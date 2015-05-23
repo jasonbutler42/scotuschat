@@ -1,0 +1,191 @@
+body {
+	//background: yellow; 
+}
+.main {
+	.container;
+}
+
+@scotusBorder: 				lighten(#369, 25%);
+@ambientBorder: 			#777;
+@counselBorder: 			lighten(#A97533, 25%);
+@maleBackground: 			#fafaff;
+@femaleBackground: 			#fffafa;
+@ambientBackground: 		#efefef;
+
+@thumbnailDirectory: 		'../img/';
+
+
+.dialog {
+	.row;
+	margin-bottom: 2em;
+	//border: 2px solid #3eeeee;
+	.name {
+		.make-xs-column(2);
+		.text-center;
+		&::before {
+			content: "";
+			display: block;
+			width: 150px;
+			height: 150px;
+			background-size: 150px 150px;
+			border-radius: 75px;
+		}
+	}
+	&.bonauto .name {&::before {background-image: url('@{thumbnailDirectory}bonauto.jpg');}}
+	&.bursch .name {&::before {background-image: url('@{thumbnailDirectory}bursch.jpg');}}
+	&.verrilli .name {&::before {background-image: url('@{thumbnailDirectory}verrilli.jpg');}}
+	&.roberts .name {&::before {background-image: url('@{thumbnailDirectory}roberts.jpg');}}
+	&.ginsburg .name {&::before {background-image: url('@{thumbnailDirectory}ginsburg.jpg');}}
+	&.thomas .name {&::before {background-image: url('@{thumbnailDirectory}thomas.jpg');}}
+	&.breyer .name {&::before {background-image: url('@{thumbnailDirectory}breyer.jpg');}}
+	&.scalia .name {&::before {background-image: url('@{thumbnailDirectory}scalia.jpg');}}
+	&.kennedy .name {&::before {background-image: url('@{thumbnailDirectory}kennedy.jpg');}}
+	&.alito .name {&::before {background-image: url('@{thumbnailDirectory}alito.jpg');}}
+	&.sotomayor .name {&::before {background-image: url('@{thumbnailDirectory}sotomayor.jpg');}}
+	&.kagan .name {&::before {background-image: url('@{thumbnailDirectory}kagan.jpg');}}
+	.sez {
+		border: 1px solid #ddd;
+		border-radius: 10px;
+	}
+	&.ambient {
+		.sez {
+			.make-xs-column(8);
+			.col-xs-offset-2;
+			.text-center;
+			.quote(none, @ambientBorder, @ambientBackground);
+		}
+	}
+	&.counsel,
+	&.scotus {
+		.name {
+			
+		}
+		.sez {
+			.make-xs-column(8);
+		}
+	}
+	&.counsel {
+		.name {
+			.pull-right;
+		}
+		.sez {
+			//.quote(right, #eee, #fee);
+		}
+
+		//boys
+		&.verrilli, &.bursch {
+			.sez {
+				.quote(right, @counselBorder, @maleBackground);
+			}
+		}
+
+		//girls
+		&.bonauto {
+			.sez {
+				.quote(right, @counselBorder, @femaleBackground);
+			}
+		}
+		
+		&::before {
+			content: "";
+			.make-xs-column(2);
+		}
+	}
+	&.scotus {
+		// boys
+		&.roberts, &.kennedy, &.alito, &.scalia, &.thomas, &.breyer {
+			.sez {
+				.quote(left, @scotusBorder, @maleBackground);
+			}
+		}
+		// girls
+		&.ginsburg, &.sotomayor, &.kagan {
+			.sez {
+				.quote(left, @scotusBorder, @femaleBackground);
+			}
+		}
+	}
+}
+
+.quote(@location, @quoteBorder: #369, @quoteBackground: #fff) {
+	position: relative;
+	padding: 15px;
+	//margin:1em 0 3em;
+	border:5px solid @quoteBorder;
+	color: #333;
+	background: @quoteBackground;
+	border-radius: 10px;
+	&::before {
+		content:"";
+		position:absolute;
+		bottom:-20px; /* value = - border-top-width - border-bottom-width */
+		left:40px; /* controls horizontal position */
+		border-width:20px 20px 0;
+		border-style:solid;
+		border-color: @quoteBorder transparent;
+		/* reduce the damage in FF3.0 */
+		display:block;
+		width:0;
+  	}
+  	&::after {
+		content:"";
+		position:absolute;
+		bottom:-13px; /* value = - border-top-width - border-bottom-width */
+		left:47px; /* value = (:before left) + (:before border-left) - (:after border-left) */
+		border-width:13px 13px 0;
+		border-style:solid;
+		border-color: @quoteBackground transparent;
+		/* reduce the damage in FF3.0 */
+		display:block;
+		width:0;
+  	}
+}
+.quote(@location, @quoteBorder: #369, @quoteBackground: #fff) when (@location = none) {
+	left: 30px;
+	/* creates the larger triangle */
+	&::before {
+		content: none;
+	}
+	&::after {
+		content: none;
+	}
+}
+.quote(@location, @quoteBorder: #369, @quoteBackground: #fff) when (@location = left) {
+	left: 30px;
+	/* creates the larger triangle */
+	&::before {
+		top:10px; /* controls vertical position */
+		bottom:auto;
+		left:-30px; /* value = - border-left-width - border-right-width */
+		border-width:15px 30px 15px 0;
+		border-color:transparent @quoteBorder;
+	}
+	&::after {
+		top:16px; /* value = (:before top) + (:before border-top) - (:after border-top) */
+		bottom:auto;
+		left:-21px; /* value = - border-left-width - border-right-width */
+		border-width:9px 21px 9px 0;
+		border-color:transparent @quoteBackground;
+	}
+}
+
+.quote(@location, @quoteBorder: #369, @quoteBackground: #fff) when (@location = right) {
+	right: 30px;
+	/* creates the larger triangle */
+	&::before {
+		top:10px; /* controls vertical position */
+		bottom:auto;
+		left:auto;
+		right:-30px; /* value = - border-left-width - border-right-width */
+		border-width:15px 0 15px 30px;
+		border-color:transparent @quoteBorder;
+	}
+	&::after {
+		top:16px; /* value = (:before top) + (:before border-top) - (:after border-top) */
+		bottom:auto;
+		left:auto;
+		right:-21px; /* value = - border-left-width - border-right-width */
+		border-width:9px 0 9px 21px;
+		border-color:transparent @quoteBackground;
+	}
+}

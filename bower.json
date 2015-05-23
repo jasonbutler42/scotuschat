@@ -1,0 +1,24 @@
+{
+  "name": "scotuschat",
+  "version": "0.0.0",
+  "authors": [
+    "jasonbutler42 <jasonbutler42@gmail.com>"
+  ],
+  "description": "Chat style dialog of oral arguments",
+  "keywords": [
+    "SCOTUS",
+    "chat"
+  ],
+  "license": "Creative Commons",
+  "homepage": "jasonbutler42.com/scotuschat",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "bootstrap": "~3.3.4"
+  }
+}

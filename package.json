@@ -1,6 +1,32 @@
 {
   "name": "scotusChat",
   "version": "0.0.0",
+  "description": "Chat styled oral arguments for SCOTUS.",
+  "author": "Jason A. Butler <jasonbutler42@gmail.com>",
+  "homepage": "https://scotuschat.com",
+  "keywords": [
+	"supreme court",
+	"scotus",
+	"chat"
+  ],
+  "license":"MIT",
+  "contributors": [
+    {
+  	"name": "Adam Lorentzen",
+  	"url": "https://github.com/adamelevate"
+    },
+   {
+  	"name": "Gardiner Allen",
+  	"url": "https://github.com/aphexddb"
+    }
+  ],
+  "repository": {
+	"type": "git",
+	"url": "https://github.com/jasonbutler42/scotuschat"
+  },
+	"bugs": {
+	"url": "https://github.com/jasonbutler42/scotuschat/issues"
+  },
   "dependencies": {},
   "scripts": {
     "test": "gulp test"

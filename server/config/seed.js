@@ -5,6 +5,7 @@
 
 'use strict';
 
+var Speaker = require('../api/speaker/speaker.model');
 var Thing = require('../api/thing/thing.model');
 var User = require('../api/user/user.model');
 
@@ -29,6 +30,18 @@ Thing.find({}).remove(function() {
     info : 'Easily deploy your app to Heroku or Openshift with the heroku and openshift subgenerators'
   });
 });
+
+
+Speaker.find({}).remove(function() {
+  Speaker.create({
+    namefirst : 'Ms.',
+    namelast:' Ginsberg'    
+  }, {
+    namefirst : 'Mr.',
+    namelast: 'Baner'
+  });
+});
+
 
 User.find({}).remove(function() {
   User.create({

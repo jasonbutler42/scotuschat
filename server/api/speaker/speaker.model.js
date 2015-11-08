@@ -4,8 +4,15 @@ var mongoose = require('mongoose'),
     Schema = mongoose.Schema;
 
 var SpeakerSchema = new Schema({
-  name: String,
-  info: String,
+  namefirst: String,
+  namelast: String,
+  title: String,
+  abreviation: String,
+  //date: { type : Date, default: Date.now },
+  bench: Boolean,
+  image: String,
+  gender: String,
+  birthdate: { type : Date},
   active: Boolean
 });
 

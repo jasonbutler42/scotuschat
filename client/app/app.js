@@ -4,6 +4,7 @@ angular.module('scotusChatApp', [
   'ngCookies',
   'ngResource',
   'ngSanitize',
+  'ngMaterial',
   'ui.router'
 ])
   .config(function ($stateProvider, $urlRouterProvider, $locationProvider, $httpProvider) {
@@ -13,7 +14,12 @@ angular.module('scotusChatApp', [
     $locationProvider.html5Mode(true);
     $httpProvider.interceptors.push('authInterceptor');
   })
-
+  .config(function($mdThemingProvider) {
+    $mdThemingProvider.theme('default')
+      .primaryPalette('cyan')
+      .accentPalette('pink')
+      .backgroundPalette('grey', {'default':'100'});
+  })
   .factory('authInterceptor', function ($rootScope, $q, $cookieStore, $location) {
     return {
       // Add authorization token to headers

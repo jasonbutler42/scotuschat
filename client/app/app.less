@@ -15,15 +15,28 @@
     padding: 0.2em 0;
 }
 
-/* Responsive: Portrait tablets and up */
-@media screen and (min-width: 768px) {
-    .container {
-        max-width: 730px;
-    }
+.md-primary{
+	background: #80DEEA;
+	color: #fff;
 }
+
+
+
+
+/* Responsive: Portrait tablets and up */
+.container{
+	max-width: 1024px;
+	margin: 0 auto;
+}
+// @media screen and (min-width: 768px) {
+//     .container {
+//         max-width: 730px;
+//     }
+// }
 
 // injector
 @import 'account/login/login.less';
 @import 'admin/admin.less';
+@import 'chats/chats.less';
 @import 'main/main.less';
 // endinjector

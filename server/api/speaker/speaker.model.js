@@ -7,7 +7,7 @@ var SpeakerSchema = new Schema({
   namefirst: String,
   namelast: String,
   title: String,
-  abreviation: String,
+  abbreviation: String,
   //date: { type : Date, default: Date.now },
   bench: Boolean,
   image: String,

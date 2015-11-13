@@ -1,9 +1,32 @@
 <div ng-include="'components/navbar/navbar.html'"></div>
-<div class="page page-chats">
+<div class="page page-speakers">
+		<md-content ui-view="">
 	<div class="container">
-		<h1>Speakers</h1>
-		<ul>
-			<li ng-repeat="speaker in speakers">{{speaker.namefirst}} {{speaker.namelast}}</li>
-		</ul>
+			<h1>Speakers</h1>
+		<section>
+			<md-subheader >Supreme Court</md-subheader>
+			<md-list>
+		      <md-list-item class="md-2-line" ng-repeat="speaker in speakers | filter:{bench:true} | orderBy: 'namelast'" ng-click="goTo(speaker)">
+		      <img ng-src="data:image/png;base64,{{speaker.image}}" class="md-avatar" alt="image of {{speaker.namefirst}} {{speaker.namelast}}" />
+		        <div class="md-list-item-text">
+		          <h3>{{speaker.namefirst}} {{speaker.namelast}}</h3>
+		          <p>{{speaker.title}}</p>
+		        </div>
+		      </md-list-item>
+		  </md-list>
+		</section>
+		<section>
+		    <md-subheader >Other Speakers</md-subheader>
+			<md-list>
+		      <md-list-item class="md-2-line" ng-repeat="speaker in speakers | filter:{bench:false} | orderBy: 'namelast'">
+		      <img ng-src="data:image/png;base64,{{speaker.image}}" class="md-avatar" alt="image of {{speaker.namefirst}} {{speaker.namelast}}" />
+		        <div class="md-list-item-text">
+		          <h3>{{speaker.namefirst}} {{speaker.namelast}}</h3>
+		          <p>{{speaker.title}}</p>
+		        </div>
+		      </md-list-item>
+			</md-list>
+		</section>
 	</div>
+		</md-content>
 </div>

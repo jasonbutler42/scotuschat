@@ -5,7 +5,12 @@ var mongoose = require('mongoose'),
 
 var CaseFileSchema = new Schema({
   name: String,
-  info: String,
+  date: { type : Date, default: Date.now },
+  parts: [{
+  	timestarted: { type : Date, default: Date.now },
+  	intro: String,
+  	speakers: String, 
+  }],
   active: Boolean
 });
 

@@ -1,0 +1,21 @@
+<div class="page-speaker">
+	<md-toolbar class="md-primary">
+	<div class="container">
+		<div class="md-toolbar-tools">
+			<md-button ng-href="/speakers"><span class="fa fa-arrow-left"></span><span>All Speakers</span></md-button>
+		</div>
+	</div>
+	</md-toolbar>
+	<div class="container content">
+		<div layout="column" layout-gt-sm="row">
+			<img ng-src="data:image/png;base64,{{speaker.image}}" class="md-avatar" alt="image of {{speaker.namefirst}} {{speaker.namelast}}"/>
+			<div flex>
+				<h1>{{speaker.namefirst}} {{speaker.namelast}}</h1>
+				<i>{{speaker.title}}</i>
+				<hr>	
+				<div>Born: <strong am-time-ago="speaker.birthdate"></strong></div>
+				<div>Gender: <strong>{{speaker.gender}}</strong></div>
+			</div>
+		</div>
+	</div>
+</div>

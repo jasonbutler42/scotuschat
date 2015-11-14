@@ -11,7 +11,7 @@ angular.module('scotusChatApp')
       .state('speaker', {
         url: '/speaker/:speakerId',
         parent: 'speakers',
-        templateUrl: 'app/speakers/speaker.html',
-        controller: 'SpeakersCtrl'
+        templateUrl: 'app/speaker/speaker.html',
+        controller: 'SpeakerCtrl'
       });
   });

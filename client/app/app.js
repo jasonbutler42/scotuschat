@@ -5,6 +5,7 @@ angular.module('scotusChatApp', [
   'ngResource',
   'ngSanitize',
   'ngMaterial',
+  'angularMoment',
   'ui.router'
 ])
   .config(function ($stateProvider, $urlRouterProvider, $locationProvider, $httpProvider) {

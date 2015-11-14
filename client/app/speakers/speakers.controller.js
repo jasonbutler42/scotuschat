@@ -1,7 +1,7 @@
 'use strict';
 
 angular.module('scotusChatApp')
-  .controller('SpeakersCtrl', function ($rootScope, $scope, $http, $location, $stateParams) {
+  .controller('SpeakersCtrl', function ($rootScope, $scope, $http, $location) {
     
   	//check to see if there are a list of speakers
   	if ($rootScope.speakers){
@@ -19,19 +19,6 @@ angular.module('scotusChatApp')
     	$rootScope.speaker = speaker;
     	$location.path('/speakers/speaker/'+ speaker._id);
     };
-
-    //check to see if there is a single speaker
-    if ($rootScope.speaker){
-  		$scope.speaker = $rootScope.speaker;
-  	}
-  	//nope? go get em
-  	else{;
-      $scope.speakerParam = $stateParams.speakerId;
-	    $http.get('/api/speakers/'+ $scope.speakerParam).success(function(speaker) {
-	      $rootScope.speaker = speaker;
-	      $scope.speaker = speaker;
-	    });
-  	}
 
     
 

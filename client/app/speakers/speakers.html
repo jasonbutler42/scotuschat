@@ -6,7 +6,7 @@
 		<section>
 			<md-subheader >Supreme Court</md-subheader>
 			<md-list>
-		      <md-list-item class="md-2-line" ng-repeat="speaker in speakers | filter:{bench:true} | orderBy: 'namelast'" ng-click="goTo(speaker)">
+		      <md-list-item class="md-2-line" ng-repeat="speaker in speakers | filter:{bench:true} | orderBy: 'namelast'"><a ui-sref="speaker({speakerId: speaker._id})">click</a>
 		      <img ng-src="data:image/png;base64,{{speaker.image}}" class="md-avatar" alt="image of {{speaker.namefirst}} {{speaker.namelast}}" />
 		        <div class="md-list-item-text">
 		          <h3>{{speaker.namefirst}} {{speaker.namelast}}</h3>
@@ -18,7 +18,7 @@
 		<section>
 		    <md-subheader >Other Speakers</md-subheader>
 			<md-list>
-		      <md-list-item class="md-2-line" ng-repeat="speaker in speakers | filter:{bench:false} | orderBy: 'namelast'"  ng-click="goTo(speaker)">
+		      <md-list-item class="md-2-line" ng-repeat="speaker in speakers | filter:{bench:false} | orderBy: 'namelast'"  ui-sref="speaker">
 		      <img ng-src="data:image/png;base64,{{speaker.image}}" class="md-avatar" alt="image of {{speaker.namefirst}} {{speaker.namelast}}" />
 		        <div class="md-list-item-text">
 		          <h3>{{speaker.namefirst}} {{speaker.namelast}}</h3>

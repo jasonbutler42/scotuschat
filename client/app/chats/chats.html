@@ -1,5 +1,10 @@
 <div ng-include="'components/navbar/navbar.html'"></div>
 <div class="page page-chats">
 	<div class="container">
+		<md-list>
+			<md-list-item ng-repeat="chat in chats" class="md-2-line" >
+				<h3 ui-sref="chat({chatId: chat._id})">{{chat.name}}</h3>
+			</md-list-item>
+		</md-list>
 	</div>
 </div>

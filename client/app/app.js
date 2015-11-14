@@ -21,6 +21,23 @@ angular.module('scotusChatApp', [
       .accentPalette('pink')
       .backgroundPalette('grey', {'default':'100'});
   })
+  .factory('Nav', ['$rootScope', function($rootScope){
+  
+  var savedParams = {};
+
+  $rootScope.$on('$stateChangeStart', function(event, toState, toParams, fromState, fromParams){
+    savedParams = toParams;
+  });
+
+  return function Nav(){
+    this.getSavedParams = function() {
+      console.debug('Loading last params');
+      console.log(savedParams);
+      return savedParams;
+    };
+  };
+}])
+  
   .factory('authInterceptor', function ($rootScope, $q, $cookieStore, $location) {
     return {
       // Add authorization token to headers

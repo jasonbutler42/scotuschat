@@ -176,3 +176,502 @@
 //     }
 //   );
 // });
+
+
+// var Chat = require('../api/chat/chat.model');
+// Chat.find({}).remove(function() {
+//   Chat.create(
+// 	{
+//   	"name":"Case No. 14-556, Obergefell v. Hodges and the consolidated cases",
+//     "intro": "IN THE SUPREME COURT OF THE UNITED STATES No. 14-556 JAMES OBERGEFELL, ET AL., Petitioners v. RICHARD HODGES, DIRECTOR, OHIO DEPARTMENT OF HEALTH, ET AL. and No. 14-562 VALERIA TANCO, ET AL., Petitioner v. BILL HASLAM, GOVERNOR OF TENNESSEE, ET AL. and No. 14-571 APRIL DEBOER, ET AL., Petitioner v. RICK SNYDER, GOVERNOR OF MICHIGAN, ET AL. and No. 14-574 GREGORY BOURKE, ET AL., Petitioner v. STEVE BESHEAR, GOVERNOR OF KENTUCKY, ET AL. Washington, D.C. Tuesday, April 28, 2015 The above-entitled matter came on for oral argument before the Supreme Court of the United States at 10:a.m.,",
+//     "speakers": [
+//       {
+//         "tag": "speaker-mary-l-bunauto",
+//         "behalf": "Boston, Mass.; on behalf of Petitioners on Question 1."
+//       },
+//       {
+//         "tag": "speaker-gen-donald-beaton-verrilli-jr",
+//         "behalf": "Solicitor General, Department of Justice, Washington, D.C.; for United States, as amicus curiae, supporting Petitioners on Question 1"
+//       },
+//       {
+//         "tag": "speaker-john-j-bursch",
+//         "behalf": "Special Assistant Attorney General, Lansing, Mich.; on behalf of Respondents on Question 1."
+//       }
+//     ],
+//     "parts": [
+//       {
+//         "number": "1",
+//         "title": "ORAL ARGUMENT OF MARY L. BONAUTO, ESQ. On behalf of the Petitioners on Question 1",
+//         "arguments": [
+//           {
+//             "speakerTag": "justice-john-roberts",
+//             "message": "We'll hear argument this morning in Case No. 14-556, Obergefell v. Hodges and the consolidated cases. Ms. Bonauto."
+//           },
+//           {
+//             "speakerTag": "speaker-mary-l-bunauto",
+//             "message": "Mr. Chief Justice, and may it please the Court:<br>The intimate and committed relationships of same-sex couples, just like those of heterosexual couples, provide mutual support and are the foundation of family life in our society. If a legal commitment, responsibility and protection that is marriage is off limits to gay people as a class, the stain of unworthiness that follows on individuals and families contravenes the basic constitutional commitment to equal dignity.<br>Indeed, the abiding purpose of the Fourteenth Amendment is to preclude relegating classes of persons to second-tier status."
+//           },
+//           {
+//             "speakerTag": "justice-ruth-bader-ginsburg",
+//             "message": "What do you do with the Windsor case where the court stressed the Federal government's historic deference to States when it comes to matters of domestic relations?"
+//           },
+//           {
+//             "speakerTag": "speaker-mary-l-bunauto",
+//             "message": "States do have primacy over domestic relations except that their laws must respect the constitutional rights of persons, and Windsor couldn't have been clearer about that. And here we have a whole class of people who are denied the equal right to be able to join in this very extensive government institution that provides protection for families."
+//           },
+//           {
+//             "speakerTag": "justice-john-roberts",
+//             "message": "Well, you say join in the institution. The argument on the other side is that they're seeking to redefine the institution. Every definition that I looked up, prior to about a dozen years ago, defined marriage as unity between a man and a woman as husband and wife. Obviously, if you succeed, that core definition will no longer be operable."
+//           },
+//           {
+//             "speakerTag": "speaker-mary-l-bunauto",
+//             "message": "I hope not, Your Honor, because what we're really talking about here is a class of people who are, by State laws, excluded from being able to participate in this institution. And if Your Honor's question is about does this really draw a sexual orientation line --"
+//           },
+//           {
+//             "speakerTag": "justice-john-roberts",
+//             "message": "No. My question is you're not seeking to join the institution, you're seeking to change what the institution is. The fundamental core of the institution is the opposite-sex relationship and you want to introduce into it a same-sex relationship."
+//           },
+//           {
+//             "speakerTag": "speaker-mary-l-bunauto",
+//             "message": "Two points on that, Your Honor. To the extent that if you're talking about the fundamental right to marry as a core male-female institution, I think when we look at the Fourteenth Amendment, we know that it provides enduring guarantees in that what we once viewed as the role of women, or even the role of gay people, is something that has changed in our society. So in a sense, just as the Lawrence court called out the Bowers court for not appreciating the extent of the liberty at stake, in the same vein here, the question is whether gay people share that same liberty to be --"
+//           },
+//           {
+//             "speakerTag": "justice-anthony-kennedy",
+//             "message": "The problem --"
+//           },
+//           {
+//             "speakerTag": "speaker-john-j-bursch",
+//             "message": "-- able to form family relationships."
+//           },
+//           {
+//             "speakerTag": "justice-anthony-kennedy",
+//             "message": "One -- one of the problems is when you think about these cases you think about words or cases, and -- and the word that keeps coming back to me in this case is -- is millennia, plus time. First of all, there has not been really time, so the Respondents say, for the Federal system to engage in this debate, the separate States. But on a larger scale, it's been -- it was about -- about the same time between Brown and Loving as between Lawrence and this case. It's about years.<br>And so there's time for the scholars and the commentators and -- and the bar and the public to -- to engage in it. But still, years is -- I don't even know how to count the decimals when we talk about millennia. This definition has been with us for millennia. And it -- it's very difficult for the Court to say, oh, well, we -- we know better."
+//           },
+//           {
+//             "speakerTag": "speaker-mary-l-bunauto",
+//             "message": "Well, I don't think this is a question of the Court knowing better. When we think about the debate, the place of gay people in our civic society is something that has been contested for more than a century. And in this -- in the last century, immigration exclusions, the place of gay people in public employment and Federal service, these are all things that have been contested and -- and you can -- you can say years of marriage for Massachusetts, but it's also in the 1970s that the Baker case from Minnesota reached this Court, and that's over years ago.<br>And it was over years ago that the Hawaii Supreme Court seemed to indicate that it would rule in favor of marriage, and the American people have been debating and discussing this. It has been exhaustively aired, and the bottom line is that gay and lesbian families live in communities as neighbors throughout this whole country. And we have seen this --"
+//           },
+//           {
+//             "speakerTag": "justice-samuel-alito",
+//             "message": "You argue in your -- you argue in your brief that the primary purpose of the Michigan law limiting marriage to a man and a woman was to demean gay people; is that correct?"
+//           },
+//           {
+//             "speakerTag": "speaker-mary-l-bunauto",
+//             "message": "The Michigan -- the Michigan statute and amendment certainly went out of their way to say that gay people were in some sense antithetical to the good of society. They wrote that --"
+//           },
+//           {
+//             "speakerTag": "justice-samuel-alito",
+//             "message": "And did -- did you say in your brief that the primary purpose of that was to demean gay people?"
+//           },
+//           {
+//             "speakerTag": "speaker-mary-l-bunauto",
+//             "message": "I think it has that effect, Your Honor. I do. Now, at the same time --"
+//           },
+//           {
+//             "speakerTag": "justice-samuel-alito",
+//             "message": "Is that true just in Michigan or is that true of -- of every other State that has a similar definition of marriage?"
+//           },
+//           {
+//             "speakerTag": "speaker-mary-l-bunauto",
+//             "message": "Well, if we're talking about the States that have constitutional amendments, many of them are similar. There are a few States that have just statutes and didn't have amendments, and there's some, of course, that had none of the above.<br>But even if there's not a purpose to demean, I think the common commonality among all of the statutes, whether they were enacted long ago or more recently, is that they encompass moral judgments and stereotypes about gay people. Even if you think about something years ago, gay people were not worthy of the concern of the government and the -- and -- and moral judgments about --"
+//           },
+//           {
+//             "speakerTag": "justice-samuel-alito",
+//             "message": "Well, how do you account for the fact that, as far as I'm aware, until the end of the 20th century, there never was a nation or a culture that recognized marriage between two people of the same sex? Now, can we infer from that that those nations and those cultures all thought that there was some rational, practical purpose for defining marriage in that way or is it your argument that they were all operating independently based solely on irrational stereotypes and prejudice?"
+//           },
+//           {
+//             "speakerTag": "speaker-mary-l-bunauto",
+//             "message": "Your Honor, my position is that times can blind. And if you think about the example of sex discrimination and what it -- again, I assume it was protected by the Fourteenth Amendment, but it took over years for this Court to recognize that a sex classification contravened the Constitution.<br>But then, in short order, between Reed and Craig v. Boren, we went from a rational-basis approach to -- to heightened scrutiny, acknowledging that this kind of discrimination is invidious. And in the same vein here, we have a foundation of Romer, of Lawrence, of Windsor --"
+//           },
+//           {
+//             "speakerTag": "justice-ruth-bader-ginsburg",
+//             "message": "And an institution --"
+//           },
+//           {
+//             "speakerTag": "justice-samuel-alito",
+//             "message": "I don't really think you answered my question."
+//           },
+//           {
+//             "speakerTag": "speaker-mary-l-bunautomessage=",
+//             "message": "I'm sorry."
+//           },
+//           {
+//             "speakerTag": "justice-samuel-alito",
+//             "message": "Can we infer that these societies all thought there was a rational reason for this and a practical reason for this?"
+//           },
+//           {
+//             "speakerTag": "speaker-mary-l-bunauto",
+//             "message": "I don't know what other societies assumed, but I do believe that times can blind and it takes time to see stereotypes and to see the common humanity of people who had once been ignored or excluded. And I do believe --"
+//           },
+//           {
+//             "speakerTag": "justice-ruth-bader-ginsburg",
+//             "message": "But you wouldn't be asking for this relief if the law of marriage was what it was a millennium ago. I mean, it wasn't possible. Same-sex unions would not have opted into the pattern of marriage, which was a relationship, a dominant and a subordinate relationship. Yes, it was marriage between a man and a woman, but the man decided where the couple would be domiciled; it was her obligation to follow him.<br>There was a change in the institution of marriage to make it egalitarian when it wasn't egalitarian. And same-sex unions wouldn't -- wouldn't fit into what marriage was once."
+//           },
+//           {
+//             "speakerTag": "speaker-mary-l-bunauto",
+//             "message": "That's correct. I mean, for centuries we had -- we had and -- and Europe had this coverture system where a woman's legal identity was absorbed into that of her husband and men and women had different prescribed legal roles. And again, because of equality and changing social circumstances, all of those gender differences in the rights and responsibilities of the married pair have been eliminated. And that, of course, is a system in which committed, same-sex couples fit quite well."
+//           },
+//           {
+//             "speakerTag": "justice-sonia-sotomayor",
+//             "message": "Could you --"
+//           },
+//           {
+//             "speakerTag": "justice-john-roberts",
+//             "message": "Coverture was not -- coverture was not a universal aspect of marriage around -- around the world. And there again, if you look at the basic definition, it is between a man and a woman. It does not always say between a man and a woman in which the woman is subordinate in legal respects. So I'm not sure it's still again a fair analogy to your situation."
+//           },
+//           {
+//             "speakerTag": "speaker-mary-l-bunauto",
+//             "message": "Well, Your -- Your Honor, the thing about marriage is that it's controlled and regulated by the States. The States create the definition of civil marriage and certainly are accountable for those definitions and any exclusions which follow. And, of course, we all know there were exclusions in cases like Loving and Zablocki and Turner where in each case with prisoners, the people behind on their child support payments, with a mixed-race couple who wanted to be able to join this institution, and even though some of those exclusions were quite traditional, they could not --"
+//           },
+//           {
+//             "speakerTag": "justice-antonin-scalia",
+//             "message": "Well, it was -- not all societies banned mixed-race marriages. In fact, not even all States in this country banned. But I don't know of any -- do you know of any society, prior to the Netherlands in 2001, that permitted same-sex marriage?"
+//           },
+//           {
+//             "speakerTag": "speaker-mary-l-bunauto",
+//             "message": "As a legal matter, Your Honor?"
+//           },
+//           {
+//             "speakerTag": "justice-antonin-scalia",
+//             "message": "As a legal matter."
+//           },
+//           {
+//             "speakerTag": "speaker-mary-l-bunauto",
+//             "message": "I -- I am not. I am not. At --"
+//           },
+//           {
+//             "speakerTag": "justice-antonin-scalia",
+//             "message": "For millennia, not -- not a single other society until the Netherlands in 2001, and you're telling me they were all -- I don't know what."
+//           },
+//           {
+//             "speakerTag": "speaker-mary-l-bunauto",
+//             "message": "No. What I'm saying is setting -- taking that tradition as it is, one still needs -- the Court still needs a reason to maintain that tradition when it has the effect --"
+//           },
+//           {
+//             "speakerTag": "justice-sonia-sotomayor",
+//             "message": "Well, may I ask a --"
+//           },
+//           {
+//             "speakerTag": "justice-antonin-scalia",
+//             "message": "Well, the -- the issue, of course, is -- is -- is not whether there should be same-sex marriage, but who should decide the point."
+//           },
+//           {
+//             "speakerTag": "speaker-mary-l-bunauto",
+//             "message": "Yes, and we --"
+//           },
+//           {
+//             "speakerTag": "justice-antonin-scalia",
+//             "message": "And you're -- you're asking us to -- to decide it for this society when no other society until ever had it. And how many States have -- have voted to have same-sex marriage or their legislature or -- or by referendum? I think it's 11, isn't it?"
+//           },
+//           {
+//             "speakerTag": "speaker-mary-l-bunauto",
+//             "message": "Yes. But I would also count the State courts that interpret their Constitutions."
+//           },
+//           {
+//             "speakerTag": "justice-antonin-scalia",
+//             "message": "Well, yes, that -- the State courts will agree with you. But once again, that's not the people deciding it. It's -- it's judges deciding it."
+//           },
+//           {
+//             "speakerTag": "justice-sonia-sotomayor",
+//             "message": "Now, counselor, in -- in terms of this millennium, what's been the status or the view of gay people in most of those countries? Have they been subject to the kinds of discrimination that they were subject to here? Were they welcomed into the worldwide community? Was it free of discrimination?"
+//           },
+//           {
+//             "speakerTag": "speaker-mary-l-bunauto",
+//             "message": "Well, if you're speaking of the world, not every legal system around the world has the kind of system with its explicit constitutional guarantees for all persons of liberty and equality, and that immediately sets the United States off from so many other countries. And of course there are now, I don't know if it's or countries that actually do authorize marriage for same-sex couples in Europe, in South America, New Zealand."
+//           },
+//           {
+//             "speakerTag": "justice-samuel-alito",
+//             "message": "But there have been cultures that did not frown on homosexuality. That is not a universal opinion throughout history and across all cultures. Ancient Greece is an example. It was -- it was well accepted within certain bounds. But did they have same-sex marriage in ancient Greece?"
+//           },
+//           {
+//             "speakerTag": "speaker-mary-l-bunauto",
+//             "message": "Yeah. They don't -- I don't believe they had anything comparable to what we have, Your Honor. You know, and we're talking about --"
+//           },
+//           {
+//             "speakerTag": "justice-samuel-alito",
+//             "message": "Well, they had marriage, didn't they?"
+//           },
+//           {
+//             "speakerTag": "speaker-mary-l-bunauto",
+//             "message": "Yeah, they had -- yes. They had some sort of marriage."
+//           },
+//           {
+//             "speakerTag": "justice-samuel-alito",
+//             "message": "And they had -- and they had same-sex relations, did they not?"
+//           },
+//           {
+//             "speakerTag": "speaker-mary-l-bunauto",
+//             "message": "Yes. And they also were able to --"
+//           },
+//           {
+//             "speakerTag": "justice-samuel-alito",
+//             "message": "People like Plato wrote in favor of that, did he not?"
+//           },
+//           {
+//             "speakerTag": "speaker-mary-l-bunauto",
+//             "message": "In favor of?"
+//           },
+//           {
+//             "speakerTag": "justice-samuel-alito",
+//             "message": "Same-sex -- wrote approvingly of same-sex relationships, did he not?"
+//           },
+//           {
+//             "speakerTag": "speaker-mary-l-bunauto",
+//             "message": "I believe so, Your Honor."
+//           },
+//           {
+//             "speakerTag": "justice-samuel-alito",
+//             "message": "So their limiting marriage to couples of the opposite sex was not based on prejudice against gay people, was it?"
+//           },
+//           {
+//             "speakerTag": "speaker-mary-l-bunauto",
+//             "message": "I can't speak to what was happening with the ancient philosophers. What I feel like --"
+//           },
+//           {
+//             "speakerTag": "justice-anthony-kennedy",
+//             "message": "But it's -- you -- you said that, well, marriage is different because it's controlled by the government. But from a historical -- from anthropological standpoint, Justice Scalia was very careful to talk about societies. Justice Alito talked about cultures. If you read the -- about the Kalahari people or -- or message=ancient peoples, they didn't have a government like this. They made it themselves and it was man and a woman."
+//           },
+//           {
+//             "speakerTag": "speaker-mary-l-bunauto",
+//             "message": "There were certainly prior to -- there were marriages prior to the United States forming and we recognize that. But when our nation did form into this union in and then when it affirmed the Fourteenth Amendment in 1868, that's when we made -- our nation collectively made a commitment to individual liberty and equality."
+//           },
+//           {
+//             "speakerTag": "justice-stephen-breyer",
+//             "message": "Well, what -- maybe you're doing that, but I would like to hear the precise answer to the question you've been asked several times."
+//           },
+//           {
+//             "speakerTag": "speaker-mary-l-bumessage=nauto",
+//             "message": "Okay."
+//           },
+//           {
+//             "speakerTag": "justice-stephen-breyer",
+//             "message": "And to me, it takes the form, the opposite view has been the law everywhere for thousands of years among people who were not discriminating even against gay people, and suddenly you want nine people outside the ballot box to require States that don't want to do it to change what you've heard is change what marriage is to include gay people. Why cannot those States at least wait and see whether in fact doing so in the other States is or is not harmful to marriage?<br>Now, that same question has been put in many, many ways in the briefs on our subject. You've received it in three or four different ways. I would like to know, so I can hear and understand it, just what your response is."
+//           },
+//           {
+//             "speakerTag": "speaker-mary-l-bunauto",
+//             "message": "Okay. And I apologize if I haven't.<br>In our system, you know, with the Fourteenth Amendment, which again is -- sets forth principles that we all are governed by and govern our lives, and you look at examples like coverture. Okay? Even if it was not universal, it was still something that was wide -- widespread in this nation for a very, very long time, and that change in marriage was deeply unsettling to people.<br>Likewise, even if race was not used as a basis for discriminating in every single State as a matter of law by criminal law and constitutional law, it was incredibly pervasive. And again, changing that, as Virginia resisted in the Loving case, resisted and said please, wait and see, percent of the American public was with Virginia on that. But again, it was the question of the individual liberty of the person to do something that was considered a profound change in its time."
+//           },
+//           {
+//             "speakerTag": "justice-samuel-alito",
+//             "message": "Suppose we rule in your favor in this case and then after that, a group consisting of two men and two women apply for a marriage license. Would there be any ground for denying them a license?"
+//           },
+//           {
+//             "speakerTag": "speaker-mary-l-bunauto",
+//             "message": "I believe so, Your Honor."
+//           },
+//           {
+//             "speakerTag": "justice-samuel-alito",
+//             "message": "What would be the reason?"
+//           },
+//           {
+//             "speakerTag": "speaker-mary-l-bunauto",
+//             "message": "There'd be two. One is whether the State would even say that that is such a thing as a marriage, but then beyond that, there are definitely going to be concerns about coercion and consent and disrupting family relationships when you start talking about multiple persons.<br>But I want to also just go back to the latency question for a moment, if I may. Because --"
+//           },
+//           {
+//             "speakerTag": "justice-antonin-scalia",
+//             "message": "Well, I didn't understand your answer."
+//           },
+//           {
+//             "speakerTag": "justice-samuel-alito",
+//             "message": "Yes. I hope you will come back to mine. If you want to go back to the earlier one --"
+//           },
+//           {
+//             "speakerTag": "speaker-mary-l-bunamessage=uto",
+//             "message": "No, no."
+//           },
+//           {
+//             "speakerTag": "justice-samuel-alito",
+//             "message": "-- then you can come back to mine."
+//           },
+//           {
+//             "speakerTag": "speaker-mary-l-bunauto",
+//             "message": "Well, that's what -- I mean, that is -- I mean, the State --"
+//           },
+//           {
+//             "speakerTag": "justice-samuel-alito",
+//             "message": "Well, what if there's no -- these are people, men and women, it's not -- it's not the sort of polygamous relationship, polygamous marriages that existed in other societies and still exist in some societies today. And let's say they're all consenting adults, highly educated. They're all lawyers."
+//           },
+//           {
+//             "speakerAlt": "Room",
+//             "message": "(Laughter.)"
+//           },
+//           {
+//             "speakerTag": "justice-samuel-alito",
+//             "message": "What would be the ground under -- under the logic of the decision you would like us to hand down in this case? What would be the logic of denying them the same right?"
+//           },
+//           {
+//             "speakerTag": "speaker-mary-l-bunauto",
+//             "message": "Number one, I assume the States would rush in and say that when you're talking about multiple people joining into a relationship, that that is not the same thing that we've had in marriage, which is on the mutual support and consent of two people. Setting that aside, even assuming it is within the fundamental --"
+//           },
+//           {
+//             "speakerTag": "justice-samuel-alito",
+//             "message": "But -- well, I don't know what kind of a distinction that is because a marriage between two people of the same sex is not something that we have had before, recognizing that is a substantial break. Maybe it's a good one. So this is no -- why is that a greater break?"
+//           },
+//           {
+//             "speakerTag": "speaker-mary-l-bunauto",
+//             "message": "The question is one of -- again, assuming it's within the fundamental right, the question then becomes one of justification. And I assume that the States would come in and they would say that there are concerns about consent and coercion. If there's a divorce from the second wife, does that mean the fourth wife has access to the child of the second wife? There are issues around who is it that makes the medical decisions, you know, in the time of crisis.<br>I assume there'd be lots of family disruption issues, setting aside issues of coercion and consent and so on that just don't apply here, when we're talking about two consenting adults who want to make that mutual commitment for as long as they shall be. So that's my answer on that.<br>And just if I may turn for a moment to the wait and see for a moment. Wait and see by itself has never been considered a legitimate justification, a freestanding justification under the Fourteenth Amendment. And what we're talking about here with waiting and seeing is we're talking about -- we're talking about the Petitioners being denied marriage. And we're talking about a second class status being tried as a matter of the Constitution --"
+//           },
+//           {
+//             "speakerTag": "justice-anthony-kennedy",
+//             "message": "Well, part of wait and see, I suppose, is to ascertain whether the social science, the new studies are accurate. But that -- it seems to me, then, that we should not consult at all the social science on this, because it's too new. You think -- you say we don't need to wait for changes. So it seems to me that if we're not going to wait, then it's only fair for us to say, well, we're not going to consult social science."
+//           },
+//           {
+//             "speakerTag": "speaker-mary-l-bunauto",
+//             "message": "Well, two points on that, if I may. In terms of waiting, I do think the effect of waiting is not neutral, it does consign same-sex couples to this outlier status, and there will be profound consequences that follow from that.<br>But then setting that aside vis-à-vis the social science, there have been trials, of course in the Michigan case, in Arkansas, in Florida about adoption bans. These issues have been aired repeatedly, and there is, as you all have heard, a social science consensus that there's nothing about the sex or sexual orientation of the parent, is it is going to affect child outcomes? And this isn't just research about gay people. It's research about, you know, again, what is the effect of gender, it goes for years."
+//           },
+//           {
+//             "speakerTag": "justice-john-roberts",
+//             "message": "You're -- you're quite right that the consequences of waiting are not neutral. On the other hand, one of the things that's truly extraordinary about this whole issue is how quickly has been the acceptance of your position across broad elements of society. I don't know what the latest opinion polls show.<br>The situation in Maine, I think, is -- is characteristic. In 2009, I guess it was by referendum, whatever, they banned gay marriage. In 2012, they enacted it as law. I mean, that sort of quick change has been a characteristic of this debate, but if you prevail here, there will be no more debate. I mean, closing of debate can close minds, and -- and it will have a consequence on how this new institution is -- is accepted. People feel very differently about something if they have a chance to vote on it than if it's imposed on them by -- by the courts."
+//           },
+//           {
+//             "speakerTag": "speaker-mary-l-bunauto",
+//             "message": "Well, there's a few points there, and I hope I get them all. With respect to Maine, one thing that separates Maine from the States that we're talking about here is that there wasn't a constitutional amendment in place that really largely shuts down the process. It is extraordinarily difficult to amend the Constitution, and an opinion poll is not a measure in any way of what a legislature is going to do in terms of approving an amendment to go out to the voters. So there -- there are some serious structural problems that did not apply in a place like Maine.<br>And in terms of acceptance, when I think about acceptance, I think about the nation as a whole, and the -- and there are places where, again, there are no protections, virtually no protections for gay and lesbian people in employment, in parenting. You know, the Michigan Petitioners, for example, are not allowed to be parents of their own children, the children that the State of Michigan has placed with them and approved of their adoptions."
+//           },
+//           {
+//             "speakerTag": "justice-antonin-scalia",
+//             "message": "Miss -- Miss Bonauto, I'm -- I'm concerned about the wisdom of this Court imposing through the Constitution a -- a requirement of action which is unpalatable to many of our citizens for religious reasons. They are not likely to change their view about what marriage consists of. And were -- were the States to adopt it by law, they could make exceptions to what -- what is required for same-sex marriage, who has to honor it and so forth.<br>But once it's -- it's made a matter of constitutional law, those exceptions -- for example, is it -- is it conceivable that a minister who is authorized by the State to conduct marriage can decline to marry two men if indeed this Court holds that they have a constitutional right to marry? Is it conceivable that that would be allowed?"
+//           },
+//           {
+//             "speakerTag": "speaker-mary-l-bunauto",
+//             "message": "Your Honor, of course the Constitution will continue to apply, and right to this day, no clergy is forced to marry any couple that they don't want to marry. We have those protections."
+//           },
+//           {
+//             "speakerTag": "justice-antonin-scalia",
+//             "message": "But -- but right to this day, we have never held that there is a constitutional right for these two people to marry, and the minister is -- to the extent he's conducting a civil marriage, he's an instrument of the State. I don't see how you could possibly allow that minister to say, I will only marry a man and a woman. I will not marry two men. Which means you -- you would -- you could -- you could have ministers who -- who conduct real marriages that -- that are civilly enforceable at the National Cathedral, but not at St. Matthews downtown, because that minister refuses to marry two men, and therefore, cannot be given the State power to make a real State marriage. I don't see any -- any answer to that. I really don't."
+//           },
+//           {
+//             "speakerTag": "justice-sonia-sotomayor",
+//             "message": "Counselor, there have been antidiscrimination laws in various States; correct?"
+//           },
+//           {
+//             "speakerTag": "speaker-mary-l-bunauto",
+//             "message": "Yes, Your Honor."
+//           },
+//           {
+//             "speakerTag": "justice-sonia-sotomayor",
+//             "message": "Antidiscrimination laws regarding gay people."
+//           },
+//           {
+//             "speakerTag": "speaker-mary-l-bunaumessage=to",
+//             "message": "Correct."
+//           },
+//           {
+//             "speakerTag": "justice-sonia-sotomayor",
+//             "message": "And in any of those States, have ministers been forced to do gay marriages?"
+//           },
+//           {
+//             "speakerTag": "speaker-mary-l-bunauto",
+//             "message": "Of course not, Your Honor. And --"
+//           },
+//           {
+//             "speakerTag": "justice-antonin-scalia",
+//             "message": "They are laws. They are not constitutional requirements. That was the whole point of my question. If you let the States do it, you can make an exception. The State can say, yes, two men can marry, but -- but ministers who do not believe in -- in same-sex marriage will still be authorized to conduct marriages on behalf of the State. You can't do that once it is a constitutional proscription."
+//           },
+//           {
+//             "speakerTag": "speaker-mary-l-bunauto",
+//             "message": "If one thing is firm, and I believe it is firm, that under the First Amendment, that a clergyperson cannot be forced to officiate at a marriage that he or she does not want to officiate at. And since there were several other questions, if I may."
+//           },
+//           {
+//             "speakerTag": "justice-antonin-scalia",
+//             "message": "He's not being required to officiate. He's just not given the State's power, unless he agrees to use that power in -- in accordance with the Constitution. I don't -- seems to me you have to -- you have to make that exception. You can't appoint people who will then go ahead and violate the Constitution."
+//           },
+//           {
+//             "speakerTag": "speaker-mary-l-bunauto",
+//             "message": "I think if we're talking about a government individual, a clerk, a judge, who's empowered to authorize marriage, that is a different matter that they are going to have to follow through, unless, again, a State decides to make some exceptions. In Connecticut, after the court permitted marriage, it did actually pass a law to do deal with implementation issues, including these kinds of liberty issues."
+//           },
+//           {
+//             "speakerTag": "justice-antonin-scalia",
+//             "message": "Because it was a State law. That's my whole my point. If it's a State law, you can make those exceptions. But if it's a constitutional requirement, I don't see how you can. And every State allows ministers to marry people, and their marriages are effective under State law. That will not be the case if, indeed, we hold, as a constitutional matter, that the State must marry two men."
+//           },
+//           {
+//             "speakerTag": "\"justice-elena-kagan\""
+//           },
+//           {
+//             "speakerTag": "speaker-mary-l-bunauto",
+//             "message": "That's precisely --"
+//           },
+//           {
+//             "speakerTag": "justice-stephen-breyer",
+//             "message": "It's called Congress shall make no law respecting the freedom of religion --"
+//           },
+//           {
+//             "speakerTag": "speaker-mary-l-bunauto",
+//             "message": "So, yes --"
+//           },
+//           {
+//             "speakerTag": "justice-stephen-breyer",
+//             "message": "-- but that --"
+//           },
+//           {
+//             "speakerTag": "speaker-mary-l-bunauto",
+//             "message": "-- can I --"
+//           },
+//           {
+//             "speakerTag": "justice-stephen-breyer",
+//             "message": "-- it leaves this question --"
+//           },
+//           {
+//             "speakerTag": "speaker-mary-l-bmessage=unauto",
+//             "message": "Yes."
+//           },
+//           {
+//             "speakerTag": "justice-stephen-breyer",
+//             "message": "-- open?"
+//           },
+//           {
+//             "speakerTag": "speaker-mary-l-bunauto",
+//             "message": "Yes. And I will just say very briefly --"
+//           },
+//           {
+//             "speakerTag": "justice-antonin-scalia",
+//             "message": "Well, you -- you --"
+//           },
+//           {
+//             "speakerTag": "speaker-mary-l-bunauto",
+//             "message": "And I need to --"
+//           },
+//           {
+//             "speakerTag": "justice-antonin-scalia",
+//             "message": "-- you agree with that --"
+//           },
+//           {
+//             "speakerTag": "speaker-mary-l-bunauto",
+//             "message": "-- reserve my time, if I may."
+//           },
+//           {
+//             "speakerTag": "justice-antonin-scalia",
+//             "message": "-- then? You agree that -- that ministers will not have to conduct same-sex marriages?"
+//           },
+//           {
+//             "speakerTag": "speaker-mary-l-bunauto",
+//             "message": "If they do not want to, that is correct. I believe that is affirmed under the First Amendment.<br>And I will say before I sit down, if I may reserve my time, Your Honor, that in terms of the question of who decides, it's not about the Court versus the States. It's about the individual making the choice to marry and with whom to marry, or the government."
+//           },
+//           {
+//             "speakerTag": "justice-john-roberts",
+//             "message": "Thank you, counsel."
+//           },
+//           {
+//             "speakerAlt": "Room",
+//             "message": "(Interruption.)"
+//           },
+//           {
+//             "speakerTag": "justice-john-roberts",
+//             "message": "General, would you like to take a moment?"
+//           },
+//           {
+//             "speakerTag": "justice-john-roberts",
+//             "message": "Well, we're ready. Okay."
+//           },
+//           {
+//             "speakerTag": "justice-antonin-scalia",
+//             "message": "It was rather refreshing, actually."
+//           },
+//           {
+//             "speakerAlt": "Room",
+//             "message": "(Laughter.)"
+//           }
+//         ]
+//       }
+//     ]
+//   })
+// });

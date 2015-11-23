@@ -9,8 +9,9 @@ angular.module('scotusChatApp')
         controller: 'ChatsCtrl'
       })
       .state('chat', {
-        url: '/chats/chat/:chatId',
+        url: '/chat/:chatId',
         templateUrl: 'app/chat/chat.html',
         controller: 'ChatCtrl'
       });
+
   });

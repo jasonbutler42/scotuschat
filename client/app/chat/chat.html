@@ -1,6 +1,18 @@
 <div ng-include="'components/navbar/navbar.html'"></div>
 	<div class="container">
 		{{chat.name}}
+		<p>{{chat.intro}}</p>
+		<h2>Parts</h2>
+		<div ng-repeat="part in chat.parts">
+			
+			{{part.number}} {{part.title}}
+			<div ng-repeat="argument in part.arguments">
+				{{argument.speakerTag}}
+				{{getSpeaker(argument.speakerTag, chat.speakerList)}}
+				{{argument.message}}
+				<hr>
+			</div>
+		</div>
 	</div>
 
 

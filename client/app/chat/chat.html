@@ -1,16 +1,13 @@
 <div ng-include="'components/navbar/navbar.html'"></div>
-	<div class="container">
+	<div class="chat-list container">
 		{{chat.name}}
 		<p>{{chat.intro}}</p>
 		<h2>Parts</h2>
-		<div ng-repeat="part in chat.parts">
+		<div ng-repeat="part in chat.parts" class="chat-item">
 			
 			{{part.number}} {{part.title}}
 			<div ng-repeat="argument in part.arguments">
-				{{argument.speakerTag}}
-				{{getSpeaker(argument.speakerTag, chat.speakerList)}}
-				{{argument.message}}
-				<hr>
+				<speaker data="{{argument.speakerTag}}" message="{{argument.message}}">{{argument.speakerTag}}</speaker>
 			</div>
 		</div>
 	</div>

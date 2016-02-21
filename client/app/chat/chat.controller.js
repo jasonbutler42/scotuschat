@@ -1,10 +1,17 @@
 'use strict';
 
 angular.module('scotusChatApp')
-  .controller('ChatCtrl', function (API, $scope, $stateParams) {
+  .controller('ChatCtrl', function (API, $scope, $stateParams, $localstorage) {
 
   	var speakers = [];
   	var loaded = false;
+
+    API.getSpeakers().then(function(data) {
+
+      $localstorage.setObject('speakersCache', data);
+
+    });  
+
     
     API.getChat($stateParams.chatId).then(function(data) {
       $scope.chat = data;
@@ -12,15 +19,6 @@ angular.module('scotusChatApp')
     }); 
 
 
-    $scope.getSpeaker = function(speakerTag, speakerList) {
-    	console.log('looking for ', speakerTag, ' in ',speakerList);
-    	var speaker = null;
-   //  	$scope.speakers.forEach(function(i,v) {
-			// if (speakerTag === v.tag) {
-			// 	speaker = v; 
-			// }
-   //  	});
-    	return speaker;
-    };
+
 
   });

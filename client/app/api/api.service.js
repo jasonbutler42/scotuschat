@@ -5,6 +5,7 @@ angular.module('scotusChatApp')
 
   .service('API', ['$http', '$q', function($http, $q){
   
+
     // Private API data
     var cache = {
       speakers: [],
@@ -14,17 +15,17 @@ angular.module('scotusChatApp')
     };
 
     this.getSpeakers = function() {
-      if (!cache.speakers.length) {
         return $http.get('/api/speakers/').then(function(response) {
-          cache.speakers = response.data;
-          return response.data;
+          var speakers = {};
+          angular.forEach(response.data, function(value, key){
+              speakers[value._id] = value;
+              //var newArr = { valID : value};
+              //speakers.push(newArr);
+          });
+          console.log(speakers);
+          return speakers;
         });
-      } else {
-        var deferred = $q.defer();
-        deferred.resolve(cache.speakers);
-        return deferred.promise;
-      }
-    };
+      };
     
     this.getSpeaker = function(id) {
       if (!cache.currentSpeaker) {

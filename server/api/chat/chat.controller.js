@@ -2,6 +2,7 @@
 
 var _ = require('lodash');
 var Chat = require('./chat.model');
+var Speaker = require('../speaker/speaker.model');
 
 // Get list of chats
 exports.index = function(req, res) {
@@ -13,10 +14,16 @@ exports.index = function(req, res) {
 
 // Get a single chat
 exports.show = function(req, res) {
+  var resultObj = {};
   Chat.findById(req.params.id, function (err, chat) {
     if(err) { return handleError(res, err); }
-    if(!chat) { return res.status(404).send('Not Found'); }
-    return res.json(chat);
+    if(!chat) { return res.status(404).send('Not Found'); }    
+    resultObj = chat;
+  }).then(function(err, chat) {
+    Speaker.find(function (err, speakers) {   
+      resultObj.speakerList = speakers;     
+      return res.json(resultObj);
+    });
   });
 };
 

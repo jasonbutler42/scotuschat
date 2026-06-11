@@ -7,9 +7,9 @@
 
 ### Infrastructure
 
-- [ ] **INFRA-01**: Full PostgreSQL schema (people, roles, cases, court_tenures, case_appearances, arguments, argument_participants, utterances, citations, pipeline_runs) is created and managed via Alembic migrations — no raw `create_all` calls anywhere
-- [ ] **INFRA-02**: Schema correctly handles consolidated arguments that cover multiple docket numbers
-- [ ] **INFRA-03**: Development environment runs fully locally (Postgres + FastAPI + SvelteKit)
+- [x] **INFRA-01**: Full PostgreSQL schema (people, roles, cases, court_tenures, case_appearances, arguments, argument_participants, utterances, citations, pipeline_runs) is created and managed via Alembic migrations — no raw `create_all` calls anywhere — *Completed: Phase 1, Plan 02 (api/models/models.py + alembic/versions/0001_initial_schema.py)*
+- [x] **INFRA-02**: Schema correctly handles consolidated arguments that cover multiple docket numbers — *Completed: Phase 1, Plan 02 (case_arguments M:M join table with composite PK)*
+- [x] **INFRA-03**: Development environment runs fully locally (Postgres + FastAPI + SvelteKit) — *Completed: Phase 1, Plan 01 (scaffold + dev-start.ps1)*
 
 ### Pipeline
 

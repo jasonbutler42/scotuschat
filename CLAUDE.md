@@ -48,6 +48,10 @@ This project uses the Get Shit Done (GSD) workflow. Always follow the phase-gate
 /data       — Raw ingested PDF files (immutable)
 ```
 
+## Spike Findings
+
+- **Spike findings for scotuschat** (PDF extraction patterns, ParsedUtterance schema, parse state machine, failure taxonomy, LLM prompt template) → `Skill("spike-findings-scotuschat")`
+
 ## Architecture Rules
 
 1. FastAPI is read-only — the pipeline writes directly to PostgreSQL; the API never triggers pipeline steps

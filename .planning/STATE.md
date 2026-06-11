@@ -10,27 +10,27 @@ See: .planning/PROJECT.md (updated 2026-06-11)
 ## Current Position
 
 Phase: 1 of 4 (Foundation + Proof of Concept)
-Plan: 1 of 5 in current phase (01-01 complete — project scaffold)
+Plan: 2 of 5 in current phase (01-02 complete — database schema + Alembic migrations)
 Status: Executing
-Last activity: 2026-06-11 — Plan 01-01 executed: Python scaffold + SvelteKit scaffold complete
+Last activity: 2026-06-11 — Plan 01-02 executed: 10-table SQLAlchemy ORM models, async Alembic env.py, initial migration, smoke tests
 
-Progress: [█░░░░░░░░░] 10%
+Progress: [██░░░░░░░░] 20%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 1
-- Average duration: 45 min
-- Total execution time: 0.75 hours
+- Total plans completed: 2
+- Average duration: 40 min
+- Total execution time: 1.33 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01-foundation-proof-of-concept | 1 | 45 min | 45 min |
+| 01-foundation-proof-of-concept | 2 | 80 min | 40 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (45 min)
+- Last 5 plans: 01-01 (45 min), 01-02 (35 min)
 - Trend: Baseline established
 
 *Updated after each plan completion*
@@ -52,6 +52,10 @@ Recent decisions affecting current work:
 - 01-01: Route /cases/[slug]/arguments/[id] created from day one to avoid Phase 3 refactor (D-17)
 - 01-01: Identical bubble backgrounds for bench and advocate (apolitical framing — position-only side differentiation)
 - 01-01: adapter-node installed for Digital Ocean App Platform SSR support
+- 01-02: Citations table deferred — 10 tables only in initial schema; schema supports citations FK (resolved_case_id) but table not created until needed
+- 01-02: Hand-written migration (not autogenerate) — explicit FK dependency order control; prevents Pitfall 2 (empty migrations)
+- 01-02: SideEnum uppercase (BENCH/ADVOCATE/UNKNOWN), PipelineRunStatus lowercase (pending/running/etc.) — matches raw speaker label conventions and status field idioms respectively
+- 01-02: test_no_create_all_in_codebase searches production dirs only (api/, alembic/, pipeline/) — test files excluded to avoid false positives
 
 ### Pending Todos
 
@@ -72,5 +76,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-06-11
-Stopped at: Phase 1, Plan 01 complete — project scaffold (Python requirements, SvelteKit app, route structure, stub components, dev startup script). Ready to execute Plan 02 (Alembic schema migrations).
+Stopped at: Phase 1, Plan 02 complete — database schema (10 SQLAlchemy ORM models, async Alembic env.py, initial migration 0001_initial_schema.py, smoke tests). Ready to execute Plan 03 (pipeline ingest step).
 Resume file: None

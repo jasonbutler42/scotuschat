@@ -1,0 +1,133 @@
+# Requirements: SCOTUS Chat
+
+**Defined:** 2026-06-11
+**Core Value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
+
+## v1 Requirements
+
+### Infrastructure
+
+- [ ] **INFRA-01**: Full PostgreSQL schema (people, roles, cases, court_tenures, case_appearances, arguments, argument_participants, utterances, citations, pipeline_runs) is created and managed via Alembic migrations — no raw `create_all` calls anywhere
+- [ ] **INFRA-02**: Schema correctly handles consolidated arguments that cover multiple docket numbers
+- [ ] **INFRA-03**: Development environment runs fully locally (Postgres + FastAPI + SvelteKit)
+
+### Pipeline
+
+- [ ] **PIPE-01**: Operator can run Step 1 (Ingest) — provide a transcript PDF URL; pipeline downloads it, stores it as an immutable local file, creates case/argument/pipeline_run records, sets status to `pending`
+- [ ] **PIPE-02**: Raw source PDFs are never modified after ingest; all derived data is pipeline output and can be regenerated
+- [ ] **PIPE-03**: Operator can run Step 2 (Parse) — pipeline extracts raw text from PDF via pdfplumber, submits to Claude API with structured prompt, receives JSON array of utterances, writes to database with `person_id` null
+- [ ] **PIPE-04**: Parse step records `pipeline_run_id` and `strategy` name on each utterance row
+- [ ] **PIPE-05**: Parse step correctly classifies stage directions (`is_stage_direction = true`) separately from spoken content
+- [ ] **PIPE-06**: Parse step classifies LLM failures as transient vs. structural before retrying; maximum 2 retries on structural failures; failure reason recorded on `pipeline_run`
+- [ ] **PIPE-07**: Operator can run Step 3 (Resolve) — pipeline attempts to match raw speaker labels to `people` records using LLM-assisted matching with case metadata as context
+- [ ] **PIPE-08**: Resolve step uses a pre-seeded `speaker_alias` table to handle surname-only and role-only labels (e.g. "MR. SMITH", "GENERAL", "CHIEF JUSTICE")
+- [ ] **PIPE-09**: Resolve step gates low-confidence matches as `needs_review` on `pipeline_run`; never auto-commits ambiguous matches; never creates new `people` records automatically
+- [ ] **PIPE-10**: `pipeline_run` status state machine is enforced: `pending → running → completed | failed | needs_review`
+- [ ] **PIPE-11**: Re-running any pipeline step produces new rows linked to the new `pipeline_run_id`; prior run rows are not deleted until the new run is explicitly promoted
+
+### API
+
+- [ ] **API-01**: `GET /arguments/{id}/utterances` — returns ordered utterances for an argument, each with speaker attribution (`person_id`, name, role, side)
+- [ ] **API-02**: `GET /cases` — returns list of available cases with basic metadata (name, docket number, term year, argued date)
+- [ ] **API-03**: `GET /people/{id}` — returns person record (name, role, `photo_url`)
+
+### Chat UI
+
+- [ ] **UI-01**: User can read an oral argument as a two-sided chat — Justices on the bench side, advocates on the advocate side
+- [ ] **UI-02**: Each utterance bubble shows the speaker's name and role label
+- [ ] **UI-03**: Stage directions (e.g. "(Laughter.)") render as a distinct visual component between bubbles, not as speech bubbles
+- [ ] **UI-04**: Argument header shows case name, docket number, date argued, and the full speaker roster
+- [ ] **UI-05**: Each speaker has an avatar; falls back to styled initials when no `photo_url` is available
+- [ ] **UI-06**: Arguments are accessible at stable, shareable URLs (`/cases/{slug}/arguments/{id}`) that render correctly on page refresh (SSR)
+- [ ] **UI-07**: Case list page lets user browse and navigate to any loaded case's argument
+- [ ] **UI-08**: Argument section navigation rail shows detected sections (Petitioner / Respondent / Rebuttal / Amicus) and allows jumping between them
+
+### Accessibility
+
+- [ ] **A11Y-01**: All UI passes WCAG 2.1 AA color contrast (4.5:1 minimum for body text)
+- [ ] **A11Y-02**: All UI is fully keyboard navigable (no mouse-only interactions)
+- [ ] **A11Y-03**: Speaker side differentiation relies on layout position, not color alone
+- [ ] **A11Y-04**: Focus is managed correctly for any overlays or interactive elements
+
+## v2 Requirements
+
+### Enrichment
+
+- **ENRICH-01**: Pipeline Step 4 (Enrich) — for each argument participant, pull bio text, photo URL, and tenure dates from Oyez API and Federal Judicial Center biographical database
+- **ENRICH-02**: Bio schema is uniform across all speakers (same fields, same depth for Justices and advocates)
+- **ENRICH-03**: Bio cards render in the UI, linked from speaker avatars
+
+### Citations
+
+- **CITE-01**: Pipeline Step 5 (Citations) — scan utterance content for legal citation patterns; write to `citations` table as `raw_text` with `resolved_case_id` null
+- **CITE-02**: Citation strings render as distinct styled inline text in the chat UI
+
+### Deployment
+
+- **DEPLOY-01**: Application is deployed to Digital Ocean App Platform (SvelteKit + FastAPI as separate services, managed Postgres)
+- **DEPLOY-02**: Production environment uses PgBouncer with `statement_cache_size=0` configured in asyncpg engine
+- **DEPLOY-03**: Continuous deployment from GitHub main branch
+
+### Discovery
+
+- **DISC-01**: Open Graph metadata on argument pages (case name + date) for social sharing previews
+- **DISC-02**: Case list supports filtering by term year
+
+## Out of Scope
+
+| Feature | Reason |
+|---------|--------|
+| Audio playback | Licensing complexity; Oyez owns the distribution relationship — link to Oyez instead |
+| AI-generated case summaries | Violates apolitical framing constraint — hard no |
+| Cross-case justice statistics | Politically interpretable; contradicts non-editorial principle |
+| Topic / subject tagging | Non-partisan framing requires careful thought; explicitly deferred |
+| Pre-2000 transcript parsing | Different format requires separate strategy; pipeline modularity will accommodate later |
+| User accounts or public contributions | Read-only product by design |
+| Monetization | Not a driving goal; not excluded for future milestones |
+| Real-time argument streaming | Arguments are historical documents; no live ingestion use case |
+| Citation resolution (linking raw citations to case records) | Schema supports it; deferrable post-v2 |
+
+## Traceability
+
+*Populated during roadmap creation.*
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| INFRA-01 | — | Pending |
+| INFRA-02 | — | Pending |
+| INFRA-03 | — | Pending |
+| PIPE-01 | — | Pending |
+| PIPE-02 | — | Pending |
+| PIPE-03 | — | Pending |
+| PIPE-04 | — | Pending |
+| PIPE-05 | — | Pending |
+| PIPE-06 | — | Pending |
+| PIPE-07 | — | Pending |
+| PIPE-08 | — | Pending |
+| PIPE-09 | — | Pending |
+| PIPE-10 | — | Pending |
+| PIPE-11 | — | Pending |
+| API-01 | — | Pending |
+| API-02 | — | Pending |
+| API-03 | — | Pending |
+| UI-01 | — | Pending |
+| UI-02 | — | Pending |
+| UI-03 | — | Pending |
+| UI-04 | — | Pending |
+| UI-05 | — | Pending |
+| UI-06 | — | Pending |
+| UI-07 | — | Pending |
+| UI-08 | — | Pending |
+| A11Y-01 | — | Pending |
+| A11Y-02 | — | Pending |
+| A11Y-03 | — | Pending |
+| A11Y-04 | — | Pending |
+
+**Coverage:**
+- v1 requirements: 28 total
+- Mapped to phases: 0 (pending roadmap)
+- Unmapped: 28 ⚠️
+
+---
+*Requirements defined: 2026-06-11*
+*Last updated: 2026-06-11 after initial definition*

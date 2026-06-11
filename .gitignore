@@ -5,7 +5,9 @@
 data/pgdata/
 
 # Raw PDF files — immutable source documents, not tracked in git
-data/pdfs/
+# The directory itself is tracked via data/pdfs/.gitkeep;
+# actual PDF files are ignored via data/pdfs/.gitignore
+data/pdfs/*.pdf
 
 # Python
 __pycache__/

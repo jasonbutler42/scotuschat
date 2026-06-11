@@ -1,0 +1,3 @@
+# Raw PDF files — immutable source documents, not tracked in git
+# Only .gitkeep is tracked so the directory exists in the repository.
+*.pdf

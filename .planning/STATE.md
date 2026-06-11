@@ -10,28 +10,28 @@ See: .planning/PROJECT.md (updated 2026-06-11)
 ## Current Position
 
 Phase: 1 of 4 (Foundation + Proof of Concept)
-Plan: 0 of TBD in current phase
-Status: Ready to plan
-Last activity: 2026-06-11 — Roadmap created; all 28 v1 requirements mapped across 4 phases
+Plan: 1 of 5 in current phase (01-01 complete — project scaffold)
+Status: Executing
+Last activity: 2026-06-11 — Plan 01-01 executed: Python scaffold + SvelteKit scaffold complete
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█░░░░░░░░░] 10%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 0
-- Average duration: —
-- Total execution time: 0 hours
+- Total plans completed: 1
+- Average duration: 45 min
+- Total execution time: 0.75 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 01-foundation-proof-of-concept | 1 | 45 min | 45 min |
 
 **Recent Trend:**
-- Last 5 plans: —
-- Trend: —
+- Last 5 plans: 01-01 (45 min)
+- Trend: Baseline established
 
 *Updated after each plan completion*
 
@@ -47,6 +47,11 @@ Recent decisions affecting current work:
 - Roadmap: Resolve step (PIPE-07–09) deferred to Phase 2 — depends on utterances from Parse
 - Roadmap: PIPE-08 (speaker_alias seed) is a Phase 2 prerequisite; must be in place before PIPE-07 runs
 - Roadmap: A11Y requirements (A11Y-01–04) held for Phase 4 after full UI surface exists
+- 01-01: Svelte 5 Runes exclusively — $props() not export let; no $: reactive blocks
+- 01-01: FASTAPI_BASE_URL imported from $env/static/private only — never PUBLIC_ prefix (T-01-01 threat mitigation)
+- 01-01: Route /cases/[slug]/arguments/[id] created from day one to avoid Phase 3 refactor (D-17)
+- 01-01: Identical bubble backgrounds for bench and advocate (apolitical framing — position-only side differentiation)
+- 01-01: adapter-node installed for Digital Ocean App Platform SSR support
 
 ### Pending Todos
 
@@ -67,5 +72,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-06-11
-Stopped at: Roadmap created; ROADMAP.md, STATE.md written; REQUIREMENTS.md traceability updated
+Stopped at: Phase 1, Plan 01 complete — project scaffold (Python requirements, SvelteKit app, route structure, stub components, dev startup script). Ready to execute Plan 02 (Alembic schema migrations).
 Resume file: None

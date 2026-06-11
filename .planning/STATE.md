@@ -10,28 +10,28 @@ See: .planning/PROJECT.md (updated 2026-06-11)
 ## Current Position
 
 Phase: 1 of 4 (Foundation + Proof of Concept)
-Plan: 2 of 5 in current phase (01-02 complete — database schema + Alembic migrations)
+Plan: 3 of 5 in current phase (01-03 complete — pipeline ingest command + test infrastructure)
 Status: Executing
-Last activity: 2026-06-11 — Plan 01-02 executed: 10-table SQLAlchemy ORM models, async Alembic env.py, initial migration, smoke tests
+Last activity: 2026-06-11 — Plan 01-03 executed: pipeline/db.py (async engine), pipeline/__main__.py (argparse CLI), pipeline/commands/ingest.py (SSRF-validated PDF download + DB records), conftest.py + test_ingest.py (9 tests, URL validation works without DB)
 
-Progress: [██░░░░░░░░] 20%
+Progress: [███░░░░░░░] 30%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 2
+- Total plans completed: 3
 - Average duration: 40 min
-- Total execution time: 1.33 hours
+- Total execution time: 2 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01-foundation-proof-of-concept | 2 | 80 min | 40 min |
+| 01-foundation-proof-of-concept | 3 | 125 min | 42 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (45 min), 01-02 (35 min)
-- Trend: Baseline established
+- Last 5 plans: 01-01 (45 min), 01-02 (35 min), 01-03 (45 min)
+- Trend: Stable ~40 min/plan
 
 *Updated after each plan completion*
 
@@ -56,6 +56,10 @@ Recent decisions affecting current work:
 - 01-02: Hand-written migration (not autogenerate) — explicit FK dependency order control; prevents Pitfall 2 (empty migrations)
 - 01-02: SideEnum uppercase (BENCH/ADVOCATE/UNKNOWN), PipelineRunStatus lowercase (pending/running/etc.) — matches raw speaker label conventions and status field idioms respectively
 - 01-02: test_no_create_all_in_codebase searches production dirs only (api/, alembic/, pipeline/) — test files excluded to avoid false positives
+- 01-03: SSRF validation as standalone _validate_url() function — synchronous, no DB, enables unit tests without async setup
+- 01-03: Lazy engine creation in get_engine() — DATABASE_URL not required at import time, only at coroutine execution time
+- 01-03: PipelineRunStatus.COMPLETED set directly for ingest (synchronous op) — pending→running→completed state machine used by parse step (Plan 04)
+- 01-03: parse.py stub created in Plan 03 to satisfy __main__.py import — full implementation in Plan 04
 
 ### Pending Todos
 
@@ -76,5 +80,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-06-11
-Stopped at: Phase 1, Plan 02 complete — database schema (10 SQLAlchemy ORM models, async Alembic env.py, initial migration 0001_initial_schema.py, smoke tests). Ready to execute Plan 03 (pipeline ingest step).
+Stopped at: Phase 1, Plan 03 complete — pipeline ingest command (pipeline/db.py, pipeline/__main__.py, pipeline/commands/ingest.py, test infrastructure with conftest.py + test_ingest.py). Ready to execute Plan 04 (pipeline parse step).
 Resume file: None

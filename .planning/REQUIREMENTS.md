@@ -13,8 +13,8 @@
 
 ### Pipeline
 
-- [ ] **PIPE-01**: Operator can run Step 1 (Ingest) — provide a transcript PDF URL; pipeline downloads it, stores it as an immutable local file, creates case/argument/pipeline_run records, sets status to `pending`
-- [ ] **PIPE-02**: Raw source PDFs are never modified after ingest; all derived data is pipeline output and can be regenerated
+- [x] **PIPE-01**: Operator can run Step 1 (Ingest) — provide a transcript PDF URL; pipeline downloads it, stores it as an immutable local file, creates case/argument/pipeline_run records — *Completed: Phase 1, Plan 03 (pipeline/commands/ingest.py; status=COMPLETED; idempotent case/argument/case_arguments/pipeline_run rows)*
+- [x] **PIPE-02**: Raw source PDFs are never modified after ingest; all derived data is pipeline output and can be regenerated — *Completed: Phase 1, Plan 03 (pdf_path.write_bytes() only when file does not exist; skip on re-run)*
 - [ ] **PIPE-03**: Operator can run Step 2 (Parse) — pipeline extracts raw text from PDF via pdfplumber, submits to Claude API with structured prompt, receives JSON array of utterances, writes to database with `person_id` null
 - [ ] **PIPE-04**: Parse step records `pipeline_run_id` and `strategy` name on each utterance row
 - [ ] **PIPE-05**: Parse step correctly classifies stage directions (`is_stage_direction = true`) separately from spoken content
@@ -91,11 +91,11 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INFRA-01 | Phase 1 | Pending |
-| INFRA-02 | Phase 1 | Pending |
-| INFRA-03 | Phase 1 | Pending |
-| PIPE-01 | Phase 1 | Pending |
-| PIPE-02 | Phase 1 | Pending |
+| INFRA-01 | Phase 1 | Complete |
+| INFRA-02 | Phase 1 | Complete |
+| INFRA-03 | Phase 1 | Complete |
+| PIPE-01 | Phase 1 | Complete |
+| PIPE-02 | Phase 1 | Complete |
 | PIPE-03 | Phase 1 | Pending |
 | PIPE-04 | Phase 1 | Pending |
 | PIPE-05 | Phase 1 | Pending |

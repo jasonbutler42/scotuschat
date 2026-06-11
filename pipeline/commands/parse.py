@@ -163,8 +163,10 @@ async def run_parse(args) -> None:
         # Step 6: Write utterance rows (PIPE-03, PIPE-04, PIPE-11)
         # -------------------------------------------------------------------
         if args.dry_run:
+            run.status = PipelineRunStatus.PENDING
+            run.strategy = None
             print(f"Dry-run mode: {len(utterances)} utterances parsed but NOT written to DB.")
-            print(f"Parse dry-run complete. strategy={run.strategy}")
+            print(f"Parse dry-run complete.")
             return
 
         print(f"Writing {len(utterances)} utterance rows ...")

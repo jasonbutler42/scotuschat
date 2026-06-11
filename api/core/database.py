@@ -58,5 +58,10 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
         async def endpoint(db: AsyncSession = Depends(get_db)):
             ...
     """
+    if AsyncSessionLocal is None:
+        raise RuntimeError(
+            "Database session factory is not initialised — "
+            "lifespan may not have completed startup."
+        )
     async with AsyncSessionLocal() as session:
         yield session

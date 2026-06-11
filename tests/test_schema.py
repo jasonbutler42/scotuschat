@@ -14,8 +14,7 @@ Run with:
 """
 
 import os
-import subprocess
-import sys
+import pathlib
 
 import pytest
 
@@ -137,15 +136,12 @@ def test_no_create_all_in_codebase():
 
     offending_files = []
     for search_dir in search_dirs:
-        if not os.path.isdir(search_dir):
-            continue
-        result = subprocess.run(
-            ["grep", "-r", "--include=*.py", "-l", "create_all", search_dir],
-            capture_output=True,
-            text=True,
-        )
-        if result.returncode == 0 and result.stdout.strip():
-            offending_files.extend(result.stdout.strip().splitlines())
+        for py_file in pathlib.Path(search_dir).rglob("*.py"):
+            try:
+                if "create_all" in py_file.read_text(encoding="utf-8", errors="ignore"):
+                    offending_files.append(str(py_file))
+            except OSError:
+                pass
 
     assert not offending_files, (
         "Found 'create_all' in production source files — "

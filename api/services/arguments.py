@@ -17,7 +17,7 @@ PIPE-11 policy:
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.models.models import Argument, Case, CaseArgument, Utterance
+from api.models.models import Argument, Case, CaseArgument, PipelineRun, PipelineRunStatus, Utterance
 
 
 async def get_argument_with_utterances(
@@ -77,11 +77,15 @@ async def get_argument_with_utterances(
     if lead_case is None:
         return None
 
-    # --- Step 3: Find the latest pipeline_run_id for this argument ----------
-    # Users always see the output of the most recent parse run (PIPE-11).
+    # --- Step 3: Find the latest completed parse run for this argument ------
+    # Users always see the output of the most recent COMPLETED parse run (PIPE-11).
+    # Use the pipeline_runs table (not MAX on utterances) to avoid surfacing
+    # partial writes from a crashed run with a higher ID.
     max_run_result = await db.execute(
-        select(func.max(Utterance.pipeline_run_id)).where(
-            Utterance.argument_id == argument_id
+        select(func.max(PipelineRun.id)).where(
+            PipelineRun.argument_id == argument_id,
+            PipelineRun.step == "parse",
+            PipelineRun.status == PipelineRunStatus.COMPLETED,
         )
     )
     max_run_id = max_run_result.scalar_one_or_none()

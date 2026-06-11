@@ -50,7 +50,7 @@
 					color: {labelColor};
 				"
 			>
-				{utterance.raw_speaker_label}
+				{utterance.raw_speaker_label ?? ''}
 			</span>
 		</div>
 

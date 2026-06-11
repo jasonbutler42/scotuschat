@@ -25,7 +25,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Depends on**: Nothing (first phase)
 **Requirements**: INFRA-01, INFRA-02, INFRA-03, PIPE-01, PIPE-02, PIPE-03, PIPE-04, PIPE-05, PIPE-06, PIPE-10, PIPE-11, API-01, UI-01, UI-02, UI-03
 **Success Criteria** (what must be TRUE):
-  1. Operator runs the ingest CLI command with a PDF URL and the database contains case, argument, and pipeline_run records with status `pending`
+  1. Operator runs the ingest CLI command with a PDF URL and the database contains case, argument, and pipeline_run records with status `completed` (ingest is synchronous — the run completes immediately)
   2. Operator runs the parse CLI command and the database contains ordered utterance rows with `pipeline_run_id` set, `is_stage_direction` correctly classified, and `person_id` null
   3. Re-running ingest or parse produces new rows linked to a new `pipeline_run_id`; prior run rows are not deleted
   4. `GET /arguments/{id}/utterances` returns ordered utterances for the hand-picked case in a running FastAPI server

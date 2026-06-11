@@ -11,8 +11,8 @@ See: .planning/PROJECT.md (updated 2026-06-11)
 
 Phase: 1 of 4 (Foundation + Proof of Concept)
 Plan: 5 of 5 in current phase (01-05 complete — FastAPI endpoint + SvelteKit chat view: config, async engine, schemas, service, router, main.py, integration tests, +page.server.ts, +page.svelte full chat layout)
-Status: Phase 1 Complete — Ready for Phase 2
-Last activity: 2026-06-11 — Plan 01-05 executed: api/core/config.py, api/core/database.py, api/schemas/utterance.py, api/services/arguments.py, api/routers/arguments.py, api/main.py, api/tests/test_arguments.py, +page.server.ts (argument metadata), +page.svelte (full UI-SPEC chat layout)
+Status: Phase 1 Complete — Human browser verification pending (visual rendering)
+Last activity: 2026-06-11 — Code review (5 critical, 8 warnings, 3 info) + 5 critical fixes applied + VERIFICATION.md written. All hard constraints satisfied. Remaining: human navigates to localhost:5173/cases/obergefell-v-hodges/arguments/1 after ingest+parse to confirm two-sided chat renders correctly.
 
 Progress: [█████░░░░░] 50%
 
@@ -69,7 +69,7 @@ Recent decisions affecting current work:
 - 01-05: expire_on_commit=False on async_sessionmaker — prevents MissingGreenlet on ORM attribute access after commit in async context
 - 01-05: Lifespan context manager (not @app.on_event) — @app.on_event deprecated in FastAPI 0.93+
 - 01-05: Service returns dict, router creates Pydantic response — clean ORM/schema separation
-- 01-05: max(pipeline_run_id) filter in service — always shows most recent parse run per PIPE-11 no-delete policy
+- 01-05: service uses MAX(pipeline_runs.id) WHERE step='parse' AND status='completed' — not MAX(utterances.pipeline_run_id), to avoid surfacing partial writes from crashed runs (CR-04 fix)
 - 01-05: formatDate appends T00:00:00 before new Date() — forces local-date parsing, avoids UTC midnight roll-back west of UTC
 
 ### Pending Todos
@@ -91,5 +91,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-06-11
-Stopped at: Phase 1, Plan 05 complete — FastAPI endpoint + SvelteKit chat view (api/core/config.py, database.py, schemas/utterance.py, services/arguments.py, routers/arguments.py, main.py, tests/test_arguments.py, +page.server.ts + +page.svelte full chat layout). Phase 1 complete — ready for Phase 2.
+Stopped at: Phase 1 code review + 5 critical fixes + verification. VERIFICATION.md written (status: human_needed — awaiting browser test of live chat rendering). When human test passes, Phase 1 is fully complete and Phase 2 (Speaker Resolution) planning can begin.
 Resume file: None

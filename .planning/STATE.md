@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-06-11)
 ## Current Position
 
 Phase: 1 of 4 (Foundation + Proof of Concept)
-Plan: 4 of 5 in current phase (01-04 complete — pipeline parse command: pdfplumber extractor + rule-based state machine + instructor/tenacity LLM pass + utterance writes)
-Status: Executing
-Last activity: 2026-06-11 — Plan 01-04 executed: pipeline/parser/extractor.py (spike copy), pipeline/parser/state_machine.py (spike copy + F04 + cascade fix + assign_side), pipeline/parser/llm_pass.py (instructor+tenacity two-layer retry), pipeline/commands/parse.py (full impl replacing stub), test_parse.py + test_pipeline_run.py
+Plan: 5 of 5 in current phase (01-05 complete — FastAPI endpoint + SvelteKit chat view: config, async engine, schemas, service, router, main.py, integration tests, +page.server.ts, +page.svelte full chat layout)
+Status: Phase 1 Complete — Ready for Phase 2
+Last activity: 2026-06-11 — Plan 01-05 executed: api/core/config.py, api/core/database.py, api/schemas/utterance.py, api/services/arguments.py, api/routers/arguments.py, api/main.py, api/tests/test_arguments.py, +page.server.ts (argument metadata), +page.svelte (full UI-SPEC chat layout)
 
-Progress: [████░░░░░░] 40%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
@@ -27,10 +27,10 @@ Progress: [████░░░░░░] 40%
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01-foundation-proof-of-concept | 4 | 170 min | 43 min |
+| 01-foundation-proof-of-concept | 5 | 215 min | 43 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (45 min), 01-02 (35 min), 01-03 (45 min), 01-04 (45 min)
+- Last 5 plans: 01-01 (45 min), 01-02 (35 min), 01-03 (45 min), 01-04 (45 min), 01-05 (45 min)
 - Trend: Stable ~43 min/plan
 
 *Updated after each plan completion*
@@ -65,6 +65,12 @@ Recent decisions affecting current work:
 - 01-04: assign_side() deterministic rule-based (BENCH_RE/ADVOCATE_RE) — resolves D-09 Open Question #3
 - 01-04: LLM pass falls back to rule-based output on failure — resilience over hard-fail for Phase 1 PoC
 - 01-04: AsyncAnthropic(max_retries=0) + tenacity outer retry — prevents triple-retry on transient errors (Pitfall 4)
+- 01-05: statement_cache_size=0 in connect_args dict (asyncpg connection args) — not top-level engine kwarg; top-level silently has no effect under PgBouncer Transaction mode
+- 01-05: expire_on_commit=False on async_sessionmaker — prevents MissingGreenlet on ORM attribute access after commit in async context
+- 01-05: Lifespan context manager (not @app.on_event) — @app.on_event deprecated in FastAPI 0.93+
+- 01-05: Service returns dict, router creates Pydantic response — clean ORM/schema separation
+- 01-05: max(pipeline_run_id) filter in service — always shows most recent parse run per PIPE-11 no-delete policy
+- 01-05: formatDate appends T00:00:00 before new Date() — forces local-date parsing, avoids UTC midnight roll-back west of UTC
 
 ### Pending Todos
 
@@ -85,5 +91,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-06-11
-Stopped at: Phase 1, Plan 04 complete — pipeline parse command (pipeline/parser/extractor.py, state_machine.py, llm_pass.py, pipeline/commands/parse.py full impl, test_parse.py + test_pipeline_run.py). Ready to execute Plan 05 (FastAPI endpoint + SvelteKit chat view).
+Stopped at: Phase 1, Plan 05 complete — FastAPI endpoint + SvelteKit chat view (api/core/config.py, database.py, schemas/utterance.py, services/arguments.py, routers/arguments.py, main.py, tests/test_arguments.py, +page.server.ts + +page.svelte full chat layout). Phase 1 complete — ready for Phase 2.
 Resume file: None

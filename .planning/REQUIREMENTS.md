@@ -27,15 +27,15 @@
 
 ### API
 
-- [ ] **API-01**: `GET /arguments/{id}/utterances` — returns ordered utterances for an argument, each with speaker attribution (`person_id`, name, role, side)
+- [x] **API-01**: `GET /arguments/{id}/utterances` — returns ordered utterances for an argument, each with speaker attribution (`person_id`, name, role, side) — *Completed: Phase 1, Plan 05 (api/routers/arguments.py + api/services/arguments.py + api/schemas/utterance.py)*
 - [ ] **API-02**: `GET /cases` — returns list of available cases with basic metadata (name, docket number, term year, argued date)
 - [ ] **API-03**: `GET /people/{id}` — returns person record (name, role, `photo_url`)
 
 ### Chat UI
 
-- [ ] **UI-01**: User can read an oral argument as a two-sided chat — Justices on the bench side, advocates on the advocate side
-- [ ] **UI-02**: Each utterance bubble shows the speaker's name and role label
-- [ ] **UI-03**: Stage directions (e.g. "(Laughter.)") render as a distinct visual component between bubbles, not as speech bubbles
+- [x] **UI-01**: User can read an oral argument as a two-sided chat — Justices on the bench side, advocates on the advocate side — *Completed: Phase 1, Plan 05 (ChatBubble side alignment in +page.svelte)*
+- [x] **UI-02**: Each utterance bubble shows the speaker's name and role label — *Completed: Phase 1, Plan 05 (raw_speaker_label displayed in ChatBubble; person_id null at Phase 1)*
+- [x] **UI-03**: Stage directions (e.g. "(Laughter.)") render as a distinct visual component between bubbles, not as speech bubbles — *Completed: Phase 1, Plan 05 (is_stage_direction → StageDirection component in +page.svelte)*
 - [ ] **UI-04**: Argument header shows case name, docket number, date argued, and the full speaker roster
 - [ ] **UI-05**: Each speaker has an avatar; falls back to styled initials when no `photo_url` is available
 - [ ] **UI-06**: Arguments are accessible at stable, shareable URLs (`/cases/{slug}/arguments/{id}`) that render correctly on page refresh (SSR)

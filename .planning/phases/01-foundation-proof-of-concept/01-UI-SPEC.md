@@ -75,22 +75,21 @@ The palette is derived from the project owner's spike viewer (`viewer.html`) whi
 | Text primary | `#e2e8f0` | Utterance body text |
 | Text secondary | `#94a3b8` | Speaker label on bench side; sequence number; descriptive metadata |
 | Text advocate | `#93c5fd` | Speaker label on advocate side |
-| Accent (10%) | `#2563eb` | Left border stripe on bench-side bubbles only |
+| Accent (10%) | n/a | No accent color used for side differentiation — position alone distinguishes sides |
 | Stage accent | `#d97706` | Left border stripe on stage direction component only |
 | Destructive | n/a | No destructive actions in Phase 1 |
 
 **Apolitical framing enforcement:**
 
-The bench side and advocate side use identical bubble backgrounds (`#1e293b`), identical border colors (`#334155`), and identical text weight. The sole differentiation between sides is:
+The bench side and advocate side use identical bubble backgrounds (`#1e293b`), identical border colors (`#334155`), identical left border stripes (`#334155`), and identical text weight. The sole differentiation between sides is:
 1. Layout position (bench bubbles are right-aligned; advocate bubbles are left-aligned)
 2. Speaker label color: bench labels use `#94a3b8` (slate); advocate labels use `#93c5fd` (blue-200). These are the same visual weight — one is warm-neutral, the other is cool-neutral. Neither is "prominent."
-3. Left border accent: both sides have a 3px left border. Bench uses `#2563eb` (blue-600); advocate uses `#334155` (slate-700, the default border color). This is a subtle position indicator, not a prominence marker.
+
+No accent color is applied to either side's bubble border. Position is the primary differentiator; label color is secondary and text-level only.
 
 **Phase 4 accessibility note:** `#94a3b8` on `#1e293b` achieves approximately 3.8:1 contrast — below WCAG AA for body text (4.5:1). Speaker labels are 13px at weight 600 — treated as "large text" (3:1 threshold), which this passes. Full WCAG AA audit is scoped to Phase 4 (A11Y-01). Phase 1 is a PoC.
 
-Accent reserved for: left border stripe on bench-side chat bubbles. No other use.
-
-Stage accent reserved for: left border stripe on stage direction component. No other use.
+Stage accent reserved for: left border stripe on stage direction component only (`#d97706`). No other use.
 
 ---
 
@@ -114,7 +113,7 @@ interface UtteranceProps {
 ```
 
 **Layout rules:**
-- `side === 'BENCH'`: bubble is right-aligned. Max-width 72% of chat column. Left border `#2563eb` 3px.
+- `side === 'BENCH'`: bubble is right-aligned. Max-width 72% of chat column. Left border `#334155` 3px.
 - `side === 'ADVOCATE'`: bubble is left-aligned. Max-width 72% of chat column. Left border `#334155` 3px.
 - `side === 'UNKNOWN'`: treat as advocate (left-aligned). This should not occur for Phase 1 Obergefell data.
 - Bubble background: `#1e293b` regardless of side.
@@ -243,7 +242,7 @@ Phase 1 has no interactive elements. The only text requiring decisions is the st
 - Bench and advocate bubbles MUST use identical background colors. No exceptions.
 - Bench and advocate bubbles MUST use identical font sizes and font weights for utterance text. No exceptions.
 - Neither side may have a larger bubble, wider max-width, elevated visual depth (heavier shadow), or any design element that implies hierarchical priority.
-- Color differences between sides are limited to: (a) speaker label color (both low-contrast, neither bright/prominent), (b) left border accent (bench gets a subtle blue stripe; advocate gets the neutral border color). Both are positional markers only.
+- Color differences between sides are limited to: speaker label color only (bench `#94a3b8`, advocate `#93c5fd` — both low-contrast, neither bright/prominent). No border accent differentiates sides.
 - Side differentiation MUST be conveyed by layout position alone when viewed without color (per A11Y-03, which must be true at Phase 4 and is being architected correctly from Phase 1).
 - Do NOT add any badge, icon, tag, or label that says "Justice" vs. "Counsel" — the raw speaker label already conveys role. Phase 2 adds structured role labels when `person_id` is resolved.
 

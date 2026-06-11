@@ -1,0 +1,39 @@
+# Environment variables — never commit secrets
+.env
+
+# Postgres data directory (lives inside repo, gitignored — easy to nuke and recreate)
+data/pgdata/
+
+# Raw PDF files — immutable source documents, not tracked in git
+data/pdfs/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+
+# SvelteKit
+app/.svelte-kit/
+app/build/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo

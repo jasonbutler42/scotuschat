@@ -15,15 +15,15 @@
 
 - [x] **PIPE-01**: Operator can run Step 1 (Ingest) — provide a transcript PDF URL; pipeline downloads it, stores it as an immutable local file, creates case/argument/pipeline_run records — *Completed: Phase 1, Plan 03 (pipeline/commands/ingest.py; status=COMPLETED; idempotent case/argument/case_arguments/pipeline_run rows)*
 - [x] **PIPE-02**: Raw source PDFs are never modified after ingest; all derived data is pipeline output and can be regenerated — *Completed: Phase 1, Plan 03 (pdf_path.write_bytes() only when file does not exist; skip on re-run)*
-- [ ] **PIPE-03**: Operator can run Step 2 (Parse) — pipeline extracts raw text from PDF via pdfplumber, submits to Claude API with structured prompt, receives JSON array of utterances, writes to database with `person_id` null
-- [ ] **PIPE-04**: Parse step records `pipeline_run_id` and `strategy` name on each utterance row
-- [ ] **PIPE-05**: Parse step correctly classifies stage directions (`is_stage_direction = true`) separately from spoken content
-- [ ] **PIPE-06**: Parse step classifies LLM failures as transient vs. structural before retrying; maximum 2 retries on structural failures; failure reason recorded on `pipeline_run`
+- [x] **PIPE-03**: Operator can run Step 2 (Parse) — pipeline extracts raw text from PDF via pdfplumber, submits to Claude API with structured prompt, receives JSON array of utterances, writes to database with `person_id` null — *Completed: Phase 1, Plan 04 (pipeline/parser/extractor.py + state_machine.py + llm_pass.py + pipeline/commands/parse.py)*
+- [x] **PIPE-04**: Parse step records `pipeline_run_id` and `strategy` name on each utterance row — *Completed: Phase 1, Plan 04 (pipeline_run_id=run.id and strategy=run.strategy on every Utterance row)*
+- [x] **PIPE-05**: Parse step correctly classifies stage directions (`is_stage_direction = true`) separately from spoken content — *Completed: Phase 1, Plan 04 (rule-based STAGE_DIR_RE + TERMINAL_STAGE_RE in state_machine.py)*
+- [x] **PIPE-06**: Parse step classifies LLM failures as transient vs. structural before retrying; maximum 2 retries on structural failures; failure reason recorded on `pipeline_run` — *Completed: Phase 1, Plan 04 (tenacity outer=transient, instructor max_retries=2=structural; InstructorRetryException/BadRequestError not in tenacity retry set)*
 - [ ] **PIPE-07**: Operator can run Step 3 (Resolve) — pipeline attempts to match raw speaker labels to `people` records using LLM-assisted matching with case metadata as context
 - [ ] **PIPE-08**: Resolve step uses a pre-seeded `speaker_alias` table to handle surname-only and role-only labels (e.g. "MR. SMITH", "GENERAL", "CHIEF JUSTICE")
 - [ ] **PIPE-09**: Resolve step gates low-confidence matches as `needs_review` on `pipeline_run`; never auto-commits ambiguous matches; never creates new `people` records automatically
-- [ ] **PIPE-10**: `pipeline_run` status state machine is enforced: `pending → running → completed | failed | needs_review`
-- [ ] **PIPE-11**: Re-running any pipeline step produces new rows linked to the new `pipeline_run_id`; prior run rows are not deleted until the new run is explicitly promoted
+- [x] **PIPE-10**: `pipeline_run` status state machine is enforced: `pending → running → completed | failed | needs_review` — *Completed: Phase 1, Plan 04 (pending→running at step start, running→completed on success, running→failed on error with failure_reason)*
+- [x] **PIPE-11**: Re-running any pipeline step produces new rows linked to the new `pipeline_run_id`; prior run rows are not deleted until the new run is explicitly promoted — *Completed: Phase 1, Plan 04 (no DELETE on Utterance rows; every row has pipeline_run_id linking to its producing run)*
 
 ### API
 

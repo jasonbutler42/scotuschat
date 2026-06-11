@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-06-11)
 ## Current Position
 
 Phase: 1 of 4 (Foundation + Proof of Concept)
-Plan: 3 of 5 in current phase (01-03 complete — pipeline ingest command + test infrastructure)
+Plan: 4 of 5 in current phase (01-04 complete — pipeline parse command: pdfplumber extractor + rule-based state machine + instructor/tenacity LLM pass + utterance writes)
 Status: Executing
-Last activity: 2026-06-11 — Plan 01-03 executed: pipeline/db.py (async engine), pipeline/__main__.py (argparse CLI), pipeline/commands/ingest.py (SSRF-validated PDF download + DB records), conftest.py + test_ingest.py (9 tests, URL validation works without DB)
+Last activity: 2026-06-11 — Plan 01-04 executed: pipeline/parser/extractor.py (spike copy), pipeline/parser/state_machine.py (spike copy + F04 + cascade fix + assign_side), pipeline/parser/llm_pass.py (instructor+tenacity two-layer retry), pipeline/commands/parse.py (full impl replacing stub), test_parse.py + test_pipeline_run.py
 
-Progress: [███░░░░░░░] 30%
+Progress: [████░░░░░░] 40%
 
 ## Performance Metrics
 
@@ -27,11 +27,11 @@ Progress: [███░░░░░░░] 30%
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01-foundation-proof-of-concept | 3 | 125 min | 42 min |
+| 01-foundation-proof-of-concept | 4 | 170 min | 43 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (45 min), 01-02 (35 min), 01-03 (45 min)
-- Trend: Stable ~40 min/plan
+- Last 5 plans: 01-01 (45 min), 01-02 (35 min), 01-03 (45 min), 01-04 (45 min)
+- Trend: Stable ~43 min/plan
 
 *Updated after each plan completion*
 
@@ -60,6 +60,11 @@ Recent decisions affecting current work:
 - 01-03: Lazy engine creation in get_engine() — DATABASE_URL not required at import time, only at coroutine execution time
 - 01-03: PipelineRunStatus.COMPLETED set directly for ingest (synchronous op) — pending→running→completed state machine used by parse step (Plan 04)
 - 01-03: parse.py stub created in Plan 03 to satisfy __main__.py import — full implementation in Plan 04
+- 01-04: Two-variable section hint design (pending_section_hint + current_section_hint) prevents cascade (Pitfall 3)
+- 01-04: F04 fix — ON\s+BEHALF\s+OF added to TOC_SECTION_RE (handles Obergefell "ON BEHALF OF" header variant)
+- 01-04: assign_side() deterministic rule-based (BENCH_RE/ADVOCATE_RE) — resolves D-09 Open Question #3
+- 01-04: LLM pass falls back to rule-based output on failure — resilience over hard-fail for Phase 1 PoC
+- 01-04: AsyncAnthropic(max_retries=0) + tenacity outer retry — prevents triple-retry on transient errors (Pitfall 4)
 
 ### Pending Todos
 
@@ -80,5 +85,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-06-11
-Stopped at: Phase 1, Plan 03 complete — pipeline ingest command (pipeline/db.py, pipeline/__main__.py, pipeline/commands/ingest.py, test infrastructure with conftest.py + test_ingest.py). Ready to execute Plan 04 (pipeline parse step).
+Stopped at: Phase 1, Plan 04 complete — pipeline parse command (pipeline/parser/extractor.py, state_machine.py, llm_pass.py, pipeline/commands/parse.py full impl, test_parse.py + test_pipeline_run.py). Ready to execute Plan 05 (FastAPI endpoint + SvelteKit chat view).
 Resume file: None

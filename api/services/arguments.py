@@ -17,7 +17,7 @@ PIPE-11 policy:
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.models.models import Argument, Case, CaseArgument, PipelineRun, PipelineRunStatus, Utterance
+from api.models.models import Argument, Case, CaseArgument, Person, PipelineRun, PipelineRunStatus, Role, Utterance
 
 
 async def get_argument_with_utterances(
@@ -91,17 +91,35 @@ async def get_argument_with_utterances(
     max_run_id = max_run_result.scalar_one_or_none()
 
     # --- Step 4: Fetch utterances for that run, ordered by sequence --------
-    utterances: list[Utterance] = []
+    # JOIN to people + roles to embed speaker_name and speaker_role (D-10).
+    # Returns Row tuples (Utterance, speaker_name, speaker_role) — not scalars.
+    # Build dicts explicitly: from_attributes=True cannot pull labeled columns
+    # from SQLAlchemy Row tuples (Pitfall 6).
+    utterances: list[dict] = []
     if max_run_id is not None:
         utterances_result = await db.execute(
-            select(Utterance)
+            select(
+                Utterance,
+                Person.full_name.label("speaker_name"),
+                Role.name.label("speaker_role"),
+            )
+            .outerjoin(Person, Utterance.person_id == Person.id)
+            .outerjoin(Role, Person.role_id == Role.id)
             .where(
                 Utterance.argument_id == argument_id,
                 Utterance.pipeline_run_id == max_run_id,
             )
             .order_by(Utterance.sequence.asc())
         )
-        utterances = list(utterances_result.scalars().all())
+        rows = utterances_result.all()
+        utterances = [
+            {
+                **{c.key: getattr(utterance, c.key) for c in utterance.__table__.columns},
+                "speaker_name": speaker_name,
+                "speaker_role": speaker_role,
+            }
+            for utterance, speaker_name, speaker_role in rows
+        ]
 
     # --- Step 5: Assemble the response dict --------------------------------
     return {

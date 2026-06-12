@@ -4,6 +4,8 @@
 	const isBench = utterance.side === 'BENCH';
 	// BENCH: right-aligned; ADVOCATE or UNKNOWN: left-aligned (apolitical framing — identical backgrounds)
 	const labelColor = isBench ? '#94a3b8' : '#93c5fd';
+	const displayName = utterance.speaker_name ?? utterance.raw_speaker_label ?? '';
+	const displayRole = utterance.speaker_role ?? null;
 </script>
 
 <div
@@ -50,8 +52,8 @@
 					color: {labelColor};
 				"
 			>
-				{utterance.raw_speaker_label ?? ''}
-			</span>
+				{displayName}
+			</span>{#if displayRole}<span style="font-size: 11px; color: #475569;">{displayRole}</span>{/if}
 		</div>
 
 		<!-- Utterance text -->

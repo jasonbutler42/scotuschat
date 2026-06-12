@@ -32,6 +32,8 @@ class UtteranceResponse(BaseModel):
     person_id: Optional[int] = None  # null at Phase 1; populated by Resolve step
     strategy: str  # "rule_based" | "llm_corrective"
     pipeline_run_id: int  # which parse run produced this row (PIPE-04)
+    speaker_name: Optional[str] = None   # Phase 2: resolved from people table
+    speaker_role: Optional[str] = None   # Phase 2: resolved from roles table
 
     model_config = {"from_attributes": True}
 

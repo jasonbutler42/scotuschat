@@ -26,6 +26,8 @@ import asyncio
 
 from pipeline.commands.ingest import run_ingest
 from pipeline.commands.parse import run_parse
+from pipeline.commands.resolve import run_resolve
+from pipeline.commands.seed_aliases import run_seed_aliases
 
 
 def main() -> None:
@@ -105,12 +107,49 @@ def main() -> None:
         help="Parse but do not write utterance rows to the DB",
     )
 
+    # -----------------------------------------------------------------------
+    # resolve subcommand
+    # -----------------------------------------------------------------------
+    resolve_p = sub.add_parser(
+        "resolve",
+        help="Interactively resolve speaker labels for a parse run",
+        description=(
+            "For each unique speaker label in a parse run, look up the alias table "
+            "or prompt the operator to map it to a Person record."
+        ),
+    )
+    resolve_p.add_argument(
+        "--run-id",
+        required=True,
+        type=int,
+        help="pipeline_run.id from a prior PARSE step (step='parse', status=COMPLETED)",
+    )
+
+    # -----------------------------------------------------------------------
+    # seed-aliases subcommand
+    # -----------------------------------------------------------------------
+    sub.add_parser(
+        "seed-aliases",
+        help="Pre-seed Justice people records and speaker_alias rows",
+        description=(
+            "Insert roles, people, and speaker_alias rows for all current and "
+            "relevant historical SCOTUS Justices. Idempotent — safe to re-run."
+        ),
+    )
+
     args = parser.parse_args()
 
     if args.command == "ingest":
         asyncio.run(run_ingest(args))
     elif args.command == "parse":
         asyncio.run(run_parse(args))
+    elif args.command == "resolve":
+        try:
+            asyncio.run(run_resolve(args))
+        except KeyboardInterrupt:
+            print("Resolve interrupted.")
+    elif args.command == "seed-aliases":
+        asyncio.run(run_seed_aliases(args))
 
 
 if __name__ == "__main__":

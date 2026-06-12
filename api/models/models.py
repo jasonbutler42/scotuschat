@@ -1,7 +1,7 @@
 """
 SQLAlchemy ORM models for SCOTUS Chat.
 
-All 10 tables are defined here. Alembic is the sole DDL authority —
+All 11 tables are defined here. Alembic is the sole DDL authority —
 schema is managed exclusively via migrations in alembic/versions/.
 """
 
@@ -244,3 +244,20 @@ class Utterance(Base):
         Index("ix_utterances_argument_id", "argument_id"),
         Index("ix_utterances_pipeline_run_id", "pipeline_run_id"),
     )
+
+
+# ---------------------------------------------------------------------------
+# Table 11: speaker_alias
+# Maps normalized speaker labels to resolved people rows.
+# Used by the Resolve step to match raw transcript labels to known people.
+# ---------------------------------------------------------------------------
+
+
+class SpeakerAlias(Base):
+    __tablename__ = "speaker_alias"
+
+    id = Column(Integer, primary_key=True)
+    normalized_label = Column(String(300), nullable=False, unique=True)
+    person_id = Column(Integer, ForeignKey("people.id"), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    notes = Column(Text, nullable=True)

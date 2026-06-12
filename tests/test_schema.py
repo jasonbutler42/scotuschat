@@ -2,7 +2,7 @@
 Smoke tests for the database schema.
 
 These tests verify:
-1. All 10 expected tables exist after running `alembic upgrade head`
+1. All 11 expected tables exist after running `alembic upgrade head`
 2. The utterances unique constraint is in place
 3. No Base.metadata.create_all() call exists anywhere in the codebase
 
@@ -62,13 +62,14 @@ EXPECTED_TABLES = {
     "argument_participants",
     "pipeline_runs",
     "utterances",
+    "speaker_alias",
 }
 
 
 @requires_db
 @pytest.mark.asyncio
 async def test_all_tables_exist(db_conn):
-    """All 10 tables must exist in the public schema after alembic upgrade head."""
+    """All 11 tables must exist in the public schema after alembic upgrade head."""
     rows = await db_conn.fetch(
         """
         SELECT table_name

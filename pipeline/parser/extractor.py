@@ -1,4 +1,4 @@
-"""
+﻿"""
 PDF text extractor for SCOTUS oral argument transcripts.
 
 Copied exactly from spike findings:
@@ -85,15 +85,19 @@ def extract_pages(pdf_path: Path) -> list[str]:
                 if HEADER_RE.match(line) or PAGE_NUM_RE.match(line):
                     continue
                 lines.append(line)
-            pages.append("\n".join(lines))
+            pages.append(normalize_text("\n".join(lines)))
     return pages
 
 
 def normalize_text(text: str) -> str:
     """
-    Normalize soft hyphens (U+00AD) to double-dashes before DB write.
+    Normalize encoding artifacts from pdfplumber before further processing.
 
-    Soft hyphens appear in some PDF exports and must be normalized to
-    prevent downstream display issues (F11 from spike failure taxonomy).
+    pdfplumber sometimes outputs the soft hyphen (U+00AD) or its HTML entity
+    form (&shy;) where the original PDF has an em dash (U+2014). Both forms
+    are replaced with a proper em dash -- the character used in SCOTUS transcripts
+    to mark interrupted or incomplete speech.
     """
-    return text.replace("­", "--").strip()   # soft hyphen → double dash (F11)
+    text = text.replace("­", "—")  # soft hyphen (U+00AD) -> em dash (U+2014)
+    text = text.replace("&shy;", "—")   # HTML entity string -> em dash
+    return text

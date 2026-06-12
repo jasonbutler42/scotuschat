@@ -149,3 +149,40 @@ async def test_utterances_ordered_by_sequence(client: AsyncClient) -> None:
     assert sequences == sorted(sequences), (
         "Utterances must be ordered by sequence ASC"
     )
+
+
+# ---------------------------------------------------------------------------
+# Test 5: Utterances embed speaker_name after resolve — requires real DB
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL with resolved data")
+async def test_utterances_have_speaker_name_after_resolve(client: AsyncClient) -> None:
+    """
+    GET /arguments/1/utterances — utterances must include speaker_name and
+    speaker_role keys in the response after the Resolve step has run.
+
+    Both fields may be null for unresolved utterances (e.g. stage directions),
+    but the keys must always be present in every utterance object (D-10).
+    At least one utterance with a resolved person_id must have a non-null
+    speaker_name.
+    """
+    response = await client.get("/arguments/1/utterances")
+    assert response.status_code == 200
+
+    utterances = response.json()["utterances"]
+    assert len(utterances) > 0, "utterances list must not be empty"
+
+    # Every utterance must have speaker_name and speaker_role keys (D-10 contract)
+    for u in utterances:
+        assert "speaker_name" in u, f"Utterance {u.get('id')} missing speaker_name key"
+        assert "speaker_role" in u, f"Utterance {u.get('id')} missing speaker_role key"
+
+    # At least one utterance with a resolved person_id must have a non-null speaker_name
+    resolved = [u for u in utterances if u.get("person_id") is not None]
+    if resolved:
+        names = [u["speaker_name"] for u in resolved if u["speaker_name"] is not None]
+        assert len(names) > 0, (
+            "At least one resolved utterance must have a non-null speaker_name"
+        )

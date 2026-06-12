@@ -40,6 +40,16 @@ from pipeline.parser.llm_pass import parse_with_llm
 from pipeline.parser.state_machine import parse_transcript
 
 
+def _normalize_dashes(text: str) -> str:
+    # " -- " (interruption marker) → " — " (em dash with spaces)
+    text = text.replace(' -- ', ' — ')
+    # All remaining en dashes, em dashes, soft hyphens → plain hyphen
+    text = text.replace('–', '-')
+    text = text.replace('—', '-')
+    text = text.replace('­', '-')
+    return text
+
+
 async def run_parse(args) -> None:
     """
     Parse a previously ingested transcript PDF into utterance rows.
@@ -60,25 +70,27 @@ async def run_parse(args) -> None:
     """
     async with get_session() as session:
         # -------------------------------------------------------------------
-        # Step 1: Load pipeline_run from DB
+        # Step 1: Load the source run to get argument_id and pdf_path
         # -------------------------------------------------------------------
-        run: Optional[PipelineRun] = await session.get(PipelineRun, args.run_id)
-        if run is None:
+        source_run: Optional[PipelineRun] = await session.get(PipelineRun, args.run_id)
+        if source_run is None:
             raise ValueError(f"No pipeline_run with id={args.run_id}")
 
-        if run.status not in (PipelineRunStatus.PENDING,):
-            print(
-                f"Warning: Run {run.id} already has status '{run.status.value}'; "
-                f"re-running will create new utterance rows (PIPE-11)."
-            )
-
         # -------------------------------------------------------------------
-        # Step 2: Transition pending → running (PIPE-10)
+        # Step 2: Create a fresh PipelineRun for this parse attempt (PIPE-11)
+        # Each invocation gets its own pipeline_run_id so re-runs produce new
+        # utterance rows without conflicting with prior runs.
         # -------------------------------------------------------------------
-        run.step = "parse"           # mark this run as a parse run for API queries
-        run.status = PipelineRunStatus.RUNNING
-        run.strategy = "rule_based"  # default; may be updated after LLM pass
+        run = PipelineRun(
+            argument_id=source_run.argument_id,
+            step="parse",
+            status=PipelineRunStatus.RUNNING,
+            strategy="rule_based",
+            pdf_path=source_run.pdf_path,
+        )
+        session.add(run)
         await session.flush()
+        print(f"Created parse pipeline_run id={run.id} (argument_id={run.argument_id})")
 
         # -------------------------------------------------------------------
         # Step 3: Extract pages from PDF
@@ -97,6 +109,7 @@ async def run_parse(args) -> None:
 
         print(f"Extracting pages from {pdf_path} ...")
         pages = extract_pages(pdf_path)
+        pages = [_normalize_dashes(p) for p in pages]
         print(f"Extracted {len(pages)} argument pages.")
 
         # -------------------------------------------------------------------

@@ -75,6 +75,7 @@ async def run_parse(args) -> None:
         # -------------------------------------------------------------------
         # Step 2: Transition pending → running (PIPE-10)
         # -------------------------------------------------------------------
+        run.step = "parse"           # mark this run as a parse run for API queries
         run.status = PipelineRunStatus.RUNNING
         run.strategy = "rule_based"  # default; may be updated after LLM pass
         await session.flush()

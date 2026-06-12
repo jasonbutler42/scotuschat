@@ -79,17 +79,6 @@ class ParseResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# LLM client initialization
-# ---------------------------------------------------------------------------
-# AsyncAnthropic(max_retries=0) — tenacity owns transient retries; avoid
-# double-retry (Pitfall 4 prevention).
-aclient = instructor.from_anthropic(
-    anthropic.AsyncAnthropic(max_retries=0),
-    mode=instructor.Mode.TOOLS,
-)
-
-
-# ---------------------------------------------------------------------------
 # Inner LLM call — instructor handles Pydantic schema validation retries
 # ---------------------------------------------------------------------------
 
@@ -116,6 +105,12 @@ async def call_llm_parse(pages_text: str) -> ParseResponse:
         anthropic.RateLimitError: Rate limited (HTTP 429) — caught by outer tenacity.
         anthropic.APIConnectionError: Network error — caught by outer tenacity.
     """
+    # Lazy init — keeps import side-effect-free when no API key is present.
+    # AsyncAnthropic(max_retries=0): tenacity owns transient retries (Pitfall 4).
+    aclient = instructor.from_anthropic(
+        anthropic.AsyncAnthropic(max_retries=0),
+        mode=instructor.Mode.ANTHROPIC_TOOLS,
+    )
     return await aclient.messages.create(
         model="claude-haiku-4-5-20251001",
         max_tokens=8192,

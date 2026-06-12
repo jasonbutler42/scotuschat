@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-06-11)
 ## Current Position
 
 Phase: 3 of 4 (Full UI)
-Plan: 3 of 4 in current phase (03-03 complete)
-Status: Phase 3 in progress — Plan 03-03 (ChatBubble avatar circle and alignment flip) complete
-Last activity: 2026-06-12 — Plan 03-03 complete: ChatBubble.svelte extended with 32px avatar circle (bench #94a3b8, advocate #93c5fd, initials text #0f1117); bench/advocate alignment flipped per D-05 (bench LEFT flex-start, advocate RIGHT flex-end).
+Plan: 4 of 4 in current phase (all plans complete — pending verification)
+Status: Phase 3 execution complete — all 4 plans done; awaiting verification
+Last activity: 2026-06-12 — Plan 03-04 complete: argument view restructured to CSS Grid (180px rail + 1fr chat); SectionRail.svelte created with IntersectionObserver scroll-spy and browser guard; speaker roster added to argument header (bench left, advocates right, both #94a3b8 — apolitical); section anchor IDs on utterances; mobile responsive breakpoint at 768px.
 
-Progress: [████████░░] 80%
+Progress: [██████████] 95%
 
 ## Performance Metrics
 
@@ -83,6 +83,10 @@ Recent decisions affecting current work:
 - 03-03: avatarBg matches labelColor logic (bench #94a3b8, advocate #93c5fd) — consistent per D-08
 - 03-03: Avatar initials use plain const IIFE (not $derived) — value fixed at component instantiation from $props(), no reactive recomputation needed
 - 03-03: Avatar font-size 12px/600 is the UI-SPEC documented exception — not subject to 4-size type scale
+- 03-04: Section anchor IDs placed on all utterances with non-null section_hint (not just first) — harmless over-annotation; SectionRail only links to first occurrence's ID from sectionAnchors derived list
+- 03-04: Roster derived client-side from utterances via $derived.by() — no new API endpoint (D-12); avoids N+1 requests
+- 03-04: Header max-width widened 860px → 1200px to accommodate 180px rail + 1fr chat column
+- 03-04: IntersectionObserver rootMargin -40%/-55% — section activates when utterance occupies middle band of viewport
 
 ### Pending Todos
 
@@ -103,5 +107,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-06-12
-Stopped at: Phase 3 Plan 03 complete. ChatBubble.svelte now has 32px avatar circle and D-05 alignment flip. Only Plan 03-04 (argument view two-column layout + section rail) remains in Phase 3.
-Resume file: .planning/phases/03-full-ui/03-03-SUMMARY.md
+Stopped at: Phase 3 execution complete — all 4 plans done. Ready for /gsd:verify-work 3.
+Resume file: .planning/phases/03-full-ui/03-04-SUMMARY.md

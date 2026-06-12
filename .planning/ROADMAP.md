@@ -85,7 +85,7 @@ Plans:
 - [x] 03-02-PLAN.md — Case list page (/cases) + intermediate /cases/[slug] page + global nav update
 - [x] 03-03-PLAN.md — ChatBubble avatar circle (32px initials, D-06/D-07/D-08) + bench/advocate alignment flip (D-05)
 **Wave 3** *(blocked on Wave 2 completion)*
-- [ ] 03-04-PLAN.md — Argument view restructure: two-column CSS Grid + SectionRail.svelte + speaker roster in header + section anchor IDs
+- [x] 03-04-PLAN.md — Argument view restructure: two-column CSS Grid + SectionRail.svelte + speaker roster in header + section anchor IDs
 
 **Cross-cutting constraints:**
 - No schema migrations in Phase 3 — all data available from existing tables

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import ChatBubble from '$lib/components/ChatBubble.svelte';
 	import StageDirection from '$lib/components/StageDirection.svelte';
+	import SectionRail from '$lib/components/SectionRail.svelte';
 
 	let { data } = $props();
 
@@ -19,6 +20,49 @@
 			year: 'numeric'
 		}).format(date);
 	}
+
+	// D-12: Roster derived client-side from utterances (no new API endpoint needed)
+	const roster = $derived.by(() => {
+		const seen = new Set<string>();
+		const bench: { name: string; role: string | null }[] = [];
+		const advocates: { name: string; role: string | null }[] = [];
+		for (const u of data.utterances) {
+			if (u.is_stage_direction) continue;
+			const key = u.speaker_name ?? u.raw_speaker_label ?? '';
+			if (!key || seen.has(key)) continue;
+			seen.add(key);
+			const entry = { name: key, role: u.speaker_role ?? null };
+			if (u.side === 'BENCH') bench.push(entry);
+			else advocates.push(entry);
+		}
+		return { bench, advocates };
+	});
+
+	// D-04: Section anchors derived from section_hint — lowercase values confirmed in RESEARCH.md Pitfall 1
+	const sectionAnchors = $derived(
+		data.utterances
+			.filter(
+				(u: { section_hint: string | null; is_stage_direction: boolean }) =>
+					u.section_hint !== null && !u.is_stage_direction
+			)
+			.reduce(
+				(
+					acc: { hint: string; label: string; anchorId: string }[],
+					u: { section_hint: string; sequence: number }
+				) => {
+					// Only take the first utterance of each section (first occurrence of each hint)
+					if (!acc.some((a) => a.hint === u.section_hint)) {
+						acc.push({
+							hint: u.section_hint,
+							label: u.section_hint.charAt(0).toUpperCase() + u.section_hint.slice(1),
+							anchorId: `section-${u.section_hint}-${u.sequence}`
+						});
+					}
+					return acc;
+				},
+				[]
+			)
+	);
 </script>
 
 <!-- Page background (#0f1117) -->
@@ -31,7 +75,7 @@
 			padding: 16px 24px;
 		"
 	>
-		<div style="max-width: 860px; margin: 0 auto;">
+		<div style="max-width: 1200px; margin: 0 auto;">
 			<!-- Case name: 20px, weight 600, #e2e8f0 -->
 			<h1
 				style="
@@ -56,44 +100,124 @@
 			>
 				No. {data.argument.docket_number} · Argued {formatDate(data.argument.argued_date)} · Question {data.argument.question_number}
 			</p>
+
+			<!-- Speaker roster: two-column grid, Bench left, Advocates right — D-11 -->
+			<!-- Both columns use #94a3b8 for speaker names — apolitical framing constraint -->
+			<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px;">
+				<!-- Bench column -->
+				<div>
+					<p
+						style="
+							font-size: 13px;
+							font-weight: 600;
+							color: #475569;
+							margin: 0 0 8px 0;
+						"
+					>
+						Bench
+					</p>
+					{#each roster.bench as speaker (speaker.name)}
+						<p
+							style="
+								font-size: 14px;
+								font-weight: 400;
+								color: #94a3b8;
+								margin: 0 0 4px 0;
+							"
+						>
+							{speaker.name}
+						</p>
+					{/each}
+				</div>
+				<!-- Advocates column -->
+				<div>
+					<p
+						style="
+							font-size: 13px;
+							font-weight: 600;
+							color: #475569;
+							margin: 0 0 8px 0;
+						"
+					>
+						Advocates
+					</p>
+					{#each roster.advocates as speaker (speaker.name)}
+						<p
+							style="
+								font-size: 14px;
+								font-weight: 400;
+								color: #94a3b8;
+								margin: 0 0 4px 0;
+							"
+						>
+							{speaker.name}
+						</p>
+					{/each}
+				</div>
+			</div>
 		</div>
 	</div>
 
-	<!-- Chat column: max-width 860px, centered, padding top/bottom 48px -->
+	<!-- Two-column content grid: nav rail (180px) + chat column (1fr) — D-01 -->
 	<div
-		style="
-			max-width: 860px;
-			margin: 0 auto;
-			padding: 48px 24px;
-		"
+		class="content-grid"
+		style="display: grid; grid-template-columns: 180px 1fr; max-width: 1200px; margin: 0 auto;"
 	>
-		{#if !data.utterances || data.utterances.length === 0}
-			<!-- Empty state -->
-			<p
-				style="
-					text-align: center;
-					color: #94a3b8;
-					font-size: 16px;
-				"
-			>
-				No utterances found for this argument.
-			</p>
-		{:else}
-			<!-- Utterance stream with turn-gap logic:
-				 same speaker → lg gap (24px); different speaker → xl gap (32px) -->
-			{#each data.utterances as utterance, i (utterance.sequence)}
-				{@const prevUtterance = i > 0 ? data.utterances[i - 1] : null}
-				{@const sameSpeaker =
-					prevUtterance !== null &&
-					prevUtterance.raw_speaker_label === utterance.raw_speaker_label}
-				<div style={i === 0 ? '' : sameSpeaker ? 'margin-top: 24px;' : 'margin-top: 32px;'}>
-					{#if utterance.is_stage_direction}
-						<StageDirection {utterance} />
-					{:else}
-						<ChatBubble {utterance} />
-					{/if}
-				</div>
-			{/each}
-		{/if}
+		<!-- Nav rail column: sticky sidebar with section navigation -->
+		<div class="nav-rail">
+			{#if sectionAnchors.length > 0}
+				<SectionRail sections={sectionAnchors} />
+			{/if}
+		</div>
+
+		<!-- Chat column: utterance stream -->
+		<div style="padding: 48px 24px;">
+			{#if !data.utterances || data.utterances.length === 0}
+				<!-- Empty state -->
+				<p
+					style="
+						text-align: center;
+						color: #94a3b8;
+						font-size: 16px;
+					"
+				>
+					No utterances found for this argument.
+				</p>
+			{:else}
+				<!-- Utterance stream with turn-gap logic:
+					 same speaker → lg gap (24px); different speaker → xl gap (32px) -->
+				{#each data.utterances as utterance, i (utterance.sequence)}
+					{@const prevUtterance = i > 0 ? data.utterances[i - 1] : null}
+					{@const sameSpeaker =
+						prevUtterance !== null &&
+						prevUtterance.raw_speaker_label === utterance.raw_speaker_label}
+					<!-- Section anchor id on first utterance of each section — id omitted (undefined) when section_hint is null -->
+					<div
+						id={utterance.section_hint
+							? `section-${utterance.section_hint}-${utterance.sequence}`
+							: undefined}
+						style={i === 0 ? '' : sameSpeaker ? 'margin-top: 24px;' : 'margin-top: 32px;'}
+					>
+						{#if utterance.is_stage_direction}
+							<StageDirection {utterance} />
+						{:else}
+							<ChatBubble {utterance} />
+						{/if}
+					</div>
+				{/each}
+			{/if}
+		</div>
 	</div>
 </div>
+
+<!-- D-03: Mobile breakpoint — hide nav rail below 768px; chat spans full width -->
+<style>
+	@media (max-width: 768px) {
+		.content-grid {
+			grid-template-columns: 1fr !important;
+		}
+		.nav-rail {
+			display: none !important;
+		}
+	}
+</style>

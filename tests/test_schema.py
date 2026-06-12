@@ -42,7 +42,7 @@ async def db_conn():
     """
     import asyncpg
 
-    conn = await asyncpg.connect(DATABASE_URL)
+    conn = await asyncpg.connect(DATABASE_URL.replace("postgresql+asyncpg://", "postgresql://"))
     yield conn
     await conn.close()
 

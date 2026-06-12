@@ -28,7 +28,7 @@
 ### API
 
 - [x] **API-01**: `GET /arguments/{id}/utterances` — returns ordered utterances for an argument, each with speaker attribution (`person_id`, name, role, side) — *Completed: Phase 1, Plan 05 (api/routers/arguments.py + api/services/arguments.py + api/schemas/utterance.py)*
-- [ ] **API-02**: `GET /cases` — returns list of available cases with basic metadata (name, docket number, term year, argued date)
+- [x] **API-02**: `GET /cases` — returns list of available cases with basic metadata (name, docket number, term year, argued date) — *Completed: Phase 3, Plan 01 (api/routers/cases.py + api/services/cases.py + api/schemas/cases.py; is_lead=True filter prevents consolidated-docket duplicates)*
 - [ ] **API-03**: `GET /people/{id}` — returns person record (name, role, `photo_url`)
 
 ### Chat UI
@@ -106,7 +106,7 @@
 | PIPE-10 | Phase 1 | Pending |
 | PIPE-11 | Phase 1 | Pending |
 | API-01 | Phase 1 | Pending |
-| API-02 | Phase 3 | Pending |
+| API-02 | Phase 3 | Complete |
 | API-03 | Phase 2 | Pending |
 | UI-01 | Phase 1 | Pending |
 | UI-02 | Phase 1 | Pending |

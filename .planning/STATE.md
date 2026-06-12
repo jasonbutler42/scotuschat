@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-06-11)
 ## Current Position
 
 Phase: 3 of 4 (Full UI)
-Plan: 0 of TBD in current phase (not yet planned)
-Status: Phase 3 UI-SPEC approved — Ready to plan Phase 3
-Last activity: 2026-06-12 — UI design contract (03-UI-SPEC.md) created and verified (6/6 dimensions passed, 1 revision to collapse typography scale from 5 → 4 sizes).
+Plan: 1 of 4 in current phase (03-01 complete)
+Status: Phase 3 in progress — Plan 03-01 (GET /cases endpoint) complete
+Last activity: 2026-06-12 — Plan 03-01 complete: GET /cases FastAPI endpoint created (schema + service + router), cases_router registered in main.py, 6 Wave 0 static-analysis tests pass.
 
-Progress: [███████░░░] 75%
+Progress: [████████░░] 80%
 
 ## Performance Metrics
 
@@ -72,6 +72,10 @@ Recent decisions affecting current work:
 - 01-05: Service returns dict, router creates Pydantic response — clean ORM/schema separation
 - 01-05: service uses MAX(pipeline_runs.id) WHERE step='parse' AND status='completed' — not MAX(utterances.pipeline_run_id), to avoid surfacing partial writes from crashed runs (CR-04 fix)
 - 01-05: formatDate appends T00:00:00 before new Date() — forces local-date parsing, avoids UTC midnight roll-back west of UTC
+- 03-01: GET /cases route path is "" (empty string, not "/") — collection endpoint matching people.py pattern, avoids trailing-slash redirect
+- 03-01: GET /cases returns empty list on no data (not 404) — empty collection is valid; 404 only for missing resources
+- 03-01: argument_id included in CaseItem — enables direct argument linking; resolved D-09 navigation model open question
+- 03-01: Wave 0 PUBLIC_FASTAPI_BASE_URL test passes vacuously before cases routes dir exists — will enforce on Plan 03-02 creation
 
 ### Pending Todos
 
@@ -92,5 +96,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-06-12
-Stopped at: Phase 3 UI-SPEC approved. UI design contract at .planning/phases/03-full-ui/03-UI-SPEC.md. Ready to plan Phase 3.
-Resume file: .planning/phases/03-full-ui/03-UI-SPEC.md
+Stopped at: Phase 3 Plan 01 complete. GET /cases endpoint live (api/routers/cases.py, api/services/cases.py, api/schemas/cases.py). Wave 2 plans (03-02 and 03-03) unblocked.
+Resume file: .planning/phases/03-full-ui/03-01-SUMMARY.md

@@ -11,6 +11,7 @@ from fastapi import FastAPI
 
 from api.core.database import lifespan
 from api.routers import arguments as arguments_router
+from api.routers import cases as cases_router
 from api.routers import people as people_router
 
 app = FastAPI(
@@ -21,6 +22,7 @@ app = FastAPI(
 )
 
 app.include_router(arguments_router.router)
+app.include_router(cases_router.router)
 app.include_router(people_router.router)
 
 

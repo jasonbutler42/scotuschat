@@ -12,7 +12,7 @@ SCOTUS Chat is built in four vertical slices. Phase 1 proves the end-to-end conc
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Foundation + Proof of Concept** - Schema, ingest, parse, minimal API, minimal chat view — end-to-end on one hand-picked case
+- [x] **Phase 1: Foundation + Proof of Concept** - Schema, ingest, parse, minimal API, minimal chat view — end-to-end on one hand-picked case
 - [ ] **Phase 2: Speaker Resolution** - Alias table seeded, resolve step wired, every utterance carries a named and sided speaker in the UI
 - [ ] **Phase 3: Full UI** - Case list, argument header, section nav, shareable URLs, avatars — complete browseable product
 - [ ] **Phase 4: Accessibility + Hardening** - WCAG 2.1 AA throughout, full keyboard navigation, focus management, apolitical framing verified

@@ -11,8 +11,8 @@ See: .planning/PROJECT.md (updated 2026-06-11)
 
 Phase: 1 of 4 (Foundation + Proof of Concept)
 Plan: 5 of 5 in current phase (01-05 complete — FastAPI endpoint + SvelteKit chat view: config, async engine, schemas, service, router, main.py, integration tests, +page.server.ts, +page.svelte full chat layout)
-Status: Phase 1 Complete — Human browser verification pending (visual rendering)
-Last activity: 2026-06-11 — Code review (5 critical, 8 warnings, 3 info) + 5 critical fixes applied + VERIFICATION.md written. All hard constraints satisfied. Remaining: human navigates to localhost:5173/cases/obergefell-v-hodges/arguments/1 after ingest+parse to confirm two-sided chat renders correctly.
+Status: Phase 1 COMPLETE ✓ — All verification passed including human browser test
+Last activity: 2026-06-12 — Human verified two-sided chat renders correctly in browser at localhost:5173. 377 utterances parsed from Obergefell oral argument (rule-based strategy). Phase 1 fully done. Ready for Phase 2 planning.
 
 Progress: [█████░░░░░] 50%
 

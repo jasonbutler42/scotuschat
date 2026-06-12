@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-06-11)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** Phase 1 — Foundation + Proof of Concept
+**Current focus:** Phase 3 — Full UI (UI-SPEC approved)
 
 ## Current Position
 
-Phase: 1 of 4 (Foundation + Proof of Concept)
-Plan: 5 of 5 in current phase (01-05 complete — FastAPI endpoint + SvelteKit chat view: config, async engine, schemas, service, router, main.py, integration tests, +page.server.ts, +page.svelte full chat layout)
-Status: Phase 1 COMPLETE ✓ — All verification passed including human browser test
-Last activity: 2026-06-12 — Human verified two-sided chat renders correctly in browser at localhost:5173. 377 utterances parsed from Obergefell oral argument (rule-based strategy). Phase 1 fully done. Ready for Phase 2 planning.
+Phase: 3 of 4 (Full UI)
+Plan: 0 of TBD in current phase (not yet planned)
+Status: Phase 3 UI-SPEC approved — Ready to plan Phase 3
+Last activity: 2026-06-12 — UI design contract (03-UI-SPEC.md) created and verified (6/6 dimensions passed, 1 revision to collapse typography scale from 5 → 4 sizes).
 
-Progress: [█████░░░░░] 50%
+Progress: [███████░░░] 75%
 
 ## Performance Metrics
 
@@ -28,6 +28,7 @@ Progress: [█████░░░░░] 50%
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-foundation-proof-of-concept | 5 | 215 min | 43 min |
+| 02-speaker-resolution | 4 | — | — |
 
 **Recent Trend:**
 - Last 5 plans: 01-01 (45 min), 01-02 (35 min), 01-03 (45 min), 01-04 (45 min), 01-05 (45 min)
@@ -90,6 +91,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-11
-Stopped at: Phase 1 code review + 5 critical fixes + verification. VERIFICATION.md written (status: human_needed — awaiting browser test of live chat rendering). When human test passes, Phase 1 is fully complete and Phase 2 (Speaker Resolution) planning can begin.
-Resume file: None
+Last session: 2026-06-12
+Stopped at: Phase 3 UI-SPEC approved. UI design contract at .planning/phases/03-full-ui/03-UI-SPEC.md. Ready to plan Phase 3.
+Resume file: .planning/phases/03-full-ui/03-UI-SPEC.md

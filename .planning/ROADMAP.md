@@ -13,7 +13,7 @@ SCOTUS Chat is built in four vertical slices. Phase 1 proves the end-to-end conc
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation + Proof of Concept** - Schema, ingest, parse, minimal API, minimal chat view — end-to-end on one hand-picked case
-- [ ] **Phase 2: Speaker Resolution** - Alias table seeded, resolve step wired, every utterance carries a named and sided speaker in the UI
+- [x] **Phase 2: Speaker Resolution** - Alias table seeded, resolve step wired, every utterance carries a named and sided speaker in the UI
 - [ ] **Phase 3: Full UI** - Case list, argument header, section nav, shareable URLs, avatars — complete browseable product
 - [ ] **Phase 4: Accessibility + Hardening** - WCAG 2.1 AA throughout, full keyboard navigation, focus management, apolitical framing verified
 
@@ -30,7 +30,14 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Re-running ingest or parse produces new rows linked to a new `pipeline_run_id`; prior run rows are not deleted
   4. `GET /arguments/{id}/utterances` returns ordered utterances for the hand-picked case in a running FastAPI server
   5. A browser pointed at the SvelteKit dev server renders the argument as a two-sided chat: Justice utterances on the bench side, advocate utterances on the advocate side, stage directions visually distinct from speech bubbles
-**Plans**: TBD
+**Plans**: 5 plans
+
+Plans:
+- [x] 01-01-PLAN.md — SvelteKit scaffold, component stubs, dev-start.ps1
+- [x] 01-02-PLAN.md — PostgreSQL schema + Alembic migration 0001
+- [x] 01-03-PLAN.md — Pipeline ingest command
+- [x] 01-04-PLAN.md — Pipeline parse command
+- [x] 01-05-PLAN.md — FastAPI endpoint + SvelteKit chat view
 
 ### Phase 2: Speaker Resolution
 **Goal**: Every utterance in the chat view shows a real speaker name and role label — not a raw label — so a reader can immediately tell who is speaking and which side they represent
@@ -42,7 +49,21 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. Operator runs the resolve CLI command and utterances for confirmed matches have `person_id` populated; low-confidence matches are gated as `needs_review` on `pipeline_run` and never silently committed
   3. `GET /people/{id}` returns a person record with name and role
   4. The chat view shows each utterance attributed to a resolved speaker name and role label (no raw labels visible for confirmed matches)
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+**Wave 1**
+- [ ] 02-01-PLAN.md — Alembic migration 0002_add_speaker_alias + SpeakerAlias ORM model + test_schema update
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 02-02-PLAN.md — seed-aliases + resolve pipeline commands + __main__.py wiring + Wave 0 test stubs
+- [ ] 02-03-PLAN.md — GET /people/{id} API (router + service + schema) + utterances JOIN extension + Wave 0 test stubs
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 02-04-PLAN.md — ChatBubble.svelte resolved speaker name + role label display + human verification
+
+**Cross-cutting constraints:**
+- Alembic is sole DDL authority — no `Base.metadata.create_all` anywhere
+- Pipeline steps (seed-aliases, resolve) are CLI-only — never HTTP endpoints
+- `utterances.raw_speaker_label` is write-once (parse step); resolve only writes `person_id`
 
 ### Phase 3: Full UI
 **Goal**: A user can browse all loaded cases, open any argument, see a complete argument header with the speaker roster, jump between argument sections, share a stable URL that renders correctly on page refresh, and see speaker avatars with initials fallback
@@ -55,8 +76,22 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Each speaker bubble shows an avatar; when no `photo_url` is available the avatar renders as styled initials — no broken images
   4. Arguments are accessible at `/cases/{slug}/arguments/{id}` and the page renders correctly on hard refresh (SSR), not just client-side navigation
   5. A section navigation rail shows Petitioner / Respondent / Rebuttal / Amicus sections and clicking a section scrolls the view to that point in the argument
-**Plans**: TBD
-**UI hint**: yes
+**Plans**: 4 plans
+
+Plans:
+**Wave 1**
+- [ ] 03-01-PLAN.md — GET /cases API endpoint (schema + service + router + main.py) + Wave 0 static-analysis tests
+**Wave 2** *(blocked on Wave 1 completion — parallel plans)*
+- [ ] 03-02-PLAN.md — Case list page (/cases) + intermediate /cases/[slug] page + global nav update
+- [ ] 03-03-PLAN.md — ChatBubble avatar circle (32px initials, D-06/D-07/D-08) + bench/advocate alignment flip (D-05)
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 03-04-PLAN.md — Argument view restructure: two-column CSS Grid + SectionRail.svelte + speaker roster in header + section anchor IDs
+
+**Cross-cutting constraints:**
+- No schema migrations in Phase 3 — all data available from existing tables
+- No new npm or pip packages — all UI uses native browser APIs and existing SvelteKit
+- FASTAPI_BASE_URL always from $env/static/private — never PUBLIC_ prefix
+- Apolitical framing: roster columns use identical name styling (#94a3b8) for both bench and advocates
 
 ### Phase 4: Accessibility + Hardening
 **Goal**: Every page passes WCAG 2.1 AA color contrast, is fully keyboard navigable, and correctly manages focus — so any user, regardless of input method or visual ability, can read and navigate a full oral argument
@@ -79,6 +114,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation + Proof of Concept | 5/5 | Complete | 2026-06-11 |
-| 2. Speaker Resolution | 0/TBD | Not started | - |
-| 3. Full UI | 0/TBD | Not started | - |
+| 2. Speaker Resolution | 4/4 | Complete | 2026-06-12 |
+| 3. Full UI | 0/4 | Not started | - |
 | 4. Accessibility + Hardening | 0/TBD | Not started | - |

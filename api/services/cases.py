@@ -8,7 +8,7 @@ Responsibilities:
   - Order by argued_date DESC so most recent cases appear first
 
 Returns a list of dicts shaped to match CaseItem (id, slug, case_name,
-docket_number, term_year, argued_date, argument_id).
+docket_number, term_year, argued_date, argument_id, question_number).
 """
 
 from sqlalchemy import select
@@ -43,6 +43,7 @@ async def get_cases(db: AsyncSession) -> list[dict]:
             "term_year": case.term_year,
             "argued_date": argument.argued_date,
             "argument_id": argument.id,
+            "question_number": argument.question_number,
         }
         for case, argument in rows
     ]

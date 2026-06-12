@@ -15,6 +15,7 @@ class CaseItem(BaseModel):
     term_year: int
     argued_date: datetime.date
     argument_id: int
+    question_number: int
 
     model_config = {"from_attributes": True}
 

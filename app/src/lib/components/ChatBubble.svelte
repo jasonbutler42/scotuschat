@@ -8,9 +8,10 @@
 	const displayRole = utterance.speaker_role ?? null;
 	const avatarBg = isBench ? '#94a3b8' : '#93c5fd';
 	const initials = (() => {
-		const parts = displayName.trim().split(/\s+/);
+		const parts = displayName.trim().split(/\s+/).filter(Boolean);
 		if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-		return displayName.slice(0, 2).toUpperCase();
+		if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+		return '?';
 	})();
 </script>
 

@@ -37,13 +37,20 @@ def upgrade() -> None:
     # Use raw SQL with IF NOT EXISTS — more reliable than sa.Enum.create()
     # with checkfirst=True, which doesn't work correctly via asyncpg.
     # ------------------------------------------------------------------
-    op.execute(sa.text(
-        "CREATE TYPE IF NOT EXISTS side AS ENUM ('BENCH', 'ADVOCATE', 'UNKNOWN')"
-    ))
-    op.execute(sa.text(
-        "CREATE TYPE IF NOT EXISTS pipeline_run_status "
-        "AS ENUM ('pending', 'running', 'completed', 'failed', 'needs_review')"
-    ))
+    # PostgreSQL has no CREATE TYPE IF NOT EXISTS; use a DO block instead.
+    op.execute(sa.text("""
+        DO $$ BEGIN
+            CREATE TYPE side AS ENUM ('BENCH', 'ADVOCATE', 'UNKNOWN');
+        EXCEPTION WHEN duplicate_object THEN null;
+        END $$;
+    """))
+    op.execute(sa.text("""
+        DO $$ BEGIN
+            CREATE TYPE pipeline_run_status
+                AS ENUM ('pending', 'running', 'completed', 'failed', 'needs_review');
+        EXCEPTION WHEN duplicate_object THEN null;
+        END $$;
+    """))
 
     # ------------------------------------------------------------------
     # Table 1: roles

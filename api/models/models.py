@@ -180,7 +180,7 @@ class ArgumentParticipant(Base):
     argument_id = Column(Integer, ForeignKey("arguments.id"), nullable=False)
     person_id = Column(Integer, ForeignKey("people.id"), nullable=True)  # null until resolved
     raw_speaker_label = Column(String(200), nullable=False)
-    side = Column(SAEnum(SideEnum, name="side"), nullable=False)
+    side = Column(SAEnum(SideEnum, name="side", values_callable=lambda e: [x.value for x in e]), nullable=False)
 
 
 # ---------------------------------------------------------------------------
@@ -197,7 +197,7 @@ class PipelineRun(Base):
     argument_id = Column(Integer, ForeignKey("arguments.id"), nullable=False)
     step = Column(String(50), nullable=False)  # "ingest", "parse", "resolve"
     status = Column(
-        SAEnum(PipelineRunStatus, name="pipeline_run_status"),
+        SAEnum(PipelineRunStatus, name="pipeline_run_status", values_callable=lambda e: [x.value for x in e]),
         nullable=False,
         default=PipelineRunStatus.PENDING,
     )
@@ -230,7 +230,7 @@ class Utterance(Base):
     text = Column(Text, nullable=False)
     is_stage_direction = Column(Boolean, nullable=False, default=False)
     section_hint = Column(String(50), nullable=True)  # "petitioner"|"respondent"|"rebuttal"|"amicus"
-    side = Column(SAEnum(SideEnum, name="side"), nullable=False, default=SideEnum.UNKNOWN)
+    side = Column(SAEnum(SideEnum, name="side", values_callable=lambda e: [x.value for x in e]), nullable=False, default=SideEnum.UNKNOWN)
     person_id = Column(Integer, ForeignKey("people.id"), nullable=True)  # null at parse time
     strategy = Column(String(100), nullable=False)   # PIPE-04: "rule_based" | "llm_corrective"
 

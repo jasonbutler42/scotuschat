@@ -34,16 +34,16 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     # ------------------------------------------------------------------
     # Create PostgreSQL enum types before the tables that reference them.
-    # Using native=True means SQLAlchemy will CREATE TYPE in PostgreSQL.
+    # Use raw SQL with IF NOT EXISTS — more reliable than sa.Enum.create()
+    # with checkfirst=True, which doesn't work correctly via asyncpg.
     # ------------------------------------------------------------------
-    side_enum = sa.Enum("BENCH", "ADVOCATE", "UNKNOWN", name="side")
-    side_enum.create(op.get_bind(), checkfirst=True)
-
-    pipeline_run_status_enum = sa.Enum(
-        "pending", "running", "completed", "failed", "needs_review",
-        name="pipeline_run_status",
-    )
-    pipeline_run_status_enum.create(op.get_bind(), checkfirst=True)
+    op.execute(sa.text(
+        "CREATE TYPE IF NOT EXISTS side AS ENUM ('BENCH', 'ADVOCATE', 'UNKNOWN')"
+    ))
+    op.execute(sa.text(
+        "CREATE TYPE IF NOT EXISTS pipeline_run_status "
+        "AS ENUM ('pending', 'running', 'completed', 'failed', 'needs_review')"
+    ))
 
     # ------------------------------------------------------------------
     # Table 1: roles

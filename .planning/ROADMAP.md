@@ -83,7 +83,7 @@ Plans:
 - [x] 03-01-PLAN.md — GET /cases API endpoint (schema + service + router + main.py) + Wave 0 static-analysis tests
 **Wave 2** *(blocked on Wave 1 completion — parallel plans)*
 - [x] 03-02-PLAN.md — Case list page (/cases) + intermediate /cases/[slug] page + global nav update
-- [ ] 03-03-PLAN.md — ChatBubble avatar circle (32px initials, D-06/D-07/D-08) + bench/advocate alignment flip (D-05)
+- [x] 03-03-PLAN.md — ChatBubble avatar circle (32px initials, D-06/D-07/D-08) + bench/advocate alignment flip (D-05)
 **Wave 3** *(blocked on Wave 2 completion)*
 - [ ] 03-04-PLAN.md — Argument view restructure: two-column CSS Grid + SectionRail.svelte + speaker roster in header + section anchor IDs
 
@@ -115,5 +115,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 1. Foundation + Proof of Concept | 5/5 | Complete | 2026-06-11 |
 | 2. Speaker Resolution | 4/4 | Complete | 2026-06-12 |
-| 3. Full UI | 2/4 | In progress | - |
+| 3. Full UI | 3/4 | In progress | - |
 | 4. Accessibility + Hardening | 0/TBD | Not started | - |

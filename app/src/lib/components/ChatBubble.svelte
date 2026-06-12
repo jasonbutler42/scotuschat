@@ -2,16 +2,22 @@
 	let { utterance } = $props();
 
 	const isBench = utterance.side === 'BENCH';
-	// BENCH: right-aligned; ADVOCATE or UNKNOWN: left-aligned (apolitical framing — identical backgrounds)
+	// D-05: BENCH: left-aligned; ADVOCATE or UNKNOWN: right-aligned
 	const labelColor = isBench ? '#94a3b8' : '#93c5fd';
 	const displayName = utterance.speaker_name ?? utterance.raw_speaker_label ?? '';
 	const displayRole = utterance.speaker_role ?? null;
+	const avatarBg = isBench ? '#94a3b8' : '#93c5fd';
+	const initials = (() => {
+		const parts = displayName.trim().split(/\s+/);
+		if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+		return displayName.slice(0, 2).toUpperCase();
+	})();
 </script>
 
 <div
 	style="
 		display: flex;
-		justify-content: {isBench ? 'flex-end' : 'flex-start'};
+		justify-content: {isBench ? 'flex-start' : 'flex-end'};
 	"
 >
 	<div
@@ -26,15 +32,22 @@
 			padding: 12px 16px;
 		"
 	>
-		<!-- Bubble header row: sequence number + speaker label -->
+		<!-- Bubble header row: avatar circle + sequence number + speaker label -->
 		<div
 			style="
 				display: flex;
 				align-items: center;
-				gap: 4px;
+				gap: 8px;
 				margin-bottom: 8px;
 			"
 		>
+			<div style="
+				width: 32px; height: 32px; border-radius: 50%;
+				background-color: {avatarBg};
+				display: flex; align-items: center; justify-content: center;
+				font-size: 12px; font-weight: 600; color: #0f1117;
+				flex-shrink: 0;
+			">{initials}</div>
 			<span
 				style="
 					font-size: 13px;

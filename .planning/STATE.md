@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-06-11)
 ## Current Position
 
 Phase: 3 of 4 (Full UI)
-Plan: 2 of 4 in current phase (03-02 complete)
-Status: Phase 3 in progress — Plan 03-02 (Case list page, slug route, nav update) complete
-Last activity: 2026-06-12 — Plan 03-02 complete: /cases SSR page created, /cases/[slug] intermediate route with redirect(307) created, +layout.svelte global nav updated from hard-coded Obergefell link to /cases.
+Plan: 3 of 4 in current phase (03-03 complete)
+Status: Phase 3 in progress — Plan 03-03 (ChatBubble avatar circle and alignment flip) complete
+Last activity: 2026-06-12 — Plan 03-03 complete: ChatBubble.svelte extended with 32px avatar circle (bench #94a3b8, advocate #93c5fd, initials text #0f1117); bench/advocate alignment flipped per D-05 (bench LEFT flex-start, advocate RIGHT flex-end).
 
 Progress: [████████░░] 80%
 
@@ -79,6 +79,10 @@ Recent decisions affecting current work:
 - 03-02: D-09 navigation model resolved — intermediate /cases/[slug] page with redirect(307) for single-argument; picker for multi-argument; future-proofs Obergefell Q2 load
 - 03-02: Case list cards link to /cases/{slug} (not directly to argument) — correct for multi-argument cases
 - 03-02: FASTAPI_BASE_URL from $env/static/private in all new +page.server.ts files — no PUBLIC_ prefix
+- 03-03: D-05 alignment flip applied — bench LEFT (flex-start), advocate RIGHT (flex-end); reverses Phase 1 implementation to match roster layout
+- 03-03: avatarBg matches labelColor logic (bench #94a3b8, advocate #93c5fd) — consistent per D-08
+- 03-03: Avatar initials use plain const IIFE (not $derived) — value fixed at component instantiation from $props(), no reactive recomputation needed
+- 03-03: Avatar font-size 12px/600 is the UI-SPEC documented exception — not subject to 4-size type scale
 
 ### Pending Todos
 
@@ -99,5 +103,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-06-12
-Stopped at: Phase 3 Plan 02 complete. Case list page at /cases, intermediate /cases/[slug] route, and +layout.svelte nav update all complete. Wave 2 plans (03-03 and 03-04) unblocked.
-Resume file: .planning/phases/03-full-ui/03-02-SUMMARY.md
+Stopped at: Phase 3 Plan 03 complete. ChatBubble.svelte now has 32px avatar circle and D-05 alignment flip. Only Plan 03-04 (argument view two-column layout + section rail) remains in Phase 3.
+Resume file: .planning/phases/03-full-ui/03-03-SUMMARY.md

@@ -37,7 +37,7 @@
 - [x] **UI-02**: Each utterance bubble shows the speaker's name and role label — *Completed: Phase 1, Plan 05 (raw_speaker_label displayed in ChatBubble; person_id null at Phase 1)*
 - [x] **UI-03**: Stage directions (e.g. "(Laughter.)") render as a distinct visual component between bubbles, not as speech bubbles — *Completed: Phase 1, Plan 05 (is_stage_direction → StageDirection component in +page.svelte)*
 - [ ] **UI-04**: Argument header shows case name, docket number, date argued, and the full speaker roster
-- [ ] **UI-05**: Each speaker has an avatar; falls back to styled initials when no `photo_url` is available
+- [x] **UI-05**: Each speaker has an avatar; falls back to styled initials when no `photo_url` is available — *Completed: Phase 3, Plan 03 (ChatBubble.svelte: 32px avatar circle with initials, bench #94a3b8, advocate #93c5fd, dark text #0f1117)*
 - [x] **UI-06**: Arguments are accessible at stable, shareable URLs (`/cases/{slug}/arguments/{id}`) that render correctly on page refresh (SSR) — *Completed: Phase 3, Plan 02 (SSR route at /cases/[slug]/arguments/[id] already existed from Phase 1; /cases/[slug] intermediate page redirects correctly; global nav updated)*
 - [x] **UI-07**: Case list page lets user browse and navigate to any loaded case's argument — *Completed: Phase 3, Plan 02 (app/src/routes/cases/+page.server.ts + +page.svelte; fetches GET /cases; renders cards with name/docket/date; empty state; links via /cases/[slug])*
 - [ ] **UI-08**: Argument section navigation rail shows detected sections (Petitioner / Respondent / Rebuttal / Amicus) and allows jumping between them
@@ -112,7 +112,7 @@
 | UI-02 | Phase 1 | Pending |
 | UI-03 | Phase 1 | Pending |
 | UI-04 | Phase 3 | Pending |
-| UI-05 | Phase 3 | Pending |
+| UI-05 | Phase 3 | Complete |
 | UI-06 | Phase 3 | Complete |
 | UI-07 | Phase 3 | Complete |
 | UI-08 | Phase 3 | Pending |

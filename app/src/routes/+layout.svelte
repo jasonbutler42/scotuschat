@@ -17,14 +17,14 @@
 		SCOTUS CHAT
 	</span>
 	<a
-		href="/cases/obergefell-v-hodges/arguments/3"
+		href="/cases"
 		style="
 			font-size: 13px;
 			color: #93c5fd;
 			text-decoration: none;
 		"
 	>
-		Obergefell v. Hodges
+		Cases
 	</a>
 </nav>
 

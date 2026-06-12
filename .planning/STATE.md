@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-06-11)
 ## Current Position
 
 Phase: 3 of 4 (Full UI)
-Plan: 1 of 4 in current phase (03-01 complete)
-Status: Phase 3 in progress — Plan 03-01 (GET /cases endpoint) complete
-Last activity: 2026-06-12 — Plan 03-01 complete: GET /cases FastAPI endpoint created (schema + service + router), cases_router registered in main.py, 6 Wave 0 static-analysis tests pass.
+Plan: 2 of 4 in current phase (03-02 complete)
+Status: Phase 3 in progress — Plan 03-02 (Case list page, slug route, nav update) complete
+Last activity: 2026-06-12 — Plan 03-02 complete: /cases SSR page created, /cases/[slug] intermediate route with redirect(307) created, +layout.svelte global nav updated from hard-coded Obergefell link to /cases.
 
 Progress: [████████░░] 80%
 
@@ -76,6 +76,9 @@ Recent decisions affecting current work:
 - 03-01: GET /cases returns empty list on no data (not 404) — empty collection is valid; 404 only for missing resources
 - 03-01: argument_id included in CaseItem — enables direct argument linking; resolved D-09 navigation model open question
 - 03-01: Wave 0 PUBLIC_FASTAPI_BASE_URL test passes vacuously before cases routes dir exists — will enforce on Plan 03-02 creation
+- 03-02: D-09 navigation model resolved — intermediate /cases/[slug] page with redirect(307) for single-argument; picker for multi-argument; future-proofs Obergefell Q2 load
+- 03-02: Case list cards link to /cases/{slug} (not directly to argument) — correct for multi-argument cases
+- 03-02: FASTAPI_BASE_URL from $env/static/private in all new +page.server.ts files — no PUBLIC_ prefix
 
 ### Pending Todos
 
@@ -96,5 +99,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-06-12
-Stopped at: Phase 3 Plan 01 complete. GET /cases endpoint live (api/routers/cases.py, api/services/cases.py, api/schemas/cases.py). Wave 2 plans (03-02 and 03-03) unblocked.
-Resume file: .planning/phases/03-full-ui/03-01-SUMMARY.md
+Stopped at: Phase 3 Plan 02 complete. Case list page at /cases, intermediate /cases/[slug] route, and +layout.svelte nav update all complete. Wave 2 plans (03-03 and 03-04) unblocked.
+Resume file: .planning/phases/03-full-ui/03-02-SUMMARY.md

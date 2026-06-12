@@ -17,7 +17,7 @@
 		SCOTUS CHAT
 	</span>
 	<a
-		href="/cases/obergefell-v-hodges/arguments/1"
+		href="/cases/obergefell-v-hodges/arguments/3"
 		style="
 			font-size: 13px;
 			color: #93c5fd;

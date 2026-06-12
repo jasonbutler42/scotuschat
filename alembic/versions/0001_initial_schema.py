@@ -146,7 +146,7 @@ def upgrade() -> None:
         sa.Column("argument_id", sa.Integer(), nullable=False),
         sa.Column("person_id", sa.Integer(), nullable=True),
         sa.Column("raw_speaker_label", sa.String(200), nullable=False),
-        sa.Column("side", sa.Enum("BENCH", "ADVOCATE", "UNKNOWN", name="side"), nullable=False),
+        sa.Column("side", sa.Enum("BENCH", "ADVOCATE", "UNKNOWN", name="side", create_type=False), nullable=False),
         sa.ForeignKeyConstraint(["argument_id"], ["arguments.id"]),
         sa.ForeignKeyConstraint(["person_id"], ["people.id"]),
         sa.PrimaryKeyConstraint("id"),
@@ -163,7 +163,7 @@ def upgrade() -> None:
         sa.Column(
             "status",
             sa.Enum("pending", "running", "completed", "failed", "needs_review",
-                    name="pipeline_run_status"),
+                    name="pipeline_run_status", create_type=False),
             nullable=False,
             server_default="pending",
         ),
@@ -201,7 +201,7 @@ def upgrade() -> None:
         sa.Column("section_hint", sa.String(50), nullable=True),
         sa.Column(
             "side",
-            sa.Enum("BENCH", "ADVOCATE", "UNKNOWN", name="side"),
+            sa.Enum("BENCH", "ADVOCATE", "UNKNOWN", name="side", create_type=False),
             nullable=False,
             server_default="UNKNOWN",
         ),

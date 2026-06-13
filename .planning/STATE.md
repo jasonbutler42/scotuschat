@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-06-11)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** Phase 3 — Full UI (UI-SPEC approved)
+**Current focus:** Phase 4 — Accessibility + Hardening
 
 ## Current Position
 
-Phase: 3 of 4 (Full UI)
-Plan: 4 of 4 in current phase (all plans complete — pending verification)
-Status: Phase 3 execution complete — all 4 plans done; awaiting verification
-Last activity: 2026-06-12 — Plan 03-04 complete: argument view restructured to CSS Grid (180px rail + 1fr chat); SectionRail.svelte created with IntersectionObserver scroll-spy and browser guard; speaker roster added to argument header (bench left, advocates right, both #94a3b8 — apolitical); section anchor IDs on utterances; mobile responsive breakpoint at 768px.
+Phase: 4 of 4 (Accessibility + Hardening)
+Plan: 0 of TBD in current phase (planning not started)
+Status: Phase 3 complete — human browser verification approved 2026-06-13; ready to plan Phase 4
+Last activity: 2026-06-13 — Phase 3 human UAT approved: case list renders, 307 redirect fires, SSR confirmed, SectionRail scroll-spy active, mobile breakpoint hides nav rail. Phase 3 marked complete.
 
-Progress: [██████████] 95%
+Progress: [████████████] 100% (Phase 3) / Phase 4 not started
 
 ## Performance Metrics
 
@@ -106,6 +106,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-12
-Stopped at: Phase 3 execution complete — all 4 plans done. Ready for /gsd:verify-work 3.
-Resume file: .planning/phases/03-full-ui/03-04-SUMMARY.md
+Last session: 2026-06-13
+Stopped at: Phase 3 complete. Ready for /gsd:discuss-phase 4 or /gsd:plan-phase 4.
+Resume file: .planning/ROADMAP.md

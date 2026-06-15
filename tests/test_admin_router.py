@@ -9,6 +9,10 @@ These tests verify:
 5. Health route returns {"status": "ok"}
 6. verify_admin_token raises 401 with detail "Unauthorized"
 7. admin.py contains no create_all (Alembic is sole DDL authority)
+8. api/main.py imports admin_router
+9. api/main.py mounts admin_router.router via include_router
+10. api/main.py still registers all three existing routers (regression guard)
+11. api.main imports without error (smoke import)
 
 All tests are static analysis checks — no database or ASGI client required.
 They run in < 1 second and pass in CI without DATABASE_URL set (per D-15).
@@ -148,3 +152,73 @@ def test_no_create_all_in_admin_router():
         "Found 'create_all' in api/routers/admin.py — "
         "Alembic is the sole DDL authority (CLAUDE.md hard constraint)"
     )
+
+
+# ---------------------------------------------------------------------------
+# Task 2: main.py mounting assertions
+# ---------------------------------------------------------------------------
+
+
+def test_main_py_imports_admin_router():
+    """api/main.py must import the admin router as admin_router."""
+    main_py = _project_root() / "api" / "main.py"
+    content = main_py.read_text(encoding="utf-8")
+    assert "admin_router" in content, (
+        "Expected 'admin_router' in api/main.py — "
+        "admin router import is missing (from api.routers import admin as admin_router)"
+    )
+    assert "admin" in content, (
+        "Expected 'admin' in api/main.py — "
+        "admin router not referenced"
+    )
+
+
+def test_main_py_mounts_admin_router():
+    """api/main.py must call app.include_router(admin_router.router)."""
+    main_py = _project_root() / "api" / "main.py"
+    content = main_py.read_text(encoding="utf-8")
+    assert "include_router(admin_router.router)" in content, (
+        "Expected 'include_router(admin_router.router)' in api/main.py — "
+        "admin router is not mounted"
+    )
+
+
+def test_main_py_still_registers_all_existing_routers():
+    """
+    api/main.py must still register arguments_router, cases_router, and people_router.
+
+    Regression guard (D-14): Phase 5 adds the admin router without touching existing
+    v1.0 router registrations.
+    """
+    main_py = _project_root() / "api" / "main.py"
+    content = main_py.read_text(encoding="utf-8")
+    for router_name in ("arguments_router", "cases_router", "people_router"):
+        assert router_name in content, (
+            f"Expected '{router_name}' in api/main.py — "
+            f"existing router registration was removed (regression — D-14)"
+        )
+
+
+def test_api_main_imports_without_error():
+    """
+    Importing api.main must succeed with the admin router mounted.
+
+    This is a smoke import — no requests made, no DB connection required.
+    Requires ADMIN_TOKEN to be set (pydantic-settings reads it at import time).
+    The pytest environment sets ADMIN_TOKEN=test via conftest.py.
+    """
+    import importlib
+    import sys
+
+    # Remove cached module so we get a fresh import
+    for mod in list(sys.modules.keys()):
+        if mod.startswith("api."):
+            del sys.modules[mod]
+
+    try:
+        importlib.import_module("api.main")
+    except Exception as exc:
+        raise AssertionError(
+            f"Importing api.main failed with: {exc}\n"
+            "Ensure ADMIN_TOKEN env var is set and api/main.py is valid."
+        ) from exc

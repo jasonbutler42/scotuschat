@@ -1,283 +1,234 @@
-# Technology Stack
+# Stack Research — v1.1 Admin Interface Additions
 
-**Project:** SCOTUS Chat
-**Researched:** 2026-06-11
-**Overall confidence:** HIGH for core choices, MEDIUM for integration patterns, HIGH for pitfalls
-
----
-
-## Recommended Stack
-
-### Frontend — SvelteKit
-
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| Svelte | 5.x (stable as of Oct 2024) | Reactive UI component model | Runes reactivity system is now stable; compile-time approach produces smaller bundles than React/Vue |
-| SvelteKit | 2.x (currently ~2.43.x) | SSR, routing, server-side load functions | File-based routing, integrated SSR, server-only load functions eliminate a separate BFF layer |
-| `@sveltejs/adapter-node` | latest | Node.js server target | Required for Digital Ocean App Platform; produces a standalone `build/` directory run with `node build` |
-| TypeScript | 5.x | Type safety | SvelteKit scaffolds TypeScript by default; use it throughout |
-| Vite | 6.x (bundled with SvelteKit) | Dev server + bundler | Comes with SvelteKit; no separate configuration needed |
-
-**Svelte 5 note:** The Runes system (`$state`, `$derived`, `$effect`) is the current idiomatic approach. Do not use legacy Svelte 4 store patterns for new code. shadcn-svelte v1.0 now supports Svelte 5 if a component library is needed.
-
-### Backend — FastAPI
-
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| Python | 3.12 | Runtime | 3.12 is the safest practical choice: mature, well-supported, FastAPI tested against it |
-| FastAPI | 0.115.x or latest stable | HTTP API layer | Pydantic v2 is default in 0.119+; async-native; automatic OpenAPI docs useful during development |
-| Pydantic | v2 (bundled with FastAPI) | Request/response schema validation | v2 is 5-10x faster than v1; model_validate replaces from_orm |
-| Uvicorn | 0.30.x+ | ASGI server (dev) | Standard for FastAPI dev; use with `--reload` in dev only |
-| Gunicorn + Uvicorn workers | gunicorn 22.x | Process manager (production) | Digital Ocean App Platform uses a Procfile; Gunicorn manages worker lifecycle, Uvicorn handles ASGI |
-| python-dotenv | 1.x | Environment config | Load `.env` files locally; App Platform injects env vars at runtime |
-
-### Database Layer — PostgreSQL + ORM
-
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| PostgreSQL | 16 (Digital Ocean managed) | Primary data store | Relational model fits entity structure; DO manages backups, failover |
-| SQLAlchemy | 2.x (2.0+ async API) | ORM + query builder | Industry standard, excellent async support with 2.0 style, type-safe, works with Alembic |
-| asyncpg | 0.29.x | Async PostgreSQL driver | Highest-performance async driver; used as SQLAlchemy's async dialect; outperforms psycopg3 in benchmarks for direct connections |
-| psycopg2-binary | 2.9.x | Sync driver for Alembic | Alembic migration generation (`--autogenerate`) works better with a sync engine; use psycopg2 for that context only |
-| Alembic | 1.13.x | Database migrations | Official SQLAlchemy migration tool; autogenerate compares models to DB schema |
-
-**Driver rationale:** asyncpg is faster than psycopg3 for the async path (benchmarks consistently show this). Use asyncpg for the FastAPI application. Use psycopg2 for the sync Alembic context (Alembic docs recommend sync). Do not mix sync and async engines in the same request path.
-
-**psycopg3 note:** psycopg3 is a viable alternative to asyncpg but shows lower throughput at scale. Choose it only if you need a single driver for both sync (Alembic) and async (app) paths, accepting the performance trade-off.
-
-### Pipeline Libraries (Offline Processing)
-
-| Library | Version | Purpose | Why |
-|---------|---------|---------|-----|
-| anthropic | 0.40.x+ (latest stable) | Claude API client | Official SDK; use `AsyncAnthropic` for async pipeline steps; includes streaming, retries |
-| pdfplumber | 0.11.x | PDF text extraction | Better structural awareness than PyPDF2 for layout-sensitive content; character-level positioning helps with transcript formatting; SCOTUS transcripts have consistent structure |
-| httpx | 0.27.x | External HTTP calls (Oyez API, FJC) | Async-native, replaces requests for async pipeline code; sync mode available for simple scripts |
-| tenacity | 8.x | Retry logic for LLM calls | Handles 429/503 from Anthropic API; exponential backoff with jitter |
-| python-ulid or uuid | stdlib | Pipeline run IDs | ULIDs are lexicographically sortable, useful for pipeline_run_id ordering |
-
-**PDF library rationale:** SCOTUS transcripts are text-based PDFs (not scanned), so OCR is unnecessary. pdfplumber provides page-by-page text with positional metadata, which is useful if the parse step needs to reason about column breaks or speaker cues. pypdf (the maintained successor to PyPDF2) is faster but less layout-aware. Start with pdfplumber; it extracts better-structured text for LLM ingestion.
-
-### Supporting Frontend Libraries
-
-| Library | Version | Purpose | When to Use |
-|---------|---------|---------|-------------|
-| `$app/stores`, `$app/navigation` | SvelteKit built-in | Page state, navigation | Always; prefer over external state managers |
-| `$env/static/private` | SvelteKit built-in | Server-only secrets (API base URL, etc.) | All secrets that should never reach the browser |
-| `$env/static/public` | SvelteKit built-in | Client-safe config (PUBLIC_API_URL) | Variables the browser legitimately needs |
+**Domain:** Operator admin interface additions to existing SvelteKit + FastAPI app
+**Researched:** 2026-06-15
+**Confidence:** HIGH for auth and file upload patterns; MEDIUM for job execution architecture (multiple valid approaches; recommendation is opinionated toward simplicity for solo operator)
 
 ---
 
-## Integration Patterns
+## Context: What Already Exists (Do Not Re-research)
 
-### SvelteKit → FastAPI: The Server-Side Proxy Pattern
+The existing validated stack (from v1.0) is:
 
-**Do this:** Make all FastAPI API calls from SvelteKit's `+page.server.ts` or `+layout.server.ts` load functions, never directly from client-side `+page.svelte` components.
+- SvelteKit 2.x + adapter-node, Svelte 5 Runes (`$state`, `$derived`, `$effect`)
+- FastAPI 0.115+, Pydantic v2, SQLAlchemy 2.0 async, asyncpg, Alembic
+- PostgreSQL 16 on Digital Ocean managed Postgres (PgBouncer transaction mode — `statement_cache_size=0` in `connect_args` is already set)
+- All FastAPI calls from SvelteKit go through `+page.server.ts` server load functions; `FASTAPI_BASE_URL` is server-only
 
-Why: Server-to-server calls have no CORS overhead, no preflight round-trips, and keep the FastAPI URL invisible to browser clients. The browser only talks to SvelteKit's Node server.
-
-```
-Browser → SvelteKit Node server (+page.server.ts) → FastAPI → PostgreSQL
-```
-
-**Pattern in practice:**
-- `+page.server.ts` load function calls the FastAPI endpoint using `fetch()` (SvelteKit's built-in server fetch, which bypasses CORS)
-- Return data as typed objects; SvelteKit serializes and hydrates automatically
-- Set `PUBLIC_API_URL` (visible) or store the internal API URL only in server env vars
-
-**Do not:** Export an `export const ssr = false` and call FastAPI directly from the browser with `fetch()`. This requires CORS headers on FastAPI, exposes the API URL, and makes every page visit a two-hop chain (browser → FastAPI) with preflight overhead.
-
-**FastAPI CORS:** Configure `CORSMiddleware` only for development convenience (localhost:5173 → localhost:8000). In production, no CORS headers are needed if all calls go through SvelteKit server.
-
-### Environment Variable Conventions (SvelteKit)
-
-| Variable | Module | Example |
-|----------|--------|---------|
-| `API_URL` | `$env/static/private` | `http://localhost:8000` (server-only internal URL) |
-| `PUBLIC_APP_NAME` | `$env/static/public` | `SCOTUS Chat` (safe for browser) |
-
-Never put API keys or internal hostnames in `PUBLIC_` variables.
-
-### FastAPI Project Structure
-
-```
-backend/
-  app/
-    api/
-      v1/
-        routes/
-          cases.py
-          arguments.py
-          people.py
-    core/
-      config.py       # pydantic-settings Settings class
-      database.py     # async engine, session factory
-    models/           # SQLAlchemy ORM models
-    schemas/          # Pydantic request/response models
-    services/         # business logic, DB queries
-  alembic/
-    versions/
-    env.py
-  tests/
-  main.py             # app = FastAPI(); include routers
-  requirements.txt
-```
-
-Keep routers thin: route → service → DB. Business logic lives in services, not in route handlers.
-
-### Database Session Lifecycle (FastAPI + SQLAlchemy async)
-
-Use a FastAPI dependency to manage session lifecycle:
-
-```python
-# core/database.py
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
-
-engine = create_async_engine(settings.database_url, echo=False)
-AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
-
-async def get_db() -> AsyncGenerator[AsyncSession, None]:
-    async with AsyncSessionLocal() as session:
-        yield session
-```
-
-Using `expire_on_commit=False` is mandatory in async SQLAlchemy — otherwise SQLAlchemy tries to lazy-load expired attributes after commit, which triggers a sync DB call and raises `MissingGreenlet` errors.
-
-### Alembic Configuration for Async App
-
-Alembic requires a sync connection to generate migrations. Configure `env.py` to use psycopg2 for autogenerate, separate from the app's asyncpg engine:
-
-```python
-# alembic/env.py — synchronous context for autogenerate
-def run_migrations_online():
-    connectable = engine_from_config(
-        config.get_section(config.config_ini_section),
-        prefix="sqlalchemy.",
-        poolclass=pool.NullPool,
-    )
-    # sqlalchemy.url in alembic.ini points to postgresql:// (psycopg2), not postgresql+asyncpg://
-```
-
-Load `sqlalchemy.url` from environment at runtime — never hardcode it in `alembic.ini`.
-
-### Pipeline Design
-
-The pipeline runs offline (CLI scripts, not API endpoints). Each step:
-1. Reads from DB (prior step's output or source data)
-2. Calls external service (Claude API, Oyez, etc.)
-3. Writes results to DB linked to a `pipeline_run_id`
-4. Is idempotent: re-running creates new rows; promotion step swaps which run_id is active
-
-Use direct `asyncio.run()` entry points for each step script rather than importing FastAPI app machinery.
+This document covers ONLY net-new additions for the three v1.1 capability areas. Do not change the existing stack.
 
 ---
 
-## Digital Ocean App Platform Deployment
+## Area 1: SvelteKit Session Auth (username+password, no user DB)
 
-### Architecture
+### Recommended Approach: DIY hooks + `bcryptjs` — no auth library
 
-```
-DO App Platform
-├── SvelteKit service (Node.js)    ← runs: node build, port 3000
-├── FastAPI service (Python)       ← runs: gunicorn -k uvicorn.workers.UvicornWorker
-└── Managed PostgreSQL (database component)
-```
+**Rationale:** Credentials live in two env vars (`ADMIN_USERNAME`, `ADMIN_PASSWORD_HASH`). No user table exists or should be added. Auth.js, Better Auth, and Lucia are all overkill — they require a database-backed session store and adapter wiring. This is a single-operator tool; the entire auth system fits in ~50 lines across two files.
 
-### SvelteKit Service Configuration
+**Implementation pattern:**
 
-- **Adapter:** `@sveltejs/adapter-node` (not `adapter-auto`, not `adapter-static`)
-- **Build command:** `npm run build`
-- **Run command:** `node build`
-- **Port:** 3000 (adapter-node default)
-- Remove `@sveltejs/adapter-auto` from devDependencies after switching
-- Environment variables injected at runtime by App Platform; `$env/dynamic/private` works for runtime-only vars if needed
+1. **Login action** (`src/routes/admin/login/+page.server.ts`) — Reads `ADMIN_USERNAME` and `ADMIN_PASSWORD_HASH` from `$env/static/private`. Calls `bcrypt.compare(submittedPassword, storedHash)`. On success: generates `crypto.randomUUID()`, signs it with HMAC-SHA256 using `SESSION_SECRET` env var (Node `crypto.createHmac`), sets it as an httpOnly cookie. On failure: returns `{ error: 'Invalid credentials' }`.
 
-### FastAPI Service Configuration
+2. **`src/hooks.server.ts` `handle` function** — Runs before every request. Reads the session cookie, re-validates the HMAC signature. If the path starts with `/admin` and the session is invalid, calls `redirect(302, '/admin/login')`. On valid session, populates `event.locals.user = { username: string }`.
 
-- **Procfile:**
-  ```
-  web: gunicorn app.main:app --workers 2 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT
-  ```
-- **`requirements.txt`** must be present at repo root or service root
-- Use `$PORT` — App Platform injects this; do not hardcode 8000 in production
-- `--workers 2` for a starter instance (1 vCPU); increase with instance size
+3. **`src/app.d.ts`** — Extend `App.Locals` with `user: { username: string } | null`.
 
-### PostgreSQL Connection Pooling
+4. **Route protection** — Each admin `+page.server.ts` load function checks `if (!locals.user) redirect(302, '/admin/login')` as a belt-and-suspenders guard beyond the hook.
 
-Digital Ocean Managed PostgreSQL exposes a PgBouncer-based connection pool. Use it.
+**Session is stateless** — no DB round-trip per request. A signed random token stored in the cookie is sufficient. The operator cannot invalidate a session remotely (deleting the cookie is the only logout mechanism), which is acceptable for single-operator use.
 
-- Default PostgreSQL max connections: 25 (shared-tier) or 100 (basic-tier)
-- PgBouncer pool mode: **Transaction mode** (recommended for web apps)
-- Connection string format from DO: `postgresql://user:pass@host:port/pool_name?sslmode=require`
-- For asyncpg: `postgresql+asyncpg://user:pass@host:port/pool_name`
-- **Prepared statements conflict with Transaction-mode PgBouncer.** Disable them in asyncpg:
-
-  ```python
-  engine = create_async_engine(
-      settings.database_url,
-      connect_args={"statement_cache_size": 0},  # disables asyncpg prepared stmt cache
-  )
-  ```
-
-  This is a silent, critical failure mode: connections will succeed but queries will fail or return wrong results under PgBouncer Transaction mode without this setting.
-
-### Service Communication (Internal)
-
-On App Platform, services within the same app communicate via internal hostnames. Set `API_URL` (server-only env var in SvelteKit service) to the FastAPI service's internal hostname (e.g., `http://fastapi-service:8080`) to avoid external round-trips.
-
----
-
-## Alternatives Considered (and Rejected)
-
-| Category | Recommended | Alternative | Why Not |
-|----------|-------------|-------------|---------|
-| Frontend adapter | `adapter-node` | `adapter-static` | Static export cannot run server-side load functions; eliminates the SSR proxy pattern |
-| Async PG driver | asyncpg | psycopg3 | psycopg3 is slower in benchmarks; asyncpg is the established default for SQLAlchemy async on PostgreSQL |
-| ORM | SQLAlchemy 2.0 | SQLModel | SQLModel is a thin wrapper; SQLAlchemy 2.0's native API is equally ergonomic and better documented |
-| Migrations | Alembic | manual SQL | Alembic autogenerate is essential for safe schema evolution without manual diff tracking |
-| PDF extraction | pdfplumber | pymupdf (fitz) | pymupdf is C-based and faster, but pdfplumber's text layout fidelity is better for structured transcripts; revisit if performance becomes an issue |
-| Pipeline concurrency | asyncio per-step | Celery/task queue | Offline pipeline; no queue infrastructure needed; asyncio is sufficient |
-| Python version | 3.12 | 3.11 | 3.12 has faster startup, better error messages, and is the current LTS target for most libraries |
-
----
-
-## Version Matrix (Install Reference)
+**One-time setup:** Generate the bcrypt hash offline and store it as `ADMIN_PASSWORD_HASH`:
 
 ```bash
-# SvelteKit (frontend)
-npm create svelte@latest scotuschat-web
-npm install
-npm install -D @sveltejs/adapter-node
-
-# FastAPI (backend + pipeline)
-pip install fastapi[standard]>=0.115     # includes uvicorn, httpx, pydantic v2
-pip install sqlalchemy>=2.0
-pip install asyncpg>=0.29
-pip install alembic>=1.13
-pip install psycopg2-binary>=2.9         # sync driver for Alembic only
-pip install anthropic>=0.40
-pip install pdfplumber>=0.11
-pip install httpx>=0.27
-pip install tenacity>=8.0
-pip install python-dotenv>=1.0
-pip install gunicorn>=22.0               # production process manager
+node -e "const b = require('bcryptjs'); b.hash('yourpassword', 12).then(console.log)"
 ```
 
-Use `pip install fastapi[standard]` — this installs FastAPI with its optional performance extras (uvicorn, email-validator, etc.) in a single command.
+### New JavaScript/TypeScript Dependencies
+
+| Package | Version | Purpose | Install location |
+|---------|---------|---------|-----------------|
+| `bcryptjs` | `^2.4.3` | Password hash comparison in login action. Pure JS — no native bindings. | `app/` (dependency) |
+| `@types/bcryptjs` | `^2.4.6` | TypeScript types for bcryptjs | `app/` (devDependency) |
+
+**Why `bcryptjs` and not `@node-rs/argon2`:** Argon2id is the stronger algorithm, but `@node-rs/argon2` ships native `.node` binaries that Vite/Rollup struggles to bundle in SvelteKit production builds (open GitHub issues through late 2024, including sveltejs/kit#13061). `bcryptjs` is pure JavaScript, builds without friction with adapter-node, and bcrypt at cost 12 is fully adequate for a single hashed credential stored in an env var that never changes. Add argon2 only if a real user DB is introduced in a future milestone.
+
+**Why not `svelte-kit-cookie-session`:** Last released August 2023, 187 stars. The same pattern is ~10 lines using Node's built-in `crypto.createHmac`. Avoid the dependency whose maintenance trajectory is unclear.
+
+**Why not Auth.js / Better Auth / Lucia:** All three require a database adapter. Better Auth and Lucia generate their own schema — that is DDL outside Alembic, which violates the project constraint. Lucia is deprecated as a library (now a learning reference only). These tools exist for multi-user applications with real credential storage; none of that applies here.
+
+---
+
+## Area 2: Background Pipeline Job Execution
+
+### Recommended Approach: FastAPI admin router + `asyncio.create_subprocess_exec` + DB status polling
+
+**Architecture:** Add a new protected router (`api/routers/admin.py`) to the existing FastAPI app — not a second service. The router validates an `X-Admin-Key` header (value from `ADMIN_API_KEY` env var) on every request. SvelteKit server actions set this header; it never reaches the browser.
+
+**Job lifecycle:**
+
+1. SvelteKit action POSTs to `POST /admin/pipeline/runs` with `{ argument_id, step }`.
+2. FastAPI creates a `pipeline_run` row (status=`pending`), immediately returns `{ pipeline_run_id }`.
+3. FastAPI schedules the pipeline step as an asyncio `BackgroundTask` that calls `asyncio.create_subprocess_exec()` — the subprocess runs the existing Python CLI entry point.
+4. The background task updates `pipeline_run.status` to `running` on start, then `completed` / `failed` / `needs_review` on subprocess exit. Stdout+stderr are captured and written to a new `log` TEXT column on `pipeline_run`.
+5. SvelteKit polls `GET /admin/pipeline/runs/{id}` every 2–3 seconds. The existing `pipeline_run` status machine already has all needed states — no schema rework required.
+
+**New FastAPI files:**
+- `api/routers/admin.py` — pipeline trigger endpoint, status endpoint, people-write endpoints
+- `api/dependencies/admin_auth.py` — `Depends` that validates `X-Admin-Key` header
+
+**New schema addition:** One Alembic migration adds `log TEXT` to `pipeline_run`. No new tables needed for job tracking; the existing `pipeline_run` table covers it.
+
+**Why `asyncio.create_subprocess_exec` and not `subprocess.run`:** The pipeline steps run for seconds to minutes. `subprocess.run` blocks the uvicorn event loop, stalling all other requests during a run. `create_subprocess_exec` is non-blocking on Linux (the DO App Platform target). The Windows `SelectorEventLoop` limitation (FastAPI discussions/7770) does not apply on Linux containers.
+
+**Why not Celery / ARQ / Redis:** A single-operator tool runs at most one pipeline job at a time. Adding Redis as a broker is a new infrastructure component on App Platform — a second stateful service with its own connection string, health check, and cost. The existing PostgreSQL instance already tracks `pipeline_run` state; polling it at 2–3s intervals is sufficient. Celery is correct for distributed workers and high-throughput queuing; neither applies here.
+
+**Why not FastAPI's built-in `BackgroundTasks` alone (without subprocess):** `BackgroundTasks` runs functions in the same process after the response is sent, with no retry, no crash recovery, and no status persistence. If uvicorn restarts mid-job, the task silently disappears. Spawning a subprocess and tracking status in the DB gives crash-survivability — on restart, the DB row shows `running` and the operator can re-trigger.
+
+**Why no SSE / WebSocket for job progress:** SSE would add either a `sveltekit-sse` library dependency or a custom `ReadableStream` endpoint, plus a persistent HTTP connection, for the sole benefit of sub-second latency updates to one operator. `setInterval` polling against the existing REST status endpoint is sufficient and keeps the implementation within the established `+page.server.ts` → FastAPI pattern.
+
+### New Python Dependencies
+
+None. `asyncio.create_subprocess_exec` is Python 3.12 stdlib. SQLAlchemy async session for status updates is already present. The `log` column write uses existing ORM patterns.
+
+---
+
+## Area 3: File Upload (PDF to Disk)
+
+### Recommended Approach: SvelteKit form action + `node:fs/promises` + DigitalOcean Spaces
+
+**SvelteKit upload pattern** (no new npm packages — stdlib only):
+
+```typescript
+// src/routes/admin/pipeline/+page.server.ts
+import { writeFile } from 'node:fs/promises';
+import { extname } from 'node:path';
+
+export const actions = {
+  upload: async ({ request }) => {
+    const formData = await request.formData();
+    const file = formData.get('pdf') as File;
+    const tempPath = `/tmp/${crypto.randomUUID()}${extname(file.name)}`;
+    await writeFile(tempPath, Buffer.from(await file.arrayBuffer()));
+    // POST tempPath to FastAPI admin trigger endpoint — same request lifecycle
+  }
+};
+```
+
+`request.formData()` handles `multipart/form-data` natively in SvelteKit (no `multer`, no `formidable`). The `Buffer.from(await file.arrayBuffer())` pattern is the validated approach per the SvelteKit community (travishorn.com).
+
+**Critical Digital Ocean constraint:** App Platform containers have no persistent filesystem and no writable volumes. Files written to `/tmp/` are lost on every deploy or container replacement. This means:
+
+1. The uploaded PDF must be relayed to DigitalOcean Spaces (S3-compatible) before the HTTP response is sent — or within the same server action lifecycle.
+2. The FastAPI pipeline `ingest` step must be adapted to fetch from Spaces (via a Spaces object key) rather than a local path.
+
+**Storage flow:**
+
+```
+Browser → SvelteKit action → /tmp/uuid.pdf (temp)
+                           → POST to FastAPI /admin/pipeline/runs with spaces_key
+SvelteKit action → boto3.upload_file → DO Spaces bucket
+FastAPI ingest step → boto3.download_file → pipeline processing
+```
+
+The Python pipeline side uploads via boto3; FastAPI's admin endpoint receives the Spaces key and passes it to the subprocess.
+
+### New Python Dependencies (pipeline/api side)
+
+| Package | Version | Purpose |
+|---------|---------|---------|
+| `boto3` | `^1.34` | Upload PDF to DO Spaces; fetch from Spaces in pipeline ingest step. S3-compatible — same API as AWS S3. |
+
+`botocore` is installed automatically as a `boto3` dependency; pin them together in requirements.
+
+**Why Spaces and not local filesystem:** DO App Platform does not support persistent volumes. The docs state explicitly: "App Platform does not currently support volumes because instances are scalable and ephemeral." Any file not in the DB or Spaces is gone after the next deploy.
+
+**Why boto3 and not the `s3fs` / `aiobotocore` variants:** The upload happens once at ingest time in a CLI-style context. Standard synchronous boto3 is correct. Async S3 adds complexity with no benefit for this use case.
+
+---
+
+## Complete Installation Reference
+
+```bash
+# In app/ — SvelteKit (new additions only)
+npm install bcryptjs
+npm install -D @types/bcryptjs
+
+# In api/ or pipeline/ Python environment (new additions only)
+pip install boto3>=1.34
+```
+
+No other new packages. The session token signing uses `node:crypto` (built-in). File writing uses `node:fs/promises` (built-in). The subprocess pattern uses Python `asyncio` (built-in).
+
+---
+
+## What NOT to Add
+
+| Avoid | Why | Use Instead |
+|-------|-----|-------------|
+| `better-auth` | Requires database schema; that is DDL outside Alembic — violates project constraint. Overkill for env-var credentials. | DIY hooks + `bcryptjs` |
+| `auth.js` (NextAuth for SvelteKit) | Same DB adapter problem; complex config for a no-user-DB scenario | DIY hooks + `bcryptjs` |
+| `lucia-auth` | Deprecated as a library (now a learning reference only); has the same DB requirement | DIY hooks + `bcryptjs` |
+| `svelte-kit-cookie-session` | Last released Aug 2023; low adoption; HMAC pattern achieves the same in stdlib Node crypto | `node:crypto` `createHmac` |
+| `@node-rs/argon2` | Native binary causes Vite/Rollup build failures in SvelteKit production builds (open issues through late 2024) | `bcryptjs` |
+| Celery + Redis | New infra dependency (Redis service on DO App Platform) for a single-operator sequential job runner | `asyncio.create_subprocess_exec` + DB polling |
+| ARQ / SAQ | Also Redis-backed | Same as Celery |
+| FastAPI `BackgroundTasks` without subprocess | No crash recovery; job is silently lost on process restart | Subprocess + DB status row |
+| SSE / WebSocket for job progress | Library dependency and persistent connection overhead for one operator who can wait 3 seconds | `setInterval` polling on existing REST endpoint |
+| `multer` / `formidable` | Node.js multipart libraries; SvelteKit form actions handle multipart natively via `request.formData()` | `request.formData()` + `node:fs/promises` |
+| Second FastAPI service for admin | Separate deploy unit, separate DB connection pool, separate auth surface | Protected router on existing FastAPI app |
+| Local filesystem for persistent PDFs | DO App Platform has no persistent volumes; files are lost on redeploy | DigitalOcean Spaces via boto3 |
+
+---
+
+## Integration Points with Existing Stack
+
+| Existing piece | How new code hooks in |
+|----------------|-----------------------|
+| `pipeline_run` table + status machine | Reused as-is for job status tracking; only addition is a `log TEXT` column via new Alembic migration |
+| `FASTAPI_BASE_URL` env var in SvelteKit | Admin actions call FastAPI using the same server-only pattern; `ADMIN_API_KEY` added as a second server-only env var |
+| `+page.server.ts` load + action pattern | All admin pages follow the same established pattern; write operations use named `actions` exports |
+| `hooks.server.ts` | New `handle` export added; if a handle function already exists, use SvelteKit's `sequence()` helper to compose them |
+| Alembic migrations | `log TEXT` column on `pipeline_run` goes in a new numbered migration; `Base.metadata.create_all` is never called |
+| PgBouncer `statement_cache_size=0` | No change; admin FastAPI router reuses the existing session factory |
+
+---
+
+## Digital Ocean App Platform Compatibility Notes
+
+1. **No persistent filesystem / no volumes.** PDF uploads must be forwarded to Spaces within the same request action before the temp file is at risk. Never depend on disk between requests.
+2. **No volumes.** This is a hard platform constraint, not a configuration option. Spaces is the only supported persistent file store.
+3. **File upload timeout: 600 seconds.** SCOTUS PDFs are typically 200–800 KB — well within this limit.
+4. **Local filesystem cap: 4 GiB.** Write uploaded files to `/tmp/` only; never accumulate them across requests.
+5. **Internal service communication.** The SvelteKit service calls FastAPI via the App Platform internal hostname — the same `FASTAPI_BASE_URL` pattern already in use. No change needed.
+6. **`asyncio.create_subprocess_exec` on Linux.** The Windows `SelectorEventLoop` limitation does not apply on DO App Platform (Linux containers). This is the production target.
+
+---
+
+## Version Compatibility
+
+| Package | Requires | Notes |
+|---------|----------|-------|
+| `bcryptjs@^2.4.3` | Node 18+, SvelteKit 2.x | Pure JS; zero native build step; no Vite config changes needed |
+| `@types/bcryptjs@^2.4.6` | TypeScript 5.x | Matches bcryptjs 2.4.x API surface |
+| `boto3@^1.34` | Python 3.12, botocore 1.34 | Pin botocore alongside boto3; they version together |
+| `asyncio.create_subprocess_exec` | Python 3.12 stdlib, Linux only | Correct for DO App Platform; not needed on Windows dev machines (pipeline runs locally anyway) |
 
 ---
 
 ## Sources
 
-- SvelteKit official docs: https://svelte.dev/docs/kit
-- SvelteKit adapter-node docs: https://svelte.dev/docs/kit/adapter-node
-- FastAPI production docs: https://fastapi.tiangolo.com/deployment/versions/
-- FastAPI best practices (community): https://github.com/zhanymkanov/fastapi-best-practices
-- SQLAlchemy 2.0 async + asyncpg: https://leapcell.io/blog/building-high-performance-async-apis-with-fastapi-sqlalchemy-2-0-and-asyncpg
-- asyncpg vs psycopg3 comparison: https://goldlapel.com/grounds/django-python/asyncpg-vs-psycopg3-fastapi
-- Alembic + FastAPI guide (2025): https://blog.greeden.me/en/2025/08/12/no-fail-guide-getting-started-with-database-migrations-fastapi-x-sqlalchemy-x-alembic/
-- Digital Ocean App Platform SvelteKit: https://blakedeckard.com/deploy-sveltekit-to-digital-ocean-app-platform
-- DO managed PostgreSQL connection pools: https://docs.digitalocean.com/products/app-platform/how-to/connect-pg-pools/
-- Anthropic Python SDK: https://github.com/anthropics/anthropic-sdk-python
-- pdfplumber GitHub: https://github.com/jsvine/pdfplumber
-- PDF extractor comparison (2025): https://onlyoneaman.medium.com/i-tested-7-python-pdf-extractors-so-you-dont-have-to-2025-edition-c88013922257
-- FastAPI connection pool pitfalls: https://blog.venturemagazine.net/the-fastapi-dependency-injection-bug-that-leaked-database-connections-5-minute-fix-26082bb4bacf
+- SvelteKit official docs (Auth page) — session/cookie locals pattern, `hooks.server.ts` structure: https://svelte.dev/docs/kit/auth
+- joyofcode.xyz — httpOnly cookie session pattern, `crypto.randomUUID` token: https://joyofcode.xyz/sveltekit-authentication-using-cookies
+- Lucia v3 tutorial — `@node-rs/argon2` configuration params, `hooks.server.ts` `locals.user` pattern: https://v3.lucia-auth.com/tutorials/username-and-password/sveltekit
+- lucia-auth/lucia issue #1567 — `@node-rs/argon2` production build breakage in SvelteKit (native binary Rollup parse error): https://github.com/lucia-auth/lucia/issues/1567
+- sveltejs/kit issue #13061 — `@node-rs/argon2-wasm32-wasi` resolution failure in SvelteKit builds: https://github.com/sveltejs/kit/issues/13061
+- travishorn.com — `request.formData()` + `writeFile(Buffer.from(arrayBuffer()))` validated upload pattern: https://travishorn.com/uploading-and-saving-files-with-sveltekit/
+- sveltetalk.com — SvelteKit 2.49 streaming upload context: https://sveltetalk.com/posts/stream-file-uploads-249
+- DO App Platform storage docs — no volumes; Spaces is the persistent option: https://docs.digitalocean.com/products/app-platform/how-to/store-data/
+- DO support — 600s upload timeout, 4 GiB local cap: https://docs.digitalocean.com/support/why-are-large-files-failing-to-upload-to-my-app-on-app-platform/
+- fastapi/fastapi discussion #7770 — `asyncio.create_subprocess_exec` in FastAPI BackgroundTasks; Windows caveat confirmed Linux-only: https://github.com/fastapi/fastapi/discussions/7770
+- betterstack.com — BackgroundTasks limitations for long-running work: https://betterstack.com/community/guides/scaling-python/background-tasks-in-fastapi/
+
+---
+*Stack research for: SCOTUS Chat v1.1 operator admin interface additions*
+*Researched: 2026-06-15*

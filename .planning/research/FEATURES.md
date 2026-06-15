@@ -1,181 +1,182 @@
-# Feature Landscape
+# Feature Research
 
-**Domain:** Legal transcript reader / Supreme Court oral argument viewer
-**Researched:** 2026-06-11
-**Primary competitor analyzed:** Oyez.org (oyez.org)
-
----
-
-## Oyez.org Competitive Analysis
-
-Oyez is the primary product to differentiate from. Understanding its strengths and gaps directly
-shapes what this project must match, exceed, or deliberately leave out.
-
-### What Oyez Does Well
-
-| Capability | Detail |
-|------------|--------|
-| Audio + transcript sync | Audio aligned to sentence-level segments; click any paragraph to jump the audio playhead |
-| Speaker identification | Per-utterance speaker labels (retroactively applied back to 1955 for pre-2004 transcripts that originally used "The Court" for all justices) |
-| Justice biographies | Biographical sketches for current and historical justices |
-| Advocate profiles | Information on attorneys who have argued before the Court |
-| Case summaries | Plain-English case abstracts alongside the transcript |
-| Audio download | MP3 download and streaming for 5,000+ hours of oral arguments |
-| Case browsing | Cases browseable by term; sort by name or chronology |
-| Subject-area filtering | Cases filterable by issue/topic area |
-| Mobile app (iOS/Android) | Synchronized audio + transcript on mobile; streaming or offline download |
-| Scale | 8,300+ oral argument transcripts; 1,800,000+ utterances in corpus |
-
-### What Oyez Does Not Do Well (gaps this project can exploit)
-
-| Gap | Impact |
-|-----|--------|
-| Transcript is displayed as a dense text wall, not a conversation | Hard to follow rapid turn-taking among multiple justices |
-| No visual differentiation between Bench and advocates | Reader must track speaker names manually in a dense block |
-| No avatar/photo treatment that makes the speaker feel present | Justices and advocates are names in text only |
-| Stage directions (laughter, pause) are buried inline in parentheses | No semantic differentiation from spoken content |
-| Justice bio depth varies; not guaranteed uniform schema | Inconsistent experience across justices and historical figures |
-| No structured rendering of argument structure (rebuttal time, amicus) | Loses the procedural shape of the argument |
-| Not optimized for non-lawyers — assumes legal literacy | Barrier for civic education and general public use |
+**Domain:** Operator-facing admin interface for a content ingestion pipeline (single operator, internal tool)
+**Researched:** 2026-06-15
+**Confidence:** HIGH
 
 ---
 
-## Table Stakes
+## Feature Landscape
 
-Features users expect from any legal transcript viewer. Absence signals the product is incomplete.
+### Table Stakes (Operator Expects These)
+
+Features the operator assumes exist. Missing these = admin tool is not usable.
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| Per-utterance speaker attribution | Every competing tool labels who is speaking | Low | Oyez, CourtListener, and supremecourt.gov PDFs all provide this |
-| Case title and docket number displayed | Standard metadata on every legal resource | Low | Must appear on case landing page |
-| Argument date and term year | Required to place argument in historical context | Low | Pairs with case title |
-| Browseable case list | Users need a way to find arguments without knowing exact case name | Low | By term, at minimum |
-| Readable transcript with clear speaker labels | Core function — the raw text must be comprehensible | Low | Even plain PDF provides this; must meet or exceed |
-| Mobile-responsive layout | Majority of incidental users will be on phones | Medium | Chat-style layout naturally adapts; test wrapping for long utterances |
-| Stable, shareable URLs per case and per argument | Users copy links to share arguments; permalinks are expected | Low | `/cases/{slug}` pattern; must work on refresh |
-| Stage direction / parenthetical rendering | Oyez transcripts include them; dropping them loses fidelity | Low | Distinct visual treatment, not deletion |
-| Open Graph / social preview metadata | When shared to social or messaging, unfurled preview should show case name, date, and a useful description | Low | `<meta>` tags; no backend required |
-| Accessible color contrast and readable type | WCAG 2.1 AA minimum — legal content has a high proportion of users with disabilities | Low-Medium | 4.5:1 contrast ratio; sufficient font size for dense text |
-| Keyboard navigation | Transcript should be fully navigable without a mouse | Low | Particularly important for power users and AT users |
+| Password-protected login | Any admin route must be gated; session must persist across refreshes | LOW | Username+password from env vars; SvelteKit `hooks.server.ts` intercepts all `/admin/*` before load functions run. Session stored as HttpOnly cookie. |
+| Logout | Every auth system has logout | LOW | Clear session cookie; redirect to `/admin/login`. |
+| Pipeline trigger — URL input | Ingest is already URL-driven (supremecourt.gov PDF URLs); the operator knows the URL before running | LOW | Input + submit button; validate URL format client-side before submitting. URL must pass existing `_validate_url()` SSRF guard on the backend. |
+| Pipeline trigger — file upload | Operator may have PDFs locally that are not yet on supremecourt.gov | MEDIUM | `<input type="file" accept=".pdf">`; upload to server, store in `data/` directory as if ingest downloaded it; then proceed through parse/resolve. Drag-and-drop is a bonus, not table stakes. |
+| Step-by-step status display | Operator must know whether ingest / parse / resolve succeeded or is still running | MEDIUM | Three named step cards, each with a status badge: pending → running → completed / failed / needs_review. Read from `pipeline_runs` table, which already has this state machine (PIPE-10 validated). |
+| Auto-advance when no discrepancies | If resolve finds zero unresolved labels, move straight to completed without blocking the operator | LOW | Backend resolve step already gates `needs_review` (PIPE-09 validated). UI polls status and advances the stepper automatically when status = completed. |
+| Pause-for-review when discrepancies exist | Operator must see which speaker labels went unresolved before marking a run done | MEDIUM | When resolve run status = `needs_review`, UI shows a list of unresolved `argument_participants` rows for that argument. Operator assigns or creates a person record per row. |
+| People directory list | Operator needs to see all speaker records to spot duplicates and gaps | LOW | Paginated or scrollable table of people rows: full_name, role, photo_url present/absent indicator. |
+| People edit form | Operator must be able to edit name, role, bio text, photo URL, tenure dates | LOW | Standard form with labeled fields; save persists to `people` and `court_tenures` tables via new admin API endpoints. |
+| Pipeline run history | Operator needs to see past runs to diagnose failures and find run IDs | LOW | List of recent `pipeline_runs` rows per argument: step, status, timestamps, failure_reason. |
+| Error display on failure | If parse or resolve fails, the operator must see the failure_reason | LOW | `pipeline_runs.failure_reason` column already populated by pipeline. Surface it inline in the step card. |
 
 ---
 
-## Differentiators
+### Differentiators (Valuable but Not Assumed)
 
-Features that set this product apart from Oyez and every flat PDF viewer. Not expected baseline — but
-valued and sticky when present.
+Features that make the admin tool faster and less error-prone for a solo operator.
 
-| Feature | Value Proposition | Complexity | Dependencies |
-|---------|-------------------|------------|--------------|
-| Chat-style two-sided layout | Turn-taking is instantly visually obvious; Bench on one side, advocates on the other; matches how people already read conversations | Medium | Speaker resolution must be complete before render; requires a "side" attribute per speaker role |
-| Speaker avatars with consistent sizing | Gives each voice a face; makes the Court feel like people not institutions | Low-Medium | Photo sourcing from Oyez API / FJC; fallback initials avatar when no photo available |
-| Uniform bio schema for every speaker | Every justice and advocate has identical fields — no one gets more or less editorial treatment | Medium | Enrichment pipeline step; data from FJC + supremecourt.gov + Oyez API |
-| Stage directions rendered as a distinct component | "(Laughter.)" and "(Pause.)" rendered as a centered, muted annotation between bubbles — not inside a speech bubble | Low | Parser must classify utterance type: speech vs. stage direction |
-| Argument-level navigation (sections) | Oral arguments have a defined structure: Petitioner → Respondent → Rebuttal → Amicus. A navigation rail lets users jump to each speaker's block | Medium | Requires argument-section tagging; depends on transcript structure being consistent enough to auto-detect |
-| Speaker role indicators | "Chief Justice", "Associate Justice", "Counsel for Petitioner" badges on bio cards so users know the structural role of each speaker without background | Low | Role data from speaker resolution step |
-| Citation callouts | Raw legal citations surfaced inline as styled text; future-ready for hyperlinking to resolved cases | Low | Pipeline already captures citations; frontend renders them with distinct visual style |
-| Re-argument awareness | When a case was re-argued, both argument sessions are accessible and clearly labeled as distinct events | Low | Schema already supports this; frontend must expose it |
-| Responsive chat bubbles with sane max-width | Long utterances wrap gracefully without becoming a wall of text; max-width ~65ch maintains readability | Low | Pure CSS; apply prose width constraint to bubble content |
-| Argument-at-a-glance header | Case name, docket, argued date, decided date (if available), and a speaker roster before the transcript begins | Low | Assembles from existing data fields; no new pipeline work |
+| Feature | Value Proposition | Complexity | Notes |
+|---------|-------------------|------------|-------|
+| Pipeline state resumable across sessions | If browser closes mid-run, operator can return and see current status | LOW | `pipeline_runs` rows are already persisted to DB (PIPE-14 requirement). UI just reads current state on page load rather than relying on in-memory state. Mostly provided by the existing schema. |
+| Inline participant review after resolve | After a run, operator can see each resolved participant and fill in missing metadata (bio, photo URL) without leaving the pipeline view | MEDIUM | After resolve completes, render `argument_participants` for the argument with each person's current metadata. Clicking a person opens an inline edit panel. Avoids separate trip to the people directory for newly encountered speakers. |
+| "Create new person" during resolve review | When a speaker label is completely new, operator can create a person record inline rather than navigating away | MEDIUM | Modal or inline form with full_name + role; saves to `people` and creates the `argument_participant` link. Returns to review queue without full page navigation. |
+| Unresolved count badge | Before operator opens the review step, show how many labels still need attention | LOW | COUNT of `argument_participants WHERE person_id IS NULL` for the current argument. Keeps operator oriented. |
+| Alias auto-save during review | When operator assigns a label to a person during review, optionally save to `speaker_alias` so future runs auto-resolve it | LOW | Checkbox on the review form: "Remember this label mapping." Writes to `speaker_alias` table. High value because the same Justices appear in every argument. |
+| Tab-separated dual trigger (URL / Upload) | Toggle between URL and file upload in one widget rather than two separate pages | LOW | Tabbed input: [Enter URL] [Upload PDF]. No navigation required to switch modes. Single submit button. |
+| Photo URL validation / preview | Show a small avatar preview when a photo URL is entered so the operator can verify it resolves | LOW | `<img>` with onerror handler in the edit form. If the URL 404s, show a warning inline. Prevents broken avatar display in the public UI. |
 
 ---
 
-## Anti-Features
+### Anti-Features (Commonly Requested, Often Problematic)
 
-Things to deliberately NOT build. Each anti-feature has a specific reason tied to the project's
-apolitical constraint, scope discipline, or technical risk.
+Features that seem useful but create disproportionate complexity or undermine existing design decisions.
 
-| Anti-Feature | Why Avoid | What to Do Instead |
-|--------------|-----------|-------------------|
-| AI-generated case summaries | Any LLM summary of a constitutional case will reflect the framing choices of the model, which cannot be uniformly neutral; users cannot verify what was omitted or reframed | Display only the raw transcript and structured metadata; let users draw their own conclusions |
-| "What this case means" editorial annotations | Adding interpretation is editorializing even when intended as neutral — every framing choice implies a stance | Link to external resources (Oyez, SCOTUSblog) for analysis; never produce it in-house |
-| Predicted/likely outcome indicators | Inferring how justices will vote from oral argument questions is common academic practice but inherently editorial and often wrong | Do not surface question counts, interruption metrics, or sentiment signals as predictive features |
-| Justice sentiment or tone analysis | Labeling a justice's tone as "skeptical," "hostile," or "sympathetic" introduces political interpretation | Render the verbatim text; let users read tone themselves |
-| Topic / subject tagging | Tagging a case as "abortion," "gun rights," or "voting rights" immediately creates politically charged filter hierarchies; flagged as deferred in PROJECT.md for this reason | Defer; if implemented later, use neutral procedural categories (First Amendment, Commerce Clause) sourced from official Court classification, not editorial assignment |
-| User accounts and social features | Not in scope; adds auth complexity, moderation surface, and content liability | Keep the product read-only; no comments, ratings, or contributions |
-| Cross-case analysis / justice statistics | "Justice X asks the most questions" or "Justice Y interrupts most" produces statistical artifacts that will be shared out of context and interpreted politically | Defer cross-case queries; schema supports it for future; do not surface aggregate stats in initial product |
-| Notifications / email alerts | CourtListener offers this; it is a power-user workflow feature adding backend complexity for marginal MVP value | Defer; users can bookmark and return |
-| Audio playback | Requires licensing clarity (audio belongs to the Court; Oyez has an established relationship); adds significant frontend complexity; Oyez already serves this well | Link to the Oyez argument page for audio; do not duplicate |
-| PDF download / export | Transforms the viewer into a document tool; adds scope; PDFs are already on supremecourt.gov | Link to the official PDF source; do not re-host or generate |
-| Full-text search across all cases | High infrastructure cost; CourtListener and Oyez already do this well; not differentiating for MVP | Provide within-argument text search (browser CTRL+F is sufficient for MVP); defer cross-case search |
-| Advocate win/loss records | Framing an advocate as "X wins, Y loses" encourages users to evaluate lawyers rather than arguments; adds editorial interpretation | Display advocate name, bar status, and role in this argument only |
-| Dark patterns in sharing | Pre-populated social sharing text that frames the case | Share raw URL only; let the user write their own post |
+| Anti-Feature | Why Requested | Why Problematic | Alternative |
+|--------------|---------------|-----------------|-------------|
+| Real-time log streaming (SSE / WebSocket) | "I want to see the LLM processing each utterance in real-time" | SSE from FastAPI requires keeping a long-lived connection open through PgBouncer transaction-mode pooling. Adds infra complexity (async generator, client EventSource) for marginal value when a single argument parses in under 60 seconds. | Poll `pipeline_runs.status` every 3–5 seconds. Status flips from `running` to `completed/failed` atomically. Operator sees the result without per-utterance streaming. |
+| Celery / Redis task queue | "Background workers for robust job execution" | Introduces two new infra components for a tool used by one operator processing ~2–5 arguments per month. PgBouncer transaction mode already constrains async DB access. | Run pipeline steps as synchronous subprocess calls spawned by the FastAPI admin endpoint, with DB status written before and after. If the process crashes, `pipeline_runs.status` stays `running` — operator re-triggers. |
+| Bulk import (multiple PDFs at once) | "Save time by uploading a batch" | Each PDF requires sequential ingest → parse → resolve with potential human review between steps. Batching obscures which argument needs attention. Resolve discrepancies are per-argument; batching creates a confusing multi-argument review queue. | Process one argument at a time. Run time per argument is short (~1–3 minutes). No meaningful time saving from batching. |
+| Granular role-based access control (RBAC) | "Different people should have different permissions" | Single operator; there is no second user. Adding roles adds schema complexity with zero current benefit. | Simple `ADMIN_USERNAME` + `ADMIN_PASSWORD` env var check. If a second operator ever joins, revisit auth at that milestone. |
+| Audit log UI for people edits | "Show a history of every change made" | The `pipeline_runs` table already functions as an append-only audit log for pipeline operations. A separate UI audit trail for people edits requires change-tracking columns or an event sourcing table — significant scope for a single operator. | Pipeline history panel (existing `pipeline_runs` rows) covers the primary audit need. People edits are low-frequency and low-risk. |
+| Dashboard with analytics / metrics | "Show me ingestion stats, parse success rates" | Even speaker-neutral metrics (utterances per argument) create editorial-adjacent views. Violates the project's apolitical framing if any per-speaker counts are surfaced. | Plain pipeline run history table — step, status, timestamp. No derived analytics. |
+| Fuzzy-match suggestion during resolve review | "Auto-suggest the closest person when a label is unresolved" | Levenshtein / fuzzy matching over the people table adds a query-time dependency. The alias table already handles all recurring Justices after the first run. New advocates are genuinely novel and need human selection, not an algorithmic guess. | Present a dropdown / searchable list of all people records. Operator picks explicitly; no algorithmic ranking. |
+| Inline utterance text editing | "Let me fix a transcription error in the transcript" | Utterances are derived from the immutable PDF source. Editing them violates the "all derived data can be regenerated" principle (PIPE-02). Re-parse produces new utterance rows; the old run is preserved per PIPE-11. | If a transcript has a known parse error, re-run parse. The `pipeline_run_id` + max-run filter design was built to support exactly this. |
+| Public registration / invite system | "Let a researcher or colleague log in" | No second operator currently exists. Building an invitation or registration system is premature and introduces user management scope. | Hard-code single operator credentials in env vars. |
 
 ---
 
 ## Feature Dependencies
 
-Understanding which features must exist before others can be built:
-
 ```
-Speaker resolution (pipeline) → Chat layout (cannot assign "side" without knowing role)
-Speaker resolution (pipeline) → Avatars (cannot display photo without resolved person record)
-Speaker resolution (pipeline) → Bio cards (no bio without person record)
-Utterance classification (speech vs. stage direction) → Stage direction rendering
-Citation extraction (pipeline) → Citation callout styling (frontend)
-Argument section detection → Section navigation rail
-Case metadata (case, argument records) → Argument-at-a-glance header
-Stable URL scheme → Open Graph / social previews
-All of the above → Full chat view
+[Auth / session cookie]
+    └──required by──> [All /admin/* routes]
+
+[Pipeline trigger — URL input or file upload]
+    └──required by──> [Ingest step execution]
+                          └──required by──> [Parse step execution]
+                                                └──required by──> [Resolve step execution]
+                                                                      └──required by──> [Inline participant review]
+
+[People directory list]
+    └──enhances──> [Inline participant review — "Create new person" flow]
+
+[Alias auto-save during review]
+    └──requires──> [Resolve step execution]
+    └──enhances──> [Future runs auto-advance without review]
+
+[Pipeline run history]
+    └──required by──> [Resumable state — operator returns to interrupted run]
 ```
 
-The pipeline is the foundation. No frontend differentiator works without complete, resolved speaker
-data. This means the pipeline must be the first working piece, even if the frontend starts simple.
+### Dependency Notes
+
+- **Auth required by all admin routes:** `hooks.server.ts` must run before any `+page.server.ts` load function in the `/admin/*` tree. A `+layout.server.ts` at `src/routes/admin/` ensures hooks fire even for routes with no server-load file.
+- **Ingest required before parse:** Parse reads the PDF path written by ingest (`pipeline_runs.pdf_path`). There is no way to parse an argument that has not been ingested.
+- **Parse required before resolve:** Resolve reads utterance rows written by parse, filtered by `pipeline_run_id`. Attempting resolve with no parse run is a schema-level impossibility.
+- **Resolve required before participant review:** `argument_participants.person_id` is only populated after resolve runs. The review UI has nothing to show until resolve has run at least once.
+- **People directory enhances participant review:** If a new speaker does not exist in `people`, the operator must create them. The "Create new person" inline form can call the same backend logic as the people editor, avoiding duplication.
 
 ---
 
-## MVP Feature Set Recommendation
+## MVP Definition
 
-### Must Have at Launch (Proof of Concept)
+### Launch With (v1.1)
 
-1. Case list page — browseable list of hand-picked arguments by term/case name
-2. Chat view — two-sided layout, speaker avatars with initials fallback, speaker name + role label
-3. Stage direction rendering — visually distinct from speech bubbles
-4. Bio card — consistent schema for every speaker (name, role, tenure dates, appointing president for justices; bar status for advocates) — no editorializing
-5. Argument header — case name, docket, date argued, speaker roster
-6. Citation display — raw citation text styled distinctly (not linked, not resolved)
-7. Stable URLs — `/cases/{slug}/arguments/{id}` pattern
-8. Open Graph metadata — case name + date in unfurl preview
-9. Mobile-responsive layout — chat bubbles stack cleanly on 375px viewport
-10. Keyboard navigable
+Minimum viable set that makes the pipeline operable from a browser.
 
-### Defer to Later Phase
+- [ ] Auth — login form, session cookie, `hooks.server.ts` guard for `/admin/*`
+- [ ] Pipeline trigger — URL input tab + file upload tab in one widget
+- [ ] Step-by-step status display — three cards (Ingest / Parse / Resolve), each with status badge, error text on failure
+- [ ] Auto-advance when no discrepancies — poll `pipeline_runs.status`; advance stepper to completed automatically
+- [ ] Pause-for-review when discrepancies — render `argument_participants WHERE person_id IS NULL`; operator assigns person or creates new
+- [ ] Alias auto-save during review — checkbox on each assignment; writes to `speaker_alias`
+- [ ] People directory list — scrollable table, full_name / role / photo present/absent
+- [ ] People edit form — fields: full_name, role_id, bio text, photo_url, tenure start/end dates
 
-| Feature | Reason to Defer |
-|---------|-----------------|
-| Argument section navigation rail | Requires reliable section detection; can add without schema change |
-| Re-argument multi-session UI | Schema ready; display logic simple; low urgency for MVP |
-| Within-argument text search | Browser search sufficient for MVP; proper implementation can be Phase 2 |
-| Full case list with term filter | Start with a curated set; browsing at scale comes later |
-| Photo enrichment for all advocates | Justice photos available; advocate photos less consistently available |
+### Add After Validation (v1.1 polish, same milestone)
+
+Features to add once core pipeline runner and people editor are working.
+
+- [ ] Unresolved count badge — show on the resolve step card before operator clicks into review; requires only a COUNT query
+- [ ] Photo URL preview in people edit form — `<img>` with onerror; one-line addition to the form
+- [ ] Pipeline run history panel — list `pipeline_runs` for an argument; useful for diagnosing re-runs
+
+### Future Consideration (v1.2+)
+
+- [ ] Automated enrichment (Oyez / FJC API) — already marked Out of Scope in PROJECT.md for v1.1
+- [ ] Batch ingestion — only warranted if the operator is processing >10 arguments per week
 
 ---
 
-## Accessibility Notes
+## Feature Prioritization Matrix
 
-| Concern | Requirement | Rationale |
-|---------|-------------|-----------|
-| Color contrast | WCAG 2.1 AA (4.5:1 minimum for body text) | Dense legal text + sustained reading sessions require high contrast |
-| Font size | 16px minimum body; no sub-12px UI text | Long-form reading use case; users include older adults and legal professionals reading for detail |
-| Speaker differentiation | Do NOT rely solely on color to distinguish Bench vs. advocate side | Color blindness; layout position (left/right) must carry the primary meaning |
-| Screen reader support | Speaker name must be in the DOM before the utterance text, not just shown via avatar | AT users need the "who" before the "what" |
-| Touch targets | 44×44px minimum tap targets for any interactive element (bio card links, navigation) | WCAG 2.5.5; mobile users with motor impairments |
-| Reduced motion | Bio card hover animations and any scroll transitions must respect `prefers-reduced-motion` | Vestibular disorders |
-| Focus management | If bio card opens as a modal/overlay, focus must trap inside and return to trigger on close | Keyboard and AT users |
+| Feature | Operator Value | Implementation Cost | Priority |
+|---------|---------------|---------------------|----------|
+| Auth + session cookie | HIGH | LOW | P1 |
+| Pipeline trigger (URL + upload) | HIGH | LOW–MEDIUM | P1 |
+| Step-by-step status display | HIGH | MEDIUM | P1 |
+| Auto-advance / pause-for-review | HIGH | MEDIUM | P1 |
+| Inline participant review + alias save | HIGH | MEDIUM | P1 |
+| People directory list | HIGH | LOW | P1 |
+| People edit form | HIGH | LOW | P1 |
+| Unresolved count badge | MEDIUM | LOW | P2 |
+| Photo URL preview | LOW | LOW | P2 |
+| Pipeline run history panel | MEDIUM | LOW | P2 |
+| "Create new person" inline during review | MEDIUM | MEDIUM | P2 |
+| Batch ingestion | LOW | HIGH | P3 |
+| SSE real-time log streaming | LOW | HIGH | P3 |
+
+**Priority key:**
+- P1: Must have for launch
+- P2: Should have, add when core is stable
+- P3: Nice to have, future consideration
+
+---
+
+## Competitor / Reference Pattern Analysis
+
+This is an internal operator tool with no direct competitors. The closest analogous patterns are:
+
+| Pattern | Reference | Our Approach |
+|---------|-----------|--------------|
+| Pipeline step stepper | Jenkins Blue Ocean — stage nodes with color-coded status | Three named cards (Ingest / Parse / Resolve) with status badges; simpler because steps are always sequential, never parallel |
+| Resolve discrepancy review | CMS import review queues (WordPress importer, Contentful import review) — flagged items shown in a list with action buttons | Inline list of unresolved `argument_participants`; assign person from dropdown or create new; dismiss/save per row |
+| Entity directory editor | Django Admin, EasyAdmin — paginated list with row-level edit | Paginated table with edit button per row; full edit form on click (not inline table editing — too fiddly for date fields and multiline bio text) |
+| File + URL dual input | GitHub new repo — tab between "Import" (URL) and "Create" (form) | Tabs within a single form widget: [Paste URL] [Upload File]; submit button shared |
+| Auth guard in SvelteKit | `hooks.server.ts` + `event.locals` pattern | `sequence()` in `hooks.server.ts`; admin session in `event.locals.admin`; `+layout.server.ts` at `/admin/` to force hook execution for all nested routes |
 
 ---
 
 ## Sources
 
-- Oyez Project Wikipedia: https://en.wikipedia.org/wiki/Oyez_Project
-- CourtListener Oral Argument Transcripts launch: https://free.law/2025/07/31/oral-argument-transcripts/
-- SCOTUSblog on Oyez audio alignment: https://www.scotusblog.com/2022/01/now-available-on-oyez-january-oral-argument-audio-aligned-with-the-transcripts/
-- Oyez speaker identification history: https://scotusoa.com/oyez-history/
-- Oyez iOS app features: https://apps.apple.com/us/app/oyez/id346152567
-- CourtListener advanced oral argument search: https://www.courtlistener.com/audio/
-- WCAG 2.2 Chat Widget Accessibility Checklist: https://threada.ai/blog/wcag-22-chat-widget-accessibility-checklist/
-- Chat UI Design best practices: https://www.uxpin.com/studio/blog/chat-user-interface-design/
-- Legal Software UX: https://smotrow.com/insights/legal-software-ux-how-to-design-interfaces-that-lawyers-adopt
-- Computational Analysis of SCOTUS Oral Argument: https://arxiv.org/pdf/2306.05373
-- AI summarization bias research: https://arxiv.org/pdf/2411.04093
-- Justia SCOTUS case browse by topic: https://supreme.justia.com/cases-by-topic/
+- UI patterns for async workflows: https://blog.logrocket.com/ux-design/ui-patterns-for-async-workflows-background-jobs-and-data-pipelines/
+- Background task progress UI: https://appmaster.io/blog/background-tasks-progress-ui
+- Jenkins Blue Ocean pipeline run details view: https://www.jenkins.io/doc/book/blueocean/pipeline-run-details/
+- File upload UX best practices: https://uploadcare.com/blog/file-uploader-ux-best-practices/
+- SvelteKit hooks middleware and auth guards: https://teta.so/blog/sveltekit-hooks-middleware-auth-guards
+- Authentication in Svelte using cookies: https://blog.logrocket.com/authentication-svelte-using-cookies/
+- Designing for the operator experience: https://medium.com/statuscode/designing-for-the-operator-experience-21b63db8143
+- CRUD admin UI design guide: https://medium.com/@tanya_anokhina/designers-guide-to-user-data-and-crud-4e53f7c5150d
+- Review queue patterns: https://docs.amigo.ai/data/review-queue
+
+---
+
+*Feature research for: Operator admin interface — SCOTUS Chat v1.1*
+*Researched: 2026-06-15*

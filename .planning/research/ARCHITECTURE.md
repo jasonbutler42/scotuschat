@@ -1,534 +1,612 @@
-# Architecture Patterns
+# Architecture Research
 
-**Domain:** Python data pipeline + FastAPI API + SvelteKit frontend + PostgreSQL
-**Project:** SCOTUS Chat — oral arguments as a chat interface
-**Researched:** 2026-06-11
-**Confidence:** HIGH (stack is well-documented; patterns verified against official sources)
-
----
-
-## Recommended Architecture
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                     OFFLINE PIPELINE                            │
-│  (runs on developer machine / CI; never serves live requests)   │
-│                                                                 │
-│  CLI entrypoint                                                 │
-│    └─ Step 1: Ingest   (download PDF, create pipeline_run)      │
-│    └─ Step 2: Parse    (LLM extracts utterances)                │
-│    └─ Step 3: Resolve  (LLM matches speakers to people records) │
-│    └─ Step 4: Enrich   (bio/photo from Oyez, FJC, scotus.gov)   │
-│    └─ Step 5: Extract  (LLM pulls citations as raw strings)     │
-│                                                                 │
-│  Database access: psycopg3 sync ConnectionPool                  │
-│  LLM calls: anthropic SDK + instructor + tenacity               │
-└───────────────────────────┬─────────────────────────────────────┘
-                            │ writes structured rows
-                            ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                     POSTGRESQL (shared)                         │
-│  Managed by Alembic (single source of schema truth)             │
-│  Hosted on Digital Ocean Managed Postgres                       │
-│                                                                 │
-│  Tables: cases, arguments, pipeline_runs, utterances,           │
-│          people, bios, citations, speaker_resolution_log        │
-└───────────────────────────┬─────────────────────────────────────┘
-                            │ reads (read-only queries)
-                            ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                     FASTAPI (read-only API)                     │
-│  Digital Ocean App Platform                                     │
-│                                                                 │
-│  Startup: create AsyncEngine + async_sessionmaker via lifespan  │
-│  Deps:    AsyncSession injected per-request                     │
-│  Routes:  /cases, /arguments/{id}, /utterances/{arg_id},        │
-│           /people/{id}  — all GET, no writes                    │
-└───────────────────────────┬─────────────────────────────────────┘
-                            │ HTTP (server-side fetch during SSR,
-                            │        direct fetch in browser)
-                            ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                     SVELTEKIT FRONTEND                          │
-│  Digital Ocean App Platform (or Static Pages)                   │
-│                                                                 │
-│  +page.server.ts load functions → fetch FastAPI on SSR          │
-│  Client-side navigation → fetch FastAPI directly                │
-│  No +server.ts API routes needed for initial build              │
-└─────────────────────────────────────────────────────────────────┘
-```
+**Domain:** Protected admin interface + pipeline job coordination on existing SvelteKit + FastAPI app
+**Researched:** 2026-06-15
+**Confidence:** HIGH
 
 ---
 
-## Component Boundaries
+## Standard Architecture
 
-### 1. Offline Pipeline
+### System Overview
 
-**Responsibility:** Transform raw PDFs into structured database rows. Has no network listener and is never invoked by the live application. The pipeline owns all write access to utterances, citations, and speaker resolution data.
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│                         Browser                                       │
+│  ┌──────────────────────┐    ┌───────────────────────────────────┐   │
+│  │  Public routes        │    │  Admin routes (/admin/*)          │   │
+│  │  /cases, /arguments   │    │  /admin/login, /admin/run, etc.   │   │
+│  └──────────┬───────────┘    └──────────────┬────────────────────┘   │
+└─────────────┼──────────────────────────────┼────────────────────────┘
+              │                              │
+┌─────────────┼──────────────────────────────┼────────────────────────┐
+│                  SvelteKit app (adapter-node)                         │
+│                                                                       │
+│  src/hooks.server.ts  ←─ ALL requests pass through here              │
+│    reads admin_session cookie, validates HMAC                         │
+│    if /admin/* (not /admin/login) and not authenticated:              │
+│      → redirect(302, '/admin/login')                                  │
+│    populates event.locals.admin = true | false                        │
+│                                                                       │
+│  ┌───────────────────────┐   ┌───────────────────────────────────┐   │
+│  │  Public +page.server  │   │  Admin +page.server.ts            │   │
+│  │  FASTAPI_BASE_URL      │   │  form actions + load via          │   │
+│  │  (server-only env var) │   │  FASTAPI_ADMIN_URL (server-only)  │   │
+│  └──────────┬────────────┘   └──────────────┬────────────────────┘   │
+│             │                               │                         │
+│             │               admin form actions:                       │
+│             │               - startRun: spawn Python subprocess       │
+│             │               - write admin_jobs row via FastAPI        │
+│             │               - return { job_id } immediately           │
+│             │               - client polls /admin/api/run/[id]        │
+└─────────────┼───────────────┼─────────────────────────────────────────┘
+              │               │
+              ↓               ↓
+┌─────────────────────────────────────────────────────────────────────┐
+│  FastAPI (read-only public + write-capable admin router)             │
+│  GET /cases, /arguments/*/utterances, /people/* (existing)          │
+│  GET/POST/PATCH /admin/jobs, /admin/people (new, X-Admin-Token auth) │
+└─────────────────────────────┬───────────────────────────────────────┘
+                              │
+                              ↓
+┌─────────────────────────────────────────────────────────────────────┐
+│  PostgreSQL 16 (Digital Ocean Managed, PgBouncer Transaction mode)   │
+│  Existing: pipeline_runs, utterances, people, cases, arguments, ... │
+│  New: admin_jobs (pipeline job coordination table)                   │
+└─────────────────────────────────────────────────────────────────────┘
+```
 
-**Communicates with:**
-- PostgreSQL (psycopg3 sync pool — pipeline is a CLI process, not an async server)
-- Claude API (via anthropic SDK)
-- External enrichment APIs (Oyez, FJC, supremecourt.gov — HTTP calls only)
-- Local filesystem (PDF storage)
+### Component Responsibilities
 
-**Does NOT communicate with:** FastAPI. The pipeline and the API are decoupled at the database layer. The pipeline runs offline; its work is visible to the API only after rows are committed.
-
-**Key invariant:** Each pipeline step reads its own input from DB rows written by the prior step (using `pipeline_run_id` as the linking key). Steps are independently re-runnable. A step never reads from another step's in-memory state.
+| Component | Responsibility | Implementation |
+|-----------|----------------|----------------|
+| `src/hooks.server.ts` | Single auth checkpoint for all requests; populates `event.locals.admin` | SvelteKit `handle` hook — runs before every server request |
+| `src/routes/admin/login/+page.server.ts` | Validate env-var credentials, set signed session cookie, redirect | Form action with HMAC-signed cookie; no DB write |
+| `src/routes/admin/+layout.server.ts` | Belt-and-suspenders redirect if not authenticated | `load` checks `locals.admin`, throws `redirect(302, '/admin/login')` |
+| `src/routes/admin/run/+page.server.ts` | Start pipeline run (form action), render current run status | Named actions: `startRun`, `approveContinue`; load reads job state via FastAPI admin router |
+| `src/routes/admin/api/run/[id]/+server.ts` | JSON polling endpoint returning current job status | `GET` handler — called by client `setInterval` every 2.5s |
+| `api/routers/admin.py` | Read/write pipeline_runs, admin_jobs, people for admin UI | New FastAPI router; protected by `X-Admin-Token` header |
+| `pipeline/__main__.py` | Python subprocess entry point — unchanged CLI | Spawned by SvelteKit Node.js via `child_process.spawn`; no changes required |
+| `alembic/versions/0003_add_admin_jobs.py` | New `admin_jobs` coordination table | Alembic is the sole DDL authority — no `Base.metadata.create_all` |
 
 ---
 
-### 2. FastAPI Backend
+## Recommended Project Structure
 
-**Responsibility:** Serve the structured data the pipeline produced. Read-only in the initial build — it queries PostgreSQL and serializes results as JSON. Owns no business logic beyond query shaping and serialization.
+New files only — existing public routes and API unchanged.
 
-**Communicates with:**
-- PostgreSQL (SQLAlchemy async + asyncpg pool via lifespan context manager)
-- SvelteKit frontend (HTTP)
+```
+app/src/
+├── hooks.server.ts                  ← NEW: auth guard for all requests
+├── app.d.ts                         ← MODIFIED: add App.Locals.admin: boolean
+├── lib/
+│   └── components/
+│       ├── AdminNav.svelte           ← NEW: admin sidebar navigation
+│       └── PipelineStatus.svelte    ← NEW: step progress display (ingest/parse/resolve)
+└── routes/
+    ├── +layout.svelte               ← UNCHANGED (public layout)
+    ├── cases/...                    ← UNCHANGED
+    └── admin/
+        ├── +layout.svelte           ← NEW: admin shell (nav + content slot)
+        ├── +layout.server.ts        ← NEW: belt-and-suspenders redirect guard
+        ├── login/
+        │   ├── +page.svelte         ← NEW: login form (username + password)
+        │   └── +page.server.ts      ← NEW: validate credentials, set cookie, redirect
+        ├── logout/
+        │   └── +page.server.ts      ← NEW: clear cookie, redirect to /admin/login
+        ├── run/
+        │   ├── +page.svelte         ← NEW: pipeline runner UI
+        │   └── +page.server.ts      ← NEW: startRun / approveContinue + load
+        ├── people/
+        │   ├── +page.svelte         ← NEW: people directory list
+        │   ├── +page.server.ts      ← NEW: load people list + create person action
+        │   └── [id]/
+        │       ├── +page.svelte     ← NEW: person edit form
+        │       └── +page.server.ts  ← NEW: load person + update action
+        └── api/
+            └── run/
+                └── [id]/
+                    └── +server.ts   ← NEW: JSON polling endpoint for job status
 
-**Does NOT communicate with:** the pipeline, the Claude API, or external enrichment sources. If later a write API is needed (e.g., admin promotion of a pipeline run), it should go through the same async session pattern with an explicit transaction per operation.
+api/
+├── main.py                          ← MODIFIED: include admin_router
+├── routers/
+│   └── admin.py                     ← NEW: admin reads/writes (jobs, people)
+├── schemas/
+│   └── admin.py                     ← NEW: AdminJobSchema, AdminPersonSchema
+└── core/
+    └── config.py                    ← MODIFIED: add admin_api_token field
+
+alembic/versions/
+└── 0003_add_admin_jobs.py           ← NEW: admin_jobs table
+```
+
+### Structure Rationale
+
+- **`admin/+layout.server.ts`:** Any new page added under `admin/` is automatically protected without needing a guard in every `+page.server.ts`. Belt-and-suspenders on top of `hooks.server.ts`.
+- **`admin/api/run/[id]/+server.ts`:** SvelteKit `+server.ts` returns JSON — this is the polling target. It reads from FastAPI, keeping all DB access behind the same FastAPI boundary as the rest of the app. Named `admin/api/` to distinguish internal endpoints from public API routes.
+- **FastAPI `admin.py` router:** Admin data reads and writes go through FastAPI, consistent with the v1.0 pattern (SvelteKit server → FastAPI → DB). FastAPI remains the only app-layer DB writer.
 
 ---
 
-### 3. SvelteKit Frontend
+## Architectural Patterns
 
-**Responsibility:** Render the chat-style UI. Fetches all data from FastAPI. Has no direct database access.
+### Pattern 1: HMAC-Signed Stateless Session Cookie
 
-**Communicates with:** FastAPI (HTTP GET requests, both SSR and client-side)
+**What:** Generate a random UUID on login, sign it with a `SESSION_SECRET` env var using HMAC-SHA256, store `token.signature` as an HttpOnly cookie. On each request, recompute the HMAC and compare. No session store or Redis needed.
 
----
+**When to use:** Single-operator apps where you only need to answer "is this person authenticated" — not "which user is this." Avoids a Redis/DB session store dependency.
 
-## Data Flow: PDF to Utterances on Screen
+**Trade-offs:** Simple and stateless. Cannot revoke a specific session without rotating `SESSION_SECRET` (which invalidates all sessions). Acceptable for single-operator use. If rotation is needed, update the env var in DO App Platform and redeploy.
 
-```
-1. Developer runs: python -m pipeline ingest --url <scotus.gov PDF URL>
-   → Downloads PDF, stores locally
-   → Creates: case record (if new), argument record, pipeline_run record (status=running)
-
-2. Step 2 (Parse):
-   → Extracts raw text from PDF (pdfminer.six or pypdf)
-   → Chunks text if > threshold (see LLM Chunking section)
-   → Sends chunks to Claude with structured output schema
-   → Inserts utterance rows (linked to pipeline_run_id, with raw_speaker_name)
-
-3. Step 3 (Resolve):
-   → Queries utterances for this pipeline_run_id
-   → Sends raw_speaker_name list + case metadata to Claude
-   → Claude returns speaker→person_id mappings
-   → Updates utterances with resolved person_id
-   → Creates/updates people rows as needed
-   → Logs resolution decisions in speaker_resolution_log
-
-4. Step 4 (Enrich):
-   → Queries people without complete bios
-   → Calls Oyez API, FJC API, supremecourt.gov
-   → Inserts/updates bio, photo_url, tenure data
-
-5. Step 5 (Citations):
-   → Queries utterances for this pipeline_run_id
-   → Sends utterance text batches to Claude
-   → Claude returns citation strings per utterance
-   → Inserts citation rows (raw text only, no resolution)
-
-6. Pipeline marks pipeline_run as status=completed
-
-7. User visits /arguments/[id] in browser
-   → SvelteKit +page.server.ts load function fires on server
-   → Calls FastAPI: GET /utterances/{argument_id}
-   → FastAPI queries PostgreSQL (joins utterances, people, bios)
-   → Returns JSON
-   → SvelteKit renders HTML with utterances as chat bubbles
-   → Page hydrates; subsequent navigations use client-side fetch to same FastAPI endpoints
-```
-
----
-
-## Pipeline/API Database Sharing Strategy
-
-### The Core Rule: Segregated Access, Shared Schema
-
-The pipeline and API share one PostgreSQL instance but use different connection strategies suited to their runtime model:
-
-| Layer | Driver | Pool Type | Rationale |
-|-------|--------|-----------|-----------|
-| Pipeline (CLI) | psycopg3 sync | `ConnectionPool` (psycopg_pool) | CLI is synchronous; no event loop overhead needed |
-| FastAPI | asyncpg via SQLAlchemy 2.0 async | `AsyncEngine` pool (built-in) | FastAPI is async; blocking DB calls would starve the event loop |
-
-Neither layer needs to know about the other's connections. PostgreSQL serializes concurrent access naturally through its MVCC model.
-
-### Schema Authority: Alembic
-
-Alembic is the single migration authority. Both the pipeline and FastAPI import from the same `models.py` (SQLAlchemy declarative base). Migration files live in `db/migrations/`. The pipeline runs `alembic upgrade head` before any step if desired, or migrations are applied separately before deployment.
-
-**Critical:** Never let the pipeline or FastAPI auto-create tables (`Base.metadata.create_all`). Only Alembic touches DDL. This ensures the shared schema stays version-controlled and auditable.
-
-### Preventing Schema Drift
-
-```
-project/
-├── db/
-│   ├── models.py          ← shared SQLAlchemy models
-│   ├── migrations/        ← Alembic migration files
-│   └── alembic.ini
-├── pipeline/
-│   └── steps/             ← imports from db.models
-└── api/
-    └── routes/            ← imports from db.models
-```
-
----
-
-## Pipeline Run State Management
-
-### State Machine
-
-```
-        ┌──────────┐
-        │ pending  │  (created on ingest, before step starts)
-        └────┬─────┘
-             │ step begins
-             ▼
-        ┌──────────┐
-        │ running  │  (set atomically at step start)
-        └────┬─────┘
-             │
-       ┌─────┴──────┐
-       ▼            ▼
- ┌──────────┐  ┌──────────┐
- │completed │  │  failed  │
- └──────────┘  └──────────┘
-```
-
-### Implementation Pattern
-
-Each step follows this exact pattern:
-
-```python
-def run_step(pipeline_run_id: int, conn: Connection) -> None:
-    # 1. Assert expected prior state (idempotency guard)
-    with conn.transaction():
-        run = fetch_pipeline_run(conn, pipeline_run_id)
-        if run.status not in ("pending", "failed"):
-            raise StepAlreadyCompleted(pipeline_run_id)
-        set_pipeline_run_status(conn, pipeline_run_id, "running")
-
-    # 2. Do the work (outside the guard transaction)
-    try:
-        perform_work(conn, pipeline_run_id)
-
-        # 3. Mark complete
-        with conn.transaction():
-            set_pipeline_run_status(conn, pipeline_run_id, "completed")
-
-    except Exception as exc:
-        with conn.transaction():
-            set_pipeline_run_status(conn, pipeline_run_id, "failed", error=str(exc))
-        raise
-```
-
-Key properties:
-- Status is updated atomically with a transaction
-- A `running` step cannot be re-entered without manual reset (prevents double-processing)
-- `failed` steps can be retried (re-enter from `failed → running`)
-- Old rows are preserved; re-runs create a new `pipeline_run_id` linked to the same argument
-
-### Advisory Lock (Optional, for distributed/CI use)
-
-If multiple developers or CI runners might trigger the same pipeline step simultaneously, use a PostgreSQL advisory lock keyed on `(namespace_int, pipeline_run_id)` before the state check. This adds a hard mutual exclusion layer on top of the optimistic state check.
-
-```python
-# Lock namespace 1001 = pipeline step mutex
-conn.execute("SELECT pg_advisory_xact_lock(1001, %s)", [pipeline_run_id])
-```
-
-Transaction-level advisory locks (`pg_advisory_xact_lock`) auto-release on commit/rollback, so no cleanup code is needed.
-
----
-
-## LLM Integration: Structured Output and Reliability
-
-### Library Stack
-
-```
-anthropic SDK          ← official Anthropic Python client
-instructor             ← wraps anthropic, adds Pydantic validation + auto-retry
-tenacity               ← exponential backoff for rate limits and transient failures
-```
-
-### Pydantic Output Models Per Step
-
-Each LLM step defines an explicit Pydantic model for its output. Claude returns structured JSON that instructor validates; on validation failure, instructor retries automatically (up to a configured max).
-
-```python
-class ParsedUtterance(BaseModel):
-    speaker_raw: str
-    text: str
-    is_stage_direction: bool
-    sequence: int
-
-class ParseResponse(BaseModel):
-    utterances: list[ParsedUtterance]
-```
-
-### Retry Strategy
-
-```python
-@retry(
-    wait=wait_exponential(multiplier=1, min=2, max=60),
-    stop=stop_after_attempt(5),
-    retry=retry_if_exception_type((anthropic.RateLimitError, anthropic.APITimeoutError)),
-    reraise=True
-)
-def call_claude(client, prompt, response_model):
-    return client.messages.parse(...)
-```
-
-Pydantic validation failures (malformed JSON, missing fields) are handled by instructor's internal retry loop. Rate limit / timeout errors are handled by tenacity's outer retry loop. These are distinct failure modes and should be handled by separate mechanisms.
-
-### Idempotency Key Pattern
-
-Before making any LLM call, store an idempotency key derived from the input content hash + step name. If a key already exists in the DB, return the cached result without calling the API. This prevents duplicate charges and duplicate rows if the pipeline crashes mid-step.
-
-```python
-content_hash = hashlib.sha256(chunk_text.encode()).hexdigest()
-key = f"parse:{pipeline_run_id}:{content_hash}"
-```
-
----
-
-## LLM Chunking for Large Transcripts
-
-### Context Window Reality
-
-Claude (Sonnet/Opus) supports 200K tokens. A SCOTUS oral argument transcript is typically 40-80 pages of text — roughly 20,000 to 40,000 tokens after PDF extraction. This fits comfortably in a single Claude context window.
-
-**For the parse step, a single-call strategy is preferred:**
-- Send the entire transcript text in one API call
-- Ask Claude to return a list of utterance objects as structured JSON
-- Avoids speaker continuity problems that arise when a single utterance spans chunk boundaries
-
-### When Chunking Is Required
-
-Chunking becomes necessary only if:
-1. A single transcript exceeds ~150K tokens (leaves room for system prompt + output)
-2. The structured output JSON itself becomes very large (instructor has streaming support)
-
-### Chunking Strategy When Needed
-
-For unusually long transcripts, chunk by natural speaker boundary rather than fixed token count:
-
-```
-Strategy: Boundary-aware chunking
-1. Split on double newlines (paragraph breaks)
-2. Accumulate paragraphs until threshold (e.g., 80K tokens)
-3. When adding next paragraph would exceed threshold, finalize chunk
-4. Add a 2-paragraph overlap to the next chunk to preserve speaker context
-5. Tag each chunk with its position (chunk_index, is_first, is_last)
-6. Include a system prompt note: "This is chunk N of M. Prior speakers: [last 3]"
-7. After all chunks processed, merge and de-duplicate on sequence number
-```
-
-**Anti-pattern to avoid:** Fixed-token splitting with no regard for sentence or speaker boundaries. This causes utterances to be split mid-sentence and confuses speaker attribution. The "lost in the middle" problem is real — information buried in the middle of a long context receives less attention from the model.
-
-### Step-Specific Chunking Needs
-
-| Step | Typical input size | Chunking needed? |
-|------|--------------------|-----------------|
-| Parse | 20-40K tokens/transcript | Rarely — single call preferred |
-| Resolve | Small (speaker name list + metadata) | Never |
-| Enrich | External API calls, not LLM | N/A |
-| Citations | Utterance batches, 1-2K tokens each | Batch by utterance, not by chunk |
-
-For citations, process utterances in batches of 20-50 per LLM call rather than one utterance at a time. This reduces API call count significantly while keeping each call well within context limits.
-
----
-
-## FastAPI Connection Pooling
-
-### Async Pattern via SQLAlchemy 2.0 Lifespan
-
-```python
-# api/db.py
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
-from contextlib import asynccontextmanager
-
-engine = None
-SessionLocal = None
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    global engine, SessionLocal
-    engine = create_async_engine(
-        settings.DATABASE_URL,           # postgresql+asyncpg://...
-        pool_size=10,
-        max_overflow=20,
-        pool_pre_ping=True,              # detect stale connections
-    )
-    SessionLocal = async_sessionmaker(engine, expire_on_commit=False)
-    yield
-    await engine.dispose()
-
-# Dependency
-async def get_db() -> AsyncSession:
-    async with SessionLocal() as session:
-        yield session
-```
-
-**pool_size guidance for Digital Ocean Managed Postgres:**
-- Default max connections: 25 (smallest plan), 97 (basic plan)
-- FastAPI workers: 1-2 on App Platform starter tier
-- pool_size=10, max_overflow=10 is safe for starter; adjust up with plan size
-- Enable `pool_pre_ping=True` — DO Managed Postgres drops idle connections after 5 minutes
-
-### Pipeline Connection (Synchronous)
-
-```python
-# pipeline/db.py
-from psycopg_pool import ConnectionPool
-
-pool = ConnectionPool(conninfo=settings.DATABASE_URL, min_size=1, max_size=5)
-
-# Context manager usage per step
-with pool.connection() as conn:
-    run_step(pipeline_run_id, conn)
-```
-
-The pipeline runs as a short-lived CLI process. A pool of 1-5 connections is more than sufficient. The pipeline should close the pool when the process exits.
-
----
-
-## SvelteKit-FastAPI Data Fetching
-
-### Recommended Pattern: Server Load Functions
-
-Use `+page.server.ts` as the primary data fetching mechanism. This is the right default because:
-
-1. The FastAPI base URL is a secret (backend URL should not be exposed in browser JavaScript)
-2. SSR gives immediate HTML without a client-side fetch waterfall
-3. SvelteKit's internal fetch optimization skips the HTTP round-trip during SSR when fetching the same-origin API routes, but since FastAPI is a separate service, the fetch does make a network call — keep this in mind for latency
-
+**Example:**
 ```typescript
-// routes/arguments/[id]/+page.server.ts
-import type { PageServerLoad } from './$types';
+// src/routes/admin/login/+page.server.ts
+import { createHmac, randomUUID } from 'crypto';
+import { redirect, fail } from '@sveltejs/kit';
+import { ADMIN_USER, ADMIN_PASS, SESSION_SECRET } from '$env/static/private';
 
-export const load: PageServerLoad = async ({ params, fetch }) => {
-    const response = await fetch(`${FASTAPI_BASE_URL}/arguments/${params.id}/utterances`);
-    if (!response.ok) throw error(response.status);
-    const data = await response.json();
-    return { utterances: data.utterances, argument: data.argument };
+export const actions = {
+  default: async ({ request, cookies }) => {
+    const data = await request.formData();
+    const username = data.get('username') as string;
+    const password = data.get('password') as string;
+
+    if (username !== ADMIN_USER || password !== ADMIN_PASS) {
+      return fail(401, { invalid: true });
+    }
+
+    const token = randomUUID();
+    const sig = createHmac('sha256', SESSION_SECRET).update(token).digest('hex');
+    cookies.set('admin_session', `${token}.${sig}`, {
+      path: '/',
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: true,
+      maxAge: 60 * 60 * 8   // 8-hour sessions
+    });
+    redirect(302, '/admin');
+  }
 };
 ```
 
-### When to Use +server.ts API Routes (SvelteKit BFF Layer)
+### Pattern 2: Centralized Route Guard in hooks.server.ts
 
-Add a SvelteKit API route only when:
-- You need to aggregate multiple FastAPI calls into one frontend request
-- You need to add caching (e.g., `Cache-Control` headers for static case data)
-- A future feature requires authentication and you want to hide tokens from the browser
+**What:** The `handle` hook intercepts every request, reads the session cookie, validates the HMAC, and sets `event.locals.admin`. Admin routes test `locals.admin`; unauthenticated requests are redirected to `/admin/login`.
 
-For the initial build, server load functions are sufficient. A BFF (Backend for Frontend) API route layer is a later optimization, not a day-one requirement.
+**When to use:** Always — this is the correct SvelteKit pattern for server-side route protection. Client-side navigation guards (`goto()` in `+layout.svelte`) are insufficient: they flash protected content, don't protect load functions, and are bypassable.
 
-### Environment Variable Strategy
+**Trade-offs:** One place to change auth logic. The `sequence` helper from `@sveltejs/kit/hooks` composes multiple handle functions if needed later (e.g., adding rate-limiting, CSRF).
 
+**Example:**
+```typescript
+// src/hooks.server.ts
+import type { Handle } from '@sveltejs/kit';
+import { createHmac } from 'crypto';
+import { SESSION_SECRET } from '$env/static/private';
+import { redirect } from '@sveltejs/kit';
+
+export const handle: Handle = async ({ event, resolve }) => {
+  // Validate session cookie
+  const session = event.cookies.get('admin_session');
+  if (session) {
+    const dotIndex = session.lastIndexOf('.');
+    const token = session.slice(0, dotIndex);
+    const sig = session.slice(dotIndex + 1);
+    const expected = createHmac('sha256', SESSION_SECRET).update(token).digest('hex');
+    if (sig === expected) {
+      event.locals.admin = true;
+    }
+  }
+
+  // Guard /admin/* (exempt: /admin/login itself)
+  if (
+    event.url.pathname.startsWith('/admin') &&
+    !event.url.pathname.startsWith('/admin/login') &&
+    !event.locals.admin
+  ) {
+    redirect(302, '/admin/login');
+  }
+
+  return resolve(event);
+};
 ```
-FASTAPI_BASE_URL=http://api:8000   ← used in +page.server.ts (server side only)
-PUBLIC_APP_NAME=SCOTUS Chat        ← PUBLIC_ prefix exposes to browser
+
+**Required `app.d.ts` change:**
+```typescript
+declare global {
+  namespace App {
+    interface Locals {
+      admin: boolean;
+    }
+  }
+}
+export {};
 ```
 
-Never expose the FastAPI URL in `PUBLIC_` variables — it would appear in client-side JS bundles.
+### Pattern 3: Fire-and-Poll Pipeline Coordination
+
+**What:** A SvelteKit form action spawns the Python pipeline subprocess via Node.js `child_process.spawn`, then immediately returns `{ job_id }` to the client. The subprocess runs independently; `proc.on('exit')` fires a status update to FastAPI when done. The client polls a SvelteKit JSON endpoint (`/admin/api/run/[id]`) every 2.5 seconds until the job reaches a terminal state.
+
+**When to use:** Long-running processes where HTTP request timeouts make waiting infeasible. The parse step takes 30–120 seconds for a full transcript.
+
+**Trade-offs:** Polling adds minor DB read load (acceptable for single-operator use). SSE would push updates immediately but adds a library (`sveltekit-sse`) and connection management overhead. BullMQ/Redis is overkill for a single-operator tool with no concurrency requirements. Fire-and-poll with a 2.5s interval is the right tradeoff here.
+
+**Action side (form action in +page.server.ts):**
+```typescript
+import { spawn } from 'child_process';
+import { FASTAPI_ADMIN_URL, ADMIN_API_TOKEN } from '$env/static/private';
+
+export const actions = {
+  startRun: async ({ request, fetch }) => {
+    const data = await request.formData();
+    const pdfUrl = data.get('pdf_url') as string;
+    // ... collect other ingest params
+
+    // 1. Create admin_jobs record via FastAPI
+    const jobRes = await fetch(`${FASTAPI_ADMIN_URL}/admin/jobs`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Token': ADMIN_API_TOKEN },
+      body: JSON.stringify({ pdf_url: pdfUrl, step: 'ingest', status: 'running' })
+    });
+    const { job_id } = await jobRes.json();
+
+    // 2. Spawn Python subprocess — non-blocking
+    const proc = spawn('python', ['-m', 'pipeline', 'ingest', '--url', pdfUrl /*, ...args */], {
+      detached: false,
+      stdio: 'pipe',
+      env: { ...process.env }
+    });
+
+    // 3. Update job status on exit (fire-and-forget fetch)
+    proc.on('exit', (code) => {
+      fetch(`${FASTAPI_ADMIN_URL}/admin/jobs/${job_id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Token': ADMIN_API_TOKEN },
+        body: JSON.stringify({ status: code === 0 ? 'completed' : 'failed' })
+      }).catch(() => { /* log but don't crash */ });
+    });
+
+    // 4. Return job_id immediately — action does not await subprocess
+    return { job_id };
+  }
+};
+```
+
+**Polling endpoint:**
+```typescript
+// src/routes/admin/api/run/[id]/+server.ts
+import { json, error } from '@sveltejs/kit';
+import { FASTAPI_ADMIN_URL, ADMIN_API_TOKEN } from '$env/static/private';
+
+export async function GET({ params, locals }) {
+  if (!locals.admin) throw error(401, 'Unauthorized');
+  const res = await fetch(`${FASTAPI_ADMIN_URL}/admin/jobs/${params.id}`, {
+    headers: { 'X-Admin-Token': ADMIN_API_TOKEN }
+  });
+  if (!res.ok) throw error(res.status, 'Job not found');
+  return json(await res.json());
+}
+```
+
+**Svelte 5 client polling (Runes — no legacy stores):**
+```svelte
+<script lang="ts">
+  let { form } = $props();
+  let jobStatus = $state<string | null>(null);
+
+  $effect(() => {
+    if (!form?.job_id) return;
+    const id = setInterval(async () => {
+      const res = await fetch(`/admin/api/run/${form.job_id}`);
+      const data = await res.json();
+      jobStatus = data.status;
+      if (data.status === 'completed' || data.status === 'failed' || data.status === 'awaiting_review') {
+        clearInterval(id);
+      }
+    }, 2500);
+    return () => clearInterval(id);
+  });
+</script>
+```
+
+### Pattern 4: FastAPI Admin Router with Internal Token Auth
+
+**What:** A new FastAPI router at `api/routers/admin.py` handles admin reads and writes (job CRUD, people CRUD, run history). Protected by an `X-Admin-Token` header — a shared secret known only to the SvelteKit server process, never transmitted to the browser.
+
+**When to use:** Maintains the v1.0 pattern (SvelteKit server → FastAPI → DB). FastAPI remains the only app-layer DB writer. The browser never touches FastAPI directly — all calls go through SvelteKit `+page.server.ts` or `+server.ts` load/action functions.
+
+**Trade-offs:** Adds one env var (`ADMIN_API_TOKEN`) to manage on both SvelteKit and FastAPI. Alternative (SvelteKit writes to DB via SQLAlchemy directly) would create two separate DB writer processes with separate connection pools — a violation of the v1.0 architectural pattern.
+
+**Example:**
+```python
+# api/routers/admin.py
+from fastapi import APIRouter, Depends, Header, HTTPException, status
+from api.core.config import settings
+
+router = APIRouter(prefix="/admin", tags=["admin"])
+
+async def verify_admin_token(x_admin_token: str = Header(...)):
+    if x_admin_token != settings.admin_api_token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+
+@router.get("/jobs/{job_id}", dependencies=[Depends(verify_admin_token)])
+async def get_job(job_id: int, session: AsyncSession = Depends(get_session)):
+    # ...returns AdminJobSchema
+    pass
+```
 
 ---
 
-## Suggested Build Order
+## Data Flow
 
-The dependency graph drives this ordering:
+### Authentication Flow
 
 ```
-1. Database schema + migrations (Alembic)
-   ← everything depends on this; nothing else can start
-
-2. Pipeline Step 1: Ingest
-   ← establishes the pipeline_run state machine; proves DB writes work
-
-3. Pipeline Step 2: Parse (LLM utterance extraction)
-   ← the core value; validates LLM integration and chunking strategy
-
-4. FastAPI read routes for utterances + arguments
-   ← need parsed data to develop against; API and pipeline can now be tested together
-
-5. SvelteKit chat UI (consumes FastAPI)
-   ← needs API working first; can use mock data for early component work
-
-6. Pipeline Step 3: Resolve (speaker → people matching)
-   ← depends on utterances existing; enriches UI with real names
-
-7. Pipeline Step 4: Enrich (bio/photo)
-   ← depends on people records from Step 3
-
-8. Pipeline Step 5: Citations (raw text extraction)
-   ← last because it's display-only and schema-safe to defer
-
-9. End-to-end: run full pipeline on 2-3 real cases, verify UI renders correctly
+Browser POST /admin/login (username + password)
+    ↓
+hooks.server.ts — login route is exempt from guard, passes through
+    ↓
+/admin/login/+page.server.ts action
+    compares against ADMIN_USER, ADMIN_PASS env vars
+    on match: generate UUID, compute HMAC-SHA256 with SESSION_SECRET
+    set HttpOnly cookie: admin_session = token.sig
+    redirect(302, '/admin')
+    ↓
+Browser GET /admin (following redirect)
+    ↓
+hooks.server.ts
+    reads admin_session cookie
+    splits token.sig, recomputes HMAC, compares
+    match → event.locals.admin = true
+    ↓
+/admin/+layout.server.ts load
+    locals.admin = true → render admin layout (no redirect)
 ```
 
-**Why this order:**
-- Schema first prevents circular refactoring of models
-- Parse before API means the API has real data to serve (not just empty tables)
-- UI after API prevents the SvelteKit developer from needing mock servers
-- Enrich after Resolve because you can't enrich a person who hasn't been identified yet
-- Citations last because they are display-only with no downstream dependencies in the initial build
+### Pipeline Job Execution Flow
+
+```
+Operator fills PDF URL form → submits
+    ↓
+SvelteKit form action: startRun
+    POST to FastAPI /admin/jobs → { job_id }   (creates queued record)
+    spawn('python', ['-m', 'pipeline', 'ingest', ...])  ← non-blocking
+    proc.on('exit') attached (updates job status on completion)
+    return { job_id }
+    ↓
+Load function re-runs (SvelteKit auto-invalidation after action)
+form.job_id is set → client $effect starts polling
+    ↓
+Client polls /admin/api/run/[job_id] every 2.5s
+    ↓
+Python subprocess runs independently
+    writes to pipeline_runs (existing behaviour, unchanged)
+    exits 0 on success
+    ↓
+proc.on('exit') fires
+    PATCH FastAPI /admin/jobs/[id] → { status: 'completed', pipeline_run_id: N }
+    ↓
+Next poll returns { status: 'completed' }
+    client stops polling
+    page shows "ingest complete — continue to parse?" button
+    ↓
+Operator clicks "Parse" → startRun action with step='parse', run_id=N
+    (same fire-and-poll cycle repeats for parse, then resolve)
+    ↓
+After resolve: job.status → 'awaiting_review' if discrepancies exist
+    operator reviews in /admin/run/[id]/review
+    approves → status → 'completed'
+```
+
+### Admin_Jobs Table Rationale
+
+The existing `pipeline_runs` table tracks pipeline provenance: which Python process ran which step, what argument it processed, what the outcome was. That table is owned by the pipeline and must not be repurposed.
+
+The new `admin_jobs` table tracks the web UI's view of a pipeline job:
+- Which step is currently active in the ingest→parse→resolve chain
+- Whether the operator needs to intervene before the next step
+- The input the operator provided (PDF URL or upload path)
+- Cross-step continuity (linking ingest_run_id → parse_run_id → resolve_run_id)
+
+These are UI/coordination concerns. They belong in a separate table to preserve the v1.0 policy that `pipeline_runs` is pipeline provenance (PIPE-11: re-running produces new rows, old rows preserved).
+
+**New `admin_jobs` schema (Alembic migration 0003):**
+```sql
+CREATE TABLE admin_jobs (
+    id              SERIAL PRIMARY KEY,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    status          TEXT NOT NULL DEFAULT 'queued',
+        -- queued | running | awaiting_review | completed | failed
+    current_step    TEXT NOT NULL DEFAULT 'ingest',
+        -- ingest | parse | resolve
+    pdf_url         TEXT,
+    pdf_path        TEXT,
+    ingest_run_id   INTEGER REFERENCES pipeline_runs(id),
+    parse_run_id    INTEGER REFERENCES pipeline_runs(id),
+    resolve_run_id  INTEGER REFERENCES pipeline_runs(id),
+    argument_id     INTEGER REFERENCES arguments(id),
+    error_detail    TEXT
+);
+```
+
+### Request Flow: Admin Page Load
+
+```
+Browser GET /admin/run
+    ↓
+hooks.server.ts → locals.admin = true
+    ↓
+/admin/+layout.server.ts load → locals.admin confirmed, no redirect
+    ↓
+/admin/run/+page.server.ts load
+    fetch(FASTAPI_ADMIN_URL + '/admin/jobs?limit=20',
+          { headers: { 'X-Admin-Token': ADMIN_API_TOKEN } })
+    returns { jobs: AdminJob[] }
+    ↓
++page.svelte renders job list with PipelineStatus component
+```
 
 ---
 
-## Anti-Patterns to Avoid
+## Digital Ocean App Platform: Subdomain Routing
 
-### Anti-Pattern 1: Pipeline Calling FastAPI
+**Both `scotuschat.com` and `admin.scotuschat.com` point to the same SvelteKit service component.** No app-level routing by domain is needed.
 
-The pipeline must write to the database directly. Routing pipeline writes through the FastAPI HTTP layer adds unnecessary latency, couples two components that should be independent, and risks data integrity issues if the API layer adds validation logic that was not designed for batch ingest.
+DO App Platform supports multiple domains on a single component natively. Add both domains in the Networking tab or in the `domains:` array of the app spec. TLS certificates for both are provisioned automatically.
 
-### Anti-Pattern 2: FastAPI Making Write Calls During Live Requests
+The admin route protection lives entirely in SvelteKit `hooks.server.ts`. The subdomain is a UX convention (it communicates "admin area" to the operator); it provides no security boundary itself. Security is the session cookie.
 
-The API is read-only in the initial build. Do not add a "trigger pipeline" endpoint that initiates LLM processing during a user's HTTP request. Pipeline processing is slow (seconds to minutes per transcript); it must remain an offline batch job.
+**App spec fragment:**
+```yaml
+services:
+  - name: web
+    # ... build/run config
+    domains:
+      - domain: scotuschat.com
+        type: PRIMARY
+        zone: scotuschat.com
+      - domain: admin.scotuschat.com
+        type: ALIAS
+        zone: scotuschat.com
+```
 
-### Anti-Pattern 3: Sharing a Single SQLAlchemy Session Across Pipeline Steps
-
-Each pipeline step should open and close its own database connection/session. Sharing a long-lived session across steps creates the risk of uncommitted transactions blocking the API's reads (PostgreSQL MVCC means readers don't block writers, but long idle transactions do hold back `VACUUM` and can cause bloat on managed Postgres).
-
-### Anti-Pattern 4: Storing Full Transcript Text in the DB as a Single Blob
-
-Store PDF path (or object storage key) on the `pipeline_run` record. Do not store the raw extracted text as a column. It is large (100+ KB), never queried, and already available from the immutable source PDF. If reprocessing is needed, re-extract from the PDF.
-
-### Anti-Pattern 5: Calling Claude Once Per Utterance for Citation Extraction
-
-SCOTUS arguments contain 200-500 utterances per case. One LLM call per utterance would mean 200-500 API calls, each with a round-trip overhead and per-call base token cost. Batch 20-50 utterances per call instead.
-
-### Anti-Pattern 6: Using `PUBLIC_FASTAPI_BASE_URL` in SvelteKit
-
-The FastAPI base URL (internal Docker/App Platform service URL) must not be exposed to browsers. It is a server-side secret. Use an unprefixed environment variable consumed only in `+page.server.ts` and server-side hooks.
+No component routing rules are needed. Both domains serve the full SvelteKit app. `/admin/*` protection is enforced by the hook on every request regardless of which domain it arrives on.
 
 ---
 
-## Scalability Considerations
+## Scaling Considerations
 
-| Concern | Current (handful of cases) | Later (all SCOTUS cases, ~100/year) |
-|---------|---------------------------|--------------------------------------|
-| DB size | Trivial — hundreds of rows | Still small — ~2M utterances/decade is modest for Postgres |
-| Pipeline throughput | Serial is fine | Parallelize step execution per argument via subprocess or a task queue (Celery/arq) |
-| API read performance | No indexing needed initially | Add indexes on `argument_id`, `person_id`, `pipeline_run_id` when query plans show seq scans |
-| LLM cost | Low (handful of cases) | Budget $5-10/case at Claude Sonnet pricing; 100 cases/year = ~$500-1000/year |
-| Frontend caching | None needed | Cache case/argument lists with `Cache-Control: max-age=3600`; utterances are static once processed |
+This is a single-operator tool. Concurrency and throughput are not concerns. The relevant operational risks are:
+
+| Concern | Mitigation |
+|---------|------------|
+| Parse step (30–120s) times out HTTP request | Fire-and-poll pattern: action returns job_id immediately; subprocess runs to completion independently |
+| Subprocess dies without updating job status | `proc.on('error')` and `proc.on('exit', code !== 0)` both PATCH failed status via FastAPI |
+| SvelteKit process restarts mid-run | subprocess is `detached: false` — it dies with parent. `admin_jobs.status` stays `running`; operator sees orphaned job and can restart |
+| Two operators running simultaneously | Not a realistic scenario. No concurrency controls needed for v1.1 |
+| PgBouncer transaction mode | `statement_cache_size=0` in `connect_args` already in FastAPI engine — must not be removed. New admin router uses the same engine. |
+
+---
+
+## Anti-Patterns
+
+### Anti-Pattern 1: Exposing Pipeline Steps as FastAPI HTTP Endpoints
+
+**What people do:** Add `POST /pipeline/ingest` to FastAPI that SvelteKit calls, which then runs the pipeline logic.
+
+**Why it's wrong:** Violates the explicit architectural constraint ("pipeline is offline only"). Makes ingest reachable over the network. The ingest step downloads URLs — exposing it as an HTTP endpoint creates an SSRF attack surface. Keeps v1.0's clean separation.
+
+**Do this instead:** SvelteKit form action spawns `python -m pipeline ingest` as a subprocess. The pipeline writes directly to the DB as it always has. FastAPI admin endpoints only track job coordination state in `admin_jobs`.
+
+### Anti-Pattern 2: Server-Side Session Store (Redis or in-memory Map)
+
+**What people do:** Generate a session ID, store session data in Redis or a Node.js `Map`, look it up on every request.
+
+**Why it's wrong:** Redis is not in the approved stack — it would be a Golden Path deviation requiring review. In-memory state is lost on server restart, which happens on every DO App Platform deploy (frequent during development).
+
+**Do this instead:** HMAC-signed stateless cookie. Signature proves authenticity without storage. The only trade-off (cannot revoke without rotating `SESSION_SECRET`) is acceptable for single-operator use.
+
+### Anti-Pattern 3: Client-Side Route Guards
+
+**What people do:** In `+layout.svelte`, check `page.data.admin` and call `goto('/admin/login')` if not set.
+
+**Why it's wrong:** Client-side guards flash protected content before redirect. They do not protect server load functions (where DB queries actually run). They are bypassable by disabling JavaScript.
+
+**Do this instead:** `hooks.server.ts` handle hook. Redirect fires before any route renders — no flash, no bypass, no JS dependency.
+
+### Anti-Pattern 4: SvelteKit Writing Directly to PostgreSQL
+
+**What people do:** Import SQLAlchemy in `+page.server.ts`, create an async session, write to the DB directly.
+
+**Why it's wrong:** Creates two DB writer processes (FastAPI and SvelteKit Node.js) with separate connection pools and separate SQLAlchemy engine instances. Pool sizing becomes unpredictable. The v1.0 pattern — FastAPI as the sole app-layer DB writer — must be maintained.
+
+**Do this instead:** All SvelteKit DB operations (admin job creation, status updates, people edits) go through FastAPI admin endpoints via `fetch` with `X-Admin-Token`. The one exception is the `proc.on('exit')` callback, which fires a `fetch` to FastAPI — still FastAPI writing, not SvelteKit.
+
+### Anti-Pattern 5: Awaiting Subprocess Completion in the Form Action
+
+**What people do:** `await new Promise((resolve) => proc.on('exit', resolve))` inside the form action before returning.
+
+**Why it's wrong:** The parse step takes 30–120 seconds. The HTTP request times out (DO App Platform default: 60s). The client gets an error, but the subprocess is still running, leaving the job state inconsistent.
+
+**Do this instead:** Spawn, attach the exit handler, return `{ job_id }` immediately. The client polls for status updates.
+
+### Anti-Pattern 6: Using `PUBLIC_` Prefix for Server-Only Env Vars
+
+**What people do:** Set `PUBLIC_FASTAPI_ADMIN_URL` and `PUBLIC_ADMIN_API_TOKEN` so they're accessible in Svelte components.
+
+**Why it's wrong:** These are server-side credentials. `PUBLIC_` env vars are embedded in the browser JavaScript bundle — anyone loading the page can extract them. `ADMIN_API_TOKEN` in the browser bundle completely defeats the internal token auth model.
+
+**Do this instead:** `FASTAPI_ADMIN_URL` and `ADMIN_API_TOKEN` in `$env/static/private` only. They are accessed only in `+page.server.ts`, `+layout.server.ts`, and `+server.ts` — never in `.svelte` components.
+
+---
+
+## Integration Points
+
+### Modified Existing Components
+
+| Component | Change | Why |
+|-----------|--------|-----|
+| `src/app.d.ts` | Add `App.Locals { admin: boolean }` | Type-safe access to `event.locals.admin` throughout load functions and hooks |
+| `api/main.py` | `app.include_router(admin_router.router)` | Include new admin router |
+| `api/core/config.py` | Add `admin_api_token: str` setting | Internal service credential for admin router auth |
+| `alembic/versions/` | New migration `0003_add_admin_jobs.py` | `admin_jobs` coordination table — Alembic is sole DDL authority |
+
+### New Components — Build Order
+
+Build in this order. Each layer unblocks the next.
+
+**Layer 1 — Schema + API foundation (no UI):**
+1. `alembic/versions/0003_add_admin_jobs.py` — migration must run before anything uses `admin_jobs`
+2. `api/core/config.py` — add `admin_api_token` field
+3. `api/routers/admin.py` + `api/schemas/admin.py` — FastAPI admin endpoints
+4. `api/main.py` — include admin router
+
+**Layer 2 — Auth (SvelteKit):**
+5. `src/app.d.ts` — add `App.Locals.admin: boolean`
+6. `src/hooks.server.ts` — route guard (requires `app.d.ts` types)
+7. `src/routes/admin/+layout.server.ts` — belt-and-suspenders redirect guard
+8. `src/routes/admin/login/+page.server.ts` + `+page.svelte` — login form + action
+9. `src/routes/admin/logout/+page.server.ts` — cookie clear action
+
+**Layer 3 — Pipeline Runner:**
+10. `src/routes/admin/api/run/[id]/+server.ts` — polling endpoint (needed before page can poll)
+11. `src/routes/admin/run/+page.server.ts` — `startRun` / `approveContinue` actions + load
+12. `src/routes/admin/run/+page.svelte` + `src/lib/components/PipelineStatus.svelte`
+
+**Layer 4 — People Editor:**
+13. `src/routes/admin/people/+page.server.ts` + `+page.svelte` — directory list + create
+14. `src/routes/admin/people/[id]/+page.server.ts` + `+page.svelte` — edit form
+
+**Layer 5 — Deployment:**
+15. DO App Platform app spec update — add `admin.scotuschat.com` as ALIAS domain, add new env vars (`ADMIN_USER`, `ADMIN_PASS`, `SESSION_SECRET`, `ADMIN_API_TOKEN`, `FASTAPI_ADMIN_URL`)
+
+### External Services
+
+| Service | Integration Pattern | Notes |
+|---------|---------------------|-------|
+| Digital Ocean App Platform | Both `scotuschat.com` and `admin.scotuschat.com` bound to same SvelteKit component; DO manages TLS | Add `admin.scotuschat.com` as ALIAS in app spec `domains:` array |
+| Digital Ocean Managed Postgres | Unchanged — FastAPI engine with `statement_cache_size=0` in `connect_args` (PgBouncer transaction mode) | New admin router uses the same engine/session dependency |
+| Python pipeline subprocess | `child_process.spawn` from SvelteKit Node.js process | No pipeline code changes required; same CLI entry point `python -m pipeline` |
+
+### Internal Boundaries
+
+| Boundary | Communication | Notes |
+|----------|---------------|-------|
+| Browser ↔ SvelteKit | HttpOnly session cookie + standard HTTP | Cookie validated server-side only; browser JS cannot read it |
+| SvelteKit server ↔ FastAPI admin | `X-Admin-Token` header (shared secret, `$env/static/private`) | Token never exposed to browser; never use `PUBLIC_` prefix |
+| SvelteKit server ↔ Python pipeline | `child_process.spawn` (subprocess of SvelteKit Node process) | No network call; pipeline writes DB directly as in v1.0 |
+| FastAPI ↔ PostgreSQL | SQLAlchemy 2.0 async via asyncpg; PgBouncer transaction mode | `statement_cache_size=0` in `connect_args` — already in place, must not be removed |
 
 ---
 
 ## Sources
 
-- [SvelteKit Load Functions — Official Docs](https://svelte.dev/docs/kit/load)
-- [FastAPI + SQLAlchemy 2.0 Async Patterns](https://dev-faizan.medium.com/fastapi-sqlalchemy-2-0-modern-async-database-patterns-7879d39b6843)
-- [psycopg3 Connection Pool Documentation](https://www.psycopg.org/psycopg3/docs/advanced/pool.html)
-- [PostgreSQL Advisory Locks — Official Docs](https://www.postgresql.org/docs/current/explicit-locking.html)
-- [Instructor — Structured Outputs for Claude](https://python.useinstructor.com/integrations/anthropic/)
-- [Idempotency in LLM Pipelines](https://tianpan.co/blog/2026-04-20-idempotency-llm-pipelines/)
-- [Chunking Strategies for LLM Applications](https://www.pinecone.io/learn/chunking-strategies/)
-- [FastAPI Async Connection Pooling](https://blog.poespas.me/posts/2024/08/08/fastapi-async-connection-pooling/)
-- [SvelteKit Server-Only Load vs API Routes](https://teta.so/blog/sveltekit-load-functions-server-universal)
-- [Alembic + FastAPI Migration Patterns](https://adex.ltd/database-migrations-with-alembic-and-fastapi-a-comprehensive-guide-using-poetry)
+- [SvelteKit Hooks documentation](https://svelte.dev/docs/kit/hooks) — `handle` hook, `event.locals`, cookie access patterns
+- [SvelteKit Form Actions documentation](https://svelte.dev/docs/kit/form-actions) — named actions, `fail()`, automatic load re-execution after action
+- [Joy of Code: SvelteKit Authentication Using Cookies](https://joyofcode.xyz/sveltekit-authentication-using-cookies) — HMAC-signed cookie pattern basis
+- [Digital Ocean App Platform: Manage Domains](https://docs.digitalocean.com/products/app-platform/how-to/manage-domains/) — multiple domains on single component, app spec `domains:` array
+
+---
+*Architecture research for: SCOTUS Chat v1.1 admin interface + pipeline job coordination*
+*Researched: 2026-06-15*

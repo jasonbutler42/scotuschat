@@ -1,149 +1,140 @@
-# Research Summary: SCOTUS Chat
+# Research Summary: SCOTUS Chat v1.1 — Operator Admin Interface
+
+**Domain:** Protected admin UI + background pipeline job coordination on existing SvelteKit + FastAPI app
+**Researched:** 2026-06-15
+**Confidence:** HIGH
+
+---
 
 ## Executive Summary
 
-SCOTUS Chat transforms flat Supreme Court oral argument transcripts into a conversational, two-sided chat interface. The dominant competitor is Oyez.org — it owns audio+transcript sync and an 8,300-argument corpus — but renders transcripts as dense text walls with no visual differentiation between the Bench and advocates. The differentiating bet is presentation: chat-style layout, speaker avatars, uniform bio cards for every participant, and semantically distinct stage direction rendering. None of this requires novel technology. It requires a well-structured pipeline that produces clean, attributed utterance rows, and a frontend that renders them thoughtfully.
+SCOTUS Chat v1.1 adds a single-operator admin interface on top of a validated v1.0 stack. The goal is to make the existing Python pipeline operable from a browser: trigger ingest/parse/resolve steps, monitor their progress, review speaker resolution discrepancies, and maintain the people directory. The system has one operator, runs at most one pipeline job at a time, and has no concurrency or throughput requirements.
 
-The architecture is a three-tier system with a hard separation of concerns: an offline Python pipeline (PDF ingest → LLM parse → speaker resolution → enrichment → citation extraction) that owns all writes; a read-only FastAPI layer that serves the structured results; and a SvelteKit frontend that renders the chat UI. The pipeline and API are decoupled at the database layer — the pipeline writes directly to PostgreSQL and the API reads from it; neither talks to the other over HTTP.
+Recommended approach: stateless HMAC-signed session cookie for auth (no user DB, no Redis, no auth library), fire-and-poll for pipeline job execution (subprocess spawned from SvelteKit form action, client polls DB-backed status endpoint every 2.5s), and DigitalOcean Spaces for PDF storage (DO App Platform container filesystem is ephemeral).
+
+Net-new additions: two npm packages (`bcryptjs`, `@types/bcryptjs`), one Python package (`boto3`), one Alembic migration (`admin_jobs` table), and new SvelteKit routes under `/admin/*`. No new services, no new infrastructure categories beyond Spaces.
 
 ---
 
 ## Recommended Stack
 
-| Technology | Version | Purpose | Critical notes |
-|---|---|---|---|
-| Svelte / SvelteKit | 5.x / 2.x | Frontend; SSR, routing | Use Runes (`$state`, `$derived`, `$effect`); do not use Svelte 4 store patterns |
-| `@sveltejs/adapter-node` | latest | Node.js deploy target | Required for DO App Platform — `adapter-auto` and `adapter-static` break the SSR proxy pattern |
-| TypeScript | 5.x | Type safety | SvelteKit scaffolds this by default |
-| Python | 3.12 | Runtime | Mature, broadly library-supported |
-| FastAPI | 0.115.x+ | API layer | Install via `fastapi[standard]` — pulls in Pydantic v2, uvicorn |
-| Pydantic | v2 (bundled) | Schema validation | `model_validate` replaces `from_orm`; 5–10x faster than v1 |
-| SQLAlchemy | 2.0+ (async API) | ORM | `expire_on_commit=False` is mandatory — omitting it causes `MissingGreenlet` in async context |
-| asyncpg | 0.29.x | Async PG driver (API) | **Requires `statement_cache_size=0` when behind DO PgBouncer Transaction mode** — silent failure otherwise |
-| psycopg2-binary | 2.9.x | Sync driver (Alembic only) | Alembic autogenerate works better with sync engine |
-| psycopg3 + psycopg_pool | latest | Sync driver (pipeline CLI) | Pipeline is a CLI process; sync pool of 1–5 connections is sufficient |
-| Alembic | 1.13.x | Migrations | Single DDL authority; never use `Base.metadata.create_all` anywhere |
-| Gunicorn 22.x + UvicornWorker | — | Production process manager | `--workers 2` for DO starter tier |
-| Anthropic SDK | 0.40.x+ | Claude API client | Use `AsyncAnthropic` for async pipeline steps |
-| instructor | latest | Structured LLM output | Wraps Anthropic SDK; adds Pydantic validation + auto-retry on schema failures |
-| pdfplumber | 0.11.x | PDF extraction | Layout-aware; better than pypdf for SCOTUS transcript formatting |
-| tenacity | 8.x | Outer retry (rate limits) | Handles HTTP 429/503; separate from instructor's inner schema-validation retry |
-| httpx | 0.27.x | External HTTP (Oyez, FJC) | Async-native |
-| PostgreSQL | 16 (DO Managed) | Primary data store | Use PgBouncer; Transaction mode; `statement_cache_size=0` in asyncpg |
+| Package | Layer | Purpose |
+|---------|-------|---------|
+| `bcryptjs@^2.4.3` | SvelteKit (`app/`) | Password hash comparison — pure JS, no native build friction |
+| `@types/bcryptjs@^2.4.6` | SvelteKit dev | TypeScript types |
+| `boto3@^1.34` | Python (api/pipeline) | Upload PDF to DO Spaces; fetch in pipeline ingest |
+
+**Key rejections:**
+- `@node-rs/argon2` — native binaries break SvelteKit production builds (confirmed GitHub issues through late 2024)
+- All auth libraries (Auth.js, Better Auth, Lucia) — require DB-backed adapters; conflicts with Alembic-only DDL constraint
+- Celery/Redis — new infra for a single-operator sequential tool; stdlib subprocess is sufficient
+- SSE/WebSocket — overkill for one polling client watching sub-60s steps; `setInterval` polling is sufficient
+
+Node stdlib handles the rest: `node:crypto` for HMAC signing, `node:fs/promises` for temp file writes, Python `asyncio.create_subprocess_exec` (3.12 stdlib) for non-blocking subprocess execution.
 
 ---
 
-## Table Stakes Features for v1
+## Table Stakes Features
 
-**Must have at launch:**
-1. Per-utterance speaker attribution with name and role label
-2. Chat-style two-sided layout — Bench one side, advocates the other
-3. Stage direction rendering as distinct visual components (not speech bubbles)
-4. Speaker avatars with initials fallback when no photo is available
-5. Uniform bio card schema for every speaker — same fields, same depth for all
-6. Argument-at-a-glance header: case name, docket number, date argued, speaker roster
-7. Stable shareable URLs: `/cases/{slug}/arguments/{id}` pattern
-8. Open Graph metadata for social unfurl previews
-9. Mobile-responsive layout tested at 375px viewport
-10. Keyboard navigation throughout
-11. WCAG 2.1 AA color contrast; speaker side differentiated by layout position, not color alone
+**Must have (P1 — launch blockers):**
+1. Auth: login form, HMAC cookie, `hooks.server.ts` guard, logout
+2. Pipeline trigger: tabbed widget — URL input + file upload in one form
+3. Step-by-step status cards (Ingest / Parse / Resolve) with status badges + error display
+4. Auto-advance when no discrepancies; pause-for-review when discrepancies exist
+5. Inline participant review with alias auto-save (writes to `speaker_alias`)
+6. People directory list and edit form (name, role, bio text, photo URL, tenure dates)
 
-**Should have (differentiators over Oyez):**
-- Argument section navigation (Petitioner → Respondent → Rebuttal → Amicus)
-- Citation callout styling — raw citation strings as distinct inline text
-- Re-argument awareness — multiple sessions for same case clearly labeled
+**Should have (P2 — after core stable):**
+- Unresolved count badge, photo URL preview, pipeline run history panel, "Create new person" inline modal
 
-**Defer to v2+:**
-- Within-argument text search, full-text cross-case search, audio playback (link to Oyez), user accounts, AI-generated summaries (violates apolitical framing — hard no)
+**Defer to v1.2+:** Automated enrichment (Oyez/FJC API), batch ingestion
 
----
-
-## Architecture and Build Order
-
-**Three non-negotiable architecture decisions:**
-
-1. **Pipeline writes directly to PostgreSQL; FastAPI is read-only.** The pipeline never calls FastAPI. FastAPI never triggers pipeline steps. LLM operations must never block live user requests.
-
-2. **All FastAPI calls from SvelteKit go through `+page.server.ts` server load functions.** `FASTAPI_BASE_URL` is a server-only env var (not a `PUBLIC_` variable). Eliminates CORS and keeps internal API URL out of browser JS bundles.
-
-3. **Alembic is the sole DDL authority.** Neither the pipeline nor FastAPI calls `Base.metadata.create_all`. Both import from the same shared `db/models.py`.
-
-**Recommended build order:**
-
-```
-1. Database schema + Alembic migrations
-   ← M:M case-argument and pipeline_run_id must be correct from day one
-
-2. Pipeline Step 1: Ingest
-   ← Establishes state machine; proves DB writes work; stores PDF locally
-
-3. Pipeline Step 2: Parse (LLM utterance extraction)
-   ← Core value; validates LLM integration; produces utterance rows
-
-4. FastAPI read routes (/cases, /arguments/{id}/utterances, /people/{id})
-   ← Once live, SvelteKit has real endpoints to develop against
-
-5. SvelteKit chat UI
-   ← Builds against real FastAPI data; all MVP table-stakes features
-
-6. Pipeline Step 3: Resolve (speaker → people matching)
-   ← Requires utterances from Step 2
-
-7. Pipeline Step 4: Enrich (bio/photo from Oyez, FJC)
-   ← Requires people records from Step 3
-
-8. Pipeline Step 5: Citations (raw text extraction)
-   ← Last because display-only; no downstream dependencies
-
-9. End-to-end: run full pipeline on 5–10 real cases; verify UI; production smoke test
-```
+**Hard anti-features (never build):**
+- SSE log streaming — PgBouncer transaction mode makes this structurally difficult
+- Celery/Redis queue — two new infra components for one operator
+- Bulk import — obscures per-argument discrepancy review, which is inherently sequential
+- Inline utterance editing — violates the immutable-PDF / regenerate-from-source principle
+- RBAC, analytics dashboard — no beneficiary for single operator
 
 ---
 
-## Critical Pitfalls (top 7, most important first)
+## Architecture
 
-**1. LLM retry loops treating structural failures as transient — data corruption risk**
-Separate by failure type: tenacity handles HTTP 429/503 (transient); instructor handles schema failures (2-retry max then halt). Track `retry_count` and `failure_reason` on `pipeline_run`. Retry rate above 5% on Parse is the warning sign. Address before first end-to-end run.
+### Pattern
+Protected `/admin/*` route tree on v1.0's SvelteKit server → FastAPI → PostgreSQL pattern. `hooks.server.ts` handle function is the sole auth checkpoint — fires before every request including `+server.ts` API endpoints. Python subprocess spawned from SvelteKit Node process; FastAPI gains `api/routers/admin.py` (`X-Admin-Token` auth); new `admin_jobs` table (migration 0003) tracks UI-level job coordination separately from pipeline-owned `pipeline_runs`.
 
-**2. Pre-2004 transcripts use "QUESTION" for all Justice speech — silent parse failure**
-The Court suppressed Justice names until October Term 2003. Fix: tag `transcript_format_version` at Ingest; hard-error on pre-2004 transcripts. Must be wired at Ingest, not retrofitted.
+### New Components
+| Component | Purpose |
+|-----------|---------|
+| `src/hooks.server.ts` | HMAC session validation; fires before every request |
+| `src/routes/admin/+layout.server.ts` | Belt-and-suspenders redirect guard for page routes |
+| `src/routes/admin/run/+page.server.ts` | `startRun` / `approveContinue` form actions; spawns Python subprocess |
+| `src/routes/admin/api/run/[id]/+server.ts` | JSON polling target; client polls every 2.5s |
+| `api/routers/admin.py` | New FastAPI router; `admin_jobs` and people CRUD; `X-Admin-Token` protected |
+| `alembic/versions/0003_add_admin_jobs.py` | `admin_jobs` table |
+| DigitalOcean Spaces (boto3) | Persistent PDF storage |
 
-**3. Fixed-token transcript chunking breaks speaker turn continuity**
-Most SCOTUS transcripts (20–40K tokens) fit in Claude's 200K context window — use single-call parsing when possible. When chunking is required, split on speaker-turn boundaries with 2–3 turn overlap. Never split on character count.
+### DO App Platform Subdomain
+Add `admin.scotuschat.com` as an ALIAS entry in the app spec `domains:` array alongside `scotuschat.com`. DO provisions TLS for both. Admin security is entirely in `hooks.server.ts`, not at the network layer.
 
-**4. Speaker resolution fails on surname-only and role-only labels**
-Pre-seed a `speaker_alias` table with known Justice rosters and SG patterns. Provide LLM with full case metadata (term year, docket, counsel of record). Gate low-confidence matches as `needs_review` — never auto-commit a guess. Disallow automatic creation of new person records.
+### `admin_jobs` vs `pipeline_runs`
+`pipeline_runs` is pipeline provenance (step, argument, strategy, status — the PIPE-11 policy). `admin_jobs` is the web UI's coordination record: which step is active, whether review is needed, cross-step run ID linkage. Do not repurpose `pipeline_runs` — a new Alembic migration is required.
 
-**5. Consolidated cases require M:M from day one — cannot retrofit**
-~10–15% of SCOTUS arguments cover multiple dockets. The `argument` ↔ `case` relationship must be many-to-many from the initial schema. A FK on `argument` is wrong. Retrofitting M:M after data exists requires a migration and re-parse of affected transcripts.
-
-**6. PgBouncer Transaction mode conflicts with asyncpg prepared statement cache**
-Digital Ocean exposes PgBouncer in Transaction mode by default. Fix: `connect_args={"statement_cache_size": 0}` in `create_async_engine`. One-line fix, must be in initial engine config — discovered late, causes intermittent production failures with no obvious error message.
-
-**7. Asymmetric bio depth breaks the apolitical framing constraint**
-Justice bios are easily sourced; advocate bios are often sparse. Define the bio schema (fields, character limits, required vs optional) before building the Enrich step. No Justice bio field should be populated unless the equivalent advocate field is also populated or confirmed unavailable.
-
----
-
-## Cross-Cutting Themes
-
-**Pipeline data quality gates everything downstream.** The chat UI, bio cards, and avatars are all rendering pipeline output. Pipeline errors produce faithfully rendered wrong data — the UI has no layer for correction. Invest in pipeline validation before building UI components.
-
-**The apolitical constraint is architectural, not editorial.** It shapes what the pipeline is allowed to produce and what the UI is allowed to display. Every feature request involving derived insight (summaries, sentiment, statistics) should be evaluated against this constraint — it is a hard scope boundary.
-
-**Re-runnability requires schema discipline.** The `pipeline_run_id` pattern (new rows per run; a promotion step swaps the active run) protects audit history. Any shortcut that shares state across steps or overwrites prior run rows destroys this property.
-
-**Test both SSR and client-side navigation for API integration.** SvelteKit server load functions bypass CORS; client-side navigation after hydration is subject to CORS. SSR-only testing misses client-side failures. Configure FastAPI CORSMiddleware explicitly for the production SvelteKit origin.
+### Build Order
+Schema + FastAPI router → Auth → Pipeline runner → People editor → DO deployment config.
 
 ---
 
-## Spikes Recommended Before Planning
+## Critical Pitfalls
 
-- **LLM parse prompt design** — 2–4 hours against 3–5 real SCOTUS PDFs to validate Claude structured output quality before finalizing the `ParsedUtterance` schema
-- **`speaker_alias` seed data completeness** — source full patterns from FJC and `walkerdb/supreme_court_transcripts` before Phase 5 (Resolve) planning
-- **Oyez API current schema** — no official docs; validate live response shape before Enrich step schema is finalized
-- **Section detection reliability** — test argument block boundary detection (Petitioner/Respondent/Rebuttal/Amicus) against 10–20 transcripts to confirm whether section nav ships in MVP
+### Auth (address before building any admin page)
+1. **Infinite redirect loop** — explicitly exclude `/admin/login` from the auth guard; test unauthenticated hit expects 200
+2. **Layout-only guard bypasses `+server.ts` endpoints** — `hooks.server.ts` is mandatory; layout guards alone do not protect API endpoints
+3. **Session cookie missing `httpOnly`/`sameSite`** — always `httpOnly: true`, `sameSite: 'lax'`, `secure: true`; use `domain: '.scotuschat.com'` for subdomain sharing
+4. **`App.Locals` untyped in `app.d.ts`** — declare `admin: boolean` before writing hooks; ES `import` in `app.d.ts` converts it to a module and silently breaks all type inference
+5. **`ORIGIN` env var missing on DO → CSRF 403 at login (silent, not obvious)** — set `ORIGIN`, `PROTOCOL_HEADER`, `HOST_HEADER` in DO App Platform env vars; test form submission on staging
+
+### Pipeline Runner
+6. **Blocking subprocess causes HTTP timeout** — fire subprocess, return `{ job_id }` immediately; never `await` completion; this is the foundational pattern
+7. **Stuck `running` jobs after server crash** — add `heartbeat_at` to `admin_jobs`; startup recovery query transitions stale `running` → `failed`
+8. **In-memory job state lost on container restart** — all state in DB; no `Map` or module-level cache; DO restarts on every deploy
+
+### File Upload
+9. **`BODY_SIZE_LIMIT` default 512KB blocks real SCOTUS PDFs (200KB–2MB)** — set `BODY_SIZE_LIMIT=10M` in DO App Platform
+10. **MIME validation trusts client header** — check magic bytes server-side (`%PDF-` = hex `25 50 44 46 2D`)
 
 ---
+
+## Roadmap Implications
+
+| Phase | Focus | Research needed? |
+|-------|-------|-----------------|
+| 5 | Schema + FastAPI admin foundation (`admin_jobs` migration, `admin.py` router) | No |
+| 6 | Auth layer (`hooks.server.ts`, login/logout, HMAC cookie) | No |
+| 7 | Pipeline runner (PDF upload to Spaces, fire-and-poll, step review UI) | Yes — multiple interacting failure modes |
+| 8 | People editor + resolve review (directory, edit form, per-argument review) | No |
+| 9 | DO App Platform deployment (subdomain, env vars, smoke test) | No |
+
+**Phase ordering rationale:**
+- Phase 5 before 6: FastAPI admin router must exist before SvelteKit calls it
+- Phase 6 before 7: All pipeline runner routes are under `/admin/*`; auth must be verified first
+- Phase 7 before 8: Participant review data only exists after a pipeline run completes resolve
+- Phase 9 last: Deployment config depends on all feature env vars being finalized; CSRF only testable on deployed environment
+
+### Research Flags
+- Phase 7 (Pipeline runner): recommend `/gsd-plan-phase --research` — multiple interacting failure modes between subprocess management, job state machine, and Spaces upload
+- Phases 5, 6, 8, 9: standard patterns, skip research
+
+---
+
+## Open Questions for Planning
+
+- DO Spaces bucket name, region, and credential env var names — decide in Phase 7 planning and add to env var checklist
+- Stateless HMAC cookie tradeoff (cannot revoke individual sessions without rotating `SESSION_SECRET`) — document explicitly in Phase 6 plan
+- Python interpreter path in DO App Platform container — resolve in Phase 7 planning
+- `admin.scotuschat.com` DNS entry — must be created before Phase 9; flag as deployment prerequisite
+
+---
+
 *Synthesized from STACK.md, FEATURES.md, ARCHITECTURE.md, PITFALLS.md*
-*Date: 2026-06-11*
+*Date: 2026-06-15*

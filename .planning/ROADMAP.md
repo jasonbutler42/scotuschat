@@ -33,51 +33,61 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
 ## Phase Details
 
 ### Phase 5: Admin Foundation
+
 **Goal**: The DB schema and FastAPI admin router are in place so that auth and pipeline runner can be built on top of them
 **Depends on**: Phase 4
 **Requirements**: INFRA-A1 (admin_jobs table via Alembic migration 0003 and FastAPI admin router at `api/routers/admin.py` with X-Admin-Token auth — prerequisite infrastructure for Phases 6 and 7)
 **Success Criteria** (what must be TRUE):
+
   1. Alembic migration 0003 runs cleanly and creates the `admin_jobs` table with all required columns
   2. `api/routers/admin.py` is mounted and returns 401 for requests missing a valid `X-Admin-Token` header
-  3. All existing v1.0 API routes and the public chat UI continue to function without regression
-**Plans**: 2 plans (2 waves)
+  3. All existing v1.0 API routes and the public chat UI continue to function without regression**Plans**: 2 plans (2 waves)
 - [ ] 05-PLAN-01.md — Schema layer: Alembic migration 0003 (admin_jobs), AdminJob ORM model, ADMIN_TOKEN config field
 - [ ] 05-PLAN-02.md — FastAPI admin router (/api/admin) with X-Admin-Token dependency + health route, mounted in main.py
 
 ### Phase 6: Auth
+
 **Goal**: The operator can log in to the admin area with username and password and all admin routes are protected from unauthenticated access
 **Depends on**: Phase 5
 **Requirements**: AUTH-01, AUTH-02, AUTH-03
 **Success Criteria** (what must be TRUE):
+
   1. Operator can navigate to `/admin/login`, submit valid credentials, and land on the admin dashboard
   2. Submitting invalid credentials shows an error message and does not set a session cookie
   3. Any unauthenticated request to any `/admin/*` URL (pages and API endpoints) redirects to `/admin/login`
   4. Operator can click logout and is immediately redirected to `/admin/login`; the prior session cookie no longer grants access
+
 **Plans**: TBD
 **UI hint**: yes
 
 ### Phase 7: Pipeline Runner
+
 **Goal**: The operator can trigger a pipeline run from the browser, monitor each step's progress, review and resolve discrepancies, and resume the job after closing the browser
 **Depends on**: Phase 6
 **Requirements**: PIPE-12, PIPE-13, PIPE-14, PIPE-15, PIPE-16, PIPE-17
 **Success Criteria** (what must be TRUE):
+
   1. Operator can enter a transcript PDF URL or upload a local PDF file and start a pipeline run
   2. The pipeline run page shows live step cards (Ingest / Parse / Resolve) that update without a page reload; each card advances to the next step automatically when no discrepancies exist
   3. When the resolve step produces discrepancies, the UI pauses and displays them for review; the run does not auto-advance
   4. Operator can confirm or correct each flagged speaker alias match; confirmed matches are written to the `speaker_alias` table
   5. Operator can close the browser, reopen it, and resume an in-progress run exactly where it paused
+
 **Plans**: TBD
 **UI hint**: yes
 
 ### Phase 8: People Editor
+
 **Goal**: The operator can maintain the people directory and fill in missing metadata for participants after a pipeline run
 **Depends on**: Phase 7
 **Requirements**: PEOPLE-01, PEOPLE-02, PEOPLE-03, PEOPLE-04
 **Success Criteria** (what must be TRUE):
+
   1. Operator can open the people directory and see all person records in a list
   2. Operator can filter the directory to show only people with one or more missing metadata fields
   3. Operator can open a person record and save changes to name, role, bio text, photo URL, and tenure dates
   4. After a pipeline run completes the resolve step, operator can open a per-argument review page showing resolved participants and fill in missing metadata inline
+
 **Plans**: TBD
 **UI hint**: yes
 

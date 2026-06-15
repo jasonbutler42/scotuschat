@@ -40,7 +40,6 @@
 			right: 0;
 			background-color: #1e293b;
 			border-top: 1px solid #334155;
-			display: flex;
 			flex-direction: row;
 			overflow-x: auto;
 			gap: 8px;

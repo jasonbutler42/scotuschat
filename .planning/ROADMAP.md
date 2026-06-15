@@ -40,7 +40,9 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
   1. Alembic migration 0003 runs cleanly and creates the `admin_jobs` table with all required columns
   2. `api/routers/admin.py` is mounted and returns 401 for requests missing a valid `X-Admin-Token` header
   3. All existing v1.0 API routes and the public chat UI continue to function without regression
-**Plans**: TBD
+**Plans**: 2 plans (2 waves)
+- [ ] 05-PLAN-01.md — Schema layer: Alembic migration 0003 (admin_jobs), AdminJob ORM model, ADMIN_TOKEN config field
+- [ ] 05-PLAN-02.md — FastAPI admin router (/api/admin) with X-Admin-Token dependency + health route, mounted in main.py
 
 ### Phase 6: Auth
 **Goal**: The operator can log in to the admin area with username and password and all admin routes are protected from unauthenticated access
@@ -87,7 +89,7 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
 | 2. Speaker Resolution | v1.0 | 4/4 | Complete | 2026-06-12 |
 | 3. Full UI | v1.0 | 4/4 | Complete | 2026-06-13 |
 | 4. Accessibility + Hardening | v1.0 | 2/2 | Complete | 2026-06-15 |
-| 5. Admin Foundation | v1.1 | 0/? | Not started | - |
+| 5. Admin Foundation | v1.1 | 0/2 | Planned | - |
 | 6. Auth | v1.1 | 0/? | Not started | - |
 | 7. Pipeline Runner | v1.1 | 0/? | Not started | - |
 | 8. People Editor | v1.1 | 0/? | Not started | - |

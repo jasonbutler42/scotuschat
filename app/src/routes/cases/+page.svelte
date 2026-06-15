@@ -19,9 +19,9 @@
 </script>
 
 <!-- Page background (#0f1117) -->
-<div style="background-color: #0f1117; min-height: 100vh;">
+<main style="background-color: #0f1117; min-height: 100vh;">
 	<!-- Header bar: full-width, #1e293b, border-bottom #334155 -->
-	<div
+	<header
 		style="
 			background-color: #1e293b;
 			border-bottom: 1px solid #334155;
@@ -40,7 +40,7 @@
 		>
 			Cases
 		</h1>
-	</div>
+	</header>
 
 	<!-- Content area: max-width 860px, centered, padding 48px 24px -->
 	<div
@@ -114,4 +114,4 @@
 			{/each}
 		{/if}
 	</div>
-</div>
+</main>

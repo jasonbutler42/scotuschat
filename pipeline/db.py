@@ -38,7 +38,7 @@ def get_engine():
     database_url = os.environ["DATABASE_URL"]
     return create_async_engine(
         database_url,
-        connect_args={"statement_cache_size": 0},
+        connect_args={"statement_cache_size": 0, "ssl": False},
         pool_size=2,  # pipeline is single-process CLI; small pool is sufficient
         echo=False,
     )

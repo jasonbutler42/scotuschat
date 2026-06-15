@@ -24,6 +24,9 @@ Usage examples:
 import argparse
 import asyncio
 
+# asyncpg is incompatible with the Windows ProactorEventLoop (Python 3.8+ default).
+asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
 from pipeline.commands.ingest import run_ingest
 from pipeline.commands.parse import run_parse
 from pipeline.commands.resolve import run_resolve

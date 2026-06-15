@@ -44,7 +44,7 @@
 				margin-bottom: 8px;
 			"
 		>
-			<div style="
+			<div aria-hidden="true" style="
 				width: 32px; height: 32px; border-radius: 50%;
 				background-color: {avatarBg};
 				display: flex; align-items: center; justify-content: center;

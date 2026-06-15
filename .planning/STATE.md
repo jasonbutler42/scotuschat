@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-stopped_at: Phase 4 planned — ready to execute
+stopped_at: Phase 4 Plan 01 complete — ready to execute Plan 04-02
 last_updated: "2026-06-15"
-last_activity: "2026-06-15 — Phase 4 planned: 2 plans in 2 waves. Plan 04-01 (color fixes, focus ring, ChatBubble ARIA, StageDirection role, SectionRail nav label); Plan 04-02 (MobileNavBar new component, HTML landmarks on all pages, roster color fix, mobile nav integration)."
+last_activity: "2026-06-15 — Plan 04-01 complete: global focus ring in app.css, sequence span removed from ChatBubble, role label color fixed (#94a3b8), role=article + aria-label on ChatBubble, role=note on StageDirection, aria-label=Argument sections on SectionRail."
 progress:
   total_phases: 4
   completed_phases: 3
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-06-11)
 ## Current Position
 
 Phase: 4 of 4 (Accessibility + Hardening)
-Plan: 0 of 2 in current phase (ready to execute)
-Status: Phase 4 planned — 2 plans, 2 waves. Ready to execute.
-Last activity: 2026-06-15 — Phase 4 planned: 2 plans in 2 waves. Plan 04-01 (color fixes, focus ring, ChatBubble ARIA, StageDirection role, SectionRail nav label); Plan 04-02 (MobileNavBar new component, HTML landmarks on all pages, roster color fix, mobile nav integration).
+Plan: 1 of 2 in current phase (Plan 04-01 complete)
+Status: Phase 4 in progress — Plan 04-01 done. Plan 04-02 (MobileNavBar, HTML landmarks, roster color fix, mobile nav integration) ready to execute.
+Last activity: 2026-06-15 — Plan 04-01 complete: global focus ring in app.css, sequence span removed from ChatBubble, role label color fixed (#94a3b8), role=article + aria-label on ChatBubble, role=note on StageDirection, aria-label=Argument sections on SectionRail.
 
-Progress: [████████████] 100% (Phase 3) / [░░░░░░░░░░░░] 0% (Phase 4 — planned, not started)
+Progress: [████████████] 100% (Phase 3) / [██████░░░░░░] 50% (Phase 4 — Plan 01 of 2 complete)
 
 ## Performance Metrics
 
@@ -105,6 +105,12 @@ Recent decisions affecting current work:
 - 03-04: Roster derived client-side from utterances via $derived.by() — no new API endpoint (D-12); avoids N+1 requests
 - 03-04: Header max-width widened 860px → 1200px to accommodate 180px rail + 1fr chat column
 - 03-04: IntersectionObserver rootMargin -40%/-55% — section activates when utterance occupies middle band of viewport
+- 04-01: *:focus-visible outline: 2px solid #93c5fd, 3px offset, 4px border-radius — global keyboard focus visibility (D-05/D-06/D-07)
+- 04-01: ChatBubble role=article + aria-label="{side}: {displayName}" — screen readers announce speaker context on each utterance (D-09)
+- 04-01: Role label span color changed #475569 to #94a3b8 — achieves WCAG 4.5:1 contrast on #1e293b surface (D-02)
+- 04-01: Sequence numbers removed from ChatBubble — utterances show avatar + name only; --color-text-sequence variable deleted (D-01)
+- 04-01: StageDirection role=note — distinguishes stage directions from speech in screen reader virtual cursor (D-10)
+- 04-01: SectionRail nav aria-label="Argument sections" — labels navigation landmark for assistive technology (D-08)
 
 ### Pending Todos
 
@@ -124,6 +130,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-15T13:55:04.954Z
-Stopped at: Phase 4 UI-SPEC approved
-Resume file: .planning/phases/04-accessibility-hardening/04-UI-SPEC.md
+Last session: 2026-06-15T14:24:36Z
+Stopped at: Phase 4 Plan 01 complete
+Resume file: .planning/phases/04-accessibility-hardening/04-01-SUMMARY.md

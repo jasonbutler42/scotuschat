@@ -107,7 +107,7 @@ Plans:
 
 Plans:
 **Wave 1**
-- [ ] 04-01-PLAN.md — Color fixes, global focus ring, ChatBubble ARIA semantics, StageDirection role, SectionRail nav label
+- [x] 04-01-PLAN.md — Color fixes, global focus ring, ChatBubble ARIA semantics, StageDirection role, SectionRail nav label
 **Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 04-02-PLAN.md — MobileNavBar.svelte (new component) + HTML landmarks on all pages + roster color fix + mobile nav integration
 
@@ -126,4 +126,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | 1. Foundation + Proof of Concept | 5/5 | Complete | 2026-06-11 |
 | 2. Speaker Resolution | 4/4 | Complete | 2026-06-12 |
 | 3. Full UI | 4/4 | Complete | 2026-06-13 |
-| 4. Accessibility + Hardening | 0/2 | Not started | - |
+| 4. Accessibility + Hardening | 1/2 | In progress | - |

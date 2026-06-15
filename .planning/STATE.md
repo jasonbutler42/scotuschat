@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: completed
+status: Awaiting next milestone
 stopped_at: context exhaustion at 79% (2026-06-15)
-last_updated: "2026-06-15T16:44:27.848Z"
-last_activity: "2026-06-15 — Plan 04-02 complete: MobileNavBar.svelte created (fixed-bottom pill nav, scroll-spy); HTML landmarks on all pages; roster color fix (#475569 eliminated); MobileNavBar wired to argument page."
+last_updated: "2026-06-15T18:41:57.905Z"
+last_activity: 2026-06-15 — Milestone v1.0 completed and archived
 progress:
   total_phases: 4
   completed_phases: 4
@@ -18,19 +18,17 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-06-11)
+See: .planning/PROJECT.md (updated 2026-06-15 after v1.0 milestone)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** Phase 4 — Accessibility + Hardening
+**Current focus:** Planning next milestone (v1.1) — run `/gsd-new-milestone`
 
 ## Current Position
 
-Phase: 4 of 4 (Accessibility + Hardening)
-Plan: 2 of 2 in current phase (Plan 04-02 complete — all phases complete)
-Status: Phase 4 complete — Plan 04-02 done. MobileNavBar.svelte, HTML landmarks, roster color fix, mobile nav integration all shipped. #475569 absent from entire codebase.
-Last activity: 2026-06-15 — Plan 04-02 complete: MobileNavBar.svelte created (fixed-bottom pill nav, scroll-spy); HTML landmarks on all pages; roster color fix (#475569 eliminated); MobileNavBar wired to argument page.
-
-Progress: [████████████] 100% (Phase 3) / [████████████] 100% (Phase 4 — all plans complete)
+Phase: Milestone v1.0 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-06-15 — Milestone v1.0 completed and archived
 
 ## Performance Metrics
 
@@ -129,12 +127,21 @@ None yet.
 
 ## Deferred Items
 
+Items acknowledged and deferred at milestone close on 2026-06-15:
+
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
-| *(none)* | | | |
+| verification | 01-VERIFICATION.md | human_needed (stale — human UAT completed per commits) | 2026-06-15 |
+| verification | 03-VERIFICATION.md | human_needed (stale — 03-HUMAN-UAT.md status: complete) | 2026-06-15 |
+| verification | 04-VERIFICATION.md | human_needed (stale — 04-UAT.md status: passed, all 8 pass) | 2026-06-15 |
+| uat | 04-UAT.md | passed — 0 pending scenarios (false-positive audit flag) | 2026-06-15 |
 
 ## Session Continuity
 
 Last session: 2026-06-15T16:44:27.841Z
 Stopped at: context exhaustion at 79% (2026-06-15)
 Resume file: None
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone

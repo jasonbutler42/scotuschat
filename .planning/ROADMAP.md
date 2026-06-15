@@ -25,7 +25,7 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
 
 **Milestone Goal:** A password-protected operator web interface that drives the ingestion pipeline step-by-step and manages speaker metadata — making it fast to ingest new arguments without touching the CLI.
 
-- [ ] **Phase 5: Admin Foundation** — Alembic migration 0003 + FastAPI admin router; prerequisite infrastructure for auth and pipeline runner
+- [x] **Phase 5: Admin Foundation** — Alembic migration 0003 + FastAPI admin router; prerequisite infrastructure for auth and pipeline runner (completed 2026-06-15)
 - [ ] **Phase 6: Auth** — Login, session cookie, route guard; all `/admin/*` routes protected
 - [ ] **Phase 7: Pipeline Runner** — Upload or URL trigger, fire-and-poll step execution, discrepancy review, resumable job state
 - [ ] **Phase 8: People Editor** — Directory listing, metadata editing, per-argument participant review
@@ -99,7 +99,7 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
 | 2. Speaker Resolution | v1.0 | 4/4 | Complete | 2026-06-12 |
 | 3. Full UI | v1.0 | 4/4 | Complete | 2026-06-13 |
 | 4. Accessibility + Hardening | v1.0 | 2/2 | Complete | 2026-06-15 |
-| 5. Admin Foundation | v1.1 | 1/2 | In Progress|  |
+| 5. Admin Foundation | v1.1 | 2/2 | Complete   | 2026-06-15 |
 | 6. Auth | v1.1 | 0/? | Not started | - |
 | 7. Pipeline Runner | v1.1 | 0/? | Not started | - |
 | 8. People Editor | v1.1 | 0/? | Not started | - |

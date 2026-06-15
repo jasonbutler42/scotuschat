@@ -4,13 +4,13 @@ milestone: v1.1
 milestone_name: Operator Admin Interface
 status: executing
 stopped_at: Phase 5 context gathered
-last_updated: "2026-06-15T20:44:11.782Z"
-last_activity: 2026-06-15 — v1.1 roadmap created (Phases 5–8)
+last_updated: "2026-06-15T20:52:25.027Z"
+last_activity: 2026-06-15 -- Phase 05 execution started
 progress:
   total_phases: 4
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 2
+  completed_plans: 1
   percent: 0
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-15 after v1.1 milestone start)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** v1.1 roadmap defined — ready to plan Phase 5 (Admin Foundation)
+**Current focus:** Phase 05 — admin-foundation
 
 ## Current Position
 
-Phase: 5 of 8 (Admin Foundation)
-Plan: —
+Phase: 05 (admin-foundation) — EXECUTING
+Plan: 2 of 2
 Status: Ready to execute
-Last activity: 2026-06-15 — v1.1 roadmap created (Phases 5–8)
+Last activity: 2026-06-15 -- Phase 05 execution started
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -50,6 +50,7 @@ Progress: [░░░░░░░░░░] 0%
 | 04-accessibility-hardening | 2 | — | — |
 
 *Updated after each plan completion*
+| Phase 05 P01 | 10 | - tasks | - files |
 
 ## Accumulated Context
 
@@ -66,6 +67,8 @@ Key v1.1 decisions from research:
 - Storage: DigitalOcean Spaces (boto3) for PDF persistence — DO App Platform container filesystem is ephemeral
 - Phase 5 before 6: FastAPI admin router must exist before SvelteKit calls it
 - Phase 7 before 8: Participant review data only exists after a pipeline run completes resolve
+- [Phase ?]: Migration 0003 lands full admin_jobs schema (all 10 columns) — no migration 0004 needed for this table
+- [Phase ?]: admin_token has no default value in Settings — app refuses to start without ADMIN_TOKEN env var set
 
 ### Pending Todos
 
@@ -90,7 +93,7 @@ Items acknowledged and deferred at v1.0 milestone close:
 
 ## Session Continuity
 
-Last session: 2026-06-15T20:22:02.786Z
+Last session: 2026-06-15T20:52:25.019Z
 Stopped at: Phase 5 context gathered
 Resume file: .planning/phases/05-admin-foundation/05-CONTEXT.md
 

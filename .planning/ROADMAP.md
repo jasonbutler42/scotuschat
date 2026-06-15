@@ -99,7 +99,7 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
 | 2. Speaker Resolution | v1.0 | 4/4 | Complete | 2026-06-12 |
 | 3. Full UI | v1.0 | 4/4 | Complete | 2026-06-13 |
 | 4. Accessibility + Hardening | v1.0 | 2/2 | Complete | 2026-06-15 |
-| 5. Admin Foundation | v1.1 | 0/2 | Planned | - |
+| 5. Admin Foundation | v1.1 | 1/2 | In Progress|  |
 | 6. Auth | v1.1 | 0/? | Not started | - |
 | 7. Pipeline Runner | v1.1 | 0/? | Not started | - |
 | 8. People Editor | v1.1 | 0/? | Not started | - |

@@ -16,6 +16,8 @@
 </script>
 
 <div
+	role="article"
+	aria-label="{isBench ? 'Bench' : 'Advocate'}: {displayName}"
 	style="
 		display: flex;
 		justify-content: {isBench ? 'flex-start' : 'flex-end'};
@@ -33,7 +35,7 @@
 			padding: 12px 16px;
 		"
 	>
-		<!-- Bubble header row: avatar circle + sequence number + speaker label -->
+		<!-- Bubble header row: avatar circle + speaker label -->
 		<div
 			style="
 				display: flex;
@@ -49,17 +51,7 @@
 				font-size: 12px; font-weight: 600; color: #0f1117;
 				flex-shrink: 0;
 			">{initials}</div>
-			<span
-				style="
-					font-size: 13px;
-					color: #475569;
-					font-weight: 400;
-					padding-right: 4px;
-				"
-			>
-				{utterance.sequence}
-			</span>
-			<span
+<span
 				style="
 					font-size: 13px;
 					font-weight: 600;
@@ -67,7 +59,7 @@
 				"
 			>
 				{displayName}
-			</span>{#if displayRole}<span style="font-size: 11px; color: #475569;">{displayRole}</span>{/if}
+			</span>{#if displayRole}<span style="font-size: 11px; color: #94a3b8;">{displayRole}</span>{/if}
 		</div>
 
 		<!-- Utterance text -->

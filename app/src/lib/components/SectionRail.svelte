@@ -33,6 +33,7 @@
 <nav aria-label="Argument sections" style="position: sticky; top: 0; padding: 24px 16px; align-self: start;">
 	{#each sections as sec (sec.hint)}
 		<button
+			aria-current={activeSection === sec.hint ? 'true' : undefined}
 			onclick={() => document.getElementById(sec.anchorId)?.scrollIntoView({ behavior: 'smooth' })}
 			style="
 				display: block;

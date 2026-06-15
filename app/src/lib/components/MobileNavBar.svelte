@@ -50,6 +50,7 @@
 	>
 		{#each sections as sec (sec.hint)}
 			<button
+				aria-current={activeSection === sec.hint ? 'true' : undefined}
 				onclick={() => document.getElementById(sec.anchorId)?.scrollIntoView({ behavior: 'smooth' })}
 				style="
 					border-radius: 20px;

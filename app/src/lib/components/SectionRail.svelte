@@ -34,7 +34,12 @@
 	{#each sections as sec (sec.hint)}
 		<button
 			aria-current={activeSection === sec.hint ? 'true' : undefined}
-			onclick={() => document.getElementById(sec.anchorId)?.scrollIntoView({ behavior: 'smooth' })}
+			onclick={() => {
+				const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+				document.getElementById(sec.anchorId)?.scrollIntoView({
+					behavior: reducedMotion ? 'instant' : 'smooth'
+				});
+			}}
 			style="
 				display: block;
 				width: 100%;

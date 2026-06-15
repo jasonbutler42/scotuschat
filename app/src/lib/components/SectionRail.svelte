@@ -30,7 +30,7 @@
 	});
 </script>
 
-<nav style="position: sticky; top: 0; padding: 24px 16px; align-self: start;">
+<nav aria-label="Argument sections" style="position: sticky; top: 0; padding: 24px 16px; align-self: start;">
 	{#each sections as sec (sec.hint)}
 		<button
 			onclick={() => document.getElementById(sec.anchorId)?.scrollIntoView({ behavior: 'smooth' })}

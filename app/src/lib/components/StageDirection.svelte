@@ -4,6 +4,7 @@
 
 <!-- Stage direction: full-width, amber accent, distinct from chat bubbles -->
 <div
+	role="note"
 	style="
 		background-color: #1e293b;
 		border-top: 1px solid #334155;

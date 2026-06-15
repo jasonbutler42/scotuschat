@@ -8,6 +8,16 @@ A website that displays Supreme Court oral arguments as a chat-style interface �
 
 Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
 
+## Current Milestone: v1.1 Operator Admin Interface
+
+**Goal:** Build a password-protected operator web interface that drives the ingestion pipeline step-by-step and manages speaker metadata — making it fast to ingest new arguments without touching the CLI.
+
+**Target features:**
+- Admin auth — username+password (env vars), session cookie, server hook guards all `/admin/*` routes; `admin.scotuschat.com` via reverse proxy
+- Pipeline runner — upload PDF or enter URL → runs ingest → parse → resolve sequentially; auto-advances when no discrepancies, pauses for operator review when they exist; pipeline job state persisted (resumable across sessions)
+- People directory — global editor for all people records: name, role, bio text, photo URL, tenure dates
+- Per-argument participant review — after ingesting, inline review of resolved participants with ability to fill in missing metadata
+
 ## Requirements
 
 ### Validated
@@ -44,16 +54,19 @@ Anyone can open a SCOTUS oral argument and immediately follow the conversation �
 
 ### Active
 
-- [ ] Pipeline step 4 (Enrich) — bio text, photo URL, tenure dates from Oyez/FJC for each argument participant (ENRICH-01)
-- [ ] Bio schema uniform across all speakers — same fields and depth for Justices and advocates (ENRICH-02)
-- [ ] Bio cards render in the UI, linked from speaker avatars (ENRICH-03)
-- [ ] Pipeline step 5 (Citations) — scan utterance content for legal citation patterns; write to citations table (CITE-01)
-- [ ] Citation strings render as distinct styled inline text in the chat UI (CITE-02)
+- [ ] Operator can authenticate to `/admin/*` routes with username+password; unauthenticated requests redirect to login (ADMIN-01)
+- [ ] Operator can start a pipeline run by uploading a PDF or entering a URL (PIPE-12)
+- [ ] Pipeline runs ingest → parse → resolve sequentially, auto-advancing when no discrepancies; pauses for review when discrepancies exist (PIPE-13)
+- [ ] Pipeline job state is persisted to DB and resumable across browser sessions (PIPE-14)
+- [ ] Operator can view all people in a directory and edit name, role, bio text, photo URL, and tenure dates (PEOPLE-01)
+- [ ] After a pipeline run, operator can review resolved participants and fill in missing metadata inline (PEOPLE-02)
 - [ ] Application deployed to Digital Ocean App Platform (SvelteKit + FastAPI as separate services, managed Postgres) (DEPLOY-01)
 - [ ] Continuous deployment from GitHub main branch (DEPLOY-03)
 
 ### Out of Scope
 
+- Automated enrich pipeline step (Oyez/FJC API) — manual people editor in admin UI serves this for v1.1; automated enrichment deferred (ENRICH-01/02/03)
+- Citation pipeline step — not in scope for v1.1; schema already supports it (CITE-01/02)
 - Audio playback — Oyez owns the distribution relationship; link to Oyez instead
 - AI-generated case summaries — violates apolitical framing constraint; hard no
 - Cross-case justice statistics — politically interpretable; contradicts non-editorial principle
@@ -123,4 +136,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-15 after v1.0 milestone*
+*Last updated: 2026-06-15 after v1.1 milestone start*

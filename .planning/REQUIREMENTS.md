@@ -80,6 +80,8 @@ Deferred to next milestone.
 - Mapped to phases: 13
 - Unmapped: 0 ✓
 
+**Note on Phase 5:** Phase 5 (Admin Foundation) is a pure infrastructure phase — Alembic migration 0003 (`admin_jobs` table) and `api/routers/admin.py` (FastAPI admin router). It carries no REQUIREMENTS.md REQ-IDs by design because it delivers no operator-observable feature; it exists solely as a prerequisite for Phase 6 (auth) and Phase 7 (pipeline runner).
+
 ---
 *Requirements defined: 2026-06-15*
-*Last updated: 2026-06-15 after initial v1.1 definition*
+*Last updated: 2026-06-15 after v1.1 roadmap created (Phases 5–8)*

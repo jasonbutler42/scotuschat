@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Operator Admin Interface
 status: planning
-last_updated: "2026-06-15T19:24:41.316Z"
+last_updated: "2026-06-15"
 last_activity: 2026-06-15
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -17,25 +17,27 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-06-15 after v1.0 milestone)
+See: .planning/PROJECT.md (updated 2026-06-15 after v1.1 milestone start)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** Planning next milestone (v1.1) — run `/gsd-new-milestone`
+**Current focus:** v1.1 roadmap defined — ready to plan Phase 5 (Admin Foundation)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 5 of 8 (Admin Foundation)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-06-15 — Milestone v1.1 started
+Status: Ready to plan
+Last activity: 2026-06-15 — v1.1 roadmap created (Phases 5–8)
+
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 3
-- Average duration: 40 min
-- Total execution time: 2 hours
+- Total plans completed: 15 (v1.0)
+- Average duration: ~40 min
+- Total execution time: ~10 hours (v1.0)
 
 **By Phase:**
 
@@ -43,11 +45,8 @@ Last activity: 2026-06-15 — Milestone v1.1 started
 |-------|-------|-------|----------|
 | 01-foundation-proof-of-concept | 5 | 215 min | 43 min |
 | 02-speaker-resolution | 4 | — | — |
-
-**Recent Trend:**
-
-- Last 5 plans: 01-01 (45 min), 01-02 (35 min), 01-03 (45 min), 01-04 (45 min), 01-05 (45 min)
-- Trend: Stable ~43 min/plan
+| 03-full-ui | 4 | — | — |
+| 04-accessibility-hardening | 2 | — | — |
 
 *Updated after each plan completion*
 
@@ -56,63 +55,16 @@ Last activity: 2026-06-15 — Milestone v1.1 started
 ### Decisions
 
 Decisions are logged in PROJECT.md Key Decisions table.
-Recent decisions affecting current work:
+Key v1.1 decisions from research:
 
-- Roadmap: Schema (INFRA-01, INFRA-02) must come first — all pipeline and API work depends on it
-- Roadmap: Parse step (PIPE-03–06) ships in Phase 1 alongside minimal FastAPI + minimal SvelteKit to prove concept end-to-end
-- Roadmap: Resolve step (PIPE-07–09) deferred to Phase 2 — depends on utterances from Parse
-- Roadmap: PIPE-08 (speaker_alias seed) is a Phase 2 prerequisite; must be in place before PIPE-07 runs
-- Roadmap: A11Y requirements (A11Y-01–04) held for Phase 4 after full UI surface exists
-- 01-01: Svelte 5 Runes exclusively — $props() not export let; no $: reactive blocks
-- 01-01: FASTAPI_BASE_URL imported from $env/static/private only — never PUBLIC_ prefix (T-01-01 threat mitigation)
-- 01-01: Route /cases/[slug]/arguments/[id] created from day one to avoid Phase 3 refactor (D-17)
-- 01-01: Identical bubble backgrounds for bench and advocate (apolitical framing — position-only side differentiation)
-- 01-01: adapter-node installed for Digital Ocean App Platform SSR support
-- 01-02: Citations table deferred — 10 tables only in initial schema; schema supports citations FK (resolved_case_id) but table not created until needed
-- 01-02: Hand-written migration (not autogenerate) — explicit FK dependency order control; prevents Pitfall 2 (empty migrations)
-- 01-02: SideEnum uppercase (BENCH/ADVOCATE/UNKNOWN), PipelineRunStatus lowercase (pending/running/etc.) — matches raw speaker label conventions and status field idioms respectively
-- 01-02: test_no_create_all_in_codebase searches production dirs only (api/, alembic/, pipeline/) — test files excluded to avoid false positives
-- 01-03: SSRF validation as standalone _validate_url() function — synchronous, no DB, enables unit tests without async setup
-- 01-03: Lazy engine creation in get_engine() — DATABASE_URL not required at import time, only at coroutine execution time
-- 01-03: PipelineRunStatus.COMPLETED set directly for ingest (synchronous op) — pending→running→completed state machine used by parse step (Plan 04)
-- 01-03: parse.py stub created in Plan 03 to satisfy __main__.py import — full implementation in Plan 04
-- 01-04: Two-variable section hint design (pending_section_hint + current_section_hint) prevents cascade (Pitfall 3)
-- 01-04: F04 fix — ON\s+BEHALF\s+OF added to TOC_SECTION_RE (handles Obergefell "ON BEHALF OF" header variant)
-- 01-04: assign_side() deterministic rule-based (BENCH_RE/ADVOCATE_RE) — resolves D-09 Open Question #3
-- 01-04: LLM pass falls back to rule-based output on failure — resilience over hard-fail for Phase 1 PoC
-- 01-04: AsyncAnthropic(max_retries=0) + tenacity outer retry — prevents triple-retry on transient errors (Pitfall 4)
-- 01-05: statement_cache_size=0 in connect_args dict (asyncpg connection args) — not top-level engine kwarg; top-level silently has no effect under PgBouncer Transaction mode
-- 01-05: expire_on_commit=False on async_sessionmaker — prevents MissingGreenlet on ORM attribute access after commit in async context
-- 01-05: Lifespan context manager (not @app.on_event) — @app.on_event deprecated in FastAPI 0.93+
-- 01-05: Service returns dict, router creates Pydantic response — clean ORM/schema separation
-- 01-05: service uses MAX(pipeline_runs.id) WHERE step='parse' AND status='completed' — not MAX(utterances.pipeline_run_id), to avoid surfacing partial writes from crashed runs (CR-04 fix)
-- 01-05: formatDate appends T00:00:00 before new Date() — forces local-date parsing, avoids UTC midnight roll-back west of UTC
-- 03-01: GET /cases route path is "" (empty string, not "/") — collection endpoint matching people.py pattern, avoids trailing-slash redirect
-- 03-01: GET /cases returns empty list on no data (not 404) — empty collection is valid; 404 only for missing resources
-- 03-01: argument_id included in CaseItem — enables direct argument linking; resolved D-09 navigation model open question
-- 03-01: Wave 0 PUBLIC_FASTAPI_BASE_URL test passes vacuously before cases routes dir exists — will enforce on Plan 03-02 creation
-- 03-02: D-09 navigation model resolved — intermediate /cases/[slug] page with redirect(307) for single-argument; picker for multi-argument; future-proofs Obergefell Q2 load
-- 03-02: Case list cards link to /cases/{slug} (not directly to argument) — correct for multi-argument cases
-- 03-02: FASTAPI_BASE_URL from $env/static/private in all new +page.server.ts files — no PUBLIC_ prefix
-- 03-03: D-05 alignment flip applied — bench LEFT (flex-start), advocate RIGHT (flex-end); reverses Phase 1 implementation to match roster layout
-- 03-03: avatarBg matches labelColor logic (bench #94a3b8, advocate #93c5fd) — consistent per D-08
-- 03-03: Avatar initials use plain const IIFE (not $derived) — value fixed at component instantiation from $props(), no reactive recomputation needed
-- 03-03: Avatar font-size 12px/600 is the UI-SPEC documented exception — not subject to 4-size type scale
-- 03-04: Section anchor IDs placed on all utterances with non-null section_hint (not just first) — harmless over-annotation; SectionRail only links to first occurrence's ID from sectionAnchors derived list
-- 03-04: Roster derived client-side from utterances via $derived.by() — no new API endpoint (D-12); avoids N+1 requests
-- 03-04: Header max-width widened 860px → 1200px to accommodate 180px rail + 1fr chat column
-- 03-04: IntersectionObserver rootMargin -40%/-55% — section activates when utterance occupies middle band of viewport
-- 04-01: *:focus-visible outline: 2px solid #93c5fd, 3px offset, 4px border-radius — global keyboard focus visibility (D-05/D-06/D-07)
-- 04-01: ChatBubble role=article + aria-label="{side}: {displayName}" — screen readers announce speaker context on each utterance (D-09)
-- 04-01: Role label span color changed #475569 to #94a3b8 — achieves WCAG 4.5:1 contrast on #1e293b surface (D-02)
-- 04-01: Sequence numbers removed from ChatBubble — utterances show avatar + name only; --color-text-sequence variable deleted (D-01)
-- 04-01: StageDirection role=note — distinguishes stage directions from speech in screen reader virtual cursor (D-10)
-- 04-01: SectionRail nav aria-label="Argument sections" — labels navigation landmark for assistive technology (D-08)
-- 04-02: MobileNavBar.svelte created — Svelte 5 Runes, fixed-bottom pill nav, IntersectionObserver scroll-spy, hidden desktop/shown mobile (D-11/D-12/D-13)
-- 04-02: HTML landmarks added to all pages — <header> wraps nav in layout; <main>/<header> on cases page and argument page (D-08)
-- 04-02: Roster column headers #475569 → #94a3b8 — #475569 now absent from entire app/src tree (D-03)
-- 04-02: Chat column bottom padding 60px — prevents last utterance hiding behind fixed MobileNavBar (D-13)
-- 04-02: MobileNavBar wired to argument page via sections={sectionAnchors} prop (D-11)
+- Auth: Stateless HMAC-signed session cookie (`node:crypto`) — no auth library, no DB-backed adapter; cannot revoke individual sessions without rotating `SESSION_SECRET`
+- Auth: `hooks.server.ts` is the sole auth checkpoint — layout guards alone do not protect `+server.ts` endpoints
+- Pipeline: Fire-and-poll pattern — subprocess spawned immediately, HTTP returns `{job_id}`, client polls every 2.5s; never await subprocess completion
+- Pipeline: All job state in DB (`admin_jobs` table) — no module-level Map or in-memory cache; DO restarts on every deploy
+- Pipeline: `admin_jobs` and `pipeline_runs` are separate — do not repurpose `pipeline_runs` for UI coordination
+- Storage: DigitalOcean Spaces (boto3) for PDF persistence — DO App Platform container filesystem is ephemeral
+- Phase 5 before 6: FastAPI admin router must exist before SvelteKit calls it
+- Phase 7 before 8: Participant review data only exists after a pipeline run completes resolve
 
 ### Pending Todos
 
@@ -120,27 +72,27 @@ None yet.
 
 ### Blockers/Concerns
 
-- Research recommends spiking LLM parse prompt design (2–4 hours, 3–5 real PDFs) before finalizing ParsedUtterance schema — worth doing before Phase 1 planning
-- `speaker_alias` seed data completeness should be sourced from FJC and walkerdb/supreme_court_transcripts before Phase 2 planning
-- asyncpg requires `statement_cache_size=0` when behind DO PgBouncer Transaction mode — must be in initial engine config (Phase 1)
+- Phase 7 has multiple interacting failure modes (subprocess management, job state machine, Spaces upload) — use `--research` flag when planning Phase 7
+- `BODY_SIZE_LIMIT` default 512KB blocks real SCOTUS PDFs — must set `BODY_SIZE_LIMIT=10M` in DO App Platform env
+- `ORIGIN` env var missing on DO causes silent CSRF 403 at login — set `ORIGIN`, `PROTOCOL_HEADER`, `HOST_HEADER` in DO env vars
+- `admin.scotuschat.com` DNS entry must be created before deployment smoke test
 
 ## Deferred Items
 
-Items acknowledged and deferred at milestone close on 2026-06-15:
+Items acknowledged and deferred at v1.0 milestone close:
 
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
 | verification | 01-VERIFICATION.md | human_needed (stale — human UAT completed per commits) | 2026-06-15 |
 | verification | 03-VERIFICATION.md | human_needed (stale — 03-HUMAN-UAT.md status: complete) | 2026-06-15 |
 | verification | 04-VERIFICATION.md | human_needed (stale — 04-UAT.md status: passed, all 8 pass) | 2026-06-15 |
-| uat | 04-UAT.md | passed — 0 pending scenarios (false-positive audit flag) | 2026-06-15 |
 
 ## Session Continuity
 
-Last session: 2026-06-15T16:44:27.841Z
-Stopped at: context exhaustion at 79% (2026-06-15)
+Last session: 2026-06-15
+Stopped at: v1.1 roadmap created — Phases 5–8 defined
 Resume file: None
 
 ## Operator Next Steps
 
-- Start the next milestone with /gsd-new-milestone
+- Run `/gsd-plan-phase 5` to plan Admin Foundation (Alembic migration 0003 + FastAPI admin router)

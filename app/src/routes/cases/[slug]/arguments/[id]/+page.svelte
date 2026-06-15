@@ -2,6 +2,7 @@
 	import ChatBubble from '$lib/components/ChatBubble.svelte';
 	import StageDirection from '$lib/components/StageDirection.svelte';
 	import SectionRail from '$lib/components/SectionRail.svelte';
+	import MobileNavBar from '$lib/components/MobileNavBar.svelte';
 
 	let { data } = $props();
 
@@ -66,9 +67,9 @@
 </script>
 
 <!-- Page background (#0f1117) -->
-<div style="background-color: #0f1117; min-height: 100vh;">
+<main style="background-color: #0f1117; min-height: 100vh;">
 	<!-- Argument heading bar: full-width, #1e293b, border-bottom #334155 -->
-	<div
+	<header
 		style="
 			background-color: #1e293b;
 			border-bottom: 1px solid #334155;
@@ -110,7 +111,7 @@
 						style="
 							font-size: 13px;
 							font-weight: 600;
-							color: #475569;
+							color: #94a3b8;
 							margin: 0 0 8px 0;
 						"
 					>
@@ -135,7 +136,7 @@
 						style="
 							font-size: 13px;
 							font-weight: 600;
-							color: #475569;
+							color: #94a3b8;
 							margin: 0 0 8px 0;
 						"
 					>
@@ -156,7 +157,7 @@
 				</div>
 			</div>
 		</div>
-	</div>
+	</header>
 
 	<!-- Two-column content grid: nav rail (180px) + chat column (1fr) — D-01 -->
 	<div
@@ -171,7 +172,7 @@
 		</div>
 
 		<!-- Chat column: utterance stream -->
-		<div style="padding: 48px 24px;">
+		<div style="padding: 48px 24px 60px 24px;">
 			{#if !data.utterances || data.utterances.length === 0}
 				<!-- Empty state -->
 				<p
@@ -208,7 +209,8 @@
 			{/if}
 		</div>
 	</div>
-</div>
+	<MobileNavBar sections={sectionAnchors} />
+</main>
 
 <!-- D-03: Mobile breakpoint — hide nav rail below 768px; chat spans full width -->
 <style>

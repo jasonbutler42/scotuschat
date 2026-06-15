@@ -103,8 +103,18 @@ Plans:
   2. A user navigating entirely by keyboard can reach every interactive element — case list, argument view, section nav rail, avatar links — with no mouse required
   3. Speaker side differentiation (bench vs. advocate) is conveyed by layout position alone and remains clear when viewed in a single-color or high-contrast display mode
   4. Focus is visibly managed for any overlays or interactive components: focus moves to the opened element on activation and returns to the trigger on close
-**Plans**: TBD
-**UI hint**: yes
+**Plans**: 2 plans
+
+Plans:
+**Wave 1**
+- [ ] 04-01-PLAN.md — Color fixes, global focus ring, ChatBubble ARIA semantics, StageDirection role, SectionRail nav label
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 04-02-PLAN.md — MobileNavBar.svelte (new component) + HTML landmarks on all pages + roster color fix + mobile nav integration
+
+**Cross-cutting constraints:**
+- No new npm packages — all Phase 4 work uses native browser APIs and existing SvelteKit primitives
+- After Phase 4 completes: #475569 must not appear anywhere in app/src/
+- Svelte 5 Runes only — $props(), $state(), $derived(), $effect() — no export let, no $: blocks
 
 ## Progress
 
@@ -116,4 +126,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | 1. Foundation + Proof of Concept | 5/5 | Complete | 2026-06-11 |
 | 2. Speaker Resolution | 4/4 | Complete | 2026-06-12 |
 | 3. Full UI | 4/4 | Complete | 2026-06-13 |
-| 4. Accessibility + Hardening | 0/TBD | Not started | - |
+| 4. Accessibility + Hardening | 0/2 | Not started | - |

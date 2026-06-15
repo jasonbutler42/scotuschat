@@ -204,13 +204,18 @@ def test_api_main_imports_without_error():
     Importing api.main must succeed with the admin router mounted.
 
     This is a smoke import — no requests made, no DB connection required.
-    Requires ADMIN_TOKEN to be set (pydantic-settings reads it at import time).
-    The pytest environment sets ADMIN_TOKEN=test via conftest.py.
+    ADMIN_TOKEN is set to a sentinel value for this test only; pydantic-settings
+    reads it at import time. The value is not a real secret.
     """
     import importlib
     import sys
+    import os
 
-    # Remove cached module so we get a fresh import
+    # Set ADMIN_TOKEN so pydantic-settings Settings() construction succeeds.
+    # This does not test the token value itself — only that the module loads.
+    os.environ.setdefault("ADMIN_TOKEN", "test-smoke-import")
+
+    # Remove cached api.* modules so we get a fresh import with ADMIN_TOKEN set.
     for mod in list(sys.modules.keys()):
         if mod.startswith("api."):
             del sys.modules[mod]

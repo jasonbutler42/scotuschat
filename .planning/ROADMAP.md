@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Foundation + Proof of Concept** - Schema, ingest, parse, minimal API, minimal chat view — end-to-end on one hand-picked case
 - [x] **Phase 2: Speaker Resolution** - Alias table seeded, resolve step wired, every utterance carries a named and sided speaker in the UI
 - [x] **Phase 3: Full UI** - Case list, argument header, section nav, shareable URLs, avatars — complete browseable product
-- [ ] **Phase 4: Accessibility + Hardening** - WCAG 2.1 AA throughout, full keyboard navigation, focus management, apolitical framing verified
+- [x] **Phase 4: Accessibility + Hardening** - WCAG 2.1 AA throughout, full keyboard navigation, focus management, apolitical framing verified
 
 ## Phase Details
 
@@ -109,7 +109,7 @@ Plans:
 **Wave 1**
 - [x] 04-01-PLAN.md — Color fixes, global focus ring, ChatBubble ARIA semantics, StageDirection role, SectionRail nav label
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 04-02-PLAN.md — MobileNavBar.svelte (new component) + HTML landmarks on all pages + roster color fix + mobile nav integration
+- [x] 04-02-PLAN.md — MobileNavBar.svelte (new component) + HTML landmarks on all pages + roster color fix + mobile nav integration
 
 **Cross-cutting constraints:**
 - No new npm packages — all Phase 4 work uses native browser APIs and existing SvelteKit primitives
@@ -126,4 +126,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | 1. Foundation + Proof of Concept | 5/5 | Complete | 2026-06-11 |
 | 2. Speaker Resolution | 4/4 | Complete | 2026-06-12 |
 | 3. Full UI | 4/4 | Complete | 2026-06-13 |
-| 4. Accessibility + Hardening | 1/2 | In progress | - |
+| 4. Accessibility + Hardening | 2/2 | Complete | 2026-06-15 |

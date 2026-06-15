@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: planning
-stopped_at: Phase 4 Plan 01 complete — ready to execute Plan 04-02
+status: complete
+stopped_at: Phase 4 Plan 02 complete — all plans in all phases complete
 last_updated: "2026-06-15"
-last_activity: "2026-06-15 — Plan 04-01 complete: global focus ring in app.css, sequence span removed from ChatBubble, role label color fixed (#94a3b8), role=article + aria-label on ChatBubble, role=note on StageDirection, aria-label=Argument sections on SectionRail."
+last_activity: "2026-06-15 — Plan 04-02 complete: MobileNavBar.svelte created (fixed-bottom pill nav, scroll-spy); HTML landmarks on all pages; roster color fix (#475569 eliminated); MobileNavBar wired to argument page."
 progress:
   total_phases: 4
   completed_phases: 3
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-06-11)
 ## Current Position
 
 Phase: 4 of 4 (Accessibility + Hardening)
-Plan: 1 of 2 in current phase (Plan 04-01 complete)
-Status: Phase 4 in progress — Plan 04-01 done. Plan 04-02 (MobileNavBar, HTML landmarks, roster color fix, mobile nav integration) ready to execute.
-Last activity: 2026-06-15 — Plan 04-01 complete: global focus ring in app.css, sequence span removed from ChatBubble, role label color fixed (#94a3b8), role=article + aria-label on ChatBubble, role=note on StageDirection, aria-label=Argument sections on SectionRail.
+Plan: 2 of 2 in current phase (Plan 04-02 complete — all phases complete)
+Status: Phase 4 complete — Plan 04-02 done. MobileNavBar.svelte, HTML landmarks, roster color fix, mobile nav integration all shipped. #475569 absent from entire codebase.
+Last activity: 2026-06-15 — Plan 04-02 complete: MobileNavBar.svelte created (fixed-bottom pill nav, scroll-spy); HTML landmarks on all pages; roster color fix (#475569 eliminated); MobileNavBar wired to argument page.
 
-Progress: [████████████] 100% (Phase 3) / [██████░░░░░░] 50% (Phase 4 — Plan 01 of 2 complete)
+Progress: [████████████] 100% (Phase 3) / [████████████] 100% (Phase 4 — all plans complete)
 
 ## Performance Metrics
 
@@ -111,6 +111,11 @@ Recent decisions affecting current work:
 - 04-01: Sequence numbers removed from ChatBubble — utterances show avatar + name only; --color-text-sequence variable deleted (D-01)
 - 04-01: StageDirection role=note — distinguishes stage directions from speech in screen reader virtual cursor (D-10)
 - 04-01: SectionRail nav aria-label="Argument sections" — labels navigation landmark for assistive technology (D-08)
+- 04-02: MobileNavBar.svelte created — Svelte 5 Runes, fixed-bottom pill nav, IntersectionObserver scroll-spy, hidden desktop/shown mobile (D-11/D-12/D-13)
+- 04-02: HTML landmarks added to all pages — <header> wraps nav in layout; <main>/<header> on cases page and argument page (D-08)
+- 04-02: Roster column headers #475569 → #94a3b8 — #475569 now absent from entire app/src tree (D-03)
+- 04-02: Chat column bottom padding 60px — prevents last utterance hiding behind fixed MobileNavBar (D-13)
+- 04-02: MobileNavBar wired to argument page via sections={sectionAnchors} prop (D-11)
 
 ### Pending Todos
 
@@ -130,6 +135,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-15T14:24:36Z
-Stopped at: Phase 4 Plan 01 complete
-Resume file: .planning/phases/04-accessibility-hardening/04-01-SUMMARY.md
+Last session: 2026-06-15T14:27:45Z
+Stopped at: Phase 4 Plan 02 complete — all phases done
+Resume file: .planning/phases/04-accessibility-hardening/04-02-SUMMARY.md

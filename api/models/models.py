@@ -22,6 +22,7 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase
 
 
@@ -42,6 +43,20 @@ class PipelineRunStatus(str, enum.Enum):
     COMPLETED = "completed"
     FAILED = "failed"
     NEEDS_REVIEW = "needs_review"
+
+
+class AdminJobStatus(str, enum.Enum):
+    PENDING = "pending"
+    RUNNING = "running"
+    PAUSED = "paused"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+class AdminJobStep(str, enum.Enum):
+    INGEST = "ingest"
+    PARSE = "parse"
+    RESOLVE = "resolve"
 
 
 # ---------------------------------------------------------------------------
@@ -261,3 +276,34 @@ class SpeakerAlias(Base):
     person_id = Column(Integer, ForeignKey("people.id"), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     notes = Column(Text, nullable=True)
+
+
+# ---------------------------------------------------------------------------
+# Table 12: admin_jobs
+# Tracks operator-initiated pipeline jobs submitted via the admin UI.
+# status and current_step use PG enums defined in migration 0003.
+# argument_id is nullable FK — NULL until ingest creates the argument row (D-02).
+# discrepancies is JSONB — read as a batch during fire-and-poll (D-03).
+# ---------------------------------------------------------------------------
+
+
+class AdminJob(Base):
+    __tablename__ = "admin_jobs"
+
+    id = Column(Integer, primary_key=True)
+    status = Column(
+        SAEnum(AdminJobStatus, name="admin_job_status", values_callable=lambda e: [x.value for x in e]),
+        nullable=False,
+        default=AdminJobStatus.PENDING,
+    )
+    current_step = Column(
+        SAEnum(AdminJobStep, name="admin_job_step", values_callable=lambda e: [x.value for x in e]),
+        nullable=True,
+    )
+    argument_id = Column(Integer, ForeignKey("arguments.id"), nullable=True)
+    pdf_url = Column(Text, nullable=True)
+    spaces_key = Column(Text, nullable=True)
+    discrepancies = Column(JSONB, nullable=True)
+    error_message = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)

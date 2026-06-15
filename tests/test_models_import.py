@@ -7,20 +7,20 @@ import pytest
 
 
 def test_all_tables_count():
-    """All 11 ORM model tables must be importable from api.models.models."""
+    """All 12 ORM model tables must be importable from api.models.models."""
     from api.models.models import Base
     tables = list(Base.metadata.tables.keys())
-    assert len(tables) == 11, f"Expected 11 tables, got {len(tables)}: {tables}"
+    assert len(tables) == 12, f"Expected 12 tables, got {len(tables)}: {tables}"
 
 
 def test_expected_table_names():
-    """All 11 exact table names must be present."""
+    """All 12 exact table names must be present."""
     from api.models.models import Base
     tables = set(Base.metadata.tables.keys())
     expected = {
         "roles", "people", "court_tenures", "cases", "arguments",
         "case_arguments", "case_appearances", "argument_participants",
-        "pipeline_runs", "utterances", "speaker_alias",
+        "pipeline_runs", "utterances", "speaker_alias", "admin_jobs",
     }
     assert tables == expected, f"Table mismatch: {tables.symmetric_difference(expected)}"
 

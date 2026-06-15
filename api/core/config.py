@@ -19,6 +19,11 @@ class Settings(BaseSettings):
     # False in production; enables SQLAlchemy SQL echo when True
     debug: bool = False
 
+    # Required — set via ADMIN_TOKEN env var (D-13).
+    # No default value: app refuses to start without this set (fail-fast, T-05-02).
+    # Do NOT log or expose this value in any endpoint response.
+    admin_token: str
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

@@ -26,7 +26,7 @@ affects:
 # Tech tracking
 tech-stack:
   added:
-    - boto3>=1.34 (official AWS SDK — pending human legitimacy verification at checkpoint)
+    - boto3>=1.34 (official AWS SDK — legitimacy verified by operator at human checkpoint: pypi.org/project/boto3, published by Amazon Web Services, github.com/boto/boto3)
   patterns:
     - Atomic rowcount guard: update(AdminJob).where(step+status).values(...).execution_options(synchronize_session=False); return result.rowcount == 1; no RETURNING
     - Fire-and-forget subprocess: sys.executable + CREATE_NEW_PROCESS_GROUP (win32) or start_new_session=True (posix); never .wait()/.communicate()
@@ -68,10 +68,10 @@ completed: 2026-06-16
 
 ## Performance
 
-- **Duration:** ~35 min (Tasks 1-2 in prior session; Task 3 in this session)
-- **Started:** 2026-06-16
-- **Completed:** 2026-06-16 (Tasks 1-3; paused at boto3 legitimacy checkpoint)
-- **Tasks:** 3 of 4 complete (Task 4 is checkpoint:human-verify awaiting approval)
+- **Duration:** ~35 min (task execution) + human checkpoint (boto3 legitimacy verification)
+- **Started:** 2026-06-16T13:40:18-05:00
+- **Completed:** 2026-06-16 (all 4 tasks complete; boto3 legitimacy checkpoint approved)
+- **Tasks:** 4 of 4 complete
 - **Files modified:** 6
 
 ## Accomplishments
@@ -95,7 +95,7 @@ It never runs in SvelteKit (Node.js). Adding these env vars to the wrong service
 1. **Task 1: boto3, DO Spaces config, admin-job schemas** - `e123c20` (feat)
 2. **Task 2: DO Spaces upload service and subprocess spawn** - `6cb2007` (feat)
 3. **Task 3: admin_jobs service** - `1cb41c0` (feat)
-4. **Task 4: checkpoint:human-verify** — AWAITING boto3 legitimacy confirmation
+4. **Task 4: checkpoint:human-verify** — boto3 legitimacy CONFIRMED by operator (pypi.org/project/boto3, Amazon Web Services, github.com/boto/boto3)
 
 ## Files Created/Modified
 
@@ -132,7 +132,7 @@ It never runs in SvelteKit (Node.js). Adding these env vars to the wrong service
 
 ## Issues Encountered
 
-None — all three tasks executed cleanly. Plan is paused at the boto3 package legitimacy checkpoint (blocking-human gate, cannot be auto-approved).
+None — all four tasks executed cleanly. The boto3 package legitimacy checkpoint (blocking-human gate) was satisfied by operator verification: pypi.org/project/boto3 is published by Amazon Web Services at github.com/boto/boto3, version >= 1.34 confirmed legitimate. Supply-chain threat T-07-SC mitigated.
 
 ## User Setup Required
 
@@ -150,9 +150,10 @@ These are optional for URL-mode jobs (PIPE-12). They are required for file-uploa
 
 ## Next Phase Readiness
 
-- Plan 01 is functionally complete pending boto3 legitimacy checkpoint approval
-- Plan 02 (admin routes) can wire all schemas + service functions from this plan
-- No blockers for Plan 02 execution other than the pending checkpoint
+- Plan 01 is fully complete; boto3 legitimacy checkpoint approved
+- Plan 02 (admin routes, Wave 2) can wire all schemas + service functions from this plan
+- Plan 03 (pipeline subprocess mods, Wave 1) can proceed immediately — targets pipeline/commands/ directly
+- No blockers for Wave 2 start
 
 ## Known Stubs
 
@@ -163,8 +164,8 @@ None — all functions are fully implemented with real DB operations. No placeho
 No new trust boundaries introduced beyond those in the plan's threat model. All mitigations applied:
 - T-07-02 (shell=False): spawn_pipeline_step uses shell=False (default) with typed argv
 - T-07-03 (Spaces creds): credentials are server-only env vars, never returned in responses
-- T-07-SC (boto3 supply chain): blocking-human checkpoint pending human verification
+- T-07-SC (boto3 supply chain): blocking-human checkpoint RESOLVED — operator verified boto3 at pypi.org/project/boto3 (Amazon Web Services, github.com/boto/boto3, >= 1.34)
 
 ---
 *Phase: 07-pipeline-runner*
-*Completed: 2026-06-16 (partial — paused at checkpoint)*
+*Completed: 2026-06-16*

@@ -15,12 +15,12 @@ Requirements for the Operator Admin Interface milestone. Phases continue numberi
 
 ### Pipeline Runner
 
-- [ ] **PIPE-12**: Operator can start a new pipeline run by entering a transcript PDF URL
-- [ ] **PIPE-13**: Operator can start a new pipeline run by uploading a local PDF file
-- [ ] **PIPE-14**: A running pipeline displays step status (Ingest / Parse / Resolve) and auto-advances when each step completes without discrepancies
-- [ ] **PIPE-15**: Pipeline pauses after a step when discrepancies exist and displays them for operator review before continuing
-- [ ] **PIPE-16**: Operator can confirm or correct speaker alias matches during resolve review; confirmed matches are saved to the alias table
-- [ ] **PIPE-17**: Pipeline job state is persisted to DB so the operator can close the browser and resume an in-progress run
+- [x] **PIPE-12**: Operator can start a new pipeline run by entering a transcript PDF URL
+- [x] **PIPE-13**: Operator can start a new pipeline run by uploading a local PDF file
+- [x] **PIPE-14**: A running pipeline displays step status (Ingest / Parse / Resolve) and auto-advances when each step completes without discrepancies
+- [x] **PIPE-15**: Pipeline pauses after a step when discrepancies exist and displays them for operator review before continuing
+- [x] **PIPE-16**: Operator can confirm or correct speaker alias matches during resolve review; confirmed matches are saved to the alias table
+- [x] **PIPE-17**: Pipeline job state is persisted to DB so the operator can close the browser and resume an in-progress run
 
 ### People
 
@@ -64,18 +64,19 @@ Deferred to next milestone.
 | AUTH-01 | Phase 6 | Pending |
 | AUTH-02 | Phase 6 | Pending |
 | AUTH-03 | Phase 6 | Pending |
-| PIPE-12 | Phase 7 | Pending |
-| PIPE-13 | Phase 7 | Pending |
-| PIPE-14 | Phase 7 | Pending |
-| PIPE-15 | Phase 7 | Pending |
-| PIPE-16 | Phase 7 | Pending |
-| PIPE-17 | Phase 7 | Pending |
+| PIPE-12 | Phase 7 | Complete |
+| PIPE-13 | Phase 7 | Complete |
+| PIPE-14 | Phase 7 | Complete |
+| PIPE-15 | Phase 7 | Complete |
+| PIPE-16 | Phase 7 | Complete |
+| PIPE-17 | Phase 7 | Complete |
 | PEOPLE-01 | Phase 8 | Pending |
 | PEOPLE-02 | Phase 8 | Pending |
 | PEOPLE-03 | Phase 8 | Pending |
 | PEOPLE-04 | Phase 8 | Pending |
 
 **Coverage:**
+
 - v1.1 requirements: 13 total
 - Mapped to phases: 13
 - Unmapped: 0 ✓

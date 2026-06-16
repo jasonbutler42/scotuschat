@@ -53,12 +53,20 @@ def main() -> None:
     )
     ingest_p.add_argument(
         "--url",
-        required=True,
+        required=False,
+        default=None,
         help="URL of the transcript PDF (must be https://...supremecourt.gov/...)",
     )
     ingest_p.add_argument(
+        "--spaces-key",
+        required=False,
+        default=None,
+        help="DO Spaces object key for an operator-uploaded PDF (alternative to --url)",
+    )
+    ingest_p.add_argument(
         "--primary-docket",
-        required=True,
+        required=False,
+        default=None,
         help="Primary docket number (e.g. 14-556)",
     )
     ingest_p.add_argument(
@@ -72,12 +80,14 @@ def main() -> None:
     )
     ingest_p.add_argument(
         "--case-name",
-        required=True,
+        required=False,
+        default=None,
         help='Human-readable case name (e.g. "Obergefell v. Hodges")',
     )
     ingest_p.add_argument(
         "--argued-date",
-        required=True,
+        required=False,
+        default=None,
         help="Argument date in YYYY-MM-DD format (e.g. 2015-04-28)",
     )
     ingest_p.add_argument(
@@ -85,6 +95,13 @@ def main() -> None:
         type=int,
         default=1,
         help="Question number — Q1 or Q2 (default: 1)",
+    )
+    ingest_p.add_argument(
+        "--job-id",
+        type=int,
+        required=False,
+        default=None,
+        help="admin_jobs.id — when set, subprocess writes status to admin_jobs (Phase 7)",
     )
 
     # -----------------------------------------------------------------------
@@ -109,6 +126,13 @@ def main() -> None:
         action="store_true",
         help="Parse but do not write utterance rows to the DB",
     )
+    parse_p.add_argument(
+        "--job-id",
+        type=int,
+        required=False,
+        default=None,
+        help="admin_jobs.id — when set, subprocess writes status to admin_jobs (Phase 7)",
+    )
 
     # -----------------------------------------------------------------------
     # resolve subcommand
@@ -126,6 +150,13 @@ def main() -> None:
         required=True,
         type=int,
         help="pipeline_run.id from a prior PARSE step (step='parse', status=COMPLETED)",
+    )
+    resolve_p.add_argument(
+        "--job-id",
+        type=int,
+        required=False,
+        default=None,
+        help="admin_jobs.id — when set, subprocess writes status to admin_jobs (Phase 7)",
     )
 
     # -----------------------------------------------------------------------

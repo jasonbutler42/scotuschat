@@ -1,8 +1,8 @@
 """
 Pipeline ingest command.
 
-Downloads a transcript PDF from supremecourt.gov and creates the following
-database records:
+Downloads a transcript PDF from supremecourt.gov (or fetches from DO Spaces)
+and creates the following database records:
     - Case row(s) — one per docket number (primary + consolidated)
     - Argument row — one per hearing session
     - CaseArgument rows — M:M join (one per case, with is_lead=True for primary)
@@ -13,16 +13,38 @@ Only https://...supremecourt.gov/... URLs are accepted.
 
 IMMUTABILITY: Downloaded PDFs are never overwritten. If the file already
 exists on disk, the download step is skipped (idempotent re-run support).
+
+JOB-AWARE MODE (--job-id set):
+    When invoked by the admin UI subprocess runner, --job-id is passed.
+    In this mode, ingest writes its own status to admin_jobs:
+      - RUNNING at start (with current_step=INGEST)
+      - COMPLETED on success (with argument_id set)
+      - FAILED on any exception (with error_message)
+    FastAPI is a reader only for pipeline progress — the pipeline writes
+    its own status directly to PostgreSQL per D-02.
+
+    Required args are relaxed when --job-id is set: --url or --spaces-key
+    provide the PDF source; --primary-docket, --case-name, --argued-date
+    may be derived from the spaces_key filename if not supplied.
+
+BACKWARD COMPATIBILITY: Running without --job-id behaves exactly as before.
+    All legacy required args must be present (--url, --primary-docket,
+    --case-name, --argued-date), or a ValueError is raised.
 """
 
+import io
+import os
 import urllib.parse
 from datetime import date
 from pathlib import Path
 
 import httpx
-from sqlalchemy import select
+from sqlalchemy import select, update
 
 from api.models.models import (
+    AdminJob,
+    AdminJobStatus,
+    AdminJobStep,
     Argument,
     Case,
     CaseArgument,
@@ -69,45 +91,201 @@ def _derive_slug(case_name: str) -> str:
     )
 
 
+def _get_spaces_client():
+    """
+    Build a boto3 S3 client pointing at DO Spaces.
+
+    Reads credentials from environment variables — same vars used by the
+    API-side spaces service, but imported directly here to keep pipeline
+    decoupled from api.services.spaces (offline pipeline constraint).
+
+    Required env vars:
+        AWS_ACCESS_KEY_ID
+        AWS_SECRET_ACCESS_KEY
+        DO_SPACES_BUCKET
+        DO_SPACES_ENDPOINT  — e.g. "https://nyc3.digitaloceanspaces.com"
+        DO_SPACES_REGION    — e.g. "nyc3"
+    """
+    import boto3
+
+    endpoint = os.environ.get("DO_SPACES_ENDPOINT", "")
+    region = os.environ.get("DO_SPACES_REGION", "nyc3")
+    access_key = os.environ.get("AWS_ACCESS_KEY_ID", "")
+    secret_key = os.environ.get("AWS_SECRET_ACCESS_KEY", "")
+
+    return boto3.client(
+        "s3",
+        region_name=region,
+        endpoint_url=endpoint,
+        aws_access_key_id=access_key,
+        aws_secret_access_key=secret_key,
+    )
+
+
+def _download_from_spaces(spaces_key: str, dest_path: Path) -> None:
+    """
+    Download a PDF from DO Spaces to dest_path.
+
+    spaces_key is treated as an opaque object key (e.g. "uploads/42.pdf").
+    It is server-generated and never used as a local filesystem path outside
+    of data/pdfs/ — T-07-08 path traversal threat is mitigated by the
+    caller deriving dest_path from a docket-based filename, not from spaces_key.
+
+    Args:
+        spaces_key: DO Spaces object key (e.g. "uploads/42.pdf")
+        dest_path: local Path to write the downloaded bytes
+    """
+    client = _get_spaces_client()
+    bucket = os.environ.get("DO_SPACES_BUCKET", "")
+
+    buf = io.BytesIO()
+    client.download_fileobj(bucket, spaces_key, buf)
+    buf.seek(0)
+    dest_path.write_bytes(buf.read())
+    print(f"Downloaded {spaces_key} from DO Spaces -> {dest_path}")
+
+
+def _derive_metadata_from_key(spaces_key: str, job_id: int) -> tuple[str, str, str]:
+    """
+    Derive placeholder metadata for a job-driven ingest when operator did not
+    supply --primary-docket, --case-name, or --argued-date.
+
+    Strategy: use the job_id as a synthetic docket number so the Argument row
+    gets a unique, deterministic identifier. Phase 8 (People Editor) lets the
+    operator edit full metadata after ingest.
+
+    Returns:
+        (primary_docket, case_name, argued_date) — all strings
+    """
+    # Use job_id-based synthetic docket — guaranteed unique, safe placeholder
+    primary_docket = f"job-{job_id}"
+    case_name = f"Pending review (job {job_id})"
+    argued_date = date.today().isoformat()
+    return primary_docket, case_name, argued_date
+
+
 async def run_ingest(args) -> None:
     """
-    Ingest a transcript PDF from supremecourt.gov into the database.
+    Ingest a transcript PDF from supremecourt.gov (or DO Spaces) into the database.
 
     Args:
         args: argparse.Namespace with:
-            - url (str): PDF URL — must be https://...supremecourt.gov/...
-            - primary_docket (str): primary docket number (e.g. "14-556")
+            - url (str | None): PDF URL — must be https://...supremecourt.gov/...
+            - spaces_key (str | None): DO Spaces object key (alternative to url)
+            - primary_docket (str | None): primary docket number (e.g. "14-556")
             - dockets (list[str]): additional consolidated docket numbers
-            - case_name (str): human-readable case name
-            - argued_date (str): YYYY-MM-DD argument date
+            - case_name (str | None): human-readable case name
+            - argued_date (str | None): YYYY-MM-DD argument date
             - question (int): question number (1 or 2)
+            - job_id (int | None): admin_jobs.id — when set, writes status to admin_jobs
 
     Steps:
-        1. Validate URL (SSRF mitigation) — raises ValueError on invalid URL
-        2. Derive slug and PDF path
-        3. Download PDF (idempotent — skip if file already exists)
-        4. Create DB records (idempotent — skip existing cases)
-        5. Commit
+        0. (job-driven) Mark admin_jobs RUNNING / INGEST
+        1. Validate legacy required args OR derive metadata (job-driven path)
+        2. Validate URL (SSRF mitigation) — raises ValueError on invalid URL
+        3. Derive slug and PDF path
+        4. Download PDF — from URL or from DO Spaces (idempotent)
+        5. Create DB records (idempotent — skip existing cases)
+        6. (job-driven) Mark admin_jobs COMPLETED + argument_id
     """
-    # ------------------------------------------------------------------
-    # Step 1: URL validation — MUST be before any httpx call (T-03-01)
-    # ------------------------------------------------------------------
-    _validate_url(args.url)
+    try:
+        await _run_ingest_inner(args)
+    except Exception as exc:
+        if args.job_id:
+            async with get_session() as session:
+                await session.execute(
+                    update(AdminJob)
+                    .where(AdminJob.id == args.job_id)
+                    .values(
+                        status=AdminJobStatus.FAILED,
+                        error_message=str(exc),
+                    )
+                    .execution_options(synchronize_session=False)
+                )
+        raise
+
+
+async def _run_ingest_inner(args) -> None:
+    """Core ingest logic. Errors bubble up to run_ingest for FAILED status write."""
 
     # ------------------------------------------------------------------
-    # Step 2: Derive slug and local PDF path
+    # Step 0: Mark admin_jobs RUNNING (job-driven path only)
     # ------------------------------------------------------------------
-    base_slug = _derive_slug(args.case_name)
-    pdf_filename = f"{args.primary_docket}-q{args.question}.pdf"
+    if args.job_id:
+        async with get_session() as session:
+            await session.execute(
+                update(AdminJob)
+                .where(AdminJob.id == args.job_id)
+                .values(
+                    status=AdminJobStatus.RUNNING,
+                    current_step=AdminJobStep.INGEST,
+                )
+                .execution_options(synchronize_session=False)
+            )
+
+    # ------------------------------------------------------------------
+    # Step 1: Validate / derive args
+    # ------------------------------------------------------------------
+    if args.job_id is None:
+        # Legacy direct-CLI path — enforce all required args
+        missing = []
+        if not args.url and not getattr(args, "spaces_key", None):
+            missing.append("--url")
+        if not args.primary_docket:
+            missing.append("--primary-docket")
+        if not args.case_name:
+            missing.append("--case-name")
+        if not args.argued_date:
+            missing.append("--argued-date")
+        if missing:
+            raise ValueError(
+                f"Missing required arguments for direct CLI use: {', '.join(missing)}. "
+                "Pass --job-id to enable job-driven mode with derived metadata."
+            )
+        primary_docket = args.primary_docket
+        case_name = args.case_name
+        argued_date = args.argued_date
+    else:
+        # Job-driven path — derive missing metadata from spaces_key / job_id
+        spaces_key = getattr(args, "spaces_key", None)
+        primary_docket = args.primary_docket
+        case_name = args.case_name
+        argued_date = args.argued_date
+
+        if not primary_docket or not case_name or not argued_date:
+            derived_docket, derived_name, derived_date = _derive_metadata_from_key(
+                spaces_key or "", args.job_id
+            )
+            primary_docket = primary_docket or derived_docket
+            case_name = case_name or derived_name
+            argued_date = argued_date or derived_date
+
+    # ------------------------------------------------------------------
+    # Step 2: URL validation — MUST be before any httpx call (T-03-01)
+    # ------------------------------------------------------------------
+    spaces_key = getattr(args, "spaces_key", None)
+    if args.url:
+        _validate_url(args.url)
+
+    # ------------------------------------------------------------------
+    # Step 3: Derive slug and local PDF path
+    # ------------------------------------------------------------------
+    base_slug = _derive_slug(case_name)
+    pdf_filename = f"{primary_docket}-q{args.question}.pdf"
     pdf_dir = Path("data/pdfs")
     pdf_dir.mkdir(parents=True, exist_ok=True)
     pdf_path = pdf_dir / pdf_filename
 
     # ------------------------------------------------------------------
-    # Step 3: Download PDF (idempotent — PIPE-02: immutable after ingest)
+    # Step 4: Download PDF (idempotent — PIPE-02: immutable after ingest)
+    # Source: --url (supremecourt.gov) or --spaces-key (DO Spaces upload)
     # ------------------------------------------------------------------
     if pdf_path.exists():
         print(f"PDF already exists at {pdf_path} — skipping download.")
+    elif spaces_key:
+        # Fetch uploaded PDF from DO Spaces (T-07-08: key is opaque, never
+        # used as a local path — dest_path derived from docket, not from key)
+        _download_from_spaces(spaces_key, pdf_path)
     else:
         async with httpx.AsyncClient(follow_redirects=True, timeout=60.0) as client:
             # write_bytes is fine for SCOTUS PDF sizes (~3–10 MB)
@@ -117,10 +295,10 @@ async def run_ingest(args) -> None:
             print(f"Downloaded {pdf_filename} ({len(response.content)} bytes)")
 
     # ------------------------------------------------------------------
-    # Step 4: Create DB records
+    # Step 5: Create DB records
     # ------------------------------------------------------------------
     # Build the list of all dockets: primary first, then consolidated.
-    all_dockets: list[str] = [args.primary_docket] + list(args.dockets or [])
+    all_dockets: list[str] = [primary_docket] + list(args.dockets or [])
 
     async with get_session() as session:
         # ---- a. Case records (idempotent) ----
@@ -137,7 +315,7 @@ async def run_ingest(args) -> None:
             else:
                 # Derive slug: primary docket uses base slug;
                 # consolidated dockets get base_slug + "-" + docket
-                if docket == args.primary_docket:
+                if docket == primary_docket:
                     case_slug = base_slug
                 else:
                     case_slug = f"{base_slug}-{docket}"
@@ -145,8 +323,8 @@ async def run_ingest(args) -> None:
                 new_case = Case(
                     docket_number=docket,
                     docket_number_norm=docket.replace("-", ""),
-                    case_name=args.case_name,
-                    term_year=int(args.argued_date.split("-")[0]),
+                    case_name=case_name,
+                    term_year=int(argued_date.split("-")[0]),
                     slug=case_slug,
                 )
                 session.add(new_case)
@@ -157,7 +335,7 @@ async def run_ingest(args) -> None:
 
         # ---- b. Argument record ----
         argument = Argument(
-            argued_date=date.fromisoformat(args.argued_date),
+            argued_date=date.fromisoformat(argued_date),
             question_number=args.question,
         )
         session.add(argument)
@@ -175,7 +353,7 @@ async def run_ingest(args) -> None:
                 link = CaseArgument(
                     case_id=case.id,
                     argument_id=argument.id,
-                    is_lead=(case.docket_number == args.primary_docket),
+                    is_lead=(case.docket_number == primary_docket),
                 )
                 session.add(link)
 
@@ -192,6 +370,25 @@ async def run_ingest(args) -> None:
         # Flush to get run.id before commit
         await session.flush()
         run_id = run.id
+        argument_id = argument.id
 
     # get_session() commits on clean exit
     print(f"Ingest complete. pipeline_run.id = {run_id}")
+
+    # ------------------------------------------------------------------
+    # Step 6: Mark admin_jobs COMPLETED + argument_id (job-driven path)
+    # Note: current_step stays INGEST — poll endpoint advances to PARSE
+    # atomically using the step-advance guard (Pattern 3 / D-05).
+    # ------------------------------------------------------------------
+    if args.job_id:
+        async with get_session() as session:
+            await session.execute(
+                update(AdminJob)
+                .where(AdminJob.id == args.job_id)
+                .values(
+                    status=AdminJobStatus.COMPLETED,
+                    argument_id=argument_id,
+                )
+                .execution_options(synchronize_session=False)
+            )
+        print(f"Admin job {args.job_id} marked completed (argument_id={argument_id})")

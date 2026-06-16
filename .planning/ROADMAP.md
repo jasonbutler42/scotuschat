@@ -59,7 +59,7 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
 
 **Plans**: 3 plans (2 waves)
 - [x] 06-01-PLAN.md — Session contract + hooks.server.ts route guard + App.Locals typing + env-var docs (AUTH-02)
-- [ ] 06-02-PLAN.md — Login page UI + form action (credential check, HMAC cookie set, redirect to /admin) (AUTH-01)
+- [x] 06-02-PLAN.md — Login page UI + form action (credential check, HMAC cookie set, redirect to /admin) (AUTH-01)
 - [ ] 06-03-PLAN.md — Isolated admin layout shell + dashboard stub + logout action (AUTH-03)
 **UI hint**: yes
 
@@ -103,6 +103,6 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
 | 3. Full UI | v1.0 | 4/4 | Complete | 2026-06-13 |
 | 4. Accessibility + Hardening | v1.0 | 2/2 | Complete | 2026-06-15 |
 | 5. Admin Foundation | v1.1 | 2/2 | Complete   | 2026-06-15 |
-| 6. Auth | v1.1 | 1/3 | Executing | - |
+| 6. Auth | v1.1 | 2/3 | Executing | - |
 | 7. Pipeline Runner | v1.1 | 0/? | Not started | - |
 | 8. People Editor | v1.1 | 0/? | Not started | - |

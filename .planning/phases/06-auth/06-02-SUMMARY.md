@@ -44,42 +44,44 @@ patterns-established:
 requirements-completed: [AUTH-01]
 
 # Metrics
-duration: 2min
+duration: 5min
 completed: 2026-06-16
 ---
 
 # Phase 06 Plan 02: Login Page + Form Action Summary
 
-**Dark-theme /admin/login page with SvelteKit form action — constant-time credential validation via timingSafeEqual, HMAC cookie set via session.ts contract, single generic error for all failure modes (no enumeration)**
+**Dark-theme /admin/login page with SvelteKit form action — constant-time credential validation via timingSafeEqual, HMAC cookie set via session.ts contract, single generic error for all failure modes (no enumeration); end-to-end flow human-verified**
 
 ## Performance
 
-- **Duration:** ~2 min (automated tasks only; paused at Task 3 checkpoint)
+- **Duration:** ~5 min (2 automated tasks + human-verify checkpoint)
 - **Started:** 2026-06-16T13:33:02Z
-- **Completed (Tasks 1-2):** 2026-06-16T13:35:17Z
-- **Tasks:** 2 of 3 complete (Task 3 is human-verify checkpoint)
+- **Completed:** 2026-06-16T14:00:00Z
+- **Tasks:** 3 of 3 complete
 - **Files modified:** 2
 
 ## Accomplishments
-- Login form action validates credentials with `timingSafeEqual` (length-mismatch-guarded), sets signed session cookie on success, returns single generic `fail(401)` on any failure
-- Load guard in `+page.server.ts` redirects already-authenticated operators away from `/admin/login` to `/admin`
-- Dark-theme login card renders per UI-SPEC: #0f1117 bg, #1e293b card, #334155 borders, 20px/600 heading, 14px labels, 44px submit button
-- Inline error bound to `form.error` via `role="alert"` for screen-reader accessibility
+
+- `app/src/routes/admin/login/+page.server.ts` — Load guard redirects already-authenticated operators from `/admin/login` to `/admin`; default form action reads `username`/`password` from formData, compares with `timingSafeEqual` (length-mismatch-guarded), calls `signSession` + `cookies.set` on success, returns `fail(401, { error: 'Invalid username or password.' })` on any failure
+- `app/src/routes/admin/login/+page.svelte` — Dark-theme login card (Svelte 5 Runes, `let { form } = $props()`): `#0f1117` full-bleed background, `#1e293b` card, `#334155` borders, 20px/600 "Admin Login" heading, `autofocus` username input, password input, `role="alert"` inline error bound to `form.error`, 44px "Log in" submit button, `<svelte:head>` title
+- Human-verify checkpoint (Task 3) approved: all 6 verification steps passed — dark card renders correctly, wrong credentials show generic error without setting a cookie, correct credentials set `scotus_admin_session` cookie and redirect to `/admin`, already-authed `/admin/login` visit bounces immediately to `/admin`
 
 ## Task Commits
 
-1. **Task 1: Login form action (+page.server.ts)** - `aff77b0` (feat)
-2. **Task 2: Login page UI (+page.svelte)** - `ac88477` (feat)
-3. **Task 3: Verify login flow end-to-end** - PENDING (human-verify checkpoint)
+1. **Task 1: Login form action (+page.server.ts)** — `aff77b0`
+2. **Task 2: Login page UI (+page.svelte)** — `ac88477`
+3. **Task 3: Verify login flow end-to-end** — Human-verified "approved" (no code commit; checkpoint gate passed)
 
 ## Files Created/Modified
-- `app/src/routes/admin/login/+page.server.ts` — Load guard (locals.session → redirect /admin) + default form action (timingSafeEqual credential check, signSession, cookies.set, redirect /admin)
-- `app/src/routes/admin/login/+page.svelte` — Dark login card, Svelte 5 Runes form prop, method=POST form, username/password inputs, role=alert error, 44px Log in button
+
+- `app/src/routes/admin/login/+page.server.ts` — New file: load guard (locals.session → redirect /admin) + default form action (timingSafeEqual credential check, signSession, cookies.set, redirect /admin on success; fail(401) on any failure)
+- `app/src/routes/admin/login/+page.svelte` — New file: dark login card, Svelte 5 Runes form prop, method=POST form, username/password inputs with labels, role=alert error, 44px "Log in" button, svelte:head title
 
 ## Decisions Made
-- Error string `'Invalid username or password.'` used exactly once; identical for wrong username, wrong password, and empty inputs (D-13, T-06-06 no enumeration).
-- `timingSafeEqual` length-mismatch guard: check `buf.length === expectedBuf.length` before calling the function to prevent the throw on unequal-length buffers (T-06-07).
-- No `logout` action in this file — the plan note explicitly resolves the PATTERNS.md vs UI-SPEC discrepancy: logout lives on `/admin?/logout` in Plan 03.
+
+- Error string `'Invalid username or password.'` used exactly once; identical for wrong username, wrong password, and empty inputs (D-13, T-06-06 — no user enumeration).
+- `timingSafeEqual` length-mismatch guard: check `buf.length === expectedBuf.length` before calling the function; treat length mismatch as a failed compare rather than letting timingSafeEqual throw (T-06-07).
+- No `logout` action in this file — plan note explicitly resolves the PATTERNS.md vs UI-SPEC discrepancy: logout lives on `/admin?/logout` in Plan 03.
 - `autofocus` retained on username input despite Svelte a11y lint warning — UI-SPEC Accessibility Notes explicitly require it ("focus is placed on the Username input (`autofocus` attribute)").
 
 ## Deviations from Plan
@@ -88,28 +90,35 @@ None — plan executed exactly as written.
 
 ## Issues Encountered
 
-- Svelte a11y lint emits a warning for `autofocus` on the username input. This is expected and intentional — the UI-SPEC mandates it. The warning is not an error and does not block the build.
+- Svelte a11y lint emits a warning for `autofocus` on the username input. This is expected and intentional — the UI-SPEC mandates it. The warning is not an error and does not block the build or type-check.
+
+## Threat Model Compliance
+
+| Threat | Status |
+|--------|--------|
+| T-06-06: Information Disclosure — login error message | Mitigated — single generic "Invalid username or password." for all failure modes; no user enumeration |
+| T-06-07: Spoofing — credential timing oracle | Mitigated — timingSafeEqual for both username and password; length-mismatch handled before call |
+| T-06-08: Tampering — session issued on partial match | Mitigated — cookie set only when BOTH username AND password match; failure path returns fail() and never calls cookies.set |
+| T-06-09: Information Disclosure — credentials in client bundle | Mitigated — ADMIN_USERNAME/ADMIN_PASSWORD imported only via $env/static/private in .server.ts |
+| T-06-10: Repudiation — empty-credential bypass | Mitigated — server requires non-empty matches independent of client required attribute |
+| T-06-SC: Supply chain | Accepted — no new packages installed |
 
 ## Known Stubs
 
-None — both files are fully wired. The login form action calls `signSession` from `session.ts` (Plan 01 contract) and the Svelte page binds `form.error` from the action's `fail()` response.
+None — both files are fully wired. The login form action calls `signSession` from `session.ts` (Plan 01 contract), and the Svelte page binds `form.error` from the action's `fail()` response. AUTH-01 is fully satisfied.
 
 ## Threat Flags
 
-No new threat surface beyond what is documented in the plan's threat model. All STRIDE entries (T-06-06 through T-06-10) are mitigated in the implementation.
+No new threat surface beyond what is documented in the plan's threat model.
 
-## User Setup Required
+## Self-Check: PASSED
 
-Before verifying Task 3, ensure `app/.env` contains:
-- `SESSION_SECRET` — minimum 32 characters (HMAC key)
-- `ADMIN_USERNAME` — operator login username
-- `ADMIN_PASSWORD` — operator login password
-
-## Next Phase Readiness
-- Login slice complete and type-checked; build passes
-- Task 3 human verification needed to confirm end-to-end cookie flow
-- After human approval, Plan 03 can add admin layout shell, dashboard stub, and logout action (`/admin?/logout`)
+- app/src/routes/admin/login/+page.server.ts: FOUND
+- app/src/routes/admin/login/+page.svelte: FOUND
+- Commit aff77b0 (Task 1 — login form action): FOUND
+- Commit ac88477 (Task 2 — login page UI): FOUND
+- Task 3 (human-verify): APPROVED by operator
 
 ---
 *Phase: 06-auth*
-*Completed (partial — awaiting Task 3 human verify): 2026-06-16*
+*Completed: 2026-06-16*

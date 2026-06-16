@@ -25,13 +25,12 @@
 		<!-- Disabled placeholder nav items — rendered as <span> not <a> to prevent
 		     navigation to unbuilt routes (D-09, T-06-13). aria-disabled + aria-label
 		     for screen-reader clarity (Accessibility Notes). -->
-		<span
-			aria-disabled="true"
-			aria-label="Pipeline Runner (coming soon)"
-			style="font-size: 14px; font-weight: 400; color: #94a3b8; opacity: 0.5; cursor: default;"
+		<a
+			href="/admin/pipeline"
+			style="font-size: 14px; font-weight: 400; color: #94a3b8; text-decoration: none;"
 		>
 			Pipeline Runner
-		</span>
+		</a>
 		<span
 			aria-disabled="true"
 			aria-label="People Editor (coming soon)"

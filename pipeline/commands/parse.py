@@ -25,10 +25,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.models.models import (
+    AdminJob,
+    AdminJobStatus,
+    AdminJobStep,
     PipelineRun,
     PipelineRunStatus,
     SideEnum,
@@ -58,8 +61,10 @@ async def run_parse(args) -> None:
         args: argparse.Namespace with:
             - run_id (int): pipeline_run.id from a prior ingest step
             - dry_run (bool): if True, parse but do not write to DB
+            - job_id (int | None): admin_jobs.id — when set, writes status to admin_jobs
 
     Sequence:
+        0. (job-driven) Mark admin_jobs RUNNING / PARSE
         1. Load PipelineRun by run_id
         2. Transition: pending → running (PIPE-10)
         3. Extract pages via pdfplumber
@@ -67,7 +72,43 @@ async def run_parse(args) -> None:
         5. LLM corrective pass (optional — falls back gracefully on failure)
         6. Write utterance rows (PIPE-03, PIPE-04, PIPE-11)
         7. Transition: running → completed (PIPE-10)
+        8. (job-driven) Mark admin_jobs COMPLETED
     """
+    try:
+        await _run_parse_inner(args)
+    except Exception as exc:
+        if args.job_id:
+            async with get_session() as session:
+                await session.execute(
+                    update(AdminJob)
+                    .where(AdminJob.id == args.job_id)
+                    .values(
+                        status=AdminJobStatus.FAILED,
+                        error_message=str(exc),
+                    )
+                    .execution_options(synchronize_session=False)
+                )
+        raise
+
+
+async def _run_parse_inner(args) -> None:
+    """Core parse logic. Errors bubble up to run_parse for FAILED status write."""
+
+    # ------------------------------------------------------------------
+    # Step 0: Mark admin_jobs RUNNING (job-driven path only)
+    # ------------------------------------------------------------------
+    if args.job_id:
+        async with get_session() as session:
+            await session.execute(
+                update(AdminJob)
+                .where(AdminJob.id == args.job_id)
+                .values(
+                    status=AdminJobStatus.RUNNING,
+                    current_step=AdminJobStep.PARSE,
+                )
+                .execution_options(synchronize_session=False)
+            )
+
     async with get_session() as session:
         # -------------------------------------------------------------------
         # Step 1: Load the source run to get argument_id and pdf_path
@@ -211,6 +252,21 @@ async def run_parse(args) -> None:
             f"Parse complete. {len(utterances)} utterances written. "
             f"strategy={run.strategy}"
         )
+
+    # ------------------------------------------------------------------
+    # Step 8: Mark admin_jobs COMPLETED (job-driven path only)
+    # Note: current_step stays PARSE — poll endpoint advances to RESOLVE
+    # atomically using the step-advance guard (Pattern 3 / D-05).
+    # ------------------------------------------------------------------
+    if args.job_id:
+        async with get_session() as session:
+            await session.execute(
+                update(AdminJob)
+                .where(AdminJob.id == args.job_id)
+                .values(status=AdminJobStatus.COMPLETED)
+                .execution_options(synchronize_session=False)
+            )
+        print(f"Admin job {args.job_id} parse step marked completed")
 
 
 async def _fail_run(

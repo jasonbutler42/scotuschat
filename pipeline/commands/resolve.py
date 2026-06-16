@@ -1,20 +1,32 @@
 """
 Pipeline resolve command.
 
-Interactively resolves raw speaker labels in a parse run's utterances to
-Person records via the speaker_alias lookup table.
+Resolves raw speaker labels in a parse run's utterances to Person records via
+the speaker_alias lookup table.
 
-Resolution flow per unique label:
-  1. Normalize the raw label (uppercase, strip trailing colon, trim whitespace).
-  2. Lookup speaker_alias by normalized_label.
-     HIT  → auto-resolve: bulk UPDATE utterances.person_id, print confirmation.
-     MISS → prompt operator with numbered list of existing people + "Create new".
-            Save chosen mapping to speaker_alias for future auto-resolution (D-06).
-  3. Also UPDATE argument_participants.person_id for the same label (Pitfall 7).
+JOB-DRIVEN MODE (--job-id set, Phase 7):
+  Resolution flow per unique label:
+    HIT  → auto-resolve: bulk UPDATE utterances.person_id, collect into resolved_map.
+    MISS → collect a discrepancy dict for browser review; do NOT prompt terminal.
 
-Interrupt handling (D-09 / PIPE-09):
-  Ctrl+C mid-run sets resolve_run.status = NEEDS_REVIEW and exits cleanly.
-  Re-running with the same parse --run-id will skip already-resolved utterances.
+  After the loop:
+    - If all labels auto-resolved: mark AdminJob COMPLETED; set resolve run COMPLETED.
+    - If any labels missed: write discrepancies JSONB to AdminJob, set status=PAUSED,
+      set resolve run NEEDS_REVIEW, then return. FastAPI will not spawn the next step;
+      operator reviews misses in the browser via the Phase 7 admin UI.
+
+  On any exception: mark AdminJob FAILED + error_message, then raise.
+
+DIRECT CLI MODE (--job-id absent, legacy):
+  Resolution flow per unique label:
+    HIT  → auto-resolve as above.
+    MISS → print the unresolved label and collect it for reporting.
+
+  After the loop:
+    - If all labels auto-resolved: set resolve run COMPLETED.
+    - If any labels missed: print a summary of unresolved labels, set resolve run
+      NEEDS_REVIEW, and exit cleanly. The operator re-seeds aliases and re-runs.
+    On Ctrl+C: set resolve run NEEDS_REVIEW and exit (backward-compat interrupt).
 
 Critical guards:
   - NEVER modify parse_run.status (Pitfall 1).
@@ -22,6 +34,10 @@ Critical guards:
   - ALL update() calls use .execution_options(synchronize_session=False) (Pitfall 3).
 
 Usage:
+    # Job-driven (Phase 7 admin UI):
+    python -m pipeline resolve --run-id <parse_pipeline_run_id> --job-id <admin_job_id>
+
+    # Direct CLI (legacy):
     python -m pipeline resolve --run-id <parse_pipeline_run_id>
 """
 
@@ -31,6 +47,9 @@ from typing import Optional
 from sqlalchemy import select, update
 
 from api.models.models import (
+    AdminJob,
+    AdminJobStatus,
+    AdminJobStep,
     ArgumentParticipant,
     Person,
     PipelineRun,
@@ -62,17 +81,43 @@ async def run_resolve(args) -> None:
     Args:
         args: argparse.Namespace with:
             - run_id (int): pipeline_run.id from a prior PARSE step
-
-    Steps:
-        1. Load the parse PipelineRun (read-only — never mutated).
-        2. Create a new resolve PipelineRun (step="resolve", status=RUNNING).
-        3. Collect unique non-null, non-stage-direction raw_speaker_labels
-           for this parse run's argument and pipeline_run_id.
-        4. For each label: alias lookup → auto-resolve or interactive prompt.
-        5. Bulk UPDATE utterances.person_id and argument_participants.person_id.
-        6. Set resolve_run.status = COMPLETED.
-        On KeyboardInterrupt: set resolve_run.status = NEEDS_REVIEW and return.
+            - job_id (int | None): admin_jobs.id — when set, writes status to admin_jobs
     """
+    try:
+        await _run_resolve_inner(args)
+    except Exception as exc:
+        if args.job_id:
+            async with get_session() as session:
+                await session.execute(
+                    update(AdminJob)
+                    .where(AdminJob.id == args.job_id)
+                    .values(
+                        status=AdminJobStatus.FAILED,
+                        error_message=str(exc),
+                    )
+                    .execution_options(synchronize_session=False)
+                )
+        raise
+
+
+async def _run_resolve_inner(args) -> None:
+    """Core resolve logic. Errors bubble up to run_resolve for FAILED status write."""
+
+    # ------------------------------------------------------------------
+    # Step 0: Mark admin_jobs RUNNING (job-driven path only)
+    # ------------------------------------------------------------------
+    if args.job_id:
+        async with get_session() as session:
+            await session.execute(
+                update(AdminJob)
+                .where(AdminJob.id == args.job_id)
+                .values(
+                    status=AdminJobStatus.RUNNING,
+                    current_step=AdminJobStep.RESOLVE,
+                )
+                .execution_options(synchronize_session=False)
+            )
+
     async with get_session() as session:
         # -------------------------------------------------------------------
         # Step 1: Load the parse run (read-only input)
@@ -105,10 +150,14 @@ async def run_resolve(args) -> None:
         # for the argument_participants update (Step 5)
         resolved_map: dict[str, int] = {}  # raw_label -> person_id
 
+        # Collect alias misses for discrepancy handling
+        discrepancies: list[dict] = []
+
         # -------------------------------------------------------------------
-        # Steps 3–5: Collect labels and resolve (wrapped for KeyboardInterrupt)
-        # The entire resolve loop — including the labels query — is inside
-        # the try block so that Ctrl+C at any point sets NEEDS_REVIEW.
+        # Steps 3–5: Collect labels and resolve
+        # Direct CLI mode: wrapped for KeyboardInterrupt.
+        # Job-driven mode: KeyboardInterrupt is not expected (no terminal),
+        # but the try/except remains for safety.
         # -------------------------------------------------------------------
         try:
             # Step 3: Collect unique raw labels for this parse run
@@ -128,6 +177,14 @@ async def run_resolve(args) -> None:
                 f"Resolving {len(raw_labels)} unique labels — "
                 "checking alias table..."
             )
+
+            # Pre-fetch all people for candidate lists (used on MISS)
+            people_result = await session.execute(
+                select(Person, Role.name.label("role_name"))
+                .outerjoin(Role, Person.role_id == Role.id)
+                .order_by(Person.full_name)
+            )
+            people_rows = people_result.all()
 
             # Step 4: Resolve each unique label
             for raw_label in raw_labels:
@@ -149,28 +206,46 @@ async def run_resolve(args) -> None:
                     print(f"Auto-resolved: {raw_label!r} -> {person.full_name}")
                     person_id = alias.person_id
 
+                    # ---- Bulk UPDATE utterances (Pitfall 2: use raw_label) ----
+                    await session.execute(
+                        update(Utterance)
+                        .where(
+                            Utterance.argument_id == parse_run.argument_id,
+                            Utterance.pipeline_run_id == args.run_id,
+                            Utterance.raw_speaker_label == raw_label,
+                        )
+                        .values(person_id=person_id)
+                        .execution_options(synchronize_session=False)  # Pitfall 3
+                    )
+
+                    resolved_map[raw_label] = person_id
+
                 else:
-                    # ---- MISS: interactive prompt ----
-                    person_id = await _prompt_operator(
-                        session, raw_label, normalized
-                    )
+                    # ---- MISS: collect discrepancy ----
+                    print(f"Alias miss: {raw_label!r} (normalized: {normalized!r})")
 
-                # ---- Bulk UPDATE utterances (Pitfall 2: use raw_label) ----
-                await session.execute(
-                    update(Utterance)
-                    .where(
-                        Utterance.argument_id == parse_run.argument_id,
-                        Utterance.pipeline_run_id == args.run_id,
-                        Utterance.raw_speaker_label == raw_label,
-                    )
-                    .values(person_id=person_id)
-                    .execution_options(synchronize_session=False)  # Pitfall 3
-                )
+                    # Build candidates list from pre-fetched people
+                    candidates = [
+                        {
+                            "id": person.id,
+                            "full_name": person.full_name,
+                            "role_name": role_name,
+                        }
+                        for person, role_name in people_rows
+                    ]
 
-                resolved_map[raw_label] = person_id
+                    discrepancies.append(
+                        {
+                            "raw_speaker_label": raw_label,
+                            "normalized": normalized,
+                            "candidates": candidates,
+                            "auto_resolved": None,
+                        }
+                    )
 
             # ----------------------------------------------------------------
             # Step 5: Update argument_participants.person_id (Pitfall 7)
+            # Only for labels that were auto-resolved (resolved_map)
             # ----------------------------------------------------------------
             for raw_label, person_id in resolved_map.items():
                 await session.execute(
@@ -184,16 +259,44 @@ async def run_resolve(args) -> None:
                 )
 
             # ----------------------------------------------------------------
-            # Step 6: Mark resolve run COMPLETED
+            # Step 6: Handle outcome — paused (misses) or completed (all hit)
             # ----------------------------------------------------------------
-            resolve_run.status = PipelineRunStatus.COMPLETED
-            resolve_run.completed_at = datetime.now(timezone.utc)
-            print(
-                f"Resolve complete. {len(resolved_map)} labels resolved. "
-                f"resolve pipeline_run.id = {resolve_run.id}"
-            )
+            if discrepancies:
+                # --- Paused: write discrepancies and set NEEDS_REVIEW ---
+                resolve_run.status = PipelineRunStatus.NEEDS_REVIEW
+                resolve_run.completed_at = datetime.now(timezone.utc)
+                await session.flush()
+
+                if args.job_id:
+                    # Job-driven: write discrepancies to admin_jobs, then exit
+                    # Flush/commit the resolve run update first
+                    # (session commits on clean __aexit__ below)
+                    pass  # commit happens on get_session().__aexit__
+
+                else:
+                    # Direct CLI: print summary for operator
+                    print(
+                        f"\n{len(discrepancies)} unresolved label(s):"
+                    )
+                    for d in discrepancies:
+                        print(f"  - {d['raw_speaker_label']!r} (normalized: {d['normalized']!r})")
+                    print(
+                        "Resolve run status set to needs_review. "
+                        "Seed aliases for these labels and re-run."
+                    )
+
+            else:
+                # --- All auto-resolved: mark COMPLETED ---
+                resolve_run.status = PipelineRunStatus.COMPLETED
+                resolve_run.completed_at = datetime.now(timezone.utc)
+                print(
+                    f"Resolve complete. {len(resolved_map)} labels auto-resolved. "
+                    f"resolve pipeline_run.id = {resolve_run.id}"
+                )
 
         except KeyboardInterrupt:
+            # Direct CLI interrupt — set NEEDS_REVIEW and exit cleanly
+            # (job-driven subprocesses won't receive KeyboardInterrupt in normal flow)
             resolve_run.status = PipelineRunStatus.NEEDS_REVIEW
             await session.flush()
             print(
@@ -202,112 +305,39 @@ async def run_resolve(args) -> None:
             )
             return
 
+    # session commits on clean __aexit__
 
-async def _prompt_operator(session, raw_label: str, normalized: str) -> int:
-    """
-    Display a numbered list of existing people and prompt the operator to
-    select a match or create a new person.
+    # ----------------------------------------------------------------
+    # Post-session: write discrepancies to admin_jobs (job-driven only)
+    # Done after the session commit so the resolve_run status is durable
+    # before we set admin_jobs to PAUSED.
+    # ----------------------------------------------------------------
+    if discrepancies and args.job_id:
+        async with get_session() as session:
+            await session.execute(
+                update(AdminJob)
+                .where(AdminJob.id == args.job_id)
+                .values(
+                    status=AdminJobStatus.PAUSED,
+                    discrepancies=discrepancies,
+                )
+                .execution_options(synchronize_session=False)
+            )
+        print(
+            f"Admin job {args.job_id} paused with {len(discrepancies)} discrepancy(ies) "
+            "— operator reviews in browser."
+        )
+        return  # FastAPI will NOT advance; operator acts via browser
 
-    Saves the chosen mapping to speaker_alias for future auto-resolution (D-06).
-
-    Returns:
-        person_id (int) of the resolved person.
-    """
-    print(f"\nUnknown label: {raw_label!r} (normalized: {normalized!r})")
-
-    # Query all people with their role names
-    people_result = await session.execute(
-        select(Person, Role.name.label("role_name"))
-        .outerjoin(Role, Person.role_id == Role.id)
-        .order_by(Person.full_name)
-    )
-    people_rows = people_result.all()
-
-    # Display numbered list
-    for i, (person, role_name) in enumerate(people_rows, start=1):
-        role_display = role_name if role_name else "no role"
-        print(f"  [{i}] {person.full_name} ({role_display})")
-    create_idx = len(people_rows) + 1
-    print(f"  [{create_idx}] Create new person")
-
-    while True:
-        choice_str = input("Select a number: ").strip()
-        try:
-            choice = int(choice_str)
-        except ValueError:
-            print("  Please enter a number.")
-            continue
-
-        if choice == create_idx:
-            # ---- Create new person ----
-            person_id = await _create_new_person(session)
-            break
-        elif 1 <= choice <= len(people_rows):
-            chosen_person, _ = people_rows[choice - 1]
-            person_id = chosen_person.id
-            break
-        else:
-            print(f"  Please enter a number between 1 and {create_idx}.")
-
-    # Save mapping to alias table for future auto-resolution (D-06)
-    new_alias = SpeakerAlias(
-        normalized_label=normalized,
-        person_id=person_id,
-    )
-    session.add(new_alias)
-    await session.flush()
-
-    return person_id
-
-
-async def _create_new_person(session) -> int:
-    """
-    Interactively create a new Person (and optionally a new Role).
-
-    Returns:
-        person_id (int) of the newly created person.
-    """
-    full_name = input("Full name: ").strip()
-    if not full_name:
-        raise ValueError("Full name cannot be empty.")
-
-    # Display existing roles + create-new option
-    roles_result = await session.execute(select(Role).order_by(Role.name))
-    roles = roles_result.scalars().all()
-
-    print("Select a role:")
-    for i, role in enumerate(roles, start=1):
-        print(f"  [{i}] {role.name}")
-    create_role_idx = len(roles) + 1
-    print(f"  [{create_role_idx}] Create new role")
-
-    role_id: Optional[int] = None
-    while True:
-        choice_str = input("Select a number: ").strip()
-        try:
-            choice = int(choice_str)
-        except ValueError:
-            print("  Please enter a number.")
-            continue
-
-        if choice == create_role_idx:
-            role_name = input("New role name: ").strip()
-            if not role_name:
-                raise ValueError("Role name cannot be empty.")
-            new_role = Role(name=role_name)
-            session.add(new_role)
-            await session.flush()
-            role_id = new_role.id
-            break
-        elif 1 <= choice <= len(roles):
-            role_id = roles[choice - 1].id
-            break
-        else:
-            print(f"  Please enter a number between 1 and {create_role_idx}.")
-
-    new_person = Person(full_name=full_name, role_id=role_id)
-    session.add(new_person)
-    await session.flush()
-
-    print(f"Created new person: {full_name} (id={new_person.id})")
-    return new_person.id
+    # ----------------------------------------------------------------
+    # Mark admin_jobs COMPLETED when all labels auto-resolved (job-driven)
+    # ----------------------------------------------------------------
+    if not discrepancies and args.job_id:
+        async with get_session() as session:
+            await session.execute(
+                update(AdminJob)
+                .where(AdminJob.id == args.job_id)
+                .values(status=AdminJobStatus.COMPLETED)
+                .execution_options(synchronize_session=False)
+            )
+        print(f"Admin job {args.job_id} resolve step marked completed (all labels auto-resolved)")

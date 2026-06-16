@@ -78,7 +78,14 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
   4. Operator can confirm or correct each flagged speaker alias match; confirmed matches are written to the `speaker_alias` table
   5. Operator can close the browser, reopen it, and resume an in-progress run exactly where it paused
 
-**Plans**: TBD
+**Plans**: 5 plans (3 waves)
+
+- [ ] 07-01-PLAN.md — Backend contract: boto3 + DO Spaces config/service, subprocess spawn util, admin-job Pydantic schemas, admin_jobs service (atomic step-advance guards, resolve, person create) (Wave 1)
+- [ ] 07-02-PLAN.md — FastAPI admin job routes: create (URL/upload), poll endpoint with step-advance side effect, history list, resolve-continue, inline person create (Wave 2)
+- [ ] 07-03-PLAN.md — Pipeline subprocess mods: --job-id on ingest/parse/resolve + --spaces-key on ingest; admin_jobs status writes; resolve writes discrepancies and pauses (Wave 1)
+- [ ] 07-04-PLAN.md — SvelteKit start page: Pipeline Runner nav link, two-mode New Run form (URL/upload), Recent Runs history table (Wave 3)
+- [ ] 07-05-PLAN.md — SvelteKit status page: live polling step cards, inline discrepancy review (confirm/correct/add-person), Continue Resolve, failed-state error panel, resumability (Wave 3)
+
 **UI hint**: yes
 
 ### Phase 8: People Editor
@@ -106,5 +113,5 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
 | 4. Accessibility + Hardening | v1.0 | 2/2 | Complete | 2026-06-15 |
 | 5. Admin Foundation | v1.1 | 2/2 | Complete   | 2026-06-15 |
 | 6. Auth | v1.1 | 3/3 | Complete   | 2026-06-16 |
-| 7. Pipeline Runner | v1.1 | 0/? | Not started | - |
+| 7. Pipeline Runner | v1.1 | 0/5 | Planned | - |
 | 8. People Editor | v1.1 | 0/? | Not started | - |

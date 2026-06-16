@@ -77,8 +77,30 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
 
+    # ------------------------------------------------------------------
+    # BEFORE UPDATE trigger so updated_at is maintained by the database
+    # regardless of whether the caller goes through the ORM or raw SQL.
+    # ------------------------------------------------------------------
+    op.execute("""
+        CREATE OR REPLACE FUNCTION set_admin_jobs_updated_at()
+        RETURNS TRIGGER AS $$
+        BEGIN
+            NEW.updated_at = NOW();
+            RETURN NEW;
+        END;
+        $$ LANGUAGE plpgsql;
+    """)
+    op.execute("""
+        CREATE TRIGGER trg_admin_jobs_updated_at
+        BEFORE UPDATE ON admin_jobs
+        FOR EACH ROW EXECUTE FUNCTION set_admin_jobs_updated_at();
+    """)
+
 
 def downgrade() -> None:
+    # Drop the trigger and function before dropping the table.
+    op.execute("DROP TRIGGER IF EXISTS trg_admin_jobs_updated_at ON admin_jobs")
+    op.execute("DROP FUNCTION IF EXISTS set_admin_jobs_updated_at()")
     op.drop_table("admin_jobs")
     op.execute("DROP TYPE IF EXISTS admin_job_status")
     op.execute("DROP TYPE IF EXISTS admin_job_step")

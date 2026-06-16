@@ -39,11 +39,12 @@ import urllib.parse
 from typing import Optional
 
 from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, UploadFile
+from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.core.config import settings
 from api.core.database import get_db
-from api.models.models import AdminJobStatus, AdminJobStep
+from api.models.models import AdminJob, AdminJobStatus, AdminJobStep
 from api.schemas.admin_jobs import (
     AdminJobResponse,
     PersonCreate,
@@ -152,10 +153,8 @@ async def create_job(
             key,
         )
         # Update the job's spaces_key now that we have it
-        from sqlalchemy import update as sa_update
-        from api.models.models import AdminJob
         await db.execute(
-            sa_update(AdminJob)
+            update(AdminJob)
             .where(AdminJob.id == job.id)
             .values(spaces_key=key)
             .execution_options(synchronize_session=False)

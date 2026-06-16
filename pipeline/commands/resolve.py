@@ -206,6 +206,12 @@ async def _run_resolve_inner(args) -> None:
                     person: Optional[Person] = await session.get(
                         Person, alias.person_id
                     )
+                    if person is None:
+                        raise ValueError(
+                            f"SpeakerAlias for '{normalized}' references "
+                            f"person_id={alias.person_id} which no longer exists. "
+                            "Re-seed aliases before re-running."
+                        )
                     print(f"Auto-resolved: {raw_label!r} -> {person.full_name}")
                     person_id = alias.person_id
 

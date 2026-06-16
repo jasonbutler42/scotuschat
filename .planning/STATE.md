@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Operator Admin Interface
 status: executing
-stopped_at: Phase 07 Plan 02 complete — admin job routes wired; ready for Plan 03 (pipeline commands)
-last_updated: "2026-06-16T19:15:12.108Z"
+stopped_at: Phase 07 Plan 04 complete — /admin/pipeline start page live; ready for Plan 05 (job status page)
+last_updated: "2026-06-16T19:20:10.254Z"
 last_activity: 2026-06-16 -- Phase 07 Plan 03 complete
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 10
-  completed_plans: 8
+  completed_plans: 9
   percent: 50
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-06-15 after v1.1 milestone start)
 ## Current Position
 
 Phase: 07 (pipeline-runner) — EXECUTING
-Plan: 4 of 5
+Plan: 5 of 5
 Status: Ready to execute (Plan 04 next)
 Last activity: 2026-06-16 -- Phase 07 Plan 03 complete
 
@@ -55,6 +55,7 @@ Progress: [███████░░░] 75%
 | Phase 07 P01 | 35min | 4 tasks | 6 files |
 | Phase 07 P03 | 20min | 2 tasks | 4 files |
 | Phase 07 P02 | 133 | 2 tasks | 1 files |
+| Phase 07-pipeline-runner P04 | 15 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -87,6 +88,8 @@ Key v1.1 decisions from research:
 - [Phase ?]: [07-02]: _validate_pdf_url at route boundary enforces https + supremecourt.gov before create_job and subprocess spawn (T-07-01)
 - [Phase ?]: [07-02]: GET /jobs/{id} re-reads job after step-advance so response reflects new current_step
 - [Phase ?]: [07-02]: ValueError from resolve_job mapped to HTTPException 422 so bad person_id leaves job paused for retry (Pitfall 5)
+- [Phase ?]: DO_SPACES_*/AWS_* env vars belong to the FastAPI service only — SvelteKit forwards bytes only [07-04]
+- [Phase ?]: enctype=multipart/form-data used for both URL and file modes to avoid conditional enctype logic [07-04]
 
 ### Pending Todos
 
@@ -111,8 +114,8 @@ Items acknowledged and deferred at v1.0 milestone close:
 
 ## Session Continuity
 
-Last session: 2026-06-16T19:15:12.100Z
-Stopped at: Phase 07 Plan 02 complete — admin job routes wired; ready for Plan 03 (pipeline commands)
+Last session: 2026-06-16T19:20:10.246Z
+Stopped at: Phase 07 Plan 04 complete — /admin/pipeline start page live; ready for Plan 05 (job status page)
 Resume file: None
 
 ## Operator Next Steps

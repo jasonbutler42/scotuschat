@@ -90,7 +90,7 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 07-04-PLAN.md — SvelteKit start page: Pipeline Runner nav link, two-mode New Run form (URL/upload), Recent Runs history table (Wave 3)
+- [x] 07-04-PLAN.md — SvelteKit start page: Pipeline Runner nav link, two-mode New Run form (URL/upload), Recent Runs history table (Wave 3)
 - [ ] 07-05-PLAN.md — SvelteKit status page: live polling step cards, inline discrepancy review (confirm/correct/add-person), Continue Resolve, failed-state error panel, resumability (Wave 3)
 
 **UI hint**: yes
@@ -120,5 +120,5 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
 | 4. Accessibility + Hardening | v1.0 | 2/2 | Complete | 2026-06-15 |
 | 5. Admin Foundation | v1.1 | 2/2 | Complete   | 2026-06-15 |
 | 6. Auth | v1.1 | 3/3 | Complete   | 2026-06-16 |
-| 7. Pipeline Runner | v1.1 | 3/5 | In Progress|  |
+| 7. Pipeline Runner | v1.1 | 4/5 | In Progress|  |
 | 8. People Editor | v1.1 | 0/? | Not started | - |

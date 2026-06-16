@@ -33,6 +33,7 @@ Prefix:
   SvelteKit's /admin/* page routes (D-09).
 """
 
+import asyncio
 import hmac
 import urllib.parse
 from typing import Optional
@@ -139,7 +140,13 @@ async def create_job(
         job = await jobs_service.create_job(db, spaces_key=None)
         key = f"uploads/{job.id}.pdf"
         file_bytes = await pdf_file.read()
-        spaces_service.upload_pdf_to_spaces(file_bytes, key)
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(
+            None,
+            spaces_service.upload_pdf_to_spaces,
+            file_bytes,
+            key,
+        )
         # Update the job's spaces_key now that we have it
         from sqlalchemy import update as sa_update
         from api.models.models import AdminJob

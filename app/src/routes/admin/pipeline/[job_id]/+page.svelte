@@ -88,12 +88,14 @@
 	});
 
 	// All rows dispositioned → show Continue Resolve button.
+	// Requires both disposition set AND person_id resolved (not null),
+	// so a "Confirm" with no auto_match_id cannot prematurely enable the button.
 	let allDispositioned = $derived.by(() => {
 		const disc = data.job.discrepancies;
 		if (!disc || disc.length === 0) return false;
 		return disc.every((row: Discrepancy) => {
 			const s = rowStates[row.raw_speaker_label];
-			return s?.disposition !== null && s?.disposition !== undefined;
+			return s?.disposition !== null && s?.disposition !== undefined && s?.person_id !== null;
 		});
 	});
 
@@ -533,23 +535,25 @@
 												<!-- Row is dispositioned — show nothing (status shown in col 2) -->
 											{:else}
 												<div style="display: flex; gap: 8px; flex-wrap: wrap;">
-													<button
-														type="button"
-														onclick={() => handleConfirm(rowKey, row)}
-														style="
-															font-size: 14px;
-															font-weight: 400;
-															color: #e2e8f0;
-															background: transparent;
-															border: 1px solid #334155;
-															border-radius: 4px;
-															padding: 6px 12px;
-															cursor: pointer;
-															min-height: 32px;
-														"
-													>
-														Confirm
-													</button>
+													{#if row.auto_match_id}
+														<button
+															type="button"
+															onclick={() => handleConfirm(rowKey, row)}
+															style="
+																font-size: 14px;
+																font-weight: 400;
+																color: #e2e8f0;
+																background: transparent;
+																border: 1px solid #334155;
+																border-radius: 4px;
+																padding: 6px 12px;
+																cursor: pointer;
+																min-height: 32px;
+															"
+														>
+															Confirm
+														</button>
+													{/if}
 													<button
 														type="button"
 														onclick={() => handleCorrect(rowKey)}

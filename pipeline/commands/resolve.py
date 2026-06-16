@@ -239,6 +239,9 @@ async def _run_resolve_inner(args) -> None:
                             "raw_speaker_label": raw_label,
                             "normalized": normalized,
                             "candidates": candidates,
+                            "auto_match_id": None,
+                            "auto_match_name": None,
+                            "auto_match_role": None,
                             "auto_resolved": None,
                         }
                     )

@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Operator Admin Interface
-status: planning
-stopped_at: Phase 6 planned — ready to execute
-last_updated: "2026-06-16T14:00:00.000Z"
-last_activity: 2026-06-16 — Phase 06 planned; 3 plans (2 waves) ready for execution
+status: executing
+stopped_at: Phase 06 Plan 01 complete — executing Plan 02
+last_updated: "2026-06-16T13:29:00.000Z"
+last_activity: 2026-06-16 -- Phase 06 Plan 01 executed (session contract + hooks guard)
 progress:
   total_phases: 4
   completed_phases: 1
-  total_plans: 5
-  completed_plans: 2
-  percent: 25
+  total_plans: 6
+  completed_plans: 3
+  percent: 33
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-06-15 after v1.1 milestone start)
 
 ## Current Position
 
-Phase: 06 (auth) — PLANNED ◆
-Plan: 0/3 complete
-Status: Ready to execute Phase 6
-Last activity: 2026-06-16 — Phase 06 planned; 3 plans (Wave 1: 06-01; Wave 2 parallel: 06-02, 06-03)
+Phase: 06 (auth) — EXECUTING
+Plan: 2 of 3
+Status: Executing Phase 06 (Plan 01 complete)
+Last activity: 2026-06-16 -- Phase 06 Plan 01 executed (session contract + hooks guard)
 
-Progress: [██░░░░░░░░] 25%
+Progress: [███░░░░░░░] 33%
 
 ## Performance Metrics
 
@@ -51,6 +51,7 @@ Progress: [██░░░░░░░░] 25%
 
 *Updated after each plan completion*
 | Phase 05 P01 | 10 | - tasks | - files |
+| Phase 06 P01 | 5 | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -69,6 +70,8 @@ Key v1.1 decisions from research:
 - Phase 7 before 8: Participant review data only exists after a pipeline run completes resolve
 - [Phase ?]: Migration 0003 lands full admin_jobs schema (all 10 columns) — no migration 0004 needed for this table
 - [Phase ?]: admin_token has no default value in Settings — app refuses to start without ADMIN_TOKEN env var set
+- [06-01]: signSession/verifySession split on lastIndexOf('.') not indexOf — defensive for payload formats that may contain dots
+- [06-01]: event.locals.session assigned unconditionally before the guard branch so Plan 02 login load can check it for already-authenticated redirect
 
 ### Pending Todos
 
@@ -93,11 +96,11 @@ Items acknowledged and deferred at v1.0 milestone close:
 
 ## Session Continuity
 
-Last session: 2026-06-16T14:00:00.000Z
-Stopped at: Phase 6 planned — ready to execute
-Resume file: .planning/phases/06-auth/06-01-PLAN.md
+Last session: 2026-06-16T13:29:00.000Z
+Stopped at: Phase 06 Plan 01 complete
+Resume file: .planning/phases/06-auth/06-02-PLAN.md
 
 ## Operator Next Steps
 
-- Run `/gsd-execute-phase 6` for Phase 6: Auth (3 plans, 2 waves)
-- Before Wave 2 checkpoints, set SESSION_SECRET (≥32 chars), ADMIN_USERNAME, ADMIN_PASSWORD in app/.env
+- Run `/gsd-execute-phase 6` for Phase 6 Plan 02: Login page + form action (AUTH-01)
+- Before Wave 2 human-verify, set real SESSION_SECRET (≥32 chars), ADMIN_USERNAME, ADMIN_PASSWORD in app/.env

@@ -24,6 +24,20 @@ class Settings(BaseSettings):
     # Do NOT log or expose this value in any endpoint response.
     admin_token: str
 
+    # ---------------------------------------------------------------------------
+    # Phase 6 note: the following env vars are SvelteKit-side ($env/static/private).
+    # They are NOT read by the Python API — Python reads only the fields above.
+    # Listed here so operators see all required env vars in one place.
+    #
+    # SESSION_SECRET   — HMAC-SHA256 key for the scotus_admin_session cookie.
+    #                    Minimum 32 characters. Rotating this key invalidates all
+    #                    existing sessions.
+    # ADMIN_USERNAME   — Operator login username (plain text, compared via
+    #                    timingSafeEqual in the SvelteKit login action).
+    # ADMIN_PASSWORD   — Operator login password (plain text; no DB-backed hashing;
+    #                    store a strong random value, not a memorable password).
+    # ---------------------------------------------------------------------------
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

@@ -60,7 +60,8 @@ def _validate_url(url: str) -> None:
 
     Raises ValueError if:
     - scheme is not 'https'
-    - netloc does not end with 'supremecourt.gov'
+    - netloc is not exactly 'supremecourt.gov' or a subdomain thereof
+      (prevents bypass via 'xsupremecourt.gov' which ends with 'supremecourt.gov')
 
     This check MUST happen before any httpx call to prevent SSRF attacks
     (T-03-01 in the threat model).
@@ -71,7 +72,8 @@ def _validate_url(url: str) -> None:
             f"Only HTTPS URLs are accepted; got scheme '{parsed.scheme}'. "
             "Only supremecourt.gov URLs are accepted."
         )
-    if not parsed.netloc.endswith("supremecourt.gov"):
+    netloc = parsed.netloc.lower()
+    if not (netloc == "supremecourt.gov" or netloc.endswith(".supremecourt.gov")):
         raise ValueError(
             f"Only supremecourt.gov URLs are accepted; got host '{parsed.netloc}'."
         )

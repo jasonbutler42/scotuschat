@@ -88,10 +88,14 @@ def _validate_pdf_url(url: str) -> None:
 
     Rules:
     - scheme must be 'https'
-    - netloc must end with 'supremecourt.gov'
+    - netloc must be exactly 'supremecourt.gov' or end with '.supremecourt.gov'
+      (prevents bypass via 'xsupremecourt.gov' which ends with 'supremecourt.gov')
     """
     parsed = urllib.parse.urlparse(url)
-    if parsed.scheme != "https" or not parsed.netloc.endswith("supremecourt.gov"):
+    netloc = parsed.netloc.lower()
+    if parsed.scheme != "https" or not (
+        netloc == "supremecourt.gov" or netloc.endswith(".supremecourt.gov")
+    ):
         raise HTTPException(
             status_code=422,
             detail="Only https://...supremecourt.gov/... URLs are accepted",

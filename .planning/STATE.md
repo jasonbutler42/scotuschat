@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Operator Admin Interface
 status: planning
-stopped_at: Phase 6 context gathered
-last_updated: "2026-06-16T12:53:01.102Z"
-last_activity: 2026-06-15 — Phase 05 complete; verified 6/6 success criteria
+stopped_at: Phase 6 planned — ready to execute
+last_updated: "2026-06-16T14:00:00.000Z"
+last_activity: 2026-06-16 — Phase 06 planned; 3 plans (2 waves) ready for execution
 progress:
   total_phases: 4
   completed_phases: 1
-  total_plans: 2
+  total_plans: 5
   completed_plans: 2
   percent: 25
 ---
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-15 after v1.1 milestone start)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** Phase 05 — admin-foundation
+**Current focus:** Phase 06 — auth
 
 ## Current Position
 
-Phase: 05 (admin-foundation) — COMPLETE ✓
-Plan: 2/2 complete
-Status: Ready to plan Phase 6
-Last activity: 2026-06-15 — Phase 05 complete; verified 6/6 success criteria
+Phase: 06 (auth) — PLANNED ◆
+Plan: 0/3 complete
+Status: Ready to execute Phase 6
+Last activity: 2026-06-16 — Phase 06 planned; 3 plans (Wave 1: 06-01; Wave 2 parallel: 06-02, 06-03)
 
 Progress: [██░░░░░░░░] 25%
 
@@ -93,10 +93,11 @@ Items acknowledged and deferred at v1.0 milestone close:
 
 ## Session Continuity
 
-Last session: 2026-06-16T12:53:01.095Z
-Stopped at: Phase 6 context gathered
-Resume file: .planning/phases/06-auth/06-CONTEXT.md
+Last session: 2026-06-16T14:00:00.000Z
+Stopped at: Phase 6 planned — ready to execute
+Resume file: .planning/phases/06-auth/06-01-PLAN.md
 
 ## Operator Next Steps
 
-- Run `/gsd-discuss-phase 6` or `/gsd-plan-phase 6` for Phase 6: Auth (HMAC session cookie login, SvelteKit route guard)
+- Run `/gsd-execute-phase 6` for Phase 6: Auth (3 plans, 2 waves)
+- Before Wave 2 checkpoints, set SESSION_SECRET (≥32 chars), ADMIN_USERNAME, ADMIN_PASSWORD in app/.env

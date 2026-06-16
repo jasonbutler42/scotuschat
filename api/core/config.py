@@ -25,6 +25,28 @@ class Settings(BaseSettings):
     admin_token: str
 
     # ---------------------------------------------------------------------------
+    # DO Spaces — required only for PIPE-13 file upload (operator uploads a local PDF).
+    # URL-mode (PIPE-12) works without these credentials — they default to "".
+    #
+    # DEPLOYMENT TIER NOTE: These credentials must be configured on the FastAPI service
+    # in the DO App Platform environment, NOT the SvelteKit service. boto3 runs inside
+    # the FastAPI container (Plan 02 upload route) and inside the pipeline subprocess
+    # (Plan 03 --spaces-key download). These vars are never used by SvelteKit.
+    #
+    # DO App Platform env var names:
+    #   AWS_ACCESS_KEY_ID     — Spaces access key (from DO Console -> API -> Spaces Keys)
+    #   AWS_SECRET_ACCESS_KEY — Spaces secret key (shown once at creation)
+    #   DO_SPACES_BUCKET      — Spaces bucket name
+    #   DO_SPACES_ENDPOINT    — e.g. "https://nyc3.digitaloceanspaces.com"
+    #   DO_SPACES_REGION      — e.g. "nyc3"
+    # ---------------------------------------------------------------------------
+    aws_access_key_id: str = ""
+    aws_secret_access_key: str = ""
+    do_spaces_bucket: str = ""
+    do_spaces_endpoint: str = ""   # e.g. "https://nyc3.digitaloceanspaces.com"
+    do_spaces_region: str = ""     # e.g. "nyc3"
+
+    # ---------------------------------------------------------------------------
     # Phase 6 note: the following env vars are SvelteKit-side ($env/static/private).
     # They are NOT read by the Python API — Python reads only the fields above.
     # Listed here so operators see all required env vars in one place.

@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Operator Admin Interface
 status: executing
-stopped_at: Phase 06 Plan 01 complete — executing Plan 02
-last_updated: "2026-06-16T13:29:00.000Z"
-last_activity: 2026-06-16 -- Phase 06 Plan 01 executed (session contract + hooks guard)
+stopped_at: Phase 06 Plan 02 paused at Task 3 (human-verify checkpoint)
+last_updated: "2026-06-16T13:35:17Z"
+last_activity: 2026-06-16 -- Phase 06 Plan 02 Tasks 1+2 executed (login form action + UI); awaiting human verify
 progress:
   total_phases: 4
   completed_phases: 1
@@ -27,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-06-15 after v1.1 milestone start)
 
 Phase: 06 (auth) — EXECUTING
 Plan: 2 of 3
-Status: Executing Phase 06 (Plan 01 complete)
-Last activity: 2026-06-16 -- Phase 06 Plan 01 executed (session contract + hooks guard)
+Status: Executing Phase 06 (Plan 02 paused at human-verify checkpoint)
+Last activity: 2026-06-16 -- Phase 06 Plan 02 Tasks 1+2 executed (login form action + UI); awaiting human verify
 
 Progress: [███░░░░░░░] 33%
 
@@ -72,6 +72,8 @@ Key v1.1 decisions from research:
 - [Phase ?]: admin_token has no default value in Settings — app refuses to start without ADMIN_TOKEN env var set
 - [06-01]: signSession/verifySession split on lastIndexOf('.') not indexOf — defensive for payload formats that may contain dots
 - [06-01]: event.locals.session assigned unconditionally before the guard branch so Plan 02 login load can check it for already-authenticated redirect
+- [06-02]: timingSafeEqual requires equal-length buffers; length-mismatch guard (check lengths first, treat mismatch as failed compare) prevents throw on wrong-length credentials
+- [06-02]: Logout action lives on /admin?/logout (Plan 03 +layout.server.ts), NOT in /admin/login/+page.server.ts — resolves PATTERNS.md vs UI-SPEC discrepancy in favor of UI-SPEC
 
 ### Pending Todos
 
@@ -96,11 +98,12 @@ Items acknowledged and deferred at v1.0 milestone close:
 
 ## Session Continuity
 
-Last session: 2026-06-16T13:29:00.000Z
-Stopped at: Phase 06 Plan 01 complete
+Last session: 2026-06-16T13:35:17Z
+Stopped at: Phase 06 Plan 02 Task 3 (human-verify checkpoint)
 Resume file: .planning/phases/06-auth/06-02-PLAN.md
 
 ## Operator Next Steps
 
-- Run `/gsd-execute-phase 6` for Phase 6 Plan 02: Login page + form action (AUTH-01)
-- Before Wave 2 human-verify, set real SESSION_SECRET (≥32 chars), ADMIN_USERNAME, ADMIN_PASSWORD in app/.env
+- Verify Plan 02 Task 3: run `cd app && npm run dev`, open http://localhost:5173/admin/login, and follow the 6-step verification checklist in 06-02-PLAN.md
+- Ensure `app/.env` has SESSION_SECRET (≥32 chars), ADMIN_USERNAME, ADMIN_PASSWORD set before testing
+- After approval, run `/gsd-execute-phase 6` for Phase 6 Plan 03: admin layout shell, dashboard stub, logout

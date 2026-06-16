@@ -79,10 +79,17 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
   5. Operator can close the browser, reopen it, and resume an in-progress run exactly where it paused
 
 **Plans**: 5 plans (3 waves)
+**Wave 1**
 
 - [ ] 07-01-PLAN.md — Backend contract: boto3 + DO Spaces config/service, subprocess spawn util, admin-job Pydantic schemas, admin_jobs service (atomic step-advance guards, resolve, person create) (Wave 1)
-- [ ] 07-02-PLAN.md — FastAPI admin job routes: create (URL/upload), poll endpoint with step-advance side effect, history list, resolve-continue, inline person create (Wave 2)
 - [ ] 07-03-PLAN.md — Pipeline subprocess mods: --job-id on ingest/parse/resolve + --spaces-key on ingest; admin_jobs status writes; resolve writes discrepancies and pauses (Wave 1)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 07-02-PLAN.md — FastAPI admin job routes: create (URL/upload), poll endpoint with step-advance side effect, history list, resolve-continue, inline person create (Wave 2)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 07-04-PLAN.md — SvelteKit start page: Pipeline Runner nav link, two-mode New Run form (URL/upload), Recent Runs history table (Wave 3)
 - [ ] 07-05-PLAN.md — SvelteKit status page: live polling step cards, inline discrepancy review (confirm/correct/add-person), Continue Resolve, failed-state error panel, resumability (Wave 3)
 

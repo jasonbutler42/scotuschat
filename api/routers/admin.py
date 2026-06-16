@@ -16,11 +16,11 @@ Prefix:
   SvelteKit's /admin/* page routes (D-09).
 """
 
+import hmac
+
 from fastapi import APIRouter, Depends, Header, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.core.config import settings
-from api.core.database import get_db
 
 
 async def verify_admin_token(x_admin_token: str = Header(...)) -> None:
@@ -36,7 +36,7 @@ async def verify_admin_token(x_admin_token: str = Header(...)) -> None:
     - The 401 response body is the constant string "Unauthorized" — no token
       information, no timing-revealing detail returned to the client.
     """
-    if x_admin_token != settings.admin_token:
+    if not hmac.compare_digest(x_admin_token, settings.admin_token):
         raise HTTPException(status_code=401, detail="Unauthorized")
 
 

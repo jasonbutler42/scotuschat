@@ -744,22 +744,25 @@ async def create_person_for_job(
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **How should file bytes be forwarded from SvelteKit to FastAPI?**
+1. **How should file bytes be forwarded from SvelteKit to FastAPI?** — **RESOLVED (Plan 04 Task 1; Plan 02 Task 1)**
    - What we know: SvelteKit `+page.server.ts` receives the `File` object via `request.formData()`. FastAPI can accept `UploadFile` directly.
    - What's unclear: Whether SvelteKit should call FastAPI with a multipart body or first convert to base64/bytes and send JSON.
    - Recommendation: Send as multipart `FormData` from SvelteKit server to FastAPI using `fetch` with a `FormData` body — this is the natural mapping and avoids base64 overhead for 3–10 MB PDFs. Verify `BODY_SIZE_LIMIT=10M` is set before testing.
+   - **Resolution:** Multipart `FormData` forwarding adopted. Plan 04 `actions.default` appends the `File` directly to a `FormData` body and POSTs to FastAPI with the `X-Admin-Token` header (no manual `Content-Type`, so fetch sets the multipart boundary). Plan 02 `POST /jobs` accepts `pdf_file: Optional[UploadFile] = File(None)`. `BODY_SIZE_LIMIT=10M` is recorded as a SvelteKit-side blocker in Plan 04 Task 1 / SUMMARY.
 
-2. **What is the ingest subprocess's `--url` or `--spaces-key` argument shape for uploaded files?**
+2. **What is the ingest subprocess's `--url` or `--spaces-key` argument shape for uploaded files?** — **RESOLVED (Plan 03 Task 1; Plan 02 Task 1)**
    - What we know: Current `run_ingest(args)` accepts `--url` (must be a supremecourt.gov HTTPS URL). For uploads, the PDF comes from Spaces (not a URL).
    - What's unclear: Whether the ingest command needs a new `--spaces-key` flag (reads from Spaces) or whether FastAPI downloads the file from Spaces and provides a local temp path.
    - Recommendation: Add `--spaces-key` flag to the ingest command so it can fetch the file from Spaces itself. This keeps the subprocess self-contained and avoids FastAPI holding large file bytes in memory.
+   - **Resolution:** `--spaces-key` flag added to the ingest subparser (Plan 03). On the upload branch, Plan 02 `POST /jobs` uploads bytes to Spaces under `uploads/{job.id}.pdf` and spawns `ingest` with `["--spaces-key", key]`; ingest fetches the bytes from Spaces itself (boto3, env-var-derived client; does NOT import the API service module — keeps the pipeline decoupled).
 
-3. **Does the poll endpoint need rate limiting?**
+3. **Does the poll endpoint need rate limiting?** — **RESOLVED (no code — accepted as-is)**
    - What we know: The operator runs one or two jobs per month, single user. No external traffic.
    - What's unclear: Whether 2.5s polling from a single admin user warrants any protection.
    - Recommendation: No rate limiting needed for v1.1. The `verify_admin_token` dependency already gates all admin routes.
+   - **Resolution:** No rate limiting implemented. Single trusted operator behind the router-level `verify_admin_token` dependency (Plan 02); 2.5s polling (Plan 05) from one admin user needs no throttling for v1.1.
 
 ---
 

@@ -4,12 +4,12 @@ milestone: v1.1
 milestone_name: Operator Admin Interface
 status: executing
 stopped_at: Phase 7 UI-SPEC approved
-last_updated: "2026-06-16T18:35:47.351Z"
+last_updated: "2026-06-16T18:38:22.287Z"
 last_activity: 2026-06-16 -- Phase 07 execution started
 progress:
   total_phases: 4
   completed_phases: 2
-  total_plans: 5
+  total_plans: 10
   completed_plans: 5
   percent: 50
 ---
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-15 after v1.1 milestone start)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** Phase 07
+**Current focus:** Phase 07 — pipeline-runner
 
 ## Current Position
 
-Phase: 07 — EXECUTING
-Plan: 1 of ?
-Status: Ready to execute
+Phase: 07 (pipeline-runner) — EXECUTING
+Plan: 1 of 5
+Status: Executing Phase 07
 Last activity: 2026-06-16 -- Phase 07 execution started
 
 Progress: [███████░░░] 75%
@@ -74,6 +74,9 @@ Key v1.1 decisions from research:
 - [06-01]: event.locals.session assigned unconditionally before the guard branch so Plan 02 login load can check it for already-authenticated redirect
 - [06-02]: timingSafeEqual requires equal-length buffers; length-mismatch guard (check lengths first, treat mismatch as failed compare) prevents throw on wrong-length credentials
 - [06-02]: Logout action lives on /admin?/logout (Plan 03 +layout.server.ts), NOT in /admin/login/+page.server.ts — resolves PATTERNS.md vs UI-SPEC discrepancy in favor of UI-SPEC
+- [07-01]: DO Spaces credentials (AWS_ACCESS_KEY_ID, DO_SPACES_*) belong to the FastAPI service in DO App Platform — never SvelteKit; boto3 is Python-only
+- [07-01]: Atomic advance guards use rowcount == 1 without RETURNING — RETURNING nullifies rowcount on some PG driver versions (Pattern 3)
+- [07-01]: get_run_id_for_step re-derives pipeline_run id from (argument_id, step) ordered by created_at DESC — no extra admin_jobs column; migration 0003 stays frozen (PIPE-17)
 
 ### Pending Todos
 
@@ -98,9 +101,9 @@ Items acknowledged and deferred at v1.0 milestone close:
 
 ## Session Continuity
 
-Last session: 2026-06-16T17:49:42.272Z
-Stopped at: Phase 7 UI-SPEC approved
-Resume file: .planning/phases/07-pipeline-runner/07-UI-SPEC.md
+Last session: 2026-06-16T18:45:00.000Z
+Stopped at: Phase 7 Plan 01 — paused at boto3 legitimacy checkpoint (Tasks 1-3 complete)
+Resume file: .planning/phases/07-pipeline-runner/07-01-SUMMARY.md
 
 ## Operator Next Steps
 

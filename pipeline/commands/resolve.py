@@ -87,16 +87,19 @@ async def run_resolve(args) -> None:
         await _run_resolve_inner(args)
     except Exception as exc:
         if args.job_id:
-            async with get_session() as session:
-                await session.execute(
-                    update(AdminJob)
-                    .where(AdminJob.id == args.job_id)
-                    .values(
-                        status=AdminJobStatus.FAILED,
-                        error_message=str(exc),
+            try:
+                async with get_session() as session:
+                    await session.execute(
+                        update(AdminJob)
+                        .where(AdminJob.id == args.job_id)
+                        .values(
+                            status=AdminJobStatus.FAILED,
+                            error_message=str(exc),
+                        )
+                        .execution_options(synchronize_session=False)
                     )
-                    .execution_options(synchronize_session=False)
-                )
+            except Exception as write_err:
+                print(f"Warning: could not write FAILED status for job {args.job_id}: {write_err}")
         raise
 
 

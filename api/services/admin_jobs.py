@@ -58,7 +58,6 @@ async def create_job(
         spaces_key=spaces_key,
     )
     db.add(job)
-    await db.flush()
     await db.commit()
     await db.refresh(job)
     return job

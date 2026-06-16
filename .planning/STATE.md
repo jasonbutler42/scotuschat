@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Operator Admin Interface
 status: executing
-stopped_at: Phase 06 Plan 02 complete — ready for Plan 03
-last_updated: "2026-06-16T14:00:00Z"
-last_activity: 2026-06-16 -- Phase 06 Plan 02 complete (login page + form action human-verified)
+stopped_at: Phase 06 Plan 03 — Tasks 1+2 complete, awaiting checkpoint:human-verify (Task 3)
+last_updated: "2026-06-16T14:12:00Z"
+last_activity: 2026-06-16 -- Phase 06 Plan 03 Tasks 1+2 done (logout action + admin layout shell + dashboard stub)
 progress:
   total_phases: 4
   completed_phases: 1
@@ -27,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-06-15 after v1.1 milestone start)
 
 Phase: 06 (auth) — EXECUTING
 Plan: 3 of 3 (next)
-Status: Executing Phase 06 (Plan 02 complete; Plan 03 is next)
-Last activity: 2026-06-16 -- Phase 06 Plan 02 complete (login page + form action human-verified)
+Status: Executing Phase 06 Plan 03 (Tasks 1+2 done; checkpoint:human-verify pending)
+Last activity: 2026-06-16 -- Phase 06 Plan 03 Tasks 1+2 done (logout action + admin layout shell + dashboard stub)
 
 Progress: [████░░░░░░] 44%
 
@@ -99,9 +99,14 @@ Items acknowledged and deferred at v1.0 milestone close:
 ## Session Continuity
 
 Last session: 2026-06-16T14:00:00Z
-Stopped at: Phase 06 Plan 02 complete — ready for Plan 03
+Stopped at: Phase 06 Plan 03 checkpoint:human-verify (Task 3) — run dev server and verify admin shell end-to-end
 Resume file: .planning/phases/06-auth/06-03-PLAN.md
 
 ## Operator Next Steps
 
-- Run `/gsd-execute-phase 6` to execute Phase 6 Plan 03: admin layout shell, dashboard stub, logout action (`/admin?/logout`)
+- Start dev server: `cd app && npm run dev`
+- Log in at http://localhost:5173/admin/login (use credentials from .env)
+- Verify admin shell at http://localhost:5173/admin (wordmark, disabled placeholders, Log out button, "Admin" heading, no "Cases" link)
+- Click Log out — confirm cookie deleted and redirect to /admin/login
+- Navigate to http://localhost:5173/admin — confirm redirect to /admin/login (AUTH-03)
+- Reply "approved" to resume plan completion

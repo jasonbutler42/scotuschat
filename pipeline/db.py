@@ -24,24 +24,33 @@ from sqlalchemy.ext.asyncio import (
 load_dotenv()
 
 
+_engine = None
+
+
 def get_engine():
     """
-    Create and return an async SQLAlchemy engine for the pipeline CLI.
+    Return a shared async SQLAlchemy engine for the pipeline CLI (singleton).
 
-    The engine is created lazily (called inside asyncio.run() wrappers)
-    so DATABASE_URL failures surface at command execution time, not import time.
+    The engine is created lazily on first call so DATABASE_URL failures surface
+    at command execution time, not import time.  The singleton is reused across
+    all get_session() calls within a pipeline run so the connection pool is
+    actually shared (previously a new engine — and a new pool — was created on
+    every call, making pool_size=2 misleading).
 
     connect_args={"statement_cache_size": 0} is in connect_args (NOT as a
     top-level kwarg) — required for asyncpg behind PgBouncer Transaction mode.
     See: github.com/sqlalchemy/sqlalchemy/issues/6467
     """
-    database_url = os.environ["DATABASE_URL"]
-    return create_async_engine(
-        database_url,
-        connect_args={"statement_cache_size": 0, "ssl": False},
-        pool_size=2,  # pipeline is single-process CLI; small pool is sufficient
-        echo=False,
-    )
+    global _engine
+    if _engine is None:
+        database_url = os.environ["DATABASE_URL"]
+        _engine = create_async_engine(
+            database_url,
+            connect_args={"statement_cache_size": 0, "ssl": False},
+            pool_size=2,  # pipeline is single-process CLI; small pool is sufficient
+            echo=False,
+        )
+    return _engine
 
 
 @asynccontextmanager
@@ -67,5 +76,3 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
         except Exception:
             await session.rollback()
             raise
-        finally:
-            await engine.dispose()

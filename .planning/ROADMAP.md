@@ -26,7 +26,7 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
 **Milestone Goal:** A password-protected operator web interface that drives the ingestion pipeline step-by-step and manages speaker metadata — making it fast to ingest new arguments without touching the CLI.
 
 - [x] **Phase 5: Admin Foundation** — Alembic migration 0003 + FastAPI admin router; prerequisite infrastructure for auth and pipeline runner (completed 2026-06-15)
-- [ ] **Phase 6: Auth** — Login, session cookie, route guard; all `/admin/*` routes protected
+- [x] **Phase 6: Auth** — Login, session cookie, route guard; all `/admin/*` routes protected (completed 2026-06-16)
 - [ ] **Phase 7: Pipeline Runner** — Upload or URL trigger, fire-and-poll step execution, discrepancy review, resumable job state
 - [ ] **Phase 8: People Editor** — Directory listing, metadata editing, per-argument participant review
 
@@ -60,7 +60,7 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
 **Plans**: 3 plans (2 waves)
 - [x] 06-01-PLAN.md — Session contract + hooks.server.ts route guard + App.Locals typing + env-var docs (AUTH-02)
 - [x] 06-02-PLAN.md — Login page UI + form action (credential check, HMAC cookie set, redirect to /admin) (AUTH-01)
-- [ ] 06-03-PLAN.md — Isolated admin layout shell + dashboard stub + logout action (AUTH-03)
+- [x] 06-03-PLAN.md — Isolated admin layout shell + dashboard stub + logout action (AUTH-03)
 **UI hint**: yes
 
 ### Phase 7: Pipeline Runner
@@ -103,6 +103,6 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
 | 3. Full UI | v1.0 | 4/4 | Complete | 2026-06-13 |
 | 4. Accessibility + Hardening | v1.0 | 2/2 | Complete | 2026-06-15 |
 | 5. Admin Foundation | v1.1 | 2/2 | Complete   | 2026-06-15 |
-| 6. Auth | v1.1 | 2/3 | Executing | - |
+| 6. Auth | v1.1 | 3/3 | Complete | 2026-06-16 |
 | 7. Pipeline Runner | v1.1 | 0/? | Not started | - |
 | 8. People Editor | v1.1 | 0/? | Not started | - |

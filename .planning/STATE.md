@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Operator Admin Interface
-status: executing
-stopped_at: Phase 06 Plan 03 — Tasks 1+2 complete, awaiting checkpoint:human-verify (Task 3)
-last_updated: "2026-06-16T14:12:00Z"
-last_activity: 2026-06-16 -- Phase 06 Plan 03 Tasks 1+2 done (logout action + admin layout shell + dashboard stub)
+status: phase-complete
+stopped_at: Phase 06 complete — ready to plan Phase 07 (Pipeline Runner)
+last_updated: "2026-06-16T15:00:00Z"
+last_activity: 2026-06-16 -- Phase 06 Plan 03 complete (admin shell + logout verified, AUTH-03 satisfied)
 progress:
   total_phases: 4
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 6
-  completed_plans: 4
-  percent: 44
+  completed_plans: 6
+  percent: 75
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-06-15 after v1.1 milestone start)
 
 ## Current Position
 
-Phase: 06 (auth) — EXECUTING
-Plan: 3 of 3 (next)
-Status: Executing Phase 06 Plan 03 (Tasks 1+2 done; checkpoint:human-verify pending)
-Last activity: 2026-06-16 -- Phase 06 Plan 03 Tasks 1+2 done (logout action + admin layout shell + dashboard stub)
+Phase: 06 (auth) — COMPLETE
+Plan: 3 of 3 (all done)
+Status: Phase 06 complete — all AUTH requirements satisfied. Next: plan Phase 07 (Pipeline Runner).
+Last activity: 2026-06-16 -- Phase 06 Plan 03 complete (admin shell + logout, AUTH-03 verified)
 
-Progress: [████░░░░░░] 44%
+Progress: [███████░░░] 75%
 
 ## Performance Metrics
 
@@ -98,15 +98,13 @@ Items acknowledged and deferred at v1.0 milestone close:
 
 ## Session Continuity
 
-Last session: 2026-06-16T14:00:00Z
-Stopped at: Phase 06 Plan 03 checkpoint:human-verify (Task 3) — run dev server and verify admin shell end-to-end
-Resume file: .planning/phases/06-auth/06-03-PLAN.md
+Last session: 2026-06-16T15:00:00Z
+Stopped at: Phase 06 complete
+Resume file: None — run /gsd:plan-phase 7 to plan Pipeline Runner
 
 ## Operator Next Steps
 
-- Start dev server: `cd app && npm run dev`
-- Log in at http://localhost:5173/admin/login (use credentials from .env)
-- Verify admin shell at http://localhost:5173/admin (wordmark, disabled placeholders, Log out button, "Admin" heading, no "Cases" link)
-- Click Log out — confirm cookie deleted and redirect to /admin/login
-- Navigate to http://localhost:5173/admin — confirm redirect to /admin/login (AUTH-03)
-- Reply "approved" to resume plan completion
+Phase 6 is complete. Before starting Phase 7:
+1. (Recommended) Fix known layout nesting bugs: admin nav shows on /admin/login, doubled SCOTUS CHAT header — see 06-03-SUMMARY.md Known Issues section
+2. Run `/gsd:plan-phase 7` with `--research` flag (Phase 7 has complex failure modes)
+3. Ensure DO env vars set: `BODY_SIZE_LIMIT=10M`, `ORIGIN`, `PROTOCOL_HEADER`, `HOST_HEADER`

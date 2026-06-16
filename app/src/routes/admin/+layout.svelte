@@ -1,8 +1,10 @@
 <script lang="ts">
 	import '../../app.css';
+	import { page } from '$app/state';
 	let { children } = $props();
 </script>
 
+{#if page.url.pathname !== '/admin/login'}
 <header>
 	<nav
 		aria-label="Admin navigation"
@@ -71,5 +73,6 @@
 		</form>
 	</nav>
 </header>
+{/if}
 
 {@render children()}

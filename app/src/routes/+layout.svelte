@@ -1,8 +1,10 @@
 <script lang="ts">
 	import '../app.css';
+	import { page } from '$app/state';
 	let { children } = $props();
 </script>
 
+{#if !page.url.pathname.startsWith('/admin')}
 <header>
 	<nav
 		aria-label="Site navigation"
@@ -30,5 +32,6 @@
 		</a>
 	</nav>
 </header>
+{/if}
 
 {@render children()}

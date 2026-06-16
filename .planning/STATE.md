@@ -4,14 +4,14 @@ milestone: v1.1
 milestone_name: Operator Admin Interface
 status: executing
 stopped_at: Phase 07 Plan 04 complete — /admin/pipeline start page live; ready for Plan 05 (job status page)
-last_updated: "2026-06-16T19:20:10.254Z"
+last_updated: "2026-06-16T19:26:06.288Z"
 last_activity: 2026-06-16 -- Phase 07 Plan 03 complete
 progress:
   total_phases: 4
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 10
-  completed_plans: 9
-  percent: 50
+  completed_plans: 10
+  percent: 75
 ---
 
 # Project State
@@ -56,6 +56,7 @@ Progress: [███████░░░] 75%
 | Phase 07 P03 | 20min | 2 tasks | 4 files |
 | Phase 07 P02 | 133 | 2 tasks | 1 files |
 | Phase 07-pipeline-runner P04 | 15 | 2 tasks | 3 files |
+| Phase 07-pipeline-runner P05 | 164 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -90,6 +91,8 @@ Key v1.1 decisions from research:
 - [Phase ?]: [07-02]: ValueError from resolve_job mapped to HTTPException 422 so bad person_id leaves job paused for retry (Pitfall 5)
 - [Phase ?]: DO_SPACES_*/AWS_* env vars belong to the FastAPI service only — SvelteKit forwards bytes only [07-04]
 - [Phase ?]: enctype=multipart/form-data used for both URL and file modes to avoid conditional enctype logic [07-04]
+- [Phase ?]: [07-05]: AddNewPersonForm uses raw fetch (?/addPerson) rather than SvelteKit use:enhance
+- [Phase ?]: [07-05]: $effect initialises rowStates only for keys not already tracked — preserves operator work when invalidateAll re-runs
 
 ### Pending Todos
 
@@ -114,7 +117,7 @@ Items acknowledged and deferred at v1.0 milestone close:
 
 ## Session Continuity
 
-Last session: 2026-06-16T19:20:10.246Z
+Last session: 2026-06-16T19:26:06.280Z
 Stopped at: Phase 07 Plan 04 complete — /admin/pipeline start page live; ready for Plan 05 (job status page)
 Resume file: None
 

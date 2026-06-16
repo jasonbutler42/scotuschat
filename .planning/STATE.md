@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Operator Admin Interface
 status: executing
-stopped_at: Phase 07 Plan 01 complete — boto3 checkpoint approved, resuming at Plan 02/03 (Wave 1/2)
-last_updated: "2026-06-16T19:01:48.615Z"
+stopped_at: Phase 07 Plan 03 complete — pipeline commands job-aware; ready for Plan 04 (FastAPI poll endpoint)
+last_updated: "2026-06-16T19:08:16Z"
 last_activity: 2026-06-16 -- Phase 07 execution started
 progress:
   total_phases: 4
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-06-15 after v1.1 milestone start)
 ## Current Position
 
 Phase: 07 (pipeline-runner) — EXECUTING
-Plan: 2 of 5
-Status: Ready to execute
-Last activity: 2026-06-16 -- Phase 07 execution started
+Plan: 3 of 5
+Status: Ready to execute (Plan 04 next)
+Last activity: 2026-06-16 -- Phase 07 Plan 03 complete
 
 Progress: [███████░░░] 75%
 
@@ -53,6 +53,7 @@ Progress: [███████░░░] 75%
 | Phase 05 P01 | 10 | - tasks | - files |
 | Phase 06 P01 | 5 | 3 tasks | 6 files |
 | Phase 07 P01 | 35min | 4 tasks | 6 files |
+| Phase 07 P03 | 20min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -78,6 +79,9 @@ Key v1.1 decisions from research:
 - [07-01]: DO Spaces credentials (AWS_ACCESS_KEY_ID, DO_SPACES_*) belong to the FastAPI service in DO App Platform — never SvelteKit; boto3 is Python-only
 - [07-01]: Atomic advance guards use rowcount == 1 without RETURNING — RETURNING nullifies rowcount on some PG driver versions (Pattern 3)
 - [07-01]: get_run_id_for_step re-derives pipeline_run id from (argument_id, step) ordered by created_at DESC — no extra admin_jobs column; migration 0003 stays frozen (PIPE-17)
+- [07-03]: Metadata derivation for job-driven ingest: synthetic docket job-{job_id} ensures unique Argument row; Phase 8 edits real metadata
+- [07-03]: resolve _prompt_operator / _create_new_person removed; job-driven path writes discrepancies JSONB + PAUSED; direct CLI prints unresolved labels + NEEDS_REVIEW
+- [07-03]: Discrepancy JSONB written post-session (after resolve_run status commits) so NEEDS_REVIEW is durable before admin_jobs becomes PAUSED
 - [Phase ?]: boto3 legitimacy verified at human checkpoint: pypi.org/project/boto3, Amazon Web Services, github.com/boto/boto3, version >= 1.34 confirmed; T-07-SC supply chain threat mitigated
 
 ### Pending Todos
@@ -103,8 +107,8 @@ Items acknowledged and deferred at v1.0 milestone close:
 
 ## Session Continuity
 
-Last session: 2026-06-16T19:01:48.607Z
-Stopped at: Phase 07 Plan 01 complete — boto3 checkpoint approved, resuming at Plan 02/03 (Wave 1/2)
+Last session: 2026-06-16T19:08:16Z
+Stopped at: Phase 07 Plan 03 complete — pipeline commands job-aware; ready for Plan 04 (FastAPI poll endpoint)
 Resume file: None
 
 ## Operator Next Steps

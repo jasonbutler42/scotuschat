@@ -86,7 +86,7 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 07-02-PLAN.md — FastAPI admin job routes: create (URL/upload), poll endpoint with step-advance side effect, history list, resolve-continue, inline person create (Wave 2)
+- [x] 07-02-PLAN.md — FastAPI admin job routes: create (URL/upload), poll endpoint with step-advance side effect, history list, resolve-continue, inline person create (Wave 2)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -120,5 +120,5 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
 | 4. Accessibility + Hardening | v1.0 | 2/2 | Complete | 2026-06-15 |
 | 5. Admin Foundation | v1.1 | 2/2 | Complete   | 2026-06-15 |
 | 6. Auth | v1.1 | 3/3 | Complete   | 2026-06-16 |
-| 7. Pipeline Runner | v1.1 | 2/5 | In Progress|  |
+| 7. Pipeline Runner | v1.1 | 3/5 | In Progress|  |
 | 8. People Editor | v1.1 | 0/? | Not started | - |

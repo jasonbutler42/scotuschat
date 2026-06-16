@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Operator Admin Interface
 status: executing
-stopped_at: Phase 07 Plan 03 complete — pipeline commands job-aware; ready for Plan 04 (FastAPI poll endpoint)
-last_updated: "2026-06-16T19:08:16Z"
-last_activity: 2026-06-16 -- Phase 07 execution started
+stopped_at: Phase 07 Plan 02 complete — admin job routes wired; ready for Plan 03 (pipeline commands)
+last_updated: "2026-06-16T19:15:12.108Z"
+last_activity: 2026-06-16 -- Phase 07 Plan 03 complete
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 10
-  completed_plans: 6
+  completed_plans: 8
   percent: 50
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-06-15 after v1.1 milestone start)
 ## Current Position
 
 Phase: 07 (pipeline-runner) — EXECUTING
-Plan: 3 of 5
+Plan: 4 of 5
 Status: Ready to execute (Plan 04 next)
 Last activity: 2026-06-16 -- Phase 07 Plan 03 complete
 
@@ -54,6 +54,7 @@ Progress: [███████░░░] 75%
 | Phase 06 P01 | 5 | 3 tasks | 6 files |
 | Phase 07 P01 | 35min | 4 tasks | 6 files |
 | Phase 07 P03 | 20min | 2 tasks | 4 files |
+| Phase 07 P02 | 133 | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -83,6 +84,9 @@ Key v1.1 decisions from research:
 - [07-03]: resolve _prompt_operator / _create_new_person removed; job-driven path writes discrepancies JSONB + PAUSED; direct CLI prints unresolved labels + NEEDS_REVIEW
 - [07-03]: Discrepancy JSONB written post-session (after resolve_run status commits) so NEEDS_REVIEW is durable before admin_jobs becomes PAUSED
 - [Phase ?]: boto3 legitimacy verified at human checkpoint: pypi.org/project/boto3, Amazon Web Services, github.com/boto/boto3, version >= 1.34 confirmed; T-07-SC supply chain threat mitigated
+- [Phase ?]: [07-02]: _validate_pdf_url at route boundary enforces https + supremecourt.gov before create_job and subprocess spawn (T-07-01)
+- [Phase ?]: [07-02]: GET /jobs/{id} re-reads job after step-advance so response reflects new current_step
+- [Phase ?]: [07-02]: ValueError from resolve_job mapped to HTTPException 422 so bad person_id leaves job paused for retry (Pitfall 5)
 
 ### Pending Todos
 
@@ -107,8 +111,8 @@ Items acknowledged and deferred at v1.0 milestone close:
 
 ## Session Continuity
 
-Last session: 2026-06-16T19:08:16Z
-Stopped at: Phase 07 Plan 03 complete — pipeline commands job-aware; ready for Plan 04 (FastAPI poll endpoint)
+Last session: 2026-06-16T19:15:12.100Z
+Stopped at: Phase 07 Plan 02 complete — admin job routes wired; ready for Plan 03 (pipeline commands)
 Resume file: None
 
 ## Operator Next Steps

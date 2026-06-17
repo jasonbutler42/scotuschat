@@ -95,7 +95,7 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
 
 **Wave 4** *(gap closure — UAT tests 10, 11, 12)*
 
-- [ ] 07-06-PLAN.md — Gap closure: HIT rows in discrepancy table, Override button, typeahead combobox, addPerson envelope fix, use:enhance on Continue Resolve (Wave 4)
+- [x] 07-06-PLAN.md — Gap closure: HIT rows in discrepancy table, Override button, typeahead combobox, addPerson envelope fix, use:enhance on Continue Resolve (Wave 4)
 
 **UI hint**: yes
 
@@ -124,5 +124,5 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
 | 4. Accessibility + Hardening | v1.0 | 2/2 | Complete | 2026-06-15 |
 | 5. Admin Foundation | v1.1 | 2/2 | Complete   | 2026-06-15 |
 | 6. Auth | v1.1 | 3/3 | Complete   | 2026-06-16 |
-| 7. Pipeline Runner | v1.1 | 5/6 | Gap closure in progress | 2026-06-16 |
+| 7. Pipeline Runner | v1.1 | 6/6 | Complete   | 2026-06-17 |
 | 8. People Editor | v1.1 | 0/? | Not started | - |

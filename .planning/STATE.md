@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Operator Admin Interface
 status: executing
-stopped_at: Phase 07 Plan 04 complete — /admin/pipeline start page live; ready for Plan 05 (job status page)
-last_updated: "2026-06-16T19:26:06.288Z"
-last_activity: 2026-06-16 -- Phase 07 Plan 03 complete
+stopped_at: Phase 07 Plan 06 complete — UAT gaps closed; ready for Phase 07 verify
+last_updated: "2026-06-17T13:44:57.899Z"
+last_activity: 2026-06-17 -- Phase 07 execution started
 progress:
   total_phases: 4
   completed_phases: 3
-  total_plans: 10
-  completed_plans: 10
+  total_plans: 11
+  completed_plans: 11
   percent: 75
 ---
 
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-06-15 after v1.1 milestone start)
 ## Current Position
 
 Phase: 07 (pipeline-runner) — EXECUTING
-Plan: 5 of 5
-Status: Ready to execute (Plan 04 next)
-Last activity: 2026-06-16 -- Phase 07 Plan 03 complete
+Plan: 2 of 6
+Status: Ready to execute
+Last activity: 2026-06-17 -- Phase 07 execution started
 
 Progress: [███████░░░] 75%
 
@@ -57,6 +57,7 @@ Progress: [███████░░░] 75%
 | Phase 07 P02 | 133 | 2 tasks | 1 files |
 | Phase 07-pipeline-runner P04 | 15 | 2 tasks | 3 files |
 | Phase 07-pipeline-runner P05 | 164 | 2 tasks | 2 files |
+| Phase 07-pipeline-runner P06 | 265 | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -93,6 +94,9 @@ Key v1.1 decisions from research:
 - [Phase ?]: enctype=multipart/form-data used for both URL and file modes to avoid conditional enctype logic [07-04]
 - [Phase ?]: [07-05]: AddNewPersonForm uses raw fetch (?/addPerson) rather than SvelteKit use:enhance
 - [Phase ?]: [07-05]: $effect initialises rowStates only for keys not already tracked — preserves operator work when invalidateAll re-runs
+- [Phase ?]: [07-06]: HIT rows now in discrepancies JSONB with auto_resolved=True — operator must confirm all aliases before pipeline advances
+- [Phase ?]: [07-06]: x-sveltekit-action header required on raw fetch to SvelteKit action endpoints to receive JSON envelope
+- [Phase ?]: [07-06]: use:enhance custom callback owns continueSubmitting state — remove onclick from submit button when using enhance
 
 ### Pending Todos
 
@@ -117,8 +121,8 @@ Items acknowledged and deferred at v1.0 milestone close:
 
 ## Session Continuity
 
-Last session: 2026-06-16T19:26:06.280Z
-Stopped at: Phase 07 Plan 04 complete — /admin/pipeline start page live; ready for Plan 05 (job status page)
+Last session: 2026-06-17T13:44:57.892Z
+Stopped at: Phase 07 Plan 06 complete — UAT gaps closed; ready for Phase 07 verify
 Resume file: None
 
 ## Operator Next Steps

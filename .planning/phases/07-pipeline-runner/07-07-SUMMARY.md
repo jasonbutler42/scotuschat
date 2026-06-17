@@ -26,7 +26,7 @@ decisions:
 metrics:
   duration_seconds: 371
   completed_date: "2026-06-17T15:14:08Z"
-  tasks_completed: 2
+  tasks_completed: 3
   tasks_total: 3
   files_changed: 4
 ---
@@ -41,7 +41,7 @@ metrics:
 |------|------|--------|--------|
 | 1 | Load all people in [job_id] server load for typeahead | 332e571 | DONE |
 | 2 | HIT-row Change UX + people-backed typeahead + use:enhance add-person | 01097ae | DONE |
-| 3 | Verify discrepancy review UX in browser | — | CHECKPOINT — awaiting human verification |
+| 3 | Verify discrepancy review UX in browser | — | DONE (human-verified: all 5 checks approved) |
 
 ## What Was Built
 
@@ -111,9 +111,14 @@ None — no new network endpoints or auth paths introduced beyond the planned `G
   - `use:enhance` present on AddNewPersonForm
   - `auto_resolved` present in rowStates init branch
 
-### Pending Human Verification (Task 3)
+### Human Verification (Task 3) — PASSED
 
-See checkpoint below.
+All 5 checks approved by operator:
+1. HIT rows show ONE "Change" button, no "Confirm" button; Continue Resolve appears once all rows are dispositioned.
+2. Change typeahead on HIT rows lists many existing people (full roster), not just "— Add new person —".
+3. Selecting an existing person from the typeahead flips the row to "Corrected" with that person selected.
+4. Picking "— Add new person —", filling Full name + Role, and clicking Save person: form dismisses without hang; new person is auto-selected.
+5. Hard-refresh: new person appears in the typeahead list because load() fetches the full people list from the API.
 
 ## Self-Check: PASSED
 
@@ -123,3 +128,6 @@ See checkpoint below.
 - `app/src/routes/admin/pipeline/[job_id]/+page.svelte` modified: confirmed (all 4 sub-tasks)
 - Commit 332e571 (Task 1): confirmed
 - Commit 01097ae (Task 2): confirmed
+- Fix commit ddf8639 (rename MISS-row Correct → Select button): confirmed
+- Task 3 human verification: all 5 checks approved 2026-06-17
+- Plan 07-07: COMPLETE

@@ -602,7 +602,7 @@
 													Change
 												</button>
 											{:else}
-												<!-- MISS row not yet dispositioned — Confirm (if auto_match_id) + Correct -->
+												<!-- MISS row not yet dispositioned — Confirm (if auto_match_id) + Select -->
 												<div style="display: flex; gap: 8px; flex-wrap: wrap;">
 													{#if row.auto_match_id}
 														<button
@@ -638,7 +638,7 @@
 															min-height: 32px;
 														"
 													>
-														Correct
+														Select
 													</button>
 												</div>
 											{/if}

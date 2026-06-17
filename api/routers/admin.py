@@ -141,17 +141,40 @@ async def create_job(
                 status_code=422,
                 detail="Uploaded file must be a PDF (application/pdf).",
             )
+        # WR-04: content_type is client-supplied — verify PDF magic bytes as a
+        # second layer so a non-PDF payload with a spoofed content-type is rejected.
+        header = await pdf_file.read(4)
+        await pdf_file.seek(0)
+        if header != b"%PDF":
+            raise HTTPException(status_code=422, detail="Uploaded file must be a PDF.")
         # Create job first to get its id, then upload with the id in the key
         job = await jobs_service.create_job(db, spaces_key=None)
         key = f"uploads/{job.id}.pdf"
         file_bytes = await pdf_file.read()
-        loop = asyncio.get_event_loop()
-        await loop.run_in_executor(
-            None,
-            spaces_service.upload_pdf_to_spaces,
-            file_bytes,
-            key,
-        )
+        loop = asyncio.get_running_loop()
+        # WR-06: wrap upload in try/except so a Spaces failure marks the job
+        # FAILED rather than leaving an orphaned PENDING job row with no subprocess.
+        try:
+            await loop.run_in_executor(
+                None,
+                spaces_service.upload_pdf_to_spaces,
+                file_bytes,
+                key,
+            )
+        except Exception as upload_exc:
+            await db.execute(
+                update(AdminJob)
+                .where(AdminJob.id == job.id)
+                .values(
+                    status=AdminJobStatus.FAILED,
+                    error_message=f"Spaces upload failed: {upload_exc}",
+                )
+                .execution_options(synchronize_session=False)
+            )
+            await db.commit()
+            raise HTTPException(
+                status_code=502, detail="File upload failed. Please try again."
+            ) from upload_exc
         # Update the job's spaces_key now that we have it
         await db.execute(
             update(AdminJob)

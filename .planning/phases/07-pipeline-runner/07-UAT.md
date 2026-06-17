@@ -10,12 +10,12 @@ updated: 2026-06-16T00:00:00Z
 
 <!-- OVERWRITE each test - shows where we are -->
 
-number: 13
-name: Failed-state error panel
+number: 9
+name: Discrepancy review table appears on PAUSED resolve step
 expected: |
-  For a job where a step failed, /admin/pipeline/{id} shows "This run failed."
-  followed by the verbatim error message in monospace text. No Retry button —
-  only a "Start a new run" link back to /admin/pipeline.
+  When the Resolve step is PAUSED, the Resolve step card expands to show a
+  discrepancy table. Each row lists a raw speaker label, the auto-matched candidate
+  (if any), and Confirm / Correct buttons. "Continue Resolve" is NOT yet visible.
 awaiting: user response
 
 ## Tests
@@ -54,23 +54,19 @@ result: pass
 
 ### 9. Discrepancy review table appears on PAUSED resolve step
 expected: When the Resolve step is PAUSED (speaker aliases could not be auto-resolved), the Resolve step card expands to show a discrepancy table. Each row lists a raw speaker label, the auto-matched candidate name (if any), and Confirm / Correct buttons. The "Continue Resolve" button is NOT yet visible.
-result: skipped
-reason: No job currently in PAUSED state; requires a run with unresolved speaker aliases
+result: [pending]
 
 ### 10. Confirm and Correct disposition in discrepancy table
 expected: Clicking Confirm on a row marks that speaker match as accepted (visual indicator updates). Clicking Correct opens a dropdown populated with candidate names from that row only. Selecting a candidate from the dropdown marks it as corrected. Once ALL rows are dispositioned, the "Continue Resolve" button appears.
-result: skipped
-reason: Depends on test 9 (PAUSED state required)
+result: [pending]
 
 ### 11. Add new person inline
 expected: In the Correct dropdown, selecting "— Add new person —" reveals a small form with Full Name and Role fields. Submitting it creates the person and auto-selects them in that row's dropdown, dismissing the form. The new person is now available as a candidate in that row.
-result: skipped
-reason: Depends on test 9 (PAUSED state required)
+result: [pending]
 
 ### 12. Continue Resolve submits and restarts polling
 expected: After all rows are dispositioned, clicking Continue Resolve submits the matches. The button text changes to "Submitting…" and becomes disabled. The page then transitions the Resolve step from PAUSED back to RUNNING (or COMPLETED if no further issues), and polling resumes to show the updated state.
-result: skipped
-reason: Depends on test 9 (PAUSED state required)
+result: [pending]
 
 ### 13. Failed-state error panel
 expected: For a job where a step failed, /admin/pipeline/{id} shows "This run failed." followed by the verbatim error message in monospace text. There is no Retry button — only a "Start a new run" link back to /admin/pipeline.
@@ -85,8 +81,8 @@ result: [pending]
 total: 14
 passed: 8
 issues: 0
-pending: 2
-skipped: 4
+pending: 6
+skipped: 0
 skipped: 0
 blocked: 0
 

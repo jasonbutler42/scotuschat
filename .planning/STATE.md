@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Operator Admin Interface
-current_phase: 8
-current_phase_name: People Editor
-status: ready to plan
+current_phase: 08
+current_phase_name: people-editor
+status: executing
 stopped_at: Phase 8 UI-SPEC approved
-last_updated: "2026-06-17T18:02:32.450Z"
+last_updated: "2026-06-17T18:33:39.523Z"
 last_activity: 2026-06-17
-last_activity_desc: Phase 07 complete, transitioned to Phase 8
+last_activity_desc: Phase 08 execution started
 progress:
   total_phases: 4
   completed_phases: 3
-  total_plans: 13
-  completed_plans: 13
+  total_plans: 18
+  completed_plans: 14
   percent: 75
 ---
 
@@ -28,10 +28,10 @@ See: .planning/PROJECT.md (updated 2026-06-17 after Phase 07)
 
 ## Current Position
 
-Phase: 8 — People Editor
-Plan: Not started
-Status: Ready to plan Phase 08
-Last activity: 2026-06-17 — Phase 07 complete, transitioned to Phase 8
+Phase: 08 (people-editor) — EXECUTING
+Plan: 2 of 5
+Status: Ready to execute
+Last activity: 2026-06-17 — Phase 08 execution started
 
 Progress: [██████████░░] 3/4 phases complete (13/13 plans)
 
@@ -64,6 +64,7 @@ Progress: [██████████░░] 3/4 phases complete (13/13 plan
 | Phase 07-pipeline-runner P06 | 265 | 3 tasks | 3 files |
 | Phase 07-pipeline-runner P07 | 371 | 2 tasks (auto) + 1 checkpoint | 4 files |
 | Phase 07-pipeline-runner P08 | 8 | 2 tasks | 5 files |
+| Phase 08-people-editor P01 | 2 | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -108,6 +109,7 @@ Key v1.1 decisions from research:
 - [Phase ?]: [07-07]: AddNewPersonForm uses use:enhance — SvelteKit devalue-deserializes result.data automatically, no raw fetch
 - [Phase ?]: [07-07]: GET /api/admin/people added to admin router using list_people() Person+Role outerjoin ordered by full_name
 - [07-08]: arguments.resolved_at visibility gate — metadata fabrication out of scope; gate alone closes Gap 3; Phase 8 (People Editor) handles real metadata edits
+- [Phase ?]: Migration 0005 and ORM model edit land in same plan wave to keep DB and ORM in sync (Pitfall 1)
 
 ### Pending Todos
 
@@ -132,6 +134,6 @@ Items acknowledged and deferred at v1.0 milestone close:
 
 ## Session Continuity
 
-Last session: 2026-06-17T18:02:32.440Z
+Last session: 2026-06-17T18:33:25.615Z
 Stopped at: Phase 8 UI-SPEC approved
 Resume file: .planning/phases/08-people-editor/08-UI-SPEC.md

@@ -24,9 +24,9 @@ Requirements for the Operator Admin Interface milestone. Phases continue numberi
 
 ### People
 
-- [ ] **PEOPLE-01**: Operator can view all people in a directory listing
-- [ ] **PEOPLE-02**: Operator can filter the directory to show only people with one or more missing metadata fields
-- [ ] **PEOPLE-03**: Operator can edit a person's name, role, bio text, photo URL, and tenure dates
+- [x] **PEOPLE-01**: Operator can view all people in a directory listing
+- [x] **PEOPLE-02**: Operator can filter the directory to show only people with one or more missing metadata fields
+- [x] **PEOPLE-03**: Operator can edit a person's name, role, bio text, photo URL, and tenure dates
 - [ ] **PEOPLE-04**: After a pipeline run completes resolve, operator can review that argument's resolved participants and fill in missing metadata inline
 
 ## v1.2 Requirements
@@ -70,9 +70,9 @@ Deferred to next milestone.
 | PIPE-15 | Phase 7 | Complete |
 | PIPE-16 | Phase 7 | Complete |
 | PIPE-17 | Phase 7 | Complete |
-| PEOPLE-01 | Phase 8 | Pending |
-| PEOPLE-02 | Phase 8 | Pending |
-| PEOPLE-03 | Phase 8 | Pending |
+| PEOPLE-01 | Phase 8 | Complete |
+| PEOPLE-02 | Phase 8 | Complete |
+| PEOPLE-03 | Phase 8 | Complete |
 | PEOPLE-04 | Phase 8 | Pending |
 
 **Coverage:**

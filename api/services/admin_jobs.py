@@ -199,7 +199,16 @@ async def resolve_job(
     if job is None:
         raise ValueError(f"AdminJob {job_id} not found")
 
-    # Step 1a: Validate all person_ids BEFORE any alias/utterance write
+    # Step 1a: Guard against double-submit or wrong-state calls.
+    # resolve_job may only be applied to a PAUSED job — a second POST on an
+    # already-COMPLETED job would re-apply alias writes and overwrite resolved_at.
+    if job.status != AdminJobStatus.PAUSED:
+        raise ValueError(
+            f"AdminJob {job_id} is not PAUSED (current status: {job.status.value!r}); "
+            "resolve can only be applied to a paused job."
+        )
+
+    # Step 1b: Validate all person_ids BEFORE any alias/utterance write
     for match in matches:
         person_result = await db.execute(
             select(Person).where(Person.id == match.person_id)
@@ -210,7 +219,7 @@ async def resolve_job(
                 f"(referenced by raw_speaker_label={match.raw_speaker_label!r})"
             )
 
-    # Step 1b: Derive the parse run-id so we can scope the Utterance UPDATE
+    # Step 1c: Derive the parse run-id so we can scope the Utterance UPDATE
     parse_run_id = await get_run_id_for_step(db, job_id, "parse")
 
     # Step 2: Apply each match

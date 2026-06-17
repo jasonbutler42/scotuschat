@@ -665,7 +665,9 @@
 							// error is displayed via form prop below
 							await update();
 						} else {
-							// success: invalidateAll restarts polling and re-fetches job state
+							// Reset before update so re-render sees correct state even if
+							// invalidateAll is slow to flip data.job.status (CR-03 race fix)
+							continueSubmitting = false;
 							await update({ reset: false });
 						}
 					};

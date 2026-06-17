@@ -122,7 +122,7 @@ All tokens carried forward from `app/src/app.css` and Phase 7 design contract. O
 - Name column: 40% width — primary identifier, primary text color `#e2e8f0`
 - Role column: 25% width — role name or "—" in `#94a3b8` if null
 - Missing fields column: 20% width — chip group or empty cell
-- Edit column: 15% width, right-aligned — "Edit" link in `#93c5fd` underline, 14px/400
+- Edit column: 15% width, right-aligned — "Edit person" link in `#93c5fd` underline, 14px/400
 
 **IncompleteToggle** (`/admin/people` — top of page, above table)
 - CSS-only toggle switch; no JS library
@@ -137,7 +137,7 @@ All tokens carried forward from `app/src/app.css` and Phase 7 design contract. O
 
 **MissingFieldChip**
 - Inline `<span>` element
-- Style: `display: inline-block; background-color: rgba(245,158,11,0.15); border: 1px solid #f59e0b; color: #f59e0b; border-radius: 4px; padding: 2px 6px; font-size: 14px; font-weight: 400; line-height: 1.4;`
+- Style: `display: inline-block; background-color: rgba(245,158,11,0.15); border: 1px solid #f59e0b; color: #f59e0b; border-radius: 4px; padding: 4px 8px; font-size: 14px; font-weight: 400; line-height: 1.4;`
 - Values: "bio", "photo", "role" — derived server-side; `missing: string[]` field on PersonListItem response
 - Chip group: `display: flex; gap: 4px; flex-wrap: wrap;`
 - Empty cell: no chips — cell is empty, not "—"
@@ -200,6 +200,8 @@ All tokens carried forward from `app/src/app.css` and Phase 7 design contract. O
 
 ### `/admin/people` (People Directory)
 
+**Primary visual anchor:** The Name column of PeopleTable is the primary focal point. It is left-aligned, 40% width, rendered in primary text color `#e2e8f0` at 16px/400 — the heaviest and widest column. All other columns are subordinate to it.
+
 ```
 [Admin Nav — +layout.svelte with "People Editor" link now active (no longer <span>)]
 
@@ -226,6 +228,8 @@ All tokens carried forward from `app/src/app.css` and Phase 7 design contract. O
 ```
 
 ### `/admin/people/[id]` (Person Edit Form)
+
+**Primary visual anchor:** The SaveChangesButton at the bottom of the form is the primary focal point for this page. It is full-width with an accent border (`#93c5fd`) — the only element on the page using accent color — which draws the operator's eye to the commit action after editing the form fields above it.
 
 ```
 [Admin Nav — +layout.svelte]
@@ -298,7 +302,7 @@ All tokens carried forward from `app/src/app.css` and Phase 7 design contract. O
 | Table column: role | "Role" | Default |
 | Table column: missing fields | "Missing fields" | CONTEXT.md D-06 |
 | Table column: edit link col | "" (empty header) | Same pattern as Phase 7 history table "View" column |
-| Table row edit link | "Edit" | Default |
+| Table row edit link | "Edit person" | Revised per checker flag — single-word label lacked noun context |
 | Missing field chip — bio | "bio" | CONTEXT.md D-06 |
 | Missing field chip — photo | "photo" | CONTEXT.md D-06 |
 | Missing field chip — role | "role" | CONTEXT.md D-06 |

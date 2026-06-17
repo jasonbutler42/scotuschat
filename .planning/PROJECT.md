@@ -51,13 +51,15 @@ Anyone can open a SCOTUS oral argument and immediately follow the conversation �
 - ✓ Fully keyboard navigable — v1.0 (A11Y-02)
 - ✓ Speaker side differentiation by layout position only — v1.0 (A11Y-03)
 - ✓ Focus managed correctly for interactive elements — v1.0 (A11Y-04)
+- ✓ Operator can authenticate to `/admin/*` routes with username+password; unauthenticated requests redirect to login — Phase 6 (ADMIN-01)
+- ✓ Operator can start a pipeline run by uploading a PDF or entering a supremecourt.gov URL — Phase 7 (PIPE-12)
+- ✓ Pipeline runs ingest → parse → resolve sequentially, auto-advancing when no discrepancies; pauses for operator discrepancy review when they exist — Phase 7 (PIPE-13)
+- ✓ Pipeline job state persisted to DB; resumable across browser sessions — Phase 7 (PIPE-14)
 
 ### Active
 
-- [ ] Operator can authenticate to `/admin/*` routes with username+password; unauthenticated requests redirect to login (ADMIN-01)
-- [ ] Operator can start a pipeline run by uploading a PDF or entering a URL (PIPE-12)
-- [ ] Pipeline runs ingest → parse → resolve sequentially, auto-advancing when no discrepancies; pauses for review when discrepancies exist (PIPE-13)
-- [ ] Pipeline job state is persisted to DB and resumable across browser sessions (PIPE-14)
+- [ ] Operator can view all people in a directory and edit name, role, bio text, photo URL, and tenure dates (PEOPLE-01)
+- [ ] After a pipeline run, operator can review resolved participants and fill in missing metadata inline (PEOPLE-02)
 - [ ] Operator can view all people in a directory and edit name, role, bio text, photo URL, and tenure dates (PEOPLE-01)
 - [ ] After a pipeline run, operator can review resolved participants and fill in missing metadata inline (PEOPLE-02)
 - [ ] Application deployed to Digital Ocean App Platform (SvelteKit + FastAPI as separate services, managed Postgres) (DEPLOY-01)
@@ -117,6 +119,10 @@ Anyone can open a SCOTUS oral argument and immediately follow the conversation �
 | Roster derived client-side from utterances via `$derived.by()` | No new API endpoint; avoids N+1 requests | ✓ Good — clean; no extra round-trips |
 | max(pipeline_run_id) filter in service layer | Always shows most-recent parse run; prevents surfacing partial writes from crashed runs | ✓ Good — correct for PIPE-11 no-delete policy |
 | Identical treatment for all speakers (color, schema, depth) | Hard apolitical framing constraint — position-only differentiation | ✓ Good — `#475569` eliminated in Phase 4; bench and advocate roster columns both `#94a3b8` |
+| Stateless HMAC session cookie (node:crypto, no library) | No auth library, no DB-backed session store; DO restarts stateless; individual sessions non-revocable without rotating SECRET | ✓ Good — minimal surface area; `hooks.server.ts` is sole auth checkpoint |
+| Fire-and-poll for pipeline status (Phase 7) | Subprocess spawned immediately, HTTP returns `{job_id}`, client polls every 2.5s; never await subprocess completion in request handler | ✓ Good — clean separation; prevents request timeouts on long-running steps |
+| DigitalOcean Spaces (boto3) for PDF persistence (Phase 7) | DO App Platform container filesystem is ephemeral; Spaces provides durable object storage | ✓ Good — PDFs survive deploys and restarts |
+| `arguments.resolved_at` visibility gate (Phase 7) | Cases only appear in `/cases/` after `resolved_at IS NOT NULL`; prevents placeholder titles ("Pending review") from surfacing publicly; metadata fabrication at resolve time forbidden by apolitical constraint | ✓ Good — Phase 8 (People Editor) provides real metadata editing |
 
 ## Evolution
 
@@ -136,4 +142,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-15 after v1.1 milestone start*
+*Last updated: 2026-06-17 after Phase 07*

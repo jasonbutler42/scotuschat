@@ -2,41 +2,44 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Operator Admin Interface
-status: executing
-stopped_at: Phase 07 Plan 08 complete — Phase 07 all plans done
-last_updated: "2026-06-17T17:00:00Z"
-last_activity: 2026-06-17 -- Phase 07 Plan 08 complete (2 tasks, resolved_at visibility gate)
+current_phase: 8
+current_phase_name: People Editor
+status: ready to plan
+stopped_at: Phase 07 complete, Phase 08 ready to plan (2026-06-17)
+last_updated: "2026-06-17T17:28:01.849Z"
+last_activity: 2026-06-17
+last_activity_desc: Phase 07 complete, transitioned to Phase 8
 progress:
   total_phases: 4
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 13
-  completed_plans: 12
-  percent: 54
+  completed_plans: 13
+  percent: 75
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-06-15 after v1.1 milestone start)
+See: .planning/PROJECT.md (updated 2026-06-17 after Phase 07)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** Phase 07 — pipeline-runner
+**Current focus:** Phase 08 — people-editor
 
 ## Current Position
 
-Phase: 07 (pipeline-runner) — COMPLETE
-Plan: 8 of 8 (all plans complete)
-Status: Phase 07 complete; ready for Phase 07 verify or Phase 08
-Last activity: 2026-06-17 -- Phase 07 Plan 08 complete (2 tasks, resolved_at visibility gate)
+Phase: 8 — People Editor
+Plan: Not started
+Status: Ready to plan Phase 08
+Last activity: 2026-06-17 — Phase 07 complete, transitioned to Phase 8
 
-Progress: [████████░░] 80%
+Progress: [██████████░░] 3/4 phases complete (13/13 plans)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 15 (v1.0)
+- Total plans completed: 23 (v1.0)
 - Average duration: ~40 min
 - Total execution time: ~10 hours (v1.0)
 
@@ -48,6 +51,7 @@ Progress: [████████░░] 80%
 | 02-speaker-resolution | 4 | — | — |
 | 03-full-ui | 4 | — | — |
 | 04-accessibility-hardening | 2 | — | — |
+| 07 | 8 | - | - |
 
 *Updated after each plan completion*
 | Phase 05 P01 | 10 | - tasks | - files |
@@ -111,10 +115,10 @@ None yet.
 
 ### Blockers/Concerns
 
-- Phase 7 has multiple interacting failure modes (subprocess management, job state machine, Spaces upload) — use `--research` flag when planning Phase 7
 - `BODY_SIZE_LIMIT` default 512KB blocks real SCOTUS PDFs — must set `BODY_SIZE_LIMIT=10M` in DO App Platform env
 - `ORIGIN` env var missing on DO causes silent CSRF 403 at login — set `ORIGIN`, `PROTOCOL_HEADER`, `HOST_HEADER` in DO env vars
 - `admin.scotuschat.com` DNS entry must be created before deployment smoke test
+- ⚠️ [Phase 7] 07-UAT.md status: diagnosed (gaps fixed via plans 07-07/08; not re-verified after fix); 07-VERIFICATION.md status: human_needed (requires running server)
 
 ## Deferred Items
 
@@ -128,14 +132,6 @@ Items acknowledged and deferred at v1.0 milestone close:
 
 ## Session Continuity
 
-Last session: 2026-06-17T16:00:00Z
-Stopped at: Phase 07 Plan 07 complete — ready to execute Plan 08 (arguments.resolved_at migration)
+Last session: 2026-06-17
+Stopped at: Phase 07 complete, ready to plan Phase 08 (People Editor)
 Resume file: None
-
-## Operator Next Steps
-
-Phase 6 is complete. Before starting Phase 7:
-
-1. (Recommended) Fix known layout nesting bugs: admin nav shows on /admin/login, doubled SCOTUS CHAT header — see 06-03-SUMMARY.md Known Issues section
-2. Run `/gsd:plan-phase 7` with `--research` flag (Phase 7 has complex failure modes)
-3. Ensure DO env vars set: `BODY_SIZE_LIMIT=10M`, `ORIGIN`, `PROTOCOL_HEADER`, `HOST_HEADER`

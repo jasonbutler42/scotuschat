@@ -142,6 +142,9 @@ class Argument(Base):
     id = Column(Integer, primary_key=True)
     argued_date = Column(Date, nullable=False)
     question_number = Column(Integer, nullable=False, default=1)  # Q1 or Q2
+    # NULL = resolve not yet completed → hidden from /cases/ (public visibility gate)
+    # Non-NULL = resolve completed; argument is visible in the public case list
+    resolved_at = Column(DateTime(timezone=True), nullable=True)
     # cases linked via case_arguments M:M join table
 
 

@@ -77,7 +77,7 @@ async def run_parse(args) -> None:
     try:
         await _run_parse_inner(args)
     except Exception as exc:
-        if args.job_id:
+        if args.job_id is not None:
             try:
                 async with get_session() as session:
                     await session.execute(
@@ -100,7 +100,7 @@ async def _run_parse_inner(args) -> None:
     # ------------------------------------------------------------------
     # Step 0: Mark admin_jobs RUNNING (job-driven path only)
     # ------------------------------------------------------------------
-    if args.job_id:
+    if args.job_id is not None:
         async with get_session() as session:
             await session.execute(
                 update(AdminJob)
@@ -266,7 +266,7 @@ async def _run_parse_inner(args) -> None:
     # Note: current_step stays PARSE — poll endpoint advances to RESOLVE
     # atomically using the step-advance guard (Pattern 3 / D-05).
     # ------------------------------------------------------------------
-    if args.job_id:
+    if args.job_id is not None:
         async with get_session() as session:
             await session.execute(
                 update(AdminJob)

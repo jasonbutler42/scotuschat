@@ -87,7 +87,7 @@ async def run_resolve(args) -> None:
     try:
         await _run_resolve_inner(args)
     except Exception as exc:
-        if args.job_id:
+        if args.job_id is not None:
             try:
                 async with get_session() as session:
                     await session.execute(
@@ -110,7 +110,7 @@ async def _run_resolve_inner(args) -> None:
     # ------------------------------------------------------------------
     # Step 0: Mark admin_jobs RUNNING (job-driven path only)
     # ------------------------------------------------------------------
-    if args.job_id:
+    if args.job_id is not None:
         async with get_session() as session:
             await session.execute(
                 update(AdminJob)
@@ -307,7 +307,7 @@ async def _run_resolve_inner(args) -> None:
                 resolve_run.completed_at = datetime.now(timezone.utc)
                 await session.flush()
 
-                if args.job_id:
+                if args.job_id is not None:
                     # Job-driven: write discrepancies to admin_jobs, then exit
                     # Flush/commit the resolve run update first
                     # (session commits on clean __aexit__ below)

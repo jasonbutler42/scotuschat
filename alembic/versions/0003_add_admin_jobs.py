@@ -28,19 +28,45 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     # ------------------------------------------------------------------
     # Create PostgreSQL enum types before the table that uses them.
-    # Enum types must exist before the columns referencing them.
-    # Use checkfirst=True to handle re-entrant upgrades safely.
+    # CREATE TYPE has no IF NOT EXISTS clause in any PG version, so we
+    # check pg_type manually. This handles the partial-migration case where
+    # the types exist but the table does not (asyncpg also ignores
+    # SQLAlchemy's checkfirst inspection path, making the ORM helper unsafe).
+    # create_type=False on the Enum objects prevents op.create_table from
+    # triggering a second unconditional CREATE TYPE for the same names.
     # ------------------------------------------------------------------
-    admin_job_status = sa.Enum(
+    conn = op.get_bind()
+    for type_name, ddl in [
+        (
+            "admin_job_status",
+            "CREATE TYPE admin_job_status AS ENUM "
+            "('pending', 'running', 'paused', 'completed', 'failed')",
+        ),
+        (
+            "admin_job_step",
+            "CREATE TYPE admin_job_step AS ENUM ('ingest', 'parse', 'resolve')",
+        ),
+    ]:
+        exists = conn.execute(
+            sa.text("SELECT 1 FROM pg_type WHERE typname = :n"),
+            {"n": type_name},
+        ).fetchone()
+        if not exists:
+            conn.execute(sa.text(ddl))
+
+    # postgresql.ENUM with create_type=False references the existing PG type without
+    # triggering a second CREATE TYPE. sa.Enum ignores create_type=False in its
+    # _on_table_create in this SQLAlchemy version, so we use the PG-specific type.
+    admin_job_status = postgresql.ENUM(
         "pending", "running", "paused", "completed", "failed",
         name="admin_job_status",
+        create_type=False,
     )
-    admin_job_step = sa.Enum(
+    admin_job_step = postgresql.ENUM(
         "ingest", "parse", "resolve",
         name="admin_job_step",
+        create_type=False,
     )
-    admin_job_status.create(op.get_bind(), checkfirst=True)
-    admin_job_step.create(op.get_bind(), checkfirst=True)
 
     # ------------------------------------------------------------------
     # Table 12: admin_jobs

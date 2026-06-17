@@ -232,20 +232,23 @@
 		fd.append('role_name', s.newPersonRole);
 
 		try {
+			// Add x-sveltekit-action header so SvelteKit returns the action result
+			// as a JSON envelope { type, status, data } instead of an HTML redirect.
 			const res = await fetch(`?/addPerson`, {
 				method: 'POST',
+				headers: { 'x-sveltekit-action': 'true' },
 				body: fd,
 			});
-			const result = await res.json();
+			const envelope = await res.json();
 
-			if (!res.ok || result?.type === 'failure') {
-				s.newPersonError = result?.data?.error ?? 'Could not create person. Please try again.';
+			if (envelope?.type === 'failure') {
+				s.newPersonError = envelope?.data?.error ?? 'Could not create person. Please try again.';
 				s.submittingNewPerson = false;
 				return;
 			}
 
 			// Success — add new person to extraCandidates and select them.
-			const person = result?.data?.person ?? result?.person;
+			const person = envelope?.data?.person;
 			if (person) {
 				s.extraCandidates = [...s.extraCandidates, { id: person.id, full_name: person.full_name, role_name: person.role_name ?? null }];
 				s.person_id = person.id;

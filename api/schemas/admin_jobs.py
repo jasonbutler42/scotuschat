@@ -58,5 +58,6 @@ class PersonResponse(BaseModel):
     id: int
     full_name: str
     role_id: Optional[int] = None
+    role_name: Optional[str] = None
 
     model_config = {"from_attributes": True}

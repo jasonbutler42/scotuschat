@@ -219,8 +219,15 @@ async def resolve_job(
                 f"(referenced by raw_speaker_label={match.raw_speaker_label!r})"
             )
 
-    # Step 1c: Derive the parse run-id so we can scope the Utterance UPDATE
+    # Step 1c: Derive the parse run-id so we can scope the Utterance UPDATE.
+    # WR-05: treat a missing parse_run_id as an error — a None would broaden the
+    # Utterance UPDATE to all parse runs for the argument, corrupting prior runs.
     parse_run_id = await get_run_id_for_step(db, job_id, "parse")
+    if parse_run_id is None:
+        raise ValueError(
+            f"No parse pipeline_run found for AdminJob {job_id}. "
+            "Cannot scope utterance updates without a parse run id."
+        )
 
     # Step 2: Apply each match
     for match in matches:
@@ -248,17 +255,15 @@ async def resolve_job(
             )
 
         # Step 2b: UPDATE Utterance.person_id (scope by argument + parse run)
+        # parse_run_id is guaranteed non-None here (checked at step 1c above)
         if job.argument_id is not None:
-            utterance_where = [
-                Utterance.argument_id == job.argument_id,
-                Utterance.raw_speaker_label == match.raw_speaker_label,
-            ]
-            if parse_run_id is not None:
-                utterance_where.append(Utterance.pipeline_run_id == parse_run_id)
-
             await db.execute(
                 update(Utterance)
-                .where(*utterance_where)
+                .where(
+                    Utterance.argument_id == job.argument_id,
+                    Utterance.raw_speaker_label == match.raw_speaker_label,
+                    Utterance.pipeline_run_id == parse_run_id,
+                )
                 .values(person_id=match.person_id)
                 .execution_options(synchronize_session=False)
             )

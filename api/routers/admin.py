@@ -51,7 +51,16 @@ from api.schemas.admin_jobs import (
     PersonResponse,
     ResolveRequest,
 )
+from api.schemas.admin_people import (
+    ParticipantItem,
+    PersonDetail,
+    PersonListItem,
+    PersonUpdate,
+    RoleCreate,
+    RoleResponse,
+)
 from api.services import admin_jobs as jobs_service
+from api.services import admin_people as people_service
 from api.services import spaces as spaces_service
 from api.services.pipeline_spawn import spawn_pipeline_step
 
@@ -276,18 +285,23 @@ async def resolve_job(
     return updated_job  # type: ignore[return-value]
 
 
-@router.get("/people", response_model=list[PersonResponse])
+@router.get("/people", response_model=list[PersonListItem])
 async def list_people(
+    incomplete: bool = False,
     db: AsyncSession = Depends(get_db),
-) -> list[PersonResponse]:
+) -> list[PersonListItem]:
     """
-    Return all Person rows sorted by full_name for the discrepancy review typeahead.
+    Return all Person rows with role name and missing-fields list (PEOPLE-01, PEOPLE-02).
 
-    Used by the [job_id] load function so operators can correct wrong auto-matches
-    against the full roster (Gap 1b fix, Plan 07-07).
+    Query param:
+    - incomplete=false (default): return all people
+    - incomplete=true: return only people where role_id OR bio_text OR photo_url is NULL
+
+    PersonListItem is a superset of the old PersonResponse (adds role_id + missing),
+    so Phase 7 typeahead consumers (which read id/full_name/role_name) still work.
     """
-    people = await jobs_service.list_people(db)
-    return [PersonResponse(**p) for p in people]
+    people = await people_service.list_people(db, incomplete=incomplete)
+    return [PersonListItem(**p) for p in people]
 
 
 @router.post("/jobs/{job_id}/people", status_code=201, response_model=PersonResponse)
@@ -308,3 +322,74 @@ async def create_person_for_job(
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return person  # type: ignore[return-value]
+
+
+@router.get("/people/{person_id}", response_model=PersonDetail)
+async def get_person(
+    person_id: int,
+    db: AsyncSession = Depends(get_db),
+) -> PersonDetail:
+    """
+    Return full person data for the edit form (PEOPLE-03, D-07, D-08).
+
+    Includes all tenure rows for the person ordered by start_date.
+    Returns 404 if the person does not exist (T-08-IDOR).
+    """
+    person = await people_service.get_person_detail(db, person_id)
+    if person is None:
+        raise HTTPException(status_code=404, detail="Person not found")
+    return PersonDetail(**person)
+
+
+@router.patch("/people/{person_id}", response_model=PersonDetail)
+async def update_person(
+    person_id: int,
+    body: PersonUpdate,
+    db: AsyncSession = Depends(get_db),
+) -> PersonDetail:
+    """
+    Update a person's name, role, bio, photo, and tenure rows (PEOPLE-03, D-09).
+
+    Mass-assignment guard: PersonUpdate ONLY exposes full_name, role_id, bio_text,
+    photo_url, tenures — no other Person columns can be set (T-08-MASS).
+    Returns 404 if the person does not exist (T-08-IDOR).
+    Returns 422 if a tenure date string is malformed (T-08-DATE).
+    """
+    try:
+        updated = await people_service.update_person(db, person_id, body)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    if updated is None:
+        raise HTTPException(status_code=404, detail="Person not found")
+    return PersonDetail(**updated)
+
+
+@router.post("/roles", status_code=201, response_model=RoleResponse)
+async def create_role(
+    body: RoleCreate,
+    db: AsyncSession = Depends(get_db),
+) -> RoleResponse:
+    """
+    Find-or-create a role by name (D-10, inline role creation from the edit form).
+
+    Returns 201 + RoleResponse whether the role was just created or already existed.
+    """
+    role = await people_service.create_role(db, body.name)
+    return RoleResponse(**role)
+
+
+@router.get("/jobs/{job_id}/participants", response_model=list[ParticipantItem])
+async def list_participants(
+    job_id: int,
+    db: AsyncSession = Depends(get_db),
+) -> list[ParticipantItem]:
+    """
+    Return resolved participants for the argument linked to this job (D-02, PEOPLE-04).
+
+    Only includes participants where person_id IS NOT NULL (resolved by the pipeline).
+    Returns 404 if the job does not exist or has no argument linked yet.
+    """
+    participants = await people_service.list_participants_for_job(db, job_id)
+    if participants is None:
+        raise HTTPException(status_code=404, detail="Job not found or has no argument")
+    return [ParticipantItem(**p) for p in participants]

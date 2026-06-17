@@ -141,17 +141,20 @@
 	};
 
 	function stepStatus(step: StepName, job: Job): string {
-		const current = job.current_step?.toLowerCase() as StepName;
-		const currentIdx = STEP_ORDER.indexOf(current);
+		const current = job.current_step?.toLowerCase() as StepName | undefined;
+		const currentIdx = current !== undefined ? STEP_ORDER.indexOf(current) : -1;
 		const thisIdx = STEP_ORDER.indexOf(step);
 
 		if (job.status === 'completed') return 'completed';
-		if (job.status === 'failed' && step === current) return 'failed';
-		if (job.status === 'failed' && thisIdx < currentIdx) return 'completed';
-		if (job.status === 'failed' && thisIdx > currentIdx) return 'pending';
+		if (job.status === 'failed') {
+			// WR-03: when current_step is null (job failed before any step wrote it),
+			// show the first step as failed and the rest as pending rather than all pending.
+			if (currentIdx === -1) return step === STEP_ORDER[0] ? 'failed' : 'pending';
+			if (step === current) return 'failed';
+			return thisIdx < currentIdx ? 'completed' : 'pending';
+		}
 		if (job.status === 'paused' && step === 'resolve') return 'paused';
-		if (job.status === 'paused' && thisIdx < currentIdx) return 'completed';
-		if (job.status === 'paused' && thisIdx > currentIdx) return 'pending';
+		if (job.status === 'paused') return thisIdx < currentIdx ? 'completed' : 'pending';
 		if (thisIdx < currentIdx) return 'completed';
 		if (thisIdx === currentIdx) return job.status === 'running' ? 'running' : 'pending';
 		return 'pending';

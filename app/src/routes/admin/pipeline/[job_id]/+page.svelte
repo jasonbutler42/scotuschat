@@ -19,6 +19,7 @@
 		auto_match_id?: number | null;
 		auto_match_name?: string | null;
 		auto_match_role?: string | null;
+		auto_resolved?: boolean | null;
 		candidates: Candidate[];
 	}
 
@@ -68,14 +69,17 @@
 
 	// Initialise row states when discrepancies arrive (status=paused).
 	// Only initialise for rows not already tracked (preserve in-progress work on re-renders).
+	// HIT rows (auto_resolved === true) start pre-dispositioned as 'confirmed' so no
+	// explicit Confirm click is required ([07-07] Gap 1a fix).
 	$effect(() => {
 		const disc = data.job.discrepancies;
 		if (!disc) return;
 		for (const row of disc) {
 			if (!(row.raw_speaker_label in rowStates)) {
+				const isHit = row.auto_resolved === true;
 				rowStates[row.raw_speaker_label] = {
 					person_id: row.auto_match_id ?? null,
-					disposition: null,
+					disposition: isHit ? 'confirmed' : null,
 					correcting: false,
 					addingPerson: false,
 					extraCandidates: [],
@@ -221,53 +225,19 @@
 		}
 	}
 
-	async function handleAddPerson(label: string) {
-		const s = rowStates[label];
-		if (!s) return;
-
-		s.submittingNewPerson = true;
-		s.newPersonError = null;
-
-		const fd = new FormData();
-		fd.append('full_name', s.newPersonName);
-		fd.append('role_name', s.newPersonRole);
-
-		try {
-			// Add x-sveltekit-action header so SvelteKit returns the action result
-			// as a JSON envelope { type, status, data } instead of an HTML redirect.
-			const res = await fetch(`?/addPerson`, {
-				method: 'POST',
-				headers: { 'x-sveltekit-action': 'true' },
-				body: fd,
-			});
-			const envelope = await res.json();
-
-			if (envelope?.type === 'failure') {
-				s.newPersonError = envelope?.data?.error ?? 'Could not create person. Please try again.';
-				s.submittingNewPerson = false;
-				return;
-			}
-
-			// Success — add new person to extraCandidates and select them.
-			const person = envelope?.data?.person;
-			if (person) {
-				s.extraCandidates = [...s.extraCandidates, { id: person.id, full_name: person.full_name, role_name: person.role_name ?? null }];
-				s.person_id = person.id;
-				s.disposition = 'corrected';
-				s.addingPerson = false;
-				s.newPersonName = '';
-				s.newPersonRole = '';
-			}
-		} catch {
-			s.newPersonError = 'Could not create person. Please try again.';
-		} finally {
-			s.submittingNewPerson = false;
-		}
-	}
-
 	function getRowCandidates(row: Discrepancy, label: string): Candidate[] {
 		const extra = rowStates[label]?.extraCandidates ?? [];
-		return [...row.candidates, ...extra];
+		// Merge the full people roster (loaded by the server) so HIT rows also have a
+		// populated typeahead when the operator clicks Change ([07-07] Gap 1b fix).
+		// De-duplicate by id — row.candidates (empty for HITs) takes precedence via the
+		// Set filter below; data.people provides the broad roster.
+		const allCandidates = [...(data.people ?? []), ...row.candidates, ...extra];
+		const seen = new Set<number>();
+		return allCandidates.filter((c) => {
+			if (seen.has(c.id)) return false;
+			seen.add(c.id);
+			return true;
+		});
 	}
 </script>
 
@@ -457,78 +427,114 @@
 													<option value="— Add new person —"></option>
 												</datalist>
 
-												<!-- AddNewPersonForm: inline below dropdown when Add new person selected -->
+												<!-- AddNewPersonForm: inline below dropdown when Add new person selected.
+												     Uses use:enhance so SvelteKit handles devalue deserialization
+												     automatically ([07-07] Gap 2 fix). -->
 												{#if s.addingPerson}
 													<div style="margin-top: 12px; padding: 12px; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px;">
-														<div style="margin-bottom: 8px;">
-															<label
-																for="new-person-name-{rowKey}"
-																style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 4px;"
-															>
-																Full name
-															</label>
-															<input
-																id="new-person-name-{rowKey}"
-																type="text"
-																bind:value={s.newPersonName}
-																style="
-																	background-color: #0f1117;
-																	border: 1px solid #334155;
-																	border-radius: 6px;
-																	padding: 8px 12px;
-																	font-size: 16px;
-																	color: #e2e8f0;
-																	width: 100%;
-																	box-sizing: border-box;
-																"
-															/>
-														</div>
-														<div style="margin-bottom: 12px;">
-															<label
-																for="new-person-role-{rowKey}"
-																style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 4px;"
-															>
-																Role
-															</label>
-															<input
-																id="new-person-role-{rowKey}"
-																type="text"
-																bind:value={s.newPersonRole}
-																style="
-																	background-color: #0f1117;
-																	border: 1px solid #334155;
-																	border-radius: 6px;
-																	padding: 8px 12px;
-																	font-size: 16px;
-																	color: #e2e8f0;
-																	width: 100%;
-																	box-sizing: border-box;
-																"
-															/>
-														</div>
-														{#if s.newPersonError}
-															<p role="alert" style="color: #ef4444; font-size: 14px; margin: 0 0 8px 0;">
-																{s.newPersonError}
-															</p>
-														{/if}
-														<button
-															type="button"
-															disabled={s.submittingNewPerson || !s.newPersonName.trim()}
-															onclick={() => handleAddPerson(rowKey)}
-															style="
-																font-size: 14px;
-																font-weight: 600;
-																color: #e2e8f0;
-																background: transparent;
-																border: 1px solid #93c5fd;
-																border-radius: 6px;
-																padding: 8px 16px;
-																min-height: 36px;
-																cursor: pointer;
-															"
+														<form
+															method="POST"
+															action="?/addPerson"
+															use:enhance={() => {
+																const label = rowKey;
+																const st = rowStates[label];
+																if (st) {
+																	st.submittingNewPerson = true;
+																	st.newPersonError = null;
+																}
+																return async ({ result }) => {
+																	const st2 = rowStates[label];
+																	if (!st2) return;
+																	if (result.type === 'failure') {
+																		st2.newPersonError = (result.data as { error?: string })?.error ?? 'Could not create person. Please try again.';
+																	} else if (result.type === 'success') {
+																		// use:enhance devalue-deserializes result.data automatically
+																		const person = (result.data as { person?: { id: number; full_name: string; role_name?: string | null } })?.person;
+																		if (person) {
+																			st2.extraCandidates = [...st2.extraCandidates, { id: person.id, full_name: person.full_name, role_name: person.role_name ?? null }];
+																			st2.person_id = person.id;
+																			st2.disposition = 'corrected';
+																			st2.addingPerson = false;
+																			st2.newPersonName = '';
+																			st2.newPersonRole = '';
+																		}
+																	}
+																	st2.submittingNewPerson = false;
+																	// Do NOT call update() with reset — that wipes rowStates
+																};
+															}}
 														>
-															{s.submittingNewPerson ? 'Saving…' : 'Save person'}
-														</button>
+															<div style="margin-bottom: 8px;">
+																<label
+																	for="new-person-name-{rowKey}"
+																	style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 4px;"
+																>
+																	Full name
+																</label>
+																<input
+																	id="new-person-name-{rowKey}"
+																	name="full_name"
+																	type="text"
+																	bind:value={s.newPersonName}
+																	style="
+																		background-color: #0f1117;
+																		border: 1px solid #334155;
+																		border-radius: 6px;
+																		padding: 8px 12px;
+																		font-size: 16px;
+																		color: #e2e8f0;
+																		width: 100%;
+																		box-sizing: border-box;
+																	"
+																/>
+															</div>
+															<div style="margin-bottom: 12px;">
+																<label
+																	for="new-person-role-{rowKey}"
+																	style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 4px;"
+																>
+																	Role
+																</label>
+																<input
+																	id="new-person-role-{rowKey}"
+																	name="role_name"
+																	type="text"
+																	bind:value={s.newPersonRole}
+																	style="
+																		background-color: #0f1117;
+																		border: 1px solid #334155;
+																		border-radius: 6px;
+																		padding: 8px 12px;
+																		font-size: 16px;
+																		color: #e2e8f0;
+																		width: 100%;
+																		box-sizing: border-box;
+																	"
+																/>
+															</div>
+															{#if s.newPersonError}
+																<p role="alert" style="color: #ef4444; font-size: 14px; margin: 0 0 8px 0;">
+																	{s.newPersonError}
+																</p>
+															{/if}
+															<button
+																type="submit"
+																disabled={s.submittingNewPerson || !s.newPersonName.trim()}
+																style="
+																	font-size: 14px;
+																	font-weight: 600;
+																	color: #e2e8f0;
+																	background: transparent;
+																	border: 1px solid #93c5fd;
+																	border-radius: 6px;
+																	padding: 8px 16px;
+																	min-height: 36px;
+																	cursor: pointer;
+																"
+															>
+																{s.submittingNewPerson ? 'Saving…' : 'Save person'}
+															</button>
+														</form>
 													</div>
 												{/if}
 											{:else}
@@ -550,8 +556,27 @@
 												padding: 12px 0;
 											"
 										>
-											{#if s?.disposition !== null && s?.disposition !== undefined}
-												<!-- Row is dispositioned — show Override button to reopen correction flow -->
+											{#if row.auto_resolved === true}
+												<!-- HIT row: single Change button — operator clicks to re-pick from full roster ([07-07] Gap 1a) -->
+												<button
+													type="button"
+													onclick={() => handleCorrect(rowKey)}
+													style="
+														font-size: 14px;
+														font-weight: 400;
+														color: #e2e8f0;
+														background: transparent;
+														border: 1px solid #334155;
+														border-radius: 4px;
+														padding: 6px 12px;
+														cursor: pointer;
+														min-height: 32px;
+													"
+												>
+													Change
+												</button>
+											{:else if s?.disposition !== null && s?.disposition !== undefined}
+												<!-- MISS row is dispositioned — Override reopens correction flow -->
 												<button
 													type="button"
 													onclick={() => {
@@ -577,6 +602,7 @@
 													Override
 												</button>
 											{:else}
+												<!-- MISS row not yet dispositioned — Confirm (if auto_match_id) + Correct -->
 												<div style="display: flex; gap: 8px; flex-wrap: wrap;">
 													{#if row.auto_match_id}
 														<button

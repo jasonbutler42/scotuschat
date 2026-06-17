@@ -1,9 +1,9 @@
 ---
-status: partial
+status: diagnosed
 phase: 07-pipeline-runner
 source: 07-01-SUMMARY.md, 07-02-SUMMARY.md, 07-03-SUMMARY.md, 07-04-SUMMARY.md, 07-05-SUMMARY.md, 07-06-SUMMARY.md
 started: 2026-06-16T00:00:00Z
-updated: 2026-06-17T02:00:00Z
+updated: 2026-06-17T03:00:00Z
 ---
 
 ## Current Test
@@ -93,28 +93,56 @@ blocked: 1
   reason: "User reported: UX has Confirm+Override instead of single Change button; typeahead for HIT rows only shows Add New Person — can't correct a wrong auto-match."
   severity: major
   test: 10
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: |
+    Two separate causes. (1) Button UX: rowStates init in +page.svelte ignores auto_resolved — all rows start with disposition: null, so HIT rows fall into the same Confirm+Correct rendering branch as MISS rows. auto_resolved field is never read in the template (lines 71-89, 553-618). (2) Empty typeahead: resolve.py line 243 explicitly writes candidates: [] for HIT rows ('HIT rows need no candidates'). No separate people list is loaded in +page.server.ts load(). getRowCandidates() only returns row.candidates + extraCandidates, both empty for HIT rows.
+  artifacts:
+    - path: "pipeline/commands/resolve.py"
+      issue: "Line 243 writes candidates: [] for HIT rows — full people list omitted intentionally but incorrectly"
+    - path: "app/src/routes/admin/pipeline/[job_id]/+page.svelte"
+      issue: "rowStates init (lines 71-89) ignores auto_resolved; Column 3 rendering (lines 553-618) has no HIT-specific branch"
+    - path: "app/src/routes/admin/pipeline/[job_id]/+page.server.ts"
+      issue: "load() fetches only the job row — no people list loaded for typeahead"
+  missing:
+    - "Initialize HIT rows with disposition: 'confirmed' in rowStates; render single Change button for auto_resolved===true rows"
+    - "Populate candidates for HIT rows in resolve.py (same as MISS rows) OR load all people in +page.server.ts and pass to getRowCandidates()"
+  debug_session: ".planning/debug/discrepancy-ux-typeahead.md"
 
 - truth: "Selecting 'Add new person' creates the person server-side, dismisses the inline form, and auto-selects them in that row."
   status: failed
   reason: "User reported: Save Person button flashes Saving... then nothing — form stays visible, no selection made. Person not persisted after page refresh."
   severity: major
   test: 11
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: |
+    handleAddPerson uses a raw fetch with two compounding bugs that prevent the success branch from executing. (1) Missing Accept: application/json header — SvelteKit's is_action_json_request() gates the JSON action path on this header, not on x-sveltekit-action. Without it, SvelteKit returns an HTML redirect response; calling res.json() on HTML either throws (caught silently) or returns malformed data. (2) Uses res.json() instead of deserialize(await res.text()) — SvelteKit serializes action return values via devalue.stringify(), not plain JSON. After res.json(), envelope.data is a raw devalue string; accessing envelope.data.person yields undefined, so the state-update branch never runs and the form stays visible.
+  artifacts:
+    - path: "app/src/routes/admin/pipeline/[job_id]/+page.svelte"
+      issue: "handleAddPerson (lines 236-243): missing Accept: application/json header; uses res.json() instead of deserialize(await res.text()) from $app/forms"
+  missing:
+    - "Add Accept: application/json to fetch headers in handleAddPerson"
+    - "Replace res.json() with deserialize(await res.text()) importing deserialize from $app/forms"
+    - "Preferred: replace raw fetch entirely with use:enhance on a <form> element — handles both headers and devalue deserialization idiomatically"
+  debug_session: ".planning/debug/add-person-silent-fail.md"
 
 - truth: "Cases only appear in /cases/ after resolve is complete with real case metadata (docket number, argued date, title)."
   status: failed
   reason: "User reported: newly ingested arguments appear in /cases/ before resolution with placeholder titles like 'Pending review (job 3)' and metadata like 'No. job-3 · Argued June 17, 2026 · Question 1'."
   severity: major
   test: 0
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: |
+    Two cooperating defects. (1) ingest.py creates Case/Argument/CaseArgument rows at ingest time with synthetic placeholder values (case_name='Pending review (job N)', docket_number='job-N', argued_date=today()) and commits them. The CaseArgument is_lead=True row is also created at this point, immediately satisfying the API query's only filter. (2) The Case and Argument models have no visibility/status column (no resolved_at, is_published, or status field) — confirmed across all three Alembic migrations. get_cases() in api/services/cases.py queries all Cases with a lead CaseArgument with no resolve-completion filter. Resolve never updates case metadata or sets any visibility flag.
+  artifacts:
+    - path: "pipeline/commands/ingest.py"
+      issue: "Creates Case/Argument/CaseArgument rows with placeholder metadata at ingest time, before parse or resolve"
+    - path: "api/services/cases.py"
+      issue: "get_cases() has no resolve-completion filter; no column exists to add one without a migration"
+    - path: "api/models/models.py"
+      issue: "Case and Argument models have no resolved_at, is_published, or status column"
+    - path: "pipeline/commands/resolve.py"
+      issue: "Resolve never updates case metadata or sets a visibility flag after completion"
+  missing:
+    - "Add resolved_at TIMESTAMPTZ nullable column to arguments table via new Alembic migration"
+    - "Set arguments.resolved_at = now() in resolve.py when job reaches COMPLETED state"
+    - "Add WHERE arguments.resolved_at IS NOT NULL filter to get_cases() in api/services/cases.py"
+    - "Update case metadata (case_name, docket_number, argued_date) from resolved data in resolve.py"
+  debug_session: ".planning/debug/cases-premature-visibility.md"
 

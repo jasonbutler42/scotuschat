@@ -19,10 +19,13 @@ Critical guards (mirroring pipeline/commands/resolve.py):
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from sqlalchemy import func
+
 from api.models.models import (
     AdminJob,
     AdminJobStatus,
     AdminJobStep,
+    Argument,
     ArgumentParticipant,
     Person,
     PipelineRun,
@@ -262,13 +265,21 @@ async def resolve_job(
                 .execution_options(synchronize_session=False)
             )
 
-    # Step 3: Mark job COMPLETED
+    # Step 3: Mark job COMPLETED and stamp arguments.resolved_at
     await db.execute(
         update(AdminJob)
         .where(AdminJob.id == job_id)
         .values(status=AdminJobStatus.COMPLETED)
         .execution_options(synchronize_session=False)
     )
+    # Stamp resolved_at so the argument becomes visible in /cases/ (Gap 3 gate)
+    if job.argument_id is not None:
+        await db.execute(
+            update(Argument)
+            .where(Argument.id == job.argument_id)
+            .values(resolved_at=func.now())
+            .execution_options(synchronize_session=False)
+        )
     await db.commit()
 
     # Reload and return the updated job

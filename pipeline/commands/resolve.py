@@ -50,6 +50,7 @@ from api.models.models import (
     AdminJob,
     AdminJobStatus,
     AdminJobStep,
+    Argument,
     ArgumentParticipant,
     Person,
     PipelineRun,
@@ -148,6 +149,9 @@ async def _run_resolve_inner(args) -> None:
         )
         session.add(resolve_run)
         await session.flush()  # get resolve_run.id
+
+        # Capture argument_id for post-session resolved_at update (Gap 3 gate)
+        resolved_argument_id: int = parse_run.argument_id
 
         # Track which person_id was assigned to each raw_label
         # for the argument_participants update (Step 5)
@@ -362,6 +366,7 @@ async def _run_resolve_inner(args) -> None:
 
     # ----------------------------------------------------------------
     # Mark admin_jobs COMPLETED when all labels auto-resolved (job-driven)
+    # Also stamp arguments.resolved_at so the case becomes visible in /cases/
     # ----------------------------------------------------------------
     if not discrepancies and args.job_id:
         async with get_session() as session:
@@ -370,5 +375,12 @@ async def _run_resolve_inner(args) -> None:
                 .where(AdminJob.id == args.job_id)
                 .values(status=AdminJobStatus.COMPLETED)
                 .execution_options(synchronize_session=False)
+            )
+            # Stamp resolved_at — Gap 3 gate (argument visible in /cases/ only after resolve)
+            await session.execute(
+                update(Argument)
+                .where(Argument.id == resolved_argument_id)
+                .values(resolved_at=datetime.now(timezone.utc))
+                .execution_options(synchronize_session=False)  # Pitfall 3
             )
         print(f"Admin job {args.job_id} resolve step marked completed (all labels auto-resolved)")

@@ -31,13 +31,12 @@
 		>
 			Pipeline Runner
 		</a>
-		<span
-			aria-disabled="true"
-			aria-label="People Editor (coming soon)"
-			style="font-size: 14px; font-weight: 400; color: #94a3b8; opacity: 0.5; cursor: default;"
+		<a
+			href="/admin/people"
+			style="font-size: 14px; font-weight: 400; color: #94a3b8; text-decoration: none;"
 		>
 			People Editor
-		</span>
+		</a>
 
 		<!-- Logout form — pushed to the right with margin-left: auto.
 		     Targets the logout named action on /admin (admin/+page.server.ts).

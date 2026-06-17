@@ -411,6 +411,7 @@
 											{:else if s?.correcting}
 												<!-- Typeahead combobox: text input + datalist for filter-as-you-type -->
 												{@const listId = `candidates-${rowKey.replace(/\s+/g, '-')}`}
+											{@const candidates = getRowCandidates(row, rowKey)}
 												<input
 													list={listId}
 													type="text"
@@ -427,8 +428,7 @@
 													"
 													oninput={(e) => {
 														const val = (e.target as HTMLInputElement).value;
-														const allC = getRowCandidates(row, rowKey);
-														const match = allC.find(c => {
+														const match = candidates.find(c => {
 															const display = c.role_name ? `${c.full_name} (${c.role_name})` : c.full_name;
 															return display === val;
 														});
@@ -440,7 +440,7 @@
 													}}
 												/>
 												<datalist id={listId}>
-													{#each getRowCandidates(row, rowKey) as candidate (candidate.id)}
+													{#each candidates as candidate (candidate.id)}
 														<option value={candidate.role_name ? `${candidate.full_name} (${candidate.role_name})` : candidate.full_name}></option>
 													{/each}
 													<option value="— Add new person —"></option>

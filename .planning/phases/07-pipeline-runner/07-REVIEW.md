@@ -1,66 +1,78 @@
 ---
 phase: 07-pipeline-runner
-reviewed: 2026-06-17T12:00:00Z
+reviewed: 2026-06-17T15:00:00Z
 depth: standard
-files_reviewed: 8
+files_reviewed: 18
 files_reviewed_list:
-  - app/src/routes/admin/pipeline/[job_id]/+page.server.ts
-  - app/src/routes/admin/pipeline/[job_id]/+page.svelte
+  - alembic/versions/0004_add_arguments_resolved_at.py
+  - api/core/config.py
+  - api/models/models.py
   - api/routers/admin.py
+  - api/schemas/admin_jobs.py
   - api/services/admin_jobs.py
   - api/services/cases.py
-  - api/models/models.py
-  - alembic/versions/0004_add_arguments_resolved_at.py
+  - api/services/pipeline_spawn.py
+  - api/services/spaces.py
+  - app/src/routes/admin/+layout.svelte
+  - app/src/routes/admin/pipeline/+page.server.ts
+  - app/src/routes/admin/pipeline/+page.svelte
+  - app/src/routes/admin/pipeline/[job_id]/+page.server.ts
+  - app/src/routes/admin/pipeline/[job_id]/+page.svelte
+  - pipeline/__main__.py
+  - pipeline/commands/ingest.py
+  - pipeline/commands/parse.py
   - pipeline/commands/resolve.py
 findings:
-  critical: 4
-  warning: 6
-  info: 3
-  total: 13
+  critical: 5
+  warning: 8
+  info: 4
+  total: 17
 status: issues_found
 ---
 
-# Phase 07: Code Review Report (Round 3 — gap-closure scope)
+# Phase 07: Code Review Report (Full Scope)
 
-**Reviewed:** 2026-06-17T12:00:00Z
+**Reviewed:** 2026-06-17T15:00:00Z
 **Depth:** standard
-**Files Reviewed:** 8
+**Files Reviewed:** 18
 **Status:** issues_found
 
 ## Summary
 
-This review covers the 8 files modified or introduced in the gap-closure plans (07-07 / 07-08):
-the `[job_id]` detail page (server + client), the admin router and service, the cases service,
-the ORM models, the migration for `resolved_at`, and the resolve pipeline command.
+This review covers all 18 files in the Phase 7 pipeline-runner implementation — 10 files not
+covered in the prior round-3 review plus the 8 files reviewed in that round. Prior-round findings
+that remain unresolved are carried forward with their original IDs.
 
-Four critical issues were found. The most impactful is that `pipeline/commands/resolve.py` still
-appends HIT rows (auto-resolved aliases) to the `discrepancies` list alongside MISS rows — the
-"all labels auto-resolved → mark COMPLETED" path (line 371) is permanently dead code for any
-transcript with utterances. This was identified in the previous round-2 review (CR-01) and has
-not been fixed. The second critical issue is that `resolve_job` in `admin_jobs.py` applies alias
-writes and stamps `resolved_at` without first verifying the job is in PAUSED state — a double
-POST or a stale browser can corrupt utterance data and make an already-completed argument
-invisible by overwriting a non-null `resolved_at` with a new timestamp. The third and fourth
-critical issues are in `+page.svelte`: `continueSubmitting` is never reset to `false` after a
-successful resolve submit (the button is permanently stuck as "Submitting…" if the polling
-`invalidateAll` doesn't change `data.job.status` in time), and `rowStates` initialisation never
-evicts stale rows when the server returns a different discrepancy set after a retry (operator
-can submit an out-of-date mapping).
+Five critical issues were found. The most impactful (CR-01, carried from round 3) is that
+`pipeline/commands/resolve.py` appends HIT rows alongside MISS rows into the `discrepancies`
+list, making the "all labels auto-resolved → COMPLETED" path permanently dead code for any
+transcript with utterances. A second critical (CR-02, carried) is that `resolve_job` in
+`admin_jobs.py` does not guard against being called on a non-PAUSED job — a double-submit or
+stale-browser POST will re-apply alias writes and overwrite `resolved_at`. CR-03 and CR-04
+(carried) are frontend bugs: `continueSubmitting` is never reset on success, and `rowStates`
+never evicts stale keys. A new critical (CR-05) was found in `pipeline/commands/parse.py`:
+when `--dry-run` is set, the code returns early inside the `async with get_session()` block
+after setting `run.status = PENDING`, which commits a live PipelineRun row with status=PENDING
+and strategy=None to the database — contradicting the docstring claim that dry-run "does not
+write to DB".
+
+Four files are clean: `api/core/config.py`, `api/schemas/admin_jobs.py`,
+`api/services/cases.py`, `app/src/routes/admin/+layout.svelte`.
 
 ---
 
 ## Critical Issues
 
-### CR-01: HIT rows appended to `discrepancies` — COMPLETED path is unreachable dead code
+### CR-01: HIT rows appended to `discrepancies` — COMPLETED path is dead code
 
 **File:** `pipeline/commands/resolve.py:243–253, 299–326, 350–386`
 
 **Issue:** Both HIT labels (alias found, lines 243–253) and MISS labels (no alias, lines
 269–279) are appended to the `discrepancies` list. Because HITs are included, `discrepancies`
-is non-empty for any transcript that contains any utterances. The branching at line 299
-(`if discrepancies:`) therefore always fires, setting
-`resolve_run.status = PipelineRunStatus.NEEDS_REVIEW` and — for the job-driven path — writing
-all rows to `admin_jobs.discrepancies` and setting `status=PAUSED`.
+is non-empty for any transcript that has utterances. The branch at line 299
+(`if discrepancies:`) therefore always fires, which sets
+`resolve_run.status = PipelineRunStatus.NEEDS_REVIEW` and — in job-driven mode — writes all
+rows to `admin_jobs.discrepancies` and sets `status=PAUSED`.
 
 Consequences:
 
@@ -68,30 +80,27 @@ Consequences:
    `AdminJob` COMPLETED and stamps `arguments.resolved_at` — can never execute for a real
    transcript. Cases are permanently invisible in `/cases/` even after full auto-resolve.
 
-2. **Dead code (line 325):** `resolve_run.status = PipelineRunStatus.COMPLETED` (the `else:`
-   branch of `if discrepancies:`) is never reached for a real transcript.
+2. **Dead code (line 325):** `resolve_run.status = PipelineRunStatus.COMPLETED` is never
+   reached for a real transcript.
 
 3. **Incorrect behavior:** Every job-driven resolve — including runs where every alias matched —
    unconditionally PAUSEs the job and forces an unnecessary browser confirmation round-trip.
 
-4. **Direct CLI (lines 307–321):** When `args.job_id is None`, the MISS-only print block
-   iterates the entire `discrepancies` list including HITs and prints all of them as "unresolved
-   labels", misleading operators.
+4. **Direct CLI mode (lines 307–321):** The MISS-only print block iterates the entire
+   `discrepancies` list including HITs and reports them all as "unresolved labels".
 
-This was flagged in the prior round-2 review (CR-01) and has not been fixed.
-
-**Fix:** Maintain separate lists for HITs and MISSes. For the job-driven path, the JSONB payload
-written to `admin_jobs.discrepancies` can contain HITs (so the browser can show them for
-confirmation), but the branching gate should be based on whether any MISSes exist:
+**Fix:** Maintain a separate `misses` list for MISS labels and key the branching gate on it,
+while still writing the full `discrepancies` list (HITs + MISSes) to the JSONB column so the
+browser can show auto-resolved labels for confirmation:
 
 ```python
-discrepancies: list[dict] = []   # ALL rows shown in browser (HITs + MISSes)
+discrepancies: list[dict] = []   # ALL rows for browser UI (HITs + MISSes)
 misses: list[str] = []           # raw labels with no alias — gate for PAUSED vs COMPLETED
 
-# HIT branch: append to discrepancies (for UI), do NOT add to misses
+# HIT branch — append to discrepancies only:
 discrepancies.append({..., "auto_resolved": True})
 
-# MISS branch: append to both
+# MISS branch — append to both:
 misses.append(raw_label)
 discrepancies.append({..., "auto_resolved": None})
 
@@ -100,21 +109,23 @@ if misses:
     resolve_run.status = PipelineRunStatus.NEEDS_REVIEW
     ...
     if args.job_id:
-        # write discrepancies JSONB (contains HITs + MISSes for browser UI)
+        # write full discrepancies JSONB (HITs + MISSes)
         ...
     else:
-        # CLI: print only MISSes
-        for label in misses:
+        for label in misses:   # CLI: print only MISSes
             print(f"  - {label!r}")
 else:
-    # All auto-resolved
     resolve_run.status = PipelineRunStatus.COMPLETED
     ...
 ```
 
+Also update the post-session block (lines 350–386) to gate on `misses` rather than
+`discrepancies`, and on the COMPLETED path (lines 371–386) write `discrepancies` to
+`admin_jobs` for the browser to show the confirmed auto-matches.
+
 ---
 
-### CR-02: `resolve_job` does not verify the job is PAUSED before writing aliases
+### CR-02: `resolve_job` does not verify PAUSED state before writing aliases
 
 **File:** `api/services/admin_jobs.py:182–287`
 
@@ -125,20 +136,16 @@ writing `SpeakerAlias` rows, updating `Utterance.person_id`, updating
 
 Two concrete failure modes:
 
-1. **Double-submit:** An operator double-clicks "Continue Resolve." The first POST wins and
-   marks the job COMPLETED. The second POST re-applies all alias writes (idempotent in practice
-   but generates spurious DB round-trips) and overwrites `resolved_at` with a new timestamp
-   (non-idempotent).
+1. **Double-submit:** An operator double-clicks "Continue Resolve." The first POST marks the job
+   COMPLETED. The second POST re-applies all alias writes and overwrites `resolved_at` with a
+   new timestamp (non-idempotent).
 
-2. **Wrong-state call:** A caller POSTs to `/api/admin/jobs/{id}/resolve` on a FAILED or
-   COMPLETED job. All alias writes and the `resolved_at` stamp execute unconditionally.
+2. **Wrong-state call:** A POST to `/api/admin/jobs/{id}/resolve` on a FAILED or COMPLETED job
+   executes all alias writes and the `resolved_at` stamp unconditionally.
 
-**Fix:** Add a state check at the top of `resolve_job`, after loading the job:
+**Fix:** Add a state check immediately after loading the job:
 
 ```python
-job = await get_job(db, job_id)
-if job is None:
-    raise ValueError(f"AdminJob {job_id} not found")
 if job.status != AdminJobStatus.PAUSED:
     raise ValueError(
         f"AdminJob {job_id} is not PAUSED (current status: {job.status.value!r}); "
@@ -146,29 +153,22 @@ if job.status != AdminJobStatus.PAUSED:
     )
 ```
 
-The router already catches `ValueError` and re-raises as HTTP 422 (line 249–252 of `admin.py`),
-so no router changes are required.
+The router at `admin.py:249–252` already catches `ValueError` and re-raises as HTTP 422, so no
+router changes are required.
 
 ---
 
-### CR-03: `continueSubmitting` is never reset to `false` on successful resolve
+### CR-03: `continueSubmitting` is never reset on successful resolve submit
 
 **File:** `app/src/routes/admin/pipeline/[job_id]/+page.svelte:660–672`
 
 **Issue:** The `use:enhance` callback for the "Continue Resolve" form sets
 `continueSubmitting = true` on submit (line 661). On failure it resets to `false` (line 664).
-On success it calls `await update({ reset: false })` (line 669) — but never resets
-`continueSubmitting`. The button stays disabled and reads "Submitting…" indefinitely.
-
-The expected recovery path is that `invalidateAll` (called by `update()`) triggers a re-fetch
-that changes `data.job.status` from `'paused'` to `'running'`, which hides the entire form
-block (the `{#if data.job.status === 'paused' && allDispositioned}` condition at line 656).
-This works if polling is fast and the server-side state transitions before the next render.
-
-However, if the FastAPI state machine has not yet advanced (race on the first poll after
-submit), the form block re-renders while `data.job.status` is still `'paused'` —
-and the button is permanently stuck because `continueSubmitting` is a `$state` variable
-that survived the `update({ reset: false })` call.
+On success it calls `await update({ reset: false })` but never resets `continueSubmitting`.
+The button stays disabled and reads "Submitting…" indefinitely if the server-side state
+transition has not occurred before the next render cycle. The expected recovery is that
+`invalidateAll` (called by `update()`) re-fetches the job and changes `data.job.status` from
+`'paused'` to `'running'`, hiding the form block. This race is narrow but real.
 
 **Fix:** Reset `continueSubmitting` in the success branch before calling `update`:
 
@@ -186,54 +186,35 @@ return async ({ result, update }) => {
 
 ---
 
-### CR-04: `rowStates` initialisation never evicts stale rows — operator can submit stale data
+### CR-04: `rowStates` never evicts stale keys — operator can submit outdated mappings
 
 **File:** `app/src/routes/admin/pipeline/[job_id]/+page.svelte:74–93`
 
-**Issue:** The `$effect` that initialises `rowStates` (line 74) skips any
-`raw_speaker_label` already present in `rowStates`:
+**Issue:** The `$effect` that initialises `rowStates` skips any `raw_speaker_label` already
+present in `rowStates` (line 77: `if (!(row.raw_speaker_label in rowStates))`). This is correct
+to preserve in-progress dispositions during polling. However, if the server returns a different
+discrepancy set — for example after the operator navigated away, the job was retried, or a new
+resolve run was spawned — `rowStates` retains entries for labels that no longer exist in the
+new set. The `matchesJson` builder (line 108) iterates `data.job.discrepancies` so it excludes
+stale keys from the submitted payload, but `allDispositioned` also iterates
+`data.job.discrepancies` — meaning new labels added by a retry may arrive undispositioned while
+stale `rowStates` keys linger silently.
 
-```typescript
-if (!(row.raw_speaker_label in rowStates)) {
-    // initialise ...
-}
-```
+There is no epoch/version guard so the client cannot distinguish state from a prior resolve
+attempt.
 
-This is correct to prevent wiping in-progress dispositions during polling. However, it creates
-a correctness problem if the server returns a *different* set of discrepancies from what was
-originally loaded — for example, if the operator navigated away and back, a new resolve run was
-spawned, or the job was retried. In that case, `rowStates` may contain entries for
-`raw_speaker_label`s that no longer exist in the new discrepancy list, and the
-`matchesJson` derived value (line 108) will include those stale mappings in the form payload
-submitted to the server.
-
-The `matchesJson` builder (line 108–118) iterates `data.job.discrepancies` so it only
-includes currently-visible rows — but `allDispositioned` (line 98–105) also iterates
-`data.job.discrepancies`. If the new discrepancy set contains a row not yet in `rowStates`
-(the new label added by a retry), the `$effect` initialises it, but stale keys in `rowStates`
-from the prior run are never cleaned up. For a re-resolved job, the prior stale state is visible
-to `allDispositioned` checks.
-
-The deeper issue: there is no version/epoch guard in `rowStates` so the client can never
-distinguish "this state belongs to this resolve attempt" from "state from a prior attempt."
-
-**Fix:** Reset `rowStates` when the set of `raw_speaker_label`s changes:
+**Fix:** Evict stale keys when the server returns a new discrepancy set:
 
 ```typescript
 $effect(() => {
     const disc = data.job.discrepancies;
     if (!disc) return;
-
     const incomingKeys = new Set(disc.map(r => r.raw_speaker_label));
-
-    // Evict stale keys no longer present in server data
     for (const key of Object.keys(rowStates)) {
         if (!incomingKeys.has(key)) {
             delete rowStates[key];
         }
     }
-
-    // Initialise new rows
     for (const row of disc) {
         if (!(row.raw_speaker_label in rowStates)) {
             const isHit = row.auto_resolved === true;
@@ -255,20 +236,61 @@ $effect(() => {
 
 ---
 
+### CR-05: `--dry-run` early return inside session block persists a PipelineRun row
+
+**File:** `pipeline/commands/parse.py:223–228`
+
+**Issue:** The dry-run path (line 223) is reached inside the `async with get_session() as
+session:` block (opened at line 115). Before returning, it sets:
+
+```python
+run.status = PipelineRunStatus.PENDING
+run.strategy = None
+```
+
+Then returns. The `get_session()` context manager commits on a clean `__aexit__`, so this
+commits a `PipelineRun` row with `step="parse"`, `status=PENDING`, `strategy=None` to the
+database. The docstring says dry-run "does not write to DB" — this claim is false. A dangling
+PENDING pipeline_run row is now visible in `pipeline_runs` and can interfere with subsequent
+`get_run_id_for_step` lookups (which order by `created_at.desc()` and take the first row) if
+the dangling row is the most recent.
+
+**Fix:** Exit the session without flushing or committing on dry-run — do not add `run` to the
+session at all when `args.dry_run` is set, or check `dry_run` before opening the session:
+
+```python
+# Option A — check before session open:
+async with get_session() as session:
+    source_run = await session.get(PipelineRun, args.run_id)
+    if source_run is None:
+        raise ValueError(f"No pipeline_run with id={args.run_id}")
+    # ... extract pages and parse ...
+    if args.dry_run:
+        print(f"Dry-run mode: {len(utterances)} utterances parsed but NOT written to DB.")
+        return   # exit WITHOUT adding the PipelineRun; session commits nothing meaningful
+
+    # Non-dry-run: create and persist the PipelineRun
+    run = PipelineRun(...)
+    session.add(run)
+    ...
+```
+
+---
+
 ## Warnings
 
-### WR-01: `asyncio.get_event_loop()` deprecated in Python 3.10+ — use `get_running_loop()`
+### WR-01: `asyncio.get_event_loop()` deprecated in Python 3.10+
 
 **File:** `api/routers/admin.py:148`
 
 **Issue:** Inside an `async def` FastAPI route handler there is always a running event loop.
-`asyncio.get_event_loop()` is deprecated in Python 3.10+ and in Python 3.12 raises
-`DeprecationWarning`; in some configurations it can raise `RuntimeError`. This was flagged in
-the prior round-2 review (WR-01) and has not been fixed.
+`asyncio.get_event_loop()` is deprecated in Python 3.10+ and raises `DeprecationWarning` in
+3.10–3.11; in Python 3.12 it raises `RuntimeError` when called from a coroutine that is already
+running on a loop. This was flagged in the prior round review (WR-01) and has not been fixed.
 
 **Fix:**
 ```python
-# line 148 — replace:
+# Replace line 148:
 loop = asyncio.get_event_loop()
 # with:
 loop = asyncio.get_running_loop()
@@ -276,22 +298,21 @@ loop = asyncio.get_running_loop()
 
 ---
 
-### WR-02: `create_person_for_job` accepts `job_id` but never uses it — no existence check
+### WR-02: `create_person_for_job` accepts `job_id` but never validates it
 
 **File:** `api/services/admin_jobs.py:327–358`
 
-**Issue:** The `job_id: int` parameter is accepted but unused in the function body. No check
-that the `AdminJob` exists or is in PAUSED state is performed. A POST to
-`/api/admin/jobs/99999/people` with a non-existent `job_id` will create a `Person` row with no
-error. This was flagged in the prior round-2 review (WR-05) and has not been fixed.
+**Issue:** The `job_id: int` parameter is accepted but the function body never uses it. No
+check verifies that the `AdminJob` exists or is in PAUSED state. A POST to
+`/api/admin/jobs/99999/people` with a non-existent `job_id` creates a `Person` row
+unconditionally. This was flagged in the prior round review (WR-05) and has not been fixed.
 
-**Fix:**
+Additionally, the router at `admin.py:283` does not wrap the call in `try/except ValueError`,
+so if a guard check is added, unhandled `ValueError` would produce an HTTP 500 rather than 422.
+
+**Fix (service layer):**
 ```python
-async def create_person_for_job(
-    db: AsyncSession,
-    job_id: int,
-    body: PersonCreate,
-) -> Person:
+async def create_person_for_job(db, job_id, body):
     job = await get_job(db, job_id)
     if job is None:
         raise ValueError(f"AdminJob {job_id} not found")
@@ -302,29 +323,27 @@ async def create_person_for_job(
     # ... rest unchanged
 ```
 
-The router at `admin.py:283` does not currently wrap this call in `try/except ValueError`,
-so the fix also requires updating the route to catch `ValueError` and re-raise as HTTP 422,
-mirroring the `resolve_job` pattern at lines 249–252.
+**Fix (router):** Wrap the `create_person_for_job` call in `try/except ValueError` mirroring
+the `resolve_job` pattern at lines 249–252.
 
 ---
 
-### WR-03: `stepStatus` returns all `'pending'` for `status='failed'` + `current_step=null`
+### WR-03: `stepStatus` returns all `'pending'` when job fails with `current_step=null`
 
 **File:** `app/src/routes/admin/pipeline/[job_id]/+page.svelte:134–148`
 
-**Issue:** When a job fails before any step writes `current_step` (e.g., the spawned subprocess
-exits before Step 0 of `resolve.py`), `job.current_step` is `null`. This makes `current` equal
-to `undefined` and `currentIdx` equal to `-1`. The three `job.status === 'failed'` branches:
+**Issue:** When a job fails before any step writes `current_step` (e.g., the subprocess exits
+before Step 0), `job.current_step` is `null`. In `stepStatus`:
 
 ```typescript
-if (job.status === 'failed' && step === current) return 'failed';   // undefined !== step
-if (job.status === 'failed' && thisIdx < currentIdx) return 'completed'; // N < -1 → false
-if (job.status === 'failed' && thisIdx > currentIdx) return 'pending';   // 0 > -1 → true
+const current = job.current_step?.toLowerCase() as StepName; // undefined
+const currentIdx = STEP_ORDER.indexOf(current);              // -1
 ```
 
-The third branch fires for every step, returning `'pending'` for all. The operator sees three
-"Pending" cards for a failed job with no indication of failure — the error panel at the bottom
-still renders (lines 703–731), but the step cards are misleading.
+The three `status === 'failed'` branches all miss (`undefined !== step`,
+`N < -1` is false, `0 > -1` is true for every step), so all three cards return `'pending'`.
+The operator sees three Pending cards for a failed job with no indication of which step failed.
+The error panel at the bottom still renders — but the step cards are misleading.
 
 **Fix:**
 ```typescript
@@ -349,17 +368,16 @@ function stepStatus(step: StepName, job: Job): string {
 
 ---
 
-### WR-04: `pdf_file.content_type` is client-supplied — not a reliable security control
+### WR-04: `pdf_file.content_type` is client-supplied — magic-bytes check is missing
 
 **File:** `api/routers/admin.py:139`
 
-**Issue:** `pdf_file.content_type` is the `Content-Type` from the multipart submission set by
-the HTTP client. Any client can send `Content-Type: application/pdf` while uploading an
-arbitrary payload. T-07-04 calls out content validation as a security requirement; the current
-check does not satisfy it. This was flagged in the prior round-2 review (WR-06) and has not
-been fixed.
+**Issue:** `pdf_file.content_type` is the value from the multipart `Content-Type` field set
+by the HTTP client. Any client can set `Content-Type: application/pdf` while uploading an
+arbitrary payload. T-07-04 requires content validation; the current check does not satisfy it.
+This was flagged in the prior round review (WR-06) and has not been fixed.
 
-**Fix:** Check the PDF magic bytes server-side:
+**Fix:** Read the first 4 bytes and check for the PDF magic signature:
 ```python
 header = await pdf_file.read(4)
 await pdf_file.seek(0)
@@ -370,35 +388,20 @@ file_bytes = await pdf_file.read()
 
 ---
 
-### WR-05: `resolve_job` does not scope Utterance UPDATE to the active parse run when `parse_run_id` is None
+### WR-05: `resolve_job` broadens Utterance UPDATE to all parse runs when `parse_run_id` is None
 
 **File:** `api/services/admin_jobs.py:242–255`
 
-**Issue:** `parse_run_id` is fetched at line 214 and used to scope the `Utterance` UPDATE at
-line 247 (`if parse_run_id is not None`). If `parse_run_id` is `None` — which can happen when
-`get_run_id_for_step` finds no `PipelineRun` row for the argument — the condition at line 247
-falls through to a WHERE clause that omits the `pipeline_run_id` filter:
+**Issue:** `parse_run_id` is fetched at line 214. At line 247 the code conditionally appends
+`Utterance.pipeline_run_id == parse_run_id` to the WHERE clause only when non-null. If
+`parse_run_id` is None, the UPDATE targets every Utterance row for the argument that matches
+the raw label — including rows from prior parse runs — violating the "prior rows are not
+deleted until the new run is promoted" invariant.
 
-```python
-utterance_where = [
-    Utterance.argument_id == job.argument_id,
-    Utterance.raw_speaker_label == match.raw_speaker_label,
-]
-if parse_run_id is not None:
-    utterance_where.append(Utterance.pipeline_run_id == parse_run_id)
-```
+In practice `parse_run_id` should be non-null when `resolve_job` is called, but the None path
+is a latent data-corruption risk.
 
-Without the `pipeline_run_id` filter, the UPDATE targets **all** Utterance rows for
-the argument that match the raw label — including rows from prior parse runs. This violates
-the "prior rows are not deleted until the new run is promoted" invariant stated in CLAUDE.md
-and in the `PipelineRun` table comment.
-
-In practice `parse_run_id` should always be non-null when `resolve_job` is called (the resolve
-step only runs after parse completes), but the None branch is a latent data-corruption path.
-
-**Fix:** Treat a missing `parse_run_id` as an error condition rather than silently broadening
-the UPDATE:
-
+**Fix:** Treat a missing `parse_run_id` as an error:
 ```python
 parse_run_id = await get_run_id_for_step(db, job_id, "parse")
 if parse_run_id is None:
@@ -410,37 +413,81 @@ if parse_run_id is None:
 
 ---
 
-### WR-06: `getRowCandidates` called twice per correcting-row render cycle
+### WR-06: Orphaned job row created if DO Spaces upload fails in upload mode
+
+**File:** `api/routers/admin.py:145–165`
+
+**Issue:** In the file-upload branch, `create_job` is called first (line 145), writing a
+`AdminJob` row to the database. The DO Spaces upload is performed next (lines 149–154). If the
+upload raises an exception (network error, invalid credentials, bucket not configured), the
+exception propagates to the FastAPI exception handler — but the `AdminJob` row created at line
+145 has already been committed (`create_job` calls `await db.commit()` at line 64 of
+`admin_jobs.py`). The orphaned job row has no `spaces_key`, `status=PENDING`, and no subprocess
+running for it. It will persist in the job history with no way to progress or be cleaned up.
+
+**Fix:** Wrap the upload call in a try/except that marks the job FAILED before re-raising:
+```python
+job = await jobs_service.create_job(db, spaces_key=None)
+key = f"uploads/{job.id}.pdf"
+file_bytes = await pdf_file.read()
+loop = asyncio.get_running_loop()
+try:
+    await loop.run_in_executor(None, spaces_service.upload_pdf_to_spaces, file_bytes, key)
+except Exception as exc:
+    await db.execute(
+        update(AdminJob)
+        .where(AdminJob.id == job.id)
+        .values(status=AdminJobStatus.FAILED, error_message=f"Spaces upload failed: {exc}")
+        .execution_options(synchronize_session=False)
+    )
+    await db.commit()
+    raise HTTPException(status_code=502, detail="File upload failed. Please try again.") from exc
+```
+
+---
+
+### WR-07: `if args.job_id:` truthy check silently skips writes when `job_id=0`
+
+**File:** `pipeline/commands/ingest.py:196, 219, 388` | `pipeline/commands/parse.py:80, 103, 264` | `pipeline/commands/resolve.py:90, 113, 305, 350, 371`
+
+**Issue:** All job-driven guard branches use the truthy idiom `if args.job_id:`. PostgreSQL
+serial PKs start at 1 so `job_id=0` cannot occur in production, but in automated tests that
+use mocked IDs of 0, all DB status writes are silently skipped without any error or warning.
+`if args.job_id is not None:` is the correct guard and is unambiguous about intent. This was
+flagged in the prior round review (IN-02) for `resolve.py` only; the same pattern exists in
+`ingest.py` and `parse.py`.
+
+**Fix:** Replace all occurrences of `if args.job_id:` in all three pipeline command files with
+`if args.job_id is not None:` (11 locations total).
+
+---
+
+### WR-08: `getRowCandidates` called twice per correcting-row render cycle
 
 **File:** `app/src/routes/admin/pipeline/[job_id]/+page.svelte:417–435`
 
-**Issue:** When a row is in correcting mode (`s?.correcting === true`), the template calls
-`getRowCandidates(row, rowKey)` twice per render: once inside the `oninput` closure (line 418)
-and once as the `{#each}` source for the `<datalist>` (line 431). Each call rebuilds the
-full merged+deduped array from `data.people`, `row.candidates`, and
-`rowStates[label].extraCandidates`. For a large people roster (hundreds of entries) and
-multiple correcting rows open simultaneously, this doubles the array construction cost on
-every keystroke.
+**Issue:** When a row is in correcting mode, the template calls `getRowCandidates(row, rowKey)`
+twice per render: once inside the `oninput` closure (line 418) and once as the `{#each}` source
+for the `<datalist>` (line 431). Each call rebuilds the full merged + deduped array from
+`data.people`, `row.candidates`, and `rowStates[label].extraCandidates`. For a large people
+roster with multiple correcting rows open simultaneously, this doubles array construction work
+on every keystroke.
 
-**Fix:** Capture the result in a template constant above the input:
-
+**Fix:** Capture in a template constant:
 ```svelte
 {@const candidates = getRowCandidates(row, rowKey)}
-<input
-    list={listId}
-    ...
-    oninput={(e) => {
-        const val = (e.target as HTMLInputElement).value;
-        const match = candidates.find(c => {
-            const display = c.role_name ? `${c.full_name} (${c.role_name})` : c.full_name;
-            return display === val;
-        });
-        ...
-    }}
-/>
+<input list={listId} ... oninput={(e) => {
+    const val = (e.target as HTMLInputElement).value;
+    const match = candidates.find(c => {
+        const display = c.role_name ? `${c.full_name} (${c.role_name})` : c.full_name;
+        return display === val;
+    });
+    if (match) handleSelectPerson(rowKey, match.id.toString());
+    else if (val === '— Add new person —') handleSelectPerson(rowKey, '__add_new__');
+}} />
 <datalist id={listId}>
     {#each candidates as candidate (candidate.id)}
-        ...
+        <option value={...}></option>
     {/each}
 </datalist>
 ```
@@ -449,29 +496,20 @@ every keystroke.
 
 ## Info
 
-### IN-01: `PersonResponse.role_name` always `null` from `create_person_for_job`
+### IN-01: `PersonResponse.role_name` is always `null` from `create_person_for_job`
 
 **File:** `api/services/admin_jobs.py:353–358`, `api/routers/admin.py:283`, `api/schemas/admin_jobs.py:61`
 
 **Issue:** `create_person_for_job` returns a `Person` ORM object. FastAPI serializes it via
 `response_model=PersonResponse` which has `from_attributes=True`. `PersonResponse` declares
-`role_name: Optional[str] = None`. The `Person` ORM model has no `role_name` column — only
-`role_id`. Pydantic v2 silently defaults missing optional attributes to `None`, so
-`PersonResponse.role_name` is always `null` in the API response regardless of whether a role
-was assigned.
+`role_name: Optional[str] = None`, but `Person` has no `role_name` column — only `role_id`.
+Pydantic v2 silently defaults the missing attribute to `None`, so `PersonResponse.role_name` is
+always `null` in the API response regardless of whether a role was assigned.
 
-The server action in `+page.server.ts` (lines 120–123) papers over this by enriching with the
-form's `role_name` value:
-```typescript
-const enrichedPerson = { ...person, role_name: person.role_name ?? (role_name.trim() || null) };
-```
-This is a workable workaround but couples the fix to client logic rather than fixing the source.
+The server action in `+page.server.ts` (lines 120–123) works around this by enriching with the
+form's `role_name` value. This is a valid workaround but couples the fix to client logic.
 
-The root cause is that `create_person_for_job` returns the bare `Person` rather than
-a dict that also includes the resolved `role_name`. Compare with `list_people` (lines 306–319)
-which correctly JOINs `Role` and returns `role_name`.
-
-**Fix (service layer):** After creating the person, return a dict matching `PersonResponse`:
+**Fix (service layer):** Return a `PersonResponse` dict rather than a bare ORM object:
 ```python
 return PersonResponse(
     id=person.id,
@@ -480,34 +518,37 @@ return PersonResponse(
     role_name=body.role_name if body.role_name and person.role_id else None,
 )
 ```
-Or re-query with a JOIN to get the canonical role_name from the DB.
 
 ---
 
-### IN-02: `if args.job_id:` truthy check skips writes if `job_id=0`
+### IN-02: No file-size limit enforced on PDF upload
 
-**File:** `pipeline/commands/resolve.py:90, 113, 305, 350, 371`
+**File:** `api/routers/admin.py:147`
 
-**Issue:** All job-driven guard branches use `if args.job_id:` (truthy int check). PostgreSQL
-serial PKs start at 1 so `job_id=0` cannot occur in production, but in automated tests using
-mocked IDs of 0, all DB status writes are silently skipped without error. The correct guard is
-`if args.job_id is not None:`. This was flagged in the prior round-2 review (IN-02) and has not
-been fixed in `resolve.py`.
+**Issue:** `await pdf_file.read()` at line 147 reads the entire upload into memory with no
+size cap. A 500 MB file would be fully buffered into the FastAPI process before the Spaces
+upload begins. The SvelteKit side is bounded by `BODY_SIZE_LIMIT=10M` (documented in
+`+page.server.ts`), but a direct API call bypasses that limit entirely.
 
-**Fix:** Replace all 5 occurrences of `if args.job_id:` in `resolve.py` with
-`if args.job_id is not None:`.
+**Suggestion:** Add a size guard after reading:
+```python
+MAX_PDF_BYTES = 50 * 1024 * 1024  # 50 MB
+file_bytes = await pdf_file.read(MAX_PDF_BYTES + 1)
+if len(file_bytes) > MAX_PDF_BYTES:
+    raise HTTPException(status_code=413, detail="PDF must be 50 MB or smaller.")
+```
 
 ---
 
-### IN-03: `alembic/versions/0004` migration adds no index on `arguments.resolved_at`
+### IN-03: `alembic/versions/0004` adds no index on `arguments.resolved_at`
 
 **File:** `alembic/versions/0004_add_arguments_resolved_at.py:29–33`
 
-**Issue:** `cases.py` line 34 filters `WHERE argument.resolved_at IS NOT NULL`. The migration
-adds the column but no index. For a small dataset this is inconsequential; for a large archive
-of arguments a full table scan on every `/cases/` page load is unnecessary.
+**Issue:** `api/services/cases.py:34` filters `WHERE argument.resolved_at IS NOT NULL` on every
+`/cases/` page load. The migration adds the column but no index. For a large archive of
+arguments this results in a full table scan on every request.
 
-**Suggestion:** Consider adding an index if the table is expected to grow:
+**Suggestion:** Add a partial index covering only non-null rows:
 ```python
 def upgrade() -> None:
     op.add_column(
@@ -521,11 +562,30 @@ def upgrade() -> None:
         postgresql_where=sa.text("resolved_at IS NOT NULL"),
     )
 ```
-This is a partial index so it only covers the non-null rows that the query actually
-needs to find.
 
 ---
 
-_Reviewed: 2026-06-17T12:00:00Z_
+### IN-04: `console.error` calls in production load function leak internal URLs
+
+**File:** `app/src/routes/admin/pipeline/[job_id]/+page.server.ts:34, 39`
+
+**Issue:** Lines 34 and 39 log `peopleLoadError` (which includes the raw FastAPI HTTP status
+code or error message) to the server console. In a production DO App Platform deployment,
+console output is visible in application logs accessible to anyone with platform access. The
+messages include `FASTAPI_BASE_URL` + endpoint path information and HTTP status codes.
+
+This is a minor operational concern — the admin pages are already auth-gated, and the data
+being logged is low-sensitivity — but internal service URLs should not be logged in plaintext
+in a deployable server component.
+
+**Suggestion:** Remove the `FASTAPI_BASE_URL` portion of the log message or replace the
+`console.error` with a structured log that omits the URL:
+```typescript
+console.error('[load] people fetch failed, status:', peopleRes.status);
+```
+
+---
+
+_Reviewed: 2026-06-17T15:00:00Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_

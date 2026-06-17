@@ -121,35 +121,19 @@ async def _run_parse_inner(args) -> None:
             raise ValueError(f"No pipeline_run with id={args.run_id}")
 
         # -------------------------------------------------------------------
-        # Step 2: Create a fresh PipelineRun for this parse attempt (PIPE-11)
-        # Each invocation gets its own pipeline_run_id so re-runs produce new
-        # utterance rows without conflicting with prior runs.
-        # -------------------------------------------------------------------
-        run = PipelineRun(
-            argument_id=source_run.argument_id,
-            step="parse",
-            status=PipelineRunStatus.RUNNING,
-            strategy="rule_based",
-            pdf_path=source_run.pdf_path,
-        )
-        session.add(run)
-        await session.flush()
-        print(f"Created parse pipeline_run id={run.id} (argument_id={run.argument_id})")
-
-        # -------------------------------------------------------------------
         # Step 3: Extract pages from PDF
+        # CR-05: extraction uses source_run.pdf_path directly. The PipelineRun
+        # for this attempt is NOT added to the session until after the dry-run
+        # check (step 6) — this ensures dry-run never commits a row to the DB.
         # -------------------------------------------------------------------
-        if not run.pdf_path:
-            await _fail_run(session, run, "pdf_path is null on pipeline_run — cannot parse")
-            return
+        if not source_run.pdf_path:
+            raise ValueError("pdf_path is null on source pipeline_run — cannot parse")
 
-        pdf_path = Path(run.pdf_path)
+        pdf_path = Path(source_run.pdf_path)
         if not pdf_path.exists():
-            await _fail_run(
-                session, run,
-                f"PDF not found at {run.pdf_path} — was the file moved or deleted?"
+            raise ValueError(
+                f"PDF not found at {source_run.pdf_path} — was the file moved or deleted?"
             )
-            return
 
         print(f"Extracting pages from {pdf_path} ...")
         pages = extract_pages(pdf_path)
@@ -167,6 +151,8 @@ async def _run_parse_inner(args) -> None:
         # Step 5: LLM corrective pass (conditional)
         # -------------------------------------------------------------------
         pages_text = "\n\n".join(pages)
+        # strategy is tracked locally until we create the PipelineRun row
+        parse_strategy = "rule_based"
 
         try:
             print("Running LLM corrective pass ...")
@@ -187,7 +173,7 @@ async def _run_parse_inner(args) -> None:
                 for u in llm_response.utterances
             ]
             utterances = llm_utterances
-            run.strategy = "llm_corrective"
+            parse_strategy = "llm_corrective"
             print(f"LLM pass: {len(utterances)} utterances. Strategy updated to 'llm_corrective'.")
 
         except Exception as exc:
@@ -215,18 +201,37 @@ async def _run_parse_inner(args) -> None:
                     f"Rule-based output will be used for this run."
                 )
             # Keep rule-based utterances (no early return — write what we have)
-            run.strategy = "rule_based"
+            parse_strategy = "rule_based"
 
         # -------------------------------------------------------------------
-        # Step 6: Write utterance rows (PIPE-03, PIPE-04, PIPE-11)
+        # Step 6: Dry-run exit — checked BEFORE creating PipelineRun row (CR-05)
+        # The session has not had run added yet so __aexit__ commits nothing
+        # meaningful (only the source_run read, which is read-only).
         # -------------------------------------------------------------------
         if args.dry_run:
-            run.status = PipelineRunStatus.PENDING
-            run.strategy = None
             print(f"Dry-run mode: {len(utterances)} utterances parsed but NOT written to DB.")
             print(f"Parse dry-run complete.")
             return
 
+        # -------------------------------------------------------------------
+        # Step 2 (deferred): Create a fresh PipelineRun for this parse attempt
+        # (PIPE-11). Placed after dry-run check so no row is ever written in
+        # dry-run mode.
+        # -------------------------------------------------------------------
+        run = PipelineRun(
+            argument_id=source_run.argument_id,
+            step="parse",
+            status=PipelineRunStatus.RUNNING,
+            strategy=parse_strategy,
+            pdf_path=source_run.pdf_path,
+        )
+        session.add(run)
+        await session.flush()
+        print(f"Created parse pipeline_run id={run.id} (argument_id={run.argument_id})")
+
+        # -------------------------------------------------------------------
+        # Step 7: Write utterance rows (PIPE-03, PIPE-04, PIPE-11)
+        # -------------------------------------------------------------------
         print(f"Writing {len(utterances)} utterance rows ...")
         for u in utterances:
             utterance = Utterance(
@@ -246,7 +251,7 @@ async def _run_parse_inner(args) -> None:
         await session.flush()
 
         # -------------------------------------------------------------------
-        # Step 7: Transition running → completed (PIPE-10)
+        # Step 8: Transition running → completed (PIPE-10)
         # -------------------------------------------------------------------
         run.status = PipelineRunStatus.COMPLETED
         run.completed_at = datetime.now(timezone.utc)
@@ -257,7 +262,7 @@ async def _run_parse_inner(args) -> None:
         )
 
     # ------------------------------------------------------------------
-    # Step 8: Mark admin_jobs COMPLETED (job-driven path only)
+    # Step 9: Mark admin_jobs COMPLETED (job-driven path only)
     # Note: current_step stays PARSE — poll endpoint advances to RESOLVE
     # atomically using the step-advance guard (Pattern 3 / D-05).
     # ------------------------------------------------------------------

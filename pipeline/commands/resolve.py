@@ -157,8 +157,10 @@ async def _run_resolve_inner(args) -> None:
         # for the argument_participants update (Step 5)
         resolved_map: dict[str, int] = {}  # raw_label -> person_id
 
-        # Collect alias misses for discrepancy handling
+        # Collect ALL rows (HITs + MISSes) for browser UI JSONB
         discrepancies: list[dict] = []
+        # Collect only MISS raw labels — gate for PAUSED vs COMPLETED
+        misses: list[str] = []
 
         # -------------------------------------------------------------------
         # Steps 3–5: Collect labels and resolve
@@ -266,6 +268,7 @@ async def _run_resolve_inner(args) -> None:
                         for person, role_name in people_rows
                     ]
 
+                    misses.append(raw_label)
                     discrepancies.append(
                         {
                             "raw_speaker_label": raw_label,
@@ -295,8 +298,10 @@ async def _run_resolve_inner(args) -> None:
 
             # ----------------------------------------------------------------
             # Step 6: Handle outcome — paused (misses) or completed (all hit)
+            # Gate on misses (labels with no alias), not discrepancies (which
+            # includes HITs). This ensures all-HIT transcripts reach COMPLETED.
             # ----------------------------------------------------------------
-            if discrepancies:
+            if misses:
                 # --- Paused: write discrepancies and set NEEDS_REVIEW ---
                 resolve_run.status = PipelineRunStatus.NEEDS_REVIEW
                 resolve_run.completed_at = datetime.now(timezone.utc)
@@ -309,12 +314,12 @@ async def _run_resolve_inner(args) -> None:
                     pass  # commit happens on get_session().__aexit__
 
                 else:
-                    # Direct CLI: print summary for operator
+                    # Direct CLI: print only MISS labels (not HITs)
                     print(
-                        f"\n{len(discrepancies)} unresolved label(s):"
+                        f"\n{len(misses)} unresolved label(s):"
                     )
-                    for d in discrepancies:
-                        print(f"  - {d['raw_speaker_label']!r} (normalized: {d['normalized']!r})")
+                    for label in misses:
+                        print(f"  - {label!r}")
                     print(
                         "Resolve run status set to needs_review. "
                         "Seed aliases for these labels and re-run."
@@ -346,8 +351,11 @@ async def _run_resolve_inner(args) -> None:
     # Post-session: write discrepancies to admin_jobs (job-driven only)
     # Done after the session commit so the resolve_run status is durable
     # before we set admin_jobs to PAUSED.
+    # Gate on misses (labels with no alias). When misses is non-empty the full
+    # discrepancies list (HITs + MISSes) is written to JSONB so the browser
+    # can show auto-resolved labels for confirmation alongside the MISSes.
     # ----------------------------------------------------------------
-    if discrepancies and args.job_id:
+    if misses and args.job_id is not None:
         async with get_session() as session:
             await session.execute(
                 update(AdminJob)
@@ -359,8 +367,8 @@ async def _run_resolve_inner(args) -> None:
                 .execution_options(synchronize_session=False)
             )
         print(
-            f"Admin job {args.job_id} paused with {len(discrepancies)} discrepancy(ies) "
-            "— operator reviews in browser."
+            f"Admin job {args.job_id} paused with {len(misses)} miss(es) "
+            f"({len(discrepancies)} total discrepancy row(s)) — operator reviews in browser."
         )
         return  # FastAPI will NOT advance; operator acts via browser
 
@@ -368,12 +376,17 @@ async def _run_resolve_inner(args) -> None:
     # Mark admin_jobs COMPLETED when all labels auto-resolved (job-driven)
     # Also stamp arguments.resolved_at so the case becomes visible in /cases/
     # ----------------------------------------------------------------
-    if not discrepancies and args.job_id:
+    if not misses and args.job_id is not None:
         async with get_session() as session:
             await session.execute(
                 update(AdminJob)
                 .where(AdminJob.id == args.job_id)
-                .values(status=AdminJobStatus.COMPLETED)
+                .values(
+                    status=AdminJobStatus.COMPLETED,
+                    # Write full discrepancies (all HITs) so browser can show
+                    # confirmed auto-matches even on the all-resolved path
+                    discrepancies=discrepancies if discrepancies else None,
+                )
                 .execution_options(synchronize_session=False)
             )
             # Stamp resolved_at — Gap 3 gate (argument visible in /cases/ only after resolve)

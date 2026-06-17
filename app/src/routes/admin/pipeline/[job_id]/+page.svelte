@@ -68,12 +68,21 @@
 	let rowStates = $state<Record<string, RowState>>({});
 
 	// Initialise row states when discrepancies arrive (status=paused).
+	// Evict stale keys first (CR-04: labels from a prior resolve attempt that are
+	// no longer in the current discrepancy set) so outdated dispositions cannot
+	// persist into a new resolve run.
 	// Only initialise for rows not already tracked (preserve in-progress work on re-renders).
 	// HIT rows (auto_resolved === true) start pre-dispositioned as 'confirmed' so no
 	// explicit Confirm click is required ([07-07] Gap 1a fix).
 	$effect(() => {
 		const disc = data.job.discrepancies;
 		if (!disc) return;
+		const incomingKeys = new Set(disc.map((r: Discrepancy) => r.raw_speaker_label));
+		for (const key of Object.keys(rowStates)) {
+			if (!incomingKeys.has(key)) {
+				delete rowStates[key];
+			}
+		}
 		for (const row of disc) {
 			if (!(row.raw_speaker_label in rowStates)) {
 				const isHit = row.auto_resolved === true;

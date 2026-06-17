@@ -253,6 +253,20 @@ async def resolve_job(
     return updated_job  # type: ignore[return-value]
 
 
+@router.get("/people", response_model=list[PersonResponse])
+async def list_people(
+    db: AsyncSession = Depends(get_db),
+) -> list[PersonResponse]:
+    """
+    Return all Person rows sorted by full_name for the discrepancy review typeahead.
+
+    Used by the [job_id] load function so operators can correct wrong auto-matches
+    against the full roster (Gap 1b fix, Plan 07-07).
+    """
+    people = await jobs_service.list_people(db)
+    return [PersonResponse(**p) for p in people]
+
+
 @router.post("/jobs/{job_id}/people", status_code=201, response_model=PersonResponse)
 async def create_person_for_job(
     job_id: int,

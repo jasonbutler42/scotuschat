@@ -277,6 +277,38 @@ async def resolve_job(
 
 
 # ---------------------------------------------------------------------------
+# People list (typeahead for discrepancy review)
+# ---------------------------------------------------------------------------
+
+
+async def list_people(
+    db: AsyncSession,
+) -> list[dict]:
+    """Return all Person rows joined with their Role name, sorted by full_name.
+
+    Used by the discrepancy review typeahead so operators can correct wrong
+    auto-matches against the full roster (Gap 1b fix, Plan 07-07).
+
+    Returns a list of dicts with keys: id, full_name, role_name (may be None).
+    The same join/order used by pipeline/commands/resolve.py lines 185-189.
+    """
+    result = await db.execute(
+        select(Person, Role.name.label("role_name"))
+        .outerjoin(Role, Person.role_id == Role.id)
+        .order_by(Person.full_name)
+    )
+    rows = result.all()
+    return [
+        {
+            "id": person.id,
+            "full_name": person.full_name,
+            "role_name": role_name,
+        }
+        for person, role_name in rows
+    ]
+
+
+# ---------------------------------------------------------------------------
 # Inline person/role creation (D-13)
 # ---------------------------------------------------------------------------
 

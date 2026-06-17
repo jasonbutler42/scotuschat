@@ -18,7 +18,22 @@ export const load: PageServerLoad = async ({ params }) => {
 	}
 
 	const job = await res.json();
-	return { job };
+
+	// Fetch all people for the HIT-row Change typeahead (Gap 1b — Plan 07-07).
+	// On non-OK, default to [] so the job view still renders.
+	let people: Array<{ id: number; full_name: string; role_name: string | null }> = [];
+	try {
+		const peopleRes = await fetch(`${FASTAPI_BASE_URL}/api/admin/people`, {
+			headers: { 'X-Admin-Token': ADMIN_TOKEN },
+		});
+		if (peopleRes.ok) {
+			people = await peopleRes.json();
+		}
+	} catch {
+		// Non-critical — degrade gracefully; typeahead will fall back to row.candidates
+	}
+
+	return { job, people };
 };
 
 export const actions: Actions = {

@@ -229,6 +229,25 @@ async def _run_resolve_inner(args) -> None:
 
                     resolved_map[raw_label] = person_id
 
+                    # ---- Append HIT row to discrepancies for browser review ----
+                    # Operator must confirm auto-matches before the job advances.
+                    role_result = await session.execute(
+                        select(Role.name).where(Role.id == person.role_id)
+                    )
+                    auto_match_role = role_result.scalar_one_or_none() if person.role_id else None
+
+                    discrepancies.append(
+                        {
+                            "raw_speaker_label": raw_label,
+                            "normalized": normalized,
+                            "candidates": [],  # HIT rows need no candidates — operator confirms or overrides
+                            "auto_match_id": person_id,
+                            "auto_match_name": person.full_name,
+                            "auto_match_role": auto_match_role,
+                            "auto_resolved": True,
+                        }
+                    )
+
                 else:
                     # ---- MISS: collect discrepancy ----
                     print(f"Alias miss: {raw_label!r} (normalized: {normalized!r})")

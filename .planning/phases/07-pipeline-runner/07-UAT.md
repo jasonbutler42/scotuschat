@@ -1,9 +1,9 @@
 ---
-status: testing
+status: partial
 phase: 07-pipeline-runner
 source: 07-01-SUMMARY.md, 07-02-SUMMARY.md, 07-03-SUMMARY.md, 07-04-SUMMARY.md, 07-05-SUMMARY.md, 07-06-SUMMARY.md
 started: 2026-06-16T00:00:00Z
-updated: 2026-06-17T00:00:00Z
+updated: 2026-06-17T02:00:00Z
 ---
 
 ## Current Test
@@ -52,18 +52,20 @@ result: pass
 
 ### 10. Confirm and Correct disposition in discrepancy table
 expected: Clicking Confirm on a row marks that speaker match as accepted (visual indicator updates). Clicking Correct opens a typeahead input backed by a datalist — typing filters candidates; selecting one marks it corrected. Auto-matched HIT rows appear with Confirm button and an Override button that resets the row. Once ALL rows are dispositioned, the "Continue Resolve" button appears.
-result: pending
-fix_applied: "07-06: resolve.py HIT branch now appends to discrepancies with auto_resolved=True; Override button added; typeahead datalist replaces select dropdown"
+result: issue
+reported: "Two problems: (1) UX wrong — want a single Change button; auto-matched rows should be assumed correct without needing an explicit Confirm click. (2) Typeahead for auto-matched HIT rows only shows Add New Person — no existing people listed — so there is no way to correct a wrong auto-match. (Ginsberg/Ginsburg two-entry behavior is acceptable.)"
+severity: major
 
 ### 11. Add new person inline
 expected: In the Correct typeahead, selecting "— Add new person —" reveals a small form with Full Name and Role fields. Submitting it creates the person, dismisses the form, and auto-selects them in that row. The new person is available for the duration of the session (note: does not persist after hard refresh, by design — resetting the page resets all row selections).
-result: pending
-fix_applied: "07-06: handleAddPerson sends x-sveltekit-action: true header so SvelteKit returns action envelope as JSON; PersonResponse now includes role_name"
+result: issue
+reported: "Save Person button changes to Saving... then nothing else happens. Form stays visible, no selection is made. After page refresh the new person was not saved and does not appear in the dropdown."
+severity: major
 
 ### 12. Continue Resolve submits and restarts polling
 expected: After all rows are dispositioned, clicking Continue Resolve: button immediately shows "Submitting…" with disabled attribute (before network request fires); on success the Resolve card transitions away from "Needs Review" and polling resumes; on failure an error message appears below the form and button re-enables.
-result: pending
-fix_applied: "07-06: resolve form now uses use:enhance with custom callback — continueSubmitting=true fires synchronously; success calls update({reset:false})/invalidateAll(); failure re-enables button and populates form?.error"
+result: pass
+note: Success path confirmed. Failure path not testable without manufacturing a server error — acceptable skip.
 
 ### 13. Failed-state error panel
 expected: For a job where a step failed, /admin/pipeline/{id} shows "This run failed." followed by the verbatim error message in monospace text. There is no Retry button — only a "Start a new run" link back to /admin/pipeline.
@@ -78,25 +80,41 @@ reason: "ModuleNotFoundError: No module named 'sqlalchemy' — venv not activate
 ## Summary
 
 total: 14
-passed: 9
-issues: 0
-pending: 3
+passed: 10
+issues: 2
+pending: 0
 skipped: 1
 blocked: 1
 
 ## Gaps
 
-- truth: "Discrepancy table shows ALL speaker aliases — auto-matched rows visible with a Confirm button and Override option; unmatched rows show Confirm/Correct actions. Correction dropdown is a typeahead that filters as you type."
-  status: fixed
-  fix: "07-06: resolve.py HIT branch appends to discrepancies with auto_resolved=True; Override button added; typeahead datalist replaces select dropdown"
+- truth: "Auto-matched HIT rows need only a single Change button — no explicit Confirm step. Clicking Change opens a typeahead listing ALL existing people (not just Add New Person) so a wrong auto-match can be corrected."
+  status: failed
+  reason: "User reported: UX has Confirm+Override instead of single Change button; typeahead for HIT rows only shows Add New Person — can't correct a wrong auto-match."
+  severity: major
   test: 10
+  root_cause: ""
+  artifacts: []
+  missing: []
+  debug_session: ""
 
-- truth: "Selecting 'Add new person' creates the person, dismisses the inline form, and auto-selects the person in that row without page refresh."
-  status: fixed
-  fix: "07-06: handleAddPerson sends x-sveltekit-action: true header; PersonResponse includes role_name"
+- truth: "Selecting 'Add new person' creates the person server-side, dismisses the inline form, and auto-selects them in that row."
+  status: failed
+  reason: "User reported: Save Person button flashes Saving... then nothing — form stays visible, no selection made. Person not persisted after page refresh."
+  severity: major
   test: 11
+  root_cause: ""
+  artifacts: []
+  missing: []
+  debug_session: ""
 
-- truth: "Clicking Continue Resolve disables the button immediately and the Resolve card transitions from 'Needs Review' on server response."
-  status: fixed
-  fix: "07-06: use:enhance added to resolve form with custom callback; continueSubmitting fires synchronously; invalidateAll() on success"
-  test: 12
+- truth: "Cases only appear in /cases/ after resolve is complete with real case metadata (docket number, argued date, title)."
+  status: failed
+  reason: "User reported: newly ingested arguments appear in /cases/ before resolution with placeholder titles like 'Pending review (job 3)' and metadata like 'No. job-3 · Argued June 17, 2026 · Question 1'."
+  severity: major
+  test: 0
+  root_cause: ""
+  artifacts: []
+  missing: []
+  debug_session: ""
+

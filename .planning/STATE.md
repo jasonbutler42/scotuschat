@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Operator Admin Interface
 status: executing
-stopped_at: Phase 07 Plan 07 complete — ready to execute Plan 08
-last_updated: "2026-06-17T16:00:00Z"
-last_activity: 2026-06-17 -- Phase 07 Plan 07 complete (all 3 tasks done, human UAT passed)
+stopped_at: Phase 07 Plan 08 complete — Phase 07 all plans done
+last_updated: "2026-06-17T17:00:00Z"
+last_activity: 2026-06-17 -- Phase 07 Plan 08 complete (2 tasks, resolved_at visibility gate)
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 13
-  completed_plans: 11
-  percent: 50
+  completed_plans: 12
+  percent: 54
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-06-15 after v1.1 milestone start)
 
 ## Current Position
 
-Phase: 07 (pipeline-runner) — EXECUTING
-Plan: 8 of 8 (Plan 07 complete; Plan 08 not yet started)
-Status: Executing Phase 07
-Last activity: 2026-06-17 -- Phase 07 Plan 07 complete (all 3 tasks done, human UAT passed)
+Phase: 07 (pipeline-runner) — COMPLETE
+Plan: 8 of 8 (all plans complete)
+Status: Phase 07 complete; ready for Phase 07 verify or Phase 08
+Last activity: 2026-06-17 -- Phase 07 Plan 08 complete (2 tasks, resolved_at visibility gate)
 
-Progress: [███████░░░] 75%
+Progress: [████████░░] 80%
 
 ## Performance Metrics
 
@@ -59,6 +59,7 @@ Progress: [███████░░░] 75%
 | Phase 07-pipeline-runner P05 | 164 | 2 tasks | 2 files |
 | Phase 07-pipeline-runner P06 | 265 | 3 tasks | 3 files |
 | Phase 07-pipeline-runner P07 | 371 | 2 tasks (auto) + 1 checkpoint | 4 files |
+| Phase 07-pipeline-runner P08 | 8 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -102,6 +103,7 @@ Key v1.1 decisions from research:
 - [Phase ?]: [07-07]: getRowCandidates merges data.people (full roster) before row.candidates for de-duplication by id
 - [Phase ?]: [07-07]: AddNewPersonForm uses use:enhance — SvelteKit devalue-deserializes result.data automatically, no raw fetch
 - [Phase ?]: [07-07]: GET /api/admin/people added to admin router using list_people() Person+Role outerjoin ordered by full_name
+- [07-08]: arguments.resolved_at visibility gate — metadata fabrication out of scope; gate alone closes Gap 3; Phase 8 (People Editor) handles real metadata edits
 
 ### Pending Todos
 

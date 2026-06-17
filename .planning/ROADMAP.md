@@ -100,7 +100,7 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
 **Wave 5** *(gap closure — UAT tests 10, 11 + premature case visibility)*
 
 - [x] 07-07-PLAN.md — Gap closure: single Change button on HIT rows, people-backed typeahead (load all people), use:enhance add-person form (Wave 5)
-- [ ] 07-08-PLAN.md — Gap closure: arguments.resolved_at column (migration 0004), get_cases() resolve-completion gate, set resolved_at on resolve completion (Wave 5)
+- [x] 07-08-PLAN.md — Gap closure: arguments.resolved_at column (migration 0004), get_cases() resolve-completion gate, set resolved_at on resolve completion (Wave 5)
 
 **UI hint**: yes
 

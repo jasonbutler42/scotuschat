@@ -735,7 +735,7 @@ save: async ({ request, params }) => {
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Participants endpoint strategy — extend `AdminJobResponse` or new endpoint?**
    - What we know: CONTEXT.md gives both options; the existing load function already calls `GET /api/admin/jobs/{id}`

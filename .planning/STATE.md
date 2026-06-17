@@ -5,8 +5,8 @@ milestone_name: Operator Admin Interface
 current_phase: 8
 current_phase_name: People Editor
 status: ready to plan
-stopped_at: Phase 8 context gathered
-last_updated: "2026-06-17T17:51:55.044Z"
+stopped_at: Phase 8 UI-SPEC approved
+last_updated: "2026-06-17T18:02:32.450Z"
 last_activity: 2026-06-17
 last_activity_desc: Phase 07 complete, transitioned to Phase 8
 progress:
@@ -132,6 +132,6 @@ Items acknowledged and deferred at v1.0 milestone close:
 
 ## Session Continuity
 
-Last session: 2026-06-17T17:51:55.039Z
-Stopped at: Phase 8 context gathered
-Resume file: .planning/phases/08-people-editor/08-CONTEXT.md
+Last session: 2026-06-17T18:02:32.440Z
+Stopped at: Phase 8 UI-SPEC approved
+Resume file: .planning/phases/08-people-editor/08-UI-SPEC.md

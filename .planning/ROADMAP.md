@@ -116,7 +116,22 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
   3. Operator can open a person record and save changes to name, role, bio text, photo URL, and tenure dates
   4. After a pipeline run completes the resolve step, operator can open a per-argument review page showing resolved participants and fill in missing metadata inline
 
-**Plans**: TBD
+**Plans**: 5 plans (3 waves)
+
+**Wave 1**
+
+- [ ] 08-01-PLAN.md — DB layer: Alembic migration 0005 (bio_text + photo_url on people) + Person ORM columns + alembic upgrade
+
+**Wave 2** *(blocked on Wave 1)*
+
+- [ ] 08-02-PLAN.md — Backend: admin_people schemas + service (incomplete filter, missing[], delete-and-reinsert tenures, role create, participants) + 5 admin routes + tests
+
+**Wave 3** *(blocked on Wave 2)*
+
+- [ ] 08-03-PLAN.md — Frontend: people directory (/admin/people) table + incomplete toggle + nav link activation
+- [ ] 08-04-PLAN.md — Frontend: person edit form (/admin/people/[id]) — three sections, role select + inline create, dynamic tenure rows, save
+- [ ] 08-05-PLAN.md — Frontend: completed job page resolved-participants list + "Review people →" link
+
 **UI hint**: yes
 
 ## Progress
@@ -129,5 +144,5 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
 | 4. Accessibility + Hardening | v1.0 | 2/2 | Complete | 2026-06-15 |
 | 5. Admin Foundation | v1.1 | 2/2 | Complete   | 2026-06-15 |
 | 6. Auth | v1.1 | 3/3 | Complete   | 2026-06-16 |
-| 7. Pipeline Runner | v1.1 | 7/8 | In Progress | - |
-| 8. People Editor | v1.1 | 0/? | Not started | - |
+| 7. Pipeline Runner | v1.1 | 8/8 | Complete    | 2026-06-17 |
+| 8. People Editor | v1.1 | 0/5 | Planned | - |

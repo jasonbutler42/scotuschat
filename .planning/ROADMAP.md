@@ -116,7 +116,7 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
   3. Operator can open a person record and save changes to name, role, bio text, photo URL, and tenure dates
   4. After a pipeline run completes the resolve step, operator can open a per-argument review page showing resolved participants and fill in missing metadata inline
 
-**Plans**: 1/5 plans executed
+**Plans**: 2/5 plans executed
 
 **Wave 1**
 
@@ -124,7 +124,7 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
 
 **Wave 2** *(blocked on Wave 1)*
 
-- [ ] 08-02-PLAN.md — Backend: admin_people schemas + service (incomplete filter, missing[], delete-and-reinsert tenures, role create, participants) + 5 admin routes + tests
+- [x] 08-02-PLAN.md — Backend: admin_people schemas + service (incomplete filter, missing[], delete-and-reinsert tenures, role create, participants) + 5 admin routes + tests
 
 **Wave 3** *(blocked on Wave 2)*
 
@@ -145,4 +145,4 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
 | 5. Admin Foundation | v1.1 | 2/2 | Complete   | 2026-06-15 |
 | 6. Auth | v1.1 | 3/3 | Complete   | 2026-06-16 |
 | 7. Pipeline Runner | v1.1 | 8/8 | Complete    | 2026-06-17 |
-| 8. People Editor | v1.1 | 1/5 | In Progress|  |
+| 8. People Editor | v1.1 | 2/5 | In Progress|  |

@@ -78,7 +78,7 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
   4. Operator can confirm or correct each flagged speaker alias match; confirmed matches are written to the `speaker_alias` table
   5. Operator can close the browser, reopen it, and resume an in-progress run exactly where it paused
 
-**Plans**: 6 plans (4 waves)
+**Plans**: 8 plans (5 waves)
 **Wave 1**
 
 - [x] 07-01-PLAN.md — Backend contract: boto3 + DO Spaces config/service, subprocess spawn util, admin-job Pydantic schemas, admin_jobs service (atomic step-advance guards, resolve, person create) (Wave 1)
@@ -96,6 +96,11 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
 **Wave 4** *(gap closure — UAT tests 10, 11, 12)*
 
 - [x] 07-06-PLAN.md — Gap closure: HIT rows in discrepancy table, Override button, typeahead combobox, addPerson envelope fix, use:enhance on Continue Resolve (Wave 4)
+
+**Wave 5** *(gap closure — UAT tests 10, 11 + premature case visibility)*
+
+- [ ] 07-07-PLAN.md — Gap closure: single Change button on HIT rows, people-backed typeahead (load all people), use:enhance add-person form (Wave 5)
+- [ ] 07-08-PLAN.md — Gap closure: arguments.resolved_at column (migration 0004), get_cases() resolve-completion gate, set resolved_at on resolve completion (Wave 5)
 
 **UI hint**: yes
 

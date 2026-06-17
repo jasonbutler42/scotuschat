@@ -93,6 +93,8 @@ class Person(Base):
     id = Column(Integer, primary_key=True)
     full_name = Column(String(300), nullable=False)
     role_id = Column(Integer, ForeignKey("roles.id"), nullable=True)
+    bio_text = Column(Text, nullable=True)
+    photo_url = Column(String(500), nullable=True)
 
 
 # ---------------------------------------------------------------------------

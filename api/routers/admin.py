@@ -303,5 +303,8 @@ async def create_person_for_job(
     person is immediately selectable as the corrected alias for a discrepancy.
     Bio, photo, and tenure dates are Phase 8 (People Editor).
     """
-    person = await jobs_service.create_person_for_job(db, job_id, body)
+    try:
+        person = await jobs_service.create_person_for_job(db, job_id, body)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     return person  # type: ignore[return-value]

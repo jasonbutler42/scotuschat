@@ -343,8 +343,20 @@ async def create_person_for_job(
     If body.role_name is set and body.role_id is None, find-or-create a Role
     by name first, then use its id for the new Person.
 
+    WR-02: validates that the AdminJob exists and is PAUSED before creating
+    the Person — prevents phantom person rows from spurious or wrong-state POSTs.
+
     Bio, photo, and tenure fields are Phase 8 (D-13 deferred).
     """
+    job = await get_job(db, job_id)
+    if job is None:
+        raise ValueError(f"AdminJob {job_id} not found")
+    if job.status != AdminJobStatus.PAUSED:
+        raise ValueError(
+            f"AdminJob {job_id} is not PAUSED (status: {job.status.value!r}); "
+            "people can only be created for a paused job."
+        )
+
     role_id = body.role_id
 
     if body.role_name and role_id is None:

@@ -300,6 +300,11 @@
 					</div>
 
 					<!-- Discrepancy review (D-11–D-14): only when resolve step is paused -->
+					{#if step === 'resolve' && data.job.status === 'paused' && data.peopleLoadError}
+						<p role="alert" style="margin-top: 12px; font-size: 13px; color: #fbbf24; font-family: monospace;">
+							Warning: could not load people list — typeahead may be incomplete. ({data.peopleLoadError})
+						</p>
+					{/if}
 					{#if step === 'resolve' && data.job.status === 'paused' && data.job.discrepancies?.length}
 						<table
 							style="width: 100%; border-collapse: collapse; margin-top: 16px;"
@@ -376,8 +381,10 @@
 											{#if s?.disposition === 'confirmed'}
 												<span style="color: #4ade80;">✓ Confirmed</span>
 												{#if row.auto_match_name}
+													{@const confirmedPerson = s?.person_id != null ? (data.people ?? []).find((p: { id: number; full_name: string; role_name: string | null }) => p.id === s.person_id) : null}
+													{@const confirmedRole = confirmedPerson?.role_name ?? row.auto_match_role ?? null}
 													<span style="color: #94a3b8; font-size: 14px; margin-left: 8px;">
-														{row.auto_match_name}{row.auto_match_role ? ` (${row.auto_match_role})` : ''}
+														{row.auto_match_name}{confirmedRole ? ` (${confirmedRole})` : ''}
 													</span>
 												{/if}
 											{:else if s?.disposition === 'corrected' && !s?.addingPerson}
@@ -576,21 +583,14 @@
 													Change
 												</button>
 											{:else if s?.disposition !== null && s?.disposition !== undefined}
-												<!-- MISS row is dispositioned — Override reopens correction flow -->
+												<!-- MISS row is dispositioned — Change reopens the typeahead correction flow -->
 												<button
 													type="button"
-													onclick={() => {
-														const st = rowStates[rowKey];
-														if (!st) return;
-														st.disposition = null;
-														st.person_id = null;
-														st.correcting = false;
-														st.addingPerson = false;
-													}}
+													onclick={() => handleCorrect(rowKey)}
 													style="
 														font-size: 14px;
 														font-weight: 400;
-														color: #94a3b8;
+														color: #e2e8f0;
 														background: transparent;
 														border: 1px solid #334155;
 														border-radius: 4px;
@@ -599,7 +599,7 @@
 														min-height: 32px;
 													"
 												>
-													Override
+													Change
 												</button>
 											{:else}
 												<!-- MISS row not yet dispositioned — Confirm (if auto_match_id) + Correct -->

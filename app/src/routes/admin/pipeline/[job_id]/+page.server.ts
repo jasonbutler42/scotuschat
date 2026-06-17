@@ -22,18 +22,24 @@ export const load: PageServerLoad = async ({ params }) => {
 	// Fetch all people for the HIT-row Change typeahead (Gap 1b — Plan 07-07).
 	// On non-OK, default to [] so the job view still renders.
 	let people: Array<{ id: number; full_name: string; role_name: string | null }> = [];
+	let peopleLoadError: string | null = null;
 	try {
 		const peopleRes = await fetch(`${FASTAPI_BASE_URL}/api/admin/people`, {
 			headers: { 'X-Admin-Token': ADMIN_TOKEN },
 		});
 		if (peopleRes.ok) {
 			people = await peopleRes.json();
+		} else {
+			peopleLoadError = `GET /api/admin/people returned ${peopleRes.status}`;
+			console.error('[load] people fetch failed:', peopleLoadError);
 		}
-	} catch {
+	} catch (err) {
 		// Non-critical — degrade gracefully; typeahead will fall back to row.candidates
+		peopleLoadError = err instanceof Error ? err.message : String(err);
+		console.error('[load] people fetch threw:', peopleLoadError);
 	}
 
-	return { job, people };
+	return { job, people, peopleLoadError };
 };
 
 export const actions: Actions = {
@@ -108,7 +114,14 @@ export const actions: Actions = {
 		}
 
 		const person = await res.json();
+		// Attach role_name from form data — the API returns PersonResponse which reads
+		// role_name from the ORM object, but Person.role_name is not an ORM column (only
+		// role_id is). Enrich with the form value so the Svelte typeahead shows "Name (Role)".
+		const enrichedPerson = {
+			...person,
+			role_name: person.role_name ?? (role_name.trim() || null),
+		};
 		// Return the created person so the Svelte component can add them to the dropdown.
-		return { personCreated: true, person };
+		return { personCreated: true, person: enrichedPerson };
 	},
 };

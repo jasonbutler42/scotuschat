@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
+	import { enhance } from '$app/forms';
 
 	let { data, form } = $props();
 
@@ -419,8 +420,13 @@
 													</span>
 												{/if}
 											{:else if s?.correcting}
-												<!-- PersonSearchDropdown: options are ONLY this row's candidates + Add new person -->
-												<select
+												<!-- Typeahead combobox: text input + datalist for filter-as-you-type -->
+												{@const listId = `candidates-${rowKey.replace(/\s+/g, '-')}`}
+												<input
+													list={listId}
+													type="text"
+													placeholder="Type to search—"
+													aria-label="Search for speaker"
 													style="
 														background-color: #0f1117;
 														border: 1px solid #93c5fd;
@@ -430,16 +436,26 @@
 														color: #e2e8f0;
 														width: 100%;
 													"
-													onchange={(e) => handleSelectPerson(rowKey, (e.target as HTMLSelectElement).value)}
-												>
-													<option value="">— Select person —</option>
+													oninput={(e) => {
+														const val = (e.target as HTMLInputElement).value;
+														const allC = getRowCandidates(row, rowKey);
+														const match = allC.find(c => {
+															const display = c.role_name ? `${c.full_name} (${c.role_name})` : c.full_name;
+															return display === val;
+														});
+														if (match) {
+															handleSelectPerson(rowKey, match.id.toString());
+														} else if (val === '— Add new person —') {
+															handleSelectPerson(rowKey, '__add_new__');
+														}
+													}}
+												/>
+												<datalist id={listId}>
 													{#each getRowCandidates(row, rowKey) as candidate (candidate.id)}
-														<option value={candidate.id.toString()} selected={s.person_id === candidate.id}>
-															{candidate.full_name}{candidate.role_name ? ` (${candidate.role_name})` : ''}
-														</option>
+														<option value={candidate.role_name ? `${candidate.full_name} (${candidate.role_name})` : candidate.full_name}></option>
 													{/each}
-													<option value="__add_new__">— Add new person —</option>
-												</select>
+													<option value="— Add new person —"></option>
+												</datalist>
 
 												<!-- AddNewPersonForm: inline below dropdown when Add new person selected -->
 												{#if s.addingPerson}
@@ -535,7 +551,31 @@
 											"
 										>
 											{#if s?.disposition !== null && s?.disposition !== undefined}
-												<!-- Row is dispositioned — show nothing (status shown in col 2) -->
+												<!-- Row is dispositioned — show Override button to reopen correction flow -->
+												<button
+													type="button"
+													onclick={() => {
+														const st = rowStates[rowKey];
+														if (!st) return;
+														st.disposition = null;
+														st.person_id = null;
+														st.correcting = false;
+														st.addingPerson = false;
+													}}
+													style="
+														font-size: 14px;
+														font-weight: 400;
+														color: #94a3b8;
+														background: transparent;
+														border: 1px solid #334155;
+														border-radius: 4px;
+														padding: 6px 12px;
+														cursor: pointer;
+														min-height: 32px;
+													"
+												>
+													Override
+												</button>
 											{:else}
 												<div style="display: flex; gap: 8px; flex-wrap: wrap;">
 													{#if row.auto_match_id}
@@ -588,12 +628,28 @@
 
 		<!-- Continue Resolve button (D-14): only when paused AND all rows dispositioned -->
 		{#if data.job.status === 'paused' && allDispositioned}
-			<form method="POST" action="?/resolve" style="margin-top: 24px;">
+			<form
+				method="POST"
+				action="?/resolve"
+				use:enhance={() => {
+					continueSubmitting = true;
+					return async ({ result, update }) => {
+						if (result.type === 'failure') {
+							continueSubmitting = false;
+							// error is displayed via form prop below
+							await update();
+						} else {
+							// success: invalidateAll restarts polling and re-fetches job state
+							await update({ reset: false });
+						}
+					};
+				}}
+				style="margin-top: 24px;"
+			>
 				<input type="hidden" name="matches" value={matchesJson} />
 				<button
 					type="submit"
 					disabled={continueSubmitting}
-					onclick={() => (continueSubmitting = true)}
 					style="
 						width: 100%;
 						min-height: 44px;
@@ -610,6 +666,11 @@
 					{continueSubmitting ? 'Submitting…' : 'Continue Resolve'}
 				</button>
 			</form>
+			{#if form?.error}
+				<p role="alert" style="margin-top: 8px; color: #ef4444; font-size: 14px;">
+					{form.error}
+				</p>
+			{/if}
 		{/if}
 
 		<!-- Error panel (D-17): when status=failed; error_message rendered verbatim; no retry -->

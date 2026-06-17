@@ -99,7 +99,7 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
 
 **Wave 5** *(gap closure — UAT tests 10, 11 + premature case visibility)*
 
-- [ ] 07-07-PLAN.md — Gap closure: single Change button on HIT rows, people-backed typeahead (load all people), use:enhance add-person form (Wave 5)
+- [x] 07-07-PLAN.md — Gap closure: single Change button on HIT rows, people-backed typeahead (load all people), use:enhance add-person form (Wave 5) [Tasks 1-2 done; Task 3 checkpoint pending]
 - [ ] 07-08-PLAN.md — Gap closure: arguments.resolved_at column (migration 0004), get_cases() resolve-completion gate, set resolved_at on resolve completion (Wave 5)
 
 **UI hint**: yes
@@ -129,5 +129,5 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
 | 4. Accessibility + Hardening | v1.0 | 2/2 | Complete | 2026-06-15 |
 | 5. Admin Foundation | v1.1 | 2/2 | Complete   | 2026-06-15 |
 | 6. Auth | v1.1 | 3/3 | Complete   | 2026-06-16 |
-| 7. Pipeline Runner | v1.1 | 6/6 | Complete   | 2026-06-17 |
+| 7. Pipeline Runner | v1.1 | 7/8 (07-07 partial) | In Progress | - |
 | 8. People Editor | v1.1 | 0/? | Not started | - |

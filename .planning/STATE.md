@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Operator Admin Interface
 status: executing
-stopped_at: Phase 07 Plan 06 complete — UAT gaps closed; ready for Phase 07 verify
-last_updated: "2026-06-17T13:44:57.899Z"
-last_activity: 2026-06-17 -- Phase 07 execution started
+stopped_at: Phase 07 Plan 07 Tasks 1-2 complete — awaiting human verification (Task 3 checkpoint)
+last_updated: "2026-06-17T15:14:08Z"
+last_activity: 2026-06-17 -- Phase 07 Plan 07 auto tasks executed
 progress:
   total_phases: 4
-  completed_phases: 3
-  total_plans: 11
+  completed_phases: 2
+  total_plans: 13
   completed_plans: 11
-  percent: 75
+  percent: 50
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-06-15 after v1.1 milestone start)
 ## Current Position
 
 Phase: 07 (pipeline-runner) — EXECUTING
-Plan: 2 of 6
-Status: Ready to execute
-Last activity: 2026-06-17 -- Phase 07 execution started
+Plan: 7 of 8 (Tasks 1-2 done, Task 3 checkpoint pending human verify)
+Status: Executing Phase 07
+Last activity: 2026-06-17 -- Phase 07 Plan 07 auto tasks executed
 
 Progress: [███████░░░] 75%
 
@@ -58,6 +58,7 @@ Progress: [███████░░░] 75%
 | Phase 07-pipeline-runner P04 | 15 | 2 tasks | 3 files |
 | Phase 07-pipeline-runner P05 | 164 | 2 tasks | 2 files |
 | Phase 07-pipeline-runner P06 | 265 | 3 tasks | 3 files |
+| Phase 07-pipeline-runner P07 | 371 | 2 tasks (auto) + 1 checkpoint | 4 files |
 
 ## Accumulated Context
 
@@ -97,6 +98,10 @@ Key v1.1 decisions from research:
 - [Phase ?]: [07-06]: HIT rows now in discrepancies JSONB with auto_resolved=True — operator must confirm all aliases before pipeline advances
 - [Phase ?]: [07-06]: x-sveltekit-action header required on raw fetch to SvelteKit action endpoints to receive JSON envelope
 - [Phase ?]: [07-06]: use:enhance custom callback owns continueSubmitting state — remove onclick from submit button when using enhance
+- [Phase ?]: [07-07]: HIT rows pre-dispositioned as 'confirmed' in rowStates init — single Change button, no Confirm click needed
+- [Phase ?]: [07-07]: getRowCandidates merges data.people (full roster) before row.candidates for de-duplication by id
+- [Phase ?]: [07-07]: AddNewPersonForm uses use:enhance — SvelteKit devalue-deserializes result.data automatically, no raw fetch
+- [Phase ?]: [07-07]: GET /api/admin/people added to admin router using list_people() Person+Role outerjoin ordered by full_name
 
 ### Pending Todos
 

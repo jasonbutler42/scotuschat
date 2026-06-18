@@ -1,5 +1,5 @@
 ---
-status: diagnosed
+status: complete
 phase: 08-people-editor
 source: 08-01-SUMMARY.md, 08-02-SUMMARY.md, 08-03-SUMMARY.md, 08-04-SUMMARY.md, 08-05-SUMMARY.md
 started: 2026-06-18T00:00:00Z
@@ -49,24 +49,21 @@ result: pass
 
 ### 9. Participants list on completed job detail
 expected: Navigate to a completed pipeline job's detail page (/admin/pipeline/[id]). A "Resolved participants" section appears at the bottom, listing each participant's name with their role in parentheses. The section heading pluralizes correctly (e.g., "3 resolved participants"). Non-completed jobs do not show this section.
-result: issue
-reported: "There is no resolved participants in a completed job"
-severity: major
+result: pass
+note: Old runs do not show the section (expected — argument_participants was never seeded for prior runs). New runs show the section after ~30s; requires a manual page refresh before the section appears (minor — page polling does not auto-update post-resolve). Backlog B-002 filed to link participant names to /admin/people/[id].
 
 ### 10. Review people link from job detail
 expected: On the completed job detail page, a "Review people →" link or button appears within the participants section. Clicking it navigates to /admin/people?incomplete=1 (the people directory filtered to show only incomplete records).
-result: blocked
-blocked_by: prior-phase
-reason: "Participants section not visible — blocked by test 9 failure"
+result: pass
 
 ## Summary
 
 total: 10
-passed: 8
-issues: 1
+passed: 10
+issues: 0
 pending: 0
 skipped: 0
-blocked: 1
+blocked: 0
 
 ## Gaps
 

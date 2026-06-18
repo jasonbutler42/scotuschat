@@ -743,6 +743,52 @@
 				</a>
 			</div>
 		{/if}
+
+		<!-- ParticipantList (PEOPLE-04, D-02, D-03): only when completed AND participants exist -->
+		{#if data.job.status === 'completed' && data.participants.length > 0}
+			<div
+				style="
+					margin-top: 32px;
+					background-color: #1e293b;
+					border: 1px solid #334155;
+					border-radius: 8px;
+					padding: 24px;
+				"
+			>
+				<h2 style="font-size: 20px; font-weight: 600; color: #e2e8f0; margin: 0 0 16px 0; line-height: 1.2;">
+					{data.participants.length} resolved participant{data.participants.length === 1 ? '' : 's'}
+				</h2>
+				<ul style="list-style: none; padding: 0; margin: 0 0 16px 0;">
+					{#each data.participants as p, i (p.person_id)}
+						<li
+							style="
+								font-size: 16px;
+								color: #e2e8f0;
+								padding: 8px 0;
+								{i < data.participants.length - 1 ? 'border-bottom: 1px solid #334155;' : ''}
+							"
+						>
+							{p.full_name}{#if p.role_name}<span style="color: #94a3b8; font-size: 14px; margin-left: 8px;">({p.role_name})</span>{/if}
+						</li>
+					{/each}
+				</ul>
+				<a
+					href="/admin/people?incomplete=1"
+					style="
+						display: inline-block;
+						font-size: 14px;
+						font-weight: 400;
+						color: #93c5fd;
+						border: 1px solid #334155;
+						border-radius: 6px;
+						padding: 8px 16px;
+						text-decoration: none;
+					"
+				>
+					Review people →
+				</a>
+			</div>
+		{/if}
 	</div>
 </main>
 

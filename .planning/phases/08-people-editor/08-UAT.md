@@ -1,5 +1,5 @@
 ---
-status: complete
+status: diagnosed
 phase: 08-people-editor
 source: 08-01-SUMMARY.md, 08-02-SUMMARY.md, 08-03-SUMMARY.md, 08-04-SUMMARY.md, 08-05-SUMMARY.md
 started: 2026-06-18T00:00:00Z
@@ -75,7 +75,12 @@ blocked: 1
   reason: "User reported: There is no resolved participants in a completed job"
   severity: major
   test: 9
-  root_cause: ""
-  artifacts: []
-  missing: []
+  root_cause: "argument_participants rows are never inserted — resolve.py Step 5 runs UPDATE against rows that don't exist (no-op). The parse step never creates ArgumentParticipant rows for unique speaker labels, so list_participants_for_job always returns an empty list."
+  artifacts:
+    - path: "pipeline/commands/resolve.py"
+      issue: "Step 5 (line 285) does UPDATE on argument_participants but rows never exist; needs INSERT before resolve runs"
+    - path: "pipeline/commands/parse.py"
+      issue: "Parse step does not insert ArgumentParticipant rows for unique speaker labels — this is the missing INSERT site"
+  missing:
+    - "INSERT one ArgumentParticipant row per unique raw_speaker_label (with person_id=null) during the parse step, keyed by (argument_id, raw_speaker_label, side)"
   debug_session: ""

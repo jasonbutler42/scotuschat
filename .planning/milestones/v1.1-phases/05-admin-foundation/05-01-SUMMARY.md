@@ -120,6 +120,17 @@ _Note: Task 2 tests were written as part of Task 1's test file (RED phase includ
 - Phase 6 (auth) can add `SESSION_SECRET` alongside `admin_token` in `api/core/config.py`
 - Phase 7 (pipeline runner) has the full `admin_jobs` schema it needs — no migration 0004 required for this table
 
+## Self-Check: PASSED
+
+- alembic/versions/0003_add_admin_jobs.py: FOUND
+- api/models/models.py: FOUND
+- api/core/config.py: FOUND
+- tests/test_admin_schema.py: FOUND
+- .planning/phases/05-admin-foundation/05-01-SUMMARY.md: FOUND
+- Commit 92415ef (test RED): FOUND
+- Commit 8188e75 (feat migration): FOUND
+- Commit 0b575d4 (feat ORM+config): FOUND
+
 ---
 *Phase: 05-admin-foundation*
 *Completed: 2026-06-15*

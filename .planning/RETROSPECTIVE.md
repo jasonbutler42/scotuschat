@@ -54,6 +54,62 @@
 
 ---
 
+## Milestone: v1.1 — Operator Admin Interface
+
+**Shipped:** 2026-06-18
+**Phases:** 4 (5–8) | **Plans:** 19 | **Timeline:** 4 days (2026-06-15 → 2026-06-18)
+**Commits:** 155 | **Files changed:** 120 | **Net lines:** +23,277 / -1,410
+
+### What Was Built
+
+- HMAC stateless session auth — `hooks.server.ts` sole checkpoint, dark-theme login page with `timingSafeEqual`, logout action (AUTH-01/02/03)
+- FastAPI admin router with `X-Admin-Token` auth dependency, admin_jobs service (schemas, boto3 DO Spaces upload, detached subprocess spawn, atomic advance guards)
+- Three pipeline commands made job-aware: `--job-id` writes RUNNING/COMPLETED/FAILED; resolve replaces terminal prompts with discrepancy JSONB + PAUSED state
+- Pipeline Runner UI: two-mode start page (URL/upload), fire-and-poll step cards at 2.5s, discrepancy review with HIT/MISS rows, inline add-person, resumable across sessions
+- `arguments.resolved_at` visibility gate (Alembic migration 0004) — cases hidden from `/cases/` until resolve completes
+- People directory (filterable by missing metadata), person edit form (bio/photo/tenures/roles), per-argument participant review (Alembic migration 0005)
+- 3 gap-closure plans within Phase 7 (07-06, 07-07, 07-08) addressing UAT gaps found post-execution
+
+### What Worked
+
+- **Phase dependency order enforced by design** — 5 before 6 before 7 before 8; each prerequisite delivered exactly what the dependent phase needed
+- **Fire-and-poll architecture** — HTTP returns `{job_id}` immediately, client polls every 2.5s, stops on terminal states; no timeout risk, no SSE complexity
+- **Atomic advance guards** — `rowcount == 1` without `RETURNING` prevents double-spawn races in concurrent polling
+- **Debug session framework** — structured diagnosis of 3 complex client-side bugs led to precise fixes; all root causes confirmed before any code was written
+- **Gap-closure as separate plans** — treating UAT failures as distinct plans with SUMMARY files gave full traceability from gap to fix to verification
+
+### What Was Inefficient
+
+- **Debug sessions left in "diagnosed" status** — all 3 were diagnosed and fixed 2 days before milestone close; should close them when the fix lands
+- **Phase 7 UAT not re-run after gap closure** — fixes were human-verified in 07-07 but UAT wasn't formally re-run; Phase 8 10/10 pass was indirect confirmation only
+- **REQUIREMENTS.md AUTH checkboxes** — same lesson as v1.0: AUTH-01/02/03 remained unchecked after Phase 6 completed; required correction at milestone close
+- **`07-VERIFICATION.md` human_needed with "no gaps" Gaps Summary** — status not updated after behavioral human checks were complete
+
+### Patterns Established
+
+- `use:enhance` vs raw fetch — raw fetch needs BOTH `Accept: application/json` AND `deserialize(await res.text())`; `use:enhance` handles both; always prefer `use:enhance` for SvelteKit actions
+- `x-sveltekit-action: true` alone is insufficient — SvelteKit checks `Accept` header, not `x-sveltekit-action`
+- `resolved_at` visibility gate — nullable timestamp column (NULL = hidden) cleaner than boolean `is_published`
+- `select-before-insert` for idempotent seeding — safe for pipeline re-runs without unique constraint errors
+- Job state in DB only — DO container filesystem is ephemeral; module-level Maps are wiped on every deploy
+- `rowcount == 1` without `RETURNING` — `RETURNING` nullifies rowcount on some PG driver versions
+
+### Key Lessons
+
+1. **Close debug sessions when fixes land** — don't leave `status: diagnosed` after the fix commits
+2. **Re-run UAT after any gap-closure plan** — passing Phase N+1 UAT is only indirect confirmation
+3. **Mark requirements complete at phase transition** — AUTH-01/02/03 should have been checked off with 06-03-SUMMARY
+4. **Update VERIFICATION.md when Gaps Summary says "no gaps"** — `human_needed` with a clean Gaps Summary creates false-positive audit flags
+5. **`use:enhance` is the correct pattern for all SvelteKit form actions** — the devalue deserialization trap will catch raw fetch every time
+
+### Cost Observations
+
+- Model mix: Sonnet primary throughout
+- Sessions: ~10 sessions over 4 days
+- Notable: Phase 7 required 3 gap-closure sub-plans — complex UI state (client-side rowStates + SvelteKit devalue + pipeline JSONB) is hard to verify statically
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -61,14 +117,17 @@
 | Milestone | Phases | Plans | Key Change |
 |-----------|--------|-------|------------|
 | v1.0 MVP | 4 | 15 | First milestone; established baseline patterns |
+| v1.1 Operator Admin Interface | 4 | 19 | First admin/auth work; fire-and-poll pattern; gap-closure plans as first-class artifacts |
 
 ### Cumulative Quality
 
 | Milestone | Test Files | Zero-Dep Additions | WCAG Compliance |
 |-----------|------------|-------------------|-----------------|
-| v1.0 MVP | 6 | 0 (no new npm/pip beyond initial setup) | AA across all pages |
+| v1.0 MVP | 6 | 0 | AA across all pages |
+| v1.1 Admin Interface | 8+ | boto3, @types/node | AA maintained; admin UI dark theme |
 
 ### Top Lessons (Verified Across Milestones)
 
-1. Keep requirements checked off in real time — stale checkboxes create reconciliation work at milestone close
-2. Run the milestone audit before the milestone close ceremony
+1. Keep requirements checked off in real time — stale checkboxes create reconciliation work at milestone close (v1.0 + v1.1)
+2. Run the milestone audit before the milestone close ceremony — surfaces stale artifacts early
+3. Close debug sessions and update verification status when the fix lands — not at milestone close

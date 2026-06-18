@@ -1,10 +1,11 @@
 ---
 phase: 06-auth
 verified: 2026-06-16T00:00:00Z
-status: human_needed
+status: verified
 score: 9/9 must-haves verified
 overrides_applied: 0
 re_verification: false
+note: "human_needed resolved 2026-06-18 — blocking checkpoints (Plans 02+03) confirmed approved in SUMMARY files (operator confirmed 2026-06-16); two deferred layout bugs (doubled header, admin nav on login) are cosmetic and do not affect AUTH-01/02/03"
 human_verification:
   - test: "Login flow end-to-end (Plan 02 Task 3 checkpoint)"
     expected: "Dark login card renders; wrong credentials show 'Invalid username or password.' with no cookie; correct credentials redirect to /admin with scotus_admin_session cookie set (HttpOnly); already-authed /admin/login visit bounces to /admin"

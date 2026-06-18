@@ -2,21 +2,17 @@
 
 ## What This Is
 
-A website that displays Supreme Court oral arguments as a chat-style interface — formatted like a group conversation between the Justices and whoever is arguing before the Court. An offline operator-only pipeline ingests transcript PDFs, parses utterances via LLM, and resolves raw speaker labels to named people records. The goal is accessibility: making dense legal transcripts easy to follow for anyone who wants to understand who said what, without editorial framing or political commentary.
+A website that displays Supreme Court oral arguments as a chat-style interface — formatted like a group conversation between the Justices and whoever is arguing before the Court. An offline operator-only pipeline ingests transcript PDFs, parses utterances via LLM, and resolves raw speaker labels to named people records. An operator admin web interface drives the full pipeline from the browser — uploading PDFs, monitoring step progress, reviewing speaker aliases, and editing people metadata — without touching the CLI. The goal is accessibility: making dense legal transcripts easy to follow for anyone who wants to understand who said what, without editorial framing or political commentary.
 
 ## Core Value
 
 Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
 
-## Current Milestone: v1.1 Operator Admin Interface
+## Next Milestone: v1.2 Deployment
 
-**Goal:** Build a password-protected operator web interface that drives the ingestion pipeline step-by-step and manages speaker metadata — making it fast to ingest new arguments without touching the CLI.
+**Goal:** Deploy to Digital Ocean App Platform (SvelteKit + FastAPI as separate services, managed Postgres) with continuous deployment from GitHub main branch.
 
-**Target features:**
-- Admin auth — username+password (env vars), session cookie, server hook guards all `/admin/*` routes; `admin.scotuschat.com` via reverse proxy
-- Pipeline runner — upload PDF or enter URL → runs ingest → parse → resolve sequentially; auto-advances when no discrepancies, pauses for operator review when they exist; pipeline job state persisted (resumable across sessions)
-- People directory — global editor for all people records: name, role, bio text, photo URL, tenure dates
-- Per-argument participant review — after ingesting, inline review of resolved participants with ability to fill in missing metadata
+**Target requirements:** DEPLOY-01, DEPLOY-03
 
 ## Requirements
 
@@ -51,12 +47,19 @@ Anyone can open a SCOTUS oral argument and immediately follow the conversation �
 - ✓ Fully keyboard navigable — v1.0 (A11Y-02)
 - ✓ Speaker side differentiation by layout position only — v1.0 (A11Y-03)
 - ✓ Focus managed correctly for interactive elements — v1.0 (A11Y-04)
-- ✓ Operator can authenticate to `/admin/*` routes with username+password; unauthenticated requests redirect to login — Phase 6 (ADMIN-01)
-- ✓ Operator can start a pipeline run by uploading a PDF or entering a supremecourt.gov URL — Phase 7 (PIPE-12)
-- ✓ Pipeline runs ingest → parse → resolve sequentially, auto-advancing when no discrepancies; pauses for operator discrepancy review when they exist — Phase 7 (PIPE-13)
-- ✓ Pipeline job state persisted to DB; resumable across browser sessions — Phase 7 (PIPE-14)
-- ✓ Operator can view all people in a directory and edit name, role, bio text, photo URL, and tenure dates — Phase 8 (PEOPLE-01)
-- ✓ After a pipeline run, operator can review resolved participants and fill in missing metadata inline — Phase 8 (PEOPLE-02)
+- ✓ Operator can log in at `/admin/login` with username+password (env vars); invalid credentials show an error — v1.1 (AUTH-01)
+- ✓ All `/admin/*` routes redirect unauthenticated requests to `/admin/login` before content renders — v1.1 (AUTH-02)
+- ✓ Operator can log out and session is invalidated immediately — v1.1 (AUTH-03)
+- ✓ Operator can start a new pipeline run by entering a supremecourt.gov PDF URL — v1.1 (PIPE-12)
+- ✓ Operator can start a new pipeline run by uploading a local PDF file — v1.1 (PIPE-13)
+- ✓ Running pipeline displays step status (Ingest / Parse / Resolve) and auto-advances when each step completes without discrepancies — v1.1 (PIPE-14)
+- ✓ Pipeline pauses after resolve when discrepancies exist and displays them for operator review before continuing — v1.1 (PIPE-15)
+- ✓ Operator can confirm or correct speaker alias matches during resolve review; confirmed matches saved to alias table — v1.1 (PIPE-16)
+- ✓ Pipeline job state persisted to DB; operator can close the browser and resume an in-progress run — v1.1 (PIPE-17)
+- ✓ Operator can view all people in a directory listing — v1.1 (PEOPLE-01)
+- ✓ Operator can filter the directory to show only people with one or more missing metadata fields — v1.1 (PEOPLE-02)
+- ✓ Operator can edit a person's name, role, bio text, photo URL, and tenure dates — v1.1 (PEOPLE-03)
+- ✓ After a pipeline run, operator can review resolved participants and fill in missing metadata inline — v1.1 (PEOPLE-04)
 
 ### Active
 
@@ -65,7 +68,7 @@ Anyone can open a SCOTUS oral argument and immediately follow the conversation �
 
 ### Out of Scope
 
-- Automated enrich pipeline step (Oyez/FJC API) — manual people editor in admin UI serves this for v1.1; automated enrichment deferred (ENRICH-01/02/03)
+- Automated enrich pipeline step (Oyez/FJC API) — manual people editor shipped in v1.1 serves this use case; automated enrichment remains deferred (ENRICH-01/02/03)
 - Citation pipeline step — not in scope for v1.1; schema already supports it (CITE-01/02)
 - Audio playback — Oyez owns the distribution relationship; link to Oyez instead
 - AI-generated case summaries — violates apolitical framing constraint; hard no
@@ -79,13 +82,16 @@ Anyone can open a SCOTUS oral argument and immediately follow the conversation �
 
 ## Context
 
-- Shipped v1.0 with ~4,895 LOC across TypeScript, Svelte, and Python (146 files, 76 commits)
+- Shipped v1.0 with ~4,895 LOC across TypeScript, Svelte, and Python (Phase 1–4)
+- Shipped v1.1 with ~52,872 total LOC (120 files changed, 23,277 insertions; 155 commits from Phase 5–8; 4 days 2026-06-15 → 2026-06-18)
 - Tech stack confirmed: SvelteKit 2.x + Svelte 5 Runes (frontend), FastAPI 0.115+ + Pydantic v2 (API), PostgreSQL 16 + SQLAlchemy 2.0 async + Alembic (database), Python 3.12 + pdfplumber + Anthropic SDK + instructor + tenacity (pipeline)
-- One hand-picked case (Obergefell v. Hodges) ingested and verified end-to-end
+- Admin interface: stateless HMAC session cookie, DO Spaces PDF storage (boto3), fire-and-poll job state, people directory + edit form
+- One hand-picked case (Obergefell v. Hodges) ingested and verified end-to-end; `arguments.resolved_at` gate controls public visibility
 - No photo URLs populated yet — avatar initials fallback in use throughout
 - Repo is public on GitHub
-- Hosting: Digital Ocean App Platform + managed Postgres (owner has existing account; DEPLOY-01 is v1.1 work)
+- Hosting: Digital Ocean App Platform + managed Postgres (owner has existing account; DEPLOY-01/03 are v1.2 work)
 - PgBouncer transaction mode constraint fully addressed: `statement_cache_size=0` in `connect_args` (not top-level engine kwarg)
+- Known deployment blockers: `BODY_SIZE_LIMIT=10M`, `ORIGIN`/`PROTOCOL_HEADER`/`HOST_HEADER` env vars, `admin.scotuschat.com` DNS entry
 
 ## Constraints
 
@@ -142,4 +148,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-18 after Phase 08 — milestone v1.1 complete*
+*Last updated: 2026-06-18 after v1.1 milestone*

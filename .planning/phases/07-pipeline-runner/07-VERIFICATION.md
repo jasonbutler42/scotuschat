@@ -1,9 +1,10 @@
 ---
 phase: 07-pipeline-runner
 verified: 2026-06-17T00:00:00Z
-status: human_needed
+status: verified
 score: 18/18
 overrides_applied: 0
+note: "human_needed resolved 2026-06-18 — 18/18 truths verified code-level; behavioral UX gaps (discrepancy HIT rows, typeahead, add-person) confirmed fixed by 07-07 human verification (all 5 checks approved 2026-06-17); cases-premature-visibility confirmed fixed by 07-08 migration; Phase 8 completed 10/10 UAT pass providing end-to-end confirmation"
 human_verification:
   - test: "Live polling step cards advance Ingest→Parse→Resolve without page reload"
     expected: "Three step cards update every 2.5s; Ingest completes, Parse card transitions to Running, then Resolve"

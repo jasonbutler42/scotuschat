@@ -32,6 +32,7 @@ from api.models.models import (
     AdminJob,
     AdminJobStatus,
     AdminJobStep,
+    ArgumentParticipant,
     PipelineRun,
     PipelineRunStatus,
     SideEnum,
@@ -249,6 +250,36 @@ async def _run_parse_inner(args) -> None:
             session.add(utterance)
 
         await session.flush()
+
+        # -------------------------------------------------------------------
+        # Step 7b: Seed argument_participants (PEOPLE-04)
+        # One row per unique speaker label so resolve.py UPDATE has rows to hit.
+        # person_id stays NULL — Resolve step sets it via UPDATE.
+        # Select-before-insert handles parse re-runs safely.
+        # -------------------------------------------------------------------
+        if run.argument_id is not None:
+            participant_labels = {
+                (u["raw_speaker_label"], SideEnum(u["side"]))
+                for u in utterances
+                if u.get("raw_speaker_label") and not u.get("is_stage_direction")
+            }
+            if participant_labels:
+                existing_result = await session.execute(
+                    select(ArgumentParticipant.raw_speaker_label).where(
+                        ArgumentParticipant.argument_id == run.argument_id
+                    )
+                )
+                existing = {row[0] for row in existing_result.all()}
+                new_rows = [(lbl, side) for lbl, side in participant_labels if lbl not in existing]
+                for raw_label, side in new_rows:
+                    session.add(ArgumentParticipant(
+                        argument_id=run.argument_id,
+                        raw_speaker_label=raw_label,
+                        side=side,
+                        person_id=None,
+                    ))
+                await session.flush()
+                print(f"Seeded {len(new_rows)} argument_participant row(s) ({len(existing)} already existed).")
 
         # -------------------------------------------------------------------
         # Step 8: Transition running → completed (PIPE-10)

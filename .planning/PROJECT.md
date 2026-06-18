@@ -8,11 +8,17 @@ A website that displays Supreme Court oral arguments as a chat-style interface �
 
 Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
 
-## Next Milestone: v1.2 Deployment
+## Current Milestone: v1.2 Pre-Launch Polish
 
-**Goal:** Deploy to Digital Ocean App Platform (SvelteKit + FastAPI as separate services, managed Postgres) with continuous deployment from GitHub main branch.
+**Goal:** Complete the admin tooling and public experience needed before the site is ready to deploy.
 
-**Target requirements:** DEPLOY-01, DEPLOY-03
+**Target features:**
+- Ingestion flow polish (progress indicators, typeahead, incomplete toggle)
+- Argument metadata editing (correct title/docket/date before resolved_at gate)
+- Unified navigation (admin and public share same top nav)
+- People data model (structured name fields, appointing president + party)
+- People admin improvements (image upload, merge people, delete orphaned records)
+- Speaker popover card (bench only — avatar click shows image, name, role, tenure, appointing president/party)
 
 ## Requirements
 
@@ -63,8 +69,14 @@ Anyone can open a SCOTUS oral argument and immediately follow the conversation �
 
 ### Active
 
-- [ ] Application deployed to Digital Ocean App Platform (SvelteKit + FastAPI as separate services, managed Postgres) (DEPLOY-01)
-- [ ] Continuous deployment from GitHub main branch (DEPLOY-03)
+- [ ] Ingestion flow polish — fix progress indicators, typeahead dropdowns, incomplete toggle
+- [ ] Argument metadata editing — correct title, docket, date before resolved_at gate
+- [ ] Unified top navigation — admin and public share same nav header
+- [ ] People data model — structured name fields (first/last/middle/suffix), appointing president + party
+- [ ] People admin — image upload to DO Spaces, merge people (utterance transfer), delete orphaned records
+- [ ] Speaker popover card — avatar click shows image, name, role, tenure, appointing president/party (bench only)
+- [ ] Application deployed to Digital Ocean App Platform (SvelteKit + FastAPI as separate services, managed Postgres) (DEPLOY-01, v1.3)
+- [ ] Continuous deployment from GitHub main branch (DEPLOY-03, v1.3)
 
 ### Out of Scope
 
@@ -148,4 +160,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-18 after v1.1 milestone*
+*Last updated: 2026-06-18 after v1.2 milestone start*

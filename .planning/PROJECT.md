@@ -55,13 +55,11 @@ Anyone can open a SCOTUS oral argument and immediately follow the conversation �
 - ✓ Operator can start a pipeline run by uploading a PDF or entering a supremecourt.gov URL — Phase 7 (PIPE-12)
 - ✓ Pipeline runs ingest → parse → resolve sequentially, auto-advancing when no discrepancies; pauses for operator discrepancy review when they exist — Phase 7 (PIPE-13)
 - ✓ Pipeline job state persisted to DB; resumable across browser sessions — Phase 7 (PIPE-14)
+- ✓ Operator can view all people in a directory and edit name, role, bio text, photo URL, and tenure dates — Phase 8 (PEOPLE-01)
+- ✓ After a pipeline run, operator can review resolved participants and fill in missing metadata inline — Phase 8 (PEOPLE-02)
 
 ### Active
 
-- [ ] Operator can view all people in a directory and edit name, role, bio text, photo URL, and tenure dates (PEOPLE-01)
-- [ ] After a pipeline run, operator can review resolved participants and fill in missing metadata inline (PEOPLE-02)
-- [ ] Operator can view all people in a directory and edit name, role, bio text, photo URL, and tenure dates (PEOPLE-01)
-- [ ] After a pipeline run, operator can review resolved participants and fill in missing metadata inline (PEOPLE-02)
 - [ ] Application deployed to Digital Ocean App Platform (SvelteKit + FastAPI as separate services, managed Postgres) (DEPLOY-01)
 - [ ] Continuous deployment from GitHub main branch (DEPLOY-03)
 
@@ -123,6 +121,8 @@ Anyone can open a SCOTUS oral argument and immediately follow the conversation �
 | Fire-and-poll for pipeline status (Phase 7) | Subprocess spawned immediately, HTTP returns `{job_id}`, client polls every 2.5s; never await subprocess completion in request handler | ✓ Good — clean separation; prevents request timeouts on long-running steps |
 | DigitalOcean Spaces (boto3) for PDF persistence (Phase 7) | DO App Platform container filesystem is ephemeral; Spaces provides durable object storage | ✓ Good — PDFs survive deploys and restarts |
 | `arguments.resolved_at` visibility gate (Phase 7) | Cases only appear in `/cases/` after `resolved_at IS NOT NULL`; prevents placeholder titles ("Pending review") from surfacing publicly; metadata fabrication at resolve time forbidden by apolitical constraint | ✓ Good — Phase 8 (People Editor) provides real metadata editing |
+| ArgumentParticipant seeding in parse Step 7b (Phase 8) | resolve.py Step 5 ran UPDATE against rows that never existed; fix seeds one row per unique speaker label (person_id=NULL) during parse Step 7b; select-before-insert guards re-runs | ✓ Good — participants section renders on completed job detail pages after any new run |
+| People editor uses SvelteKit form actions + use:enhance throughout (Phase 8) | Consistent with existing admin UI patterns; AddNewPersonForm uses raw fetch for role creation (needs JSON response inspection) | ✓ Good — clean server validation via FastAPI Pydantic models |
 
 ## Evolution
 
@@ -142,4 +142,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-17 after Phase 07*
+*Last updated: 2026-06-18 after Phase 08 — milestone v1.1 complete*

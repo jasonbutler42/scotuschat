@@ -3,43 +3,43 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Operator Admin Interface
 current_phase: 08
-current_phase_name: people-editor
-status: verifying
-stopped_at: Phase 8 UI-SPEC approved
-last_updated: "2026-06-18T03:05:04.425Z"
-last_activity: 2026-06-17
-last_activity_desc: Phase 08 execution started
+status: milestone_complete
+stopped_at: Phase 08 complete — all 4 phases done, milestone v1.1 100%
+last_updated: "2026-06-18T14:10:48.865Z"
+last_activity: 2026-06-18
+last_activity_desc: Phase 08 complete
 progress:
   total_phases: 4
   completed_phases: 4
-  total_plans: 18
-  completed_plans: 18
+  total_plans: 19
+  completed_plans: 19
   percent: 100
+current_phase_name: people-editor
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-06-17 after Phase 07)
+See: .planning/PROJECT.md (updated 2026-06-18 after Phase 08)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** Phase 08 — people-editor
+**Current focus:** Milestone v1.1 complete — ready for /gsd-complete-milestone
 
 ## Current Position
 
-Phase: 08 (people-editor) — EXECUTING
-Plan: 5 of 5
-Status: Phase complete — ready for verification
-Last activity: 2026-06-17 — Phase 08 execution started
+Phase: 08 (complete)
+Plan: 6/6 complete
+Status: Milestone complete — all 4 phases, 19/19 plans done
+Last activity: 2026-06-18 — Phase 08 complete, milestone v1.1 100%
 
-Progress: [██████████░░] 3/4 phases complete (13/13 plans)
+Progress: [████████████████████] 19/19 plans (100%)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 23 (v1.0)
+- Total plans completed: 29 (v1.0)
 - Average duration: ~40 min
 - Total execution time: ~10 hours (v1.0)
 
@@ -52,6 +52,7 @@ Progress: [██████████░░] 3/4 phases complete (13/13 plan
 | 03-full-ui | 4 | — | — |
 | 04-accessibility-hardening | 2 | — | — |
 | 07 | 8 | - | - |
+| 08 | 6 | - | - |
 
 *Updated after each plan completion*
 | Phase 05 P01 | 10 | - tasks | - files |
@@ -115,6 +116,8 @@ Key v1.1 decisions from research:
 - [07-08]: arguments.resolved_at visibility gate — metadata fabrication out of scope; gate alone closes Gap 3; Phase 8 (People Editor) handles real metadata edits
 - [Phase ?]: Migration 0005 and ORM model edit land in same plan wave to keep DB and ORM in sync (Pitfall 1)
 - [Phase ?]: participants fetch only when status=completed AND argument_id set; graceful degrade to [] on error
+- [08-06]: ArgumentParticipant rows must be seeded during parse Step 7b (person_id=NULL); resolve.py Step 5 UPDATE has rows to hit; select-before-insert guards re-runs safely
+- [08]: People editor uses SvelteKit form actions + use:enhance; AddNewPersonForm uses raw fetch only for role creation (JSON response inspection needed)
 
 ### Pending Todos
 
@@ -139,6 +142,6 @@ Items acknowledged and deferred at v1.0 milestone close:
 
 ## Session Continuity
 
-Last session: 2026-06-18T03:05:00.728Z
-Stopped at: Phase 8 UI-SPEC approved
-Resume file: .planning/phases/08-people-editor/08-UI-SPEC.md
+Last session: 2026-06-18
+Stopped at: Phase 08 complete — milestone v1.1 100% done, ready for /gsd-complete-milestone
+Resume file: None

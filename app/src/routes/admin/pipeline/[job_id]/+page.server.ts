@@ -2,6 +2,12 @@ import { ADMIN_TOKEN, FASTAPI_BASE_URL } from '$env/static/private';
 import { error, fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
+interface ParticipantItem {
+	person_id: number;
+	full_name: string;
+	role_name: string | null;
+}
+
 export const load: PageServerLoad = async ({ params }) => {
 	// Fetch the specific job from the admin jobs endpoint.
 	// X-Admin-Token is required for all SvelteKit → FastAPI calls.
@@ -39,7 +45,30 @@ export const load: PageServerLoad = async ({ params }) => {
 		console.error('[load] people fetch threw:', peopleLoadError);
 	}
 
-	return { job, people, peopleLoadError };
+	// Fetch resolved participants when the job is completed and has an argument (PEOPLE-04, D-02).
+	// Only fetches when status === 'completed' and argument_id is set — otherwise defaults to [].
+	// Degrades gracefully on any error so the existing page is never broken by this addition.
+	let participants: ParticipantItem[] = [];
+	if (job.status === 'completed' && job.argument_id != null) {
+		try {
+			const participantsRes = await fetch(
+				`${FASTAPI_BASE_URL}/api/admin/jobs/${params.job_id}/participants`,
+				{ headers: { 'X-Admin-Token': ADMIN_TOKEN } },
+			);
+			if (participantsRes.ok) {
+				participants = await participantsRes.json();
+			} else {
+				console.error(
+					`[load] participants fetch failed: GET /api/admin/jobs/${params.job_id}/participants returned ${participantsRes.status}`,
+				);
+			}
+		} catch (err) {
+			// Non-critical — degrade to [] so the page still renders without the participant section
+			console.error('[load] participants fetch threw:', err instanceof Error ? err.message : String(err));
+		}
+	}
+
+	return { job, people, peopleLoadError, participants };
 };
 
 export const actions: Actions = {

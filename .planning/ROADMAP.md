@@ -4,7 +4,7 @@
 
 - ✅ **v1.0 MVP** — Phases 1–4 (shipped 2026-06-15)
 - ✅ **v1.1 Operator Admin Interface** — Phases 5–8 (shipped 2026-06-18)
-- 📋 **v1.2 Deployment** — (planned)
+- 🚧 **v1.2 Pre-Launch Polish** — Phases 9–14 (in progress)
 
 ## Phases
 
@@ -36,11 +36,87 @@ Full phase details: `.planning/milestones/v1.1-ROADMAP.md`
 
 </details>
 
-### 📋 v1.2 Deployment (Planned)
+### 🚧 v1.2 Pre-Launch Polish (In Progress)
 
-**Milestone Goal:** Deploy to Digital Ocean App Platform with continuous deployment from GitHub.
+**Milestone Goal:** Complete admin tooling and public experience needed before the site is ready to deploy — structured people data, unified navigation, argument editing, people admin improvements, and the speaker popover card.
 
-- [ ] Phase 9: Deployment (TBD plans)
+- [ ] **Phase 9: People Data Model Migration** - Add structured name fields and appointing president/party to the people schema
+- [ ] **Phase 10: Unified Navigation** - Admin and public pages share one top navigation component
+- [ ] **Phase 11: Argument Metadata Editing** - Operator can correct case title, docket, and date before resolving
+- [ ] **Phase 12: People Admin Improvements** - Image upload, delete orphaned records, and merge duplicate people
+- [ ] **Phase 13: Ingestion Flow Polish** - Fix progress indicators, typeahead, and incomplete filter
+- [ ] **Phase 14: Speaker Popover Card** - Avatar click shows bench speaker details with photo, role, and tenure
+
+## Phase Details
+
+### Phase 9: People Data Model Migration
+**Goal**: The people schema carries structured name parts and appointing president/party so all downstream features can read and display that data
+**Depends on**: Phase 8 (people editor exists; migration extends it)
+**Requirements**: PEOP-01, PEOP-02
+**Success Criteria** (what must be TRUE):
+  1. Operator can type a first name, last name, middle name, and suffix into separate fields on a person edit form and save them
+  2. Operator can type an appointing president name and select a party affiliation on a person edit form and save them
+  3. Existing full_name values are preserved after the migration runs; no person record loses its resolution anchor
+  4. All new fields accept null/empty and do not break existing people records that have not been filled in
+**Plans**: TBD
+
+### Phase 10: Unified Navigation
+**Goal**: Every page — admin and public — shares the same top navigation header component so the site feels cohesive and navigation is consistent
+**Depends on**: Nothing (zero data dependencies; can land in any order)
+**Requirements**: NAV-01
+**Success Criteria** (what must be TRUE):
+  1. Visitor on a public argument page can see a top navigation bar with a link to the public case list and to the admin area
+  2. Operator on any admin page sees the same navigation bar with the same links
+  3. The navigation component is a single shared Svelte component — no duplicate markup in admin and public layouts
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 11: Argument Metadata Editing
+**Goal**: Operator can correct a pending argument's title, docket number, and argued date from the admin area before it is published
+**Depends on**: Phase 9 (no schema dependency; can proceed after Phase 9 for sequencing clarity)
+**Requirements**: ARG-01, ARG-02
+**Success Criteria** (what must be TRUE):
+  1. Operator can open a pending argument in the admin area and edit its case title, docket number, and argued date, then save successfully
+  2. Changes to case title, docket, and date are reflected immediately in the admin view after saving
+  3. After an argument's resolved_at is set, its title, docket, and date fields are displayed as read-only and cannot be submitted for editing
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 12: People Admin Improvements
+**Goal**: Operator can upload a profile photo, delete an orphaned person record, and merge duplicate person records — all from the admin people directory
+**Depends on**: Phase 9 (structured name fields available in the edit form)
+**Requirements**: PADM-01, PADM-02, PADM-03, PADM-04
+**Success Criteria** (what must be TRUE):
+  1. Operator can upload a photo file from their computer and have it stored on DO Spaces; the person's avatar updates to show the uploaded photo
+  2. Operator can enter a photo URL as an alternative to file upload; the person's avatar updates to the URL-sourced image
+  3. Operator can delete a person record that has no utterances, aliases, or appearances; the person no longer appears in the directory
+  4. Operator can select a source and a target person and initiate a merge; all utterances, aliases, and appearances transfer to the target before the source is deleted
+  5. Before committing a merge, the operator sees a count of utterances, aliases, and appearances that will transfer
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 13: Ingestion Flow Polish
+**Goal**: The pipeline runner UI accurately reflects job state at all times and gives the operator correct tools to act on incomplete jobs
+**Depends on**: Nothing (independent fixes to the existing pipeline runner)
+**Requirements**: PIPE-18, PIPE-19, PIPE-20
+**Success Criteria** (what must be TRUE):
+  1. Step status badges on a running pipeline job never show stale or incorrect state — the displayed step matches the actual DB state
+  2. Operator typing in the speaker alias typeahead sees relevant candidate matches and can select one; the selected value is applied correctly
+  3. Operator toggling the incomplete filter on the pipeline list sees only jobs that require their action; toggling it off restores the full list
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 14: Speaker Popover Card
+**Goal**: Visitors can click any speaker's avatar on an argument page to see a floating card with the speaker's identity and role details
+**Depends on**: Phase 9 (structured names and appointing president data), Phase 12 (profile photos via Spaces)
+**Requirements**: PUB-01, PUB-02, PUB-03, PUB-04
+**Success Criteria** (what must be TRUE):
+  1. Visitor can click any speaker avatar on an argument page and a popover card opens showing the speaker's name and role
+  2. Bench speaker popovers additionally show tenure dates and the name of the appointing president (no party affiliation shown)
+  3. The popover shows the speaker's profile photo when one is available, or a styled initials fallback when it is not
+  4. Visitor can dismiss the popover by pressing the Escape key; keyboard-only users can reach and dismiss the popover without a mouse
+**Plans**: TBD
+**UI hint**: yes
 
 ## Progress
 
@@ -54,4 +130,9 @@ Full phase details: `.planning/milestones/v1.1-ROADMAP.md`
 | 6. Auth | v1.1 | 3/3 | Complete | 2026-06-16 |
 | 7. Pipeline Runner | v1.1 | 8/8 | Complete | 2026-06-17 |
 | 8. People Editor | v1.1 | 6/6 | Complete | 2026-06-18 |
-| 9. Deployment | v1.2 | 0/? | Not started | — |
+| 9. People Data Model Migration | v1.2 | 0/? | Not started | — |
+| 10. Unified Navigation | v1.2 | 0/? | Not started | — |
+| 11. Argument Metadata Editing | v1.2 | 0/? | Not started | — |
+| 12. People Admin Improvements | v1.2 | 0/? | Not started | — |
+| 13. Ingestion Flow Polish | v1.2 | 0/? | Not started | — |
+| 14. Speaker Popover Card | v1.2 | 0/? | Not started | — |

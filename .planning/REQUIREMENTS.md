@@ -75,28 +75,28 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| NAV-01 | — | Pending |
-| PIPE-18 | — | Pending |
-| PIPE-19 | — | Pending |
-| PIPE-20 | — | Pending |
-| ARG-01 | — | Pending |
-| ARG-02 | — | Pending |
-| PEOP-01 | — | Pending |
-| PEOP-02 | — | Pending |
-| PADM-01 | — | Pending |
-| PADM-02 | — | Pending |
-| PADM-03 | — | Pending |
-| PADM-04 | — | Pending |
-| PUB-01 | — | Pending |
-| PUB-02 | — | Pending |
-| PUB-03 | — | Pending |
-| PUB-04 | — | Pending |
+| NAV-01 | Phase 10 | Pending |
+| PIPE-18 | Phase 13 | Pending |
+| PIPE-19 | Phase 13 | Pending |
+| PIPE-20 | Phase 13 | Pending |
+| ARG-01 | Phase 11 | Pending |
+| ARG-02 | Phase 11 | Pending |
+| PEOP-01 | Phase 9 | Pending |
+| PEOP-02 | Phase 9 | Pending |
+| PADM-01 | Phase 12 | Pending |
+| PADM-02 | Phase 12 | Pending |
+| PADM-03 | Phase 12 | Pending |
+| PADM-04 | Phase 12 | Pending |
+| PUB-01 | Phase 14 | Pending |
+| PUB-02 | Phase 14 | Pending |
+| PUB-03 | Phase 14 | Pending |
+| PUB-04 | Phase 14 | Pending |
 
 **Coverage:**
 - v1.2 requirements: 16 total
-- Mapped to phases: 0 (roadmap pending)
-- Unmapped: 16 ⚠️
+- Mapped to phases: 16
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-06-18*
-*Last updated: 2026-06-18 after initial definition*
+*Last updated: 2026-06-18 after roadmap creation*

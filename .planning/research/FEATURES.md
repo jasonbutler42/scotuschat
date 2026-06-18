@@ -1,182 +1,217 @@
 # Feature Research
 
-**Domain:** Operator-facing admin interface for a content ingestion pipeline (single operator, internal tool)
-**Researched:** 2026-06-15
+**Domain:** Admin tooling + public content site — SCOTUS oral argument viewer (v1.2 polish)
+**Researched:** 2026-06-18
 **Confidence:** HIGH
+
+## Context
+
+This is a subsequent milestone. v1.0 shipped the public chat view; v1.1 shipped the admin pipeline runner and people editor. v1.2 adds six feature clusters to complete the admin tooling and enrich the public experience before deployment. The features below are analyzed in terms of expected behaviors, UX patterns, and data considerations for this specific codebase — not greenfield design.
 
 ---
 
 ## Feature Landscape
 
-### Table Stakes (Operator Expects These)
+### Table Stakes (Users Expect These)
 
-Features the operator assumes exist. Missing these = admin tool is not usable.
+Features the operator expects to work correctly. Missing or broken = the admin panel feels unfinished.
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| Password-protected login | Any admin route must be gated; session must persist across refreshes | LOW | Username+password from env vars; SvelteKit `hooks.server.ts` intercepts all `/admin/*` before load functions run. Session stored as HttpOnly cookie. |
-| Logout | Every auth system has logout | LOW | Clear session cookie; redirect to `/admin/login`. |
-| Pipeline trigger — URL input | Ingest is already URL-driven (supremecourt.gov PDF URLs); the operator knows the URL before running | LOW | Input + submit button; validate URL format client-side before submitting. URL must pass existing `_validate_url()` SSRF guard on the backend. |
-| Pipeline trigger — file upload | Operator may have PDFs locally that are not yet on supremecourt.gov | MEDIUM | `<input type="file" accept=".pdf">`; upload to server, store in `data/` directory as if ingest downloaded it; then proceed through parse/resolve. Drag-and-drop is a bonus, not table stakes. |
-| Step-by-step status display | Operator must know whether ingest / parse / resolve succeeded or is still running | MEDIUM | Three named step cards, each with a status badge: pending → running → completed / failed / needs_review. Read from `pipeline_runs` table, which already has this state machine (PIPE-10 validated). |
-| Auto-advance when no discrepancies | If resolve finds zero unresolved labels, move straight to completed without blocking the operator | LOW | Backend resolve step already gates `needs_review` (PIPE-09 validated). UI polls status and advances the stepper automatically when status = completed. |
-| Pause-for-review when discrepancies exist | Operator must see which speaker labels went unresolved before marking a run done | MEDIUM | When resolve run status = `needs_review`, UI shows a list of unresolved `argument_participants` rows for that argument. Operator assigns or creates a person record per row. |
-| People directory list | Operator needs to see all speaker records to spot duplicates and gaps | LOW | Paginated or scrollable table of people rows: full_name, role, photo_url present/absent indicator. |
-| People edit form | Operator must be able to edit name, role, bio text, photo URL, tenure dates | LOW | Standard form with labeled fields; save persists to `people` and `court_tenures` tables via new admin API endpoints. |
-| Pipeline run history | Operator needs to see past runs to diagnose failures and find run IDs | LOW | List of recent `pipeline_runs` rows per argument: step, status, timestamps, failure_reason. |
-| Error display on failure | If parse or resolve fails, the operator must see the failure_reason | LOW | `pipeline_runs.failure_reason` column already populated by pipeline. Surface it inline in the step card. |
+| Unified top navigation | Every admin tool has a single consistent nav; toggling between admin and public by URL feels broken without it | LOW | SvelteKit root `+layout.svelte` already exists. Pattern: root layout renders nav that reads `page.url.pathname` to conditionally show admin vs. public links. Auth state check via `$page.data.user` or `locals.user`. No new routes. |
+| Argument metadata editing (pre-resolve) | Pipeline produces a title from the PDF filename; operators must correct it before the argument goes public | MEDIUM | Gate is `resolved_at IS NULL` — form must be disabled once resolved. Fields: `case_name` on `cases` table, `docket_number`, `argued_date` on `arguments`. Multi-case (consolidated dockets) complicates: editing the lead case name may not propagate to joined dockets. Scope: edit only the primary case row's name and the argument date/docket for now. |
+| Ingestion flow polish (progress, typeahead, incomplete toggle) | Fire-and-poll status display already exists but has known gaps in progress indicators | MEDIUM | Three sub-items: (1) fix step progress indicators to reflect actual polling state accurately, (2) typeahead for URL input (autocomplete from past supremecourt.gov URLs stored in admin_jobs), (3) "incomplete" toggle in jobs list to filter to paused/failed/needs_review jobs. All within existing `/admin/pipeline` route. |
+| Structured name fields | Legal names have suffix (Jr., III) and middle names; a single `full_name` field makes display logic fragile and prevents proper sorting | MEDIUM | Alembic migration required. New columns on `people`: `first_name`, `last_name`, `middle_name` (nullable), `name_suffix` (nullable). Keep `full_name` as the stored display name — do not make it computed/generated in the DB, derive it in the service layer on save. Existing data migration: parse existing `full_name` strings via simple heuristic (split on space, last token = last name). Flag records that fail the heuristic for manual review. |
+| Appointing president + party field | Factual data point on Justice records; required by the speaker popover feature | LOW | Two new columns on `people`: `appointing_president` (VARCHAR), `appointing_party` (VARCHAR — "Republican"/"Democrat"). Not computed; operator-entered. Aligns with apolitical constraint: factual attribution, not commentary. Only meaningful for Justices but schema stores on all people (nullable). Alembic migration required alongside structured name columns. |
+| People delete (orphaned records) | Resolve step creates stub person records that may never be linked; no delete path exists today | LOW | Must guard: block delete if any `utterances.person_id` or `argument_participants.person_id` references the row. Show referencing count before confirming. Hard delete only when counts = 0. Cascade: also delete `court_tenures`, `case_appearances`, `speaker_alias` rows for that person. |
 
----
+### Differentiators (Competitive Advantage)
 
-### Differentiators (Valuable but Not Assumed)
-
-Features that make the admin tool faster and less error-prone for a solo operator.
+Features that make the public viewer meaningfully better than reading raw PDFs.
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| Pipeline state resumable across sessions | If browser closes mid-run, operator can return and see current status | LOW | `pipeline_runs` rows are already persisted to DB (PIPE-14 requirement). UI just reads current state on page load rather than relying on in-memory state. Mostly provided by the existing schema. |
-| Inline participant review after resolve | After a run, operator can see each resolved participant and fill in missing metadata (bio, photo URL) without leaving the pipeline view | MEDIUM | After resolve completes, render `argument_participants` for the argument with each person's current metadata. Clicking a person opens an inline edit panel. Avoids separate trip to the people directory for newly encountered speakers. |
-| "Create new person" during resolve review | When a speaker label is completely new, operator can create a person record inline rather than navigating away | MEDIUM | Modal or inline form with full_name + role; saves to `people` and creates the `argument_participant` link. Returns to review queue without full page navigation. |
-| Unresolved count badge | Before operator opens the review step, show how many labels still need attention | LOW | COUNT of `argument_participants WHERE person_id IS NULL` for the current argument. Keeps operator oriented. |
-| Alias auto-save during review | When operator assigns a label to a person during review, optionally save to `speaker_alias` so future runs auto-resolve it | LOW | Checkbox on the review form: "Remember this label mapping." Writes to `speaker_alias` table. High value because the same Justices appear in every argument. |
-| Tab-separated dual trigger (URL / Upload) | Toggle between URL and file upload in one widget rather than two separate pages | LOW | Tabbed input: [Enter URL] [Upload PDF]. No navigation required to switch modes. Single submit button. |
-| Photo URL validation / preview | Show a small avatar preview when a photo URL is entered so the operator can verify it resolves | LOW | `<img>` with onerror handler in the edit form. If the URL 404s, show a warning inline. Prevents broken avatar display in the public UI. |
-
----
+| Speaker popover card (bench only) | Clicking a Justice's avatar reveals who they are, when they served, and who appointed them — zero friction for non-legal readers | MEDIUM | Trigger: click on avatar in `ChatBubble`. Scope: bench side only (`side === 'BENCH'`). Content: photo (if available), full name, role, tenure dates, appointing president + party. Pattern: `@floating-ui/dom` for positioning — autoPlacement middleware handles viewport edges. Dismiss: click outside, Escape key, or second click on same avatar. No hover — touch devices need click. A11y: `popover` role or `dialog` role, focus trap on open, return focus on close. Data gap: `GET /people/{id}` currently returns only `id`, `full_name`, `role_name`; needs tenure + appointing fields added. |
+| Image upload to DO Spaces | Operators currently paste URLs; uploading actual photos keeps them in the admin without leaving the page | MEDIUM | Recommended pattern: server-side relay via SvelteKit form action — receives multipart, streams to Spaces via boto3 (simpler than presigned URLs for internal admin; `api/services/spaces.py` already exists). UX: file input + image preview via `URL.createObjectURL` on file select, accept=".jpg,.jpeg,.png,.webp", max 5MB client-side validation, upload executes on form submit (not on file select — avoids orphaned Spaces objects from abandoned edits). `BODY_SIZE_LIMIT=10M` env var required on DO App Platform (already a known deployment requirement). Store resulting Spaces public URL in `photo_url`. |
+| People merge (utterance transfer) | Resolve step may create duplicate person records under slightly different labels; merge transfers all utterances then deletes the source | HIGH | Highest-complexity feature in the milestone. Data transfer scope: `utterances.person_id`, `argument_participants.person_id`, `case_appearances.person_id`, `speaker_alias.person_id` — all UPDATE from source_id to target_id in a single DB transaction. Then DELETE source person row. Alias conflict: if both source and target have an alias for the same `normalized_label`, drop the source's conflicting alias before transferring the rest. UX pattern: (1) select source person (the duplicate), (2) select target person (canonical), (3) preview screen shows transfer counts, (4) confirm with irreversibility warning, (5) redirect to target record after success. New endpoint: `POST /api/admin/people/{source_id}/merge-into/{target_id}`. |
 
 ### Anti-Features (Commonly Requested, Often Problematic)
 
-Features that seem useful but create disproportionate complexity or undermine existing design decisions.
-
 | Anti-Feature | Why Requested | Why Problematic | Alternative |
 |--------------|---------------|-----------------|-------------|
-| Real-time log streaming (SSE / WebSocket) | "I want to see the LLM processing each utterance in real-time" | SSE from FastAPI requires keeping a long-lived connection open through PgBouncer transaction-mode pooling. Adds infra complexity (async generator, client EventSource) for marginal value when a single argument parses in under 60 seconds. | Poll `pipeline_runs.status` every 3–5 seconds. Status flips from `running` to `completed/failed` atomically. Operator sees the result without per-utterance streaming. |
-| Celery / Redis task queue | "Background workers for robust job execution" | Introduces two new infra components for a tool used by one operator processing ~2–5 arguments per month. PgBouncer transaction mode already constrains async DB access. | Run pipeline steps as synchronous subprocess calls spawned by the FastAPI admin endpoint, with DB status written before and after. If the process crashes, `pipeline_runs.status` stays `running` — operator re-triggers. |
-| Bulk import (multiple PDFs at once) | "Save time by uploading a batch" | Each PDF requires sequential ingest → parse → resolve with potential human review between steps. Batching obscures which argument needs attention. Resolve discrepancies are per-argument; batching creates a confusing multi-argument review queue. | Process one argument at a time. Run time per argument is short (~1–3 minutes). No meaningful time saving from batching. |
-| Granular role-based access control (RBAC) | "Different people should have different permissions" | Single operator; there is no second user. Adding roles adds schema complexity with zero current benefit. | Simple `ADMIN_USERNAME` + `ADMIN_PASSWORD` env var check. If a second operator ever joins, revisit auth at that milestone. |
-| Audit log UI for people edits | "Show a history of every change made" | The `pipeline_runs` table already functions as an append-only audit log for pipeline operations. A separate UI audit trail for people edits requires change-tracking columns or an event sourcing table — significant scope for a single operator. | Pipeline history panel (existing `pipeline_runs` rows) covers the primary audit need. People edits are low-frequency and low-risk. |
-| Dashboard with analytics / metrics | "Show me ingestion stats, parse success rates" | Even speaker-neutral metrics (utterances per argument) create editorial-adjacent views. Violates the project's apolitical framing if any per-speaker counts are surfaced. | Plain pipeline run history table — step, status, timestamp. No derived analytics. |
-| Fuzzy-match suggestion during resolve review | "Auto-suggest the closest person when a label is unresolved" | Levenshtein / fuzzy matching over the people table adds a query-time dependency. The alias table already handles all recurring Justices after the first run. New advocates are genuinely novel and need human selection, not an algorithmic guess. | Present a dropdown / searchable list of all people records. Operator picks explicitly; no algorithmic ranking. |
-| Inline utterance text editing | "Let me fix a transcription error in the transcript" | Utterances are derived from the immutable PDF source. Editing them violates the "all derived data can be regenerated" principle (PIPE-02). Re-parse produces new utterance rows; the old run is preserved per PIPE-11. | If a transcript has a known parse error, re-run parse. The `pipeline_run_id` + max-run filter design was built to support exactly this. |
-| Public registration / invite system | "Let a researcher or colleague log in" | No second operator currently exists. Building an invitation or registration system is premature and introduces user management scope. | Hard-code single operator credentials in env vars. |
+| Hover popover for speaker card | Hover feels natural on desktop | Touch devices have no hover state; hover over dense text content triggers accidental popovers while reading | Click-to-open popover — intentional trigger, works on touch + desktop, simpler focus management |
+| Image crop in upload flow | Uploaded photos may not be square | Canvas-based crop UI is complex to implement cross-browser, adds JS payload, is not blocking for v1.2 | Upload as-is; use CSS `object-fit: cover` on avatar circles for non-square images; crop deferred to v1.3 |
+| Field-level merge control (choose per-field which record wins) | Source may have better bio or more complete tenure data | Adds comparison UI with per-field radio buttons; multiplies implementation complexity 3-4x | Target-wins merge; operator manually edits target record fields after merge if needed |
+| Metadata editing after resolve | Operator realizes title/date is wrong after the argument is published | Post-resolve edits are unexpected to users with bookmarks; no undo path exists | Gate editing to `resolved_at IS NULL` strictly; if post-resolve correction is needed, operator resets `resolved_at` to null via direct DB access (not a v1.2 UI feature) |
+| AI-suggested appointing president | Automatically populate from Justice name | Violates apolitical hard constraint — LLM-derived political data is editorial even when factually correct | Operator manually enters from an authoritative source (oyez.org); one-time data entry per Justice (~9 active, ~20 retired) |
+| Bulk people import via CSV | Seems efficient for populating Justice records | Adds CSV parsing, column mapping, validation, partial-failure handling; for ~9 active Justices this is over-engineering | Single-record edit form is adequate; import deferred to v2+ |
 
 ---
 
 ## Feature Dependencies
 
 ```
-[Auth / session cookie]
-    └──required by──> [All /admin/* routes]
+People data model migration (structured names + appointing fields)
+    └──required before──> Speaker popover card (needs appointing_president/party columns populated)
+    └──required before──> People admin edit form changes (new fields in schema + form)
+    └──independent of──> Image upload (photo_url already exists)
 
-[Pipeline trigger — URL input or file upload]
-    └──required by──> [Ingest step execution]
-                          └──required by──> [Parse step execution]
-                                                └──required by──> [Resolve step execution]
-                                                                      └──required by──> [Inline participant review]
+Speaker popover card
+    └──requires──> Extended GET /people/{id} response (tenure + appointing fields)
+    └──requires──> People data model migration
 
-[People directory list]
-    └──enhances──> [Inline participant review — "Create new person" flow]
+People merge
+    └──requires──> People directory (already shipped — needed for source/target selection)
+    └──conflict risk──> People delete (after merge, source is deleted; delete endpoint logic overlaps)
 
-[Alias auto-save during review]
-    └──requires──> [Resolve step execution]
-    └──enhances──> [Future runs auto-advance without review]
+People delete
+    └──requires──> Referencing-count check (utterances + argument_participants counts)
+    └──independent of──> People merge (can be built separately)
 
-[Pipeline run history]
-    └──required by──> [Resumable state — operator returns to interrupted run]
+Image upload
+    └──requires──> DO Spaces service (already exists: api/services/spaces.py)
+    └──enhances──> Speaker popover card (popover only shows photo if photo_url is populated)
+
+Argument metadata editing
+    └──requires──> resolved_at IS NULL gate logic (already on arguments table)
+    └──independent of all people features
+
+Unified navigation
+    └──independent of all other v1.2 features
+    └──prerequisite for──> acceptable admin UX at launch perception
 ```
 
 ### Dependency Notes
 
-- **Auth required by all admin routes:** `hooks.server.ts` must run before any `+page.server.ts` load function in the `/admin/*` tree. A `+layout.server.ts` at `src/routes/admin/` ensures hooks fire even for routes with no server-load file.
-- **Ingest required before parse:** Parse reads the PDF path written by ingest (`pipeline_runs.pdf_path`). There is no way to parse an argument that has not been ingested.
-- **Parse required before resolve:** Resolve reads utterance rows written by parse, filtered by `pipeline_run_id`. Attempting resolve with no parse run is a schema-level impossibility.
-- **Resolve required before participant review:** `argument_participants.person_id` is only populated after resolve runs. The review UI has nothing to show until resolve has run at least once.
-- **People directory enhances participant review:** If a new speaker does not exist in `people`, the operator must create them. The "Create new person" inline form can call the same backend logic as the people editor, avoiding duplication.
+- **People data model migration must ship before speaker popover card.** The popover needs `appointing_president` and `appointing_party` to exist in the DB and be returned by the API.
+- **Image upload is independent of structured names.** `photo_url` already exists. Upload is a UI/API enhancement to the existing edit form, no schema change required.
+- **People merge is the riskiest feature and should ship last** in the people admin cluster, after delete and image upload are verified stable.
+- **Unified navigation is the lowest complexity, highest perceived polish feature.** Build first — it makes every subsequent admin feature feel properly finished.
 
 ---
 
 ## MVP Definition
 
-### Launch With (v1.1)
+### Launch With (v1.2)
 
-Minimum viable set that makes the pipeline operable from a browser.
+All six feature clusters are required for the milestone goal: admin tooling and public experience sufficient for deployment.
 
-- [ ] Auth — login form, session cookie, `hooks.server.ts` guard for `/admin/*`
-- [ ] Pipeline trigger — URL input tab + file upload tab in one widget
-- [ ] Step-by-step status display — three cards (Ingest / Parse / Resolve), each with status badge, error text on failure
-- [ ] Auto-advance when no discrepancies — poll `pipeline_runs.status`; advance stepper to completed automatically
-- [ ] Pause-for-review when discrepancies — render `argument_participants WHERE person_id IS NULL`; operator assigns person or creates new
-- [ ] Alias auto-save during review — checkbox on each assignment; writes to `speaker_alias`
-- [ ] People directory list — scrollable table, full_name / role / photo present/absent
-- [ ] People edit form — fields: full_name, role_id, bio text, photo_url, tenure start/end dates
+- [x] Unified top navigation — prerequisite for "done" perception
+- [x] Ingestion flow polish — existing gaps block smooth operator use
+- [x] Argument metadata editing — no path exists today to correct pipeline-derived titles
+- [x] People data model (structured names + appointing president/party) — unblocks popover; enables proper name display
+- [x] People admin improvements (image upload + delete + merge) — completes people management workflow
+- [x] Speaker popover card — primary public-facing differentiator for this milestone
 
-### Add After Validation (v1.1 polish, same milestone)
+### Add After Validation (v1.3)
 
-Features to add once core pipeline runner and people editor are working.
+- [ ] Image crop in upload flow — CSS `object-fit` covers most cases in v1.2
+- [ ] Post-resolve metadata editing with explicit reset action — needs UX design for "unresolved" flow
+- [ ] Bulk people import — only relevant when corpus exceeds ~50 people
 
-- [ ] Unresolved count badge — show on the resolve step card before operator clicks into review; requires only a COUNT query
-- [ ] Photo URL preview in people edit form — `<img>` with onerror; one-line addition to the form
-- [ ] Pipeline run history panel — list `pipeline_runs` for an argument; useful for diagnosing re-runs
+### Future Consideration (v2+)
 
-### Future Consideration (v1.2+)
-
-- [ ] Automated enrichment (Oyez / FJC API) — already marked Out of Scope in PROJECT.md for v1.1
-- [ ] Batch ingestion — only warranted if the operator is processing >10 arguments per week
+- [ ] Automated enrichment from Oyez/FJC API — manual editor ships in v1.1; automation deferred
+- [ ] Speaker statistics across arguments — apolitical constraint makes this high-risk
+- [ ] Public speaker profile pages — architecturally supported; defer until public demand is clear
 
 ---
 
 ## Feature Prioritization Matrix
 
-| Feature | Operator Value | Implementation Cost | Priority |
-|---------|---------------|---------------------|----------|
-| Auth + session cookie | HIGH | LOW | P1 |
-| Pipeline trigger (URL + upload) | HIGH | LOW–MEDIUM | P1 |
-| Step-by-step status display | HIGH | MEDIUM | P1 |
-| Auto-advance / pause-for-review | HIGH | MEDIUM | P1 |
-| Inline participant review + alias save | HIGH | MEDIUM | P1 |
-| People directory list | HIGH | LOW | P1 |
-| People edit form | HIGH | LOW | P1 |
-| Unresolved count badge | MEDIUM | LOW | P2 |
-| Photo URL preview | LOW | LOW | P2 |
-| Pipeline run history panel | MEDIUM | LOW | P2 |
-| "Create new person" inline during review | MEDIUM | MEDIUM | P2 |
-| Batch ingestion | LOW | HIGH | P3 |
-| SSE real-time log streaming | LOW | HIGH | P3 |
+| Feature | User Value | Implementation Cost | Priority |
+|---------|------------|---------------------|----------|
+| Unified navigation | HIGH | LOW | P1 |
+| Ingestion flow polish | HIGH | MEDIUM | P1 |
+| Argument metadata editing | HIGH | MEDIUM | P1 |
+| People data model migration | HIGH (unblocks popover) | MEDIUM | P1 |
+| Appointing president/party fields | HIGH (popover content) | LOW | P1 |
+| People delete | MEDIUM | LOW | P1 |
+| Image upload | MEDIUM | MEDIUM | P1 |
+| Speaker popover card | HIGH | MEDIUM | P1 |
+| People merge | MEDIUM | HIGH | P1 |
+| Image crop | LOW | HIGH | P3 |
 
 **Priority key:**
-- P1: Must have for launch
-- P2: Should have, add when core is stable
-- P3: Nice to have, future consideration
+- P1: Required for v1.2 milestone
+- P2: Should add, not blocking deployment
+- P3: Nice to have, future milestone
 
 ---
 
-## Competitor / Reference Pattern Analysis
+## Existing API Gaps to Close
 
-This is an internal operator tool with no direct competitors. The closest analogous patterns are:
+| Gap | Required By | Current State | Action Needed |
+|-----|-------------|---------------|---------------|
+| `GET /people/{id}` returns only `id, full_name, role_name` | Speaker popover card | Missing tenure, appointing_president, appointing_party | Extend `PersonResponse` schema after data model migration |
+| No argument metadata PATCH endpoint | Argument metadata editing | Does not exist | `PATCH /api/admin/arguments/{id}` + service method |
+| No photo upload endpoint | Image upload | Does not exist | `POST /api/admin/people/{id}/upload-photo` multipart handler |
+| No merge endpoint | People merge | Does not exist | `POST /api/admin/people/{source_id}/merge-into/{target_id}` |
+| No people delete endpoint | People delete | Does not exist | `DELETE /api/admin/people/{id}` with referencing-count guard |
+| `PersonUpdate` schema lacks new fields | Structured names + appointing | Has only `full_name, role_id, bio_text, photo_url, tenures` | Add `first_name, last_name, middle_name, name_suffix, appointing_president, appointing_party` post-migration |
 
-| Pattern | Reference | Our Approach |
-|---------|-----------|--------------|
-| Pipeline step stepper | Jenkins Blue Ocean — stage nodes with color-coded status | Three named cards (Ingest / Parse / Resolve) with status badges; simpler because steps are always sequential, never parallel |
-| Resolve discrepancy review | CMS import review queues (WordPress importer, Contentful import review) — flagged items shown in a list with action buttons | Inline list of unresolved `argument_participants`; assign person from dropdown or create new; dismiss/save per row |
-| Entity directory editor | Django Admin, EasyAdmin — paginated list with row-level edit | Paginated table with edit button per row; full edit form on click (not inline table editing — too fiddly for date fields and multiline bio text) |
-| File + URL dual input | GitHub new repo — tab between "Import" (URL) and "Create" (form) | Tabs within a single form widget: [Paste URL] [Upload File]; submit button shared |
-| Auth guard in SvelteKit | `hooks.server.ts` + `event.locals` pattern | `sequence()` in `hooks.server.ts`; admin session in `event.locals.admin`; `+layout.server.ts` at `/admin/` to force hook execution for all nested routes |
+---
+
+## Behavioral Specifications
+
+### Speaker Popover Card
+
+- Appears anchored to the clicked avatar, positioned above or below based on viewport space (Floating UI `autoPlacement` middleware)
+- Width: 260–320px; never clips outside viewport on mobile
+- Content sections: photo thumbnail (with initials fallback), name + role label, tenure date range formatted as "YYYY–present" or "YYYY–YYYY", appointing president + party in a neutral factual line
+- One popover visible at a time — opening a second closes the first
+- Dismissed by: clicking outside, pressing Escape, or clicking the same avatar again
+- No action buttons needed for v1.2 (read-only)
+- A11y: ARIA `dialog` role, focus trap when open, focus returns to avatar button on close
+- Implementation entry point: `ChatBubble.svelte` — add click handler on the avatar `<div>`, convert it to a `<button>`, render popover via `{#if showPopover}` with `@floating-ui/dom` for position computation
+
+### Record Merge Workflow
+
+1. Operator selects "Merge" from a person's row in the people directory
+2. Second screen: search field to select target (canonical) person
+3. Preview screen: counts of rows to transfer — "N utterances, M participants, K aliases, J appearances"
+4. Confirm button with warning: "This cannot be undone. [Source name] will be permanently deleted."
+5. Atomic DB transaction: UPDATE all FK references, DELETE source row
+6. On success: redirect to target person's edit page; success flash message
+7. On conflict (alias collision): silently drop conflicting source aliases, proceed with non-conflicting ones
+8. No partial commits — if transaction fails, show error, no data changed
+
+### Argument Metadata Editing
+
+- Form renders only when `resolved_at IS NULL`; if resolved, show read-only display with note: "Locked — argument is published. Editing requires reopening the pipeline."
+- Editable fields: `argued_date`, lead case `case_name`, lead case `docket_number`
+- For consolidated arguments: display all linked cases but only allow editing the lead case's name; secondary docket numbers shown as read-only
+- Save validates: date format, docket number matches `##-####` pattern
+- No publish/unpublish toggle in this form — `resolved_at` is set only by the resolve pipeline step
+
+### Image Upload
+
+- File input accepts `.jpg`, `.jpeg`, `.png`, `.webp` only
+- Client-side validation before submit: reject files > 5MB with an inline error message
+- `URL.createObjectURL` renders preview in a small image element (48×48px) immediately after file selection
+- Upload executes as part of the main save form submission (not a separate async upload on file-select)
+- Server streams file bytes to DO Spaces via boto3 `put_object`; returns the public Spaces URL
+- Updates `photo_url` field in the person record and re-renders the preview with the saved URL
+- Error states: file type rejected (client), file too large (client), upload failed (server) — all surface inline below the file input
 
 ---
 
 ## Sources
 
-- UI patterns for async workflows: https://blog.logrocket.com/ux-design/ui-patterns-for-async-workflows-background-jobs-and-data-pipelines/
-- Background task progress UI: https://appmaster.io/blog/background-tasks-progress-ui
-- Jenkins Blue Ocean pipeline run details view: https://www.jenkins.io/doc/book/blueocean/pipeline-run-details/
-- File upload UX best practices: https://uploadcare.com/blog/file-uploader-ux-best-practices/
-- SvelteKit hooks middleware and auth guards: https://teta.so/blog/sveltekit-hooks-middleware-auth-guards
-- Authentication in Svelte using cookies: https://blog.logrocket.com/authentication-svelte-using-cookies/
-- Designing for the operator experience: https://medium.com/statuscode/designing-for-the-operator-experience-21b63db8143
-- CRUD admin UI design guide: https://medium.com/@tanya_anokhina/designers-guide-to-user-data-and-crud-4e53f7c5150d
-- Review queue patterns: https://docs.amigo.ai/data/review-queue
+- [Floating UI — positioning library](https://floating-ui.com/)
+- [floating-ui-svelte examples](https://floating-ui-svelte.vercel.app/examples/popovers)
+- [Shadcn Hover Card pattern](https://ui.shadcn.com/docs/components/radix/hover-card)
+- [CiviCRM deduping and merging workflow](https://docs.civicrm.org/user/en/latest/common-workflows/deduping-and-merging/)
+- [Talend Cloud Data Stewardship — merging tasks](https://help.qlik.com/talend/en-US/data-stewardship-user-guide/Cloud/handling-merging-tasks-to-deduplicate-records)
+- [Image upload UX patterns — uxpatterns.dev](https://uxpatterns.dev/patterns/media/image-upload)
+- [Uploadcare file uploader UX best practices](https://uploadcare.com/blog/file-uploader-ux-best-practices/)
+- [FastAPI + presigned URL upload pattern](https://medium.com/@sanmugamsanjai98/secure-file-uploads-made-simple-mastering-s3-presigned-urls-with-react-and-fastapi-258a8f874e97)
+- [boto3 presigned URLs reference](https://boto3.amazonaws.com/v1/documentation/api/latest/guide/s3-presigned-urls.html)
+- [DatoCMS draft/published system](https://www.datocms.com/docs/general-concepts/draft-published)
+- [Craft CMS publish vs save UX discussion](https://github.com/craftcms/cms/issues/7543)
+- [Adobe XDM person name data type](https://experienceleague.adobe.com/en/docs/project-aim-demo/xdm/data-types/person-name)
+- [SvelteKit advanced layouts — joyofcode](https://joyofcode.xyz/sveltekit-advanced-layouts)
 
 ---
-
-*Feature research for: Operator admin interface — SCOTUS Chat v1.1*
-*Researched: 2026-06-15*
+*Feature research for: SCOTUS Chat v1.2 — admin tooling and public experience polish*
+*Researched: 2026-06-18*

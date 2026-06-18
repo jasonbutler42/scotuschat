@@ -1,163 +1,241 @@
-# Stack Research — v1.1 Admin Interface Additions
+# Stack Research — v1.2 Pre-Launch Polish Additions
 
-**Domain:** Operator admin interface additions to existing SvelteKit + FastAPI app
-**Researched:** 2026-06-15
-**Confidence:** HIGH for auth and file upload patterns; MEDIUM for job execution architecture (multiple valid approaches; recommendation is opinionated toward simplicity for solo operator)
+**Domain:** v1.2 incremental additions to existing SvelteKit 2 + Svelte 5 Runes + FastAPI + PostgreSQL app
+**Researched:** 2026-06-18
+**Confidence:** MEDIUM (community docs + official docs; consistent cross-source findings)
 
 ---
 
 ## Context: What Already Exists (Do Not Re-research)
 
-The existing validated stack (from v1.0) is:
+Validated v1.0/v1.1 stack — no changes:
 
 - SvelteKit 2.x + adapter-node, Svelte 5 Runes (`$state`, `$derived`, `$effect`)
-- FastAPI 0.115+, Pydantic v2, SQLAlchemy 2.0 async, asyncpg, Alembic
-- PostgreSQL 16 on Digital Ocean managed Postgres (PgBouncer transaction mode — `statement_cache_size=0` in `connect_args` is already set)
+- FastAPI 0.115+ with Pydantic v2; `python-multipart` already in `fastapi[standard]`
+- SQLAlchemy 2.0 async + asyncpg (`statement_cache_size=0` in `connect_args`) + Alembic hand-written migrations
+- PostgreSQL 16 on Digital Ocean managed Postgres (PgBouncer transaction mode)
+- boto3 already in requirements.txt for DO Spaces PDF upload — `get_spaces_client()` pattern exists in `api/services/spaces.py`
 - All FastAPI calls from SvelteKit go through `+page.server.ts` server load functions; `FASTAPI_BASE_URL` is server-only
+- SvelteKit form actions + `use:enhance` established pattern throughout admin UI
 
-This document covers ONLY net-new additions for the three v1.1 capability areas. Do not change the existing stack.
+This document covers ONLY net-new additions for v1.2 features.
 
 ---
 
-## Area 1: SvelteKit Session Auth (username+password, no user DB)
+## New Libraries Needed
 
-### Recommended Approach: DIY hooks + `bcryptjs` — no auth library
+### Frontend (npm) — One New Package
 
-**Rationale:** Credentials live in two env vars (`ADMIN_USERNAME`, `ADMIN_PASSWORD_HASH`). No user table exists or should be added. Auth.js, Better Auth, and Lucia are all overkill — they require a database-backed session store and adapter wiring. This is a single-operator tool; the entire auth system fits in ~50 lines across two files.
+| Library | Version | Purpose | Why |
+|---------|---------|---------|-----|
+| `bits-ui` | `^2.18.1` | Headless Popover for speaker card | Svelte 5 native (uses `$state` / `$derived` internally). Built on Floating UI — handles positioning, collision detection, and ARIA automatically. Clean composable API: `Popover.Root` / `Popover.Trigger` / `Popover.Content`. Headless (bring-your-own Tailwind styles) — no style conflicts with the existing design. Current latest as of 2026-06-18. |
 
-**Implementation pattern:**
-
-1. **Login action** (`src/routes/admin/login/+page.server.ts`) — Reads `ADMIN_USERNAME` and `ADMIN_PASSWORD_HASH` from `$env/static/private`. Calls `bcrypt.compare(submittedPassword, storedHash)`. On success: generates `crypto.randomUUID()`, signs it with HMAC-SHA256 using `SESSION_SECRET` env var (Node `crypto.createHmac`), sets it as an httpOnly cookie. On failure: returns `{ error: 'Invalid credentials' }`.
-
-2. **`src/hooks.server.ts` `handle` function** — Runs before every request. Reads the session cookie, re-validates the HMAC signature. If the path starts with `/admin` and the session is invalid, calls `redirect(302, '/admin/login')`. On valid session, populates `event.locals.user = { username: string }`.
-
-3. **`src/app.d.ts`** — Extend `App.Locals` with `user: { username: string } | null`.
-
-4. **Route protection** — Each admin `+page.server.ts` load function checks `if (!locals.user) redirect(302, '/admin/login')` as a belt-and-suspenders guard beyond the hook.
-
-**Session is stateless** — no DB round-trip per request. A signed random token stored in the cookie is sufficient. The operator cannot invalidate a session remotely (deleting the cookie is the only logout mechanism), which is acceptable for single-operator use.
-
-**One-time setup:** Generate the bcrypt hash offline and store it as `ADMIN_PASSWORD_HASH`:
-
+**Install:**
 ```bash
-node -e "const b = require('bcryptjs'); b.hash('yourpassword', 12).then(console.log)"
+cd app
+npm install bits-ui
 ```
 
-### New JavaScript/TypeScript Dependencies
+### Backend Python — One New Package
 
-| Package | Version | Purpose | Install location |
-|---------|---------|---------|-----------------|
-| `bcryptjs` | `^2.4.3` | Password hash comparison in login action. Pure JS — no native bindings. | `app/` (dependency) |
-| `@types/bcryptjs` | `^2.4.6` | TypeScript types for bcryptjs | `app/` (devDependency) |
+| Library | Version | Purpose | Why |
+|---------|---------|---------|-----|
+| `Pillow` | `>=11.0` | Image validation + resize before DO Spaces upload | Validate content type (JPEG/PNG/WebP), reject non-images, resize to a max dimension before upload so storage stays predictable. Standard FastAPI image upload companion. Current stable is 12.x. |
 
-**Why `bcryptjs` and not `@node-rs/argon2`:** Argon2id is the stronger algorithm, but `@node-rs/argon2` ships native `.node` binaries that Vite/Rollup struggles to bundle in SvelteKit production builds (open GitHub issues through late 2024, including sveltejs/kit#13061). `bcryptjs` is pure JavaScript, builds without friction with adapter-node, and bcrypt at cost 12 is fully adequate for a single hashed credential stored in an env var that never changes. Add argon2 only if a real user DB is introduced in a future milestone.
-
-**Why not `svelte-kit-cookie-session`:** Last released August 2023, 187 stars. The same pattern is ~10 lines using Node's built-in `crypto.createHmac`. Avoid the dependency whose maintenance trajectory is unclear.
-
-**Why not Auth.js / Better Auth / Lucia:** All three require a database adapter. Better Auth and Lucia generate their own schema — that is DDL outside Alembic, which violates the project constraint. Lucia is deprecated as a library (now a learning reference only). These tools exist for multi-user applications with real credential storage; none of that applies here.
+**Add to `requirements.txt`:**
+```
+Pillow>=11.0
+```
 
 ---
 
-## Area 2: Background Pipeline Job Execution
+## No New Libraries Needed For These Features
 
-### Recommended Approach: FastAPI admin router + `asyncio.create_subprocess_exec` + DB status polling
-
-**Architecture:** Add a new protected router (`api/routers/admin.py`) to the existing FastAPI app — not a second service. The router validates an `X-Admin-Key` header (value from `ADMIN_API_KEY` env var) on every request. SvelteKit server actions set this header; it never reaches the browser.
-
-**Job lifecycle:**
-
-1. SvelteKit action POSTs to `POST /admin/pipeline/runs` with `{ argument_id, step }`.
-2. FastAPI creates a `pipeline_run` row (status=`pending`), immediately returns `{ pipeline_run_id }`.
-3. FastAPI schedules the pipeline step as an asyncio `BackgroundTask` that calls `asyncio.create_subprocess_exec()` — the subprocess runs the existing Python CLI entry point.
-4. The background task updates `pipeline_run.status` to `running` on start, then `completed` / `failed` / `needs_review` on subprocess exit. Stdout+stderr are captured and written to a new `log` TEXT column on `pipeline_run`.
-5. SvelteKit polls `GET /admin/pipeline/runs/{id}` every 2–3 seconds. The existing `pipeline_run` status machine already has all needed states — no schema rework required.
-
-**New FastAPI files:**
-- `api/routers/admin.py` — pipeline trigger endpoint, status endpoint, people-write endpoints
-- `api/dependencies/admin_auth.py` — `Depends` that validates `X-Admin-Key` header
-
-**New schema addition:** One Alembic migration adds `log TEXT` to `pipeline_run`. No new tables needed for job tracking; the existing `pipeline_run` table covers it.
-
-**Why `asyncio.create_subprocess_exec` and not `subprocess.run`:** The pipeline steps run for seconds to minutes. `subprocess.run` blocks the uvicorn event loop, stalling all other requests during a run. `create_subprocess_exec` is non-blocking on Linux (the DO App Platform target). The Windows `SelectorEventLoop` limitation (FastAPI discussions/7770) does not apply on Linux containers.
-
-**Why not Celery / ARQ / Redis:** A single-operator tool runs at most one pipeline job at a time. Adding Redis as a broker is a new infrastructure component on App Platform — a second stateful service with its own connection string, health check, and cost. The existing PostgreSQL instance already tracks `pipeline_run` state; polling it at 2–3s intervals is sufficient. Celery is correct for distributed workers and high-throughput queuing; neither applies here.
-
-**Why not FastAPI's built-in `BackgroundTasks` alone (without subprocess):** `BackgroundTasks` runs functions in the same process after the response is sent, with no retry, no crash recovery, and no status persistence. If uvicorn restarts mid-job, the task silently disappears. Spawning a subprocess and tracking status in the DB gives crash-survivability — on restart, the DB row shows `running` and the operator can re-trigger.
-
-**Why no SSE / WebSocket for job progress:** SSE would add either a `sveltekit-sse` library dependency or a custom `ReadableStream` endpoint, plus a persistent HTTP connection, for the sole benefit of sub-second latency updates to one operator. `setInterval` polling against the existing REST status endpoint is sufficient and keeps the implementation within the established `+page.server.ts` → FastAPI pattern.
-
-### New Python Dependencies
-
-None. `asyncio.create_subprocess_exec` is Python 3.12 stdlib. SQLAlchemy async session for status updates is already present. The `log` column write uses existing ORM patterns.
+| Feature | Why No New Library |
+|---------|-------------------|
+| Image upload to DO Spaces | boto3 already in requirements.txt. Same `get_spaces_client()` pattern as PDF upload — add a new `upload_image_to_spaces()` helper alongside the existing `upload_pdf_to_spaces()`. |
+| People merge operation | Pure SQLAlchemy 2.0 async DML: `update()` + `delete()` statements in one session transaction. No extension or helper library needed. |
+| Argument metadata edit form | FastAPI already handles form data via Pydantic models. SvelteKit `use:enhance` form actions already established. No new libraries. |
+| Structured name fields migration | Alembic `op.add_column` + `op.execute()` SQL backfill in one revision — the established hand-written migration pattern. |
+| Unified top nav | Extract to `src/lib/components/TopNav.svelte`, import in both layout files. Component composition, not a routing pattern change. No new npm package. |
+| File upload form action (image) | `request.formData()` → `file.arrayBuffer()` is already the validated pattern from v1.1 PDF upload. No new npm package. |
 
 ---
 
-## Area 3: File Upload (PDF to Disk)
+## Integration Patterns
 
-### Recommended Approach: SvelteKit form action + `node:fs/promises` + DigitalOcean Spaces
+### 1. bits-ui Popover in Svelte 5
 
-**SvelteKit upload pattern** (no new npm packages — stdlib only):
+```svelte
+<script lang="ts">
+  import { Popover } from "bits-ui";
 
-```typescript
-// src/routes/admin/pipeline/+page.server.ts
-import { writeFile } from 'node:fs/promises';
-import { extname } from 'node:path';
+  let open = $state(false);
+</script>
 
-export const actions = {
-  upload: async ({ request }) => {
-    const formData = await request.formData();
-    const file = formData.get('pdf') as File;
-    const tempPath = `/tmp/${crypto.randomUUID()}${extname(file.name)}`;
-    await writeFile(tempPath, Buffer.from(await file.arrayBuffer()));
-    // POST tempPath to FastAPI admin trigger endpoint — same request lifecycle
+<Popover.Root bind:open>
+  <Popover.Trigger>
+    <!-- avatar img or initials element -->
+  </Popover.Trigger>
+  <Popover.Portal>
+    <Popover.Content sideOffset={8} class="z-50 ...your Tailwind classes...">
+      <!-- person card: photo, name, role, tenure, appointing president -->
+    </Popover.Content>
+  </Popover.Portal>
+</Popover.Root>
+```
+
+`Popover.Portal` renders outside the DOM subtree — avoids z-index stacking context issues from the two-column chat layout. `sideOffset` controls the gap from the trigger element. Placement defaults to `bottom`; set `side="top"` or `side="right"` as needed. No manual Floating UI wiring required.
+
+### 2. Image Upload to DO Spaces (FastAPI + boto3)
+
+Add a new helper to `api/services/spaces.py` alongside the existing `upload_pdf_to_spaces`:
+
+```python
+import asyncio, io
+from PIL import Image
+
+ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
+MAX_IMAGE_BYTES = 5 * 1024 * 1024  # 5 MB
+
+def _upload_image_sync(image_bytes: bytes, key: str, content_type: str) -> str:
+    client = get_spaces_client()
+    client.upload_fileobj(
+        io.BytesIO(image_bytes),
+        settings.do_spaces_bucket,
+        key,
+        ExtraArgs={"ContentType": content_type, "ACL": "public-read"},
+    )
+    return key
+
+async def upload_image_to_spaces(image_bytes: bytes, key: str, content_type: str) -> str:
+    """Resize and upload a profile photo. Returns the Spaces key."""
+    return await asyncio.to_thread(_upload_image_sync, image_bytes, key, content_type)
+```
+
+FastAPI endpoint handler pattern:
+```python
+from fastapi import UploadFile, File, HTTPException
+from PIL import Image
+import io
+
+async def handle_photo_upload(person_id: int, file: UploadFile = File(...)):
+    if file.content_type not in ALLOWED_IMAGE_TYPES:
+        raise HTTPException(400, "Image must be JPEG, PNG, or WebP")
+    content = await file.read()
+    if len(content) > MAX_IMAGE_BYTES:
+        raise HTTPException(400, "Image exceeds 5 MB limit")
+    img = Image.open(io.BytesIO(content))
+    img.thumbnail((400, 400), Image.Resampling.LANCZOS)
+    out = io.BytesIO()
+    fmt = "JPEG" if file.content_type == "image/jpeg" else "PNG"
+    img.save(out, format=fmt, optimize=True)
+    out.seek(0)
+    key = f"people/{person_id}/photo.{fmt.lower()}"
+    await upload_image_to_spaces(out.read(), key, file.content_type)
+    return key
+```
+
+**ACL note:** DO Spaces has a documented community-reported issue where per-object `ACL: public-read` is sometimes silently ignored. Mitigation: also enable bucket-level public access in the DO Spaces control panel for the `people/` prefix. Profile photos are public content (displayed to all site visitors) — no presigned URLs needed. Serve via the CDN URL: `https://<bucket>.<region>.cdn.digitaloceanspaces.com/<key>`.
+
+### 3. People Merge — SQLAlchemy 2.0 Async
+
+Pure DML within one async session. No new libraries. Dependency order matters (FK constraints):
+
+```python
+from sqlalchemy import update, delete
+
+async def merge_people(source_id: int, target_id: int, session: AsyncSession) -> None:
+    """Transfer all FK references from source to target, then delete source."""
+    for model, col in [
+        (Utterance, Utterance.person_id),
+        (SpeakerAlias, SpeakerAlias.person_id),
+        (CaseAppearance, CaseAppearance.person_id),
+        (ArgumentParticipant, ArgumentParticipant.person_id),
+    ]:
+        await session.execute(
+            update(model).where(col == source_id).values({col: target_id})
+        )
+    await session.execute(delete(Person).where(Person.id == source_id))
+    await session.commit()
+```
+
+All five DML statements run within one implicit transaction. If any `execute` raises, the session rolls back automatically before `commit` is reached. No savepoints or nested transactions needed.
+
+### 4. Alembic Migration for Name Field Split
+
+In a single hand-written revision file:
+
+```python
+def upgrade() -> None:
+    # Add new nullable columns — no constraint violations on existing rows
+    op.add_column("people", sa.Column("first_name", sa.String(150), nullable=True))
+    op.add_column("people", sa.Column("last_name", sa.String(150), nullable=True))
+    op.add_column("people", sa.Column("middle_name", sa.String(150), nullable=True))
+    op.add_column("people", sa.Column("suffix", sa.String(50), nullable=True))
+    op.add_column("people", sa.Column("appointing_president", sa.String(200), nullable=True))
+    op.add_column("people", sa.Column("party_of_appointing_president", sa.String(50), nullable=True))
+    # Best-effort backfill: first word = first_name, last word = last_name
+    # Middle names and suffixes will be left NULL for operator to fill manually
+    op.execute("""
+        UPDATE people
+        SET first_name = split_part(full_name, ' ', 1),
+            last_name   = reverse(split_part(reverse(full_name), ' ', 1))
+        WHERE full_name IS NOT NULL
+    """)
+    # Do NOT drop full_name — retain as display fallback and for backward compat
+
+def downgrade() -> None:
+    op.drop_column("people", "party_of_appointing_president")
+    op.drop_column("people", "appointing_president")
+    op.drop_column("people", "suffix")
+    op.drop_column("people", "middle_name")
+    op.drop_column("people", "last_name")
+    op.drop_column("people", "first_name")
+```
+
+**Important:** The backfill is approximate. "Ruth Bader Ginsburg" → first=Ruth, last=Ginsburg, middle=NULL. This is acceptable — the operator will correct values via the people editor. Do NOT add NOT NULL constraints to the new columns in this migration. Name fields will be filled over time via the admin UI.
+
+### 5. Unified Top Nav — Component Composition
+
+No new library. Extract shared markup to `src/lib/components/TopNav.svelte`:
+
+```svelte
+<script lang="ts">
+  interface Props {
+    isAdmin?: boolean;
   }
-};
+  let { isAdmin = false }: Props = $props();
+</script>
+
+<nav class="...">
+  <!-- shared nav content -->
+  {#if isAdmin}
+    <!-- admin-specific links -->
+  {/if}
+</nav>
 ```
 
-`request.formData()` handles `multipart/form-data` natively in SvelteKit (no `multer`, no `formidable`). The `Buffer.from(await file.arrayBuffer())` pattern is the validated approach per the SvelteKit community (travishorn.com).
+Import in both layout files:
+- `src/routes/+layout.svelte` — `<TopNav />`
+- `src/routes/admin/+layout.svelte` — `<TopNav isAdmin />`
 
-**Critical Digital Ocean constraint:** App Platform containers have no persistent filesystem and no writable volumes. Files written to `/tmp/` are lost on every deploy or container replacement. This means:
-
-1. The uploaded PDF must be relayed to DigitalOcean Spaces (S3-compatible) before the HTTP response is sent — or within the same server action lifecycle.
-2. The FastAPI pipeline `ingest` step must be adapted to fetch from Spaces (via a Spaces object key) rather than a local path.
-
-**Storage flow:**
-
-```
-Browser → SvelteKit action → /tmp/uuid.pdf (temp)
-                           → POST to FastAPI /admin/pipeline/runs with spaces_key
-SvelteKit action → boto3.upload_file → DO Spaces bucket
-FastAPI ingest step → boto3.download_file → pipeline processing
-```
-
-The Python pipeline side uploads via boto3; FastAPI's admin endpoint receives the Spaces key and passes it to the subprocess.
-
-### New Python Dependencies (pipeline/api side)
-
-| Package | Version | Purpose |
-|---------|---------|---------|
-| `boto3` | `^1.34` | Upload PDF to DO Spaces; fetch from Spaces in pipeline ingest step. S3-compatible — same API as AWS S3. |
-
-`botocore` is installed automatically as a `boto3` dependency; pin them together in requirements.
-
-**Why Spaces and not local filesystem:** DO App Platform does not support persistent volumes. The docs state explicitly: "App Platform does not currently support volumes because instances are scalable and ephemeral." Any file not in the DB or Spaces is gone after the next deploy.
-
-**Why boto3 and not the `s3fs` / `aiobotocore` variants:** The upload happens once at ingest time in a CLI-style context. Standard synchronous boto3 is correct. Async S3 adds complexity with no benefit for this use case.
+No routing changes. No route groups needed. The existing layout hierarchy is already correct.
 
 ---
 
-## Complete Installation Reference
+## Alternatives Considered
 
-```bash
-# In app/ — SvelteKit (new additions only)
-npm install bcryptjs
-npm install -D @types/bcryptjs
-
-# In api/ or pipeline/ Python environment (new additions only)
-pip install boto3>=1.34
-```
-
-No other new packages. The session token signing uses `node:crypto` (built-in). File writing uses `node:fs/promises` (built-in). The subprocess pattern uses Python `asyncio` (built-in).
+| Feature | Recommended | Alternative | Why Not |
+|---------|-------------|-------------|---------|
+| Popover | `bits-ui` Popover | `@floating-ui/dom` direct | Requires manual Svelte 5 wiring: `useFloating`, `useClick`, `useInteractions`, prop spreading. bits-ui wraps all of this. Same positioning engine underneath — no tradeoff. |
+| Popover | `bits-ui` Popover | `@skeletonlabs/floating-ui-svelte` | **Archived October 2025. Deprecated. End of life. Hard no.** |
+| Popover | `bits-ui` Popover | HTML native `<details>`/`<summary>` | Cannot anchor to a trigger position. No collision detection. Not keyboard-accessible for a floating card. |
+| Popover | `bits-ui` Popover | CSS Anchor Positioning (AnchorPop) | Browser support still incomplete as of mid-2026 (no Firefox GA). Not production-safe. |
+| Image resize | `Pillow` (Python) | `sharp` (npm, Node side) | Image processing belongs on the FastAPI side where upload validation already occurs. No benefit to moving it to Node. |
+| Image resize | `Pillow` | `imageio` | Pillow is the standard; imageio adds no benefit for resize + format conversion. |
+| Photo serving | Direct CDN URL | Presigned URLs | Profile photos are public content visible to all site visitors. Presigned URLs add complexity and expiry handling with zero security benefit. |
+| Name split | SQL `split_part()` in Alembic | Python string splitting in upgrade() | `op.execute()` with a SQL expression runs in the DB transaction — no extra Python loop, no ORM loading. Faster and simpler for a one-time backfill. |
 
 ---
 
@@ -165,70 +243,38 @@ No other new packages. The session token signing uses `node:crypto` (built-in). 
 
 | Avoid | Why | Use Instead |
 |-------|-----|-------------|
-| `better-auth` | Requires database schema; that is DDL outside Alembic — violates project constraint. Overkill for env-var credentials. | DIY hooks + `bcryptjs` |
-| `auth.js` (NextAuth for SvelteKit) | Same DB adapter problem; complex config for a no-user-DB scenario | DIY hooks + `bcryptjs` |
-| `lucia-auth` | Deprecated as a library (now a learning reference only); has the same DB requirement | DIY hooks + `bcryptjs` |
-| `svelte-kit-cookie-session` | Last released Aug 2023; low adoption; HMAC pattern achieves the same in stdlib Node crypto | `node:crypto` `createHmac` |
-| `@node-rs/argon2` | Native binary causes Vite/Rollup build failures in SvelteKit production builds (open issues through late 2024) | `bcryptjs` |
-| Celery + Redis | New infra dependency (Redis service on DO App Platform) for a single-operator sequential job runner | `asyncio.create_subprocess_exec` + DB polling |
-| ARQ / SAQ | Also Redis-backed | Same as Celery |
-| FastAPI `BackgroundTasks` without subprocess | No crash recovery; job is silently lost on process restart | Subprocess + DB status row |
-| SSE / WebSocket for job progress | Library dependency and persistent connection overhead for one operator who can wait 3 seconds | `setInterval` polling on existing REST endpoint |
-| `multer` / `formidable` | Node.js multipart libraries; SvelteKit form actions handle multipart natively via `request.formData()` | `request.formData()` + `node:fs/promises` |
-| Second FastAPI service for admin | Separate deploy unit, separate DB connection pool, separate auth surface | Protected router on existing FastAPI app |
-| Local filesystem for persistent PDFs | DO App Platform has no persistent volumes; files are lost on redeploy | DigitalOcean Spaces via boto3 |
-
----
-
-## Integration Points with Existing Stack
-
-| Existing piece | How new code hooks in |
-|----------------|-----------------------|
-| `pipeline_run` table + status machine | Reused as-is for job status tracking; only addition is a `log TEXT` column via new Alembic migration |
-| `FASTAPI_BASE_URL` env var in SvelteKit | Admin actions call FastAPI using the same server-only pattern; `ADMIN_API_KEY` added as a second server-only env var |
-| `+page.server.ts` load + action pattern | All admin pages follow the same established pattern; write operations use named `actions` exports |
-| `hooks.server.ts` | New `handle` export added; if a handle function already exists, use SvelteKit's `sequence()` helper to compose them |
-| Alembic migrations | `log TEXT` column on `pipeline_run` goes in a new numbered migration; `Base.metadata.create_all` is never called |
-| PgBouncer `statement_cache_size=0` | No change; admin FastAPI router reuses the existing session factory |
-
----
-
-## Digital Ocean App Platform Compatibility Notes
-
-1. **No persistent filesystem / no volumes.** PDF uploads must be forwarded to Spaces within the same request action before the temp file is at risk. Never depend on disk between requests.
-2. **No volumes.** This is a hard platform constraint, not a configuration option. Spaces is the only supported persistent file store.
-3. **File upload timeout: 600 seconds.** SCOTUS PDFs are typically 200–800 KB — well within this limit.
-4. **Local filesystem cap: 4 GiB.** Write uploaded files to `/tmp/` only; never accumulate them across requests.
-5. **Internal service communication.** The SvelteKit service calls FastAPI via the App Platform internal hostname — the same `FASTAPI_BASE_URL` pattern already in use. No change needed.
-6. **`asyncio.create_subprocess_exec` on Linux.** The Windows `SelectorEventLoop` limitation does not apply on DO App Platform (Linux containers). This is the production target.
+| `@skeletonlabs/floating-ui-svelte` | Archived October 2025, deprecated, no support, end of life | `bits-ui` Popover |
+| `@floating-ui/dom` (standalone) | bits-ui already wraps it; direct use requires substantial boilerplate for this use case | `bits-ui` |
+| Any full component library (Flowbite-Svelte, shadcn-svelte, Skeleton) | Style conflicts with existing raw Tailwind design; pulling in a library for one component is over-engineering | `bits-ui` (headless, no styles shipped) |
+| `aiobotocore` or async S3 client | Overkill; `boto3` wrapped in `asyncio.to_thread` is the established pattern in this codebase | Existing `boto3` + `asyncio.to_thread` |
+| `python-multipart` explicit pin | Already bundled in `fastapi[standard]`; adding an explicit pin risks version conflicts | Leave as transitive dep of fastapi[standard] |
+| `aiofiles` | Not needed; FastAPI's `UploadFile.read()` is already async | FastAPI built-in `UploadFile` |
+| SvelteKit route groups for nav sharing | Adds routing restructuring complexity to a problem that's solved by a shared Svelte component | `TopNav.svelte` component imported in both layouts |
 
 ---
 
 ## Version Compatibility
 
-| Package | Requires | Notes |
-|---------|----------|-------|
-| `bcryptjs@^2.4.3` | Node 18+, SvelteKit 2.x | Pure JS; zero native build step; no Vite config changes needed |
-| `@types/bcryptjs@^2.4.6` | TypeScript 5.x | Matches bcryptjs 2.4.x API surface |
-| `boto3@^1.34` | Python 3.12, botocore 1.34 | Pin botocore alongside boto3; they version together |
-| `asyncio.create_subprocess_exec` | Python 3.12 stdlib, Linux only | Correct for DO App Platform; not needed on Windows dev machines (pipeline runs locally anyway) |
+| Package | Compatible With | Notes |
+|---------|-----------------|-------|
+| `bits-ui@^2.18.1` | `svelte@^5.30.0` | bits-ui 2.x requires Svelte 5. Do not use bits-ui 0.x (Svelte 4 only). |
+| `bits-ui@^2.18.1` | `@sveltejs/kit@^2.21.0` | No conflict. bits-ui is framework-agnostic at the Kit routing level. |
+| `Pillow>=11.0` | `Python 3.12` | Pillow 11.x+ targets Python 3.9+. Full 3.12 support confirmed. |
+| `Pillow>=11.0` | `FastAPI 0.115+` | No conflict. Pillow is a pure image processing dependency with no FastAPI integration layer. |
 
 ---
 
 ## Sources
 
-- SvelteKit official docs (Auth page) — session/cookie locals pattern, `hooks.server.ts` structure: https://svelte.dev/docs/kit/auth
-- joyofcode.xyz — httpOnly cookie session pattern, `crypto.randomUUID` token: https://joyofcode.xyz/sveltekit-authentication-using-cookies
-- Lucia v3 tutorial — `@node-rs/argon2` configuration params, `hooks.server.ts` `locals.user` pattern: https://v3.lucia-auth.com/tutorials/username-and-password/sveltekit
-- lucia-auth/lucia issue #1567 — `@node-rs/argon2` production build breakage in SvelteKit (native binary Rollup parse error): https://github.com/lucia-auth/lucia/issues/1567
-- sveltejs/kit issue #13061 — `@node-rs/argon2-wasm32-wasi` resolution failure in SvelteKit builds: https://github.com/sveltejs/kit/issues/13061
-- travishorn.com — `request.formData()` + `writeFile(Buffer.from(arrayBuffer()))` validated upload pattern: https://travishorn.com/uploading-and-saving-files-with-sveltekit/
-- sveltetalk.com — SvelteKit 2.49 streaming upload context: https://sveltetalk.com/posts/stream-file-uploads-249
-- DO App Platform storage docs — no volumes; Spaces is the persistent option: https://docs.digitalocean.com/products/app-platform/how-to/store-data/
-- DO support — 600s upload timeout, 4 GiB local cap: https://docs.digitalocean.com/support/why-are-large-files-failing-to-upload-to-my-app-on-app-platform/
-- fastapi/fastapi discussion #7770 — `asyncio.create_subprocess_exec` in FastAPI BackgroundTasks; Windows caveat confirmed Linux-only: https://github.com/fastapi/fastapi/discussions/7770
-- betterstack.com — BackgroundTasks limitations for long-running work: https://betterstack.com/community/guides/scaling-python/background-tasks-in-fastapi/
+- https://bits-ui.com/docs/components/popover — Popover component API, Svelte 5 Runes usage (MEDIUM confidence)
+- https://floating-ui-svelte.vercel.app/examples/popovers — Confirmed v0.3.9, Svelte 5 native; archived repo (MEDIUM confidence)
+- https://github.com/skeletonlabs/floating-ui-svelte/discussions/169 — Confirmed archived October 2025, deprecated (MEDIUM confidence)
+- https://docs.digitalocean.com/products/spaces/reference/s3-compatibility/ — DO Spaces ACL support via x-amz-acl header (MEDIUM confidence)
+- https://www.digitalocean.com/community/questions/spaces-api-put-call-ignores-acl-header — Known ACL ignore issue; prefer bucket-level public policy (MEDIUM confidence)
+- https://pillow.readthedocs.io/en/stable/reference/Image.html — Pillow 12.x thumbnail/resize API (MEDIUM confidence)
+- https://alembic.sqlalchemy.org/en/latest/ops.html — op.add_column / op.execute backfill pattern (MEDIUM confidence)
+- https://docs.sqlalchemy.org/en/20/orm/queryguide/dml.html — SQLAlchemy 2.0 async UPDATE/DELETE DML for merge (MEDIUM confidence)
 
 ---
-*Stack research for: SCOTUS Chat v1.1 operator admin interface additions*
-*Researched: 2026-06-15*
+*Stack research for: SCOTUS Chat v1.2 pre-launch polish*
+*Researched: 2026-06-18*

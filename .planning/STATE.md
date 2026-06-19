@@ -5,8 +5,8 @@ milestone_name: Pre-Launch Polish
 current_phase: 9
 current_phase_name: people-data-model-migration
 status: verifying
-stopped_at: Completed 09-02 — service layer derivation, assignments, and sort; ready for 09-03
-last_updated: "2026-06-19T12:50:49.363Z"
+stopped_at: Completed 09-03 — admin form extension for six new people fields; Phase 9 complete
+last_updated: "2026-06-19T13:42:34.348Z"
 last_activity: 2026-06-19
 last_activity_desc: Phase 9 execution started
 progress:
@@ -56,6 +56,7 @@ Progress: [███░░░░░░░] 33%
 | Phase 09 P01 | 97 | 3 tasks | 3 files |
 | Phase 09 P02 | 119 | 3 tasks | 2 files |
 | Phase 09 P03 | 92 | 2 tasks | 2 files |
+| Phase 09 P03 | 92 | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -73,6 +74,7 @@ Full log in PROJECT.md Key Decisions table. Key decisions for v1.2:
 - [09-01]: PersonUpdate mass-assignment allow-list extended with six new fields — only path to write first_name, last_name, middle_name, name_suffix, appointing_president, appointing_president_party (T-09-01 mitigated)
 - [Phase ?]: [09-02]: _derive_full_name requires BOTH first_name AND last_name non-empty (D-04/D-05 deviation, Pitfall 3 — prevents anchor corruption)
 - [Phase ?]: [09-02]: get_person_detail return dict explicitly includes all six new keys (Pitfall 2 — missing keys would silently reload as None)
+- [Phase ?]: [09-03]: PersonDetail TS interface, save action, and PATCH body extended with six new people fields; form extended with name-parts grid and Appointment section (PEOP-01, PEOP-02 closed)
 
 ### Pending Todos
 
@@ -96,9 +98,9 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-19T12:50:49.355Z
-Stopped at: Completed 09-02 — service layer derivation, assignments, and sort; ready for 09-03
-Resume file: .planning/phases/09-people-data-model-migration/09-03-PLAN.md
+Last session: 2026-06-19T13:42:34.339Z
+Stopped at: Completed 09-03 — admin form extension for six new people fields; Phase 9 complete
+Resume file: None
 
 ## Operator Next Steps
 

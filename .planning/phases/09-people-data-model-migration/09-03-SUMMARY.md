@@ -45,12 +45,15 @@ decisions:
   - "D-14 confirmed: section order Basic Info, Bio & Photo, Court Tenure, Appointment, single Save button"
   - "appointing_president_party extraction omits .trim() (select value) — empty string still becomes null via || null"
 
+requirements-completed: [PEOP-01, PEOP-02]
+
 metrics:
   duration_seconds: 92
   completed_date: "2026-06-19"
-  tasks_completed: 2
+  tasks_completed: 3
   tasks_total: 3
   files_changed: 2
+status: complete
 ---
 
 # Phase 9 Plan 03: SvelteKit Edit Form Extension Summary
@@ -81,11 +84,19 @@ metrics:
 - Page h1: already bound to `{data.person.full_name}` (Phase 8 implementation) — confirmed unchanged.
 - Accent color `#93c5fd` not used on new Appointment inputs (reserved for focus ring and Save button).
 
-## Checkpoint: Awaiting Human Verification
+## Human Verification Result
 
-**Task 3 is a `checkpoint:human-verify` (blocking).** The automated code tasks are complete. End-to-end save/reload testing requires migration 0006 to be applied to the dev database.
+**Task 3 checkpoint approved with one known issue.**
 
-See Task 3 checkpoint details below.
+Verified passing:
+- Form save round-trip: all six fields (first_name, middle_name, last_name, name_suffix, appointing_president, appointing_president_party) save and reload correctly.
+- `full_name` derivation: server correctly derives "Amy Coney Barrett" when first + last both present.
+- Field pre-fill: all six inputs pre-fill from saved values on reload.
+- Partial-save protection: editing ONLY a first name preserves the existing `full_name` anchor (no overwrite).
+- Responsive collapse: name-parts grid collapses to 2 columns below 640px; all inputs remain usable.
+- Existing records: people with no name parts load with empty inputs and unchanged `full_name`.
+
+**Known issue (not verified):** `/admin/people` directory sort by `last_name` did not work as expected. The `list_people` endpoint sort logic (09-02, commit 59ca693) is implemented but the directory ordering was not visibly correct during browser testing. This is logged as a gap item for a follow-up plan.
 
 ## Deviations from Plan
 
@@ -106,8 +117,17 @@ None. Both files are fully wired:
 
 The round-trip is complete at the SvelteKit layer pending database migration (Task 3 checkpoint).
 
+## Issues Encountered
+
+**Directory sort by last_name not working as expected (gap item)**
+
+During human verification, the `/admin/people` directory did not sort correctly by `last_name`. The `list_people` service change (59ca693, plan 09-02) adds `ORDER BY last_name NULLS LAST, full_name ASC` at the ORM layer, but the observed sort order was incorrect. This may be a query-level issue, a FastAPI caching artifact, or a frontend display issue. It does not affect the edit-form functionality verified in this plan.
+
+**Required follow-up:** Create a gap plan to investigate and fix the `/admin/people` directory sort. The fix must ensure: records with `last_name` sort alphabetically; records with no `last_name` appear at the bottom; the sort is stable and matches the ROADMAP criterion "directory sorted by last name."
+
 ## Self-Check: PASSED
 
 - `app/src/routes/admin/people/[id]/+page.server.ts` modified with six new interface fields, six extractions, six PATCH body keys: FOUND
 - `app/src/routes/admin/people/[id]/+page.svelte` modified with name-parts grid, Appointment section, responsive style: FOUND
 - Commits e407600 and 8ee17f6 present in git log: FOUND
+- Human verification checkpoint approved: PASSED (with sort issue as known gap)

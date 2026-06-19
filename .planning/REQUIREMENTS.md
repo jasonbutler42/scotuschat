@@ -24,8 +24,8 @@ Requirements for the Pre-Launch Polish milestone. Each maps to roadmap phases (p
 
 ### People Data Model
 
-- [ ] **PEOP-01**: Operator can enter and edit structured name fields (first name, last name, middle name, suffix) on a person record in addition to the existing full name
-- [ ] **PEOP-02**: Operator can enter and edit appointing president name and party affiliation on a person record
+- [x] **PEOP-01**: Operator can enter and edit structured name fields (first name, last name, middle name, suffix) on a person record in addition to the existing full name
+- [x] **PEOP-02**: Operator can enter and edit appointing president name and party affiliation on a person record
 
 ### People Admin
 
@@ -81,8 +81,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PIPE-20 | Phase 13 | Pending |
 | ARG-01 | Phase 11 | Pending |
 | ARG-02 | Phase 11 | Pending |
-| PEOP-01 | Phase 9 | Pending |
-| PEOP-02 | Phase 9 | Pending |
+| PEOP-01 | Phase 9 | Complete |
+| PEOP-02 | Phase 9 | Complete |
 | PADM-01 | Phase 12 | Pending |
 | PADM-02 | Phase 12 | Pending |
 | PADM-03 | Phase 12 | Pending |
@@ -93,6 +93,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PUB-04 | Phase 14 | Pending |
 
 **Coverage:**
+
 - v1.2 requirements: 16 total
 - Mapped to phases: 16
 - Unmapped: 0 ✓

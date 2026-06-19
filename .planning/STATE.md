@@ -3,17 +3,17 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Pre-Launch Polish
 current_phase: 9
-current_phase_name: People Data Model Migration
-status: planned
+current_phase_name: people-data-model-migration
+status: executing
 stopped_at: Phase 9 plans verified — ready to execute
-last_updated: "2026-06-19T12:00:00.000Z"
+last_updated: "2026-06-19T12:40:56.283Z"
 last_activity: 2026-06-19
-last_activity_desc: Phase 9 planned — 3 plans (09-01 migration+ORM+schema, 09-02 service layer, 09-03 SvelteKit form); verified
+last_activity_desc: Phase 9 execution started
 progress:
   total_phases: 6
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 3
+  completed_plans: 1
   percent: 0
 ---
 
@@ -24,16 +24,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-18 after v1.2 milestone start)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** v1.2 Pre-Launch Polish — Phase 9 ready to plan
+**Current focus:** Phase 9 — people-data-model-migration
 
 ## Current Position
 
-Phase: 9 of 14 (People Data Model Migration)
-Plan: — of —
-Status: Ready to plan
-Last activity: 2026-06-18 — Roadmap created for v1.2; Phase 9 is next
+Phase: 9 (people-data-model-migration) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
+Last activity: 2026-06-19 — Phase 9 execution started
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [███░░░░░░░] 33%
 
 ## Performance Metrics
 
@@ -53,6 +53,7 @@ Progress: [░░░░░░░░░░] 0%
 | 08 | 6 | People editor |
 
 *Updated after each plan completion*
+| Phase 09 P01 | 97 | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -66,6 +67,8 @@ Full log in PROJECT.md Key Decisions table. Key decisions for v1.2:
 - [Research]: People merge must transfer all 4 FK tables (utterances, speaker_alias, case_appearances, argument_participants) in single `async with db.begin()` — no commit mid-transfer
 - [Research]: Speaker popover data pre-loaded in `+page.server.ts` — no client-side fetch, no `PUBLIC_FASTAPI_BASE_URL`
 - [Research]: `appointing_party` is admin-only — public popover shows "Appointed by [president]" with no party affiliation
+- [09-01]: Migration 0006 adds six nullable columns to people (D-01); full_name NOT NULL preserved as resolution anchor (D-02); no backfill (D-03)
+- [09-01]: PersonUpdate mass-assignment allow-list extended with six new fields — only path to write first_name, last_name, middle_name, name_suffix, appointing_president, appointing_president_party (T-09-01 mitigated)
 
 ### Pending Todos
 
@@ -89,9 +92,9 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-19T11:35:36.677Z
-Stopped at: Phase 9 UI-SPEC approved
-Resume file: .planning/phases/09-people-data-model-migration/09-UI-SPEC.md
+Last session: 2026-06-19T12:40:56.275Z
+Stopped at: Completed 09-01 — migration 0006, ORM, and schemas; ready for 09-02
+Resume file: .planning/phases/09-people-data-model-migration/09-02-PLAN.md
 
 ## Operator Next Steps
 

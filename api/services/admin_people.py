@@ -123,7 +123,7 @@ async def list_people(db: AsyncSession, incomplete: bool = False) -> list[dict]:
     q = (
         select(Person, Role.name.label("role_name"))
         .outerjoin(Role, Person.role_id == Role.id)
-        .order_by(Person.full_name)
+        .order_by(Person.last_name.nulls_last(), Person.full_name.asc())
     )
     if incomplete:
         q = q.where(

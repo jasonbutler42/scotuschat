@@ -613,17 +613,19 @@ def _derive_full_name(first: str, middle: str | None, last: str, suffix: str | N
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Derivation guard: `first_name` only, or `first_name` AND `last_name`?**
    - What we know: D-04 says "when `first_name` is non-empty." D-05 says "if `first_name` is null or empty, `full_name` is left unchanged."
    - What's unclear: Whether providing `first_name` without `last_name` should derive `full_name = "Amy"` (overwriting "Amy Coney Barrett") or leave `full_name` unchanged.
    - Recommendation: Require both `first_name` AND `last_name` non-empty to trigger derivation. This is a safe default — the planner can add a comment noting the deviation from D-04's literal text, and the user can override during plan review.
+   - **RESOLVED:** Both-field guard adopted per Pitfall 3 — deviation from D-04 literal text confirmed by user. Derivation fires only when `first_name AND last_name` are both non-empty, preventing anchor corruption from partial name entry.
 
 2. **`PersonListItem.missing` — should `first_name`/`last_name` absence be flagged as "missing"?**
    - What we know: The current incomplete filter checks `role_id`, `bio_text`, and `photo_url`. D-04 defines these as the three "missing" signals. PEOP-01 adds name parts as new fields.
    - What's unclear: Whether the "missing fields" filter and amber chip should count absent `first_name`/`last_name` as incomplete.
    - Recommendation: Keep the existing incomplete filter definition (role/bio/photo only). Adding name parts to the filter is a separate product decision not covered by PEOP-01 or PEOP-02. The planner should NOT add this unless the user confirms.
+   - **RESOLVED:** Incomplete filter unchanged — name parts absence is NOT flagged as missing. Existing role/bio/photo-only definition retained per PEOP-01/PEOP-02 scope.
 
 ---
 

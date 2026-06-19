@@ -144,6 +144,72 @@
 					/>
 				</div>
 
+				<!-- Name parts — 4-column on desktop, 2-column on mobile -->
+				<div style="margin-bottom: 16px;">
+					<div class="name-parts-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr 80px; gap: 16px;">
+						<div>
+							<label
+								for="first_name"
+								style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
+							>
+								First name
+							</label>
+							<input
+								id="first_name"
+								name="first_name"
+								type="text"
+								value={data.person.first_name ?? ''}
+								style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
+							/>
+						</div>
+						<div>
+							<label
+								for="middle_name"
+								style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
+							>
+								Middle name
+							</label>
+							<input
+								id="middle_name"
+								name="middle_name"
+								type="text"
+								value={data.person.middle_name ?? ''}
+								style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
+							/>
+						</div>
+						<div>
+							<label
+								for="last_name"
+								style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
+							>
+								Last name
+							</label>
+							<input
+								id="last_name"
+								name="last_name"
+								type="text"
+								value={data.person.last_name ?? ''}
+								style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
+							/>
+						</div>
+						<div>
+							<label
+								for="name_suffix"
+								style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
+							>
+								Suffix
+							</label>
+							<input
+								id="name_suffix"
+								name="name_suffix"
+								type="text"
+								value={data.person.name_suffix ?? ''}
+								style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
+							/>
+						</div>
+					</div>
+				</div>
+
 				<!-- Role select -->
 				<div style="margin-bottom: 0;">
 					<label
@@ -368,6 +434,57 @@
 				<input type="hidden" name="tenures" value={JSON.stringify(tenureRows)} />
 			</div>
 
+			<!-- ── Section 4: Appointment ── -->
+			<div
+				style="background-color: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 24px; margin-bottom: 24px;"
+			>
+				<h2
+					style="font-size: 20px; font-weight: 600; color: #e2e8f0; margin: 0 0 16px 0; line-height: 1.2;"
+				>
+					Appointment
+				</h2>
+
+				<!-- Appointed by -->
+				<div style="margin-bottom: 16px;">
+					<label
+						for="appointing_president"
+						style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
+					>
+						Appointed by
+					</label>
+					<input
+						id="appointing_president"
+						name="appointing_president"
+						type="text"
+						value={data.person.appointing_president ?? ''}
+						style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
+					/>
+				</div>
+
+				<!-- Appointing president's party -->
+				<div style="margin-bottom: 0;">
+					<label
+						for="appointing_president_party"
+						style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
+					>
+						Appointing president's party
+					</label>
+					<select
+						id="appointing_president_party"
+						name="appointing_president_party"
+						style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
+					>
+						<option value="" selected={!data.person.appointing_president_party}>— No party —</option>
+						<option value="Democratic" selected={data.person.appointing_president_party === 'Democratic'}>Democratic</option>
+						<option value="Democratic-Republican" selected={data.person.appointing_president_party === 'Democratic-Republican'}>Democratic-Republican</option>
+						<option value="Federalist" selected={data.person.appointing_president_party === 'Federalist'}>Federalist</option>
+						<option value="Independent" selected={data.person.appointing_president_party === 'Independent'}>Independent</option>
+						<option value="Republican" selected={data.person.appointing_president_party === 'Republican'}>Republican</option>
+						<option value="Whig" selected={data.person.appointing_president_party === 'Whig'}>Whig</option>
+					</select>
+				</div>
+			</div>
+
 			<!-- Form-level error (from save action) -->
 			{#if form?.error}
 				<p role="alert" style="color: #ef4444; font-size: 14px; margin: 0 0 8px 0;">
@@ -386,3 +503,11 @@
 		</form>
 	</div>
 </main>
+
+<style>
+	@media (max-width: 640px) {
+		.name-parts-grid {
+			grid-template-columns: 1fr 1fr !important;
+		}
+	}
+</style>

@@ -18,7 +18,7 @@ Critical guards (project-wide pattern from admin_jobs.py):
 import datetime
 from typing import Optional
 
-from sqlalchemy import delete, or_, select
+from sqlalchemy import delete, func as sqlfunc, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.models.models import (
@@ -112,7 +112,12 @@ async def _replace_tenures(
 
 
 async def list_people(db: AsyncSession, incomplete: bool = False) -> list[dict]:
-    """Return all Person rows joined with their Role name, sorted by full_name.
+    """Return all Person rows joined with their Role name.
+
+    Sorted by COALESCE(last_name, full_name) ascending so that people whose
+    last_name is not yet populated (legacy rows, pre-Phase-9 backfill) are
+    ordered by full_name as a fallback rather than being pushed to the bottom
+    of the directory (which NULLS LAST on last_name alone would cause).
 
     When incomplete=True, only returns people where role_id OR bio_text OR
     photo_url is NULL (D-04, PEOPLE-02).
@@ -123,7 +128,7 @@ async def list_people(db: AsyncSession, incomplete: bool = False) -> list[dict]:
     q = (
         select(Person, Role.name.label("role_name"))
         .outerjoin(Role, Person.role_id == Role.id)
-        .order_by(Person.last_name.nulls_last(), Person.full_name.asc())
+        .order_by(sqlfunc.coalesce(Person.last_name, Person.full_name).asc())
     )
     if incomplete:
         q = q.where(
@@ -239,9 +244,9 @@ async def update_person(
     if body.first_name and body.last_name:
         person.full_name = _derive_full_name(
             body.first_name,
-            person.middle_name,   # already None when blank (normalized above)
+            body.middle_name,
             body.last_name,
-            person.name_suffix,   # already None when blank (normalized above)
+            body.name_suffix,
         )
 
     if body.tenures is not None:

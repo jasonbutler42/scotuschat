@@ -185,6 +185,15 @@ async def get_person_detail(db: AsyncSession, person_id: int) -> dict | None:
             }
             for t in tenures
         ],
+        # Phase 9 additions — all six new fields must be explicitly included so
+        # PersonDetail(**p) in the router does not silently default them to None
+        # on page reload (Pitfall 2)
+        "first_name": person.first_name,
+        "last_name": person.last_name,
+        "middle_name": person.middle_name,
+        "name_suffix": person.name_suffix,
+        "appointing_president": person.appointing_president,
+        "appointing_president_party": person.appointing_president_party,
     }
 
 
@@ -214,6 +223,26 @@ async def update_person(
     # Normalize empty strings to None (Pitfall 5) — ensures IS NULL filter works
     person.bio_text = body.bio_text if body.bio_text else None
     person.photo_url = body.photo_url if body.photo_url else None
+
+    # Phase 9: normalize empty strings to None (same pattern as bio_text/photo_url)
+    # Pitfall 4 — empty string must become NULL to keep IS NULL semantics correct
+    person.first_name = body.first_name if body.first_name else None
+    person.last_name = body.last_name if body.last_name else None
+    person.middle_name = body.middle_name if body.middle_name else None
+    person.name_suffix = body.name_suffix if body.name_suffix else None
+    person.appointing_president = body.appointing_president if body.appointing_president else None
+    person.appointing_president_party = body.appointing_president_party if body.appointing_president_party else None
+
+    # Derivation: overwrite full_name only when BOTH first_name and last_name are non-empty (D-04/D-05)
+    # Note: D-04 says "when first_name is non-empty" but requiring both first_name AND last_name
+    # prevents overwriting a valid full_name anchor with a single-word partial value (Pitfall 3, D-05)
+    if body.first_name and body.last_name:
+        person.full_name = _derive_full_name(
+            body.first_name,
+            body.middle_name,
+            body.last_name,
+            body.name_suffix,
+        )
 
     if body.tenures is not None:
         # May raise ValueError on malformed date — caller catches and returns 422

@@ -95,6 +95,13 @@ class Person(Base):
     role_id = Column(Integer, ForeignKey("roles.id"), nullable=True)
     bio_text = Column(Text, nullable=True)
     photo_url = Column(String(500), nullable=True)
+    # Phase 9 additions — migration 0006
+    first_name = Column(String(150), nullable=True)
+    last_name = Column(String(150), nullable=True)
+    middle_name = Column(String(150), nullable=True)
+    name_suffix = Column(String(50), nullable=True)
+    appointing_president = Column(String(200), nullable=True)
+    appointing_president_party = Column(String(50), nullable=True)
 
 
 # ---------------------------------------------------------------------------

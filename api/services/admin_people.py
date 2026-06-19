@@ -218,11 +218,16 @@ async def update_person(
 
     if body.full_name is not None:
         person.full_name = body.full_name
-    # role_id may be explicitly set to None (remove role) or a new id
-    person.role_id = body.role_id
+    # Only write role_id / bio_text / photo_url when the client explicitly included them
+    # in the JSON body — body.model_fields_set distinguishes absent from explicit-null
+    # (Pydantic v2; prevents a partial PATCH omitting role_id from silently clearing it)
+    if "role_id" in body.model_fields_set:
+        person.role_id = body.role_id
     # Normalize empty strings to None (Pitfall 5) — ensures IS NULL filter works
-    person.bio_text = body.bio_text if body.bio_text else None
-    person.photo_url = body.photo_url if body.photo_url else None
+    if "bio_text" in body.model_fields_set:
+        person.bio_text = body.bio_text if body.bio_text else None
+    if "photo_url" in body.model_fields_set:
+        person.photo_url = body.photo_url if body.photo_url else None
 
     # Phase 9: normalize empty strings to None (same pattern as bio_text/photo_url)
     # Pitfall 4 — empty string must become NULL to keep IS NULL semantics correct

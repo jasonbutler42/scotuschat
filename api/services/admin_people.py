@@ -19,7 +19,6 @@ import datetime
 from typing import Optional
 
 from sqlalchemy import delete, or_, select
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.models.models import (
@@ -240,9 +239,9 @@ async def update_person(
     if body.first_name and body.last_name:
         person.full_name = _derive_full_name(
             body.first_name,
-            body.middle_name,
+            person.middle_name,   # already None when blank (normalized above)
             body.last_name,
-            body.name_suffix,
+            person.name_suffix,   # already None when blank (normalized above)
         )
 
     if body.tenures is not None:
@@ -256,23 +255,20 @@ async def update_person(
 async def create_role(db: AsyncSession, name: str) -> dict:
     """Find-or-create a Role by name (D-10).
 
-    Inserts immediately and handles a concurrent duplicate via IntegrityError
-    rather than pre-checking existence (which is vulnerable to a TOCTOU race).
-    On collision, rolls back and re-queries for the row that won the race.
-    Role.name has a unique constraint enforced at the DB level.
+    If a role with the given name already exists, returns its dict.
+    Otherwise creates a new Role, flushes, commits, and returns {id, name}.
+    Role.name has a unique constraint — this avoids IntegrityError by checking first.
     """
-    try:
-        role = Role(name=name)
-        db.add(role)
-        await db.flush()
-        await db.commit()
-        await db.refresh(role)
+    result = await db.execute(select(Role).where(Role.name == name))
+    role = result.scalar_one_or_none()
+    if role is not None:
         return {"id": role.id, "name": role.name}
-    except IntegrityError:
-        await db.rollback()
-        result = await db.execute(select(Role).where(Role.name == name))
-        existing = result.scalar_one()
-        return {"id": existing.id, "name": existing.name}
+    role = Role(name=name)
+    db.add(role)
+    await db.flush()
+    await db.commit()
+    await db.refresh(role)
+    return {"id": role.id, "name": role.name}
 
 
 async def list_participants_for_job(

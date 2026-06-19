@@ -36,6 +36,20 @@ from api.schemas.admin_people import PersonUpdate, TenureRow
 # ---------------------------------------------------------------------------
 
 
+def _derive_full_name(
+    first: str, middle: str | None, last: str, suffix: str | None
+) -> str:
+    """Derive full_name from structured name parts (D-04).
+
+    Joins non-blank parts with a single space.
+    Middle and suffix are omitted when blank/None.
+    Examples:
+      first='Amy', middle='Coney', last='Barrett' -> 'Amy Coney Barrett'
+      first='John', middle=None, last='Roberts', suffix='Jr.' -> 'John Roberts Jr.'
+    """
+    return " ".join(p for p in [first, middle or "", last, suffix or ""] if p)
+
+
 def _missing_fields(person: Person) -> list[str]:
     """Return list of missing field labels per D-04.
 

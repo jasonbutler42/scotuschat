@@ -37,6 +37,7 @@ def test_schemas_import() -> None:
 def test_service_import() -> None:
     """All required service functions must import without error."""
     from api.services.admin_people import (  # noqa: F401
+        _derive_full_name,
         _missing_fields,
         _replace_tenures,
         create_role,
@@ -244,3 +245,40 @@ def test_participant_item_shape() -> None:
     item = ParticipantItem(person_id=10, full_name="Solicitor General", role_name="Petitioner's Counsel")
     assert item.person_id == 10
     assert item.full_name == "Solicitor General"
+
+
+# ---------------------------------------------------------------------------
+# _derive_full_name unit tests (D-04, no DB required)
+# ---------------------------------------------------------------------------
+
+
+def test_derive_full_name_first_middle_last() -> None:
+    """first + middle + last → 'Amy Coney Barrett' (no suffix)."""
+    from api.services.admin_people import _derive_full_name
+
+    result = _derive_full_name("Amy", "Coney", "Barrett", None)
+    assert result == "Amy Coney Barrett"
+
+
+def test_derive_full_name_first_last_suffix() -> None:
+    """first + last + suffix, no middle → 'John Roberts Jr.'"""
+    from api.services.admin_people import _derive_full_name
+
+    result = _derive_full_name("John", None, "Roberts", "Jr.")
+    assert result == "John Roberts Jr."
+
+
+def test_derive_full_name_blank_suffix_omitted() -> None:
+    """Blank string suffix (empty string) is omitted from the result."""
+    from api.services.admin_people import _derive_full_name
+
+    result = _derive_full_name("Ketanji", "Brown", "Jackson", "")
+    assert result == "Ketanji Brown Jackson"
+
+
+def test_derive_full_name_blank_middle_omitted() -> None:
+    """Blank string middle (empty string) is omitted from the result."""
+    from api.services.admin_people import _derive_full_name
+
+    result = _derive_full_name("Elena", "", "Kagan", None)
+    assert result == "Elena Kagan"

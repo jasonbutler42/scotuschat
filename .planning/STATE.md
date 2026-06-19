@@ -5,15 +5,15 @@ milestone_name: Pre-Launch Polish
 current_phase: 9
 current_phase_name: people-data-model-migration
 status: executing
-stopped_at: Phase 9 plans verified — ready to execute
-last_updated: "2026-06-19T12:40:56.283Z"
+stopped_at: Completed 09-02 — service layer derivation, assignments, and sort; ready for 09-03
+last_updated: "2026-06-19T12:46:19.809Z"
 last_activity: 2026-06-19
 last_activity_desc: Phase 9 execution started
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 3
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-06-18 after v1.2 milestone start)
 ## Current Position
 
 Phase: 9 (people-data-model-migration) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-06-19 — Phase 9 execution started
 
@@ -54,6 +54,7 @@ Progress: [███░░░░░░░] 33%
 
 *Updated after each plan completion*
 | Phase 09 P01 | 97 | 3 tasks | 3 files |
+| Phase 09 P02 | 119 | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -69,6 +70,8 @@ Full log in PROJECT.md Key Decisions table. Key decisions for v1.2:
 - [Research]: `appointing_party` is admin-only — public popover shows "Appointed by [president]" with no party affiliation
 - [09-01]: Migration 0006 adds six nullable columns to people (D-01); full_name NOT NULL preserved as resolution anchor (D-02); no backfill (D-03)
 - [09-01]: PersonUpdate mass-assignment allow-list extended with six new fields — only path to write first_name, last_name, middle_name, name_suffix, appointing_president, appointing_president_party (T-09-01 mitigated)
+- [Phase ?]: [09-02]: _derive_full_name requires BOTH first_name AND last_name non-empty (D-04/D-05 deviation, Pitfall 3 — prevents anchor corruption)
+- [Phase ?]: [09-02]: get_person_detail return dict explicitly includes all six new keys (Pitfall 2 — missing keys would silently reload as None)
 
 ### Pending Todos
 
@@ -92,9 +95,9 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-19T12:40:56.275Z
-Stopped at: Completed 09-01 — migration 0006, ORM, and schemas; ready for 09-02
-Resume file: .planning/phases/09-people-data-model-migration/09-02-PLAN.md
+Last session: 2026-06-19T12:46:19.801Z
+Stopped at: Completed 09-02 — service layer derivation, assignments, and sort; ready for 09-03
+Resume file: .planning/phases/09-people-data-model-migration/09-03-PLAN.md
 
 ## Operator Next Steps
 

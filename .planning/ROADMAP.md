@@ -61,10 +61,10 @@ Full phase details: `.planning/milestones/v1.1-ROADMAP.md`
   3. Existing full_name values are preserved after the migration runs; no person record loses its resolution anchor
   4. All new fields accept null/empty and do not break existing people records that have not been filled in
 
-**Plans**: 1/3 plans executed
+**Plans**: 2/3 plans executed
 
 - [x] 09-01-PLAN.md — Migration 0006 + Person ORM + PersonDetail/PersonUpdate schema fields
-- [ ] 09-02-PLAN.md — Service layer: _derive_full_name (TDD), update_person derivation, get_person_detail dict, list_people sort
+- [x] 09-02-PLAN.md — Service layer: _derive_full_name (TDD), update_person derivation, get_person_detail dict, list_people sort
 - [ ] 09-03-PLAN.md — SvelteKit edit form: name-parts grid + Appointment section + server action (human verify checkpoint)
 
 ### Phase 10: Unified Navigation
@@ -152,7 +152,7 @@ Full phase details: `.planning/milestones/v1.1-ROADMAP.md`
 | 6. Auth | v1.1 | 3/3 | Complete | 2026-06-16 |
 | 7. Pipeline Runner | v1.1 | 8/8 | Complete | 2026-06-17 |
 | 8. People Editor | v1.1 | 6/6 | Complete | 2026-06-18 |
-| 9. People Data Model Migration | v1.2 | 1/3 | In Progress|  |
+| 9. People Data Model Migration | v1.2 | 2/3 | In Progress|  |
 | 10. Unified Navigation | v1.2 | 0/? | Not started | — |
 | 11. Argument Metadata Editing | v1.2 | 0/? | Not started | — |
 | 12. People Admin Improvements | v1.2 | 0/? | Not started | — |

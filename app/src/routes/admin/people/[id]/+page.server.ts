@@ -22,6 +22,13 @@ interface PersonDetail {
 		start_date: string | null;
 		end_date: string | null;
 	}>;
+	// Phase 9 additions
+	first_name: string | null;
+	last_name: string | null;
+	middle_name: string | null;
+	name_suffix: string | null;
+	appointing_president: string | null;
+	appointing_president_party: string | null;
 }
 
 interface PersonListItem {
@@ -96,6 +103,12 @@ export const actions: Actions = {
 		const role_id = role_id_raw ? parseInt(role_id_raw, 10) : null;
 		const bio_text = ((formData.get('bio_text') as string) ?? '').trim() || null;
 		const photo_url = ((formData.get('photo_url') as string) ?? '').trim() || null;
+		const first_name = ((formData.get('first_name') as string) ?? '').trim() || null;
+		const last_name = ((formData.get('last_name') as string) ?? '').trim() || null;
+		const middle_name = ((formData.get('middle_name') as string) ?? '').trim() || null;
+		const name_suffix = ((formData.get('name_suffix') as string) ?? '').trim() || null;
+		const appointing_president = ((formData.get('appointing_president') as string) ?? '').trim() || null;
+		const appointing_president_party = ((formData.get('appointing_president_party') as string) ?? '') || null;
 		const tenuresRaw = (formData.get('tenures') as string) ?? '[]';
 
 		if (!full_name) {
@@ -124,7 +137,11 @@ export const actions: Actions = {
 					'X-Admin-Token': ADMIN_TOKEN,
 					'Content-Type': 'application/json',
 				},
-				body: JSON.stringify({ full_name, role_id, bio_text, photo_url, tenures }),
+				body: JSON.stringify({
+					full_name, role_id, bio_text, photo_url, tenures,
+					first_name, last_name, middle_name, name_suffix,
+					appointing_president, appointing_president_party,
+				}),
 			});
 		} catch {
 			return fail(502, { error: 'Could not save changes. Check the form and try again.' });

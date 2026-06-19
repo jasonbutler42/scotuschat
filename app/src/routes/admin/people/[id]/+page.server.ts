@@ -111,7 +111,7 @@ export const actions: Actions = {
 		const middle_name = ((formData.get('middle_name') as string) ?? '').trim() || null;
 		const name_suffix = ((formData.get('name_suffix') as string) ?? '').trim() || null;
 		const appointing_president = ((formData.get('appointing_president') as string) ?? '').trim() || null;
-		const appointing_president_party = ((formData.get('appointing_president_party') as string) ?? '') || null;
+		const appointing_president_party = ((formData.get('appointing_president_party') as string) ?? '').trim() || null;
 		const tenuresRaw = (formData.get('tenures') as string) ?? '[]';
 
 		if (!full_name) {

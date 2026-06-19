@@ -1,7 +1,8 @@
 ---
 phase: 9
 slug: people-data-model-migration
-status: draft
+status: approved
+reviewed_at: 2026-06-19
 shadcn_initialized: false
 preset: none
 created: 2026-06-19

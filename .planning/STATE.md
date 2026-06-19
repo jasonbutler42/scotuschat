@@ -4,11 +4,11 @@ milestone: v1.2
 milestone_name: Pre-Launch Polish
 current_phase: 9
 current_phase_name: People Data Model Migration
-status: planning
-stopped_at: Phase 9 context gathered
-last_updated: "2026-06-19T11:29:47.314Z"
-last_activity: 2026-06-18
-last_activity_desc: Roadmap created for v1.2; Phase 9 is next
+status: planned
+stopped_at: Phase 9 plans verified — ready to execute
+last_updated: "2026-06-19T12:00:00.000Z"
+last_activity: 2026-06-19
+last_activity_desc: Phase 9 planned — 3 plans (09-01 migration+ORM+schema, 09-02 service layer, 09-03 SvelteKit form); verified
 progress:
   total_phases: 6
   completed_phases: 0
@@ -89,9 +89,9 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-19T11:29:47.304Z
-Stopped at: Phase 9 context gathered
-Resume file: .planning/phases/09-people-data-model-migration/09-CONTEXT.md
+Last session: 2026-06-19T11:35:36.677Z
+Stopped at: Phase 9 UI-SPEC approved
+Resume file: .planning/phases/09-people-data-model-migration/09-UI-SPEC.md
 
 ## Operator Next Steps
 

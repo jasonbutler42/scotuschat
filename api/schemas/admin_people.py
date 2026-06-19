@@ -48,6 +48,7 @@ class PersonDetail(BaseModel):
     """Full person data returned by GET /api/admin/people/{id} and PATCH /api/admin/people/{id}.
 
     Includes all tenure rows for display in the edit form (D-07, D-08).
+    Phase 9 additions: six structured name and appointment fields (all optional).
     """
 
     id: int
@@ -57,6 +58,13 @@ class PersonDetail(BaseModel):
     bio_text: Optional[str] = None
     photo_url: Optional[str] = None
     tenures: list[TenureRow] = []
+    # Phase 9 additions — migration 0006
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    middle_name: Optional[str] = None
+    name_suffix: Optional[str] = None
+    appointing_president: Optional[str] = None
+    appointing_president_party: Optional[str] = None
 
     model_config = {"from_attributes": True}
 
@@ -67,7 +75,9 @@ class PersonUpdate(BaseModel):
     All fields are optional — but the edit form sends all of them.
     tenures=None means "leave existing tenures unchanged".
     tenures=[] means "delete all tenure rows".
-    Mass-assignment guard: ONLY these five fields are exposed (T-08-MASS).
+    Mass-assignment guard: ONLY explicitly-declared fields are writable.
+    Phase 9 extends the allow-list with six structured name and appointment
+    fields (T-09-01 — prevents writing arbitrary Person attributes).
     """
 
     full_name: Optional[str] = None
@@ -75,6 +85,13 @@ class PersonUpdate(BaseModel):
     bio_text: Optional[str] = None
     photo_url: Optional[str] = None
     tenures: Optional[list[TenureRow]] = None
+    # Phase 9 additions — mass-assignment allow-list extension (T-09-01)
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    middle_name: Optional[str] = None
+    name_suffix: Optional[str] = None
+    appointing_president: Optional[str] = None
+    appointing_president_party: Optional[str] = None
 
 
 class RoleCreate(BaseModel):

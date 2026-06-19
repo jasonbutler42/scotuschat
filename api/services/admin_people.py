@@ -19,6 +19,7 @@ import datetime
 from typing import Optional
 
 from sqlalchemy import delete, or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.models.models import (
@@ -218,16 +219,11 @@ async def update_person(
 
     if body.full_name is not None:
         person.full_name = body.full_name
-    # Only write role_id / bio_text / photo_url when the client explicitly included them
-    # in the JSON body — body.model_fields_set distinguishes absent from explicit-null
-    # (Pydantic v2; prevents a partial PATCH omitting role_id from silently clearing it)
-    if "role_id" in body.model_fields_set:
-        person.role_id = body.role_id
+    # role_id may be explicitly set to None (remove role) or a new id
+    person.role_id = body.role_id
     # Normalize empty strings to None (Pitfall 5) — ensures IS NULL filter works
-    if "bio_text" in body.model_fields_set:
-        person.bio_text = body.bio_text if body.bio_text else None
-    if "photo_url" in body.model_fields_set:
-        person.photo_url = body.photo_url if body.photo_url else None
+    person.bio_text = body.bio_text if body.bio_text else None
+    person.photo_url = body.photo_url if body.photo_url else None
 
     # Phase 9: normalize empty strings to None (same pattern as bio_text/photo_url)
     # Pitfall 4 — empty string must become NULL to keep IS NULL semantics correct
@@ -260,20 +256,23 @@ async def update_person(
 async def create_role(db: AsyncSession, name: str) -> dict:
     """Find-or-create a Role by name (D-10).
 
-    If a role with the given name already exists, returns its dict.
-    Otherwise creates a new Role, flushes, commits, and returns {id, name}.
-    Role.name has a unique constraint — this avoids IntegrityError by checking first.
+    Inserts immediately and handles a concurrent duplicate via IntegrityError
+    rather than pre-checking existence (which is vulnerable to a TOCTOU race).
+    On collision, rolls back and re-queries for the row that won the race.
+    Role.name has a unique constraint enforced at the DB level.
     """
-    result = await db.execute(select(Role).where(Role.name == name))
-    role = result.scalar_one_or_none()
-    if role is not None:
+    try:
+        role = Role(name=name)
+        db.add(role)
+        await db.flush()
+        await db.commit()
+        await db.refresh(role)
         return {"id": role.id, "name": role.name}
-    role = Role(name=name)
-    db.add(role)
-    await db.flush()
-    await db.commit()
-    await db.refresh(role)
-    return {"id": role.id, "name": role.name}
+    except IntegrityError:
+        await db.rollback()
+        result = await db.execute(select(Role).where(Role.name == name))
+        existing = result.scalar_one()
+        return {"id": existing.id, "name": existing.name}
 
 
 async def list_participants_for_job(

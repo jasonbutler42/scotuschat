@@ -101,6 +101,9 @@ export const actions: Actions = {
 		const full_name = ((formData.get('full_name') as string) ?? '').trim();
 		const role_id_raw = formData.get('role_id') as string | null;
 		const role_id = role_id_raw ? parseInt(role_id_raw, 10) : null;
+		if (role_id_raw && isNaN(role_id as number)) {
+			return fail(400, { error: 'Please select a valid role or complete the new-role form before saving.' });
+		}
 		const bio_text = ((formData.get('bio_text') as string) ?? '').trim() || null;
 		const photo_url = ((formData.get('photo_url') as string) ?? '').trim() || null;
 		const first_name = ((formData.get('first_name') as string) ?? '').trim() || null;

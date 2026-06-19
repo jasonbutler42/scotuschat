@@ -38,6 +38,9 @@
 	// Whether the inline add-role form is visible
 	let showAddRoleForm = $state(false);
 
+	// The role id that was selected before the sentinel was chosen; restored on cancel
+	let roleIdBeforeSentinel = $state<string>('');
+
 	// Error from the createRole action
 	let roleError = $state<string | null>(null);
 
@@ -47,11 +50,19 @@
 	function handleRoleChange(e: Event) {
 		const val = (e.target as HTMLSelectElement).value;
 		if (val === ADD_NEW_ROLE_SENTINEL) {
+			// Record the previously-selected value so it can be restored on cancel
+			roleIdBeforeSentinel = selectedRoleId;
 			showAddRoleForm = true;
 		} else {
 			selectedRoleId = val;
 			showAddRoleForm = false;
 		}
+	}
+
+	function cancelAddRole() {
+		// Restore the previously-selected role and hide the inline form
+		selectedRoleId = roleIdBeforeSentinel;
+		showAddRoleForm = false;
 	}
 
 	// ──────────────────────────────────────────────────────────────────────────
@@ -221,14 +232,14 @@
 					<select
 						id="role_id"
 						name="role_id"
-						value={selectedRoleId}
+						bind:value={selectedRoleId}
 						aria-expanded={showAddRoleForm}
 						onchange={handleRoleChange}
 						style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
 					>
 						<option value="">— No role —</option>
 						{#each localRoles as role (role.id)}
-							<option value={String(role.id)} selected={String(role.id) === selectedRoleId}>
+							<option value={String(role.id)}>
 								{role.name}
 							</option>
 						{/each}
@@ -287,13 +298,22 @@
 									</p>
 								{/if}
 
-								<button
-									type="submit"
-									disabled={creatingRole}
-									style="font-size: 14px; font-weight: 600; color: #e2e8f0; background: transparent; border: 1px solid #93c5fd; border-radius: 6px; padding: 8px 16px; min-height: 36px; margin-top: 8px; cursor: pointer;"
-								>
-									{creatingRole ? 'Creating…' : 'Create role'}
-								</button>
+								<div style="display: flex; gap: 8px; margin-top: 8px;">
+									<button
+										type="submit"
+										disabled={creatingRole}
+										style="font-size: 14px; font-weight: 600; color: #e2e8f0; background: transparent; border: 1px solid #93c5fd; border-radius: 6px; padding: 8px 16px; min-height: 36px; cursor: pointer;"
+									>
+										{creatingRole ? 'Creating…' : 'Create role'}
+									</button>
+									<button
+										type="button"
+										onclick={cancelAddRole}
+										style="font-size: 14px; font-weight: 400; color: #94a3b8; background: transparent; border: 1px solid #334155; border-radius: 6px; padding: 8px 16px; min-height: 36px; cursor: pointer;"
+									>
+										Cancel
+									</button>
+								</div>
 							</form>
 						</div>
 					{/if}

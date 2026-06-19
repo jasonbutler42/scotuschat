@@ -40,7 +40,7 @@ Full phase details: `.planning/milestones/v1.1-ROADMAP.md`
 
 **Milestone Goal:** Complete admin tooling and public experience needed before the site is ready to deploy — structured people data, unified navigation, argument editing, people admin improvements, and the speaker popover card.
 
-- [ ] **Phase 9: People Data Model Migration** - Add structured name fields and appointing president/party to the people schema
+- [x] **Phase 9: People Data Model Migration** - Add structured name fields and appointing president/party to the people schema (completed 2026-06-19)
 - [ ] **Phase 10: Unified Navigation** - Admin and public pages share one top navigation component
 - [ ] **Phase 11: Argument Metadata Editing** - Operator can correct case title, docket, and date before resolving
 - [ ] **Phase 12: People Admin Improvements** - Image upload, delete orphaned records, and merge duplicate people
@@ -61,11 +61,11 @@ Full phase details: `.planning/milestones/v1.1-ROADMAP.md`
   3. Existing full_name values are preserved after the migration runs; no person record loses its resolution anchor
   4. All new fields accept null/empty and do not break existing people records that have not been filled in
 
-**Plans**: 2/3 plans executed
+**Plans**: 3/3 plans complete
 
 - [x] 09-01-PLAN.md — Migration 0006 + Person ORM + PersonDetail/PersonUpdate schema fields
 - [x] 09-02-PLAN.md — Service layer: _derive_full_name (TDD), update_person derivation, get_person_detail dict, list_people sort
-- [ ] 09-03-PLAN.md — SvelteKit edit form: name-parts grid + Appointment section + server action (human verify checkpoint)
+- [x] 09-03-PLAN.md — SvelteKit edit form: name-parts grid + Appointment section + server action (human verify checkpoint)
 
 ### Phase 10: Unified Navigation
 
@@ -152,7 +152,7 @@ Full phase details: `.planning/milestones/v1.1-ROADMAP.md`
 | 6. Auth | v1.1 | 3/3 | Complete | 2026-06-16 |
 | 7. Pipeline Runner | v1.1 | 8/8 | Complete | 2026-06-17 |
 | 8. People Editor | v1.1 | 6/6 | Complete | 2026-06-18 |
-| 9. People Data Model Migration | v1.2 | 2/3 | In Progress|  |
+| 9. People Data Model Migration | v1.2 | 3/3 | Complete   | 2026-06-19 |
 | 10. Unified Navigation | v1.2 | 0/? | Not started | — |
 | 11. Argument Metadata Editing | v1.2 | 0/? | Not started | — |
 | 12. People Admin Improvements | v1.2 | 0/? | Not started | — |

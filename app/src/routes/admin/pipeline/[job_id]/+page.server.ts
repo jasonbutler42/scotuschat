@@ -8,6 +8,15 @@ interface ParticipantItem {
 	role_name: string | null;
 }
 
+interface ArgumentPreview {
+	id: number;
+	case_name: string;
+	docket_number: string;
+	argued_date: string | null;
+	resolved_at: string | null;
+	published_at: string | null;
+}
+
 export const load: PageServerLoad = async ({ params }) => {
 	// Fetch the specific job from the admin jobs endpoint.
 	// X-Admin-Token is required for all SvelteKit → FastAPI calls.
@@ -68,7 +77,30 @@ export const load: PageServerLoad = async ({ params }) => {
 		}
 	}
 
-	return { job, people, peopleLoadError, participants };
+	// Fetch argument metadata when the job has an argument_id set (D-03, Plan 04).
+	// Uses the dedicated argument endpoint — not embedded in AdminJobResponse (RESEARCH Pattern 5).
+	// Degrades gracefully to null on any error so the existing job view still renders.
+	let argument: ArgumentPreview | null = null;
+	if (job.argument_id != null) {
+		try {
+			const argRes = await fetch(
+				`${FASTAPI_BASE_URL}/api/admin/arguments/${job.argument_id}`,
+				{ headers: { 'X-Admin-Token': ADMIN_TOKEN } },
+			);
+			if (argRes.ok) {
+				argument = await argRes.json();
+			} else {
+				console.error(
+					`[load] argument fetch failed: GET /api/admin/arguments/${job.argument_id} returned ${argRes.status}`,
+				);
+			}
+		} catch (err) {
+			// Non-critical — degrade gracefully; the existing job view renders without the preview
+			console.error('[load] argument fetch threw:', err instanceof Error ? err.message : String(err));
+		}
+	}
+
+	return { job, people, peopleLoadError, participants, argument };
 };
 
 export const actions: Actions = {

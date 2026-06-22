@@ -51,6 +51,11 @@ from api.schemas.admin_jobs import (
     PersonResponse,
     ResolveRequest,
 )
+from api.schemas.admin_arguments import (
+    ArgumentDetail,
+    ArgumentListItem,
+    ArgumentUpdate,
+)
 from api.schemas.admin_people import (
     ParticipantItem,
     PersonDetail,
@@ -59,6 +64,7 @@ from api.schemas.admin_people import (
     RoleCreate,
     RoleResponse,
 )
+from api.services import admin_arguments as arguments_service
 from api.services import admin_jobs as jobs_service
 from api.services import admin_people as people_service
 from api.services import spaces as spaces_service
@@ -362,6 +368,104 @@ async def update_person(
     if updated is None:
         raise HTTPException(status_code=404, detail="Person not found")
     return PersonDetail(**updated)
+
+
+@router.get("/arguments", response_model=list[ArgumentListItem])
+async def list_arguments(
+    db: AsyncSession = Depends(get_db),
+) -> list[ArgumentListItem]:
+    """
+    Return all arguments with lead case metadata, sorted argued_date DESC (D-01).
+
+    One row per argument — consolidated dockets are not shown here (see detail endpoint).
+    """
+    args = await arguments_service.list_arguments(db)
+    return [ArgumentListItem(**a) for a in args]
+
+
+@router.get("/arguments/{argument_id}", response_model=ArgumentDetail)
+async def get_argument(
+    argument_id: int,
+    db: AsyncSession = Depends(get_db),
+) -> ArgumentDetail:
+    """
+    Return full argument data for the edit form (D-02, D-10).
+
+    Includes lead case fields (case_name, docket_number, slug) and a
+    consolidated_dockets list for read-only display.
+    Returns 404 if the argument does not exist (T-11-IDOR).
+    """
+    detail = await arguments_service.get_argument_detail(db, argument_id)
+    if detail is None:
+        raise HTTPException(status_code=404, detail="Argument not found")
+    return ArgumentDetail(**detail)
+
+
+@router.patch("/arguments/{argument_id}", response_model=ArgumentDetail)
+async def update_argument(
+    argument_id: int,
+    body: ArgumentUpdate,
+    db: AsyncSession = Depends(get_db),
+) -> ArgumentDetail:
+    """
+    Update an argument's argued_date and its lead case's case_name / docket_number (D-02).
+
+    Mass-assignment guard: ArgumentUpdate ONLY exposes case_name, docket_number,
+    argued_date — published_at and slug are never writable via PATCH (T-11-MASS).
+    Returns 404 if the argument does not exist (T-11-IDOR).
+    Returns 422 if argued_date is malformed, or if slug/docket collision detected
+    (T-11-SLUG, T-11-DOCKET). The detail string carries "slug_collision" or
+    "docket_collision" so the SvelteKit layer can display the specific error message.
+    """
+    try:
+        updated = await arguments_service.update_argument(db, argument_id, body)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    if updated is None:
+        raise HTTPException(status_code=404, detail="Argument not found")
+    return ArgumentDetail(**updated)
+
+
+@router.post("/arguments/{argument_id}/publish", response_model=ArgumentDetail)
+async def publish_argument(
+    argument_id: int,
+    db: AsyncSession = Depends(get_db),
+) -> ArgumentDetail:
+    """
+    Stamp published_at = now(), making the argument publicly visible (D-07, D-08).
+
+    Returns 404 if the argument does not exist (T-11-IDOR).
+    Returns 422 if resolved_at IS NULL (T-11-PUBGATE — backend enforces this guard
+    independently of the UI; a direct API call cannot publish an unresolved argument).
+    Returns 422 if already published.
+    """
+    try:
+        result = await arguments_service.publish_argument(db, argument_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    if result is None:
+        raise HTTPException(status_code=404, detail="Argument not found")
+    return ArgumentDetail(**result)
+
+
+@router.post("/arguments/{argument_id}/unpublish", response_model=ArgumentDetail)
+async def unpublish_argument(
+    argument_id: int,
+    db: AsyncSession = Depends(get_db),
+) -> ArgumentDetail:
+    """
+    Clear published_at, hiding the argument from the public site (D-07, D-08).
+
+    Returns 404 if the argument does not exist (T-11-IDOR).
+    Returns 422 if the argument is not currently published.
+    """
+    try:
+        result = await arguments_service.unpublish_argument(db, argument_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    if result is None:
+        raise HTTPException(status_code=404, detail="Argument not found")
+    return ArgumentDetail(**result)
 
 
 @router.post("/roles", status_code=201, response_model=RoleResponse)

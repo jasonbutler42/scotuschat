@@ -100,9 +100,16 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
+**Wave 1**
 
 - [ ] 11-01-PLAN.md — Migration 0007 (published_at) + Argument ORM column + get_cases visibility gate swap
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 11-02-PLAN.md — Backend: admin_arguments schemas + service (slug/docket collision, publish guards) + admin router routes
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 11-03-PLAN.md — SvelteKit /admin/arguments list + [id] edit pages + TopNav Arguments link
 - [ ] 11-04-PLAN.md — Job detail page argument preview card + Ready-to-publish CTA
 

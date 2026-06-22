@@ -614,16 +614,13 @@ function formatDate(iso: string | null): string {
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Import `_derive_slug` from pipeline or duplicate it?**
-   - What we know: `admin_jobs.py` already imports `normalize_label` from `pipeline.commands.resolve` — cross-layer import is established.
-   - What's unclear: whether `pipeline.commands.ingest` has any side-effects at import time that could be costly.
-   - Recommendation: Import `_derive_slug` directly. If an import-time issue is discovered, duplicate the 5-line function and add a comment pointing to the source.
+1. RESOLVED: **Import `_derive_slug` from pipeline or duplicate it?**
+   - Decision: Import `_derive_slug` directly from `pipeline.commands.ingest`. Cross-layer import is precedented (admin_jobs.py imports normalize_label from pipeline.commands.resolve) and the function has no import-time side effects.
 
-2. **How does the list-page publish toggle send `argument_id`?**
-   - What we know: Each row needs its own form (Pitfall 6). The action must know which argument to publish.
-   - Recommendation: Hidden `<input name="argument_id" value={arg.id}>` inside a per-row form with `action="?/publish"` or `action="?/unpublish"`. The action reads `formData.get('argument_id')`.
+2. RESOLVED: **How does the list-page publish toggle send `argument_id`?**
+   - Decision: Hidden `<input name="argument_id" value={arg.id}>` inside a per-row `<form method="POST" action="?/publish">` (or `?/unpublish`). The action reads `formData.get('argument_id')`.
 
 ---
 

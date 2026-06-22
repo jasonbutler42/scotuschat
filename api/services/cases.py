@@ -31,7 +31,7 @@ async def get_cases(db: AsyncSession) -> list[dict]:
         .join(CaseArgument, CaseArgument.case_id == Case.id)
         .join(Argument, CaseArgument.argument_id == Argument.id)
         .where(CaseArgument.is_lead == True)  # noqa: E712 — SQLAlchemy requires == True
-        .where(Argument.resolved_at.isnot(None))  # hide unresolved arguments (Gap 3 gate)
+        .where(Argument.published_at.isnot(None))  # hide unpublished arguments (D-06)
         .order_by(Argument.argued_date.desc())
     )
     rows = result.all()

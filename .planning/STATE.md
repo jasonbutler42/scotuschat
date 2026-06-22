@@ -5,15 +5,15 @@ milestone_name: Pre-Launch Polish
 current_phase: 11
 current_phase_name: argument-metadata-editing
 status: executing
-stopped_at: Phase 11 UI-SPEC approved
-last_updated: "2026-06-22T21:07:26.912Z"
+stopped_at: Completed 11-03-PLAN.md
+last_updated: "2026-06-22T21:14:29.537Z"
 last_activity: 2026-06-22
 last_activity_desc: Phase 11 execution started
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 8
-  completed_plans: 6
+  completed_plans: 7
   percent: 33
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-06-18 after v1.2 milestone start)
 ## Current Position
 
 Phase: 11 (argument-metadata-editing) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 Status: Ready to execute
 Last activity: 2026-06-22 — Phase 11 execution started
 
@@ -59,6 +59,7 @@ Progress: [█████░░░░░] 50%
 | Phase 09 P03 | 92 | 3 tasks | 2 files |
 | Phase 10 P01 | 2 | 3 tasks | 3 files |
 | Phase 11 P02 | 3 | 3 tasks | 5 files |
+| Phase 11 P03 | 10 | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -85,6 +86,9 @@ Full log in PROJECT.md Key Decisions table. Key decisions for v1.2:
 - [Phase ?]: [11-02]: ArgumentUpdate allow-list is exactly {case_name, docket_number, argued_date} — published_at never PATCH-writable (T-11-MASS)
 - [Phase ?]: [11-02]: slug freeze — re-derive only when argument.published_at IS None; when published only case_name updates (D-11)
 - [Phase ?]: [11-02]: publish_argument enforces resolved_at IS NOT NULL server-side (T-11-PUBGATE / Pitfall 1)
+- [Phase ?]: [11-03]: Arguments list load degrades to [] on non-OK
+- [Phase ?]: [11-03]: Edit page save parses 422 body to discriminate slug_collision vs docket_collision
+- [Phase ?]: [11-03]: toDateInputValue() slices first 10 chars of ISO string for date input compatibility
 
 ### Pending Todos
 
@@ -108,9 +112,9 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-22T21:07:17.956Z
-Stopped at: Phase 11 UI-SPEC approved
-Resume file: .planning/phases/11-argument-metadata-editing/11-UI-SPEC.md
+Last session: 2026-06-22T21:14:29.527Z
+Stopped at: Completed 11-03-PLAN.md
+Resume file: None
 
 ## Operator Next Steps
 

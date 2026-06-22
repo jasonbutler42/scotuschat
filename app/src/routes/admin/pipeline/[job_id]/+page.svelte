@@ -261,6 +261,110 @@
 	</header>
 
 	<div style="max-width: 860px; margin: 0 auto; padding: 48px 24px;">
+		<!-- Argument metadata preview card (D-03, Plan 04): shown above step timeline when argument_id is set -->
+		{#if data.argument}
+			{@const arg = data.argument}
+			{@const argStatus = arg.published_at != null ? 'published' : arg.resolved_at != null ? 'resolved' : 'pending'}
+			{@const argBadgeColor = argStatus === 'published' ? '#4ade80' : argStatus === 'resolved' ? '#a78bfa' : '#94a3b8'}
+			{@const argBadgeLabel = argStatus === 'published' ? 'Published' : argStatus === 'resolved' ? 'Resolved' : 'Pending'}
+			{@const formatArgDate = (iso: string | null) => iso ? new Date(iso).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '—'}
+			<div
+				style="
+					background-color: #1e293b;
+					border: 1px solid #334155;
+					border-radius: 8px;
+					padding: 24px;
+					margin-bottom: 24px;
+				"
+			>
+				<h2 style="font-size: 20px; font-weight: 600; color: #e2e8f0; margin: 0 0 16px 0; line-height: 1.2;">
+					Argument
+				</h2>
+
+				<!-- Case title row -->
+				<div style="margin-bottom: 12px;">
+					<span style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 4px;">Case title</span>
+					<span style="font-size: 16px; color: #e2e8f0;">{arg.case_name}</span>
+				</div>
+
+				<!-- Docket row -->
+				<div style="margin-bottom: 12px;">
+					<span style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 4px;">Docket</span>
+					<span style="font-size: 16px; color: #e2e8f0;">{arg.docket_number}</span>
+				</div>
+
+				<!-- Argued date row -->
+				<div style="margin-bottom: 12px;">
+					<span style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 4px;">Argued</span>
+					<span style="font-size: 16px; color: #e2e8f0;">{formatArgDate(arg.argued_date)}</span>
+				</div>
+
+				<!-- Status badge row -->
+				<div style="margin-bottom: 16px;">
+					<span style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 4px;">Status</span>
+					<span
+						style="
+							border: 1px solid {argBadgeColor};
+							border-radius: 4px;
+							padding: 2px 8px;
+							font-size: 14px;
+							font-weight: 400;
+							color: {argBadgeColor};
+							background-color: #1e293b;
+							display: inline-block;
+						"
+					>
+						{argBadgeLabel}
+					</span>
+				</div>
+
+				<!-- Edit link -->
+				<a
+					href="/admin/arguments/{arg.id}"
+					style="font-size: 14px; color: #93c5fd; text-decoration: underline;"
+				>
+					Edit argument metadata
+				</a>
+			</div>
+
+			<!-- Ready to publish CTA (D-04): only when completed and argument not yet published -->
+			{#if data.job.status === 'completed' && arg.published_at == null}
+				<div
+					style="
+						border: 1px solid #93c5fd;
+						border-radius: 8px;
+						padding: 24px;
+						margin-bottom: 24px;
+					"
+				>
+					<h2 style="font-size: 20px; font-weight: 600; color: #e2e8f0; margin: 0 0 8px 0; line-height: 1.2;">
+						Ready to publish
+					</h2>
+					<p style="font-size: 16px; font-weight: 400; color: #94a3b8; margin: 0 0 16px 0;">
+						This argument has been resolved. Review and publish it from the argument editor.
+					</p>
+					<a
+						href="/admin/arguments/{arg.id}"
+						style="
+							display: inline-block;
+							font-size: 14px;
+							font-weight: 400;
+							color: #e2e8f0;
+							background: transparent;
+							border: 1px solid #93c5fd;
+							border-radius: 6px;
+							padding: 10px 20px;
+							min-height: 44px;
+							text-decoration: none;
+							box-sizing: border-box;
+						"
+					>
+						Go to argument editor
+					</a>
+				</div>
+			{/if}
+		{/if}
+
 		<!-- Step cards container — aria-live polite so screen readers announce step changes -->
 		<div
 			aria-live="polite"

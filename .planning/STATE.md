@@ -4,16 +4,16 @@ milestone: v1.2
 milestone_name: Pre-Launch Polish
 current_phase: 11
 current_phase_name: argument-metadata-editing
-status: not_started
+status: executing
 stopped_at: Phase 11 UI-SPEC approved
-last_updated: "2026-06-22T18:53:06.013Z"
+last_updated: "2026-06-22T20:59:34.459Z"
 last_activity: 2026-06-22
-last_activity_desc: Phase 10 verification passed
+last_activity_desc: Phase 11 execution started
 progress:
   total_phases: 6
   completed_phases: 2
-  total_plans: 4
-  completed_plans: 4
+  total_plans: 8
+  completed_plans: 5
   percent: 33
 ---
 
@@ -28,10 +28,10 @@ See: .planning/PROJECT.md (updated 2026-06-18 after v1.2 milestone start)
 
 ## Current Position
 
-Phase: 11 (argument-metadata-editing) — NOT STARTED
-Plan: 0 of TBD
-Status: Phase 10 complete — ready for Phase 11 discussion/planning
-Last activity: 2026-06-22 — Phase 10 verification passed
+Phase: 11 (argument-metadata-editing) — EXECUTING
+Plan: 2 of 4
+Status: Ready to execute
+Last activity: 2026-06-22 — Phase 11 execution started
 
 Progress: [█████░░░░░] 50%
 
@@ -78,6 +78,9 @@ Full log in PROJECT.md Key Decisions table. Key decisions for v1.2:
 - [Phase ?]: [09-03]: PersonDetail TS interface, save action, and PATCH body extended with six new people fields; form extended with name-parts grid and Appointment section (PEOP-01, PEOP-02 closed)
 - [Phase ?]: [10-01]: TopNav accepts variant prop; each layout passes its own value — component stays URL-unaware (D-03/D-04)
 - [Phase ?]: [10-01]: Login guard stays in admin layout (not TopNav) to keep component URL-unaware; root layout admin guard preserved to prevent double-nav stacking
+- [Phase ?]: [11-01] D-05 complete
+- [Phase ?]: [11-01]: Migration 0007 adds nullable published_at to arguments; resolved_at unchanged — D-05 complete
+- [Phase ?]: [11-01]: get_cases() public gate swapped to published_at.isnot(None); no other service uses resolved_at.isnot — D-06 complete
 
 ### Pending Todos
 
@@ -101,7 +104,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-22T18:53:06.005Z
+Last session: 2026-06-22T20:58:44.870Z
 Stopped at: Phase 11 UI-SPEC approved
 Resume file: .planning/phases/11-argument-metadata-editing/11-UI-SPEC.md
 

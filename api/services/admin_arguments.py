@@ -1,0 +1,277 @@
+"""
+Business logic for admin argument management.
+
+Responsibilities:
+  - Directory listing of all arguments with lead case metadata (D-01)
+  - Argument detail query with consolidated dockets (D-10)
+  - Argument update with slug re-derivation and freeze-on-publish (D-11)
+  - Slug and docket collision detection before write (T-11-SLUG, T-11-DOCKET)
+  - Publish / Unpublish with resolved_at pre-condition guard (D-07, T-11-PUBGATE)
+
+Critical guards (project-wide pattern from admin_jobs.py):
+  - EVERY update() statement includes .execution_options(synchronize_session=False)
+  - Date strings parsed with datetime.date.fromisoformat() (V5 Input Validation)
+  - Alembic is sole DDL authority (CLAUDE.md) — no direct schema creation calls
+  - _derive_slug imported from pipeline.commands.ingest (single source of truth;
+    same cross-layer import precedent as admin_jobs.py → pipeline.commands.resolve)
+"""
+
+import datetime
+
+from sqlalchemy import func as sqlfunc, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from api.models.models import Argument, Case, CaseArgument
+from api.schemas.admin_arguments import ArgumentUpdate
+from pipeline.commands.ingest import _derive_slug  # noqa: F401 — re-exported for tests
+
+
+# ---------------------------------------------------------------------------
+# Public service functions
+# ---------------------------------------------------------------------------
+
+
+async def list_arguments(db: AsyncSession) -> list[dict]:
+    """Return all Argument rows joined to their lead Case, sorted by argued_date DESC.
+
+    One dict per argument with keys: id, argued_date, case_name, docket_number,
+    resolved_at, published_at.
+
+    Only joins where CaseArgument.is_lead == True so the result is one row per
+    argument regardless of how many consolidated dockets the argument has.
+    """
+    q = (
+        select(
+            Argument.id,
+            Argument.argued_date,
+            Argument.resolved_at,
+            Argument.published_at,
+            Case.case_name,
+            Case.docket_number,
+        )
+        .join(CaseArgument, CaseArgument.argument_id == Argument.id)
+        .join(Case, CaseArgument.case_id == Case.id)
+        .where(CaseArgument.is_lead == True)  # noqa: E712
+        .order_by(Argument.argued_date.desc())
+    )
+    result = await db.execute(q)
+    rows = result.all()
+    return [
+        {
+            "id": row.id,
+            "argued_date": row.argued_date,
+            "case_name": row.case_name,
+            "docket_number": row.docket_number,
+            "resolved_at": row.resolved_at,
+            "published_at": row.published_at,
+        }
+        for row in rows
+    ]
+
+
+async def get_argument_detail(db: AsyncSession, argument_id: int) -> dict | None:
+    """Return full argument data including consolidated dockets.
+
+    Returns None if the argument does not exist (router → 404 IDOR guard T-11-IDOR).
+    consolidated_dockets: list of {docket_number} for non-lead cases on the same argument.
+    """
+    # Load the argument row
+    arg_result = await db.execute(
+        select(Argument).where(Argument.id == argument_id)
+    )
+    argument = arg_result.scalar_one_or_none()
+    if argument is None:
+        return None
+
+    # Load lead case via CaseArgument.is_lead == True
+    lead_result = await db.execute(
+        select(Case)
+        .join(CaseArgument, CaseArgument.case_id == Case.id)
+        .where(
+            CaseArgument.argument_id == argument_id,
+            CaseArgument.is_lead == True,  # noqa: E712
+        )
+    )
+    lead_case = lead_result.scalar_one_or_none()
+    if lead_case is None:
+        # Argument exists but has no lead case — data integrity issue; return partial
+        return None
+
+    # Load consolidated (non-lead) dockets
+    consolidated_result = await db.execute(
+        select(Case.docket_number)
+        .join(CaseArgument, CaseArgument.case_id == Case.id)
+        .where(
+            CaseArgument.argument_id == argument_id,
+            CaseArgument.is_lead == False,  # noqa: E712
+        )
+        .order_by(Case.docket_number)
+    )
+    consolidated_rows = consolidated_result.all()
+
+    return {
+        "id": argument.id,
+        "argued_date": argument.argued_date,
+        "case_name": lead_case.case_name,
+        "docket_number": lead_case.docket_number,
+        "slug": lead_case.slug,
+        "resolved_at": argument.resolved_at,
+        "published_at": argument.published_at,
+        "consolidated_dockets": [
+            {"docket_number": row.docket_number} for row in consolidated_rows
+        ],
+    }
+
+
+async def update_argument(
+    db: AsyncSession, argument_id: int, body: ArgumentUpdate
+) -> dict | None:
+    """Update an argument's argued_date and its lead case's case_name / docket_number.
+
+    Returns None if the argument does not exist (router → 404 IDOR guard T-11-IDOR).
+
+    Slug logic (D-11):
+      - When body.case_name is provided AND argument.published_at IS NULL:
+        re-derive slug from new case_name and write to lead_case.slug.
+        Pre-write collision check: if another Case has the same slug, raise
+        ValueError("slug_collision") → router returns 422 (T-11-SLUG).
+      - When argument.published_at IS NOT NULL: slug is frozen — only
+        lead_case.case_name is updated; lead_case.slug is NOT touched (Pitfall 3).
+
+    Docket collision (T-11-DOCKET):
+      - If body.docket_number differs from current and another Case already has
+        that docket_number, raise ValueError("docket_collision") → 422.
+
+    Date validation (T-11-VALID):
+      - body.argued_date is parsed with datetime.date.fromisoformat(); a malformed
+        ISO string raises ValueError with a descriptive message → 422.
+
+    EVERY update() statement uses .execution_options(synchronize_session=False)
+    (Pitfall 5 — project-wide critical guard).
+    """
+    # 1. Load argument row
+    arg_result = await db.execute(
+        select(Argument).where(Argument.id == argument_id)
+    )
+    argument = arg_result.scalar_one_or_none()
+    if argument is None:
+        return None
+
+    # 2. Load lead case
+    lead_result = await db.execute(
+        select(Case)
+        .join(CaseArgument, CaseArgument.case_id == Case.id)
+        .where(
+            CaseArgument.argument_id == argument_id,
+            CaseArgument.is_lead == True,  # noqa: E712
+        )
+    )
+    lead_case = lead_result.scalar_one_or_none()
+    if lead_case is None:
+        raise ValueError("No lead case found for this argument")
+
+    # 3. Apply argued_date (T-11-VALID)
+    if body.argued_date is not None:
+        argument.argued_date = datetime.date.fromisoformat(body.argued_date)
+
+    # 4. Apply docket_number with collision check (T-11-DOCKET)
+    if body.docket_number is not None:
+        new_docket = body.docket_number.strip()
+        if new_docket != lead_case.docket_number:
+            collision = await db.execute(
+                select(Case).where(
+                    Case.docket_number == new_docket,
+                    Case.id != lead_case.id,
+                )
+            )
+            if collision.scalar_one_or_none() is not None:
+                raise ValueError("docket_collision")
+            lead_case.docket_number = new_docket
+            # docket_number_norm: same normalization as ingest (strip leading zeros, etc.)
+            # The norm column is a project field — keep it consistent with ingest.
+            # ingest.py does not export a normalizer for docket_number_norm, so we
+            # set it to the same stripped value (operator-entered dockets are already
+            # in canonical form; the norm column is used for duplicate detection at
+            # ingest time, not for display).
+            lead_case.docket_number_norm = new_docket
+
+    # 5. Apply case_name with slug logic (D-11, Pitfall 2, Pitfall 3)
+    if body.case_name is not None:
+        lead_case.case_name = body.case_name.strip()
+        if argument.published_at is None:
+            # Unpublished: re-derive slug from new case_name
+            new_slug = _derive_slug(lead_case.case_name)
+            # Pre-write collision check (T-11-SLUG)
+            slug_collision = await db.execute(
+                select(Case).where(
+                    Case.slug == new_slug,
+                    Case.id != lead_case.id,
+                )
+            )
+            if slug_collision.scalar_one_or_none() is not None:
+                raise ValueError("slug_collision")
+            lead_case.slug = new_slug
+        # else: published — slug is frozen; only case_name display updates (Pitfall 3)
+
+    await db.commit()
+    return await get_argument_detail(db, argument_id)
+
+
+async def publish_argument(db: AsyncSession, argument_id: int) -> dict | None:
+    """Stamp published_at = now() on an argument, making it publicly visible.
+
+    Returns None if the argument does not exist (router → 404 T-11-IDOR).
+    Raises ValueError if resolved_at IS NULL (publish gate — T-11-PUBGATE, Pitfall 1).
+    Raises ValueError if already published.
+
+    Uses .execution_options(synchronize_session=False) (Pitfall 5).
+    """
+    result = await db.execute(
+        select(Argument).where(Argument.id == argument_id)
+    )
+    argument = result.scalar_one_or_none()
+    if argument is None:
+        return None
+
+    # D-07 / T-11-PUBGATE: backend must enforce this independently of the UI
+    if argument.resolved_at is None:
+        raise ValueError("Cannot publish: resolve step not yet complete")
+    if argument.published_at is not None:
+        raise ValueError("Already published")
+
+    await db.execute(
+        update(Argument)
+        .where(Argument.id == argument_id)
+        .values(published_at=sqlfunc.now())
+        .execution_options(synchronize_session=False)
+    )
+    await db.commit()
+    return await get_argument_detail(db, argument_id)
+
+
+async def unpublish_argument(db: AsyncSession, argument_id: int) -> dict | None:
+    """Clear published_at on an argument, hiding it from the public site.
+
+    Returns None if the argument does not exist (router → 404 T-11-IDOR).
+    Raises ValueError if the argument is not currently published.
+
+    Uses .execution_options(synchronize_session=False) (Pitfall 5).
+    """
+    result = await db.execute(
+        select(Argument).where(Argument.id == argument_id)
+    )
+    argument = result.scalar_one_or_none()
+    if argument is None:
+        return None
+
+    if argument.published_at is None:
+        raise ValueError("Not currently published")
+
+    await db.execute(
+        update(Argument)
+        .where(Argument.id == argument_id)
+        .values(published_at=None)
+        .execution_options(synchronize_session=False)
+    )
+    await db.commit()
+    return await get_argument_detail(db, argument_id)

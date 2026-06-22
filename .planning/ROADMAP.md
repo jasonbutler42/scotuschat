@@ -97,7 +97,7 @@ Plans:
   2. Changes to case title, docket, and date are reflected immediately in the admin view after saving
   3. After an argument's resolved_at is set, its title, docket, and date fields are displayed as read-only and cannot be submitted for editing
 
-**Plans**: 1/4 plans executed
+**Plans**: 2/4 plans executed
 
 Plans:
 **Wave 1**
@@ -106,7 +106,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 11-02-PLAN.md — Backend: admin_arguments schemas + service (slug/docket collision, publish guards) + admin router routes
+- [x] 11-02-PLAN.md — Backend: admin_arguments schemas + service (slug/docket collision, publish guards) + admin router routes
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -174,7 +174,7 @@ Plans:
 | 8. People Editor | v1.1 | 6/6 | Complete | 2026-06-18 |
 | 9. People Data Model Migration | v1.2 | 3/3 | Complete    | 2026-06-19 |
 | 10. Unified Navigation | v1.2 | 1/1 | Complete   | 2026-06-22 |
-| 11. Argument Metadata Editing | v1.2 | 1/4 | In Progress|  |
+| 11. Argument Metadata Editing | v1.2 | 2/4 | In Progress|  |
 | 12. People Admin Improvements | v1.2 | 0/? | Not started | — |
 | 13. Ingestion Flow Polish | v1.2 | 0/? | Not started | — |
 | 14. Speaker Popover Card | v1.2 | 0/? | Not started | — |

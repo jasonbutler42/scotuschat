@@ -20,7 +20,7 @@ Requirements for the Pre-Launch Polish milestone. Each maps to roadmap phases (p
 ### Argument Metadata
 
 - [x] **ARG-01**: Operator can view and edit a pending argument's case title, docket number, and argued date from the admin area
-- [ ] **ARG-02**: Argument metadata fields are read-only after `resolved_at` is set
+- [x] **ARG-02**: Argument metadata fields are read-only after `resolved_at` is set
 
 ### People Data Model
 
@@ -80,7 +80,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PIPE-19 | Phase 13 | Pending |
 | PIPE-20 | Phase 13 | Pending |
 | ARG-01 | Phase 11 | Complete |
-| ARG-02 | Phase 11 | Pending |
+| ARG-02 | Phase 11 | Complete |
 | PEOP-01 | Phase 9 | Complete |
 | PEOP-02 | Phase 9 | Complete |
 | PADM-01 | Phase 12 | Pending |

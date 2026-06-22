@@ -9,7 +9,7 @@ Requirements for the Pre-Launch Polish milestone. Each maps to roadmap phases (p
 
 ### Navigation
 
-- [ ] **NAV-01**: Admin and public pages share the same top navigation component, with links to both the public case list and the admin area visible from either view
+- [x] **NAV-01**: Admin and public pages share the same top navigation component, with links to both the public case list and the admin area visible from either view
 
 ### Ingestion & Pipeline
 
@@ -75,7 +75,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| NAV-01 | Phase 10 | Pending |
+| NAV-01 | Phase 10 | Complete |
 | PIPE-18 | Phase 13 | Pending |
 | PIPE-19 | Phase 13 | Pending |
 | PIPE-20 | Phase 13 | Pending |

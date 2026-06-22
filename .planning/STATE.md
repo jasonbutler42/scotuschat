@@ -3,18 +3,18 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Pre-Launch Polish
 current_phase: 10
-current_phase_name: Unified Navigation
-status: executing
+current_phase_name: unified-navigation
+status: verifying
 stopped_at: Phase 10 UI-SPEC approved
-last_updated: "2026-06-22T16:34:38.258Z"
+last_updated: "2026-06-22T16:40:22.912Z"
 last_activity: 2026-06-22
-last_activity_desc: Phase 09 complete, transitioned to Phase 10
+last_activity_desc: Phase 10 execution started
 progress:
   total_phases: 6
-  completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
-  percent: 17
+  completed_phases: 2
+  total_plans: 4
+  completed_plans: 4
+  percent: 33
 ---
 
 # Project State
@@ -28,10 +28,10 @@ See: .planning/PROJECT.md (updated 2026-06-18 after v1.2 milestone start)
 
 ## Current Position
 
-Phase: 10 — Unified Navigation
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-06-22 — Phase 09 complete, transitioned to Phase 10
+Phase: 10 (unified-navigation) — EXECUTING
+Plan: 1 of 1
+Status: Phase complete — ready for verification
+Last activity: 2026-06-22 — Phase 10 execution started
 
 Progress: [███░░░░░░░] 33%
 
@@ -57,6 +57,7 @@ Progress: [███░░░░░░░] 33%
 | Phase 09 P02 | 119 | 3 tasks | 2 files |
 | Phase 09 P03 | 92 | 2 tasks | 2 files |
 | Phase 09 P03 | 92 | 3 tasks | 2 files |
+| Phase 10 P01 | 2 | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -75,6 +76,8 @@ Full log in PROJECT.md Key Decisions table. Key decisions for v1.2:
 - [Phase ?]: [09-02]: _derive_full_name requires BOTH first_name AND last_name non-empty (D-04/D-05 deviation, Pitfall 3 — prevents anchor corruption)
 - [Phase ?]: [09-02]: get_person_detail return dict explicitly includes all six new keys (Pitfall 2 — missing keys would silently reload as None)
 - [Phase ?]: [09-03]: PersonDetail TS interface, save action, and PATCH body extended with six new people fields; form extended with name-parts grid and Appointment section (PEOP-01, PEOP-02 closed)
+- [Phase ?]: [10-01]: TopNav accepts variant prop; each layout passes its own value — component stays URL-unaware (D-03/D-04)
+- [Phase ?]: [10-01]: Login guard stays in admin layout (not TopNav) to keep component URL-unaware; root layout admin guard preserved to prevent double-nav stacking
 
 ### Pending Todos
 
@@ -98,7 +101,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-22T16:19:02.457Z
+Last session: 2026-06-22T16:40:12.907Z
 Stopped at: Phase 10 UI-SPEC approved
 Resume file: .planning/phases/10-unified-navigation/10-UI-SPEC.md
 

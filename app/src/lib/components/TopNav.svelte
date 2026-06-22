@@ -44,6 +44,12 @@
 				Pipeline Runner
 			</a>
 			<a
+				href="/admin/arguments"
+				style="font-size: 14px; font-weight: 400; color: #94a3b8; text-decoration: none;"
+			>
+				Arguments
+			</a>
+			<a
 				href="/admin/people"
 				style="font-size: 14px; font-weight: 400; color: #94a3b8; text-decoration: none;"
 			>

@@ -42,7 +42,7 @@ Full phase details: `.planning/milestones/v1.1-ROADMAP.md`
 
 - [x] **Phase 9: People Data Model Migration** - Add structured name fields and appointing president/party to the people schema (completed 2026-06-19)
 - [x] **Phase 10: Unified Navigation** - Admin and public pages share one top navigation component (completed 2026-06-22)
-- [ ] **Phase 11: Argument Metadata Editing** - Operator can correct case title, docket, and date before resolving
+- [x] **Phase 11: Argument Metadata Editing** - Operator can correct case title, docket, and date before resolving (completed 2026-06-22)
 - [ ] **Phase 12: People Admin Improvements** - Image upload, delete orphaned records, and merge duplicate people
 - [ ] **Phase 13: Ingestion Flow Polish** - Fix progress indicators, typeahead, and incomplete filter
 - [ ] **Phase 14: Speaker Popover Card** - Avatar click shows bench speaker details with photo, role, and tenure
@@ -97,7 +97,7 @@ Plans:
   2. Changes to case title, docket, and date are reflected immediately in the admin view after saving
   3. After an argument's resolved_at is set, its title, docket, and date fields are displayed as read-only and cannot be submitted for editing
 
-**Plans**: 3/4 plans executed
+**Plans**: 4/4 plans complete
 
 Plans:
 **Wave 1**
@@ -111,7 +111,7 @@ Plans:
 **Wave 3** *(blocked on Wave 2 completion)*
 
 - [x] 11-03-PLAN.md — SvelteKit /admin/arguments list + [id] edit pages + TopNav Arguments link
-- [ ] 11-04-PLAN.md — Job detail page argument preview card + Ready-to-publish CTA
+- [x] 11-04-PLAN.md — Job detail page argument preview card + Ready-to-publish CTA
 
 **UI hint**: yes
 
@@ -174,7 +174,7 @@ Plans:
 | 8. People Editor | v1.1 | 6/6 | Complete | 2026-06-18 |
 | 9. People Data Model Migration | v1.2 | 3/3 | Complete    | 2026-06-19 |
 | 10. Unified Navigation | v1.2 | 1/1 | Complete   | 2026-06-22 |
-| 11. Argument Metadata Editing | v1.2 | 3/4 | In Progress|  |
+| 11. Argument Metadata Editing | v1.2 | 4/4 | Complete   | 2026-06-22 |
 | 12. People Admin Improvements | v1.2 | 0/? | Not started | — |
 | 13. Ingestion Flow Polish | v1.2 | 0/? | Not started | — |
 | 14. Speaker Popover Card | v1.2 | 0/? | Not started | — |

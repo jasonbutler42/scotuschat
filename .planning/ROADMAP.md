@@ -78,7 +78,11 @@ Full phase details: `.planning/milestones/v1.1-ROADMAP.md`
   2. Operator on any admin page sees the same navigation bar with the same links
   3. The navigation component is a single shared Svelte component — no duplicate markup in admin and public layouts
 
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 10-01-PLAN.md — Create shared TopNav.svelte (variant prop) and wire both root and admin layouts to it
+
 **UI hint**: yes
 
 ### Phase 11: Argument Metadata Editing
@@ -152,8 +156,8 @@ Full phase details: `.planning/milestones/v1.1-ROADMAP.md`
 | 6. Auth | v1.1 | 3/3 | Complete | 2026-06-16 |
 | 7. Pipeline Runner | v1.1 | 8/8 | Complete | 2026-06-17 |
 | 8. People Editor | v1.1 | 6/6 | Complete | 2026-06-18 |
-| 9. People Data Model Migration | v1.2 | 3/3 | Complete   | 2026-06-19 |
-| 10. Unified Navigation | v1.2 | 0/? | Not started | — |
+| 9. People Data Model Migration | v1.2 | 3/3 | Complete    | 2026-06-19 |
+| 10. Unified Navigation | v1.2 | 0/1 | Not started | — |
 | 11. Argument Metadata Editing | v1.2 | 0/? | Not started | — |
 | 12. People Admin Improvements | v1.2 | 0/? | Not started | — |
 | 13. Ingestion Flow Polish | v1.2 | 0/? | Not started | — |

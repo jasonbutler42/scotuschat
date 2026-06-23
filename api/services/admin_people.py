@@ -7,6 +7,10 @@ Responsibilities:
   - Person update with delete-and-reinsert tenure strategy (D-09, Pattern 5)
   - Inline role find-or-create (D-10)
   - Resolved participants list for a completed job (PEOPLE-04, D-02)
+  - Photo upload with dual-path storage (PADM-01)
+  - Merge preview count query (PADM-04)
+  - Atomic multi-table merge (PADM-03, D-10)
+  - Orphan-only delete (PADM-02)
 
 Critical guards (project-wide pattern from admin_jobs.py):
   - EVERY update() / delete() statement includes .execution_options(synchronize_session=False)
@@ -15,18 +19,23 @@ Critical guards (project-wide pattern from admin_jobs.py):
   - Alembic is sole DDL authority (CLAUDE.md) — no direct schema creation calls
 """
 
+import asyncio
 import datetime
+from pathlib import Path
 from typing import Optional
 
-from sqlalchemy import delete, func as sqlfunc, or_, select
+from sqlalchemy import delete, func as sqlfunc, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.models.models import (
     AdminJob,
     ArgumentParticipant,
+    CaseAppearance,
     CourtTenure,
     Person,
     Role,
+    SpeakerAlias,
+    Utterance,
 )
 from api.schemas.admin_people import PersonUpdate, TenureRow
 
@@ -274,6 +283,180 @@ async def create_role(db: AsyncSession, name: str) -> dict:
     await db.commit()
     await db.refresh(role)
     return {"id": role.id, "name": role.name}
+
+
+async def get_merge_preview(db: AsyncSession, source_id: int) -> dict | None:
+    """Return row counts for the 4 FK tables that would transfer from source to target.
+
+    Returns None if source person does not exist.
+    Returns dict with keys: utterances, aliases, appearances, argument_participants.
+    target_id is not required for counts — the source's rows are what transfer (D-09, PADM-04).
+    """
+    result = await db.execute(select(Person).where(Person.id == source_id))
+    person = result.scalar_one_or_none()
+    if person is None:
+        return None
+
+    counts: dict[str, int] = {}
+    for key, model, col in [
+        ("utterances", Utterance, Utterance.person_id),
+        ("aliases", SpeakerAlias, SpeakerAlias.person_id),
+        ("appearances", CaseAppearance, CaseAppearance.person_id),
+        ("argument_participants", ArgumentParticipant, ArgumentParticipant.person_id),
+    ]:
+        count = (await db.execute(
+            select(sqlfunc.count()).select_from(model).where(col == source_id)
+        )).scalar_one()
+        counts[key] = count
+    return counts
+
+
+async def merge_people(
+    db: AsyncSession, source_id: int, target_id: int
+) -> dict | None:
+    """Transfer all FK rows from source to target, then delete the source Person.
+
+    Returns the refreshed target person dict on success.
+    Returns None if either source or target does not exist (router → 404).
+    Raises ValueError if source_id == target_id (T-12-SELF guard).
+
+    All 4 UPDATEs and the DELETE execute inside a single `async with db.begin()`
+    transaction — any failure rolls back all steps atomically (D-10, T-12-ATOMIC).
+    Do NOT call db.commit() inside the block; the context manager commits on clean exit.
+    Every bulk statement carries .execution_options(synchronize_session=False) (T-12-SYNC).
+    """
+    # T-12-SELF: merge-to-self guard — raise before any DB operation
+    if source_id == target_id:
+        raise ValueError("Source and target must be different people.")
+
+    # Fetch-guard: both must exist before starting the transaction
+    source = (await db.execute(select(Person).where(Person.id == source_id))).scalar_one_or_none()
+    if source is None:
+        return None
+    target = (await db.execute(select(Person).where(Person.id == target_id))).scalar_one_or_none()
+    if target is None:
+        return None
+
+    # Atomic transfer — no commit between steps (Pitfall: committing inside db.begin)
+    async with db.begin():
+        for model, col in [
+            (Utterance, Utterance.person_id),
+            (SpeakerAlias, SpeakerAlias.person_id),
+            (CaseAppearance, CaseAppearance.person_id),
+            (ArgumentParticipant, ArgumentParticipant.person_id),
+        ]:
+            await db.execute(
+                update(model)
+                .where(col == source_id)
+                .values({col.key: target_id})
+                .execution_options(synchronize_session=False)
+            )
+        await db.execute(
+            delete(Person)
+            .where(Person.id == source_id)
+            .execution_options(synchronize_session=False)
+        )
+    # Transaction committed on context manager exit — fetch refreshed target
+    return await get_person_detail(db, target_id)
+
+
+async def delete_person_if_orphan(db: AsyncSession, person_id: int) -> bool | None:
+    """Delete a person only if they have zero rows across all 4 FK tables.
+
+    Returns True on successful deletion.
+    Returns False if any FK row exists (router → 409 Conflict); person row is NOT deleted.
+    Returns None if the person does not exist (router → 404).
+
+    Server-side orphan check is authoritative — client disabled state is defense-in-depth
+    only (D-06, T-12-ORPHAN). COUNT check covers all 4 FK tables.
+    """
+    result = await db.execute(select(Person).where(Person.id == person_id))
+    person = result.scalar_one_or_none()
+    if person is None:
+        return None
+
+    for model, col in [
+        (Utterance, Utterance.person_id),
+        (SpeakerAlias, SpeakerAlias.person_id),
+        (CaseAppearance, CaseAppearance.person_id),
+        (ArgumentParticipant, ArgumentParticipant.person_id),
+    ]:
+        count = (await db.execute(
+            select(sqlfunc.count()).select_from(model).where(col == person_id)
+        )).scalar_one()
+        if count > 0:
+            return False  # Not orphaned — caller returns 409 (D-06)
+
+    await db.execute(
+        delete(Person)
+        .where(Person.id == person_id)
+        .execution_options(synchronize_session=False)
+    )
+    await db.commit()
+    return True
+
+
+async def update_photo_url(db: AsyncSession, person_id: int, photo_url: str) -> dict | None:
+    """Set photo_url directly without touching Spaces (URL-only update path, D-03).
+
+    Returns refreshed PersonDetail dict, or None if person does not exist.
+    Normalizes empty/whitespace-only URL to None (Pitfall 5 convention).
+    """
+    result = await db.execute(select(Person).where(Person.id == person_id))
+    person = result.scalar_one_or_none()
+    if person is None:
+        return None
+
+    person.photo_url = photo_url.strip() or None
+    await db.commit()
+    return await get_person_detail(db, person_id)
+
+
+async def upload_photo(
+    db: AsyncSession,
+    person_id: int,
+    file_bytes: bytes,
+    ext: str,
+    content_type: str,
+) -> dict | None:
+    """Store image bytes via Spaces (if configured) or local disk, then update photo_url.
+
+    Dual-path storage (D-01):
+    - If settings.do_spaces_bucket is set: upload to Spaces via run_in_executor,
+      set photo_url to the full public URL.
+    - Else (local fallback): write to data/uploads/people/{person_id}.{ext},
+      set photo_url to the relative path /uploads/people/{person_id}.{ext}.
+      The full URL is reconstructed in +page.server.ts load by prepending FASTAPI_BASE_URL.
+
+    Returns None if person does not exist (T-12-IDOR guard).
+    Returns refreshed PersonDetail dict on success.
+    """
+    result = await db.execute(select(Person).where(Person.id == person_id))
+    person = result.scalar_one_or_none()
+    if person is None:
+        return None
+
+    from api.core.config import settings
+    from api.services import spaces as spaces_service
+
+    if settings.do_spaces_bucket:
+        key = f"people/{person_id}.{ext}"
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(
+            None, spaces_service.upload_photo_to_spaces, file_bytes, key, content_type
+        )
+        photo_url = f"{settings.do_spaces_endpoint}/{settings.do_spaces_bucket}/{key}"
+    else:
+        # Local fallback — create directory on demand (pathlib mkdir parents=True)
+        uploads_dir = Path("data/uploads/people")
+        uploads_dir.mkdir(parents=True, exist_ok=True)
+        local_path = uploads_dir / f"{person_id}.{ext}"
+        local_path.write_bytes(file_bytes)
+        photo_url = f"/uploads/people/{person_id}.{ext}"
+
+    person.photo_url = photo_url
+    await db.commit()
+    return await get_person_detail(db, person_id)
 
 
 async def list_participants_for_job(

@@ -97,6 +97,55 @@
 	// ──────────────────────────────────────────────────────────────────────────
 
 	let saveSubmitting = $state(false);
+
+	// ──────────────────────────────────────────────────────────────────────────
+	// Photo widget state (Phase 12 — PADM-01)
+	// ──────────────────────────────────────────────────────────────────────────
+
+	let photoTab = $state<'upload' | 'url'>('upload');
+	let photoSubmitting = $state(false);
+
+	// ──────────────────────────────────────────────────────────────────────────
+	// Merge section state (Phase 12 — PADM-03/PADM-04)
+	// ──────────────────────────────────────────────────────────────────────────
+
+	let mergeTargetId = $state<string>('');
+	let mergePreview = $state<{
+		utterances: number;
+		aliases: number;
+		appearances: number;
+		argument_participants: number;
+	} | null>(null);
+	let mergeLoading = $state(false);
+	let mergeError = $state<string | null>(null);
+	let mergeSubmitting = $state(false);
+
+	async function fetchMergePreview(targetId: string) {
+		mergePreview = null;
+		mergeError = null;
+		if (!targetId) return;
+		mergeLoading = true;
+		try {
+			const res = await fetch(
+				`/admin/people/${data.person.id}/merge-preview?target_id=${targetId}`
+			);
+			if (res.ok) {
+				mergePreview = await res.json();
+			} else {
+				mergeError = 'Could not load counts. Try again.';
+			}
+		} catch {
+			mergeError = 'Could not load counts. Try again.';
+		} finally {
+			mergeLoading = false;
+		}
+	}
+
+	// ──────────────────────────────────────────────────────────────────────────
+	// Delete section state (Phase 12 — PADM-02)
+	// ──────────────────────────────────────────────────────────────────────────
+
+	let deleteSubmitting = $state(false);
 </script>
 
 <main style="background-color: #0f1117; min-height: 100vh;">
@@ -113,6 +162,12 @@
 	</header>
 
 	<div style="max-width: 640px; margin: 0 auto; padding: 48px 24px;">
+
+		<!-- ══════════════════════════════════════════════════════════════════════
+		     Main save form — covers Basic Info, Bio & Photo (bio only),
+		     Court Tenure, Appointment. Photo is managed by a separate form below.
+		     IMPORTANT: no enctype on this form (Pitfall 1).
+		     ══════════════════════════════════════════════════════════════════════ -->
 		<form
 			method="POST"
 			action="?/save"
@@ -320,9 +375,9 @@
 				</div>
 			</div>
 
-			<!-- ── Section 2: Bio & Photo ── -->
+			<!-- ── Section 2: Bio & Photo (bio portion — inside save form) ── -->
 			<div
-				style="background-color: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 24px; margin-bottom: 24px;"
+				style="background-color: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 24px; margin-bottom: 0; border-bottom-left-radius: 0; border-bottom-right-radius: 0; border-bottom: none;"
 			>
 				<h2
 					style="font-size: 20px; font-weight: 600; color: #e2e8f0; margin: 0 0 16px 0; line-height: 1.2;"
@@ -330,8 +385,8 @@
 					Bio &amp; Photo
 				</h2>
 
-				<!-- Bio text -->
-				<div style="margin-bottom: 16px;">
+				<!-- Bio text — managed by the save form -->
+				<div style="margin-bottom: 0;">
 					<label
 						for="bio_text"
 						style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
@@ -343,24 +398,6 @@
 						name="bio_text"
 						style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box; min-height: 120px; resize: vertical; font-family: inherit;"
 					>{data.person.bio_text ?? ''}</textarea>
-				</div>
-
-				<!-- Photo URL -->
-				<div style="margin-bottom: 0;">
-					<label
-						for="photo_url"
-						style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
-					>
-						Photo URL
-					</label>
-					<input
-						id="photo_url"
-						name="photo_url"
-						type="text"
-						value={data.person.photo_url ?? ''}
-						placeholder="https://…"
-						style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
-					/>
 				</div>
 			</div>
 
@@ -521,6 +558,237 @@
 				{saveSubmitting ? 'Saving…' : 'Save changes'}
 			</button>
 		</form>
+
+		<!-- ── Bio & Photo: photo widget — SEPARATE form, outside the save form (Pitfall 1) ── -->
+		<!-- This continues the "Bio & Photo" card visually (connected bottom of the card above) -->
+		<div
+			style="background-color: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 24px; margin-bottom: 24px; border-top-left-radius: 0; border-top-right-radius: 0; margin-top: 0;"
+		>
+			<form
+				method="POST"
+				action="?/photo"
+				enctype="multipart/form-data"
+				use:enhance={() => {
+					photoSubmitting = true;
+					return async ({ update }) => {
+						photoSubmitting = false;
+						await update();
+					};
+				}}
+			>
+				<!-- Photo preview: 80×80 circle — image or initials fallback -->
+				<div style="margin-bottom: 16px;">
+					{#if data.person.photo_url_full}
+						<img
+							src={data.person.photo_url_full}
+							alt="{data.person.full_name} profile photo"
+							style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 1px solid #334155;"
+						/>
+					{:else}
+						<div
+							aria-hidden="true"
+							style="width: 80px; height: 80px; border-radius: 50%; background-color: #334155; color: #94a3b8; font-size: 28px; font-weight: 600; display: flex; align-items: center; justify-content: center; user-select: none;"
+						>
+							{(data.person.full_name ?? '').charAt(0).toUpperCase()}
+						</div>
+					{/if}
+				</div>
+
+				<!-- Tab bar -->
+				<div style="display: flex; gap: 0; margin-bottom: 16px; border-bottom: 1px solid #334155;">
+					<button
+						type="button"
+						onclick={() => (photoTab = 'upload')}
+						style="padding: 8px 16px; font-size: 14px; font-weight: 400; background: transparent; border: none; border-bottom: {photoTab === 'upload' ? '2px solid #93c5fd' : '2px solid transparent'}; color: {photoTab === 'upload' ? '#e2e8f0' : '#94a3b8'}; cursor: pointer; margin-bottom: -1px;"
+					>
+						Upload file
+					</button>
+					<button
+						type="button"
+						onclick={() => (photoTab = 'url')}
+						style="padding: 8px 16px; font-size: 14px; font-weight: 400; background: transparent; border: none; border-bottom: {photoTab === 'url' ? '2px solid #93c5fd' : '2px solid transparent'}; color: {photoTab === 'url' ? '#e2e8f0' : '#94a3b8'}; cursor: pointer; margin-bottom: -1px;"
+					>
+						Enter URL
+					</button>
+				</div>
+
+				<!-- Tab panel -->
+				{#if photoTab === 'upload'}
+					<div style="margin-bottom: 16px;">
+						<input
+							type="file"
+							name="photo_file"
+							accept="image/*"
+							style="display: block; width: 100%; min-height: 44px; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box; cursor: pointer;"
+						/>
+					</div>
+				{:else}
+					<div style="margin-bottom: 16px;">
+						<input
+							type="text"
+							name="photo_url"
+							placeholder="https://…"
+							style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
+						/>
+					</div>
+				{/if}
+
+				{#if form?.photoError}
+					<p role="alert" style="color: #ef4444; font-size: 14px; margin: 0 0 8px 0;">
+						{form.photoError}
+					</p>
+				{/if}
+
+				<button
+					type="submit"
+					disabled={photoSubmitting}
+					style="display: block; width: 100%; min-height: 44px; background: transparent; border: 1px solid #93c5fd; border-radius: 6px; font-size: 16px; font-weight: 600; color: #e2e8f0; cursor: pointer; opacity: {photoSubmitting ? 0.7 : 1};"
+				>
+					{photoSubmitting ? 'Saving photo…' : 'Save photo'}
+				</button>
+			</form>
+		</div>
+
+		<!-- ── Section 5: Merge (PADM-03/PADM-04) — outside the save form ── -->
+		<div
+			style="background-color: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 24px; margin-bottom: 24px;"
+		>
+			<h2
+				style="font-size: 20px; font-weight: 600; color: #e2e8f0; margin: 0 0 16px 0; line-height: 1.2;"
+			>
+				Merge into another person
+			</h2>
+
+			<form
+				method="POST"
+				action="?/merge"
+				use:enhance={() => {
+					mergeSubmitting = true;
+					return async ({ update }) => {
+						mergeSubmitting = false;
+						await update();
+					};
+				}}
+			>
+				<!-- Target picker -->
+				<div style="margin-bottom: 16px;">
+					<label
+						for="merge_target_id"
+						style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
+					>
+						Merge this person into
+					</label>
+					<select
+						id="merge_target_id"
+						bind:value={mergeTargetId}
+						onchange={() => fetchMergePreview(mergeTargetId)}
+						style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
+					>
+						<option value="">— Select a person —</option>
+						{#each data.people ?? [] as p (p.id)}
+							<option value={String(p.id)}>
+								{p.last_name ? `${p.last_name}, ${p.first_name ?? ''}` : p.full_name}
+							</option>
+						{/each}
+					</select>
+					<!-- Hidden input carries the value to the form action -->
+					<input type="hidden" name="target_id" value={mergeTargetId} />
+				</div>
+
+				<!-- Preview panel — shown when a target is selected -->
+				{#if mergeTargetId}
+					<div
+						style="background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 16px; margin-bottom: 16px;"
+					>
+						{#if mergeLoading}
+							<p style="font-size: 14px; color: #94a3b8; margin: 0;">Loading…</p>
+						{:else if mergeError}
+							<p role="alert" style="font-size: 14px; color: #ef4444; margin: 0;">{mergeError}</p>
+						{:else if mergePreview}
+							{@const targetPerson = (data.people ?? []).find((p: { id: number }) => String(p.id) === mergeTargetId)}
+							<p style="font-size: 14px; color: #94a3b8; margin: 0 0 8px 0;">
+								This will transfer from <strong style="color: #e2e8f0;">{data.person.full_name}</strong> to <strong style="color: #e2e8f0;">{targetPerson?.full_name ?? targetPerson?.last_name ?? 'selected person'}</strong>:
+							</p>
+							{#if mergePreview.utterances === 0 && mergePreview.aliases === 0 && mergePreview.appearances === 0 && mergePreview.argument_participants === 0}
+								<p style="font-size: 14px; color: #94a3b8; margin: 0;">
+									No records to transfer. This person has no associated data.
+								</p>
+							{:else}
+								<p style="font-size: 14px; color: #e2e8f0; margin: 0;">
+									{mergePreview.utterances} utterance(s) · {mergePreview.aliases} alias(es) · {mergePreview.appearances} appearance(s) · {mergePreview.argument_participants} argument participant(s)
+								</p>
+							{/if}
+						{/if}
+					</div>
+				{/if}
+
+				<!-- Confirm merge button — shown when target selected and preview loaded -->
+				{#if mergeTargetId && mergePreview}
+					{@const confirmTargetPerson = (data.people ?? []).find((p: { id: number }) => String(p.id) === mergeTargetId)}
+					<button
+						type="submit"
+						disabled={mergeSubmitting}
+						style="display: block; width: 100%; min-height: 44px; background: transparent; border: 1px solid #93c5fd; border-radius: 6px; font-size: 16px; font-weight: 600; color: #e2e8f0; cursor: pointer; opacity: {mergeSubmitting ? 0.7 : 1};"
+					>
+						{mergeSubmitting ? 'Merging…' : `Merge ${data.person.full_name} into ${confirmTargetPerson?.full_name ?? confirmTargetPerson?.last_name ?? 'selected person'}`}
+					</button>
+				{/if}
+
+				{#if form?.mergeError}
+					<p role="alert" style="color: #ef4444; font-size: 14px; margin: 8px 0 0 0;">
+						{form.mergeError}
+					</p>
+				{/if}
+			</form>
+		</div>
+
+		<!-- ── Section 6: Delete (PADM-02) — outside the save form ── -->
+		<div
+			style="background-color: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 24px; margin-bottom: 24px;"
+		>
+			<form
+				method="POST"
+				action="?/delete"
+				use:enhance={() => {
+					deleteSubmitting = true;
+					return async ({ update }) => {
+						deleteSubmitting = false;
+						await update();
+					};
+				}}
+			>
+				{#if data.can_delete}
+					<button
+						type="submit"
+						disabled={deleteSubmitting}
+						style="display: block; width: 100%; min-height: 44px; background: transparent; border: 1px solid #ef4444; border-radius: 6px; font-size: 16px; font-weight: 600; color: #ef4444; cursor: pointer; opacity: {deleteSubmitting ? 0.7 : 1};"
+					>
+						{deleteSubmitting ? 'Deleting…' : 'Delete person'}
+					</button>
+				{:else}
+					<button
+						type="submit"
+						disabled
+						aria-describedby="delete-tip"
+						style="display: block; width: 100%; min-height: 44px; background: transparent; border: 1px solid #334155; border-radius: 6px; font-size: 16px; font-weight: 600; color: #94a3b8; cursor: not-allowed; opacity: 0.7;"
+					>
+						Delete person
+					</button>
+					<p
+						id="delete-tip"
+						style="font-size: 14px; color: #94a3b8; margin-top: 8px; text-align: center;"
+					>
+						Cannot delete — this person has associated records and cannot be removed.
+					</p>
+				{/if}
+
+				{#if form?.deleteError}
+					<p role="alert" style="color: #ef4444; font-size: 14px; margin: 8px 0 0 0;">
+						{form.deleteError}
+					</p>
+				{/if}
+			</form>
+		</div>
 	</div>
 </main>
 

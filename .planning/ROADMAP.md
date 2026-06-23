@@ -128,7 +128,25 @@ Plans:
   4. Operator can select a source and a target person and initiate a merge; all utterances, aliases, and appearances transfer to the target before the source is deleted
   5. Before committing a merge, the operator sees a count of utterances, aliases, and appearances that will transfer
 
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 12-01-PLAN.md — Backend services + schemas: spaces upload_photo_to_spaces, admin_people merge/preview/orphan-delete/photo functions, MergeRequest/MergePreview
+
+**Wave 2** *(blocked on Wave 1)*
+
+- [ ] 12-02-PLAN.md — admin.py 4 endpoints (photo/merge-preview/merge/delete) + main.py StaticFiles mount
+
+**Wave 3** *(blocked on Wave 2)*
+
+- [ ] 12-03-PLAN.md — SvelteKit +page.server.ts photo/merge/delete actions + extended load + merge-preview proxy +server.ts
+
+**Wave 4** *(blocked on Wave 3)*
+
+- [ ] 12-04-PLAN.md — +page.svelte photo widget + merge section + delete section (human-verify checkpoint)
+
 **UI hint**: yes
 
 ### Phase 13: Ingestion Flow Polish

@@ -7,7 +7,10 @@ The app uses the lifespan context manager (not deprecated @app.on_event) to
 initialise the async database engine on startup and dispose it on shutdown.
 """
 
+import os
+
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 
 from api.core.database import lifespan
 from api.routers import admin as admin_router
@@ -26,6 +29,12 @@ app.include_router(arguments_router.router)
 app.include_router(cases_router.router)
 app.include_router(people_router.router)
 app.include_router(admin_router.router)
+
+# Serve locally-stored photos at /uploads/people/{file}.
+# The mount is added after router includes so API routes take precedence.
+# Harmless when DO Spaces is the active storage path (directory stays empty).
+os.makedirs("data/uploads", exist_ok=True)
+app.mount("/uploads", StaticFiles(directory="data/uploads"), name="uploads")
 
 
 @app.get("/health")

@@ -1,6 +1,7 @@
 """Pydantic v2 request/response models for the admin people API endpoints.
 
-These schemas back the Phase 8 People Editor routes:
+These schemas back the Phase 8 People Editor routes and the Phase 12 People Admin
+Improvements routes:
   - PersonListItem  — directory listing row with missing-fields derivation
   - PersonDetail    — full person data for the edit form (includes tenures)
   - PersonUpdate    — PATCH body (all fields optional; tenures=None means keep existing)
@@ -8,6 +9,8 @@ These schemas back the Phase 8 People Editor routes:
   - RoleCreate      — request body for POST /api/admin/roles
   - RoleResponse    — response from POST /api/admin/roles
   - ParticipantItem — one resolved participant for GET /api/admin/jobs/{id}/participants
+  - MergeRequest    — POST body for POST /api/admin/people/{id}/merge (PADM-03)
+  - MergePreview    — response from GET /api/admin/people/{id}/merge-preview (PADM-04)
 """
 
 from typing import Optional
@@ -118,5 +121,30 @@ class ParticipantItem(BaseModel):
     person_id: int
     full_name: str
     role_name: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+
+class MergeRequest(BaseModel):
+    """POST body for POST /api/admin/people/{id}/merge (PADM-03).
+
+    The source person is taken from the URL path parameter; this body
+    carries only the target person's id.
+    """
+
+    target_id: int
+
+
+class MergePreview(BaseModel):
+    """Response from GET /api/admin/people/{id}/merge-preview (PADM-04).
+
+    Returns the count of each FK table row that will transfer from source to target
+    when a merge is executed. Used to show the operator a summary before confirming.
+    """
+
+    utterances: int
+    aliases: int
+    appearances: int
+    argument_participants: int
 
     model_config = {"from_attributes": True}

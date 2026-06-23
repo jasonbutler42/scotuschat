@@ -1,12 +1,12 @@
 """
 DO Spaces upload service.
 
-Provides a boto3 S3 client configured for DigitalOcean Spaces and a helper
-for uploading PDF bytes to a Spaces bucket.
+Provides a boto3 S3 client configured for DigitalOcean Spaces and helpers
+for uploading PDF bytes and image bytes to a Spaces bucket.
 
-Used by the Plan 02 file upload route (PIPE-13). Credentials come from
-api/core/config.py settings fields (DO Spaces block) — FastAPI service only,
-never the SvelteKit service.
+Used by the Plan 02 file upload route (PIPE-13) and the Phase 12 photo upload
+endpoint (PADM-01). Credentials come from api/core/config.py settings fields
+(DO Spaces block) — FastAPI service only, never the SvelteKit service.
 """
 
 import io
@@ -46,5 +46,26 @@ def upload_pdf_to_spaces(file_bytes: bytes, key: str) -> str:
         settings.do_spaces_bucket,
         key,
         ExtraArgs={"ContentType": "application/pdf"},
+    )
+    return key
+
+
+def upload_photo_to_spaces(file_bytes: bytes, key: str, content_type: str) -> str:
+    """Upload image bytes to DO Spaces under the given key.
+
+    key format: people/{person_id}.{ext}
+    content_type: caller-supplied MIME type (e.g. "image/jpeg", "image/png").
+    Returns the key so the caller can construct the full public URL.
+
+    Mirrors upload_pdf_to_spaces exactly — same client, same upload_fileobj call —
+    except the ContentType ExtraArg is caller-supplied rather than hard-coded.
+    No ACL ExtraArg is added (DO Spaces ACL setup is deferred per CONTEXT.md).
+    """
+    client = get_spaces_client()
+    client.upload_fileobj(
+        io.BytesIO(file_bytes),
+        settings.do_spaces_bucket,
+        key,
+        ExtraArgs={"ContentType": content_type},
     )
     return key

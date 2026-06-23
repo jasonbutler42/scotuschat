@@ -5,15 +5,15 @@ milestone_name: Pre-Launch Polish
 current_phase: 12
 current_phase_name: people-admin-improvements
 status: executing
-stopped_at: Completed 12-02-PLAN.md HTTP endpoints
-last_updated: "2026-06-23T22:12:16.434Z"
+stopped_at: Completed 12-03-PLAN.md SvelteKit server layer
+last_updated: "2026-06-23T22:17:11.125Z"
 last_activity: 2026-06-23
 last_activity_desc: Phase 12 execution started
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 12
-  completed_plans: 10
+  completed_plans: 11
   percent: 50
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-06-18 after v1.2 milestone start)
 ## Current Position
 
 Phase: 12 (people-admin-improvements) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 Status: Ready to execute
 Last activity: 2026-06-23 — Phase 12 execution started
 
@@ -63,6 +63,7 @@ Progress: [█████░░░░░] 50%
 | Phase 11 P04 | 2 | 2 tasks | 2 files |
 | Phase 12 P01 | 35 | 2 tasks | 4 files |
 | Phase 12 P02 | 25 | 2 tasks | 2 files |
+| Phase 12 P03 | 8 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -99,6 +100,10 @@ Full log in PROJECT.md Key Decisions table. Key decisions for v1.2:
 - [Phase ?]: [12-02]: img.format read before img.verify() — Pillow verify() exhausts the image object (Pitfall 2)
 - [Phase ?]: [12-02]: StaticFiles mount placed after router includes — API routes take precedence; harmless when Spaces is active
 - [Phase ?]: [12-02]: target_id accepted as query param for merge-preview but counts derive from source only (D-09 confirmed)
+- [Phase ?]: [12-03]: photo_url_full reconstructed server-side in load — FASTAPI_BASE_URL never sent to client (Pitfall 5)
+- [Phase ?]: [12-03]: photo action sets no Content-Type — Node fetch sets multipart boundary automatically (Pitfall 4)
+- [Phase ?]: [12-03]: save action JSON body excludes photo_url — photo managed exclusively by photo action (Pitfall 7)
+- [Phase ?]: [12-03]: merge-preview +server.ts proxies ADMIN_TOKEN server-side so client never sees the secret (T-12-TOKENLEAK)
 
 ### Pending Todos
 
@@ -122,9 +127,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-23T22:12:16.426Z
-Stopped at: Completed 12-02-PLAN.md HTTP endpoints
+Last session: 2026-06-23T22:17:11.115Z
+Stopped at: Completed 12-03-PLAN.md SvelteKit server layer
 Resume file: 
 
-- `/gsd-discuss-phase 11` — gather context for Argument Metadata Editing
 - `/gsd-plan-phase 11` — plan directly if context already gathered

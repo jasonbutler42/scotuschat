@@ -17,6 +17,7 @@ interface PersonDetail {
 	role_name: string | null;
 	bio_text: string | null;
 	photo_url: string | null;
+	photo_url_full: string | null;
 	tenures: Array<{
 		seat: string | null;
 		start_date: string | null;
@@ -34,6 +35,8 @@ interface PersonDetail {
 interface PersonListItem {
 	id: number;
 	full_name: string;
+	last_name: string | null;
+	first_name: string | null;
 	role_id: number | null;
 	role_name: string | null;
 }
@@ -41,6 +44,13 @@ interface PersonListItem {
 interface RoleItem {
 	id: number;
 	name: string;
+}
+
+interface MergePreviewCounts {
+	utterances: number;
+	aliases: number;
+	appearances: number;
+	argument_participants: number;
 }
 
 export const load: PageServerLoad = async ({ fetch, params }) => {
@@ -59,19 +69,33 @@ export const load: PageServerLoad = async ({ fetch, params }) => {
 
 	const person: PersonDetail = await personRes.json();
 
-	// Fetch the people list to derive a de-duplicated roles list.
-	// There is no dedicated GET /api/admin/roles endpoint; the people list
-	// carries role_id + role_name and is the available source.
+	// Reconstruct full photo URL server-side (Pitfall 5):
+	// FASTAPI_BASE_URL is server-only — pass the full URL to the client via photo_url_full.
+	if (person.photo_url && person.photo_url.startsWith('/')) {
+		person.photo_url_full = FASTAPI_BASE_URL + person.photo_url;
+	} else {
+		// Already a full https:// URL, or null
+		person.photo_url_full = person.photo_url ?? null;
+	}
+
+	// Fetch the people list for two purposes:
+	//   1. De-duplicate roles for the role dropdown
+	//   2. Build the merge target picker (all persons except the current one)
 	let roles: RoleItem[] = [];
+	let people: PersonListItem[] = [];
 	try {
 		const peopleRes = await fetch(`${FASTAPI_BASE_URL}/api/admin/people`, {
 			headers: { 'X-Admin-Token': ADMIN_TOKEN },
 		});
 		if (peopleRes.ok) {
-			const people: PersonListItem[] = await peopleRes.json();
-			// Dedupe by role_id — keep only items with non-null role_id
+			const all: PersonListItem[] = await peopleRes.json();
+
+			// Merge picker: exclude the current person
+			people = all.filter((p) => p.id !== parseInt(params.id, 10));
+
+			// Roles dedup: keep only items with non-null role_id
 			const seen = new Set<number>();
-			for (const p of people) {
+			for (const p of all) {
 				if (p.role_id !== null && p.role_name !== null && !seen.has(p.role_id)) {
 					seen.add(p.role_id);
 					roles.push({ id: p.role_id, name: p.role_name! });
@@ -81,10 +105,34 @@ export const load: PageServerLoad = async ({ fetch, params }) => {
 			roles.sort((a, b) => a.name.localeCompare(b.name));
 		}
 	} catch {
-		// Non-critical — degrade gracefully; role dropdown will be empty
+		// Non-critical — degrade gracefully; role dropdown and merge picker will be empty
 	}
 
-	return { person, roles };
+	// Derive can_delete and delete_block_count from the merge-preview endpoint
+	// (target_id=0 is ignored server-side; counts reflect source FKs only, D-09).
+	let can_delete = false;
+	let delete_block_count = 0;
+	try {
+		const previewRes = await fetch(
+			`${FASTAPI_BASE_URL}/api/admin/people/${params.id}/merge-preview?target_id=0`,
+			{ headers: { 'X-Admin-Token': ADMIN_TOKEN } }
+		);
+		if (previewRes.ok) {
+			const counts: MergePreviewCounts = await previewRes.json();
+			const total =
+				counts.utterances + counts.aliases + counts.appearances + counts.argument_participants;
+			can_delete =
+				counts.utterances === 0 &&
+				counts.aliases === 0 &&
+				counts.appearances === 0 &&
+				counts.argument_participants === 0;
+			delete_block_count = total;
+		}
+	} catch {
+		// Degrade gracefully: can_delete stays false (safe default), delete_block_count stays 0
+	}
+
+	return { person, roles, people, can_delete, delete_block_count };
 };
 
 export const actions: Actions = {
@@ -94,6 +142,10 @@ export const actions: Actions = {
 	 * The `tenures` form field carries a JSON-serialized array (Pitfall 3 —
 	 * hidden JSON field strategy). The _key client-side field is stripped before
 	 * sending to FastAPI. Empty role_id converts to null (Open Question 2).
+	 *
+	 * NOTE: photo_url is intentionally NOT sent in this action's PATCH body (Pitfall 7).
+	 * Photo management is exclusive to the `photo` action. Omitting photo_url from
+	 * the PATCH body means the backend leaves the existing photo_url untouched.
 	 */
 	save: async ({ request, params, fetch }) => {
 		const formData = await request.formData();
@@ -105,7 +157,7 @@ export const actions: Actions = {
 			return fail(400, { error: 'Please select a valid role or complete the new-role form before saving.' });
 		}
 		const bio_text = ((formData.get('bio_text') as string) ?? '').trim() || null;
-		const photo_url = ((formData.get('photo_url') as string) ?? '').trim() || null;
+		// photo_url intentionally omitted — managed exclusively by the photo action (Pitfall 7)
 		const first_name = ((formData.get('first_name') as string) ?? '').trim() || null;
 		const last_name = ((formData.get('last_name') as string) ?? '').trim() || null;
 		const middle_name = ((formData.get('middle_name') as string) ?? '').trim() || null;
@@ -141,9 +193,10 @@ export const actions: Actions = {
 					'Content-Type': 'application/json',
 				},
 				body: JSON.stringify({
-					full_name, role_id, bio_text, photo_url, tenures,
+					full_name, role_id, bio_text, tenures,
 					first_name, last_name, middle_name, name_suffix,
 					appointing_president, appointing_president_party,
+					// photo_url omitted intentionally (Pitfall 7)
 				}),
 			});
 		} catch {
@@ -195,5 +248,123 @@ export const actions: Actions = {
 		const role = await res.json();
 		// Return roleCreated + role so the Svelte component can add it to the dropdown
 		return { roleCreated: true, role };
+	},
+
+	/**
+	 * photo — Forward multipart form to FastAPI POST /api/admin/people/{id}/photo.
+	 *
+	 * CRITICAL: Do NOT set Content-Type header — Node fetch sets the multipart
+	 * boundary automatically when body is FormData (Pitfall 4).
+	 *
+	 * Accepts either a file upload (photo_file) or a URL (photo_url).
+	 * On success, redirects to the person's edit page to re-run load with fresh photo_url.
+	 */
+	photo: async ({ request, params, fetch }) => {
+		const formData = await request.formData();
+		const photoFile = formData.get('photo_file') as File | null;
+		const photoUrl = (formData.get('photo_url') as string | null)?.trim() || null;
+
+		const outForm = new FormData();
+		if (photoFile && photoFile.size > 0) {
+			outForm.append('photo_file', photoFile, photoFile.name);
+		}
+		if (photoUrl) {
+			outForm.append('photo_url', photoUrl);
+		}
+
+		let res: Response;
+		try {
+			res = await fetch(`${FASTAPI_BASE_URL}/api/admin/people/${params.id}/photo`, {
+				method: 'POST',
+				headers: { 'X-Admin-Token': ADMIN_TOKEN },
+				// DO NOT set Content-Type — fetch sets the multipart boundary automatically
+				body: outForm,
+			});
+		} catch {
+			return fail(502, { photoError: 'Photo could not be saved. Try again.' });
+		}
+
+		if (!res.ok) {
+			if (res.status === 422) {
+				return fail(422, {
+					photoError: 'The uploaded file is not a valid image. Please upload a JPG, PNG, or WebP file.',
+				});
+			}
+			return fail(502, { photoError: 'Photo could not be saved. Try again.' });
+		}
+
+		throw redirect(303, '/admin/people/' + params.id);
+	},
+
+	/**
+	 * merge — POST to FastAPI to transfer all FK rows from the current person
+	 * (source) to the chosen target, then delete the source.
+	 *
+	 * On success, redirects to the target person's edit page (D-11 — source no
+	 * longer exists after merge).
+	 */
+	merge: async ({ request, params, fetch }) => {
+		const formData = await request.formData();
+		const target_id = formData.get('target_id') as string | null;
+
+		if (!target_id) {
+			return fail(400, { mergeError: 'Select a target person.' });
+		}
+
+		let res: Response;
+		try {
+			res = await fetch(`${FASTAPI_BASE_URL}/api/admin/people/${params.id}/merge`, {
+				method: 'POST',
+				headers: {
+					'X-Admin-Token': ADMIN_TOKEN,
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({ target_id: parseInt(target_id, 10) }),
+			});
+		} catch {
+			return fail(502, { mergeError: 'Merge failed. Please try again.' });
+		}
+
+		if (!res.ok) {
+			const detail = await res.json().catch(() => ({}));
+			return fail(res.status === 422 ? 422 : 502, {
+				mergeError: (detail as { detail?: string }).detail ?? 'Merge failed. Please try again.',
+			});
+		}
+
+		// Redirect to target — source person no longer exists (D-11)
+		throw redirect(303, '/admin/people/' + target_id);
+	},
+
+	/**
+	 * delete — DELETE the current person if they are an orphan (no FK rows).
+	 *
+	 * The FastAPI endpoint enforces orphan status server-side (D-06).
+	 * The client-side disabled button is defense-in-depth only.
+	 *
+	 * On success, redirects to the people directory (D-07).
+	 */
+	delete: async ({ params, fetch }) => {
+		let res: Response;
+		try {
+			res = await fetch(`${FASTAPI_BASE_URL}/api/admin/people/${params.id}`, {
+				method: 'DELETE',
+				headers: { 'X-Admin-Token': ADMIN_TOKEN },
+			});
+		} catch {
+			return fail(502, { deleteError: 'Delete failed. Please try again.' });
+		}
+
+		if (!res.ok) {
+			if (res.status === 409) {
+				return fail(409, {
+					deleteError: 'This person cannot be deleted — they have associated records.',
+				});
+			}
+			return fail(502, { deleteError: 'Delete failed. Please try again.' });
+		}
+
+		// Redirect to people list — person no longer exists (D-07)
+		throw redirect(303, '/admin/people');
 	},
 };

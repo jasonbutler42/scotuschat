@@ -5,15 +5,15 @@ milestone_name: Pre-Launch Polish
 current_phase: 12
 current_phase_name: people-admin-improvements
 status: executing
-stopped_at: Completed 12-01-PLAN.md service layer
-last_updated: "2026-06-23T22:06:47.414Z"
+stopped_at: Completed 12-02-PLAN.md HTTP endpoints
+last_updated: "2026-06-23T22:12:16.434Z"
 last_activity: 2026-06-23
 last_activity_desc: Phase 12 execution started
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 12
-  completed_plans: 9
+  completed_plans: 10
   percent: 50
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-06-18 after v1.2 milestone start)
 ## Current Position
 
 Phase: 12 (people-admin-improvements) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-06-23 — Phase 12 execution started
 
@@ -62,6 +62,7 @@ Progress: [█████░░░░░] 50%
 | Phase 11 P03 | 10 | 3 tasks | 5 files |
 | Phase 11 P04 | 2 | 2 tasks | 2 files |
 | Phase 12 P01 | 35 | 2 tasks | 4 files |
+| Phase 12 P02 | 25 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -95,6 +96,9 @@ Full log in PROJECT.md Key Decisions table. Key decisions for v1.2:
 - [Phase ?]: [12-01]: merge_people uses single async with db.begin() — no inner db.commit() (D-10, T-12-ATOMIC)
 - [Phase ?]: [12-01]: delete_person_if_orphan returns False (not raises) when FK rows exist — router translates to 409 (D-06)
 - [Phase ?]: [12-01]: get_merge_preview takes only source_id — target_id not needed for counts (D-09)
+- [Phase ?]: [12-02]: img.format read before img.verify() — Pillow verify() exhausts the image object (Pitfall 2)
+- [Phase ?]: [12-02]: StaticFiles mount placed after router includes — API routes take precedence; harmless when Spaces is active
+- [Phase ?]: [12-02]: target_id accepted as query param for merge-preview but counts derive from source only (D-09 confirmed)
 
 ### Pending Todos
 
@@ -118,11 +122,9 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-23T22:06:47.405Z
-Stopped at: Completed 12-01-PLAN.md service layer
+Last session: 2026-06-23T22:12:16.426Z
+Stopped at: Completed 12-02-PLAN.md HTTP endpoints
 Resume file: 
-
-## Operator Next Steps
 
 - `/gsd-discuss-phase 11` — gather context for Argument Metadata Editing
 - `/gsd-plan-phase 11` — plan directly if context already gathered

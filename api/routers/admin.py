@@ -36,9 +36,12 @@ Prefix:
 import asyncio
 import hmac
 import urllib.parse
+from io import BytesIO
+from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, UploadFile
+from PIL import Image, UnidentifiedImageError
 from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -57,6 +60,8 @@ from api.schemas.admin_arguments import (
     ArgumentUpdate,
 )
 from api.schemas.admin_people import (
+    MergePreview,
+    MergeRequest,
     ParticipantItem,
     PersonDetail,
     PersonListItem,
@@ -162,44 +167,56 @@ async def create_job(
         await pdf_file.seek(0)
         if header != b"%PDF":
             raise HTTPException(status_code=422, detail="Uploaded file must be a PDF.")
-        # Create job first to get its id, then upload with the id in the key
-        job = await jobs_service.create_job(db, spaces_key=None)
-        key = f"uploads/{job.id}.pdf"
+
         file_bytes = await pdf_file.read()
-        loop = asyncio.get_running_loop()
-        # WR-06: wrap upload in try/except so a Spaces failure marks the job
-        # FAILED rather than leaving an orphaned PENDING job row with no subprocess.
-        try:
-            await loop.run_in_executor(
-                None,
-                spaces_service.upload_pdf_to_spaces,
-                file_bytes,
-                key,
-            )
-        except Exception as upload_exc:
+        job = await jobs_service.create_job(db, spaces_key=None)
+
+        if settings.do_spaces_bucket:
+            # Object storage configured — upload and pass the key to ingest.
+            key = f"uploads/{job.id}.pdf"
+            loop = asyncio.get_running_loop()
+            # WR-06: wrap upload in try/except so a storage failure marks the job
+            # FAILED rather than leaving an orphaned PENDING job row with no subprocess.
+            try:
+                await loop.run_in_executor(
+                    None,
+                    spaces_service.upload_pdf_to_spaces,
+                    file_bytes,
+                    key,
+                )
+            except Exception as upload_exc:
+                await db.execute(
+                    update(AdminJob)
+                    .where(AdminJob.id == job.id)
+                    .values(
+                        status=AdminJobStatus.FAILED,
+                        error_message=f"Storage upload failed: {upload_exc}",
+                    )
+                    .execution_options(synchronize_session=False)
+                )
+                await db.commit()
+                raise HTTPException(
+                    status_code=502, detail="File upload failed. Please try again."
+                ) from upload_exc
             await db.execute(
                 update(AdminJob)
                 .where(AdminJob.id == job.id)
-                .values(
-                    status=AdminJobStatus.FAILED,
-                    error_message=f"Spaces upload failed: {upload_exc}",
-                )
+                .values(spaces_key=key)
                 .execution_options(synchronize_session=False)
             )
             await db.commit()
-            raise HTTPException(
-                status_code=502, detail="File upload failed. Please try again."
-            ) from upload_exc
-        # Update the job's spaces_key now that we have it
-        await db.execute(
-            update(AdminJob)
-            .where(AdminJob.id == job.id)
-            .values(spaces_key=key)
-            .execution_options(synchronize_session=False)
-        )
-        await db.commit()
-        await db.refresh(job)
-        spawn_pipeline_step("ingest", job.id, ["--spaces-key", key])
+            await db.refresh(job)
+            spawn_pipeline_step("ingest", job.id, ["--spaces-key", key])
+        else:
+            # No object storage configured — save locally for dev use.
+            uploads_dir = Path("data/uploads")
+            uploads_dir.mkdir(parents=True, exist_ok=True)
+            local_path = uploads_dir / f"{job.id}.pdf"
+            local_path.write_bytes(file_bytes)
+            await db.commit()
+            await db.refresh(job)
+            spawn_pipeline_step("ingest", job.id, ["--local-file", str(local_path.resolve())])
+
         return job  # type: ignore[return-value]
 
     else:
@@ -368,6 +385,132 @@ async def update_person(
     if updated is None:
         raise HTTPException(status_code=404, detail="Person not found")
     return PersonDetail(**updated)
+
+
+@router.post("/people/{person_id}/photo", response_model=PersonDetail)
+async def upload_person_photo(
+    person_id: int,
+    photo_file: Optional[UploadFile] = File(None),
+    photo_url: Optional[str] = Form(None),
+    db: AsyncSession = Depends(get_db),
+) -> PersonDetail:
+    """
+    Upload or set a photo for a person (PADM-01).
+
+    File path (D-03 file-takes-precedence): validates content_type (first gate)
+    and Pillow Image.open/verify (second gate, server-side truth). Non-images → 422.
+    URL path: stores the supplied URL directly.
+    Returns 422 if neither a file nor a URL is provided.
+    Returns 404 if the person does not exist (T-12-IDOR).
+
+    Security (T-12-UPLOAD): two-gate image validation mirrors existing PDF magic-byte
+    pattern. Server-derives filename from person_id + validated format — never from the
+    client-supplied filename (T-12-PATHTRAVERSAL).
+    Auth inherited from router-level dependency (T-12-AUTH).
+    """
+    if photo_file is not None:
+        # First gate: content_type is client-supplied (spoofable) — fast reject
+        if not (photo_file.content_type or "").startswith("image/"):
+            raise HTTPException(
+                status_code=422,
+                detail="Uploaded file must be an image.",
+            )
+        file_bytes = await photo_file.read()
+        # Second gate: Pillow server-side truth
+        # CRITICAL (Pitfall 2): read img.format BEFORE calling img.verify()
+        # because verify() exhausts the image object — no attributes readable after.
+        try:
+            with Image.open(BytesIO(file_bytes)) as img:
+                img_format = img.format  # must read before verify()
+                img.verify()
+        except (UnidentifiedImageError, Exception):
+            raise HTTPException(
+                status_code=422,
+                detail="Uploaded file is not a valid image.",
+            )
+        ext_map = {"JPEG": "jpg", "PNG": "png", "WEBP": "webp"}
+        ext = ext_map.get(img_format or "", "jpg")
+        content_type = photo_file.content_type or f"image/{ext}"
+        result = await people_service.upload_photo(db, person_id, file_bytes, ext, content_type)
+    elif photo_url is not None:
+        result = await people_service.update_photo_url(db, person_id, photo_url)
+    else:
+        raise HTTPException(
+            status_code=422,
+            detail="Provide either a file or a URL.",
+        )
+    if result is None:
+        raise HTTPException(status_code=404, detail="Person not found")
+    return PersonDetail(**result)
+
+
+@router.get("/people/{person_id}/merge-preview", response_model=MergePreview)
+async def get_merge_preview(
+    person_id: int,
+    target_id: int,
+    db: AsyncSession = Depends(get_db),
+) -> MergePreview:
+    """
+    Return transfer counts for a prospective merge (PADM-04).
+
+    target_id is accepted as a query param for the frontend contract, but counts
+    derive from the source (person_id) — per Plan 01 D-09.
+    Returns 404 if the source person does not exist (T-12-IDOR).
+    Auth inherited from router-level dependency (T-12-AUTH).
+    """
+    counts = await people_service.get_merge_preview(db, person_id)
+    if counts is None:
+        raise HTTPException(status_code=404, detail="Person not found")
+    return MergePreview(**counts)
+
+
+@router.post("/people/{person_id}/merge", response_model=PersonDetail)
+async def merge_person(
+    person_id: int,
+    body: MergeRequest,
+    db: AsyncSession = Depends(get_db),
+) -> PersonDetail:
+    """
+    Merge source person (person_id) into target person (body.target_id) (PADM-03).
+
+    Transfers all FK rows from source to target in a single atomic transaction,
+    then deletes the source person. Returns the updated target PersonDetail.
+    Returns 422 on self-merge (T-12-SELF — ValueError from service → HTTPException 422).
+    Returns 404 if either person does not exist (T-12-IDOR).
+    Auth inherited from router-level dependency (T-12-AUTH).
+    """
+    try:
+        result = await people_service.merge_people(db, person_id, body.target_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    if result is None:
+        raise HTTPException(status_code=404, detail="Person not found")
+    return PersonDetail(**result)
+
+
+@router.delete("/people/{person_id}", status_code=200)
+async def delete_person(
+    person_id: int,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """
+    Delete a person only if they have no associated FK rows (PADM-02).
+
+    Returns 200 + {"deleted": True} on success.
+    Returns 404 if the person does not exist (T-12-IDOR).
+    Returns 409 if the person has associated records (T-12-ORPHAN — server-side
+    COUNT is authoritative; client disabled-state is defense-in-depth only, D-06).
+    Auth inherited from router-level dependency (T-12-AUTH).
+    """
+    result = await people_service.delete_person_if_orphan(db, person_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Person not found")
+    if result is False:
+        raise HTTPException(
+            status_code=409,
+            detail="Person has associated records and cannot be deleted.",
+        )
+    return {"deleted": True}
 
 
 @router.get("/arguments", response_model=list[ArgumentListItem])

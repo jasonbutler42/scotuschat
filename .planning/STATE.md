@@ -2,17 +2,17 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Pre-Launch Polish
-current_phase: 11
-current_phase_name: argument-metadata-editing
-status: verifying
-stopped_at: Phase 12 context gathered
-last_updated: "2026-06-23T18:00:54.934Z"
-last_activity: 2026-06-22
-last_activity_desc: Phase 11 execution started
+current_phase: 12
+current_phase_name: people-admin-improvements
+status: planned
+stopped_at: Phase 12 plans verified — ready for execution
+last_updated: "2026-06-23T00:00:00.000Z"
+last_activity: 2026-06-23
+last_activity_desc: Phase 12 planned (4 plans, 4 waves)
 progress:
   total_phases: 6
   completed_phases: 3
-  total_plans: 8
+  total_plans: 12
   completed_plans: 8
   percent: 50
 ---
@@ -24,14 +24,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-18 after v1.2 milestone start)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** Phase 11 — argument-metadata-editing
+**Current focus:** Phase 12 — people-admin-improvements
 
 ## Current Position
 
-Phase: 11 (argument-metadata-editing) — EXECUTING
-Plan: 4 of 4
-Status: Phase complete — ready for verification
-Last activity: 2026-06-22 — Phase 11 execution started
+Phase: 12 (people-admin-improvements) — PLANNED
+Plan: 0 of 4
+Status: Plans verified — ready for execution
+Last activity: 2026-06-23 — Phase 12 planned (4 plans, 4 waves)
 
 Progress: [█████░░░░░] 50%
 
@@ -113,9 +113,9 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-23T18:00:54.926Z
-Stopped at: Phase 12 context gathered
-Resume file: .planning/phases/12-people-admin-improvements/12-CONTEXT.md
+Last session: 2026-06-23T19:26:54.432Z
+Stopped at: Phase 12 UI-SPEC approved
+Resume file: .planning/phases/12-people-admin-improvements/12-UI-SPEC.md
 
 ## Operator Next Steps
 

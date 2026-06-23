@@ -43,7 +43,7 @@ Full phase details: `.planning/milestones/v1.1-ROADMAP.md`
 - [x] **Phase 9: People Data Model Migration** - Add structured name fields and appointing president/party to the people schema (completed 2026-06-19)
 - [x] **Phase 10: Unified Navigation** - Admin and public pages share one top navigation component (completed 2026-06-22)
 - [x] **Phase 11: Argument Metadata Editing** - Operator can correct case title, docket, and date before resolving (completed 2026-06-22)
-- [ ] **Phase 12: People Admin Improvements** - Image upload, delete orphaned records, and merge duplicate people
+- [x] **Phase 12: People Admin Improvements** - Image upload, delete orphaned records, and merge duplicate people (completed 2026-06-23)
 - [ ] **Phase 13: Ingestion Flow Polish** - Fix progress indicators, typeahead, and incomplete filter
 - [ ] **Phase 14: Speaker Popover Card** - Avatar click shows bench speaker details with photo, role, and tenure
 
@@ -128,7 +128,7 @@ Plans:
   4. Operator can select a source and a target person and initiate a merge; all utterances, aliases, and appearances transfer to the target before the source is deleted
   5. Before committing a merge, the operator sees a count of utterances, aliases, and appearances that will transfer
 
-**Plans**: 3/4 plans executed
+**Plans**: 4/4 plans complete
 
 Plans:
 **Wave 1**
@@ -145,7 +145,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3)*
 
-- [ ] 12-04-PLAN.md — +page.svelte photo widget + merge section + delete section (human-verify checkpoint)
+- [x] 12-04-PLAN.md — +page.svelte photo widget + merge section + delete section (human-verify checkpoint)
 
 **UI hint**: yes
 
@@ -193,6 +193,6 @@ Plans:
 | 9. People Data Model Migration | v1.2 | 3/3 | Complete    | 2026-06-19 |
 | 10. Unified Navigation | v1.2 | 1/1 | Complete   | 2026-06-22 |
 | 11. Argument Metadata Editing | v1.2 | 4/4 | Complete   | 2026-06-22 |
-| 12. People Admin Improvements | v1.2 | 3/4 | In Progress|  |
+| 12. People Admin Improvements | v1.2 | 4/4 | Complete   | 2026-06-23 |
 | 13. Ingestion Flow Polish | v1.2 | 0/? | Not started | — |
 | 14. Speaker Popover Card | v1.2 | 0/? | Not started | — |

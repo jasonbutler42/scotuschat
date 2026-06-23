@@ -4,17 +4,17 @@ milestone: v1.2
 milestone_name: Pre-Launch Polish
 current_phase: 12
 current_phase_name: people-admin-improvements
-status: executing
-stopped_at: Completed 12-03-PLAN.md SvelteKit server layer
-last_updated: "2026-06-23T22:17:11.125Z"
+status: verifying
+stopped_at: Completed 12-04-PLAN.md UI restructure, awaiting human-verify checkpoint
+last_updated: "2026-06-23T22:25:25.625Z"
 last_activity: 2026-06-23
 last_activity_desc: Phase 12 execution started
 progress:
   total_phases: 6
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 12
-  completed_plans: 11
-  percent: 50
+  completed_plans: 12
+  percent: 67
 ---
 
 # Project State
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-06-18 after v1.2 milestone start)
 
 Phase: 12 (people-admin-improvements) — EXECUTING
 Plan: 4 of 4
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-06-23 — Phase 12 execution started
 
 Progress: [█████░░░░░] 50%
@@ -64,6 +64,7 @@ Progress: [█████░░░░░] 50%
 | Phase 12 P01 | 35 | 2 tasks | 4 files |
 | Phase 12 P02 | 25 | 2 tasks | 2 files |
 | Phase 12 P03 | 8 | 2 tasks | 2 files |
+| Phase 12 P04 | 30 | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -104,6 +105,9 @@ Full log in PROJECT.md Key Decisions table. Key decisions for v1.2:
 - [Phase ?]: [12-03]: photo action sets no Content-Type — Node fetch sets multipart boundary automatically (Pitfall 4)
 - [Phase ?]: [12-03]: save action JSON body excludes photo_url — photo managed exclusively by photo action (Pitfall 7)
 - [Phase ?]: [12-03]: merge-preview +server.ts proxies ADMIN_TOKEN server-side so client never sees the secret (T-12-TOKENLEAK)
+- [Phase ?]: [12-04]: Photo form placed as sibling to save form — HTML nesting prohibition prevents nested forms; Bio & Photo card split visually
+- [Phase ?]: [12-04]: fetchMergePreview uses same-origin proxy URL; ADMIN_TOKEN never in client (T-12-TOKENLEAK)
+- [Phase ?]: [12-04]: Delete button branched via {#if data.can_delete} for correct aria-describedby tooltip wiring (D-06, PADM-02)
 
 ### Pending Todos
 
@@ -127,8 +131,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-23T22:17:11.115Z
-Stopped at: Completed 12-03-PLAN.md SvelteKit server layer
+Last session: 2026-06-23T22:25:25.617Z
+Stopped at: Completed 12-04-PLAN.md UI restructure, awaiting human-verify checkpoint
 Resume file: 
 
-- `/gsd-plan-phase 11` — plan directly if context already gathered
+None

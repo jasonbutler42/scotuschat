@@ -29,10 +29,10 @@ Requirements for the Pre-Launch Polish milestone. Each maps to roadmap phases (p
 
 ### People Admin
 
-- [ ] **PADM-01**: Operator can upload a profile photo file or enter a photo URL; both paths store the image on the server and update the person's photo
-- [ ] **PADM-02**: Operator can delete a person record that has no associated utterances, aliases, or appearances
-- [ ] **PADM-03**: Operator can merge two person records; all utterances, aliases, and appearances transfer from source to target before the source is deleted
-- [ ] **PADM-04**: Merge confirmation shows a count of records that will transfer before the operator commits
+- [x] **PADM-01**: Operator can upload a profile photo file or enter a photo URL; both paths store the image on the server and update the person's photo
+- [x] **PADM-02**: Operator can delete a person record that has no associated utterances, aliases, or appearances
+- [x] **PADM-03**: Operator can merge two person records; all utterances, aliases, and appearances transfer from source to target before the source is deleted
+- [x] **PADM-04**: Merge confirmation shows a count of records that will transfer before the operator commits
 
 ### Public Experience
 
@@ -83,10 +83,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ARG-02 | Phase 11 | Complete |
 | PEOP-01 | Phase 9 | Complete |
 | PEOP-02 | Phase 9 | Complete |
-| PADM-01 | Phase 12 | Pending |
-| PADM-02 | Phase 12 | Pending |
-| PADM-03 | Phase 12 | Pending |
-| PADM-04 | Phase 12 | Pending |
+| PADM-01 | Phase 12 | Complete |
+| PADM-02 | Phase 12 | Complete |
+| PADM-03 | Phase 12 | Complete |
+| PADM-04 | Phase 12 | Complete |
 | PUB-01 | Phase 14 | Pending |
 | PUB-02 | Phase 14 | Pending |
 | PUB-03 | Phase 14 | Pending |

@@ -128,12 +128,12 @@ Plans:
   4. Operator can select a source and a target person and initiate a merge; all utterances, aliases, and appearances transfer to the target before the source is deleted
   5. Before committing a merge, the operator sees a count of utterances, aliases, and appearances that will transfer
 
-**Plans**: 4 plans
+**Plans**: 1/4 plans executed
 
 Plans:
 **Wave 1**
 
-- [ ] 12-01-PLAN.md — Backend services + schemas: spaces upload_photo_to_spaces, admin_people merge/preview/orphan-delete/photo functions, MergeRequest/MergePreview
+- [x] 12-01-PLAN.md — Backend services + schemas: spaces upload_photo_to_spaces, admin_people merge/preview/orphan-delete/photo functions, MergeRequest/MergePreview
 
 **Wave 2** *(blocked on Wave 1)*
 
@@ -193,6 +193,6 @@ Plans:
 | 9. People Data Model Migration | v1.2 | 3/3 | Complete    | 2026-06-19 |
 | 10. Unified Navigation | v1.2 | 1/1 | Complete   | 2026-06-22 |
 | 11. Argument Metadata Editing | v1.2 | 4/4 | Complete   | 2026-06-22 |
-| 12. People Admin Improvements | v1.2 | 0/? | Not started | — |
+| 12. People Admin Improvements | v1.2 | 1/4 | In Progress|  |
 | 13. Ingestion Flow Polish | v1.2 | 0/? | Not started | — |
 | 14. Speaker Popover Card | v1.2 | 0/? | Not started | — |

@@ -4,16 +4,16 @@ milestone: v1.2
 milestone_name: Pre-Launch Polish
 current_phase: 12
 current_phase_name: people-admin-improvements
-status: planned
-stopped_at: Phase 12 plans verified — ready for execution
-last_updated: "2026-06-23T00:00:00.000Z"
+status: executing
+stopped_at: Completed 12-01-PLAN.md service layer
+last_updated: "2026-06-23T22:06:47.414Z"
 last_activity: 2026-06-23
-last_activity_desc: Phase 12 planned (4 plans, 4 waves)
+last_activity_desc: Phase 12 execution started
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 12
-  completed_plans: 8
+  completed_plans: 9
   percent: 50
 ---
 
@@ -28,10 +28,10 @@ See: .planning/PROJECT.md (updated 2026-06-18 after v1.2 milestone start)
 
 ## Current Position
 
-Phase: 12 (people-admin-improvements) — PLANNED
-Plan: 0 of 4
-Status: Plans verified — ready for execution
-Last activity: 2026-06-23 — Phase 12 planned (4 plans, 4 waves)
+Phase: 12 (people-admin-improvements) — EXECUTING
+Plan: 2 of 4
+Status: Ready to execute
+Last activity: 2026-06-23 — Phase 12 execution started
 
 Progress: [█████░░░░░] 50%
 
@@ -61,6 +61,7 @@ Progress: [█████░░░░░] 50%
 | Phase 11 P02 | 3 | 3 tasks | 5 files |
 | Phase 11 P03 | 10 | 3 tasks | 5 files |
 | Phase 11 P04 | 2 | 2 tasks | 2 files |
+| Phase 12 P01 | 35 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -90,6 +91,10 @@ Full log in PROJECT.md Key Decisions table. Key decisions for v1.2:
 - [Phase ?]: [11-03]: Arguments list load degrades to [] on non-OK
 - [Phase ?]: [11-03]: Edit page save parses 422 body to discriminate slug_collision vs docket_collision
 - [Phase ?]: [11-03]: toDateInputValue() slices first 10 chars of ISO string for date input compatibility
+- [Phase ?]: [12-01]: upload_photo_to_spaces mirrors upload_pdf_to_spaces with caller-supplied content_type; no ACL arg (deferred)
+- [Phase ?]: [12-01]: merge_people uses single async with db.begin() — no inner db.commit() (D-10, T-12-ATOMIC)
+- [Phase ?]: [12-01]: delete_person_if_orphan returns False (not raises) when FK rows exist — router translates to 409 (D-06)
+- [Phase ?]: [12-01]: get_merge_preview takes only source_id — target_id not needed for counts (D-09)
 
 ### Pending Todos
 
@@ -113,9 +118,9 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-23T19:26:54.432Z
-Stopped at: Phase 12 UI-SPEC approved
-Resume file: .planning/phases/12-people-admin-improvements/12-UI-SPEC.md
+Last session: 2026-06-23T22:06:47.405Z
+Stopped at: Completed 12-01-PLAN.md service layer
+Resume file: 
 
 ## Operator Next Steps
 

@@ -320,9 +320,9 @@ async def merge_people(
     Returns None if either source or target does not exist (router → 404).
     Raises ValueError if source_id == target_id (T-12-SELF guard).
 
-    All 4 UPDATEs and the DELETE execute inside a single `async with db.begin()`
-    transaction — any failure rolls back all steps atomically (D-10, T-12-ATOMIC).
-    Do NOT call db.commit() inside the block; the context manager commits on clean exit.
+    All 4 UPDATEs and the DELETE execute on the active implicit transaction started
+    by the fetch-guard SELECTs above. db.commit() is called once after all statements
+    complete — any failure rolls back all steps atomically (D-10, T-12-ATOMIC).
     Every bulk statement carries .execution_options(synchronize_session=False) (T-12-SYNC).
     """
     # T-12-SELF: merge-to-self guard — raise before any DB operation
@@ -337,26 +337,26 @@ async def merge_people(
     if target is None:
         return None
 
-    # Atomic transfer — no commit between steps (Pitfall: committing inside db.begin)
-    async with db.begin():
-        for model, col in [
-            (Utterance, Utterance.person_id),
-            (SpeakerAlias, SpeakerAlias.person_id),
-            (CaseAppearance, CaseAppearance.person_id),
-            (ArgumentParticipant, ArgumentParticipant.person_id),
-        ]:
-            await db.execute(
-                update(model)
-                .where(col == source_id)
-                .values({col.key: target_id})
-                .execution_options(synchronize_session=False)
-            )
+    # Atomic transfer using the session's active implicit transaction
+    for model, col in [
+        (Utterance, Utterance.person_id),
+        (SpeakerAlias, SpeakerAlias.person_id),
+        (CaseAppearance, CaseAppearance.person_id),
+        (ArgumentParticipant, ArgumentParticipant.person_id),
+    ]:
         await db.execute(
-            delete(Person)
-            .where(Person.id == source_id)
+            update(model)
+            .where(col == source_id)
+            .values({col.key: target_id})
             .execution_options(synchronize_session=False)
         )
-    # Transaction committed on context manager exit — fetch refreshed target
+    await db.execute(
+        delete(Person)
+        .where(Person.id == source_id)
+        .execution_options(synchronize_session=False)
+    )
+    await db.commit()
+    # Transaction committed — fetch refreshed target
     return await get_person_detail(db, target_id)
 
 

@@ -375,9 +375,15 @@ async def delete_person_if_orphan(db: AsyncSession, person_id: int) -> bool | No
     if person is None:
         return None
 
+    # Delete name-variant aliases first — they are intrinsic to the person (Gap B fix).
+    await db.execute(
+        delete(SpeakerAlias)
+        .where(SpeakerAlias.person_id == person_id)
+        .execution_options(synchronize_session=False)
+    )
+
     for model, col in [
         (Utterance, Utterance.person_id),
-        (SpeakerAlias, SpeakerAlias.person_id),
         (CaseAppearance, CaseAppearance.person_id),
         (ArgumentParticipant, ArgumentParticipant.person_id),
     ]:

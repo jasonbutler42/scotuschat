@@ -3,7 +3,21 @@
 </svelte:head>
 
 <script lang="ts">
+	import { goto } from '$app/navigation';
+
 	let { data, form } = $props();
+
+	// IncompleteToggle state — mirrors the server-side incomplete flag (D-11, D-13).
+	// $derived keeps it in sync when the load re-runs after navigation.
+	let incomplete = $derived(data.incomplete ?? false);
+
+	function handleToggle() {
+		if (incomplete) {
+			goto('/admin/pipeline');
+		} else {
+			goto('/admin/pipeline?incomplete=1');
+		}
+	}
 
 	// Mode toggle state: 'url' or 'upload'. Defaults to URL mode.
 	let mode = $state<'url' | 'upload'>('url');
@@ -278,20 +292,96 @@
 
 		<!-- Recent Runs history section -->
 		<div style="margin-top: 32px;">
-			<h2
-				style="
-					font-size: 20px;
-					font-weight: 600;
-					color: #e2e8f0;
-					margin: 0 0 16px 0;
-					line-height: 1.2;
-				"
-			>
-				Recent Runs
-			</h2>
+			<!-- Section header row: h2 left, incomplete toggle right (D-13, 13-UI-SPEC §Layout Contract) -->
+			<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+				<h2
+					style="
+						font-size: 20px;
+						font-weight: 600;
+						color: #e2e8f0;
+						margin: 0;
+						line-height: 1.2;
+					"
+				>
+					Recent Runs
+				</h2>
 
-			{#if !data.jobs || data.jobs.length === 0}
-				<!-- Empty state per 07-UI-SPEC Copywriting Contract -->
+				<!-- IncompleteToggle (PIPE-20) — mirrors /admin/people pattern exactly -->
+				<div style="display: flex; align-items: center; gap: 8px;">
+					<button
+						role="switch"
+						aria-checked={incomplete}
+						aria-label="Show incomplete only"
+						onclick={handleToggle}
+						style="
+							position: relative;
+							width: 44px;
+							height: 24px;
+							min-height: 44px;
+							border-radius: 12px;
+							border: 1px solid {incomplete ? '#93c5fd' : '#334155'};
+							background-color: {incomplete ? 'rgba(147,197,253,0.2)' : '#0f1117'};
+							cursor: pointer;
+							padding: 0;
+							flex-shrink: 0;
+						"
+					>
+						<span
+							style="
+								position: absolute;
+								top: 50%;
+								transform: translateY(-50%) translateX({incomplete ? '22px' : '2px'});
+								width: 18px;
+								height: 18px;
+								border-radius: 50%;
+								background-color: {incomplete ? '#93c5fd' : '#94a3b8'};
+							"
+						></span>
+					</button>
+					<span
+						style="
+							font-size: 14px;
+							font-weight: 400;
+							color: {incomplete ? '#e2e8f0' : '#94a3b8'};
+						"
+					>Show incomplete only</span>
+				</div>
+			</div>
+
+			{#if incomplete && (!data.jobs || data.jobs.length === 0)}
+				<!-- Filter-on empty state: no paused/failed jobs (13-UI-SPEC §Component Inventory 3) -->
+				<div
+					style="
+						background-color: #1e293b;
+						border: 1px solid #334155;
+						border-radius: 8px;
+						padding: 32px;
+						text-align: center;
+					"
+				>
+					<p
+						style="
+							font-size: 16px;
+							font-weight: 600;
+							color: #e2e8f0;
+							margin: 0 0 8px 0;
+						"
+					>
+						No jobs need attention
+					</p>
+					<p
+						style="
+							font-size: 16px;
+							font-weight: 400;
+							color: #94a3b8;
+							margin: 0;
+						"
+					>
+						All recent runs completed or are running. Toggle off to see the full history.
+					</p>
+				</div>
+			{:else if !data.jobs || data.jobs.length === 0}
+				<!-- Default empty state per 07-UI-SPEC Copywriting Contract -->
 				<div
 					style="
 						background-color: #1e293b;

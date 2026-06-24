@@ -36,6 +36,8 @@ Prefix:
 import asyncio
 import hmac
 import urllib.parse
+
+import httpx
 from io import BytesIO
 from pathlib import Path
 from typing import Optional
@@ -433,7 +435,24 @@ async def upload_person_photo(
         content_type = photo_file.content_type or f"image/{ext}"
         result = await people_service.upload_photo(db, person_id, file_bytes, ext, content_type)
     elif photo_url is not None:
-        result = await people_service.update_photo_url(db, person_id, photo_url)
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                r = await client.get(photo_url, follow_redirects=True)
+                r.raise_for_status()
+                file_bytes = r.content
+        except Exception:
+            raise HTTPException(status_code=422, detail="Could not fetch image from URL.")
+        # Same two-gate Pillow check as the file-upload path (Pitfall 2: read format before verify)
+        try:
+            with Image.open(BytesIO(file_bytes)) as img:
+                img_format = img.format
+                img.verify()
+        except (UnidentifiedImageError, Exception):
+            raise HTTPException(status_code=422, detail="URL does not point to a valid image.")
+        ext_map = {"JPEG": "jpg", "PNG": "png", "WEBP": "webp"}
+        ext = ext_map.get(img_format or "", "jpg")
+        content_type = f"image/{ext}"
+        result = await people_service.upload_photo(db, person_id, file_bytes, ext, content_type)
     else:
         raise HTTPException(
             status_code=422,

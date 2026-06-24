@@ -165,7 +165,18 @@ Plans:
   2. Operator typing in the speaker alias typeahead sees relevant candidate matches and can select one; the selected value is applied correctly
   3. Operator toggling the incomplete filter on the pipeline list sees only jobs that require their action; toggling it off restores the full list
 
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 13-01-PLAN.md — Pre-Phase-13 cleanup + backend list_jobs incomplete filter & GET /api/admin/jobs param (PIPE-20)
+- [ ] 13-03-PLAN.md — Job detail: step-badge null-transition fallback (PIPE-18) + custom combobox replacing datalist (PIPE-19)
+
+**Wave 2** *(blocked on 13-01)*
+
+- [ ] 13-02-PLAN.md — Pipeline list incomplete toggle + load param forwarding + filter-on empty state (PIPE-20)
+
 **UI hint**: yes
 
 ### Phase 14: Speaker Popover Card
@@ -199,5 +210,5 @@ Plans:
 | 10. Unified Navigation | v1.2 | 1/1 | Complete   | 2026-06-22 |
 | 11. Argument Metadata Editing | v1.2 | 4/4 | Complete   | 2026-06-22 |
 | 12. People Admin Improvements | v1.2 | 7/7 | Complete   | 2026-06-24 |
-| 13. Ingestion Flow Polish | v1.2 | 0/? | Not started | — |
+| 13. Ingestion Flow Polish | v1.2 | 0/3 | Planned | — |
 | 14. Speaker Popover Card | v1.2 | 0/? | Not started | — |

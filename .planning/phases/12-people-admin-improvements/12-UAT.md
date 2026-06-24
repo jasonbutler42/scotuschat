@@ -1,9 +1,9 @@
 ---
-status: diagnosed
+status: resolved
 phase: 12-people-admin-improvements
 source: 12-01-SUMMARY.md, 12-02-SUMMARY.md, 12-03-SUMMARY.md, 12-04-SUMMARY.md
 started: 2026-06-24T00:00:00Z
-updated: 2026-06-24T00:00:00Z
+updated: 2026-06-24T17:00:00Z
 ---
 
 ## Current Test
@@ -68,7 +68,7 @@ blocked: 0
 ## Gaps
 
 - truth: "Bio & Photo card appears as a unified section positioned above the Save Changes button"
-  status: failed
+  status: resolved
   reason: "User reported: bio and phot are together in one card but it's still below the 'Save Changes' button"
   severity: major
   test: 1
@@ -83,7 +83,7 @@ blocked: 0
   debug_session: ""
 
 - truth: "Bio text can be saved independently of photo — editing bio and submitting persists on reload, whether or not a photo is selected"
-  status: failed
+  status: resolved
   reason: "User reported: If I enter a bio and hit Save photo but haven't selected a photo, I get an error about not having selected a photo. If I use Save Changes it appears to save but on refresh the bio is gone. Bio save should not be tied to the photograph."
   severity: major
   test: 4
@@ -96,7 +96,7 @@ blocked: 0
   debug_session: ""
 
 - truth: "Merge preview counts reload correctly each time a different target person is selected"
-  status: failed
+  status: resolved
   reason: "User reported: Preview counts show up but can't confirm accuracy. Only works once — selecting a second target person after the first gives 'Could not load counts. Try again.' error."
   severity: major
   test: 5
@@ -112,7 +112,7 @@ blocked: 0
   debug_session: ""
 
 - truth: "After merge executes and redirects to the target person's page, all client state resets as if navigated there directly — no stale picker selection or preview counts carried over"
-  status: failed
+  status: resolved
   reason: "User reported: Merge redirects to the target person's page but the page still has the previously selected target still open in the merge picker. It should reset as if you navigated to the target person directly."
   severity: major
   test: 6
@@ -125,7 +125,7 @@ blocked: 0
   debug_session: ""
 
 - truth: "A person with only aliases (no utterances, appearances, or argument participants) can be deleted — aliases should cascade-delete or be excluded from the orphan block check"
-  status: failed
+  status: resolved
   reason: "User reported: Person with 0 utterances, 1 alias, 0 appearances, 0 argument participants cannot be deleted. Aliases should not block deletion."
   severity: major
   test: 8
@@ -141,7 +141,7 @@ blocked: 0
   debug_session: ""
 
 - truth: "Submitting a photo URL should fetch the image from that URL and save it locally on the server, not store an external URL reference"
-  status: failed
+  status: resolved
   reason: "User reported: works visually, but requirement is that the URL path should fetch the image and save it to the local server — not store an external URL reference. Everything should be self-contained locally at this stage."
   severity: major
   test: 3

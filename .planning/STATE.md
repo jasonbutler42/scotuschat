@@ -2,19 +2,19 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Pre-Launch Polish
-current_phase: 12
-current_phase_name: people-admin-improvements
-status: verifying
-stopped_at: Completed 12-06-PLAN.md gap fixes — bio save independence and delete eligibility
-last_updated: "2026-06-24T16:43:34.877Z"
-last_activity: 2026-06-23
-last_activity_desc: Phase 12 execution started
+current_phase: 13
+current_phase_name: pending
+status: planning
+stopped_at: Phase 12 complete — all 6 UAT gaps resolved and user-verified
+last_updated: "2026-06-24T17:00:00Z"
+last_activity: 2026-06-24
+last_activity_desc: Phase 12 verified complete — people admin improvements (photo upload, merge, delete)
 progress:
   total_phases: 6
-  completed_phases: 4
-  total_plans: 15
-  completed_plans: 15
-  percent: 67
+  completed_phases: 5
+  total_plans: 18
+  completed_plans: 18
+  percent: 83
 ---
 
 # Project State
@@ -24,16 +24,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-18 after v1.2 milestone start)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** Phase 12 — people-admin-improvements
+**Current focus:** Phase 13 — next phase (planning)
 
 ## Current Position
 
-Phase: 12 (people-admin-improvements) — EXECUTING
-Plan: 4 of 4
-Status: Phase complete — ready for verification
-Last activity: 2026-06-23 — Phase 12 execution started
+Phase: 12 (people-admin-improvements) — COMPLETE ✓
+Phase: 13 — pending planning
+Status: Phase 12 verified — all UAT gaps resolved
+Last activity: 2026-06-24 — Phase 12 gap closure verified (photo URL fetch, bio save, delete aliases, merge state, card position)
 
-Progress: [█████░░░░░] 50%
+Progress: [████████░░] 83%
 
 ## Performance Metrics
 

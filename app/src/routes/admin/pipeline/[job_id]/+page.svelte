@@ -566,7 +566,7 @@
 													return text.toLowerCase().includes((s.comboQuery ?? '').toLowerCase());
 												})}
 												<div
-													style="position: relative; width: 100%;"
+													style="position: relative; width: 100%;{s.addingPerson ? ' display: none;' : ''}"
 													use:comboOutsideClick={rowKey}
 												>
 													<input

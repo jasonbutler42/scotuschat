@@ -5,15 +5,15 @@ milestone_name: Pre-Launch Polish
 current_phase: 12
 current_phase_name: people-admin-improvements
 status: verifying
-stopped_at: Completed 12-04-PLAN.md UI restructure, awaiting human-verify checkpoint
-last_updated: "2026-06-24T16:37:03.259Z"
+stopped_at: Completed 12-06-PLAN.md gap fixes — bio save independence and delete eligibility
+last_updated: "2026-06-24T16:40:03.882Z"
 last_activity: 2026-06-23
 last_activity_desc: Phase 12 execution started
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 15
-  completed_plans: 13
+  completed_plans: 14
   percent: 50
 ---
 
@@ -67,6 +67,7 @@ Progress: [█████░░░░░] 50%
 | Phase 12 P04 | 30 | 1 tasks | 1 files |
 | Phase 12-people-admin-improvements P04 | 60 | 1 tasks | 3 files |
 | Phase 12 P05 | 1 | 2 tasks | 2 files |
+| Phase 12 P06 | 3 | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -110,6 +111,8 @@ Full log in PROJECT.md Key Decisions table. Key decisions for v1.2:
 - [Phase ?]: [12-04]: Photo form placed as sibling to save form — HTML nesting prohibition prevents nested forms; Bio & Photo card split visually
 - [Phase ?]: [12-04]: fetchMergePreview uses same-origin proxy URL; ADMIN_TOKEN never in client (T-12-TOKENLEAK)
 - [Phase ?]: [12-04]: Delete button branched via {#if data.can_delete} for correct aria-describedby tooltip wiring (D-06, PADM-02)
+- [Phase ?]: [12-06]: Bio-only save redirects immediately after bio PATCH — no FastAPI photo call when outForm is empty (Gap C closed)
+- [Phase ?]: [12-06]: Aliases removed from can_delete and delete_block_count — backend deletes them before orphan check, frontend must match (Gap D closed)
 
 ### Pending Todos
 
@@ -133,8 +136,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-24T16:37:03.251Z
-Stopped at: Completed 12-04-PLAN.md UI restructure, awaiting human-verify checkpoint
+Last session: 2026-06-24T16:40:03.872Z
+Stopped at: Completed 12-06-PLAN.md gap fixes — bio save independence and delete eligibility
 Resume file: 
 
 None

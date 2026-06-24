@@ -128,12 +128,12 @@ Plans:
   4. Operator can select a source and a target person and initiate a merge; all utterances, aliases, and appearances transfer to the target before the source is deleted
   5. Before committing a merge, the operator sees a count of utterances, aliases, and appearances that will transfer
 
-**Plans**: 5/7 plans executed
+**Plans**: 6/7 plans executed
 
 Plans:
 
 - [x] 12-05-PLAN.md
-- [ ] 12-06-PLAN.md
+- [x] 12-06-PLAN.md
 - [ ] 12-07-PLAN.md
 
 **Wave 1**
@@ -198,6 +198,6 @@ Plans:
 | 9. People Data Model Migration | v1.2 | 3/3 | Complete    | 2026-06-19 |
 | 10. Unified Navigation | v1.2 | 1/1 | Complete   | 2026-06-22 |
 | 11. Argument Metadata Editing | v1.2 | 4/4 | Complete   | 2026-06-22 |
-| 12. People Admin Improvements | v1.2 | 5/7 | In Progress|  |
+| 12. People Admin Improvements | v1.2 | 6/7 | In Progress|  |
 | 13. Ingestion Flow Polish | v1.2 | 0/? | Not started | — |
 | 14. Speaker Popover Card | v1.2 | 0/? | Not started | — |

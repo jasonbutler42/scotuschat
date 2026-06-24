@@ -1,130 +1,184 @@
 ---
 phase: 13-ingestion-flow-polish
 plan: "03"
-subsystem: frontend
-status: partial
-tags: [svelte, combobox, polling, badge, ux, accessibility]
-requires: []
-provides: [lastKnownStep-fallback, custom-combobox]
-affects: [job-detail-page]
-tech_stack:
+subsystem: ui
+tags: [svelte5, runes, combobox, polling, step-badge, pipeline, discrepancy-review, accessibility]
+
+requires:
+  - phase: 07-pipeline-runner
+    provides: discrepancy review table, AddNewPersonForm, handleSelectPerson, datalist typeahead
+  - phase: 13-ingestion-flow-polish
+    provides: phase context, UI-SPEC for combobox and step-badge fallback
+
+provides:
+  - lastKnownStep $state fallback preventing step badges from flashing all-pending during null current_step transitions
+  - 1s poll interval for running jobs (down from 2500ms)
+  - custom Svelte 5 Runes combobox replacing native datalist typeahead in the correcting branch
+  - combobox hidden when AddNewPersonForm is active to prevent UI ambiguity
+
+affects: [13-ingestion-flow-polish, 14-ui-polish, pipeline-job-detail-page]
+
+tech-stack:
   added: []
-  patterns: [svelte-action-outside-click, svelte5-runes-combobox]
-key_files:
+  patterns:
+    - "lastKnownStep $state pattern: track last non-null current_step; pass as fallback to stepStatus only when status=running"
+    - "Custom combobox pattern: position:relative container + text input + conditional ul[role=listbox]; outside-click via $effect document listener"
+    - "Per-row combobox state keyed by raw_speaker_label extended into existing RowState interface"
+    - "Combobox visibility tied to sub-form state: hide container when inline form is active"
+
+key-files:
+  created: []
   modified:
     - app/src/routes/admin/pipeline/[job_id]/+page.svelte
-decisions:
+
+key-decisions:
   - "lastKnownStep $state declared outside the poll $effect; updated inside setInterval on non-null current_step; effectiveJob spreads in the fallback at the stepStatus call site"
   - "comboOutsideClick is a Svelte action (not a bare $effect) so each combobox instance registers and cleans up its own document listener independently"
-  - "filteredCandidates is a {@const $derived} expression inside the #each loop rather than a top-level $derived, because candidates are per-row and keyed by rowKey"
-  - "Combobox always shows dropdown on focus (not only when query length > 0) per UI-SPEC open/close rules; matches Interaction State Map row 'Correcting, empty query'"
-  - "comboHighlight index includes filteredCandidates.length as the sentinel for the Add new person item, so Up/Down wraps cleanly"
-metrics:
-  duration: "~3 minutes"
-  completed: 2026-06-24
-  task_count: 2
-  file_count: 1
+  - "filteredCandidates is a {@const} expression inside the #each loop (not a top-level $derived) because candidates are per-row and keyed by rowKey"
+  - "Combobox always shows dropdown on focus (not only when query length > 0) per UI-SPEC open/close rules"
+  - "comboHighlight index includes filteredCandidates.length as the sentinel for the Add new person item"
+  - "Combobox container hidden (display:none) when s.addingPerson is true — form fields unambiguous; combobox input disappears so operator focus goes to Full Name and Role inputs"
+  - "Role field in AddNewPersonForm remains a plain text input — confirmed never a select across all git history"
+
+patterns-established:
+  - "Step-badge null-transition guard: lastKnownStep fallback pattern for poll-driven step cards"
+  - "Combobox visibility tied to form state: hide combobox container when inline sub-form is active"
+
+requirements-completed: [PIPE-18, PIPE-19]
+
+duration: ~45min (including checkpoint verification and regression investigation)
+completed: 2026-06-24
+status: complete
 ---
 
 # Phase 13 Plan 03: Step Badge Fallback + Custom Combobox Summary
 
-**One-liner:** `lastKnownStep` $state fallback keeps Running badge stable during null `current_step` transitions; custom Svelte 5 Runes combobox (no dep) replaces the browser-inconsistent native datalist typeahead.
+**`lastKnownStep` fallback keeps Running badge stable during null `current_step` transitions; custom Svelte 5 Runes combobox replaces native datalist with keyboard/outside-click/filter; combobox hidden when AddNewPersonForm is active**
 
-**Status:** PARTIAL — Tasks 1 and 2 complete and committed; Task 3 (human-verify checkpoint) is pending operator review.
+## Performance
 
----
+- **Duration:** ~45 min (including checkpoint verification and regression investigation)
+- **Started:** 2026-06-24T14:15:00Z
+- **Completed:** 2026-06-24T15:05:00Z
+- **Tasks:** 2 implementation + 1 human-verify checkpoint + 1 post-checkpoint fix
+- **Files modified:** 1
 
-## Tasks Completed
+## Accomplishments
 
-| Task | Description | Commit |
-|------|-------------|--------|
-| 1 | PIPE-18: lastKnownStep fallback + 1s poll interval + console.debug diagnostic | 7ddc157 |
-| 2 | PIPE-19: custom Svelte combobox replacing native datalist | 63118c6 |
+- PIPE-18: `lastKnownStep $state` tracks the last non-null `current_step`; stepStatus receives `current_step ?? lastKnownStep` when running, keeping the last active step showing "Running" through the null gap between pipeline steps
+- PIPE-18: Poll interval reduced from 2500ms to 1000ms; TERMINAL short-circuit (completed/failed/paused) unchanged; `console.debug('[poll]')` diagnostic retained
+- PIPE-19: Custom `<input role="combobox">` + `<ul role="listbox">` replaces native `<datalist>`; filters candidates case-insensitively on name+role; "Add new person" always last in accent blue; keyboard Up/Down/Enter/Escape navigation
+- Post-checkpoint: Combobox container set to `display:none` when `s.addingPerson` is true, removing the UI ambiguity that caused the user to report a "missing" role field
 
----
+## Task Commits
+
+1. **Task 1: PIPE-18 — lastKnownStep fallback + 1s poll** — `7ddc157` (fix)
+2. **Task 2: PIPE-19 — custom Svelte combobox** — `63118c6` (feat)
+3. **Checkpoint docs (pre-verify)** — `e4302e4` (docs)
+4. **Post-checkpoint regression fix** — `a25bd41` (fix)
+
+## Files Created/Modified
+
+- `app/src/routes/admin/pipeline/[job_id]/+page.svelte` — All changes in this one file:
+  - Added `lastKnownStep $state`, poll assignment, `effectiveJob` call-site fallback for `stepStatus`
+  - Added `comboQuery`, `comboOpen`, `comboHighlight` per-row state fields to `RowState` interface
+  - Replaced `<input list>` + `<datalist>` with custom combobox div + input + ul + `comboOutsideClick` action
+  - Set combobox container `display:none` when `s.addingPerson` is true
 
 ## What Was Built
 
 ### Task 1 — PIPE-18: Step Badge Null-Transition Fallback (7ddc157)
 
-**File:** `app/src/routes/admin/pipeline/[job_id]/+page.svelte`
+Three changes to `app/src/routes/admin/pipeline/[job_id]/+page.svelte`:
 
-Three changes:
+1. **`lastKnownStep` `$state`** — declared outside the `$effect` poll loop, initialized from `data.job.current_step ?? null`. Tracks the most recent non-null `current_step` across poll cycles.
 
-1. **`lastKnownStep` $state** — declared outside the `$effect` poll loop, initialized from `data.job.current_step ?? null`. Tracks the most recent non-null `current_step` so the UI can fall back to it during transitions.
+2. **Poll loop updates + diagnostic log** — inside the `setInterval` callback, `lastKnownStep` is assigned when `data.job.current_step` is non-null. `console.debug('[poll]', { status, current_step })` retained for live diagnostics.
 
-2. **Poll loop updates + diagnostic log** — inside the `setInterval` callback (after `invalidateAll()`), `lastKnownStep` is assigned when `data.job.current_step` is non-null. A `console.debug('[poll]', { status, current_step })` call remains in place for live diagnostics (D-02).
+3. **`effectiveJob` at the call site** — `{#each STEP_ORDER}` computes `effectiveJob` via a spread that substitutes `lastKnownStep` for `current_step` when `status === 'running'` and `current_step === null`. Passed to `stepStatus()` instead of `data.job` directly. Failed/paused/completed branches unchanged.
 
-3. **`effectiveJob` at the call site** — the `{#each STEP_ORDER}` block now computes `effectiveJob` using a spread that substitutes `lastKnownStep` for `current_step` when `status === 'running'` and `current_step === null`. This is passed to `stepStatus()` instead of `data.job` directly. The `failed`/`paused`/`completed` branches of `stepStatus()` are unchanged.
-
-4. **Poll interval** — `setInterval` delay changed from `2500` to `1000`. The `TERMINAL` short-circuit (`completed`/`failed`/`paused`) is unchanged.
+4. **Poll interval** — `setInterval` delay changed from `2500` to `1000`. TERMINAL short-circuit unchanged.
 
 ### Task 2 — PIPE-19: Custom Svelte Combobox (63118c6)
 
-**File:** `app/src/routes/admin/pipeline/[job_id]/+page.svelte`
+Replaced `<input list> + <datalist>` in `{:else if s?.correcting}` with a fully custom combobox.
 
-Replaced the `<input list> + <datalist>` block inside `{:else if s?.correcting}` with a fully custom combobox.
+**State additions to `RowState`:** `comboQuery: string`, `comboOpen: boolean`, `comboHighlight: number` (index into `filteredCandidates`; `.length` = "Add new person" sentinel).
 
-**State additions to `RowState`:** `comboQuery: string`, `comboOpen: boolean`, `comboHighlight: number` (index into filteredCandidates; `filteredCandidates.length` = "Add new person" sentinel).
+**`comboOutsideClick` Svelte action:** uses an internal `$effect` to add/remove a `document` click listener; closes dropdown when click target is outside the container.
 
-**`comboOutsideClick` Svelte action:** registered on the container `<div>`; uses an internal `$effect` to add/remove a `document` click listener that closes the dropdown when the click target is outside the container.
+**Combobox structure:** container `<div style="position: relative; width: 100%;">` + `<input role="combobox">` + `{#if s.comboOpen}` `<ul role="listbox">` with `<li role="option">` candidates. "Add new person" always last, color `#93c5fd`. `handleSelectPerson` and `getRowCandidates` functions unchanged.
 
-**Combobox structure:**
-- Container `<div style="position: relative; width: 100%;">` with `use:comboOutsideClick`
-- `<input role="combobox" aria-expanded aria-haspopup="listbox" aria-controls aria-autocomplete="list" aria-label="Search for speaker" placeholder="Type to search…">` — styled per UI-SPEC (bg `#0f1117`, border `1px solid #93c5fd`, radius 6px, padding `6px 10px`, 16px text, `#e2e8f0`)
-- `{#if s.comboOpen}` → `<ul role="listbox" id={comboId}>` (absolute, top 100%, full width, bg `#1e293b`, border `#334155`, radius 6px, max-height 240px, z-index 10)
-- `{#each filteredCandidates}` → `<li role="option" aria-selected={false}>` with hover/keyboard highlight (`#334155` bg when highlighted, else `#1e293b`)
-- "Add new person" `<li>` always last, color `#93c5fd`, 14px, calls `handleSelectPerson(rowKey, '__add_new__')`
+### Post-Checkpoint Fix — Combobox Hidden When AddNewPersonForm Active (a25bd41)
 
-**Filter:** `{@const filteredCandidates = candidates.filter(c => text.toLowerCase().includes(query.toLowerCase()))}` — case-insensitive contains on `full_name + role_name`.
+During human verification, user reported "no longer the dropdown to select/add Role" when clicking "Add new person."
 
-**Keyboard:** Up/Down moves highlight, Enter selects highlighted item (or "Add new person"), Escape clears query and closes dropdown.
+**Investigation:** Full git bisect from `d24329a` through `a25bd41` confirmed the AddNewPersonForm role field has always been `<input type="text" name="role_name">` — never a `<select>`. The plain text input was not removed or altered by Task 2.
 
-**Behavior:** `handleSelectPerson` and `getRowCandidates` functions are unchanged. `AddNewPersonForm` block is unchanged and still renders below the combobox when `s.addingPerson` is true.
+**Root cause identified:** When `s.addingPerson = true`, the combobox search input remained visible above the AddNewPersonForm, presenting two unlabeled text inputs simultaneously. The combobox input (which was no longer relevant) was the source of confusion.
 
----
+**Fix:** Added `{s.addingPerson ? ' display: none;' : ''}` to the combobox container `<div>` style. When AddNewPersonForm is open, the combobox input hides; when the form closes (on successful save), it reappears.
+
+## Decisions Made
+
+- `lastKnownStep` initialized from `data.job.current_step ?? null` on page load — retains last known step across null transitions without resetting on each poll
+- `comboOutsideClick` uses Svelte action (not bare `$effect`) so each row instance owns its own listener lifecycle
+- Combobox hidden (not conditionally removed) on `s.addingPerson` to avoid remounting and resetting combobox state
+- Role field kept as `<input type="text">` — confirmed correct per historical intent (D-13 from 07-CONTEXT: "name + role only" minimal creation form; role is free-text, not a join to the roles table)
 
 ## Deviations from Plan
 
 ### Auto-fixed Issues
 
-None.
+**1. [Rule 1 - Bug] Combobox input visible alongside AddNewPersonForm causing UI ambiguity**
 
-### Notes
-
-1. `filteredCandidates` is computed as a `{@const}` block inside the `{#each}` loop (not a top-level `$derived`) because candidates are scoped per row and there is no stable per-row `$derived` anchor outside the template. This is idiomatic for per-row data in a Svelte `{#each}` loop.
-
-2. The `comboOutsideClick` action uses an internal `$effect` to register the document listener within the Svelte reactivity lifecycle, ensuring cleanup runs correctly when the correcting branch unmounts.
-
-3. `handleSelectPerson` sets `s.correcting = true` after a correction (keeping the correcting UI visible but with a "Corrected" disposition). This pre-existing behavior is unchanged — the combobox closes its dropdown on selection (`s.comboOpen = false`) but does not touch `s.correcting`.
-
----
-
-## Threat Surface Scan
-
-No new network endpoints, auth paths, or file access patterns introduced. The combobox query string is used only for client-side `.includes` filtering of already-loaded in-memory data (`data.people`). Selection submits a numeric `person_id` through the existing validated resolve action. Matches T-13-05 and T-13-06 dispositions from the plan threat register (both accepted).
+- **Found during:** Human checkpoint verification (Task 3)
+- **Issue:** User reported "no longer the dropdown to select/add Role." Investigation confirmed the role text input in AddNewPersonForm was present and unchanged. The actual problem: the combobox search input remained visible above the AddNewPersonForm when `s.addingPerson = true`, making the UI ambiguous.
+- **Fix:** `{s.addingPerson ? ' display: none;' : ''}` added to combobox container style attribute
+- **Files modified:** `app/src/routes/admin/pipeline/[job_id]/+page.svelte`
+- **Verification:** `svelte-check` 0 errors; `grep -n "new-person-role"` confirms role input at lines 755 and 761
+- **Committed in:** `a25bd41`
 
 ---
+
+**Total deviations:** 1 auto-fixed (Rule 1 — UI ambiguity bug discovered at verification)
+**Impact on plan:** Surgical single-attribute fix. AddNewPersonForm behavior and server action unchanged.
+
+## Future Consideration (captured, not implemented)
+
+**Cancel button UX (user-requested, deferred):** When the combobox dropdown is open, the trigger/search input button could visually change to "Cancel" text. This is a UX polish enhancement — not a bug, not part of PIPE-18 or PIPE-19 scope. Candidate for Phase 14 UI polish.
 
 ## Known Stubs
 
-None. Both changes are complete behavioral implementations with no placeholder data or TODO markers.
+None — all form fields wire to live server actions; no placeholder or mock data.
 
----
+## Threat Surface Scan
+
+No new network endpoints, auth paths, or file access patterns introduced. Combobox query is used only for client-side `.includes` filtering of already-loaded `data.people`. Selection submits a numeric `person_id` through the existing validated resolve action. Consistent with T-13-05 and T-13-06 accepted dispositions in the plan threat register.
 
 ## Self-Check: PASSED
 
 - [x] `app/src/routes/admin/pipeline/[job_id]/+page.svelte` modified and committed
-- [x] Commit 7ddc157 exists (Task 1)
-- [x] Commit 63118c6 exists (Task 2)
+- [x] Commit `7ddc157` exists (Task 1)
+- [x] Commit `63118c6` exists (Task 2)
+- [x] Commit `a25bd41` exists (post-checkpoint fix)
 - [x] `grep -c "<datalist"` → 0
-- [x] `grep -n 'role="combobox"'` → line 574
-- [x] `grep -n 'role="listbox"'` → line 630
-- [x] `grep -n 'role="option"'` → lines 650, 671
-- [x] `grep -n "lastKnownStep"` → 4 matches (declaration, update, call site, effectiveJob)
-- [x] `grep -n "1000"` → line 57 (setInterval delay)
+- [x] `grep -n 'role="combobox"'` → present
+- [x] `grep -n 'role="listbox"'` → present
+- [x] `grep -n 'role="option"'` → present
+- [x] `grep -n "lastKnownStep"` → 4+ matches
 - [x] `grep -c "2500"` → 0
+- [x] `grep -n "new-person-role"` → lines 755 and 761 (role field present in AddNewPersonForm)
 - [x] `npx svelte-check` → 0 errors
-- [x] `git diff app/package.json` → empty (no new dependencies)
+- [x] Human checkpoint: PIPE-18 passing, PIPE-19 all 7 interaction tests passing
+- [x] Post-checkpoint fix applied and committed
 
-**Pending:** Task 3 (human-verify checkpoint) — operator must confirm step badge fallback and combobox behavior in a live running app before plan is marked complete.
+## Next Phase Readiness
+
+- PIPE-18 and PIPE-19 complete; job detail page step-badge and combobox UX are verified
+- Phase 13 Plan 03 is the final plan in Phase 13 — phase complete
+- Ready for Phase 13 wrap-up or Phase 14
+
+---
+*Phase: 13-ingestion-flow-polish*
+*Completed: 2026-06-24*

@@ -44,7 +44,7 @@ Full phase details: `.planning/milestones/v1.1-ROADMAP.md`
 - [x] **Phase 10: Unified Navigation** - Admin and public pages share one top navigation component (completed 2026-06-22)
 - [x] **Phase 11: Argument Metadata Editing** - Operator can correct case title, docket, and date before resolving (completed 2026-06-22)
 - [x] **Phase 12: People Admin Improvements** - Image upload, delete orphaned records, and merge duplicate people (completed 2026-06-23)
-- [ ] **Phase 13: Ingestion Flow Polish** - Fix progress indicators, typeahead, and incomplete filter
+- [x] **Phase 13: Ingestion Flow Polish** - Fix progress indicators, typeahead, and incomplete filter (completed 2026-06-24)
 - [ ] **Phase 14: Speaker Popover Card** - Avatar click shows bench speaker details with photo, role, and tenure
 
 ## Phase Details
@@ -175,7 +175,7 @@ Plans:
 
 **Wave 2** *(blocked on 13-01)*
 
-- [ ] 13-02-PLAN.md — Pipeline list incomplete toggle + load param forwarding + filter-on empty state (PIPE-20)
+- [x] 13-02-PLAN.md — Pipeline list incomplete toggle + load param forwarding + filter-on empty state (PIPE-20) [rolled into 13-01]
 
 **UI hint**: yes
 

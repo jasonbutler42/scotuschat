@@ -13,8 +13,8 @@ progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 18
-  completed_plans: 17
-  percent: 67
+  completed_plans: 18
+  percent: 100
 ---
 
 # Project State
@@ -30,10 +30,10 @@ See: .planning/PROJECT.md (updated 2026-06-18 after v1.2 milestone start)
 
 Phase: 13 (ingestion-flow-polish) — EXECUTING
 Phase: 13 — pending planning
-Status: Executing Phase 13
-Last activity: 2026-06-24 — Phase 13 execution started
+Status: Phase 13 complete — all 3 plans done (13-01, 13-02 skipped/merged into 13-01, 13-03)
+Last activity: 2026-06-24 — Phase 13 Plan 03 complete
 
-Progress: [████████░░] 83%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -69,6 +69,8 @@ Progress: [████████░░] 83%
 | Phase 12 P05 | 1 | 2 tasks | 2 files |
 | Phase 12 P06 | 3 | 2 tasks | 1 files |
 | Phase 12 P07 | 8 | 3 tasks | 2 files |
+| Phase 13 P01 | ~30 | 2 tasks | 4 files |
+| Phase 13 P03 | ~45 | 3 tasks + fix | 1 files |
 
 ## Accumulated Context
 
@@ -114,6 +116,9 @@ Full log in PROJECT.md Key Decisions table. Key decisions for v1.2:
 - [Phase ?]: [12-04]: Delete button branched via {#if data.can_delete} for correct aria-describedby tooltip wiring (D-06, PADM-02)
 - [Phase ?]: [12-06]: Bio-only save redirects immediately after bio PATCH — no FastAPI photo call when outForm is empty (Gap C closed)
 - [Phase ?]: [12-06]: Aliases removed from can_delete and delete_block_count — backend deletes them before orphan check, frontend must match (Gap D closed)
+- [13-03]: lastKnownStep $state tracks last non-null current_step; passed as fallback to stepStatus only when status=running and current_step=null (PIPE-18)
+- [13-03]: Custom Svelte 5 Runes combobox replaces native datalist — no new dependency; per-row state in RowState interface (PIPE-19)
+- [13-03]: Combobox container hidden (display:none) when s.addingPerson is true — AddNewPersonForm fields unambiguous
 
 ### Pending Todos
 
@@ -137,8 +142,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-24T19:18:32.305Z
-Stopped at: Phase 13 UI-SPEC approved
-Resume file: 
-
-None
+Last session: 2026-06-24T20:05:00.000Z
+Stopped at: Phase 13 Plan 03 complete — all plans done, phase complete
+Resume file: None

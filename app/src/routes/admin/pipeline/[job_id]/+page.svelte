@@ -74,6 +74,10 @@
 		newPersonName: string;
 		newPersonRole: string;
 		newPersonError: string | null;
+		// PIPE-19: custom combobox state
+		comboQuery: string;
+		comboOpen: boolean;
+		comboHighlight: number; // index into filteredCandidates (-1 = none)
 	}
 
 	let rowStates = $state<Record<string, RowState>>({});
@@ -107,6 +111,10 @@
 					newPersonName: '',
 					newPersonRole: '',
 					newPersonError: null,
+					// PIPE-19: custom combobox state
+					comboQuery: '',
+					comboOpen: false,
+					comboHighlight: -1,
 				};
 			}
 		}
@@ -261,6 +269,29 @@
 			seen.add(c.id);
 			return true;
 		});
+	}
+
+	// PIPE-19: Svelte action — close combobox dropdown when operator clicks outside the container.
+	function comboOutsideClick(container: HTMLElement, rowKey: string) {
+		function handleClick(e: MouseEvent) {
+			if (!container.contains(e.target as Node)) {
+				const s = rowStates[rowKey];
+				if (s) {
+					s.comboOpen = false;
+				}
+			}
+		}
+		$effect(() => {
+			document.addEventListener('click', handleClick);
+			return () => {
+				document.removeEventListener('click', handleClick);
+			};
+		});
+		return {
+			destroy() {
+				document.removeEventListener('click', handleClick);
+			}
+		};
 	}
 </script>
 
@@ -527,42 +558,136 @@
 													</span>
 												{/if}
 											{:else if s?.correcting}
-												<!-- Typeahead combobox: text input + datalist for filter-as-you-type -->
-												{@const listId = `candidates-${rowKey.replace(/\s+/g, '-')}`}
-											{@const candidates = getRowCandidates(row, rowKey)}
-												<input
-													list={listId}
-													type="text"
-													placeholder="Type to search—"
-													aria-label="Search for speaker"
-													style="
-														background-color: #0f1117;
-														border: 1px solid #93c5fd;
-														border-radius: 6px;
-														padding: 6px 10px;
-														font-size: 16px;
-														color: #e2e8f0;
-														width: 100%;
-													"
-													oninput={(e) => {
-														const val = (e.target as HTMLInputElement).value;
-														const match = candidates.find(c => {
-															const display = c.role_name ? `${c.full_name} (${c.role_name})` : c.full_name;
-															return display === val;
-														});
-														if (match) {
-															handleSelectPerson(rowKey, match.id.toString());
-														} else if (val === '— Add new person —') {
-															handleSelectPerson(rowKey, '__add_new__');
-														}
-													}}
-												/>
-												<datalist id={listId}>
-													{#each candidates as candidate (candidate.id)}
-														<option value={candidate.role_name ? `${candidate.full_name} (${candidate.role_name})` : candidate.full_name}></option>
-													{/each}
-													<option value="— Add new person —"></option>
-												</datalist>
+												<!-- PIPE-19: custom combobox — replaces native datalist typeahead -->
+												{@const comboId = `listbox-${rowKey.replace(/\s+/g, '-')}`}
+												{@const candidates = getRowCandidates(row, rowKey)}
+												{@const filteredCandidates = candidates.filter(c => {
+													const text = c.role_name ? `${c.full_name} ${c.role_name}` : c.full_name;
+													return text.toLowerCase().includes((s.comboQuery ?? '').toLowerCase());
+												})}
+												<div
+													style="position: relative; width: 100%;"
+													use:comboOutsideClick={rowKey}
+												>
+													<input
+														type="text"
+														role="combobox"
+														aria-expanded={s.comboOpen}
+														aria-haspopup="listbox"
+														aria-controls={comboId}
+														aria-autocomplete="list"
+														aria-label="Search for speaker"
+														placeholder="Type to search…"
+														value={s.comboQuery}
+														style="
+															background-color: #0f1117;
+															border: 1px solid #93c5fd;
+															border-radius: 6px;
+															padding: 6px 10px;
+															font-size: 16px;
+															color: #e2e8f0;
+															width: 100%;
+															box-sizing: border-box;
+														"
+														onfocus={() => {
+															s.comboOpen = true;
+															s.comboHighlight = -1;
+														}}
+														oninput={(e) => {
+															s.comboQuery = (e.target as HTMLInputElement).value;
+															s.comboOpen = true;
+															s.comboHighlight = -1;
+														}}
+														onkeydown={(e) => {
+															if (e.key === 'ArrowDown') {
+																e.preventDefault();
+																s.comboHighlight = Math.min(s.comboHighlight + 1, filteredCandidates.length);
+															} else if (e.key === 'ArrowUp') {
+																e.preventDefault();
+																s.comboHighlight = Math.max(s.comboHighlight - 1, -1);
+															} else if (e.key === 'Enter') {
+																e.preventDefault();
+																if (s.comboHighlight === filteredCandidates.length) {
+																	// "Add new person" highlighted
+																	handleSelectPerson(rowKey, '__add_new__');
+																	s.comboOpen = false;
+																} else if (s.comboHighlight >= 0 && s.comboHighlight < filteredCandidates.length) {
+																	const picked = filteredCandidates[s.comboHighlight];
+																	s.comboQuery = picked.full_name;
+																	handleSelectPerson(rowKey, picked.id.toString());
+																	s.comboOpen = false;
+																}
+															} else if (e.key === 'Escape') {
+																s.comboQuery = '';
+																s.comboOpen = false;
+																s.comboHighlight = -1;
+															}
+														}}
+													/>
+													{#if s.comboOpen}
+														<ul
+															id={comboId}
+															role="listbox"
+															style="
+																position: absolute;
+																top: 100%;
+																left: 0;
+																width: 100%;
+																margin-top: 4px;
+																background-color: #1e293b;
+																border: 1px solid #334155;
+																border-radius: 6px;
+																padding: 4px 0;
+																max-height: 240px;
+																overflow-y: auto;
+																z-index: 10;
+																list-style: none;
+																margin: 4px 0 0 0;
+															"
+														>
+															{#each filteredCandidates as candidate, idx (candidate.id)}
+																<li
+																	role="option"
+																	aria-selected={false}
+																	style="
+																		padding: 8px 12px;
+																		font-size: 16px;
+																		color: #e2e8f0;
+																		cursor: pointer;
+																		background-color: {s.comboHighlight === idx ? '#334155' : '#1e293b'};
+																	"
+																	onmouseenter={() => { s.comboHighlight = idx; }}
+																	onclick={() => {
+																		s.comboQuery = candidate.full_name;
+																		handleSelectPerson(rowKey, candidate.id.toString());
+																		s.comboOpen = false;
+																	}}
+																>
+																	{candidate.full_name}{#if candidate.role_name}<span style="font-size: 14px; color: #94a3b8; margin-left: 4px;">({candidate.role_name})</span>{/if}
+																</li>
+															{/each}
+															<!-- "Add new person" always last, regardless of query -->
+															<li
+																role="option"
+																aria-selected={false}
+																style="
+																	padding: 8px 12px;
+																	font-size: 14px;
+																	color: #93c5fd;
+																	cursor: pointer;
+																	background-color: {s.comboHighlight === filteredCandidates.length ? '#334155' : '#1e293b'};
+																"
+																onmouseenter={() => { s.comboHighlight = filteredCandidates.length; }}
+																onclick={() => {
+																	handleSelectPerson(rowKey, '__add_new__');
+																	s.comboOpen = false;
+																}}
+															>
+																Add new person
+															</li>
+														</ul>
+													{/if}
+												</div>
 
 												<!-- AddNewPersonForm: inline below dropdown when Add new person selected.
 												     Uses use:enhance so SvelteKit handles devalue deserialization

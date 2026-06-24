@@ -120,6 +120,16 @@
 	let mergeError = $state<string | null>(null);
 	let mergeSubmitting = $state(false);
 
+	// Reset merge state when navigating to a different person (SvelteKit soft navigation
+	// reuses the component — $state variables must be reset manually when person.id changes).
+	$effect(() => {
+		data.person.id;
+		mergeTargetId = '';
+		mergePreview = null;
+		mergeError = null;
+		mergeLoading = false;
+	});
+
 	async function fetchMergePreview(targetId: string) {
 		mergePreview = null;
 		mergeError = null;

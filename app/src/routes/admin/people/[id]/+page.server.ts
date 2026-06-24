@@ -119,14 +119,11 @@ export const load: PageServerLoad = async ({ fetch, params }) => {
 		);
 		if (previewRes.ok) {
 			const counts: MergePreviewCounts = await previewRes.json();
-			const total =
-				counts.utterances + counts.aliases + counts.appearances + counts.argument_participants;
 			can_delete =
 				counts.utterances === 0 &&
-				counts.aliases === 0 &&
 				counts.appearances === 0 &&
 				counts.argument_participants === 0;
-			delete_block_count = total;
+			delete_block_count = counts.utterances + counts.appearances + counts.argument_participants;
 		}
 	} catch {
 		// Degrade gracefully: can_delete stays false (safe default), delete_block_count stays 0

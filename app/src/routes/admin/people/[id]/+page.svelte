@@ -651,7 +651,7 @@
 			type="submit"
 			form="save-form"
 			disabled={saveSubmitting}
-			style="display: block; width: 100%; min-height: 44px; background: transparent; border: 1px solid #93c5fd; border-radius: 6px; font-size: 16px; font-weight: 600; color: #e2e8f0; cursor: pointer; margin-top: 8px; opacity: {saveSubmitting ? 0.7 : 1};"
+			style="display: block; width: 100%; min-height: 44px; background: transparent; border: 1px solid #93c5fd; border-radius: 6px; font-size: 16px; font-weight: 600; color: #e2e8f0; cursor: pointer; margin-top: 8px; margin-bottom: 24px; opacity: {saveSubmitting ? 0.7 : 1};"
 		>
 			{saveSubmitting ? 'Saving…' : 'Save changes'}
 		</button>

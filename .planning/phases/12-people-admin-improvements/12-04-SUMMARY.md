@@ -2,7 +2,7 @@
 phase: 12-people-admin-improvements
 plan: "04"
 subsystem: frontend-ui
-tags: [people, photo, merge, delete, sveltekit, svelte5, runes, form-actions]
+tags: [people, photo, bio, merge, delete, sveltekit, svelte5, runes, form-actions]
 status: complete
 
 dependency_graph:
@@ -12,104 +12,126 @@ dependency_graph:
     - can_delete + delete_block_count in load — Plan 03
     - photo_url_full in load — Plan 03
   provides:
-    - photo preview + Upload/URL tab widget (PADM-01)
+    - bio + photo unified card with photo preview + Upload/URL tab widget (PADM-01)
     - merge section with eager count preview and confirm (PADM-03/PADM-04)
     - eligibility-gated delete section with tooltip (PADM-02)
+    - merge transaction bug fix — drop nested db.begin() (12-01 regression)
   affects:
     - app/src/routes/admin/people/[id]/+page.svelte
+    - app/src/routes/admin/people/[id]/+page.server.ts
+    - api/services/admin_people.py
 
 tech_stack:
   added: []
   patterns:
     - Svelte 5 Runes ($state only — no legacy stores)
     - photo form as sibling to save form (HTML disallows nested forms)
-    - Bio & Photo card split across two adjacent divs — top half in save form, photo widget as standalone form below
+    - Bio & Photo as single standalone card — bio_text + photo widget in one form (post-verify fix)
+    - photo action best-effort PATCHes bio_text before photo fetch (Pitfall 7 extended)
     - fetchMergePreview client-side fetch to same-origin /admin/people/[id]/merge-preview proxy (no ADMIN_TOKEN in client)
     - $state-driven tab toggle (photoTab upload | url) — no page reload
     - can_delete branching for delete button enabled/disabled state
     - aria-describedby + id="delete-tip" for accessible disabled tooltip
+    - flat SQLAlchemy active-session commit pattern — no nested db.begin()
 
 key_files:
   created: []
   modified:
     - app/src/routes/admin/people/[id]/+page.svelte
+    - app/src/routes/admin/people/[id]/+page.server.ts
+    - api/services/admin_people.py
 
 decisions:
-  - "Photo form placed as a sibling div/form adjacent to the save form (HTML nesting prohibition). Bio & Photo card is visually split — bio textarea stays inside the save form's card, photo widget is a continuation card outside the save form. This avoids enctype on the save form (Pitfall 1) and keeps the visual grouping intact."
+  - "Post-verify fix: bio_text moved from save form into photo form. Bio & Photo is now a single card with a single form — bio textarea at top, photo widget below. photo action best-effort PATCHes bio_text before proceeding to photo save. Save action body drops bio_text (Pitfall 7 extended)."
+  - "Post-verify fix: merge_people() dropped async with db.begin() block. SQLAlchemy 2.0 raises InvalidRequestError when db.begin() is called while a transaction is already in progress (started by the fetch-guard SELECTs). Fix: execute UPDATEs and DELETE flat on active session, call db.commit() once after all statements."
+  - "Photo form placed as a sibling div/form adjacent to the save form (HTML nesting prohibition). Bio is in the same form as photo to avoid the visual split created by Court Tenure and Appointment sections sitting between them."
   - "fetchMergePreview fetches /admin/people/${data.person.id}/merge-preview (same-origin relative URL) — the +server.ts proxy injects ADMIN_TOKEN server-side so no token leaks to client (T-12-TOKENLEAK confirmed)"
-  - "Delete button uses Svelte {#if data.can_delete} branching rather than disabled attribute + opacity; each branch renders its own button with appropriate styles — avoids dynamic style strings for the disabled state"
+  - "Delete button uses Svelte {#if data.can_delete} branching rather than disabled attribute + opacity; each branch renders its own button with appropriate styles"
   - "Merge confirm button conditioned on mergeTargetId && mergePreview — only appears after counts are loaded, preventing submission before the preview is visible"
   - "Count display preserves exact integers from the API — no rounding, no paraphrase (audit-relevant per T-12-COUNTFIDELITY)"
 
 metrics:
-  duration_minutes: 30
-  completed_date: "2026-06-23"
+  duration_minutes: 60
+  completed_date: "2026-06-24"
   tasks_completed: 1
-  files_changed: 1
+  files_changed: 3
 ---
 
 # Phase 12 Plan 04: People Edit Page UI Restructure Summary
 
-**One-liner:** Replaced standalone photo_url input with a photo preview + Upload/URL tab widget (separate multipart form), and appended Merge (eager count preview) and Delete (eligibility-gated) sections below the save form in +page.svelte.
+**One-liner:** Restructured people edit page with unified Bio & Photo card (bio + photo in one form), fixed SQLAlchemy nested-transaction crash in merge_people(), and wired photo action to best-effort save bio_text before photo.
 
 ## What Was Built
 
-One file restructured — no new packages, no new routes.
+### Task 1 — Svelte UI (commit b89f6e3)
 
-### app/src/routes/admin/people/[id]/+page.svelte
+**app/src/routes/admin/people/[id]/+page.svelte restructured:**
 
-**Script block additions (Svelte 5 Runes):**
 - `photoTab = $state<'upload' | 'url'>('upload')` — drives tab toggle
-- `photoSubmitting = $state(false)` — drives photo submit button state
-- `mergeTargetId = $state<string>('')` — bound to merge picker select
-- `mergePreview = $state<{...} | null>(null)` — populated by fetchMergePreview
-- `mergeLoading = $state(false)`, `mergeError = $state<string | null>(null)` — fetch state
-- `mergeSubmitting = $state(false)`, `deleteSubmitting = $state(false)` — submit states
-- `fetchMergePreview(targetId)` — async function fetching `/admin/people/${id}/merge-preview?target_id=${targetId}`; sets mergePreview on ok, mergeError on failure, mergeLoading during fetch
+- `photoSubmitting = $state(false)`, `mergeSubmitting = $state(false)`, `deleteSubmitting = $state(false)`
+- `mergeTargetId = $state<string>('')`, `mergePreview = $state<{...} | null>(null)`, `mergeLoading`, `mergeError`
+- `fetchMergePreview(targetId)` — async client-side fetch to same-origin merge-preview proxy
 
-**Bio & Photo section restructure:**
-- The main save form's Bio & Photo card now contains only the bio textarea (bio is still saved via `?/save`)
-- A second adjacent card (outside the save form) contains the photo widget in its own `<form action="?/photo" enctype="multipart/form-data" use:enhance>`
-- Photo preview: 80×80 circle — `<img>` with `object-fit: cover` if `data.person.photo_url_full` is set; else styled initials div (`aria-hidden="true"`)
-- Tab bar: two `type="button"` buttons toggling `photoTab`; active tab has `border-bottom: 2px solid #93c5fd; color: #e2e8f0`, inactive has `border-bottom: 2px solid transparent; color: #94a3b8`
-- Upload panel: `<input type="file" name="photo_file" accept="image/*">` (min-height 44px)
-- URL panel: `<input type="text" name="photo_url" placeholder="https://…">` (matches existing input style)
-- `{#if form?.photoError}` alert paragraph below tabs
-- "Save photo" / "Saving photo…" submit button (accent border `#93c5fd`)
+**Bio & Photo section (Task 1 approach — split across two adjacent cards):**
+- Top card (inside save form): bio textarea only, with zero-corner CSS to visually connect to photo card below
+- Bottom card (outside save form, separate `<form action="?/photo" enctype="multipart/form-data">`): photo preview + tab widget
 
-**Merge section (new card after photo widget):**
-- Card tokens: bg `#1e293b`, border `#334155`, radius 8px, padding 24px
-- Heading "Merge into another person" (20px, 600, `#e2e8f0`)
-- `<form action="?/merge" use:enhance>` with `<select>` bound to `mergeTargetId` + `onchange={() => fetchMergePreview(mergeTargetId)}`
-- Options: blank placeholder "— Select a person —" then `data.people` items (server already excludes current person), sorted as provided by load; option label `{last_name}, {first_name}` or `full_name` fallback
-- Hidden `<input name="target_id">` carries value to action
-- Preview panel (shown when `mergeTargetId` truthy): bg `#0f1117`, border `#334155`; shows "Loading…", error, or count summary
-- Count line format: `N utterance(s) · N alias(es) · N appearance(s) · N argument participant(s)` — exact integers
-- Zero-count variant: "No records to transfer. This person has no associated data."
-- Confirm button (shown when `mergeTargetId && mergePreview`): label "Merge [source] into [target]" / "Merging…"; accent border `#93c5fd`
-- `{#if form?.mergeError}` alert paragraph
+**Merge section:** `<form action="?/merge">` with select picker, hidden target_id input, preview panel showing exact counts, confirm button conditioned on preview loaded.
 
-**Delete section (new card at bottom):**
-- Card tokens identical to merge card; no heading
-- `<form action="?/delete" use:enhance>`
-- When `data.can_delete`: enabled button with `border: 1px solid #ef4444; color: #ef4444; cursor: pointer`; label "Delete person" / "Deleting…"
-- When `!data.can_delete`: `disabled` button with `border: 1px solid #334155; color: #94a3b8; cursor: not-allowed; opacity: 0.7`; plus `<p id="delete-tip">Cannot delete — this person has associated records and cannot be removed.</p>` with `aria-describedby="delete-tip"` on the button
-- `{#if form?.deleteError}` alert paragraph
+**Delete section:** `<form action="?/delete">` with eligibility-gated button — enabled (red border) when `data.can_delete`, disabled (gray, cursor not-allowed) with `aria-describedby` tooltip when not.
 
-**Save form unchanged:**
-- Opening tag: `<form method="POST" action="?/save" use:enhance>` — no `enctype` attribute
-- No `name="photo_url"` input in the save form body
+## Post-Verify Fixes
+
+Two bugs were identified during operator verification and fixed after the checkpoint.
+
+### Fix 1 — Merge transaction crash (commit b11b754)
+
+**File:** `api/services/admin_people.py` — `merge_people()`
+
+**Root cause:** `merge_people()` called `async with db.begin():` after two `SELECT` queries had already started an implicit SQLAlchemy 2.0 transaction. SQLAlchemy 2.0 raises `InvalidRequestError: A transaction is already begun on this Session` when `db.begin()` is nested. The router's generic 500 handler surfaced this as "Merge failed. Please try again." in the UI.
+
+**Fix:** Removed the `async with db.begin():` block. The four `UPDATE` statements and the `DELETE` now execute directly on the active session (part of the same implicit transaction started by the fetch-guard SELECTs), followed by a single `await db.commit()` after all statements complete.
+
+### Fix 2 — Bio & Photo card placement (commit 61504f6)
+
+**Files:** `app/src/routes/admin/people/[id]/+page.svelte` and `+page.server.ts`
+
+**Root cause:** The bio textarea was inside the save form, which sits above Court Tenure and Appointment sections. The photo widget card was below Save Changes. The "connected card" zero-radius CSS did not work because the save form wrapped all those sections between the bio card and the photo card.
+
+**Fix:**
+- Removed bio_text div from inside the save form entirely
+- Removed the zero-corner-radius connected-card hack on the photo widget
+- Made the photo card a proper standalone card with `border-radius: 8px` and an H2 "Bio & Photo" heading
+- Added bio_text textarea at the top of the photo card (above the photo preview)
+- `photo` action now reads `bio_text` from formData and best-effort PATCHes it to `/api/admin/people/{id}` before the photo fetch
+- `save` action body drops `bio_text` (Pitfall 7 extended — both bio and photo managed by photo action)
 
 ## Deviations from Plan
 
 ### Auto-fixed Issues
 
-**1. [Rule 1 - Bug] Restructured photo widget placement to avoid nested form**
+**1. [Rule 1 - Bug] Restructured photo widget placement to avoid nested form (Task 1)**
 - **Found during:** Task 1 (svelte-check: "`<form>` cannot be a descendant of `<form>`")
-- **Issue:** Placing the photo `<form>` inside the Bio & Photo card which was itself inside the save `<form>` created a nested form — HTML-invalid and flagged as a Svelte error.
-- **Fix:** Split the Bio & Photo section into two adjacent cards. The top half (bio textarea) stays inside the save form. The bottom half (photo widget) is a standalone `<form>` sibling outside the save form with visual CSS continuity (rounded corners adjusted to join the two parts).
-- **Files modified:** `app/src/routes/admin/people/[id]/+page.svelte`
+- **Fix:** Split Bio & Photo section into two adjacent cards — bio in save form, photo widget as sibling form. Later superseded by post-verify Fix 2.
 - **Commit:** b89f6e3
+
+**2. [Rule 1 - Bug] SQLAlchemy nested transaction crash in merge_people() (post-verify Fix 1)**
+- **Found during:** Human verify checkpoint — merge endpoint returning 500
+- **Fix:** Dropped `async with db.begin():` block; execute flat on active session + `await db.commit()`
+- **Files modified:** `api/services/admin_people.py`
+- **Commit:** b11b754
+
+**3. [Rule 2 - Missing functionality] Bio textarea placement renders bio below Save Changes button (post-verify Fix 2)**
+- **Found during:** Human verify checkpoint — connected-card CSS not working
+- **Fix:** Unified bio + photo into single standalone card outside save form; photo action saves bio best-effort
+- **Files modified:** `app/src/routes/admin/people/[id]/+page.svelte`, `app/src/routes/admin/people/[id]/+page.server.ts`
+- **Commit:** 61504f6
+
+## Human Verify Checkpoint
+
+- **Status:** Resolved — operator reviewed Task 1 output, identified two issues, provided fix instructions
+- **Issues found:** (1) merge endpoint 500 on nested db.begin(); (2) bio textarea placement below Save Changes
+- **Resolution:** Both fixes applied and committed after checkpoint
 
 ## Known Stubs
 
@@ -118,32 +140,25 @@ None. All data flows from live server load:
 - `data.people` — populated in load as merge picker list (Plan 03)
 - `data.can_delete` — derived in load from merge-preview counts (Plan 03)
 - `mergePreview` — fetched client-side via same-origin proxy on picker change (Plan 03)
+- `data.person.bio_text` — populated in load from FastAPI person detail (Plan 01)
 
 ## Threat Flags
 
 No new threat surface beyond Plan 04's threat model. All five threat entries mitigated:
 - T-12-CLIENTGATE: `data.can_delete` client gate is defense-in-depth; server enforces orphan check (Plan 02)
 - T-12-SELFPICK: picker bound to `data.people` (load already excludes current person); server rejects self-merge with 422 (Plan 01/02)
-- T-12-XSS-PHOTO: `photo_url_full` rendered in `<img src>` only — Svelte auto-escapes attribute values; not executable
+- T-12-XSS-PHOTO: `photo_url_full` rendered in `<img src>` only — Svelte auto-escapes attribute values
 - T-12-TOKENLEAK: client fetches same-origin `/admin/people/[id]/merge-preview` proxy; ADMIN_TOKEN never in client code (Plan 03)
 - T-12-COUNTFIDELITY: counts rendered as exact integers from API — no rounding or paraphrase
 
 ## Self-Check
 
 - [x] `app/src/routes/admin/people/[id]/+page.svelte` — FOUND
+- [x] `app/src/routes/admin/people/[id]/+page.server.ts` — FOUND
+- [x] `api/services/admin_people.py` — FOUND
 - [x] Commit `b89f6e3` — FOUND (feat(12-04): restructure Bio & Photo + add Merge and Delete sections)
-- [x] `name="photo_url"` count = 1 — VERIFIED (grep returns 1)
-- [x] All three actions `?/photo`, `?/merge`, `?/delete` referenced — VERIFIED
-- [x] Save form has no `enctype` attribute — VERIFIED
-- [x] `svelte-check --threshold error` returns 0 errors — VERIFIED
+- [x] Commit `b11b754` — FOUND (fix(12-01): resolve merge transaction error)
+- [x] Commit `61504f6` — FOUND (fix(12-04): move bio_text into photo form)
+- [x] `tsc --noEmit` on people/[id] files — PASSED (tsc ok)
 
 ## Self-Check: PASSED
-
-All artifacts confirmed present and verified.
-
-Commits:
-- b89f6e3: feat(12-04): restructure Bio & Photo + add Merge and Delete sections
-
-## Human Verify Pending
-
-Task 2 (checkpoint:human-verify) is pending operator approval. See checkpoint details in the executor's return message.

@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Pre-Launch Polish
-current_phase: 12
-current_phase_name: people-admin-improvements
-status: planning
+current_phase: 13
+current_phase_name: ingestion-flow-polish
+status: executing
 stopped_at: Phase 13 UI-SPEC approved
-last_updated: "2026-06-24T18:54:13.468Z"
+last_updated: "2026-06-24T19:13:07.156Z"
 last_activity: 2026-06-24
-last_activity_desc: Phase 12 gap closure verified (photo URL fetch, bio save, delete aliases, merge state, card position)
+last_activity_desc: Phase 13 execution started
 progress:
   total_phases: 6
   completed_phases: 4
-  total_plans: 15
-  completed_plans: 15
+  total_plans: 18
+  completed_plans: 16
   percent: 67
 ---
 
@@ -24,14 +24,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-18 after v1.2 milestone start)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** Phase 13 — next phase (planning)
+**Current focus:** Phase 13 — ingestion-flow-polish
 
 ## Current Position
 
-Phase: 12 (people-admin-improvements) — COMPLETE ✓
+Phase: 13 (ingestion-flow-polish) — EXECUTING
 Phase: 13 — pending planning
-Status: Phase 12 verified — all UAT gaps resolved
-Last activity: 2026-06-24 — Phase 12 gap closure verified (photo URL fetch, bio save, delete aliases, merge state, card position)
+Status: Executing Phase 13
+Last activity: 2026-06-24 — Phase 13 execution started
 
 Progress: [████████░░] 83%
 
@@ -137,8 +137,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-24T18:54:13.460Z
+Last session: 2026-06-24T19:13:07.147Z
 Stopped at: Phase 13 UI-SPEC approved
 Resume file: 
 
-.planning/phases/13-ingestion-flow-polish/13-UI-SPEC.md
+None

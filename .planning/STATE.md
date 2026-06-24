@@ -5,8 +5,8 @@ milestone_name: Pre-Launch Polish
 current_phase: 12
 current_phase_name: people-admin-improvements
 status: planning
-stopped_at: Phase 13 context gathered
-last_updated: "2026-06-24T18:37:49.063Z"
+stopped_at: Phase 13 UI-SPEC approved
+last_updated: "2026-06-24T18:54:13.468Z"
 last_activity: 2026-06-24
 last_activity_desc: Phase 12 gap closure verified (photo URL fetch, bio save, delete aliases, merge state, card position)
 progress:
@@ -137,8 +137,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-24T18:37:49.054Z
-Stopped at: Phase 13 context gathered
+Last session: 2026-06-24T18:54:13.460Z
+Stopped at: Phase 13 UI-SPEC approved
 Resume file: 
 
-.planning/phases/13-ingestion-flow-polish/13-CONTEXT.md
+.planning/phases/13-ingestion-flow-polish/13-UI-SPEC.md

@@ -37,5 +37,7 @@ export const GET: RequestHandler = async ({ params, url, fetch }) => {
 	}
 
 	// Return the FastAPI JSON payload — no token echoed back to the client
-	return json(await res.json());
+	// Cache-Control: no-store prevents browser from serving stale cached responses
+	// when the user selects a second merge target (Gap F fix)
+	return json(await res.json(), { headers: { 'Cache-Control': 'no-store' } });
 };

@@ -678,7 +678,7 @@
 					<select
 						id="merge_target_id"
 						bind:value={mergeTargetId}
-						onchange={() => fetchMergePreview(mergeTargetId)}
+						onchange={(e) => fetchMergePreview((e.target as HTMLSelectElement).value)}
 						style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
 					>
 						<option value="">— Select a person —</option>

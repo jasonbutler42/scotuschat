@@ -137,15 +137,15 @@ export const load: PageServerLoad = async ({ fetch, params }) => {
 
 export const actions: Actions = {
 	/**
-	 * save — PATCH the person with all form fields and redirect on success.
+	 * save — PATCH the person with name/role/tenure/appointment fields and redirect on success.
 	 *
 	 * The `tenures` form field carries a JSON-serialized array (Pitfall 3 —
 	 * hidden JSON field strategy). The _key client-side field is stripped before
 	 * sending to FastAPI. Empty role_id converts to null (Open Question 2).
 	 *
-	 * NOTE: photo_url is intentionally NOT sent in this action's PATCH body (Pitfall 7).
-	 * Photo management is exclusive to the `photo` action. Omitting photo_url from
-	 * the PATCH body means the backend leaves the existing photo_url untouched.
+	 * NOTE: bio_text and photo_url are intentionally NOT sent in this action's PATCH body
+	 * (Pitfall 7 extended). Both are managed exclusively by the `photo` action. The Bio &
+	 * Photo card is a single form so bio saves together with photo on every photo action submit.
 	 */
 	save: async ({ request, params, fetch }) => {
 		const formData = await request.formData();
@@ -156,7 +156,7 @@ export const actions: Actions = {
 		if (role_id_raw && isNaN(role_id as number)) {
 			return fail(400, { error: 'Please select a valid role or complete the new-role form before saving.' });
 		}
-		const bio_text = ((formData.get('bio_text') as string) ?? '').trim() || null;
+		// bio_text intentionally omitted — managed exclusively by the photo action (Pitfall 7 extended)
 		// photo_url intentionally omitted — managed exclusively by the photo action (Pitfall 7)
 		const first_name = ((formData.get('first_name') as string) ?? '').trim() || null;
 		const last_name = ((formData.get('last_name') as string) ?? '').trim() || null;
@@ -193,10 +193,11 @@ export const actions: Actions = {
 					'Content-Type': 'application/json',
 				},
 				body: JSON.stringify({
-					full_name, role_id, bio_text, tenures,
+					full_name, role_id, tenures,
 					first_name, last_name, middle_name, name_suffix,
 					appointing_president, appointing_president_party,
-					// photo_url omitted intentionally (Pitfall 7)
+					// bio_text omitted intentionally — managed by photo action (Pitfall 7 extended)
+					// photo_url omitted intentionally — managed by photo action (Pitfall 7)
 				}),
 			});
 		} catch {
@@ -251,18 +252,37 @@ export const actions: Actions = {
 	},
 
 	/**
-	 * photo — Forward multipart form to FastAPI POST /api/admin/people/{id}/photo.
+	 * photo — Save bio_text and forward photo to FastAPI POST /api/admin/people/{id}/photo.
 	 *
-	 * CRITICAL: Do NOT set Content-Type header — Node fetch sets the multipart
-	 * boundary automatically when body is FormData (Pitfall 4).
+	 * This action handles both bio_text and photo because the Bio & Photo section is
+	 * a single card with a single form (Pitfall 7 extended — bio_text excluded from save).
+	 *
+	 * bio_text is saved via a PATCH request before the photo fetch. This is best-effort:
+	 * a failed bio save is not surfaced as an error (consistent with how save action works).
+	 *
+	 * CRITICAL: Do NOT set Content-Type header on the photo fetch — Node fetch sets the
+	 * multipart boundary automatically when body is FormData (Pitfall 4).
 	 *
 	 * Accepts either a file upload (photo_file) or a URL (photo_url).
-	 * On success, redirects to the person's edit page to re-run load with fresh photo_url.
+	 * On success, redirects to the person's edit page to re-run load with fresh data.
 	 */
 	photo: async ({ request, params, fetch }) => {
 		const formData = await request.formData();
+		const bio_text = (formData.get('bio_text') as string | null)?.trim() ?? null;
 		const photoFile = formData.get('photo_file') as File | null;
 		const photoUrl = (formData.get('photo_url') as string | null)?.trim() || null;
+
+		// Best-effort bio save — always run before photo, ignore response (Pitfall 7 extended)
+		await fetch(`${FASTAPI_BASE_URL}/api/admin/people/${params.id}`, {
+			method: 'PATCH',
+			headers: {
+				'Content-Type': 'application/json',
+				'X-Admin-Token': ADMIN_TOKEN,
+			},
+			body: JSON.stringify({ bio_text: bio_text }),
+		}).catch(() => {
+			// Non-critical — bio save failure does not block photo save
+		});
 
 		const outForm = new FormData();
 		if (photoFile && photoFile.size > 0) {

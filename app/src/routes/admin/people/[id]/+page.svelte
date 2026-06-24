@@ -164,8 +164,8 @@
 	<div style="max-width: 640px; margin: 0 auto; padding: 48px 24px;">
 
 		<!-- ══════════════════════════════════════════════════════════════════════
-		     Main save form — covers Basic Info, Bio & Photo (bio only),
-		     Court Tenure, Appointment. Photo is managed by a separate form below.
+		     Main save form — covers Basic Info, Court Tenure, Appointment.
+		     Bio & Photo are managed by a separate form below (Pitfall 7 extended).
 		     IMPORTANT: no enctype on this form (Pitfall 1).
 		     ══════════════════════════════════════════════════════════════════════ -->
 		<form
@@ -375,32 +375,6 @@
 				</div>
 			</div>
 
-			<!-- ── Section 2: Bio & Photo (bio portion — inside save form) ── -->
-			<div
-				style="background-color: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 24px; margin-bottom: 0; border-bottom-left-radius: 0; border-bottom-right-radius: 0; border-bottom: none;"
-			>
-				<h2
-					style="font-size: 20px; font-weight: 600; color: #e2e8f0; margin: 0 0 16px 0; line-height: 1.2;"
-				>
-					Bio &amp; Photo
-				</h2>
-
-				<!-- Bio text — managed by the save form -->
-				<div style="margin-bottom: 0;">
-					<label
-						for="bio_text"
-						style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
-					>
-						Bio
-					</label>
-					<textarea
-						id="bio_text"
-						name="bio_text"
-						style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box; min-height: 120px; resize: vertical; font-family: inherit;"
-					>{data.person.bio_text ?? ''}</textarea>
-				</div>
-			</div>
-
 			<!-- ── Section 3: Court Tenure ── -->
 			<div
 				style="background-color: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 24px; margin-bottom: 24px;"
@@ -559,11 +533,16 @@
 			</button>
 		</form>
 
-		<!-- ── Bio & Photo: photo widget — SEPARATE form, outside the save form (Pitfall 1) ── -->
-		<!-- This continues the "Bio & Photo" card visually (connected bottom of the card above) -->
+		<!-- ── Bio & Photo: single card — bio_text + photo widget (SEPARATE form, outside save form, Pitfall 1) ── -->
 		<div
-			style="background-color: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 24px; margin-bottom: 24px; border-top-left-radius: 0; border-top-right-radius: 0; margin-top: 0;"
+			style="background-color: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 24px; margin-bottom: 24px;"
 		>
+			<h2
+				style="font-size: 20px; font-weight: 600; color: #e2e8f0; margin: 0 0 16px 0; line-height: 1.2;"
+			>
+				Bio &amp; Photo
+			</h2>
+
 			<form
 				method="POST"
 				action="?/photo"
@@ -576,6 +555,21 @@
 					};
 				}}
 			>
+				<!-- bio_text submitted via this form; excluded from the save action (Pitfall 7 extended) -->
+				<div style="margin-bottom: 16px;">
+					<label
+						for="bio_text"
+						style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
+					>
+						Bio
+					</label>
+					<textarea
+						id="bio_text"
+						name="bio_text"
+						style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box; min-height: 120px; resize: vertical; font-family: inherit;"
+					>{data.person.bio_text ?? ''}</textarea>
+				</div>
+
 				<!-- Photo preview: 80×80 circle — image or initials fallback -->
 				<div style="margin-bottom: 16px;">
 					{#if data.person.photo_url_full}

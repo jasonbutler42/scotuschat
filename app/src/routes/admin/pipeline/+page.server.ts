@@ -2,22 +2,28 @@ import { ADMIN_TOKEN, FASTAPI_BASE_URL } from '$env/static/private';
 import { redirect, fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async () => {
+export const load: PageServerLoad = async ({ url }) => {
+	// Read ?incomplete=1 URL param — strict === '1' comparison (T-13-03: any other value → off).
+	const incomplete = url.searchParams.get('incomplete') === '1';
+
+	// Build fetch URL: forward incomplete=true to FastAPI only when the param is active (D-11, D-12).
+	const apiUrl = `${FASTAPI_BASE_URL}/api/admin/jobs${incomplete ? '?incomplete=true' : ''}`;
+
 	// Fetch the 10 most recent pipeline jobs from the admin jobs endpoint.
 	// X-Admin-Token is required for all SvelteKit → FastAPI calls (T-07-12).
 	try {
-		const res = await fetch(`${FASTAPI_BASE_URL}/api/admin/jobs`, {
+		const res = await fetch(apiUrl, {
 			headers: { 'X-Admin-Token': ADMIN_TOKEN },
 		});
 		if (!res.ok) {
 			// Non-OK response — return empty list so the page still renders.
-			return { jobs: [] };
+			return { jobs: [], incomplete };
 		}
 		const jobs = await res.json();
-		return { jobs };
+		return { jobs, incomplete };
 	} catch {
 		// Network error or FastAPI unavailable — return empty list to avoid crash.
-		return { jobs: [] };
+		return { jobs: [], incomplete };
 	}
 };
 

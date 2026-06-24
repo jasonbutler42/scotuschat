@@ -13,8 +13,8 @@ Requirements for the Pre-Launch Polish milestone. Each maps to roadmap phases (p
 
 ### Ingestion & Pipeline
 
-- [ ] **PIPE-18**: Pipeline runner progress indicators accurately reflect step status without stale or incorrect state
-- [ ] **PIPE-19**: Typeahead dropdown for speaker alias correction returns correct candidates and responds to operator input correctly
+- [x] **PIPE-18**: Pipeline runner progress indicators accurately reflect step status without stale or incorrect state
+- [x] **PIPE-19**: Typeahead dropdown for speaker alias correction returns correct candidates and responds to operator input correctly
 - [x] **PIPE-20**: Incomplete filter toggle on the pipeline list shows only jobs requiring operator action
 
 ### Argument Metadata
@@ -76,8 +76,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | NAV-01 | Phase 10 | Complete |
-| PIPE-18 | Phase 13 | Pending |
-| PIPE-19 | Phase 13 | Pending |
+| PIPE-18 | Phase 13 | Complete |
+| PIPE-19 | Phase 13 | Complete |
 | PIPE-20 | Phase 13 | Complete |
 | ARG-01 | Phase 11 | Complete |
 | ARG-02 | Phase 11 | Complete |

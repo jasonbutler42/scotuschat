@@ -100,6 +100,12 @@ def main() -> None:
         help="Question number — Q1 or Q2 (default: 1)",
     )
     ingest_p.add_argument(
+        "--local-file",
+        required=False,
+        default=None,
+        help="Absolute path to a locally saved PDF (dev fallback when object storage is not configured)",
+    )
+    ingest_p.add_argument(
         "--job-id",
         type=int,
         required=False,

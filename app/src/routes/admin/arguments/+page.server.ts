@@ -44,10 +44,13 @@ export const actions: Actions = {
 		const argument_id = formData.get('argument_id') as string;
 
 		try {
-			await fetch(`${FASTAPI_BASE_URL}/api/admin/arguments/${argument_id}/publish`, {
+			const res = await fetch(`${FASTAPI_BASE_URL}/api/admin/arguments/${argument_id}/publish`, {
 				method: 'POST',
 				headers: { 'X-Admin-Token': ADMIN_TOKEN },
 			});
+			if (!res.ok) {
+				console.error('[arguments publish] FastAPI returned', res.status, await res.text());
+			}
 		} catch (err) {
 			console.error('[arguments publish] fetch threw:', err instanceof Error ? err.message : String(err));
 		}

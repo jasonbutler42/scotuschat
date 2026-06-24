@@ -283,12 +283,21 @@ async def _run_ingest_inner(args) -> None:
 
     # ------------------------------------------------------------------
     # Step 4: Download PDF (idempotent — PIPE-02: immutable after ingest)
-    # Source: --url (supremecourt.gov) or --spaces-key (DO Spaces upload)
+    # Source: --url (supremecourt.gov), --spaces-key (object storage upload),
+    #         or --local-file (dev fallback when object storage is not configured)
     # ------------------------------------------------------------------
+    local_file = getattr(args, "local_file", None)
     if pdf_path.exists():
         print(f"PDF already exists at {pdf_path} — skipping download.")
+    elif local_file:
+        # Dev fallback: copy from locally saved upload to the immutable pdf_path.
+        # local_file is an absolute path written by the API before spawning this
+        # subprocess; it is never derived from user input directly.
+        import shutil
+        shutil.copy2(local_file, pdf_path)
+        print(f"Copied local file {local_file} -> {pdf_path}")
     elif spaces_key:
-        # Fetch uploaded PDF from DO Spaces (T-07-08: key is opaque, never
+        # Fetch uploaded PDF from object storage (T-07-08: key is opaque, never
         # used as a local path — dest_path derived from docket, not from key)
         _download_from_spaces(spaces_key, pdf_path)
     else:

@@ -169,6 +169,7 @@
 		     IMPORTANT: no enctype on this form (Pitfall 1).
 		     ══════════════════════════════════════════════════════════════════════ -->
 		<form
+			id="save-form"
 			method="POST"
 			action="?/save"
 			use:enhance={() => {
@@ -516,21 +517,6 @@
 				</div>
 			</div>
 
-			<!-- Form-level error (from save action) -->
-			{#if form?.error}
-				<p role="alert" style="color: #ef4444; font-size: 14px; margin: 0 0 8px 0;">
-					{form.error}
-				</p>
-			{/if}
-
-			<!-- SaveChangesButton (UI-SPEC): full-width, accent border, disabled while submitting -->
-			<button
-				type="submit"
-				disabled={saveSubmitting}
-				style="display: block; width: 100%; min-height: 44px; background: transparent; border: 1px solid #93c5fd; border-radius: 6px; font-size: 16px; font-weight: 600; color: #e2e8f0; cursor: pointer; margin-top: 8px; opacity: {saveSubmitting ? 0.7 : 1};"
-			>
-				{saveSubmitting ? 'Saving…' : 'Save changes'}
-			</button>
 		</form>
 
 		<!-- ── Bio & Photo: single card — bio_text + photo widget (SEPARATE form, outside save form, Pitfall 1) ── -->
@@ -642,6 +628,23 @@
 				</button>
 			</form>
 		</div>
+
+		<!-- Form-level error (from save action) -->
+		{#if form?.error}
+			<p role="alert" style="color: #ef4444; font-size: 14px; margin: 0 0 8px 0;">
+				{form.error}
+			</p>
+		{/if}
+
+		<!-- SaveChangesButton: associated with save-form via form attribute (Gap E fix) -->
+		<button
+			type="submit"
+			form="save-form"
+			disabled={saveSubmitting}
+			style="display: block; width: 100%; min-height: 44px; background: transparent; border: 1px solid #93c5fd; border-radius: 6px; font-size: 16px; font-weight: 600; color: #e2e8f0; cursor: pointer; margin-top: 8px; opacity: {saveSubmitting ? 0.7 : 1};"
+		>
+			{saveSubmitting ? 'Saving…' : 'Save changes'}
+		</button>
 
 		<!-- ── Section 5: Merge (PADM-03/PADM-04) — outside the save form ── -->
 		<div

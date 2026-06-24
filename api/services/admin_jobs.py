@@ -74,11 +74,24 @@ async def get_job(db: AsyncSession, job_id: int) -> AdminJob | None:
     return result.scalar_one_or_none()
 
 
-async def list_jobs(db: AsyncSession, limit: int = 10) -> list[AdminJob]:
-    """Return the most recent `limit` AdminJob rows, newest first."""
-    result = await db.execute(
-        select(AdminJob).order_by(AdminJob.created_at.desc()).limit(limit)
-    )
+async def list_jobs(
+    db: AsyncSession, limit: int = 10, incomplete: bool = False
+) -> list[AdminJob]:
+    """Return the most recent `limit` AdminJob rows, newest first.
+
+    Args:
+        db: Async database session.
+        limit: Maximum number of rows to return (default 10).
+        incomplete: When True, filter to only PAUSED and FAILED jobs (D-10 / PIPE-20).
+                    When False (default), return all jobs regardless of status.
+    """
+    query = select(AdminJob)
+    if incomplete:
+        query = query.where(
+            AdminJob.status.in_([AdminJobStatus.PAUSED, AdminJobStatus.FAILED])
+        )
+    query = query.order_by(AdminJob.created_at.desc()).limit(limit)
+    result = await db.execute(query)
     return list(result.scalars().all())
 
 

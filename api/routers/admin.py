@@ -230,10 +230,16 @@ async def create_job(
 
 @router.get("/jobs", response_model=list[AdminJobResponse])
 async def list_jobs(
+    incomplete: bool = False,
     db: AsyncSession = Depends(get_db),
 ) -> list[AdminJobResponse]:
-    """Return the 10 most recent pipeline jobs, newest first."""
-    return await jobs_service.list_jobs(db, limit=10)  # type: ignore[return-value]
+    """Return the 10 most recent pipeline jobs, newest first.
+
+    Query param:
+    - incomplete=false (default): return all jobs regardless of status
+    - incomplete=true: return only PAUSED and FAILED jobs (require operator action, PIPE-20)
+    """
+    return await jobs_service.list_jobs(db, limit=10, incomplete=incomplete)  # type: ignore[return-value]
 
 
 @router.get("/jobs/{job_id}", response_model=AdminJobResponse)

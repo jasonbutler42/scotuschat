@@ -292,6 +292,11 @@ export const actions: Actions = {
 			outForm.append('photo_url', photoUrl);
 		}
 
+		// If neither a file nor a URL was provided, bio-only save — skip photo upload
+		if (!outForm.has('photo_file') && !outForm.has('photo_url')) {
+			throw redirect(303, '/admin/people/' + params.id);
+		}
+
 		let res: Response;
 		try {
 			res = await fetch(`${FASTAPI_BASE_URL}/api/admin/people/${params.id}/photo`, {

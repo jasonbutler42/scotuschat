@@ -37,13 +37,24 @@
 	// Continue Resolve flips paused → running.
 	// ──────────────────────────────────────────────────────────────────────────
 
+	// PIPE-18 (D-03): last-known-step fallback — when current_step is null during
+	// a running→running step transition, the badge stays on the last known step
+	// rather than flashing all badges to pending.
+	let lastKnownStep = $state<string | null>(data.job.current_step ?? null);
+
 	$effect(() => {
 		const TERMINAL = new Set(['completed', 'failed', 'paused']);
 		if (TERMINAL.has(data.job.status)) return;
 
 		const interval = setInterval(async () => {
 			await invalidateAll();
-		}, 2500);
+			// PIPE-18 (D-02): diagnostic log — captures null current_step transitions in the browser console
+			console.debug('[poll]', { status: data.job.status, current_step: data.job.current_step });
+			// PIPE-18 (D-03): update lastKnownStep whenever current_step is non-null
+			if (data.job.current_step !== null && data.job.current_step !== undefined) {
+				lastKnownStep = data.job.current_step;
+			}
+		}, 1000);
 
 		return () => clearInterval(interval);
 	});
@@ -371,7 +382,10 @@
 			style="display: flex; flex-direction: column; gap: 16px;"
 		>
 			{#each STEP_ORDER as step}
-				{@const status = stepStatus(step, data.job)}
+				{@const effectiveJob = (data.job.status === 'running' && data.job.current_step === null)
+					? { ...data.job, current_step: lastKnownStep }
+					: data.job}
+				{@const status = stepStatus(step, effectiveJob as Job)}
 				{@const color = BADGE_COLOR[status]}
 				{@const glyph = BADGE_GLYPH[status]}
 				{@const label = BADGE_LABEL[status]}

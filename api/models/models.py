@@ -33,8 +33,11 @@ from sqlalchemy.orm import DeclarativeBase
 
 class SideEnum(str, enum.Enum):
     BENCH = "BENCH"
-    ADVOCATE = "ADVOCATE"
+    ADVOCATE = "ADVOCATE"  # legacy — never remove (PG cannot drop enum values)
     UNKNOWN = "UNKNOWN"
+    PETITIONER = "PETITIONER"
+    RESPONDENT = "RESPONDENT"
+    AMICUS = "AMICUS"
 
 
 class PipelineRunStatus(str, enum.Enum):
@@ -57,6 +60,12 @@ class AdminJobStep(str, enum.Enum):
     INGEST = "ingest"
     PARSE = "parse"
     RESOLVE = "resolve"
+
+
+class ArgumentStatusEnum(str, enum.Enum):
+    PIPELINE = "pipeline"
+    DRAFT = "draft"
+    PUBLISHED = "published"
 
 
 # ---------------------------------------------------------------------------
@@ -158,6 +167,15 @@ class Argument(Base):
     # NULL = unpublished (hidden from /cases/); Non-NULL = published and publicly visible.
     # resolved_at retains its pipeline-completion meaning and is unchanged.
     published_at = Column(DateTime(timezone=True), nullable=True)
+    # Phase 15 (D-01): explicit lifecycle status — pipeline/draft/published.
+    # Backfilled from published_at/resolved_at by migration 0008.
+    # The public /cases route continues to filter on published_at IS NOT NULL (D-03).
+    status = Column(
+        SAEnum(ArgumentStatusEnum, name="argument_status",
+               values_callable=lambda e: [x.value for x in e]),
+        nullable=False,
+        default=ArgumentStatusEnum.PIPELINE,
+    )
     # cases linked via case_arguments M:M join table
 
 

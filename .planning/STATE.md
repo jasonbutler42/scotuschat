@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Pre-Launch Polish
-current_phase: 13
-current_phase_name: ingestion-flow-polish
-status: executing
-stopped_at: Phase 13 UI-SPEC approved
-last_updated: "2026-06-25T13:06:13.528Z"
-last_activity: 2026-06-24
-last_activity_desc: Phase 13 Plan 03 complete
+current_phase: 14
+current_phase_name: Speaker Popover Card
+status: completed
+stopped_at: Phase 13 Plan 03 complete — all plans done, phase complete
+last_updated: "2026-06-25T13:11:48.832Z"
+last_activity: 2026-06-25
+last_activity_desc: Phase 13 complete, transitioned to Phase 14
 progress:
   total_phases: 6
   completed_phases: 5
@@ -28,10 +28,10 @@ See: .planning/PROJECT.md (updated 2026-06-18 after v1.2 milestone start)
 
 ## Current Position
 
-Phase: 13 (ingestion-flow-polish) — EXECUTING
+Phase: 14 — Speaker Popover Card
 Phase: 13 — pending planning
 Status: Phase 13 complete — all 3 plans done (13-01, 13-02 skipped/merged into 13-01, 13-03)
-Last activity: 2026-06-24 — Phase 13 Plan 03 complete
+Last activity: 2026-06-25 — Phase 13 complete, transitioned to Phase 14
 
 Progress: [██████████] 100%
 

@@ -210,5 +210,5 @@ Plans:
 | 10. Unified Navigation | v1.2 | 1/1 | Complete   | 2026-06-22 |
 | 11. Argument Metadata Editing | v1.2 | 4/4 | Complete   | 2026-06-22 |
 | 12. People Admin Improvements | v1.2 | 7/7 | Complete   | 2026-06-24 |
-| 13. Ingestion Flow Polish | v1.2 | 3/3 | Complete   | 2026-06-25 |
+| 13. Ingestion Flow Polish | v1.2 | 3/3 | Complete    | 2026-06-25 |
 | 14. Speaker Popover Card | v1.2 | 0/? | Not started | — |

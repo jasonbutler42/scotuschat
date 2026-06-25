@@ -18,10 +18,19 @@ Critical guards (project-wide pattern from admin_jobs.py):
 
 import datetime
 
-from sqlalchemy import func as sqlfunc, select, update
+from sqlalchemy import and_, exists, func as sqlfunc, not_, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.models.models import Argument, Case, CaseArgument
+from api.models.models import (
+    Argument,
+    ArgumentParticipant,
+    ArgumentStatusEnum,
+    Case,
+    CaseArgument,
+    CourtTenure,
+    Person,
+    SideEnum,
+)
 from api.schemas.admin_arguments import ArgumentUpdate
 from pipeline.commands.ingest import _derive_slug  # noqa: F401 — re-exported for tests
 
@@ -46,12 +55,15 @@ async def list_arguments(db: AsyncSession) -> list[dict]:
             Argument.argued_date,
             Argument.resolved_at,
             Argument.published_at,
+            Argument.status,
             Case.case_name,
             Case.docket_number,
         )
         .join(CaseArgument, CaseArgument.argument_id == Argument.id)
         .join(Case, CaseArgument.case_id == Case.id)
         .where(CaseArgument.is_lead == True)  # noqa: E712
+        # D-02: exclude pipeline-state arguments from admin list (Pitfall 7)
+        .where(Argument.status.in_([ArgumentStatusEnum.DRAFT, ArgumentStatusEnum.PUBLISHED]))
         .order_by(Argument.argued_date.desc())
     )
     result = await db.execute(q)
@@ -64,6 +76,7 @@ async def list_arguments(db: AsyncSession) -> list[dict]:
             "docket_number": row.docket_number,
             "resolved_at": row.resolved_at,
             "published_at": row.published_at,
+            "status": row.status,
         }
         for row in rows
     ]
@@ -109,6 +122,45 @@ async def get_argument_detail(db: AsyncSession, argument_id: int) -> dict | None
     )
     consolidated_rows = consolidated_result.all()
 
+    # Compute tenure gap warnings (D-15): bench participants whose argued_date
+    # is not covered by any of their CourtTenure rows.
+    tenure_gap_warnings: list[dict] = []
+    if argument.argued_date is not None:
+        bench_result = await db.execute(
+            select(ArgumentParticipant.person_id, Person.full_name)
+            .join(Person, Person.id == ArgumentParticipant.person_id)
+            .where(
+                ArgumentParticipant.argument_id == argument_id,
+                ArgumentParticipant.side == SideEnum.BENCH,
+                ArgumentParticipant.person_id.isnot(None),
+            )
+        )
+        bench_rows = bench_result.all()
+
+        for person_id, full_name in bench_rows:
+            # Check if any CourtTenure covers the argued_date for this person
+            covering = exists(
+                select(CourtTenure.id).where(
+                    and_(
+                        CourtTenure.person_id == person_id,
+                        CourtTenure.start_date <= argument.argued_date,
+                        or_(
+                            CourtTenure.end_date.is_(None),
+                            CourtTenure.end_date >= argument.argued_date,
+                        ),
+                    )
+                )
+            )
+            has_covering = (await db.execute(select(covering))).scalar()
+            if not has_covering:
+                tenure_gap_warnings.append(
+                    {
+                        "person_id": person_id,
+                        "full_name": full_name,
+                        "argued_date": str(argument.argued_date),
+                    }
+                )
+
     return {
         "id": argument.id,
         "argued_date": argument.argued_date,
@@ -117,9 +169,11 @@ async def get_argument_detail(db: AsyncSession, argument_id: int) -> dict | None
         "slug": lead_case.slug,
         "resolved_at": argument.resolved_at,
         "published_at": argument.published_at,
+        "status": argument.status,
         "consolidated_dockets": [
             {"docket_number": row.docket_number} for row in consolidated_rows
         ],
+        "tenure_gap_warnings": tenure_gap_warnings,
     }
 
 
@@ -247,6 +301,53 @@ async def publish_argument(db: AsyncSession, argument_id: int) -> dict | None:
     )
     await db.commit()
     return await get_argument_detail(db, argument_id)
+
+
+async def update_participant_side(
+    db: AsyncSession,
+    argument_id: int,
+    participant_id: int,
+    side: SideEnum,
+) -> dict | None:
+    """Update argument_participants.side for a specific participant in a specific argument.
+
+    IDOR guard (T-15-02-IDOR): the SELECT and UPDATE are both scoped by BOTH
+    argument_id AND participant_id — a participant that belongs to a different
+    argument will return None → router returns 404.
+
+    Mass-assignment guard (T-15-02-MASS): only ``side`` is writable via this function.
+
+    BENCH guard (T-15-02-BENCH): raises ValueError when side == BENCH — operators
+    cannot demote or re-classify bench participants.
+
+    Returns:
+        dict with ``id`` and ``side`` on success.
+        None if the participant does not exist under this argument_id (→ 404).
+    """
+    if side == SideEnum.BENCH:
+        raise ValueError("BENCH cannot be set via participant side update")
+
+    result = await db.execute(
+        select(ArgumentParticipant).where(
+            ArgumentParticipant.id == participant_id,
+            ArgumentParticipant.argument_id == argument_id,
+        )
+    )
+    participant = result.scalar_one_or_none()
+    if participant is None:
+        return None  # router → 404
+
+    await db.execute(
+        update(ArgumentParticipant)
+        .where(
+            ArgumentParticipant.id == participant_id,
+            ArgumentParticipant.argument_id == argument_id,
+        )
+        .values(side=side)
+        .execution_options(synchronize_session=False)
+    )
+    await db.commit()
+    return {"id": participant_id, "side": side.value}
 
 
 async def unpublish_argument(db: AsyncSession, argument_id: int) -> dict | None:

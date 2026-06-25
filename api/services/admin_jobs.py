@@ -27,6 +27,7 @@ from api.models.models import (
     AdminJobStep,
     Argument,
     ArgumentParticipant,
+    ArgumentStatusEnum,
     Person,
     PipelineRun,
     Role,
@@ -312,6 +313,84 @@ async def resolve_job(
     # Reload and return the updated job
     updated = await get_job(db, job_id)
     return updated  # type: ignore[return-value]
+
+
+# ---------------------------------------------------------------------------
+# Phase 15: Approve and re-run pipeline transitions (D-09, D-10)
+# ---------------------------------------------------------------------------
+
+
+async def approve_job(db: AsyncSession, job_id: int) -> AdminJob:
+    """Transition argument from pipeline to draft state (D-09).
+
+    Sets argument.status = 'draft' and argument.resolved_at = now().
+    Sets admin_job.status = COMPLETED.
+
+    Raises ValueError:
+      - AdminJob not found
+      - AdminJob has no linked argument
+      - Argument not found for the job
+      - Argument is not in PIPELINE state (double-approve guard, Pitfall 6)
+
+    Uses .execution_options(synchronize_session=False) on every update()
+    (critical project-wide guard).
+    """
+    job = await get_job(db, job_id)
+    if job is None:
+        raise ValueError(f"AdminJob {job_id} not found")
+    if job.argument_id is None:
+        raise ValueError(f"AdminJob {job_id} has no linked argument")
+
+    arg_result = await db.execute(
+        select(Argument).where(Argument.id == job.argument_id)
+    )
+    argument = arg_result.scalar_one_or_none()
+    if argument is None:
+        raise ValueError("Argument not found for this job")
+    if argument.status != ArgumentStatusEnum.PIPELINE:
+        raise ValueError(
+            f"Argument is already in '{argument.status.value}' state; cannot approve again."
+        )
+
+    await db.execute(
+        update(Argument)
+        .where(Argument.id == job.argument_id)
+        .values(
+            status=ArgumentStatusEnum.DRAFT,
+            resolved_at=func.now(),
+        )
+        .execution_options(synchronize_session=False)
+    )
+    await db.execute(
+        update(AdminJob)
+        .where(AdminJob.id == job_id)
+        .values(status=AdminJobStatus.COMPLETED)
+        .execution_options(synchronize_session=False)
+    )
+    await db.commit()
+
+    updated = await get_job(db, job_id)
+    return updated  # type: ignore[return-value]
+
+
+async def rerun_job(db: AsyncSession, job_id: int) -> AdminJob:
+    """Create a new pipeline job re-using the PDF source from an existing job (D-10).
+
+    Raises ValueError if the original job is not found.
+
+    The caller (router) is responsible for spawning the ingest subprocess
+    for the NEW job after this returns — same pattern as POST /api/admin/jobs.
+    """
+    original = await get_job(db, job_id)
+    if original is None:
+        raise ValueError(f"AdminJob {job_id} not found")
+
+    new_job = await create_job(
+        db,
+        pdf_url=original.pdf_url,
+        spaces_key=original.spaces_key,
+    )
+    return new_job
 
 
 # ---------------------------------------------------------------------------

@@ -6,16 +6,49 @@ These schemas back the Phase 11 Argument Metadata Editing routes:
   - ArgumentDetail    — full argument data for the edit form (includes consolidated dockets)
   - ArgumentUpdate    — PATCH body (mass-assignment allow-list: only three editable fields)
 
+Phase 15 additions:
+  - ParticipantSideUpdate — PATCH body for argument_participants.side (ROLE-03, T-15-02-MASS)
+  - TenureGapWarning      — inline warning when bench argued_date outside all tenures (D-15)
+  - ArgumentListItem.status  — explicit lifecycle status
+  - ArgumentDetail.tenure_gap_warnings — list of TenureGapWarning per affected bench speaker
+
 Security notes:
   - ArgumentUpdate allow-list is exactly {case_name, docket_number, argued_date} (T-11-MASS).
     published_at is NOT in this schema — it is controlled only by /publish and /unpublish.
     slug and id are also excluded — slug is derived server-side; id is path parameter.
+  - ParticipantSideUpdate exposes only ``side`` — no other ArgumentParticipant field is
+    writable via this schema (T-15-02-MASS).
 """
 
 import datetime
 from typing import Optional
 
 from pydantic import BaseModel
+
+from api.models.models import ArgumentStatusEnum, SideEnum
+
+
+class ParticipantSideUpdate(BaseModel):
+    """PATCH body for argument_participants.side (ROLE-03).
+
+    Mass-assignment guard (T-15-02-MASS): ONLY ``side`` is writable via this
+    schema.  No other ArgumentParticipant column can be set.  Service validates
+    that BENCH cannot be set (T-15-02-BENCH) — operators set advocate roles only.
+    """
+
+    side: SideEnum
+
+
+class TenureGapWarning(BaseModel):
+    """A bench speaker whose argued_date falls outside all their CourtTenure rows (D-15).
+
+    Surfaced as an inline warning on the argument edit page.  The ``argued_date``
+    field is a serialized "YYYY-MM-DD" string for display.
+    """
+
+    person_id: int
+    full_name: str
+    argued_date: str  # "YYYY-MM-DD"
 
 
 class ConsolidatedDocket(BaseModel):
@@ -35,6 +68,8 @@ class ArgumentListItem(BaseModel):
     shown only on the detail page (D-10).
     resolved_at and published_at expose the argument's pipeline / publish state
     so the list page can render status badges without a per-row detail fetch.
+    status (Phase 15) is the explicit lifecycle enum value.  The list only
+    returns DRAFT and PUBLISHED rows (pipeline-state arguments are excluded, D-02).
     """
 
     id: int
@@ -43,6 +78,7 @@ class ArgumentListItem(BaseModel):
     docket_number: str      # lead case
     resolved_at: Optional[datetime.datetime] = None
     published_at: Optional[datetime.datetime] = None
+    status: ArgumentStatusEnum   # Phase 15 — always DRAFT or PUBLISHED in list results
 
     model_config = {"from_attributes": True}
 
@@ -52,6 +88,8 @@ class ArgumentDetail(BaseModel):
 
     Extends ArgumentListItem with slug and consolidated_dockets (D-10).
     slug is displayed read-only when published_at IS NOT NULL (frozen per D-11).
+    tenure_gap_warnings (Phase 15, D-15): list of bench speakers whose
+    argued_date falls outside all their CourtTenure rows.
     """
 
     id: int
@@ -61,7 +99,9 @@ class ArgumentDetail(BaseModel):
     slug: str
     resolved_at: Optional[datetime.datetime] = None
     published_at: Optional[datetime.datetime] = None
+    status: ArgumentStatusEnum = ArgumentStatusEnum.DRAFT  # Phase 15
     consolidated_dockets: list[ConsolidatedDocket] = []
+    tenure_gap_warnings: list[TenureGapWarning] = []       # Phase 15
 
     model_config = {"from_attributes": True}
 

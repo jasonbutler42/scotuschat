@@ -24,16 +24,18 @@ import datetime
 from pathlib import Path
 from typing import Optional
 
-from sqlalchemy import delete, func as sqlfunc, or_, select, update
+from sqlalchemy import and_, delete, exists, func as sqlfunc, not_, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.models.models import (
     AdminJob,
+    Argument,
     ArgumentParticipant,
     CaseAppearance,
     CourtTenure,
     Person,
     Role,
+    SideEnum,
     SpeakerAlias,
     Utterance,
 )
@@ -120,7 +122,11 @@ async def _replace_tenures(
 # ---------------------------------------------------------------------------
 
 
-async def list_people(db: AsyncSession, incomplete: bool = False) -> list[dict]:
+async def list_people(
+    db: AsyncSession,
+    incomplete: bool = False,
+    tenure_gaps: bool = False,
+) -> list[dict]:
     """Return all Person rows joined with their Role name.
 
     Sorted by COALESCE(last_name, full_name) ascending so that people whose
@@ -130,6 +136,10 @@ async def list_people(db: AsyncSession, incomplete: bool = False) -> list[dict]:
 
     When incomplete=True, only returns people where role_id OR bio_text OR
     photo_url is NULL (D-04, PEOPLE-02).
+
+    When tenure_gaps=True, only returns bench speakers who have at least one
+    argument appearance where argued_date falls outside all their CourtTenure
+    windows (D-15, Phase 15).
 
     Returns a list of dicts with keys: id, full_name, role_id, role_name, missing.
     The missing list is derived server-side so the API response carries it directly (D-06).
@@ -147,6 +157,32 @@ async def list_people(db: AsyncSession, incomplete: bool = False) -> list[dict]:
                 Person.photo_url.is_(None),
             )
         )
+    if tenure_gaps:
+        # Subquery: people who have at least one BENCH appearance in an argument
+        # where no CourtTenure covers the argued_date (Pattern 7).
+        covering_tenure = exists(
+            select(CourtTenure.id).where(
+                and_(
+                    CourtTenure.person_id == ArgumentParticipant.person_id,
+                    CourtTenure.start_date <= Argument.argued_date,
+                    or_(
+                        CourtTenure.end_date.is_(None),
+                        CourtTenure.end_date >= Argument.argued_date,
+                    ),
+                )
+            )
+        )
+        gap_person_ids = (
+            select(ArgumentParticipant.person_id)
+            .join(Argument, Argument.id == ArgumentParticipant.argument_id)
+            .where(
+                ArgumentParticipant.side == SideEnum.BENCH,
+                ArgumentParticipant.person_id.isnot(None),
+                not_(covering_tenure),
+            )
+            .distinct()
+        )
+        q = q.where(Person.id.in_(gap_person_ids))
     result = await db.execute(q)
     rows = result.all()
     return [

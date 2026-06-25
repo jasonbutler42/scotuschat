@@ -36,7 +36,7 @@ Full phase details: `.planning/milestones/v1.1-ROADMAP.md`
 
 </details>
 
-### 🚧 v1.2 Pre-Launch Polish (In Progress)
+### ✅ v1.2 Pre-Launch Polish — SHIPPED 2026-06-25
 
 **Milestone Goal:** Complete admin tooling and public experience needed before the site is ready to deploy — structured people data, unified navigation, argument editing, people admin improvements, and the speaker popover card.
 
@@ -45,7 +45,7 @@ Full phase details: `.planning/milestones/v1.1-ROADMAP.md`
 - [x] **Phase 11: Argument Metadata Editing** - Operator can correct case title, docket, and date before resolving (completed 2026-06-22)
 - [x] **Phase 12: People Admin Improvements** - Image upload, delete orphaned records, and merge duplicate people (completed 2026-06-23)
 - [x] **Phase 13: Ingestion Flow Polish** - Fix progress indicators, typeahead, and incomplete filter (completed 2026-06-24)
-- [ ] **Phase 14: Speaker Popover Card** - Avatar click shows bench speaker details with photo, role, and tenure
+- [x] **Phase 14: Speaker Popover Card** - Avatar click shows bench speaker details with photo, role, and tenure (completed 2026-06-25)
 
 ## Phase Details
 
@@ -191,7 +191,7 @@ Plans:
   3. The popover shows the speaker's profile photo when one is available, or a styled initials fallback when it is not
   4. Visitor can dismiss the popover by pressing the Escape key; keyboard-only users can reach and dismiss the popover without a mouse
 
-**Plans**: 2/3 plans executed
+**Plans**: 3/3 plans complete
 
 Plans:
 **Wave 1**
@@ -204,7 +204,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2)*
 
-- [ ] 14-03-PLAN.md — SpeakerPopover.svelte (new) + ChatBubble avatar button + +page.svelte Popover.Root wiring + roster avatars (human-verify checkpoint)
+- [x] 14-03-PLAN.md — SpeakerPopover.svelte (new) + ChatBubble avatar button + +page.svelte Popover.Root wiring + roster avatars (human-verify checkpoint)
 
 **UI hint**: yes
 
@@ -225,7 +225,7 @@ Plans:
 | 11. Argument Metadata Editing | v1.2 | 4/4 | Complete   | 2026-06-22 |
 | 12. People Admin Improvements | v1.2 | 7/7 | Complete   | 2026-06-24 |
 | 13. Ingestion Flow Polish | v1.2 | 3/3 | Complete    | 2026-06-25 |
-| 14. Speaker Popover Card | v1.2 | 2/3 | In Progress|  |
+| 14. Speaker Popover Card | v1.2 | 3/3 | Complete   | 2026-06-25 |
 
 ## Backlog
 

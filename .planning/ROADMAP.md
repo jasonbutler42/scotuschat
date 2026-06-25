@@ -235,7 +235,7 @@ Plans:
 | 12. People Admin Improvements | v1.2 | 7/7 | Complete   | 2026-06-24 |
 | 13. Ingestion Flow Polish | v1.2 | 3/3 | Complete    | 2026-06-25 |
 | 14. Speaker Popover Card | v1.2 | 3/3 | Complete   | 2026-06-25 |
-| 15. Speaker Role Accuracy | v1.3 | 2/4 | In Progress|  |
+| 15. Speaker Role Accuracy | v1.3 | 3/4 | In Progress|  |
 | 16. Parser Improvements | v1.3 | 0/2 | Pending | — |
 | 17. Pipeline UI Polish | v1.3 | 0/2 | Pending | — |
 
@@ -251,7 +251,7 @@ Plans:
   3. Operator can change an advocate's role for a specific argument in the admin without affecting their role in other arguments
   4. Popovers for speakers with no tenure data and no per-argument role degrade gracefully (no crash, no misleading label)
 
-**Plans**: 2/4 plans executed
+**Plans**: 3/4 plans executed
 
 **Wave 1**
 
@@ -263,7 +263,7 @@ Plans:
 
 **Wave 3** *(blocked on 15-02; 15-03 and 15-04 run in parallel — disjoint frontend files)*
 
-- [ ] 15-03-PLAN.md — Pipeline job detail UI: advocate role dropdowns (pipeline state), "Create Argument" approve button, post-approval read-only + two-step Re-run (human-verify checkpoint)
+- [x] 15-03-PLAN.md — Pipeline job detail UI: advocate role dropdowns (pipeline state), "Create Argument" approve button, post-approval read-only + two-step Re-run (human-verify checkpoint)
 - [ ] 15-04-PLAN.md — Argument edit page advocate role editor + tenure-gap warnings; arguments-list status badge/column; people-directory tenure-gaps filter (human-verify checkpoint)
 
 ### Phase 16: Parser Improvements

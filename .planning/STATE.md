@@ -5,15 +5,15 @@ milestone_name: Speaker Accuracy + Pipeline Confidence — PLANNED
 current_phase: 15
 current_phase_name: speaker-role-accuracy
 status: executing
-stopped_at: Phase 15 UI-SPEC approved
-last_updated: "2026-06-25T21:26:00.111Z"
+stopped_at: "Completed 15-03-PLAN.md — awaiting human verification of checkpoint:human-verify Task 2"
+last_updated: "2026-06-25T21:38:40.914Z"
 last_activity: 2026-06-25
 last_activity_desc: Phase 15 execution started
 progress:
   total_phases: 17
   completed_phases: 6
   total_plans: 25
-  completed_plans: 23
+  completed_plans: 24
   percent: 35
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-06-18 after v1.2 milestone start)
 ## Current Position
 
 Phase: 15 (speaker-role-accuracy) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 Status: Ready to execute
 Last activity: 2026-06-25 — Phase 15 execution started
 
@@ -72,6 +72,7 @@ Last activity: 2026-06-25 — Phase 15 execution started
 | Phase 14 P01 | 8 | 3 tasks | 3 files |
 | Phase 15 P01 | 3 | 2 tasks | 2 files |
 | Phase 15 P01 | 3 | - tasks | - files |
+| Phase 15 P03 | 35 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -126,6 +127,8 @@ Full log in PROJECT.md Key Decisions table. Key decisions for v1.2:
 - [Phase ?]: [15-01] Migration 0008 commits Alembic transaction before ALTER TYPE ADD VALUE (Pitfall 1 guard)
 - [Phase ?]: [15-01] ArgumentStatusEnum added to models.py; Argument.status uses SAEnum pattern matching PipelineRun.status
 - [Phase ?]: [15-01] SideEnum.ADVOCATE retained as legacy; backfilled to UNKNOWN in migration 0008 (D-06)
+- [Phase ?]: [15-03] ParticipantItem extended with participant_id + side for advocate dropdown wiring
+- [Phase ?]: [15-03] use:enhance FormData injection chosen over nested HTML forms for advocate side submission
 
 ### Pending Todos
 
@@ -149,6 +152,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-25T21:26:00.100Z
-Stopped at: Phase 15 UI-SPEC approved
+Last session: 2026-06-25T21:38:40.904Z
+Stopped at: Completed 15-03-PLAN.md — awaiting human verification of checkpoint:human-verify Task 2
 Resume file: .planning/phases/15-speaker-role-accuracy/15-UI-SPEC.md

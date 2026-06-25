@@ -1248,13 +1248,31 @@
 					{#each data.participants as p, i (p.person_id)}
 						<li
 							style="
+								display: flex;
+								align-items: center;
 								font-size: 16px;
 								color: #e2e8f0;
 								padding: 8px 0;
 								{i < data.participants.length - 1 ? 'border-bottom: 1px solid #334155;' : ''}
 							"
 						>
-							{p.full_name}{#if p.role_name}<span style="color: #94a3b8; font-size: 14px; margin-left: 8px;">({p.role_name})</span>{/if}
+							<span style="flex: 1;">{p.full_name}{#if p.role_name}<span style="color: #94a3b8; font-size: 14px; margin-left: 8px;">({p.role_name})</span>{/if}</span>
+							{#if p.side !== 'BENCH'}
+								{#if data.argument?.status === 'pipeline'}
+									<select
+										value={advocateSides[String(p.participant_id)] ?? 'UNKNOWN'}
+										onchange={(e) => { advocateSides[String(p.participant_id)] = (e.currentTarget as HTMLSelectElement).value; }}
+										style="margin-left: 12px; background-color: #1e3a5f; color: #e2e8f0; border: 1px solid #334155; border-radius: 4px; padding: 4px 8px; font-size: 14px;"
+									>
+										<option value="PETITIONER">Petitioner's Counsel</option>
+										<option value="RESPONDENT">Respondent's Counsel</option>
+										<option value="AMICUS">Amicus Curiae</option>
+										<option value="UNKNOWN">Counsel</option>
+									</select>
+								{:else}
+									<span style="color: #94a3b8; font-size: 14px; margin-left: 12px;">{ADVOCATE_LABEL_MAP[advocateSides[String(p.participant_id)] ?? (p.side ?? 'UNKNOWN')] ?? 'Counsel'}</span>
+								{/if}
+							{/if}
 						</li>
 					{/each}
 				</ul>

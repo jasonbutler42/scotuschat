@@ -1,7 +1,8 @@
 ---
 phase: 14
 slug: speaker-popover-card
-status: draft
+status: approved
+reviewed_at: 2026-06-25
 shadcn_initialized: false
 preset: none
 created: 2026-06-25

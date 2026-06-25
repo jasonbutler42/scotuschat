@@ -239,12 +239,20 @@ def test_person_detail_shape() -> None:
 
 
 def test_participant_item_shape() -> None:
-    """ParticipantItem has person_id, full_name, role_name."""
+    """ParticipantItem has participant_id, person_id, full_name, role_name, side."""
     from api.schemas.admin_people import ParticipantItem
 
-    item = ParticipantItem(person_id=10, full_name="Solicitor General", role_name="Petitioner's Counsel")
+    item = ParticipantItem(
+        participant_id=42,
+        person_id=10,
+        full_name="Solicitor General",
+        role_name="Petitioner's Counsel",
+        side="PETITIONER",
+    )
+    assert item.participant_id == 42
     assert item.person_id == 10
     assert item.full_name == "Solicitor General"
+    assert item.side == "PETITIONER"
 
 
 # ---------------------------------------------------------------------------

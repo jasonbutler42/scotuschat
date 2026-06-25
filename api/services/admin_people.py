@@ -517,7 +517,9 @@ async def list_participants_for_job(
 
     result = await db.execute(
         select(
+            ArgumentParticipant.id.label("participant_id"),
             ArgumentParticipant.person_id,
+            ArgumentParticipant.side,
             Person.full_name,
             Role.name.label("role_name"),
         )
@@ -532,9 +534,11 @@ async def list_participants_for_job(
     rows = result.all()
     return [
         {
+            "participant_id": row.participant_id,
             "person_id": row.person_id,
             "full_name": row.full_name,
             "role_name": row.role_name,
+            "side": row.side.value if row.side is not None else None,
         }
         for row in rows
     ]

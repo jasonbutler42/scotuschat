@@ -116,11 +116,15 @@ class ParticipantItem(BaseModel):
     """A resolved participant in an argument, returned by GET /api/admin/jobs/{id}/participants.
 
     Only includes participants where person_id IS NOT NULL (D-02).
+    Phase 15 adds participant_id (ArgumentParticipant.id) and side for the advocate
+    role dropdowns on the pipeline job detail page.
     """
 
+    participant_id: int
     person_id: int
     full_name: str
     role_name: Optional[str] = None
+    side: Optional[str] = None
 
     model_config = {"from_attributes": True}
 

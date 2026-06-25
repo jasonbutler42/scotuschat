@@ -217,6 +217,39 @@
 	let continueSubmitting = $state(false);
 
 	// ──────────────────────────────────────────────────────────────────────────
+	// Phase 15: Advocate role selection state (D-08)
+	// Keyed by participant_id (string); values are SideEnum strings.
+	// Initialized from data.participants when available.
+	// ──────────────────────────────────────────────────────────────────────────
+
+	const ADVOCATE_LABEL_MAP: Record<string, string> = {
+		PETITIONER: "Petitioner's Counsel",
+		RESPONDENT: "Respondent's Counsel",
+		AMICUS: 'Amicus Curiae',
+		UNKNOWN: 'Counsel',
+		ADVOCATE: 'Counsel', // legacy
+	};
+
+	// Initialized from loaded participants; updated on change.
+	let advocateSides = $state<Record<string, string>>(
+		Object.fromEntries(
+			(data.participants ?? [])
+				.filter((p: { side: string | null; participant_id: number }) => p.side && p.side !== 'BENCH')
+				.map((p: { participant_id: number; side: string | null }) => [
+					String(p.participant_id),
+					p.side ?? 'UNKNOWN',
+				]),
+		),
+	);
+
+	// Phase 15: Approve form submit state
+	let approveSubmitting = $state(false);
+
+	// Phase 15: Re-run two-step confirm state (D-10)
+	let rerunConfirming = $state(false);
+	let rerunSubmitting = $state(false);
+
+	// ──────────────────────────────────────────────────────────────────────────
 	// Row action handlers
 	// ──────────────────────────────────────────────────────────────────────────
 
@@ -271,6 +304,16 @@
 		});
 	}
 
+	// Phase 15: Determine if a discrepancy row resolves to a BENCH participant (Justice).
+	// Returns true if the row's resolved person_id maps to a BENCH side in data.participants.
+	function isRowBench(personId: number | null): boolean {
+		if (personId == null) return false;
+		const participant = (data.participants ?? []).find(
+			(p: { person_id: number; side: string | null }) => p.person_id === personId,
+		);
+		return participant?.side === 'BENCH';
+	}
+
 	// PIPE-19: Svelte action — close combobox dropdown when operator clicks outside the container.
 	function comboOutsideClick(container: HTMLElement, rowKey: string) {
 		function handleClick(e: MouseEvent) {
@@ -306,9 +349,9 @@
 		<!-- Argument metadata preview card (D-03, Plan 04): shown above step timeline when argument_id is set -->
 		{#if data.argument}
 			{@const arg = data.argument}
-			{@const argStatus = arg.published_at != null ? 'published' : arg.resolved_at != null ? 'resolved' : 'pending'}
-			{@const argBadgeColor = argStatus === 'published' ? '#4ade80' : argStatus === 'resolved' ? '#a78bfa' : '#94a3b8'}
-			{@const argBadgeLabel = argStatus === 'published' ? 'Published' : argStatus === 'resolved' ? 'Resolved' : 'Pending'}
+			{@const argStatus = arg.status ?? (arg.published_at != null ? 'published' : arg.resolved_at != null ? 'draft' : 'pipeline')}
+			{@const argBadgeColor = argStatus === 'published' ? '#4ade80' : argStatus === 'draft' ? '#a78bfa' : '#94a3b8'}
+			{@const argBadgeLabel = argStatus === 'published' ? 'Published' : argStatus === 'draft' ? 'Draft' : 'Pipeline'}
 			{@const formatArgDate = (iso: string | null) => iso ? new Date(iso).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '—'}
 			<div
 				style="
@@ -369,8 +412,8 @@
 				</a>
 			</div>
 
-			<!-- Ready to publish CTA (D-04): only when completed and argument not yet published -->
-			{#if data.job.status === 'completed' && arg.published_at == null}
+			<!-- Ready to publish CTA (D-04): only when completed and argument is draft (not yet published) -->
+			{#if data.job.status === 'completed' && argStatus === 'draft'}
 				<div
 					style="
 						border: 1px solid #93c5fd;
@@ -481,7 +524,7 @@
 											border-bottom: 1px solid #334155;
 											padding: 8px 0;
 											text-align: left;
-											width: 35%;
+											width: 28%;
 										"
 									>Raw label</th>
 									<th
@@ -493,7 +536,7 @@
 											border-bottom: 1px solid #334155;
 											padding: 8px 0;
 											text-align: left;
-											width: 45%;
+											width: 39%;
 										"
 									>Resolved as</th>
 									<th
@@ -505,7 +548,19 @@
 											border-bottom: 1px solid #334155;
 											padding: 8px 0;
 											text-align: left;
-											width: 20%;
+											width: 18%;
+										"
+									>Role</th>
+									<th
+										scope="col"
+										style="
+											font-size: 14px;
+											font-weight: 400;
+											color: #94a3b8;
+											border-bottom: 1px solid #334155;
+											padding: 8px 0;
+											text-align: left;
+											width: 15%;
 										"
 									>Action</th>
 								</tr>
@@ -809,7 +864,59 @@
 											{/if}
 										</td>
 
-										<!-- Column 3: Action buttons -->
+										<!-- Column 3: Advocate role dropdown (Phase 15 D-08) -->
+										<!-- Only shown for non-BENCH participants while argument is in pipeline state -->
+										<td
+											style="
+												font-size: 16px;
+												color: #e2e8f0;
+												border-bottom: 1px solid #334155;
+												padding: 12px 0;
+												padding-right: 12px;
+											"
+										>
+											{#if data.argument?.status === 'pipeline' && !isRowBench(s?.person_id ?? null)}
+												{@const pid = (data.participants ?? []).find((p: { person_id: number; participant_id: number }) => p.person_id === s?.person_id)?.participant_id}
+												{#if pid != null}
+													<select
+														value={advocateSides[String(pid)] ?? 'UNKNOWN'}
+														onchange={(e) => {
+															advocateSides[String(pid)] = (e.target as HTMLSelectElement).value;
+														}}
+														style="
+															background-color: #0f1117;
+															border: 1px solid #334155;
+															border-radius: 6px;
+															padding: 8px 12px;
+															font-size: 16px;
+															font-weight: 400;
+															color: #e2e8f0;
+															min-height: 36px;
+															width: 100%;
+															cursor: pointer;
+														"
+													>
+														<option value="PETITIONER">Petitioner's Counsel</option>
+														<option value="RESPONDENT">Respondent's Counsel</option>
+														<option value="AMICUS">Amicus Curiae</option>
+														<option value="UNKNOWN">Counsel</option>
+													</select>
+												{:else}
+													<span style="color: #94a3b8; font-size: 14px;">—</span>
+												{/if}
+											{:else if data.argument?.status !== 'pipeline'}
+												<!-- Post-approval: read-only role label -->
+												{@const pid2 = (data.participants ?? []).find((p: { person_id: number; participant_id: number }) => p.person_id === s?.person_id)?.participant_id}
+												{@const currentSide = pid2 != null ? (advocateSides[String(pid2)] ?? 'UNKNOWN') : null}
+												{#if currentSide != null && !isRowBench(s?.person_id ?? null)}
+													<span style="font-size: 14px; color: #94a3b8;">
+														{ADVOCATE_LABEL_MAP[currentSide] ?? 'Counsel'}
+													</span>
+												{/if}
+											{/if}
+										</td>
+
+										<!-- Column 4: Action buttons -->
 										<td
 											style="
 												font-size: 16px;
@@ -954,6 +1061,142 @@
 					{form.error}
 				</p>
 			{/if}
+		{/if}
+
+		<!-- Phase 15 D-09: Create Argument button — visible while argument is in pipeline state -->
+		{#if data.argument?.status === 'pipeline'}
+			<form
+				method="POST"
+				action="?/approve"
+				use:enhance={({ formData }) => {
+					// Inject advocate side assignments into FormData at submit time
+					for (const [pid, side] of Object.entries(advocateSides)) {
+						formData.append(`participant_side[${pid}]`, side);
+					}
+					approveSubmitting = true;
+					return async ({ result, update }) => {
+						approveSubmitting = false;
+						if (result.type === 'failure') {
+							await update();
+						} else {
+							await update({ reset: false });
+						}
+					};
+				}}
+				style="margin-top: 24px;"
+			>
+				<button
+					type="submit"
+					disabled={approveSubmitting}
+					style="
+						width: 100%;
+						min-height: 44px;
+						font-size: 16px;
+						font-weight: 600;
+						color: #e2e8f0;
+						background-color: #1e293b;
+						border: 1px solid #93c5fd;
+						border-radius: 6px;
+						padding: 12px 24px;
+						cursor: pointer;
+						{approveSubmitting ? 'opacity: 0.7; cursor: not-allowed;' : ''}
+					"
+				>
+					{approveSubmitting ? 'Creating…' : 'Create Argument'}
+				</button>
+			</form>
+			{#if form?.approveError}
+				<p role="alert" style="margin-top: 8px; color: #ef4444; font-size: 14px;">
+					{form.approveError}
+				</p>
+			{/if}
+		{/if}
+
+		<!-- Phase 15 D-10: Post-approval read-only state — notice + Re-run button -->
+		{#if data.argument != null && data.argument.status !== 'pipeline'}
+			<div style="margin-top: 24px;">
+				<p style="font-size: 16px; font-weight: 400; color: #94a3b8; margin: 0 0 16px 0;">
+					This run has been approved. The argument is now in draft.
+				</p>
+				<!-- Re-run two-step confirm (D-10) -->
+				{#if rerunConfirming}
+					<div style="display: flex; align-items: center; gap: 16px;">
+						<form
+							method="POST"
+							action="?/rerun"
+							use:enhance={() => {
+								rerunSubmitting = true;
+								return async ({ result, update }) => {
+									rerunSubmitting = false;
+									rerunConfirming = false;
+									if (result.type === 'failure') {
+										await update();
+									} else {
+										await update({ reset: false });
+									}
+								};
+							}}
+						>
+							<button
+								type="submit"
+								disabled={rerunSubmitting}
+								style="
+									font-size: 14px;
+									font-weight: 400;
+									color: #e2e8f0;
+									background-color: #1e293b;
+									border: 1px solid #334155;
+									border-radius: 6px;
+									padding: 8px 16px;
+									min-height: 36px;
+									cursor: pointer;
+									{rerunSubmitting ? 'opacity: 0.7; cursor: not-allowed;' : ''}
+								"
+							>
+								{rerunSubmitting ? 'Starting…' : 'Confirm re-run — this starts a new pipeline run'}
+							</button>
+						</form>
+						<button
+							type="button"
+							onclick={() => { rerunConfirming = false; }}
+							style="
+								font-size: 14px;
+								font-weight: 400;
+								color: #94a3b8;
+								background: transparent;
+								border: none;
+								padding: 0;
+								cursor: pointer;
+							"
+						>
+							Cancel
+						</button>
+					</div>
+				{:else}
+					<button
+						type="button"
+						onclick={() => { rerunConfirming = true; }}
+						style="
+							font-size: 14px;
+							font-weight: 400;
+							color: #e2e8f0;
+							background-color: #1e293b;
+							border: 1px solid #334155;
+							border-radius: 6px;
+							padding: 8px 16px;
+							min-height: 36px;
+							cursor: pointer;
+						"
+					>
+						Re-run with same source
+					</button>
+				{/if}
+				{#if form?.rerunError}
+					<p role="alert" style="margin-top: 8px; color: #ef4444; font-size: 14px;">
+						{form.rerunError}
+					</p>
+				{/if}
+			</div>
 		{/if}
 
 		<!-- Error panel (D-17): when status=failed; error_message rendered verbatim; no retry -->

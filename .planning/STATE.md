@@ -2,17 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Speaker Accuracy + Pipeline Confidence — PLANNED
-current_phase_name: defining requirements
+current_phase: 15
+current_phase_name: speaker-role-accuracy
 status: executing
 stopped_at: Phase 15 UI-SPEC approved
-last_updated: "2026-06-25T21:04:31.360Z"
+last_updated: "2026-06-25T21:13:19.601Z"
 last_activity: 2026-06-25
-last_activity_desc: Milestone v1.3 started
+last_activity_desc: Phase 15 execution started
 progress:
   total_phases: 17
   completed_phases: 6
-  total_plans: 21
-  completed_plans: 21
+  total_plans: 25
+  completed_plans: 22
   percent: 35
 ---
 
@@ -23,14 +24,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-18 after v1.2 milestone start)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** Phase 14 — speaker-popover-card
+**Current focus:** Phase 15 — speaker-role-accuracy
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
+Phase: 15 (speaker-role-accuracy) — EXECUTING
+Plan: 2 of 4
 Status: Ready to execute
-Last activity: 2026-06-25 — Milestone v1.3 started
+Last activity: 2026-06-25 — Phase 15 execution started
 
 ## Performance Metrics
 
@@ -69,6 +70,8 @@ Last activity: 2026-06-25 — Milestone v1.3 started
 | Phase 13 P01 | ~30 | 2 tasks | 4 files |
 | Phase 13 P03 | ~45 | 3 tasks + fix | 1 files |
 | Phase 14 P01 | 8 | 3 tasks | 3 files |
+| Phase 15 P01 | 3 | 2 tasks | 2 files |
+| Phase 15 P01 | 3 | - tasks | - files |
 
 ## Accumulated Context
 
@@ -120,6 +123,9 @@ Full log in PROJECT.md Key Decisions table. Key decisions for v1.2:
 - [Phase ?]: [14-01]: SpeakerPopoverEntry uses list[TenureEntry] not ORM relationship — avoids N+1 lazy loads
 - [Phase ?]: [14-01]: appointing_president_party excluded at schema and service layers (T-14-02, apolitical framing)
 - [Phase ?]: [14-01]: get_argument_speakers returns [] not 404 for unresolved arguments (D-01)
+- [Phase ?]: [15-01] Migration 0008 commits Alembic transaction before ALTER TYPE ADD VALUE (Pitfall 1 guard)
+- [Phase ?]: [15-01] ArgumentStatusEnum added to models.py; Argument.status uses SAEnum pattern matching PipelineRun.status
+- [Phase ?]: [15-01] SideEnum.ADVOCATE retained as legacy; backfilled to UNKNOWN in migration 0008 (D-06)
 
 ### Pending Todos
 
@@ -143,6 +149,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-25T20:36:08.205Z
+Last session: 2026-06-25T21:12:49.172Z
 Stopped at: Phase 15 UI-SPEC approved
 Resume file: .planning/phases/15-speaker-role-accuracy/15-UI-SPEC.md

@@ -235,7 +235,7 @@ Plans:
 | 12. People Admin Improvements | v1.2 | 7/7 | Complete   | 2026-06-24 |
 | 13. Ingestion Flow Polish | v1.2 | 3/3 | Complete    | 2026-06-25 |
 | 14. Speaker Popover Card | v1.2 | 3/3 | Complete   | 2026-06-25 |
-| 15. Speaker Role Accuracy | v1.3 | 0/4 | Pending | — |
+| 15. Speaker Role Accuracy | v1.3 | 1/4 | In Progress|  |
 | 16. Parser Improvements | v1.3 | 0/2 | Pending | — |
 | 17. Pipeline UI Polish | v1.3 | 0/2 | Pending | — |
 
@@ -251,11 +251,11 @@ Plans:
   3. Operator can change an advocate's role for a specific argument in the admin without affecting their role in other arguments
   4. Popovers for speakers with no tenure data and no per-argument role degrade gracefully (no crash, no misleading label)
 
-**Plans**: 0/4 plans — pending (expanded from 3 to fold in the argument lifecycle status / manual-approval changes per 15-CONTEXT)
+**Plans**: 1/4 plans executed
 
 **Wave 1**
 
-- [ ] 15-01-PLAN.md — Migration 0008: expand SideEnum (PETITIONER/RESPONDENT/AMICUS, backfill ADVOCATE→UNKNOWN) + new arguments.status enum column + ORM model updates
+- [x] 15-01-PLAN.md — Migration 0008: expand SideEnum (PETITIONER/RESPONDENT/AMICUS, backfill ADVOCATE→UNKNOWN) + new arguments.status enum column + ORM model updates
 
 **Wave 2** *(blocked on 15-01)*
 

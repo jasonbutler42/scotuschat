@@ -60,6 +60,7 @@ from api.schemas.admin_arguments import (
     ArgumentDetail,
     ArgumentListItem,
     ArgumentUpdate,
+    ParticipantSideUpdate,
 )
 from api.schemas.admin_people import (
     MergePreview,
@@ -319,19 +320,22 @@ async def resolve_job(
 @router.get("/people", response_model=list[PersonListItem])
 async def list_people(
     incomplete: bool = False,
+    tenure_gaps: bool = False,
     db: AsyncSession = Depends(get_db),
 ) -> list[PersonListItem]:
     """
     Return all Person rows with role name and missing-fields list (PEOPLE-01, PEOPLE-02).
 
-    Query param:
+    Query params:
     - incomplete=false (default): return all people
     - incomplete=true: return only people where role_id OR bio_text OR photo_url is NULL
+    - tenure_gaps=true: return only bench speakers with at least one argued_date outside
+      all their CourtTenure windows (D-15, Phase 15)
 
     PersonListItem is a superset of the old PersonResponse (adds role_id + missing),
     so Phase 7 typeahead consumers (which read id/full_name/role_name) still work.
     """
-    people = await people_service.list_people(db, incomplete=incomplete)
+    people = await people_service.list_people(db, incomplete=incomplete, tenure_gaps=tenure_gaps)
     return [PersonListItem(**p) for p in people]
 
 
@@ -665,3 +669,103 @@ async def list_participants(
     if participants is None:
         raise HTTPException(status_code=404, detail="Job not found or has no argument")
     return [ParticipantItem(**p) for p in participants]
+
+
+# ---------------------------------------------------------------------------
+# Phase 15: Approve, Re-run, and Participant-Side endpoints
+# ---------------------------------------------------------------------------
+
+
+@router.post("/jobs/{job_id}/approve", response_model=AdminJobResponse)
+async def approve_job(
+    job_id: int,
+    db: AsyncSession = Depends(get_db),
+) -> AdminJobResponse:
+    """
+    Approve a pipeline job — transitions argument from pipeline to draft state (D-09).
+
+    Sets argument.status = 'draft' and stamps argument.resolved_at = now().
+    Sets admin_job.status = COMPLETED.
+
+    Returns 422 on:
+      - Job not found
+      - Job has no linked argument
+      - Argument already approved (double-approve guard, T-15-02-RACE)
+
+    Auth inherited from router-level verify_admin_token dependency (T-15-02-AUTH).
+    """
+    try:
+        result = await jobs_service.approve_job(db, job_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return result  # type: ignore[return-value]
+
+
+@router.post("/jobs/{job_id}/rerun", status_code=202, response_model=AdminJobResponse)
+async def rerun_job(
+    job_id: int,
+    db: AsyncSession = Depends(get_db),
+) -> AdminJobResponse:
+    """
+    Re-run an existing pipeline job using the same PDF source (D-10).
+
+    Creates a NEW AdminJob and immediately spawns the ingest subprocess for the
+    new job.  The existing draft/published argument is unaffected — the new run
+    goes through the pipeline state independently.
+
+    Returns 202 + new AdminJobResponse so the caller can redirect to the new job.
+    Returns 422 if the original job is not found.
+
+    Auth inherited from router-level verify_admin_token dependency (T-15-02-AUTH).
+    """
+    try:
+        new_job = await jobs_service.rerun_job(db, job_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    # Spawn ingest for the new job — same pattern as POST /api/admin/jobs
+    if new_job.spaces_key:
+        spawn_pipeline_step("ingest", new_job.id, ["--spaces-key", new_job.spaces_key])
+    elif new_job.pdf_url:
+        spawn_pipeline_step("ingest", new_job.id, ["--url", new_job.pdf_url])
+
+    return new_job  # type: ignore[return-value]
+
+
+@router.patch(
+    "/arguments/{argument_id}/participants/{participant_id}",
+    response_model=dict,
+)
+async def update_participant_side(
+    argument_id: int,
+    participant_id: int,
+    body: ParticipantSideUpdate,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """
+    Update argument_participants.side for a specific participant (ROLE-03).
+
+    IDOR guard (T-15-02-IDOR): the participant must belong to the specified
+    argument — a cross-argument update attempt returns 404.
+
+    Mass-assignment guard (T-15-02-MASS): only ``side`` is writable via this
+    endpoint (ParticipantSideUpdate exposes only that field).
+
+    BENCH guard (T-15-02-BENCH): returns 422 if side == BENCH — operators
+    cannot set advocate participants to BENCH via this endpoint.
+
+    Returns 422 on side == BENCH.
+    Returns 404 if the participant is not found under this argument.
+    Auth inherited from router-level verify_admin_token dependency (T-15-02-AUTH).
+    """
+    try:
+        result = await arguments_service.update_participant_side(
+            db, argument_id, participant_id, body.side
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    if result is None:
+        raise HTTPException(
+            status_code=404, detail="Participant not found for this argument"
+        )
+    return result

@@ -34,5 +34,6 @@ class SpeakerPopoverEntry(BaseModel):
     photo_url: Optional[str] = None   # raw DB value; URL reconstructed in +page.server.ts (D-03)
     appointing_president: Optional[str] = None
     tenure: list[TenureEntry] = []
+    side: Optional[str] = None        # raw SideEnum value for isBench rendering logic (Phase 15)
 
     model_config = ConfigDict(from_attributes=True)

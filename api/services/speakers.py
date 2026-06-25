@@ -1,7 +1,7 @@
 """
 Business logic for the speaker popover endpoint.
 
-Assembles the complete speaker data set for a given argument in three async
+Assembles the complete speaker data set for a given argument in five async
 queries, avoiding N+1 loops.  Returns a plain list[dict] — the router's
 response_model=list[SpeakerPopoverEntry] validates and serializes the output.
 
@@ -9,12 +9,80 @@ CRITICAL: appointing_president_party is intentionally never included in the
 assembled dict — admin-only field, apolitical framing constraint (T-14-02).
 """
 
+import datetime
 from collections import defaultdict
 
 from sqlalchemy import distinct, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.models.models import CourtTenure, Person, Role, Utterance
+from api.models.models import (
+    Argument,
+    ArgumentParticipant,
+    CourtTenure,
+    Person,
+    Role,
+    SideEnum,
+    Utterance,
+)
+
+
+# ---------------------------------------------------------------------------
+# Module-level constants and helpers (Phase 15 — ROLE-01/ROLE-02)
+# ---------------------------------------------------------------------------
+
+
+ADVOCATE_LABEL_MAP: dict[SideEnum, str] = {
+    SideEnum.PETITIONER: "Petitioner's Counsel",
+    SideEnum.RESPONDENT: "Respondent's Counsel",
+    SideEnum.AMICUS: "Amicus Curiae",
+    SideEnum.UNKNOWN: "Counsel",
+    SideEnum.ADVOCATE: "Counsel",  # legacy — retained permanently (Pitfall 4)
+}
+
+
+def _tenure_role_name(
+    tenures: list[dict],
+    argued_date: datetime.date | None,
+) -> str | None:
+    """Return the seat name for the tenure covering argued_date (D-13),
+    or the most-recent tenure's seat as D-14 fallback.
+
+    Args:
+        tenures: List of dicts with keys ``seat``, ``start_date``, ``end_date``.
+                 ``start_date`` and ``end_date`` must be ``datetime.date`` objects
+                 (not strings) so direct date comparison works without parsing.
+                 ``end_date=None`` means the tenure is open-ended (currently active).
+        argued_date: The argument's argued_date as a ``datetime.date``.
+                     When None, skip the window check and go straight to D-14 fallback
+                     (Pitfall 5 — argument may not have an argued_date yet).
+
+    Returns:
+        The ``seat`` string from the matching tenure, or None if tenures is empty.
+    """
+    if not tenures:
+        return None
+
+    if argued_date is not None:
+        for t in tenures:
+            start = t["start_date"]
+            end = t["end_date"]
+            if start is not None and argued_date >= start:
+                if end is None or argued_date <= end:
+                    return t["seat"]
+
+    # D-14 fallback: argued_date is None OR outside all windows — use most-recent
+    # tenure by start_date.  start_date=None is treated as datetime.date.min so a
+    # tenure with no start_date is always the "oldest" and will lose ties.
+    most_recent = max(
+        tenures,
+        key=lambda t: t["start_date"] or datetime.date.min,
+    )
+    return most_recent["seat"]
+
+
+# ---------------------------------------------------------------------------
+# Public service function
+# ---------------------------------------------------------------------------
 
 
 async def get_argument_speakers(
@@ -24,10 +92,12 @@ async def get_argument_speakers(
     """
     Return speaker popover data for all resolved speakers in an argument.
 
-    Three-step async subquery pattern:
+    Five-step async subquery pattern (Phase 15 extends the original three steps):
+      0. Fetch the argument's argued_date (date-range tenure lookup).
       1. Collect distinct person_ids from utterances for this argument.
       2. Fetch Person + Role.name for those person_ids in one query.
       3. Fetch all CourtTenure rows for those person_ids in one query.
+      4. Fetch argument_participants.side per person for this argument.
 
     Returns [] immediately when no utterances have a resolved person_id
     (e.g. resolve step has not run yet) — never raises 404.
@@ -35,6 +105,12 @@ async def get_argument_speakers(
     Returns list[dict] shaped to match SpeakerPopoverEntry (validated by
     the router's response_model).
     """
+    # Step 0 — Fetch the argument's argued_date (needed for tenure lookup) ----
+    arg_result = await db.execute(
+        select(Argument.argued_date).where(Argument.id == argument_id)
+    )
+    argued_date = arg_result.scalar_one_or_none()
+
     # Step 1 — Collect distinct person_ids (ignore unresolved utterances) ----
     person_ids_result = await db.execute(
         select(distinct(Utterance.person_id)).where(
@@ -63,10 +139,21 @@ async def get_argument_speakers(
     )
     tenure_rows = tenures_result.scalars().all()
 
-    # Step 4 — Group tenures by person_id -----------------------------------
-    tenures_by_person: dict[int, list[dict]] = defaultdict(list)
+    # Step 3a — Group tenures by person_id (keep date objects for lookup) ---
+    # We maintain TWO representations for each tenure:
+    #   - date_tenures_by_person: datetime.date objects for _tenure_role_name lookup
+    #   - str_tenures_by_person:  stringified dates for SpeakerPopoverEntry.tenure output
+    date_tenures_by_person: dict[int, list[dict]] = defaultdict(list)
+    str_tenures_by_person: dict[int, list[dict]] = defaultdict(list)
     for t in tenure_rows:
-        tenures_by_person[t.person_id].append(
+        date_tenures_by_person[t.person_id].append(
+            {
+                "seat": t.seat,
+                "start_date": t.start_date,        # datetime.date for comparison
+                "end_date": t.end_date,             # datetime.date or None
+            }
+        )
+        str_tenures_by_person[t.person_id].append(
             {
                 "seat": t.seat,
                 "start_date": str(t.start_date) if t.start_date else None,
@@ -74,9 +161,33 @@ async def get_argument_speakers(
             }
         )
 
+    # Step 4 — Fetch argument_participants.side per person for this argument -
+    sides_result = await db.execute(
+        select(ArgumentParticipant.person_id, ArgumentParticipant.side)
+        .where(
+            ArgumentParticipant.argument_id == argument_id,
+            ArgumentParticipant.person_id.in_(person_ids),
+        )
+    )
+    side_by_person: dict[int, SideEnum] = {
+        row.person_id: row.side for row in sides_result.all()
+    }
+
     # Step 5 — Assemble result ----------------------------------------------
     result: list[dict] = []
-    for person, role_name in people_rows:
+    for person, _legacy_role_name in people_rows:
+        side = side_by_person.get(person.id)
+
+        # Resolve role_name via tenure date-range lookup for bench speakers,
+        # or via the label map for advocates (ROLE-01/ROLE-02).
+        if side == SideEnum.BENCH:
+            role_name = _tenure_role_name(
+                date_tenures_by_person.get(person.id) or [],
+                argued_date,
+            )
+        else:
+            role_name = ADVOCATE_LABEL_MAP.get(side or SideEnum.UNKNOWN)
+
         result.append(
             {
                 "person_id": person.id,
@@ -85,7 +196,8 @@ async def get_argument_speakers(
                 "photo_url": person.photo_url,
                 "appointing_president": person.appointing_president,
                 # appointing_president_party intentionally excluded (T-14-02)
-                "tenure": tenures_by_person[person.id],
+                "tenure": str_tenures_by_person[person.id],
+                "side": side.value if side is not None else None,
             }
         )
 

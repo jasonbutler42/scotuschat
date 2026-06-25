@@ -47,9 +47,9 @@ Requirements for the next milestone. Phases 15–17.
 
 ### Speaker Role Accuracy
 
-- [ ] **ROLE-01**: The public speaker popover shows the role a Justice held at the time the argument was heard — determined by tenure date-range lookup against the argument's `argued_date`, not the person's current role field
+- [x] **ROLE-01**: The public speaker popover shows the role a Justice held at the time the argument was heard — determined by tenure date-range lookup against the argument's `argued_date`, not the person's current role field
 - [x] **ROLE-02**: Advocate roles (petitioner's counsel, respondent's counsel, amicus curiae) are stored per argument, not per person — a person can hold different roles across different arguments
-- [ ] **ROLE-03**: Operator can set or correct an advocate's role for a specific argument in the admin interface without affecting that person's role in other arguments
+- [x] **ROLE-03**: Operator can set or correct an advocate's role for a specific argument in the admin interface without affecting that person's role in other arguments
 
 ### Parser Extraction
 
@@ -111,9 +111,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PUB-02 | Phase 14 | Complete |
 | PUB-03 | Phase 14 | Complete |
 | PUB-04 | Phase 14 | Pending |
-| ROLE-01 | Phase 15 | Pending |
+| ROLE-01 | Phase 15 | Complete |
 | ROLE-02 | Phase 15 | Complete |
-| ROLE-03 | Phase 15 | Pending |
+| ROLE-03 | Phase 15 | Complete |
 | PARSE-01 | Phase 16 | Pending |
 | PARSE-02 | Phase 16 | Pending |
 | PIPE-21 | Phase 17 | Pending |

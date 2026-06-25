@@ -1,0 +1,46 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-06-25T17:17:43.718Z",
+  "phase": "14",
+  "phase_name": "speaker-popover-card",
+  "phase_dir": ".planning/phases/14-speaker-popover-card",
+  "plan": 3,
+  "task": 4,
+  "total_tasks": 4,
+  "status": "paused",
+  "completed_tasks": [
+    {"id": 1, "name": "Create SpeakerPopover.svelte", "status": "done", "commit": "722f372"},
+    {"id": 2, "name": "Modify ChatBubble.svelte — avatar to button", "status": "done", "commit": "89a9915"},
+    {"id": 3, "name": "Wire +page.svelte — Popover.Root, speakersMap, roster avatars", "status": "done", "commit": "d19959d"}
+  ],
+  "remaining_tasks": [
+    {"id": 4, "name": "checkpoint:human-verify — browser verification", "status": "blocked"}
+  ],
+  "blockers": [
+    {
+      "description": "FastAPI uvicorn running stale .pyc cache — GET /arguments/{id}/speakers returns 404 instead of speaker data",
+      "type": "human_action",
+      "workaround": "Clear api/__pycache__ dirs and restart uvicorn fresh. Then curl http://localhost:8000/arguments/3/speakers should return array, not 404."
+    },
+    {
+      "description": "Page title bug on people admin pages (argument name appearing) — not yet investigated",
+      "type": "technical",
+      "workaround": "Investigate after speakers popover is verified"
+    }
+  ],
+  "human_actions_pending": [
+    {
+      "action": "Clear Python pycache and restart FastAPI, then re-verify speaker popover in browser",
+      "context": "Speakers endpoint returns 404 because running uvicorn loaded stale .pyc before new route was added. Fix: `Get-ChildItem -Path api -Recurse -Filter __pycache__ -Directory | Remove-Item -Recurse -Force` then restart uvicorn.",
+      "blocking": true
+    }
+  ],
+  "decisions": [
+    {"decision": "shared Popover.Root pattern with onAvatarClick callback for ChatBubble", "rationale": "Avoids O(n) popover instances per utterance", "phase": "14"},
+    {"decision": "Popover.Portal wraps Popover.Content", "rationale": "Avoids overflow clip from scrollable chat column", "phase": "14"},
+    {"decision": "appointing_president_party excluded from SpeakerPopoverEntry schema", "rationale": "Apolitical framing hard constraint", "phase": "14"}
+  ],
+  "uncommitted_files": [],
+  "next_action": "1) Clear api pycache: `Get-ChildItem -Path api -Recurse -Filter __pycache__ -Directory | Remove-Item -Recurse -Force` 2) Restart uvicorn 3) Verify http://localhost:8000/arguments/3/speakers returns array 4) Re-run browser verification checklist in .continue-here.md 5) Type 'approved' to close plan 14-03 and proceed to phase verification",
+  "context_notes": "All three auto tasks in plan 14-03 are committed. The ONLY remaining work is human-verify checkpoint. The popover was non-functional because the FastAPI server was serving stale bytecode (new speakers route not loaded). Once uvicorn loads fresh, speakersMap will populate and all popover interactions should work. Photos will be missing (no photo_url data in DB yet — expected). The page title bug on admin/people pages is a separate pre-existing or new regression to investigate after this phase closes."
+}

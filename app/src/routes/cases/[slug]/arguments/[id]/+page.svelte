@@ -27,6 +27,7 @@
 	// Popover state
 	let isPopoverOpen = $state(false);
 	let currentSpeaker = $state<SpeakerDetail | null>(null);
+	let currentAnchor = $state<HTMLElement | null>(null);
 
 	// Build O(1) lookup map from server-loaded speakers array (Pitfall 2: not returned as Map)
 	// Cast via unknown because RawSpeaker uses an index signature in +page.server.ts
@@ -36,9 +37,10 @@
 		)
 	);
 
-	function onAvatarClick(personId: number): void {
+	function onAvatarClick(personId: number, anchor: HTMLElement): void {
 		const speaker = speakersMap.get(personId) ?? null;
 		currentSpeaker = speaker;
+		currentAnchor = anchor;
 		isPopoverOpen = speaker !== null;
 	}
 
@@ -119,6 +121,7 @@
 	<Popover.Root bind:open={isPopoverOpen} onOpenChange={(open) => { if (!open) currentSpeaker = null; }}>
 		<Popover.Portal>
 			<Popover.Content
+				customAnchor={currentAnchor}
 				sideOffset={8}
 				trapFocus={true}
 				escapeKeydownBehavior="close"
@@ -183,15 +186,16 @@
 					{#each roster.bench as speaker (speaker.name)}
 						<div style="display:flex;align-items:center;gap:8px;margin:0 0 4px 0;">
 							{#if speaker.person_id != null}
-								<Popover.Trigger
-									onclick={() => onAvatarClick(speaker.person_id!)}
+								<button
+									type="button"
+									onclick={(e) => onAvatarClick(speaker.person_id!, e.currentTarget as HTMLElement)}
 									style="background:none;border:none;padding:6px;cursor:pointer;border-radius:50%;display:flex;align-items:center;justify-content:center;"
 									aria-label="View {speaker.name} details"
 								>
 									<div aria-hidden="true" style="width:32px;height:32px;border-radius:50%;background-color:#94a3b8;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#0f1117;flex-shrink:0;">
 										{getInitials(speaker.name)}
 									</div>
-								</Popover.Trigger>
+								</button>
 							{:else}
 								<div aria-hidden="true" style="width:32px;height:32px;border-radius:50%;background-color:#94a3b8;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#0f1117;flex-shrink:0;">
 									{getInitials(speaker.name)}
@@ -216,15 +220,16 @@
 					{#each roster.advocates as speaker (speaker.name)}
 						<div style="display:flex;align-items:center;gap:8px;margin:0 0 4px 0;">
 							{#if speaker.person_id != null}
-								<Popover.Trigger
-									onclick={() => onAvatarClick(speaker.person_id!)}
+								<button
+									type="button"
+									onclick={(e) => onAvatarClick(speaker.person_id!, e.currentTarget as HTMLElement)}
 									style="background:none;border:none;padding:6px;cursor:pointer;border-radius:50%;display:flex;align-items:center;justify-content:center;"
 									aria-label="View {speaker.name} details"
 								>
 									<div aria-hidden="true" style="width:32px;height:32px;border-radius:50%;background-color:#93c5fd;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#0f1117;flex-shrink:0;">
 										{getInitials(speaker.name)}
 									</div>
-								</Popover.Trigger>
+								</button>
 							{:else}
 								<div aria-hidden="true" style="width:32px;height:32px;border-radius:50%;background-color:#93c5fd;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#0f1117;flex-shrink:0;">
 									{getInitials(speaker.name)}

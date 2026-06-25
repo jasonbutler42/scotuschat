@@ -9,7 +9,7 @@
 			text: string;
 			is_stage_direction: boolean;
 		};
-		onAvatarClick?: (personId: number) => void;
+		onAvatarClick?: (personId: number, anchor: HTMLElement) => void;
 	}>();
 
 	const isBench = utterance.side === 'BENCH';
@@ -59,7 +59,7 @@
 				<button
 					type="button"
 					aria-label="View {displayName} details"
-					onclick={() => onAvatarClick?.(utterance.person_id!)}
+					onclick={(e) => onAvatarClick?.(utterance.person_id!, e.currentTarget as HTMLElement)}
 					style="background:none;border:none;padding:6px;cursor:pointer;border-radius:50%;
 					       display:flex;align-items:center;justify-content:center;"
 				>

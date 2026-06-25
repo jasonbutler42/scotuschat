@@ -191,12 +191,12 @@ Plans:
   3. The popover shows the speaker's profile photo when one is available, or a styled initials fallback when it is not
   4. Visitor can dismiss the popover by pressing the Escape key; keyboard-only users can reach and dismiss the popover without a mouse
 
-**Plans**: 3 plans
+**Plans**: 1/3 plans executed
 
 Plans:
 **Wave 1**
 
-- [ ] 14-01-PLAN.md — Backend: SpeakerPopoverEntry schema + get_argument_speakers service + GET /arguments/{id}/speakers route
+- [x] 14-01-PLAN.md — Backend: SpeakerPopoverEntry schema + get_argument_speakers service + GET /arguments/{id}/speakers route
 
 **Wave 2** *(blocked on Wave 1)*
 
@@ -225,7 +225,7 @@ Plans:
 | 11. Argument Metadata Editing | v1.2 | 4/4 | Complete   | 2026-06-22 |
 | 12. People Admin Improvements | v1.2 | 7/7 | Complete   | 2026-06-24 |
 | 13. Ingestion Flow Polish | v1.2 | 3/3 | Complete    | 2026-06-25 |
-| 14. Speaker Popover Card | v1.2 | 0/? | Not started | — |
+| 14. Speaker Popover Card | v1.2 | 1/3 | In Progress|  |
 
 ## Backlog
 
@@ -236,6 +236,7 @@ Plans:
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (promote with /gsd-review-backlog when ready)
 
 ### Phase 999.2: prefill argument metadata during pipeline run (BACKLOG)
@@ -245,6 +246,7 @@ Plans:
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (promote with /gsd-review-backlog when ready)
 
 ### Phase 999.3: move people avatar to gutters outside the arguments (BACKLOG)
@@ -254,6 +256,7 @@ Plans:
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (promote with /gsd-review-backlog when ready)
 
 ### Phase 999.4: decide on listing style for arguments (BACKLOG)
@@ -263,6 +266,7 @@ Plans:
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (promote with /gsd-review-backlog when ready)
 
 ### Phase 999.5: improve in-argument navigation (BACKLOG)
@@ -272,6 +276,7 @@ Plans:
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (promote with /gsd-review-backlog when ready)
 
 ### Phase 999.6: unify admin header navigation with public navigation (BACKLOG)
@@ -281,6 +286,7 @@ Plans:
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (promote with /gsd-review-backlog when ready)
 
 ### Phase 999.7: implement design system in Figma (BACKLOG)
@@ -290,6 +296,7 @@ Plans:
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (promote with /gsd-review-backlog when ready)
 
 ### Phase 999.8: create readme for git commits so I can remember how to start the stack locally (BACKLOG)
@@ -299,4 +306,5 @@ Plans:
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (promote with /gsd-review-backlog when ready)

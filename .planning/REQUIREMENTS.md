@@ -36,8 +36,8 @@ Requirements for the Pre-Launch Polish milestone. Each maps to roadmap phases (p
 
 ### Public Experience
 
-- [ ] **PUB-01**: Visitor can click any speaker's avatar to open a popover card showing the speaker's name and role
-- [ ] **PUB-02**: Bench speaker popovers additionally show tenure dates and appointing president
+- [x] **PUB-01**: Visitor can click any speaker's avatar to open a popover card showing the speaker's name and role
+- [x] **PUB-02**: Bench speaker popovers additionally show tenure dates and appointing president
 - [ ] **PUB-03**: Speaker popover displays the speaker's profile photo when available, or styled initials as a fallback
 - [ ] **PUB-04**: Speaker popover is keyboard accessible and dismissible with the Escape key
 
@@ -87,8 +87,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PADM-02 | Phase 12 | Complete |
 | PADM-03 | Phase 12 | Complete |
 | PADM-04 | Phase 12 | Complete |
-| PUB-01 | Phase 14 | Pending |
-| PUB-02 | Phase 14 | Pending |
+| PUB-01 | Phase 14 | Complete |
+| PUB-02 | Phase 14 | Complete |
 | PUB-03 | Phase 14 | Pending |
 | PUB-04 | Phase 14 | Pending |
 

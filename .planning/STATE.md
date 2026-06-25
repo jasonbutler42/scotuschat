@@ -3,17 +3,17 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Pre-Launch Polish
 current_phase: 14
-current_phase_name: Speaker Popover Card
+current_phase_name: speaker-popover-card
 status: executing
 stopped_at: Phase 14 UI-SPEC approved
-last_updated: "2026-06-25T15:24:16.547Z"
+last_updated: "2026-06-25T15:32:06.779Z"
 last_activity: 2026-06-25
-last_activity_desc: Phase 13 complete, transitioned to Phase 14
+last_activity_desc: Phase 14 execution started
 progress:
   total_phases: 6
   completed_phases: 5
-  total_plans: 18
-  completed_plans: 18
+  total_plans: 21
+  completed_plans: 19
   percent: 83
 ---
 
@@ -24,14 +24,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-18 after v1.2 milestone start)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** Phase 13 — ingestion-flow-polish
+**Current focus:** Phase 14 — speaker-popover-card
 
 ## Current Position
 
-Phase: 14 — Speaker Popover Card
+Phase: 14 (speaker-popover-card) — EXECUTING
 Phase: 13 — pending planning
-Status: Ready to execute
-Last activity: 2026-06-25 — Phase 13 complete, transitioned to Phase 14
+Status: Executing Phase 14
+Last activity: 2026-06-25 — Phase 14 execution started
 
 Progress: [██████████] 100%
 
@@ -71,6 +71,7 @@ Progress: [██████████] 100%
 | Phase 12 P07 | 8 | 3 tasks | 2 files |
 | Phase 13 P01 | ~30 | 2 tasks | 4 files |
 | Phase 13 P03 | ~45 | 3 tasks + fix | 1 files |
+| Phase 14 P01 | 8 | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -119,6 +120,9 @@ Full log in PROJECT.md Key Decisions table. Key decisions for v1.2:
 - [13-03]: lastKnownStep $state tracks last non-null current_step; passed as fallback to stepStatus only when status=running and current_step=null (PIPE-18)
 - [13-03]: Custom Svelte 5 Runes combobox replaces native datalist — no new dependency; per-row state in RowState interface (PIPE-19)
 - [13-03]: Combobox container hidden (display:none) when s.addingPerson is true — AddNewPersonForm fields unambiguous
+- [Phase ?]: [14-01]: SpeakerPopoverEntry uses list[TenureEntry] not ORM relationship — avoids N+1 lazy loads
+- [Phase ?]: [14-01]: appointing_president_party excluded at schema and service layers (T-14-02, apolitical framing)
+- [Phase ?]: [14-01]: get_argument_speakers returns [] not 404 for unresolved arguments (D-01)
 
 ### Pending Todos
 
@@ -142,6 +146,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-25T14:28:42.828Z
+Last session: 2026-06-25T15:32:06.768Z
 Stopped at: Phase 14 UI-SPEC approved
 Resume file: .planning/phases/14-speaker-popover-card/14-UI-SPEC.md

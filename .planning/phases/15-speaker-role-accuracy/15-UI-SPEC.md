@@ -36,7 +36,7 @@ Declared values (must be multiples of 4):
 
 | Token | Value | Usage |
 |-------|-------|-------|
-| xs | 4px | Icon gaps, badge padding (2px 4px → rounded to 4px token), inline text gap |
+| xs | 4px | Icon gaps, inline text gap |
 | sm | 8px | Label-to-input margin, list item padding, button padding (6px 12px uses 8px base) |
 | md | 16px | Default element spacing, field margin-bottom, card inner padding rows |
 | lg | 24px | Card padding, section margin-bottom, CTA margin-top |
@@ -45,9 +45,10 @@ Declared values (must be multiples of 4):
 | 3xl | 64px | Not used at this scale — reserved |
 
 Exceptions:
-- Status badge padding is `2px 8px` (intentional — matches all existing badges; do not change to 4px).
 - Touch-target minimum for primary action buttons: 44px min-height (WCAG 2.5.5 — already established in all admin CTAs).
 - Inline warning banner uses `12px` vertical padding (between sm and md) — match existing inline alert patterns in pipeline job detail.
+
+> **Inherited constant (not Phase 15 governance scope):** Status badge padding `2px 8px` is a pre-existing codebase value carried forward from earlier phases. It is not introduced by Phase 15 and is not subject to Phase 15 spacing governance. Do not change it; do not audit it as a Phase 15 violation.
 
 Source: inline styles throughout `app/src/routes/admin/pipeline/[job_id]/+page.svelte` and `app/src/routes/admin/arguments/[id]/+page.svelte`.
 
@@ -114,7 +115,7 @@ Used in two locations: pipeline job detail resolve table (new column) and argume
 | Background | `#0f1117` |
 | Border | `1px solid #334155` (default), `1px solid #93c5fd` (focus) |
 | Border radius | `6px` |
-| Padding | `6px 10px` |
+| Padding | `8px 12px` |
 | Font size | 16px, weight 400, color `#e2e8f0` |
 | Min height | 36px (not a primary CTA — inline action in a table row) |
 

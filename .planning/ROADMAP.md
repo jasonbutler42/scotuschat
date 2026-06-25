@@ -235,7 +235,7 @@ Plans:
 | 12. People Admin Improvements | v1.2 | 7/7 | Complete   | 2026-06-24 |
 | 13. Ingestion Flow Polish | v1.2 | 3/3 | Complete    | 2026-06-25 |
 | 14. Speaker Popover Card | v1.2 | 3/3 | Complete   | 2026-06-25 |
-| 15. Speaker Role Accuracy | v1.3 | 0/3 | Pending | — |
+| 15. Speaker Role Accuracy | v1.3 | 0/4 | Pending | — |
 | 16. Parser Improvements | v1.3 | 0/2 | Pending | — |
 | 17. Pipeline UI Polish | v1.3 | 0/2 | Pending | — |
 
@@ -251,11 +251,20 @@ Plans:
   3. Operator can change an advocate's role for a specific argument in the admin without affecting their role in other arguments
   4. Popovers for speakers with no tenure data and no per-argument role degrade gracefully (no crash, no misleading label)
 
-**Plans**: 0/3 plans — pending
+**Plans**: 0/4 plans — pending (expanded from 3 to fold in the argument lifecycle status / manual-approval changes per 15-CONTEXT)
 
-- [ ] 15-01-PLAN.md — Schema migration: add role FK to argument_participants; expand SideEnum to BENCH/PETITIONER/RESPONDENT/AMICUS/UNKNOWN
-- [ ] 15-02-PLAN.md — Service: tenure date-range lookup in get_argument_speakers; argument_participants role join for advocates
-- [ ] 15-03-PLAN.md — Admin UI: per-argument advocate role editor; SpeakerPopoverEntry role_name resolution update
+**Wave 1**
+
+- [ ] 15-01-PLAN.md — Migration 0008: expand SideEnum (PETITIONER/RESPONDENT/AMICUS, backfill ADVOCATE→UNKNOWN) + new arguments.status enum column + ORM model updates
+
+**Wave 2** *(blocked on 15-01)*
+
+- [ ] 15-02-PLAN.md — Service + schemas + router: tenure date-range role lookup + advocate label map in get_argument_speakers; approve/rerun job transitions; IDOR-guarded participant-side PATCH; admin-list status filter; tenure-gap filter; 3 new admin endpoints
+
+**Wave 3** *(blocked on 15-02; 15-03 and 15-04 run in parallel — disjoint frontend files)*
+
+- [ ] 15-03-PLAN.md — Pipeline job detail UI: advocate role dropdowns (pipeline state), "Create Argument" approve button, post-approval read-only + two-step Re-run (human-verify checkpoint)
+- [ ] 15-04-PLAN.md — Argument edit page advocate role editor + tenure-gap warnings; arguments-list status badge/column; people-directory tenure-gaps filter (human-verify checkpoint)
 
 ### Phase 16: Parser Improvements
 

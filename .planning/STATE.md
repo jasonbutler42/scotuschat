@@ -4,9 +4,9 @@ milestone: v1.2
 milestone_name: Pre-Launch Polish
 current_phase: 14
 current_phase_name: Speaker Popover Card
-status: completed
-stopped_at: Phase 14 context gathered
-last_updated: "2026-06-25T13:48:28.311Z"
+status: executing
+stopped_at: Phase 14 UI-SPEC approved
+last_updated: "2026-06-25T15:24:16.547Z"
 last_activity: 2026-06-25
 last_activity_desc: Phase 13 complete, transitioned to Phase 14
 progress:
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-06-18 after v1.2 milestone start)
 
 Phase: 14 — Speaker Popover Card
 Phase: 13 — pending planning
-Status: Phase 13 complete — all 3 plans done (13-01, 13-02 skipped/merged into 13-01, 13-03)
+Status: Ready to execute
 Last activity: 2026-06-25 — Phase 13 complete, transitioned to Phase 14
 
 Progress: [██████████] 100%
@@ -142,6 +142,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-25T13:48:28.300Z
-Stopped at: Phase 14 context gathered
-Resume file: .planning/phases/14-speaker-popover-card/14-CONTEXT.md
+Last session: 2026-06-25T14:28:42.828Z
+Stopped at: Phase 14 UI-SPEC approved
+Resume file: .planning/phases/14-speaker-popover-card/14-UI-SPEC.md

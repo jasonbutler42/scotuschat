@@ -30,9 +30,8 @@ metrics:
   completed: "2026-06-24"
   tasks: 2
   files: 2
-status: partial
+status: complete
 requirements: [PIPE-20]
-checkpoint_pending: "Task 3 — human verify incomplete filter toggle end-to-end"
 ---
 
 # Phase 13 Plan 02: Pipeline List Incomplete Toggle Summary
@@ -73,15 +72,14 @@ checkpoint_pending: "Task 3 — human verify incomplete filter toggle end-to-end
 
 None — plan executed exactly as written.
 
-## Pending Checkpoint
+## Checkpoint Verification
 
-Task 3 (`checkpoint:human-verify`) has not been cleared. The operator must:
-1. Start the app and visit /admin/pipeline
-2. Verify the toggle renders in the off state above Recent Runs
-3. Click the toggle — URL becomes /admin/pipeline?incomplete=1, knob slides right (blue), table shows only paused/failed jobs
-4. If no paused/failed jobs exist, verify "No jobs need attention" empty state
-5. Click toggle again — URL returns to /admin/pipeline, full list restored
-6. Verify keyboard access (Tab → focus ring, Enter/Space to flip)
+Task 3 (`checkpoint:human-verify`) cleared — approved 2026-06-25. Operator confirmed:
+- Toggle renders in off state above Recent Runs
+- Clicking toggle: URL becomes /admin/pipeline?incomplete=1, knob slides right (blue), table shows only paused/failed jobs
+- Filter-on empty state ("No jobs need attention") renders correctly when no paused/failed jobs
+- Clicking toggle again: URL returns to /admin/pipeline, full list restored
+- Keyboard access verified (Tab focus ring, Enter/Space to flip)
 
 ## Known Stubs
 

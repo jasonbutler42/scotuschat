@@ -8,17 +8,14 @@ A website that displays Supreme Court oral arguments as a chat-style interface �
 
 Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
 
-## Current Milestone: v1.2 Pre-Launch Polish
+## Current Milestone: v1.3 Speaker Accuracy + Pipeline Confidence
 
-**Goal:** Complete the admin tooling and public experience needed before the site is ready to deploy.
+**Goal:** Fix speaker role accuracy on the live popover, make the ingestion pipeline reliable enough to process large volumes of older transcripts, and give the operator enough visibility to trust the process.
 
 **Target features:**
-- Ingestion flow polish (progress indicators, typeahead, incomplete toggle)
-- Argument metadata editing (correct title/docket/date before resolved_at gate)
-- Unified navigation (admin and public share same top nav)
-- People data model (structured name fields, appointing president + party)
-- People admin improvements (image upload, merge people, delete orphaned records)
-- Speaker popover card (bench only — avatar click shows image, name, role, tenure, appointing president/party)
+- Speaker role accuracy — Justices show tenure-derived role at argument date; advocates have per-argument roles (ROLE-01–03)
+- Parser improvements — extract case metadata and advocate sides from transcript PDF at parse time (PARSE-01–02)
+- Pipeline UI polish — stage stat cards, pre-populated argument fields, source PDF access (PIPE-21–22)
 
 ## Requirements
 
@@ -69,14 +66,11 @@ Anyone can open a SCOTUS oral argument and immediately follow the conversation �
 
 ### Active
 
-- ✓ Ingestion flow polish — step badge null-transition fallback, custom combobox typeahead, incomplete jobs filter — v1.2 (PIPE-18, PIPE-19, PIPE-20)
-- [ ] Argument metadata editing — correct title, docket, date before resolved_at gate
-- [ ] Unified top navigation — admin and public share same nav header
-- [ ] People data model — structured name fields (first/last/middle/suffix), appointing president + party
-- [ ] People admin — image upload to DO Spaces, merge people (utterance transfer), delete orphaned records
-- [ ] Speaker popover card — avatar click shows image, name, role, tenure, appointing president/party (bench only)
-- [ ] Application deployed to Digital Ocean App Platform (SvelteKit + FastAPI as separate services, managed Postgres) (DEPLOY-01, v1.3)
-- [ ] Continuous deployment from GitHub main branch (DEPLOY-03, v1.3)
+- [ ] Speaker role accuracy — Justice tenure date-range lookup for popover role; per-argument advocate roles stored and editable (ROLE-01, ROLE-02, ROLE-03)
+- [ ] Parser improvements — parse step extracts case name, docket, argued date, and advocate side from transcript PDF (PARSE-01, PARSE-02)
+- [ ] Pipeline UI polish — stage stat cards; source PDF accessible from job detail; pre-populated argument fields (PIPE-21, PIPE-22)
+- [ ] Application deployed to Digital Ocean App Platform (SvelteKit + FastAPI as separate services, managed Postgres) (DEPLOY-01, v1.4)
+- [ ] Continuous deployment from GitHub main branch (DEPLOY-03, v1.4)
 
 ### Out of Scope
 
@@ -141,6 +135,9 @@ Anyone can open a SCOTUS oral argument and immediately follow the conversation �
 | `arguments.resolved_at` visibility gate (Phase 7) | Cases only appear in `/cases/` after `resolved_at IS NOT NULL`; prevents placeholder titles ("Pending review") from surfacing publicly; metadata fabrication at resolve time forbidden by apolitical constraint | ✓ Good — Phase 8 (People Editor) provides real metadata editing |
 | ArgumentParticipant seeding in parse Step 7b (Phase 8) | resolve.py Step 5 ran UPDATE against rows that never existed; fix seeds one row per unique speaker label (person_id=NULL) during parse Step 7b; select-before-insert guards re-runs | ✓ Good — participants section renders on completed job detail pages after any new run |
 | People editor uses SvelteKit form actions + use:enhance throughout (Phase 8) | Consistent with existing admin UI patterns; AddNewPersonForm uses raw fetch for role creation (needs JSON response inspection) | ✓ Good — clean server validation via FastAPI Pydantic models |
+| `bits-ui ^2.18.1` for speaker popover (Phase 14) | Only Svelte 5-native headless popover after `@skeletonlabs/floating-ui-svelte` archived Oct 2025 | ✓ Good — customAnchor prop + plain buttons pattern worked correctly |
+| `argument_participants.side` BENCH/ADVOCATE binary (Phase 1) | Simple classification sufficient at MVP; advocate sub-roles deferred | ⚠️ Revisit — Phase 15 expands to per-argument roles for correct popover display |
+| `Person.role_id` as popover role source (Phase 14) | Expedient at build time; person's primary role used as fallback | ⚠️ Revisit — Phase 15 replaces with tenure date-range lookup for Justices |
 
 ## Evolution
 
@@ -160,4 +157,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-18 after v1.2 milestone start*
+*Last updated: 2026-06-25 after v1.3 milestone start*

@@ -1,20 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.2
-milestone_name: Pre-Launch Polish
-current_phase: 14
-current_phase_name: speaker-popover-card
-status: complete
-stopped_at: v1.2 milestone complete — all 6 phases shipped (2026-06-25)
-last_updated: "2026-06-25T18:30:00.000Z"
+milestone: v1.3
+milestone_name: Speaker Accuracy + Pipeline Confidence
+status: planning
+last_updated: "2026-06-25T19:14:22.393Z"
 last_activity: 2026-06-25
-last_activity_desc: Phase 14 UAT passed — v1.2 Pre-Launch Polish milestone complete
 progress:
-  total_phases: 6
-  completed_phases: 6
-  total_plans: 21
-  completed_plans: 21
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -28,12 +24,10 @@ See: .planning/PROJECT.md (updated 2026-06-18 after v1.2 milestone start)
 
 ## Current Position
 
-Phase: 14 (speaker-popover-card) — EXECUTING
-Phase: 13 — pending planning
-Status: Executing Phase 14
-Last activity: 2026-06-25 — Phase 14 execution started
-
-Progress: [██████████] 100%
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-06-25 — Milestone v1.3 started
 
 ## Performance Metrics
 
@@ -146,6 +140,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-25T16:51:05.844Z
-Stopped at: context exhaustion at 75% (2026-06-25)
-Resume file: .planning/phases/14-speaker-popover-card/14-UI-SPEC.md
+Last session: 2026-06-25T18:30:00.000Z
+Stopped at: v1.2 milestone complete — session resumed, proceeding to /gsd-new-milestone for v1.3
+Resume file: none

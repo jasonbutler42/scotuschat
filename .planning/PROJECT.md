@@ -69,7 +69,7 @@ Anyone can open a SCOTUS oral argument and immediately follow the conversation �
 
 ### Active
 
-- [ ] Ingestion flow polish — fix progress indicators, typeahead dropdowns, incomplete toggle
+- ✓ Ingestion flow polish — step badge null-transition fallback, custom combobox typeahead, incomplete jobs filter — v1.2 (PIPE-18, PIPE-19, PIPE-20)
 - [ ] Argument metadata editing — correct title, docket, date before resolved_at gate
 - [ ] Unified top navigation — admin and public share same nav header
 - [ ] People data model — structured name fields (first/last/middle/suffix), appointing president + party

@@ -165,7 +165,7 @@ Plans:
   2. Operator typing in the speaker alias typeahead sees relevant candidate matches and can select one; the selected value is applied correctly
   3. Operator toggling the incomplete filter on the pipeline list sees only jobs that require their action; toggling it off restores the full list
 
-**Plans**: 2/3 plans executed
+**Plans**: 3/3 plans complete
 
 Plans:
 **Wave 1**
@@ -210,5 +210,5 @@ Plans:
 | 10. Unified Navigation | v1.2 | 1/1 | Complete   | 2026-06-22 |
 | 11. Argument Metadata Editing | v1.2 | 4/4 | Complete   | 2026-06-22 |
 | 12. People Admin Improvements | v1.2 | 7/7 | Complete   | 2026-06-24 |
-| 13. Ingestion Flow Polish | v1.2 | 2/3 | In Progress|  |
+| 13. Ingestion Flow Polish | v1.2 | 3/3 | Complete   | 2026-06-25 |
 | 14. Speaker Popover Card | v1.2 | 0/? | Not started | — |

@@ -1,5 +1,16 @@
 <script lang="ts">
-	let { utterance } = $props();
+	let { utterance, onAvatarClick } = $props<{
+		utterance: {
+			person_id: number | null;
+			side: string;
+			speaker_name: string | null;
+			raw_speaker_label: string | null;
+			speaker_role: string | null;
+			text: string;
+			is_stage_direction: boolean;
+		};
+		onAvatarClick?: (personId: number) => void;
+	}>();
 
 	const isBench = utterance.side === 'BENCH';
 	// D-05: BENCH: left-aligned; ADVOCATE or UNKNOWN: right-aligned
@@ -44,13 +55,31 @@
 				margin-bottom: 8px;
 			"
 		>
-			<div aria-hidden="true" style="
-				width: 32px; height: 32px; border-radius: 50%;
-				background-color: {avatarBg};
-				display: flex; align-items: center; justify-content: center;
-				font-size: 12px; font-weight: 600; color: #0f1117;
-				flex-shrink: 0;
-			">{initials}</div>
+			{#if utterance.person_id != null && onAvatarClick}
+				<button
+					type="button"
+					aria-label="View {displayName} details"
+					onclick={() => onAvatarClick?.(utterance.person_id!)}
+					style="background:none;border:none;padding:6px;cursor:pointer;border-radius:50%;
+					       display:flex;align-items:center;justify-content:center;"
+				>
+					<div aria-hidden="true" style="
+						width: 32px; height: 32px; border-radius: 50%;
+						background-color: {avatarBg};
+						display: flex; align-items: center; justify-content: center;
+						font-size: 12px; font-weight: 600; color: #0f1117;
+						flex-shrink: 0;
+					">{initials}</div>
+				</button>
+			{:else}
+				<div aria-hidden="true" style="
+					width: 32px; height: 32px; border-radius: 50%;
+					background-color: {avatarBg};
+					display: flex; align-items: center; justify-content: center;
+					font-size: 12px; font-weight: 600; color: #0f1117;
+					flex-shrink: 0;
+				">{initials}</div>
+			{/if}
 <span
 				style="
 					font-size: 13px;

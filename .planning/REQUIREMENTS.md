@@ -41,6 +41,26 @@ Requirements for the Pre-Launch Polish milestone. Each maps to roadmap phases (p
 - [x] **PUB-03**: Speaker popover displays the speaker's profile photo when available, or styled initials as a fallback
 - [ ] **PUB-04**: Speaker popover is keyboard accessible and dismissible with the Escape key
 
+## v1.3 Requirements
+
+Requirements for the next milestone. Phases 15–17.
+
+### Speaker Role Accuracy
+
+- [ ] **ROLE-01**: The public speaker popover shows the role a Justice held at the time the argument was heard — determined by tenure date-range lookup against the argument's `argued_date`, not the person's current role field
+- [ ] **ROLE-02**: Advocate roles (petitioner's counsel, respondent's counsel, amicus curiae) are stored per argument, not per person — a person can hold different roles across different arguments
+- [ ] **ROLE-03**: Operator can set or correct an advocate's role for a specific argument in the admin interface without affecting that person's role in other arguments
+
+### Parser Extraction
+
+- [ ] **PARSE-01**: Parse step automatically extracts case name, docket number, and argued date from the transcript PDF and pre-populates argument metadata fields so the operator reviews rather than types from scratch
+- [ ] **PARSE-02**: Parse step automatically detects which side each advocate is arguing (petitioner/respondent/amicus) from the transcript structure and stores it as the initial per-argument role
+
+### Pipeline Confidence
+
+- [ ] **PIPE-21**: Each pipeline stage card shows detailed stats — Ingest shows the source filename; Parse shows utterance count, speaker count, and any extracted case metadata
+- [ ] **PIPE-22**: Operator can access the original source PDF for any ingested argument directly from the pipeline admin to verify speaker assignments against the transcript
+
 ## Future Requirements
 
 Deferred to v1.3 and beyond. Tracked but not in current roadmap.
@@ -91,13 +111,19 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PUB-02 | Phase 14 | Complete |
 | PUB-03 | Phase 14 | Complete |
 | PUB-04 | Phase 14 | Pending |
+| ROLE-01 | Phase 15 | Pending |
+| ROLE-02 | Phase 15 | Pending |
+| ROLE-03 | Phase 15 | Pending |
+| PARSE-01 | Phase 16 | Pending |
+| PARSE-02 | Phase 16 | Pending |
+| PIPE-21 | Phase 17 | Pending |
+| PIPE-22 | Phase 17 | Pending |
 
 **Coverage:**
 
-- v1.2 requirements: 16 total
-- Mapped to phases: 16
-- Unmapped: 0 ✓
+- v1.2 requirements: 16 total, 16 mapped ✓
+- v1.3 requirements: 7 total, 7 mapped ✓
 
 ---
 *Requirements defined: 2026-06-18*
-*Last updated: 2026-06-18 after roadmap creation*
+*Last updated: 2026-06-25 after v1.3 scoping exploration*

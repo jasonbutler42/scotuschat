@@ -4,7 +4,8 @@
 
 - ✅ **v1.0 MVP** — Phases 1–4 (shipped 2026-06-15)
 - ✅ **v1.1 Operator Admin Interface** — Phases 5–8 (shipped 2026-06-18)
-- 🚧 **v1.2 Pre-Launch Polish** — Phases 9–14 (in progress)
+- ✅ **v1.2 Pre-Launch Polish** — Phases 9–14 (shipped 2026-06-25)
+- 🔜 **v1.3 Speaker Accuracy + Pipeline Confidence** — Phases 15–17 (planned)
 
 ## Phases
 
@@ -35,6 +36,14 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
 Full phase details: `.planning/milestones/v1.1-ROADMAP.md`
 
 </details>
+
+### 🔜 v1.3 Speaker Accuracy + Pipeline Confidence — PLANNED
+
+**Milestone Goal:** Fix speaker role accuracy on the live popover, make ingestion reliable enough to process large volumes of older transcripts, and give the operator enough pipeline visibility to trust the process.
+
+- [ ] **Phase 15: Speaker Role Accuracy** - Justice role in popover determined by tenure date lookup; advocate roles stored and editable per argument
+- [ ] **Phase 16: Parser Improvements** - Parse step extracts case metadata and advocate sides from transcript PDF
+- [ ] **Phase 17: Pipeline UI Polish** - Stage stat cards, pre-populated argument fields, source PDF access
 
 ### ✅ v1.2 Pre-Launch Polish — SHIPPED 2026-06-25
 
@@ -226,6 +235,61 @@ Plans:
 | 12. People Admin Improvements | v1.2 | 7/7 | Complete   | 2026-06-24 |
 | 13. Ingestion Flow Polish | v1.2 | 3/3 | Complete    | 2026-06-25 |
 | 14. Speaker Popover Card | v1.2 | 3/3 | Complete   | 2026-06-25 |
+| 15. Speaker Role Accuracy | v1.3 | 0/3 | Pending | — |
+| 16. Parser Improvements | v1.3 | 0/2 | Pending | — |
+| 17. Pipeline UI Polish | v1.3 | 0/2 | Pending | — |
+
+### Phase 15: Speaker Role Accuracy
+
+**Goal**: The public speaker popover shows accurate roles — Justices show the role they held at the time of the specific argument, and advocates show the role they played in that argument, not their default person-level role
+**Depends on**: Phase 14 (popover exists and is live)
+**Requirements**: ROLE-01, ROLE-02, ROLE-03
+**Success Criteria** (what must be TRUE):
+
+  1. A Justice who served as Associate Justice and later as Chief Justice shows the correct title in the popover based on the argument's argued_date
+  2. An advocate who argued for the petitioner in one case and the respondent in another shows the correct role in each argument's popover
+  3. Operator can change an advocate's role for a specific argument in the admin without affecting their role in other arguments
+  4. Popovers for speakers with no tenure data and no per-argument role degrade gracefully (no crash, no misleading label)
+
+**Plans**: 0/3 plans — pending
+
+- [ ] 15-01-PLAN.md — Schema migration: add role FK to argument_participants; expand SideEnum to BENCH/PETITIONER/RESPONDENT/AMICUS/UNKNOWN
+- [ ] 15-02-PLAN.md — Service: tenure date-range lookup in get_argument_speakers; argument_participants role join for advocates
+- [ ] 15-03-PLAN.md — Admin UI: per-argument advocate role editor; SpeakerPopoverEntry role_name resolution update
+
+### Phase 16: Parser Improvements
+
+**Goal**: The parse step extracts case name, docket number, argued date, and advocate sides directly from the transcript PDF so the operator reviews pre-populated fields rather than entering everything from scratch
+**Depends on**: Phase 15 (argument_participants role field must exist before parser can populate it)
+**Requirements**: PARSE-01, PARSE-02
+**Success Criteria** (what must be TRUE):
+
+  1. After parsing a standard SCOTUS transcript, the argument's case name, docket number, and argued date fields are pre-populated with values extracted from the PDF
+  2. Each advocate in argument_participants has an initial role (petitioner/respondent/amicus) derived from the transcript structure, not left as UNKNOWN
+  3. Pre-populated fields are editable — the operator can correct any extraction error before publishing
+  4. Arguments from transcripts where extraction fails (older/non-standard formats) fall back to blank fields without breaking the parse step
+
+**Plans**: 0/2 plans — pending
+
+- [ ] 16-01-PLAN.md — Parser: extract cover-page metadata (case name, docket, date) and write to argument record at parse time
+- [ ] 16-02-PLAN.md — Parser: detect advocate side from transcript section headers; write initial role to argument_participants
+
+### Phase 17: Pipeline UI Polish
+
+**Goal**: The pipeline admin gives the operator enough information at each stage to trust the process — detailed stats per card, clear source file identification, and direct access to the original PDF for speaker verification
+**Depends on**: Phase 16 (parser extracts metadata that stage cards will display)
+**Requirements**: PIPE-21, PIPE-22
+**Success Criteria** (what must be TRUE):
+
+  1. The Ingest stage card shows the original filename of the uploaded PDF
+  2. The Parse stage card shows utterance count, distinct speaker count, and the extracted case metadata (name, docket, date)
+  3. Operator can open or download the original source PDF for any argument directly from the pipeline job detail page
+  4. Stats and file link are visible without leaving the pipeline admin view
+
+**Plans**: 0/2 plans — pending
+
+- [ ] 17-01-PLAN.md — Backend: store original filename at ingest; expose filename + parse stats in job detail API response
+- [ ] 17-02-PLAN.md — Frontend: update stage cards with stats; add source PDF link to job detail page
 
 ## Backlog
 

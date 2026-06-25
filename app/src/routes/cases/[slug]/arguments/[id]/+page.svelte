@@ -1,10 +1,46 @@
 <script lang="ts">
+	import { Popover } from 'bits-ui';
 	import ChatBubble from '$lib/components/ChatBubble.svelte';
 	import StageDirection from '$lib/components/StageDirection.svelte';
 	import SectionRail from '$lib/components/SectionRail.svelte';
 	import MobileNavBar from '$lib/components/MobileNavBar.svelte';
+	import SpeakerPopover from '$lib/components/SpeakerPopover.svelte';
+
+	interface TenureRow {
+		seat: string | null;
+		start_date: string | null;
+		end_date: string | null;
+	}
+
+	interface SpeakerDetail {
+		person_id: number;
+		full_name: string;
+		role_name: string | null;
+		photo_url_full: string | null;
+		is_bench: boolean;
+		tenure: TenureRow[];
+		appointing_president: string | null;
+	}
 
 	let { data } = $props();
+
+	// Popover state
+	let isPopoverOpen = $state(false);
+	let currentSpeaker = $state<SpeakerDetail | null>(null);
+
+	// Build O(1) lookup map from server-loaded speakers array (Pitfall 2: not returned as Map)
+	// Cast via unknown because RawSpeaker uses an index signature in +page.server.ts
+	const speakersMap = $derived(
+		new Map<number, SpeakerDetail>(
+			(data.speakers as unknown as SpeakerDetail[]).map((s) => [s.person_id, s])
+		)
+	);
+
+	function onAvatarClick(personId: number): void {
+		const speaker = speakersMap.get(personId) ?? null;
+		currentSpeaker = speaker;
+		isPopoverOpen = speaker !== null;
+	}
 
 	/**
 	 * Format an argued_date string (e.g. "2015-04-28") as "April 28, 2015".
@@ -24,16 +60,17 @@
 	}
 
 	// D-12: Roster derived client-side from utterances (no new API endpoint needed)
+	// Extended to carry person_id alongside name and role (Pitfall 4 fix)
 	const roster = $derived.by(() => {
 		const seen = new Set<string>();
-		const bench: { name: string; role: string | null }[] = [];
-		const advocates: { name: string; role: string | null }[] = [];
+		const bench: { name: string; role: string | null; person_id: number | null }[] = [];
+		const advocates: { name: string; role: string | null; person_id: number | null }[] = [];
 		for (const u of data.utterances) {
 			if (u.is_stage_direction) continue;
 			const key = u.speaker_name ?? u.raw_speaker_label ?? '';
 			if (!key || seen.has(key)) continue;
 			seen.add(key);
-			const entry = { name: key, role: u.speaker_role ?? null };
+			const entry = { name: key, role: u.speaker_role ?? null, person_id: u.person_id ?? null };
 			if (u.side === 'BENCH') bench.push(entry);
 			else advocates.push(entry);
 		}
@@ -65,10 +102,35 @@
 				[]
 			)
 	);
+
+	// Helper: derive initials from a display name
+	function getInitials(name: string): string {
+		const parts = name.trim().split(/\s+/).filter(Boolean);
+		if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+		if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+		return '?';
+	}
 </script>
 
 <!-- Page background (#0f1117) -->
 <main style="background-color: #0f1117; min-height: 100vh;">
+
+	<!-- Shared Popover.Root at page level — single instance for all avatar triggers -->
+	<Popover.Root bind:open={isPopoverOpen} onOpenChange={(open) => { if (!open) currentSpeaker = null; }}>
+		<Popover.Portal>
+			<Popover.Content
+				sideOffset={8}
+				trapFocus={true}
+				escapeKeydownBehavior="close"
+				interactOutsideBehavior="close"
+				style="z-index: 50;"
+			>
+				{#if currentSpeaker}
+					<SpeakerPopover speaker={currentSpeaker} />
+				{/if}
+			</Popover.Content>
+		</Popover.Portal>
+
 	<!-- Argument heading bar: full-width, #1e293b, border-bottom #334155 -->
 	<header
 		style="
@@ -119,16 +181,24 @@
 						Bench
 					</p>
 					{#each roster.bench as speaker (speaker.name)}
-						<p
-							style="
-								font-size: 14px;
-								font-weight: 400;
-								color: #94a3b8;
-								margin: 0 0 4px 0;
-							"
-						>
-							{speaker.name}
-						</p>
+						<div style="display:flex;align-items:center;gap:8px;margin:0 0 4px 0;">
+							{#if speaker.person_id != null}
+								<Popover.Trigger
+									onclick={() => onAvatarClick(speaker.person_id!)}
+									style="background:none;border:none;padding:6px;cursor:pointer;border-radius:50%;display:flex;align-items:center;justify-content:center;"
+									aria-label="View {speaker.name} details"
+								>
+									<div aria-hidden="true" style="width:32px;height:32px;border-radius:50%;background-color:#94a3b8;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#0f1117;flex-shrink:0;">
+										{getInitials(speaker.name)}
+									</div>
+								</Popover.Trigger>
+							{:else}
+								<div aria-hidden="true" style="width:32px;height:32px;border-radius:50%;background-color:#94a3b8;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#0f1117;flex-shrink:0;">
+									{getInitials(speaker.name)}
+								</div>
+							{/if}
+							<p style="font-size:14px;font-weight:400;color:#94a3b8;margin:0;">{speaker.name}</p>
+						</div>
 					{/each}
 				</div>
 				<!-- Advocates column -->
@@ -144,16 +214,24 @@
 						Advocates
 					</p>
 					{#each roster.advocates as speaker (speaker.name)}
-						<p
-							style="
-								font-size: 14px;
-								font-weight: 400;
-								color: #94a3b8;
-								margin: 0 0 4px 0;
-							"
-						>
-							{speaker.name}
-						</p>
+						<div style="display:flex;align-items:center;gap:8px;margin:0 0 4px 0;">
+							{#if speaker.person_id != null}
+								<Popover.Trigger
+									onclick={() => onAvatarClick(speaker.person_id!)}
+									style="background:none;border:none;padding:6px;cursor:pointer;border-radius:50%;display:flex;align-items:center;justify-content:center;"
+									aria-label="View {speaker.name} details"
+								>
+									<div aria-hidden="true" style="width:32px;height:32px;border-radius:50%;background-color:#93c5fd;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#0f1117;flex-shrink:0;">
+										{getInitials(speaker.name)}
+									</div>
+								</Popover.Trigger>
+							{:else}
+								<div aria-hidden="true" style="width:32px;height:32px;border-radius:50%;background-color:#93c5fd;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#0f1117;flex-shrink:0;">
+									{getInitials(speaker.name)}
+								</div>
+							{/if}
+							<p style="font-size:14px;font-weight:400;color:#94a3b8;margin:0;">{speaker.name}</p>
+						</div>
 					{/each}
 				</div>
 			</div>
@@ -203,7 +281,7 @@
 						{#if utterance.is_stage_direction}
 							<StageDirection {utterance} />
 						{:else}
-							<ChatBubble {utterance} />
+							<ChatBubble {utterance} {onAvatarClick} />
 						{/if}
 					</div>
 				{/each}
@@ -211,6 +289,8 @@
 		</div>
 	</div>
 	<MobileNavBar sections={sectionAnchors} />
+
+	</Popover.Root>
 </main>
 
 <!-- D-03: Mobile breakpoint — hide nav rail below 768px; chat spans full width -->

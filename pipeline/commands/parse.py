@@ -304,6 +304,42 @@ async def _run_parse_inner(args) -> None:
                 print(f"Seeded {len(new_rows)} argument_participant row(s) ({len(existing)} already existed).")
 
         # -------------------------------------------------------------------
+        # Phase 16 PARSE-01: Write cover metadata to existing rows (D-02, D-03, D-04)
+        # Both UPDATE blocks are after the dry-run gate (Pitfall 3 guard).
+        # Always overwrite — D-04 (no write-if-blank conditional).
+        # -------------------------------------------------------------------
+
+        # Block A: argued_date → Argument row (D-02, always overwrite per D-04)
+        if cover_meta.get("argued_date") is not None:
+            await session.execute(
+                update(Argument)
+                .where(Argument.id == source_run.argument_id)
+                .values(argued_date=cover_meta["argued_date"])
+                .execution_options(synchronize_session=False)
+            )
+            print(f"argued_date written: {cover_meta['argued_date']}")
+
+        # Block B: case_name → lead Case row only (D-03, Pitfall 2 is_lead guard)
+        if cover_meta.get("case_name") is not None:
+            lead_result = await session.execute(
+                select(CaseArgument.case_id).where(
+                    CaseArgument.argument_id == source_run.argument_id,
+                    CaseArgument.is_lead == True,
+                )
+            )
+            lead_row = lead_result.first()
+            if lead_row:
+                await session.execute(
+                    update(Case)
+                    .where(Case.id == lead_row.case_id)
+                    .values(case_name=cover_meta["case_name"])
+                    .execution_options(synchronize_session=False)
+                )
+                print(f"case_name written: {cover_meta['case_name']!r}")
+            else:
+                print("case_name not written: no lead CaseArgument row found.")
+
+        # -------------------------------------------------------------------
         # Step 8: Transition running → completed (PIPE-10)
         # -------------------------------------------------------------------
         run.status = PipelineRunStatus.COMPLETED

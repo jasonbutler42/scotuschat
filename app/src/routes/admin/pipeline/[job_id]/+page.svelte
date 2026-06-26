@@ -40,7 +40,7 @@
 	// PIPE-18 (D-03): last-known-step fallback — when current_step is null during
 	// a running→running step transition, the badge stays on the last known step
 	// rather than flashing all badges to pending.
-	let lastKnownStep = $state<string | null>(data.job.current_step ?? null);
+	let lastKnownStep = $state<string | null>(data?.job?.current_step ?? null);
 
 	$effect(() => {
 		const TERMINAL = new Set(['completed', 'failed', 'paused']);
@@ -1245,7 +1245,7 @@
 					{data.participants.length} resolved participant{data.participants.length === 1 ? '' : 's'}
 				</h2>
 				<ul style="list-style: none; padding: 0; margin: 0 0 16px 0;">
-					{#each data.participants as p, i (p.person_id)}
+					{#each data.participants as p, i (p.participant_id)}
 						<li
 							style="
 								display: flex;

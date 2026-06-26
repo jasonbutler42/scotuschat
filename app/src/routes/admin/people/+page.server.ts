@@ -11,8 +11,13 @@ type PersonListItem = {
 
 export const load: PageServerLoad = async ({ fetch, url }) => {
 	const incomplete = url.searchParams.get('incomplete') === '1';
+	const tenure_gaps = url.searchParams.get('tenure_gaps') === '1';
 
-	const apiUrl = `${FASTAPI_BASE_URL}/api/admin/people${incomplete ? '?incomplete=1' : ''}`;
+	const params = new URLSearchParams();
+	if (incomplete) params.set('incomplete', '1');
+	if (tenure_gaps) params.set('tenure_gaps', '1');
+	const queryString = params.toString();
+	const apiUrl = `${FASTAPI_BASE_URL}/api/admin/people${queryString ? '?' + queryString : ''}`;
 
 	let people: PersonListItem[] = [];
 
@@ -30,5 +35,5 @@ export const load: PageServerLoad = async ({ fetch, url }) => {
 		console.error('[people load] fetch threw:', err instanceof Error ? err.message : String(err));
 	}
 
-	return { people, incomplete };
+	return { people, incomplete, tenure_gaps };
 };

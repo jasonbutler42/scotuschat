@@ -9,6 +9,7 @@ type ArgumentListItem = {
 	docket_number: string;
 	resolved_at: string | null;
 	published_at: string | null;
+	status: string;
 };
 
 export const load: PageServerLoad = async ({ fetch }) => {

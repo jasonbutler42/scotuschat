@@ -83,6 +83,21 @@ class ArgumentListItem(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class AdvocateParticipant(BaseModel):
+    """An advocate participant in an argument with their current role assignment.
+
+    Used on the argument edit page (D-12) to render the per-advocate role dropdown.
+    participant_id is the ArgumentParticipant.id — used to PATCH the side field.
+    person_id links to the people directory for the "Edit person" navigation.
+    side is one of PETITIONER, RESPONDENT, AMICUS, UNKNOWN (never BENCH).
+    """
+
+    participant_id: int
+    person_id: int
+    full_name: str
+    side: str  # SideEnum value as string
+
+
 class ArgumentDetail(BaseModel):
     """Full argument data for the edit form.
 
@@ -90,6 +105,8 @@ class ArgumentDetail(BaseModel):
     slug is displayed read-only when published_at IS NOT NULL (frozen per D-11).
     tenure_gap_warnings (Phase 15, D-15): list of bench speakers whose
     argued_date falls outside all their CourtTenure rows.
+    participants (Phase 15, D-12): list of resolved advocate participants for
+    the per-argument role editor — excludes BENCH participants.
     """
 
     id: int
@@ -102,6 +119,7 @@ class ArgumentDetail(BaseModel):
     status: ArgumentStatusEnum = ArgumentStatusEnum.DRAFT  # Phase 15
     consolidated_dockets: list[ConsolidatedDocket] = []
     tenure_gap_warnings: list[TenureGapWarning] = []       # Phase 15
+    participants: list[AdvocateParticipant] = []           # Phase 15 D-12
 
     model_config = {"from_attributes": True}
 

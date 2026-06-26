@@ -161,6 +161,34 @@ async def get_argument_detail(db: AsyncSession, argument_id: int) -> dict | None
                     }
                 )
 
+    # Load resolved advocate participants (D-12): non-BENCH ArgumentParticipant rows
+    # where person_id IS NOT NULL (unresolved participants cannot be role-assigned).
+    advocate_result = await db.execute(
+        select(
+            ArgumentParticipant.id,
+            ArgumentParticipant.person_id,
+            ArgumentParticipant.side,
+            Person.full_name,
+        )
+        .join(Person, Person.id == ArgumentParticipant.person_id)
+        .where(
+            ArgumentParticipant.argument_id == argument_id,
+            ArgumentParticipant.side != SideEnum.BENCH,
+            ArgumentParticipant.person_id.isnot(None),
+        )
+        .order_by(Person.full_name)
+    )
+    advocate_rows = advocate_result.all()
+    participants = [
+        {
+            "participant_id": row.id,
+            "person_id": row.person_id,
+            "full_name": row.full_name,
+            "side": row.side.value if row.side else SideEnum.UNKNOWN.value,
+        }
+        for row in advocate_rows
+    ]
+
     return {
         "id": argument.id,
         "argued_date": argument.argued_date,
@@ -174,6 +202,7 @@ async def get_argument_detail(db: AsyncSession, argument_id: int) -> dict | None
             {"docket_number": row.docket_number} for row in consolidated_rows
         ],
         "tenure_gap_warnings": tenure_gap_warnings,
+        "participants": participants,
     }
 
 

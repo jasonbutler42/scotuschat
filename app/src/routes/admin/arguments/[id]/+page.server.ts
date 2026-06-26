@@ -6,6 +6,19 @@ type ConsolidatedDocket = {
 	docket_number: string;
 };
 
+type AdvocateParticipant = {
+	participant_id: number;
+	person_id: number;
+	full_name: string;
+	side: string;
+};
+
+type TenureGapWarning = {
+	person_id: number;
+	full_name: string;
+	argued_date: string;
+};
+
 type ArgumentDetail = {
 	id: number;
 	argued_date: string | null;
@@ -13,8 +26,11 @@ type ArgumentDetail = {
 	docket_number: string;
 	resolved_at: string | null;
 	published_at: string | null;
+	status: string;
 	slug: string;
 	consolidated_dockets: ConsolidatedDocket[];
+	participants: AdvocateParticipant[];
+	tenure_gap_warnings: TenureGapWarning[];
 };
 
 export const load: PageServerLoad = async ({ fetch, params }) => {
@@ -36,6 +52,40 @@ export const load: PageServerLoad = async ({ fetch, params }) => {
 };
 
 export const actions: Actions = {
+	/**
+	 * updateParticipantSide — PATCH /api/admin/arguments/{id}/participants/{participant_id}
+	 * with { side }. Isolated to this argument only (ROLE-03, IDOR guard T-15-04-IDOR).
+	 * On success, redirects to reload the page with fresh data.
+	 */
+	updateParticipantSide: async ({ request, params, fetch }) => {
+		const formData = await request.formData();
+		const participant_id = ((formData.get('participant_id') as string) ?? '').trim();
+		const side = ((formData.get('side') as string) ?? '').trim();
+
+		let res: Response;
+		try {
+			res = await fetch(
+				`${FASTAPI_BASE_URL}/api/admin/arguments/${params.id}/participants/${participant_id}`,
+				{
+					method: 'PATCH',
+					headers: {
+						'X-Admin-Token': ADMIN_TOKEN,
+						'Content-Type': 'application/json',
+					},
+					body: JSON.stringify({ side }),
+				},
+			);
+		} catch {
+			return fail(502, { roleError: 'Could not save role. Try again.' });
+		}
+
+		if (!res.ok) {
+			return fail(422, { roleError: 'Could not save role. Try again.' });
+		}
+
+		throw redirect(303, '/admin/arguments/' + params.id);
+	},
+
 	/**
 	 * save — PATCH /api/admin/arguments/{id} with the three editable fields.
 	 * On slug_collision 422, surface the UI-SPEC error copy (D-11).

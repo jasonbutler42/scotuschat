@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Speaker Accuracy + Pipeline Confidence — PLANNED
-current_phase: 15
-current_phase_name: speaker-role-accuracy
+current_phase: 16
+current_phase_name: parser-improvements
 status: executing
 stopped_at: Phase 16 UI-SPEC approved
-last_updated: "2026-06-26T18:19:10.112Z"
+last_updated: "2026-06-26T18:35:15.933Z"
 last_activity: 2026-06-26
-last_activity_desc: Phase 15 execution started
+last_activity_desc: Phase 16 execution started
 progress:
   total_phases: 17
   completed_phases: 7
-  total_plans: 25
-  completed_plans: 25
+  total_plans: 27
+  completed_plans: 26
   percent: 41
 ---
 
@@ -24,14 +24,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-18 after v1.2 milestone start)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** Phase 15 — speaker-role-accuracy
+**Current focus:** Phase 16 — parser-improvements
 
 ## Current Position
 
-Phase: 15 (speaker-role-accuracy) — EXECUTING
-Plan: 1 of 4
+Phase: 16 (parser-improvements) — EXECUTING
+Plan: 2 of 2
 Status: Ready to execute
-Last activity: 2026-06-26 — Phase 15 execution started
+Last activity: 2026-06-26 — Phase 16 execution started
 
 ## Performance Metrics
 
@@ -73,6 +73,7 @@ Last activity: 2026-06-26 — Phase 15 execution started
 | Phase 15 P01 | 3 | 2 tasks | 2 files |
 | Phase 15 P01 | 3 | - tasks | - files |
 | Phase 15 P03 | 35 | 2 tasks | 5 files |
+| Phase 16 P01 | 35 | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -152,6 +153,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-26T17:39:26.253Z
+Last session: 2026-06-26T18:35:15.923Z
 Stopped at: Phase 16 UI-SPEC approved
 Resume file: .planning/phases/16-parser-improvements/16-UI-SPEC.md

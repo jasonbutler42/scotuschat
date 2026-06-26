@@ -236,7 +236,7 @@ Plans:
 | 13. Ingestion Flow Polish | v1.2 | 3/3 | Complete    | 2026-06-25 |
 | 14. Speaker Popover Card | v1.2 | 3/3 | Complete   | 2026-06-25 |
 | 15. Speaker Role Accuracy | v1.3 | 3/4 | In Progress|  |
-| 16. Parser Improvements | v1.3 | 0/2 | Pending | — |
+| 16. Parser Improvements | v1.3 | 1/2 | In Progress|  |
 | 17. Pipeline UI Polish | v1.3 | 0/2 | Pending | — |
 
 ### Phase 15: Speaker Role Accuracy
@@ -278,11 +278,11 @@ Plans:
   3. Pre-populated fields are editable — the operator can correct any extraction error before publishing
   4. Arguments from transcripts where extraction fails (older/non-standard formats) fall back to blank fields without breaking the parse step
 
-**Plans**: 2 plans
+**Plans**: 1/2 plans executed
 
 **Wave 1**
 
-- [ ] 16-01-PLAN.md — Parser: extract cover-page metadata (case name + argued date) via regex; write argued_date to Argument and case_name to lead Case after the dry-run gate (PARSE-01)
+- [x] 16-01-PLAN.md — Parser: extract cover-page metadata (case name + argued date) via regex; write argued_date to Argument and case_name to lead Case after the dry-run gate (PARSE-01)
 
 **Wave 2** *(blocked on 16-01 — same files: cover_extractor.py, parse.py)*
 

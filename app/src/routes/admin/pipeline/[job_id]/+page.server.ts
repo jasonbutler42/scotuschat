@@ -92,6 +92,7 @@ export const load: PageServerLoad = async ({ params }) => {
 			);
 			if (argRes.ok) {
 				argument = await argRes.json();
+				console.log(`[load] argument fetch OK: argument_id=${job.argument_id} status=${argument?.status}`);
 			} else {
 				console.error(
 					`[load] argument fetch failed: GET /api/admin/arguments/${job.argument_id} returned ${argRes.status}`,

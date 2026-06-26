@@ -523,6 +523,7 @@
 									>
 										<a
 											href="/admin/pipeline/{job.id}"
+											data-sveltekit-reload
 											style="
 												color: #93c5fd;
 												text-decoration: underline;

@@ -44,7 +44,7 @@
 
 	$effect(() => {
 		const TERMINAL = new Set(['completed', 'failed', 'paused']);
-		if (TERMINAL.has(data.job.status)) return;
+		if (!data?.job?.status || TERMINAL.has(data.job.status)) return;
 
 		const interval = setInterval(async () => {
 			await invalidateAll();

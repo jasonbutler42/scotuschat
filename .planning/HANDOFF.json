@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "timestamp": "2026-06-26T13:43:36.369Z",
+  "timestamp": "2026-06-26T15:09:44.758Z",
   "phase": "15",
   "phase_name": "speaker-role-accuracy",
   "phase_dir": ".planning/phases/15-speaker-role-accuracy",
@@ -9,53 +9,54 @@
   "total_tasks": 2,
   "status": "paused",
   "completed_tasks": [
-    {"id": 1, "name": "updateParticipantSide action + tenure_gaps param forwarding (server modules)", "status": "done", "commit": "828ccb6"},
-    {"id": 2, "name": "Advocate Roles editor, TenureGapWarning banners, status badge, people tenure-gaps toggle (components)", "status": "done_pending_human_verify", "commit": "3c2c41c"}
+    {"id": 1, "name": "updateParticipantSide action + tenure_gaps param forwarding", "status": "done", "commit": "828ccb6"},
+    {"id": 2, "name": "Advocate Roles editor, TenureGapWarning banners, status badge, people toggle", "status": "done", "commit": "3c2c41c"},
+    {"id": "nav-fix", "name": "data-sveltekit-reload on View links in pipeline list — fixes URL-changes-but-page-stays nav bug", "status": "done", "commit": "uncommitted"},
+    {"id": "poll-guard", "name": "Polling $effect hardened: !data?.job?.status || guard added before terminal check", "status": "done", "commit": "uncommitted"},
+    {"id": "debug-log", "name": "TEMP console.log added to server.ts argument fetch — MUST REMOVE before SUMMARY", "status": "done", "commit": "uncommitted"}
   ],
   "remaining_tasks": [
-    {"id": "bug-fix", "name": "Diagnose and fix missing Create Argument button on pipeline job page", "status": "not_started"},
-    {"id": "15-03-uat", "name": "Human verification of 15-03 (advocate dropdowns, Create Argument, re-run flow)", "status": "not_started"},
-    {"id": "15-04-uat", "name": "Human verification of 15-04 Task 2 (role editor, tenure-gap banners, status badges, people filter)", "status": "not_started"},
-    {"id": "summary", "name": "Create 15-04-SUMMARY.md", "status": "not_started"}
+    {"id": "confirm-fix", "name": "Restart dev server, load /admin/pipeline/16, count [load] argument fetch OK lines in terminal: 1 line = fixed, 2 lines = invalidateAll still firing", "status": "not_started"},
+    {"id": "remove-debug", "name": "Remove console.log from app/src/routes/admin/pipeline/[job_id]/+page.server.ts argument fetch block", "status": "not_started"},
+    {"id": "15-03-uat", "name": "Live-test 15-03: advocate dropdowns, Create Argument button approve flow, re-run flow on job 16", "status": "not_started"},
+    {"id": "15-04-uat", "name": "Live-test 15-04: role editor, tenure-gap banners, status badges, people tenure-gaps toggle", "status": "not_started"},
+    {"id": "summary", "name": "Create 15-04-SUMMARY.md after UAT passes", "status": "not_started"}
   ],
   "blockers": [
     {
-      "description": "Create Argument button not visible on /admin/pipeline/16 — backend healthy (argument_id: 17, status: pipeline) but root cause in frontend not confirmed before context limit",
+      "description": "Argument card + Create Argument button flash-then-collapse on /admin/pipeline/16: SSR renders full page correctly (flash), then client re-render collapses to participants-only. Root cause: polling $effect likely fires during Svelte 5 hydration with data.job.status=undefined, starts 1s interval, invalidateAll fires, re-fetch returns argument=null. Polling guard has been hardened — restart dev server to test.",
       "type": "technical",
-      "workaround": "Get full job 16 API response; check SSR page data in browser for data.argument"
+      "workaround": "Polling guard hardened. Restart dev server + load /admin/pipeline/16. If argument card stays visible (no collapse), bug is fixed. If still collapses, count [load] log lines."
     },
     {
-      "description": "15-03 human UAT was never completed — SUMMARY.md says complete but checkpoint gates were skipped",
+      "description": "15-03 human UAT never completed — SUMMARY.md says complete but checkpoint was skipped",
       "type": "human_action",
-      "workaround": "Must validate 15-03 against live stack before accepting 15-04 verification"
+      "workaround": "Must pass 15-03 UAT before accepting 15-04"
     }
   ],
   "async_jobs": [],
   "human_actions_pending": [
     {
-      "action": "Diagnose Create Argument button: run full job curl + check browser SSR data",
-      "context": "Button condition is data.argument?.status === 'pipeline'; backend returns pipeline status correctly; need to confirm SvelteKit server load is receiving the argument",
+      "action": "Restart SvelteKit dev server, load /admin/pipeline/16, check if argument card persists (no flash-then-collapse)",
+      "context": "Polling guard hardened this session. One restart + page load will confirm if fixed.",
       "blocking": true
     },
     {
-      "action": "Live-test 15-03: advocate dropdowns, Create Argument button, re-run flow, status badge",
-      "context": "15-03 was committed with status: complete but human-verify checkpoint was never executed",
-      "blocking": true
-    },
-    {
-      "action": "Live-test 15-04: role editor, tenure-gap banners, status column, people tenure-gaps toggle",
-      "context": "At the checkpoint waiting for approval",
+      "action": "Live-test 15-03 then 15-04 UAT on job 16",
+      "context": "Advocate dropdowns, Create Argument approve, re-run, role editor, tenure-gap banners, status badges",
       "blocking": true
     }
   ],
   "decisions": [
-    {
-      "decision": "15-04 executor added AdvocateParticipant schema + extended get_argument_detail",
-      "rationale": "ArgumentDetail did not include advocate participants; role editor had no data without this addition",
-      "phase": "15"
-    }
+    {"decision": "data-sveltekit-reload on View links", "rationale": "Client-side nav changed URL but kept list page DOM — full reload ensures SSR runs correctly", "phase": "15"},
+    {"decision": "Hardened polling guard with !data?.job?.status ||", "rationale": "Svelte 5 hydration may run $effect before data prop is fully set, causing undefined status to bypass terminal check", "phase": "15"},
+    {"decision": "Temp debug log in server.ts argument fetch", "rationale": "Diagnostic — logs argument_id+status on successful fetch. Remove before summary.", "phase": "15"}
   ],
-  "uncommitted_files": [],
-  "next_action": "curl full job 16 response; check browser SSR for data.argument; fix Create Argument bug; validate 15-03 then 15-04",
-  "context_notes": "Session started executing 15-04 (last incomplete plan). Executor committed both tasks. At checkpoint, user reported Create Argument button missing and 15-03 unvalidated. Backend diagnosis confirmed healthy. Root cause not found before context limit."
+  "uncommitted_files": [
+    "app/src/routes/admin/pipeline/+page.svelte",
+    "app/src/routes/admin/pipeline/[job_id]/+page.server.ts",
+    "app/src/routes/admin/pipeline/[job_id]/+page.svelte"
+  ],
+  "next_action": "Restart dev server. Load /admin/pipeline/16. Confirm argument card stays visible. Then run 15-03 UAT.",
+  "context_notes": "Two bugs diagnosed this session: (1) nav from list — fixed with data-sveltekit-reload; (2) argument card flash-then-collapse — hardened polling guard. Backend confirmed healthy (curl /api/admin/arguments/17 returns 200 with status:pipeline). Flash pattern = SSR correct, client hydration triggers re-fetch with argument=null."
 }

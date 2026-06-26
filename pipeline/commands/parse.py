@@ -366,6 +366,64 @@ async def _run_parse_inner(args) -> None:
         print(f"Admin job {args.job_id} parse step marked completed")
 
 
+def _normalize_label_last_name(raw_label: str) -> str | None:
+    """
+    Extract last name component from a raw_speaker_label.
+
+    'MR. FRIEDMAN'    -> 'FRIEDMAN'
+    'MS. BONAUTO'     -> 'BONAUTO'
+    'GEN. VERRILLI'   -> 'VERRILLI'
+    'GENERAL VERRILLI' -> 'VERRILLI'
+
+    Returns None if the label is empty after prefix removal.
+    """
+    import re as _re
+    label = _re.sub(
+        r'^(?:MR|MS|MRS|GENERAL|GEN)\.\s+|^GENERAL\s+',
+        '',
+        raw_label.strip(),
+        flags=_re.IGNORECASE,
+    )
+    parts = label.strip().split()
+    return parts[-1] if parts else None
+
+
+async def _update_participant_sides(
+    session: AsyncSession,
+    argument_id: int,
+    sides_map: "dict[str, str]",
+) -> int:
+    """
+    Update argument_participants.side for advocates whose normalized last name
+    matches a key in sides_map ({last_name_upper: SideEnum_value}).
+
+    Returns count of participant rows updated. Unmatched participants stay
+    UNKNOWN (D-08 partial update). Known limitation (Pitfall 4): last-name
+    collision means a second advocate with the same last name overwrites the
+    first mapping in sides_map — accepted for Phase 16.
+    """
+    if not sides_map:
+        return 0
+
+    result = await session.execute(
+        select(ArgumentParticipant).where(
+            ArgumentParticipant.argument_id == argument_id
+        )
+    )
+    participants = result.scalars().all()
+
+    updated = 0
+    for p in participants:
+        if p.raw_speaker_label is None:
+            continue
+        label_last = _normalize_label_last_name(p.raw_speaker_label)
+        if label_last and label_last.upper() in sides_map:
+            p.side = SideEnum(sides_map[label_last.upper()])
+            updated += 1
+
+    return updated
+
+
 async def _fail_run(
     session: AsyncSession,
     run: PipelineRun,

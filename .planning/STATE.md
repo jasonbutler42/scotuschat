@@ -5,8 +5,8 @@ milestone_name: Speaker Accuracy + Pipeline Confidence — PLANNED
 current_phase: 15
 current_phase_name: speaker-role-accuracy
 status: executing
-stopped_at: Phase 16 context gathered
-last_updated: "2026-06-26T17:33:04.839Z"
+stopped_at: Phase 16 UI-SPEC approved
+last_updated: "2026-06-26T18:19:10.112Z"
 last_activity: 2026-06-26
 last_activity_desc: Phase 15 execution started
 progress:
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-06-18 after v1.2 milestone start)
 
 Phase: 15 (speaker-role-accuracy) — EXECUTING
 Plan: 1 of 4
-Status: Executing Phase 15
+Status: Ready to execute
 Last activity: 2026-06-26 — Phase 15 execution started
 
 ## Performance Metrics
@@ -152,6 +152,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-26T17:33:04.828Z
-Stopped at: Phase 16 context gathered
-Resume file: .planning/phases/16-parser-improvements/16-CONTEXT.md
+Last session: 2026-06-26T17:39:26.253Z
+Stopped at: Phase 16 UI-SPEC approved
+Resume file: .planning/phases/16-parser-improvements/16-UI-SPEC.md

@@ -300,10 +300,15 @@ Plans:
   3. Operator can open or download the original source PDF for any argument directly from the pipeline job detail page
   4. Stats and file link are visible without leaving the pipeline admin view
 
-**Plans**: 0/2 plans — pending
+**Plans**: 2 plans — pending
 
-- [ ] 17-01-PLAN.md — Backend: store original filename at ingest; expose filename + parse stats in job detail API response
-- [ ] 17-02-PLAN.md — Frontend: update stage cards with stats; add source PDF link to job detail page
+**Wave 1**
+
+- [ ] 17-01-PLAN.md — Backend: migration 0009 (original_filename), parse-stats query in get_job, GET /jobs/{id}/pdf endpoint
+
+**Wave 2** *(blocked on 17-01)*
+
+- [ ] 17-02-PLAN.md — Frontend: Ingest source row + Parse stat rows + "View source PDF" link via same-origin SvelteKit PDF proxy (human-verify checkpoint)
 
 ## Backlog
 

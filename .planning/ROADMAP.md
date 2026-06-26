@@ -42,7 +42,7 @@ Full phase details: `.planning/milestones/v1.1-ROADMAP.md`
 **Milestone Goal:** Fix speaker role accuracy on the live popover, make ingestion reliable enough to process large volumes of older transcripts, and give the operator enough pipeline visibility to trust the process.
 
 - [ ] **Phase 15: Speaker Role Accuracy** - Justice role in popover determined by tenure date lookup; advocate roles stored and editable per argument
-- [ ] **Phase 16: Parser Improvements** - Parse step extracts case metadata and advocate sides from transcript PDF
+- [x] **Phase 16: Parser Improvements** - Parse step extracts case metadata and advocate sides from transcript PDF (completed 2026-06-26)
 - [ ] **Phase 17: Pipeline UI Polish** - Stage stat cards, pre-populated argument fields, source PDF access
 
 ### ✅ v1.2 Pre-Launch Polish — SHIPPED 2026-06-25
@@ -236,7 +236,7 @@ Plans:
 | 13. Ingestion Flow Polish | v1.2 | 3/3 | Complete    | 2026-06-25 |
 | 14. Speaker Popover Card | v1.2 | 3/3 | Complete   | 2026-06-25 |
 | 15. Speaker Role Accuracy | v1.3 | 3/4 | In Progress|  |
-| 16. Parser Improvements | v1.3 | 1/2 | In Progress|  |
+| 16. Parser Improvements | v1.3 | 2/2 | Complete   | 2026-06-26 |
 | 17. Pipeline UI Polish | v1.3 | 0/2 | Pending | — |
 
 ### Phase 15: Speaker Role Accuracy
@@ -278,7 +278,7 @@ Plans:
   3. Pre-populated fields are editable — the operator can correct any extraction error before publishing
   4. Arguments from transcripts where extraction fails (older/non-standard formats) fall back to blank fields without breaking the parse step
 
-**Plans**: 1/2 plans executed
+**Plans**: 2/2 plans complete
 
 **Wave 1**
 
@@ -286,7 +286,7 @@ Plans:
 
 **Wave 2** *(blocked on 16-01 — same files: cover_extractor.py, parse.py)*
 
-- [ ] 16-02-PLAN.md — Parser: detect advocate sides from the TOC page; map by last name and UPDATE argument_participants.side after step 7b (PARSE-02)
+- [x] 16-02-PLAN.md — Parser: detect advocate sides from the TOC page; map by last name and UPDATE argument_participants.side after step 7b (PARSE-02)
 
 ### Phase 17: Pipeline UI Polish
 

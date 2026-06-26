@@ -4,17 +4,17 @@ milestone: v1.3
 milestone_name: Speaker Accuracy + Pipeline Confidence — PLANNED
 current_phase: 16
 current_phase_name: parser-improvements
-status: executing
-stopped_at: Phase 16 UI-SPEC approved
-last_updated: "2026-06-26T18:35:15.933Z"
+status: verifying
+stopped_at: Completed 16-02-PLAN.md
+last_updated: "2026-06-26T18:44:13.913Z"
 last_activity: 2026-06-26
 last_activity_desc: Phase 16 execution started
 progress:
   total_phases: 17
-  completed_phases: 7
+  completed_phases: 8
   total_plans: 27
-  completed_plans: 26
-  percent: 41
+  completed_plans: 27
+  percent: 47
 ---
 
 # Project State
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-06-18 after v1.2 milestone start)
 
 Phase: 16 (parser-improvements) — EXECUTING
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-06-26 — Phase 16 execution started
 
 ## Performance Metrics
@@ -74,6 +74,7 @@ Last activity: 2026-06-26 — Phase 16 execution started
 | Phase 15 P01 | 3 | - tasks | - files |
 | Phase 15 P03 | 35 | 2 tasks | 5 files |
 | Phase 16 P01 | 35 | 3 tasks | 3 files |
+| Phase 16 P02 | 30 | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -130,6 +131,7 @@ Full log in PROJECT.md Key Decisions table. Key decisions for v1.2:
 - [Phase ?]: [15-01] SideEnum.ADVOCATE retained as legacy; backfilled to UNKNOWN in migration 0008 (D-06)
 - [Phase ?]: [15-03] ParticipantItem extended with participant_id + side for advocate dropdown wiring
 - [Phase ?]: [15-03] use:enhance FormData injection chosen over nested HTML forms for advocate side submission
+- [Phase ?]: [16-02]: _normalize_label_last_name added to parse.py — module self-contained; ORM mutation for side UPDATE matches step 7b pattern; call site after step 7b flush and dry-run gate (T-16-07, T-16-08 mitigated)
 
 ### Pending Todos
 
@@ -153,6 +155,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-26T18:35:15.923Z
-Stopped at: Phase 16 UI-SPEC approved
-Resume file: .planning/phases/16-parser-improvements/16-UI-SPEC.md
+Last session: 2026-06-26T18:44:13.902Z
+Stopped at: Completed 16-02-PLAN.md
+Resume file: None

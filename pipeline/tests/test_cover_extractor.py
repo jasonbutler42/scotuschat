@@ -7,6 +7,8 @@ re.Match objects constructed from the module's own regex patterns.
 
 Test IDs covered:
   - PARSE-01: Extract argued_date and case_name from cover pages
+  - PARSE-02: _toc_last_name last-name extraction and extract_advocate_sides
+              TOC side mapping
 
 Transcript range tested against: Obergefell 2015 (Alderson) through Rahimi 2023 (Heritage).
 """
@@ -233,4 +235,116 @@ def test_header_re_and_page_num_re_are_not_redefined():
     )
     assert ce.PAGE_NUM_RE is ext.PAGE_NUM_RE, (
         f"PAGE_NUM_RE in cover_extractor should be the same object as in extractor.py"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Test 6: _toc_last_name — last name extraction from TOC ESQ. lines (PARSE-02)
+# ---------------------------------------------------------------------------
+
+
+def test_toc_last_name_simple():
+    """_toc_last_name on a plain 'FIRSTNAME LASTNAME, ESQ.' line returns the last name."""
+    from pipeline.parser.cover_extractor import _toc_last_name
+
+    result = _toc_last_name("MARY L. BONAUTO, ESQ.")
+    assert result == "BONAUTO", (
+        f"Expected 'BONAUTO' from 'MARY L. BONAUTO, ESQ.', got: {result!r}"
+    )
+
+
+def test_toc_last_name_strips_gen_prefix_and_jr_suffix():
+    """_toc_last_name strips GEN. prefix and JR. suffix before ESQ."""
+    from pipeline.parser.cover_extractor import _toc_last_name
+
+    result = _toc_last_name("GEN. DONALD B. VERRILLI, JR., ESQ.")
+    assert result == "VERRILLI", (
+        f"Expected 'VERRILLI' from 'GEN. DONALD B. VERRILLI, JR., ESQ.', got: {result!r}"
+    )
+
+
+def test_toc_last_name_no_prefix():
+    """_toc_last_name on a name with no title prefix returns the last name."""
+    from pipeline.parser.cover_extractor import _toc_last_name
+
+    result = _toc_last_name("SHAY DVORETZKY, ESQ.")
+    assert result == "DVORETZKY", (
+        f"Expected 'DVORETZKY' from 'SHAY DVORETZKY, ESQ.', got: {result!r}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Test 7: extract_advocate_sides / _parse_toc_sides — TOC side mapping (PARSE-02)
+# ---------------------------------------------------------------------------
+
+
+def test_toc_sides_petitioner_and_respondent():
+    """_parse_toc_sides maps petitioner and respondent from standard TOC lines."""
+    from pipeline.parser.cover_extractor import _parse_toc_sides
+
+    lines = [
+        "C O N T E N T S",
+        "SHAY DVORETZKY, ESQ.",
+        "On behalf of the Petitioner 3",
+        "FREDERICK LIU, ESQ.",
+        "On behalf of the Respondent 59",
+    ]
+    result = _parse_toc_sides(lines)
+    assert result.get("DVORETZKY") == "PETITIONER", (
+        f"Expected DVORETZKY -> PETITIONER, got: {result!r}"
+    )
+    assert result.get("LIU") == "RESPONDENT", (
+        f"Expected LIU -> RESPONDENT, got: {result!r}"
+    )
+
+
+def test_toc_sides_amicus_multiline():
+    """_parse_toc_sides maps amicus when 'amicus curiae' appears on a continuation line (Pitfall 5)."""
+    from pipeline.parser.cover_extractor import _parse_toc_sides
+
+    lines = [
+        "GEN. DONALD B. VERRILLI, JR., ESQ.",
+        "For the United States, as amicus curiae,",
+        "supporting Petitioners on Question 1 28",
+    ]
+    result = _parse_toc_sides(lines)
+    assert result.get("VERRILLI") == "AMICUS", (
+        f"Expected VERRILLI -> AMICUS via multi-line continuation, got: {result!r}"
+    )
+
+
+def test_toc_sides_empty_on_no_recognizable_lines():
+    """_parse_toc_sides returns {} when no recognizable side lines exist (D-09)."""
+    from pipeline.parser.cover_extractor import _parse_toc_sides
+
+    lines = [
+        "Some heading",
+        "Page numbers follow",
+        "Argument body text...",
+    ]
+    result = _parse_toc_sides(lines)
+    assert result == {}, (
+        f"Expected {{}} for lines with no ESQ/side patterns, got: {result!r}"
+    )
+
+
+def test_extract_advocate_sides_missing_pdf_returns_empty():
+    """extract_advocate_sides on a non-existent path returns {} and never raises (D-09)."""
+    from pathlib import Path
+    from pipeline.parser.cover_extractor import extract_advocate_sides
+
+    result = extract_advocate_sides(Path("does-not-exist-at-all.pdf"))
+    assert result == {}, (
+        f"Expected {{}} for missing PDF (D-09 silent-fail contract), got: {result!r}"
+    )
+
+
+def test_extract_advocate_sides_returns_dict():
+    """extract_advocate_sides always returns a dict (never raises, never returns None)."""
+    from pathlib import Path
+    from pipeline.parser.cover_extractor import extract_advocate_sides
+
+    result = extract_advocate_sides(Path("/nonexistent/totally-fake.pdf"))
+    assert isinstance(result, dict), (
+        f"Expected dict, got: {type(result)!r}"
     )

@@ -5,16 +5,16 @@ milestone_name: Speaker Accuracy + Pipeline Confidence — PLANNED
 current_phase: 15
 current_phase_name: speaker-role-accuracy
 status: executing
-stopped_at: context exhaustion at 76% (2026-06-26)
-last_updated: "2026-06-26T15:06:34.956Z"
+stopped_at: Phase 16 context gathered
+last_updated: "2026-06-26T17:33:04.839Z"
 last_activity: 2026-06-26
 last_activity_desc: Phase 15 execution started
 progress:
   total_phases: 17
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 25
-  completed_plans: 24
-  percent: 35
+  completed_plans: 25
+  percent: 41
 ---
 
 # Project State
@@ -152,6 +152,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-26T15:06:34.940Z
-Stopped at: context exhaustion at 76% (2026-06-26)
-Resume file: .planning/phases/15-speaker-role-accuracy/15-UI-SPEC.md
+Last session: 2026-06-26T17:33:04.828Z
+Stopped at: Phase 16 context gathered
+Resume file: .planning/phases/16-parser-improvements/16-CONTEXT.md

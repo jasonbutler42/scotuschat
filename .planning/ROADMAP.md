@@ -236,7 +236,7 @@ Plans:
 | 13. Ingestion Flow Polish | v1.2 | 3/3 | Complete    | 2026-06-25 |
 | 14. Speaker Popover Card | v1.2 | 3/3 | Complete   | 2026-06-25 |
 | 15. Speaker Role Accuracy | v1.3 | 3/4 | In Progress|  |
-| 16. Parser Improvements | v1.3 | 2/2 | Complete   | 2026-06-26 |
+| 16. Parser Improvements | v1.3 | 2/2 | Complete    | 2026-06-26 |
 | 17. Pipeline UI Polish | v1.3 | 0/2 | Pending | — |
 
 ### Phase 15: Speaker Role Accuracy
@@ -311,7 +311,7 @@ Plans:
 
 **Goal:** [Captured for future planning]
 **Requirements:** TBD
-**Plans:** 0 plans
+**Plans:** 2/2 plans complete
 
 Plans:
 

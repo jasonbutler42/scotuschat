@@ -32,13 +32,17 @@ from api.models.models import (
     AdminJob,
     AdminJobStatus,
     AdminJobStep,
+    Argument,
     ArgumentParticipant,
+    Case,
+    CaseArgument,
     PipelineRun,
     PipelineRunStatus,
     SideEnum,
     Utterance,
 )
 from pipeline.db import get_session
+from pipeline.parser.cover_extractor import extract_cover_metadata, extract_advocate_sides
 from pipeline.parser.extractor import extract_pages
 from pipeline.parser.llm_pass import parse_with_llm
 from pipeline.parser.state_machine import parse_transcript
@@ -113,6 +117,32 @@ async def _run_parse_inner(args) -> None:
                 .execution_options(synchronize_session=False)
             )
 
+    # -------------------------------------------------------------------
+    # Phase 16 PARSE-01: Hoist pdf_path resolution before the main session
+    # so that synchronous pdfplumber I/O never runs inside the async DB
+    # transaction (RESEARCH.md Pitfall 1).
+    # -------------------------------------------------------------------
+    async with get_session() as _pre_session:
+        _source_pre: Optional[PipelineRun] = await _pre_session.get(PipelineRun, args.run_id)
+        if _source_pre is None:
+            raise ValueError(f"No pipeline_run with id={args.run_id}")
+        if not _source_pre.pdf_path:
+            raise ValueError("pdf_path is null on source pipeline_run — cannot parse")
+        _pdf_path_str = _source_pre.pdf_path
+
+    pdf_path = Path(_pdf_path_str)
+    if not pdf_path.exists():
+        raise ValueError(
+            f"PDF not found at {_pdf_path_str} — was the file moved or deleted?"
+        )
+
+    # Cover metadata extraction (CPU-only, synchronous pdfplumber — runs before
+    # the async DB session per Pitfall 1). Returns {} on any failure (D-05).
+    cover_meta = extract_cover_metadata(pdf_path)
+    advocate_sides = extract_advocate_sides(pdf_path)
+    if cover_meta:
+        print(f"Cover metadata extracted: {list(cover_meta.keys())}")
+
     async with get_session() as session:
         # -------------------------------------------------------------------
         # Step 1: Load the source run to get argument_id and pdf_path
@@ -127,14 +157,6 @@ async def _run_parse_inner(args) -> None:
         # for this attempt is NOT added to the session until after the dry-run
         # check (step 6) — this ensures dry-run never commits a row to the DB.
         # -------------------------------------------------------------------
-        if not source_run.pdf_path:
-            raise ValueError("pdf_path is null on source pipeline_run — cannot parse")
-
-        pdf_path = Path(source_run.pdf_path)
-        if not pdf_path.exists():
-            raise ValueError(
-                f"PDF not found at {source_run.pdf_path} — was the file moved or deleted?"
-            )
 
         print(f"Extracting pages from {pdf_path} ...")
         pages = extract_pages(pdf_path)

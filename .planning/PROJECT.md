@@ -67,7 +67,7 @@ Anyone can open a SCOTUS oral argument and immediately follow the conversation �
 ### Active
 
 - [ ] Speaker role accuracy — Justice tenure date-range lookup for popover role; per-argument advocate roles stored and editable (ROLE-01, ROLE-02, ROLE-03)
-- [ ] Parser improvements — parse step extracts case name, docket, argued date, and advocate side from transcript PDF (PARSE-01, PARSE-02)
+- ✓ Parser improvements — parse step extracts case name, docket, argued date, and advocate side from transcript PDF (PARSE-01, PARSE-02) — Validated in Phase 16
 - [ ] Pipeline UI polish — stage stat cards; source PDF accessible from job detail; pre-populated argument fields (PIPE-21, PIPE-22)
 - [ ] Application deployed to Digital Ocean App Platform (SvelteKit + FastAPI as separate services, managed Postgres) (DEPLOY-01, v1.4)
 - [ ] Continuous deployment from GitHub main branch (DEPLOY-03, v1.4)
@@ -157,4 +157,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-25 after v1.3 milestone start*
+*Last updated: 2026-06-26 after Phase 16 complete (parser improvements — PARSE-01, PARSE-02)*

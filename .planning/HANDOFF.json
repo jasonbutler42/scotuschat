@@ -1,46 +1,61 @@
 {
   "version": "1.0",
-  "timestamp": "2026-06-25T17:17:43.718Z",
-  "phase": "14",
-  "phase_name": "speaker-popover-card",
-  "phase_dir": ".planning/phases/14-speaker-popover-card",
-  "plan": 3,
-  "task": 4,
-  "total_tasks": 4,
+  "timestamp": "2026-06-26T13:43:36.369Z",
+  "phase": "15",
+  "phase_name": "speaker-role-accuracy",
+  "phase_dir": ".planning/phases/15-speaker-role-accuracy",
+  "plan": 4,
+  "task": 2,
+  "total_tasks": 2,
   "status": "paused",
   "completed_tasks": [
-    {"id": 1, "name": "Create SpeakerPopover.svelte", "status": "done", "commit": "722f372"},
-    {"id": 2, "name": "Modify ChatBubble.svelte — avatar to button", "status": "done", "commit": "89a9915"},
-    {"id": 3, "name": "Wire +page.svelte — Popover.Root, speakersMap, roster avatars", "status": "done", "commit": "d19959d"}
+    {"id": 1, "name": "updateParticipantSide action + tenure_gaps param forwarding (server modules)", "status": "done", "commit": "828ccb6"},
+    {"id": 2, "name": "Advocate Roles editor, TenureGapWarning banners, status badge, people tenure-gaps toggle (components)", "status": "done_pending_human_verify", "commit": "3c2c41c"}
   ],
   "remaining_tasks": [
-    {"id": 4, "name": "checkpoint:human-verify — browser verification", "status": "blocked"}
+    {"id": "bug-fix", "name": "Diagnose and fix missing Create Argument button on pipeline job page", "status": "not_started"},
+    {"id": "15-03-uat", "name": "Human verification of 15-03 (advocate dropdowns, Create Argument, re-run flow)", "status": "not_started"},
+    {"id": "15-04-uat", "name": "Human verification of 15-04 Task 2 (role editor, tenure-gap banners, status badges, people filter)", "status": "not_started"},
+    {"id": "summary", "name": "Create 15-04-SUMMARY.md", "status": "not_started"}
   ],
   "blockers": [
     {
-      "description": "FastAPI uvicorn running stale .pyc cache — GET /arguments/{id}/speakers returns 404 instead of speaker data",
-      "type": "human_action",
-      "workaround": "Clear api/__pycache__ dirs and restart uvicorn fresh. Then curl http://localhost:8000/arguments/3/speakers should return array, not 404."
+      "description": "Create Argument button not visible on /admin/pipeline/16 — backend healthy (argument_id: 17, status: pipeline) but root cause in frontend not confirmed before context limit",
+      "type": "technical",
+      "workaround": "Get full job 16 API response; check SSR page data in browser for data.argument"
     },
     {
-      "description": "Page title bug on people admin pages (argument name appearing) — not yet investigated",
-      "type": "technical",
-      "workaround": "Investigate after speakers popover is verified"
+      "description": "15-03 human UAT was never completed — SUMMARY.md says complete but checkpoint gates were skipped",
+      "type": "human_action",
+      "workaround": "Must validate 15-03 against live stack before accepting 15-04 verification"
     }
   ],
+  "async_jobs": [],
   "human_actions_pending": [
     {
-      "action": "Clear Python pycache and restart FastAPI, then re-verify speaker popover in browser",
-      "context": "Speakers endpoint returns 404 because running uvicorn loaded stale .pyc before new route was added. Fix: `Get-ChildItem -Path api -Recurse -Filter __pycache__ -Directory | Remove-Item -Recurse -Force` then restart uvicorn.",
+      "action": "Diagnose Create Argument button: run full job curl + check browser SSR data",
+      "context": "Button condition is data.argument?.status === 'pipeline'; backend returns pipeline status correctly; need to confirm SvelteKit server load is receiving the argument",
+      "blocking": true
+    },
+    {
+      "action": "Live-test 15-03: advocate dropdowns, Create Argument button, re-run flow, status badge",
+      "context": "15-03 was committed with status: complete but human-verify checkpoint was never executed",
+      "blocking": true
+    },
+    {
+      "action": "Live-test 15-04: role editor, tenure-gap banners, status column, people tenure-gaps toggle",
+      "context": "At the checkpoint waiting for approval",
       "blocking": true
     }
   ],
   "decisions": [
-    {"decision": "shared Popover.Root pattern with onAvatarClick callback for ChatBubble", "rationale": "Avoids O(n) popover instances per utterance", "phase": "14"},
-    {"decision": "Popover.Portal wraps Popover.Content", "rationale": "Avoids overflow clip from scrollable chat column", "phase": "14"},
-    {"decision": "appointing_president_party excluded from SpeakerPopoverEntry schema", "rationale": "Apolitical framing hard constraint", "phase": "14"}
+    {
+      "decision": "15-04 executor added AdvocateParticipant schema + extended get_argument_detail",
+      "rationale": "ArgumentDetail did not include advocate participants; role editor had no data without this addition",
+      "phase": "15"
+    }
   ],
   "uncommitted_files": [],
-  "next_action": "1) Clear api pycache: `Get-ChildItem -Path api -Recurse -Filter __pycache__ -Directory | Remove-Item -Recurse -Force` 2) Restart uvicorn 3) Verify http://localhost:8000/arguments/3/speakers returns array 4) Re-run browser verification checklist in .continue-here.md 5) Type 'approved' to close plan 14-03 and proceed to phase verification",
-  "context_notes": "All three auto tasks in plan 14-03 are committed. The ONLY remaining work is human-verify checkpoint. The popover was non-functional because the FastAPI server was serving stale bytecode (new speakers route not loaded). Once uvicorn loads fresh, speakersMap will populate and all popover interactions should work. Photos will be missing (no photo_url data in DB yet — expected). The page title bug on admin/people pages is a separate pre-existing or new regression to investigate after this phase closes."
+  "next_action": "curl full job 16 response; check browser SSR for data.argument; fix Create Argument bug; validate 15-03 then 15-04",
+  "context_notes": "Session started executing 15-04 (last incomplete plan). Executor committed both tasks. At checkpoint, user reported Create Argument button missing and 15-03 unvalidated. Backend diagnosis confirmed healthy. Root cause not found before context limit."
 }

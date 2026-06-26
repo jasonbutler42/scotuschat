@@ -53,7 +53,7 @@ Requirements for the next milestone. Phases 15–17.
 
 ### Parser Extraction
 
-- [ ] **PARSE-01**: Parse step automatically extracts case name, docket number, and argued date from the transcript PDF and pre-populates argument metadata fields so the operator reviews rather than types from scratch
+- [ ] **PARSE-01**: Parse step automatically extracts case name and argued date from the transcript PDF and pre-populates argument metadata fields so the operator reviews rather than types from scratch (docket number is already set at ingest; docket pre-population from the PDF is deferred to a future phase — see Phase 16 CONTEXT.md Deferred Ideas)
 - [ ] **PARSE-02**: Parse step automatically detects which side each advocate is arguing (petitioner/respondent/amicus) from the transcript structure and stores it as the initial per-argument role
 
 ### Pipeline Confidence

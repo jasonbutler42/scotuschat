@@ -43,7 +43,7 @@
 
 | ID | Description | Research Support |
 |----|-------------|------------------|
-| PARSE-01 | Parse step automatically extracts case name, docket number, and argued date from the transcript PDF and pre-populates argument metadata fields | Cover-page structure confirmed across 9 real PDFs; regex patterns validated against all formats; INSERT slot in `_run_parse_inner` identified (between steps 3 and 7) |
+| PARSE-01 | Parse step automatically extracts case name and argued date from the transcript PDF and pre-populates argument metadata fields (docket number deferred — already set at ingest, per CONTEXT.md Deferred Ideas) | Cover-page structure confirmed across 9 real PDFs; regex patterns validated against all formats; INSERT slot in `_run_parse_inner` identified (between steps 3 and 7) |
 | PARSE-02 | Parse step automatically detects which side each advocate is arguing from the transcript structure and stores it as the initial per-argument role | TOC page structure confirmed; last-name matching strategy validated; UPDATE slot identified (after step 7b, within same session) |
 </phase_requirements>
 
@@ -803,15 +803,17 @@ def _normalize_label_last_name(raw_label: str) -> str | None:
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+Both questions are answered by the **DB Write Placement** and **Pitfall 1** sections above. Resolutions inlined below.
 
 1. **Where exactly in `_run_parse_inner` do the metadata DB writes go relative to the PipelineRun row creation?**
    - What we know: dry-run gate is at line 212–215; PipelineRun row is created at lines 222–231 (step 2d); utterance writes are steps 7/7b.
-   - Recommendation: Write `argued_date` and `case_name` **after** PipelineRun row creation (step 2d) and **before** utterance writes (step 7). This keeps all writes inside the same session transaction. The `source_run.argument_id` is available from step 1 load.
+   - **(RESOLVED)** Per the **DB Write Placement** section: the metadata DB writes (`argued_date`, `case_name`) go **after the dry-run gate (step 6, line 212–215)** and **after PipelineRun row creation (step 2d)** but **before/around the utterance writes (step 7)** — all inside the same async session transaction. `source_run.argument_id` is available from the step 1 load, so the writes can be issued any time after the dry-run gate. The plan (16-01 Task 3) places both UPDATE blocks after the step 7b flush and before step 8, which satisfies this constraint.
 
 2. **Should `extract_cover_metadata()` and `extract_advocate_sides()` be called before or inside the `async with get_session()` block?**
    - What we know: Both are pure synchronous pdfplumber I/O; DB session is async.
-   - Recommendation: Call both **before** the `async with get_session() as session:` block (at the top of `_run_parse_inner` after the PDF path validation). Pass the result dicts into the session block. Eliminates any risk of blocking inside an async context.
+   - **(RESOLVED)** Per **Pitfall 1** ("Calling pdfplumber inside async DB session context"): call both extraction functions **before** entering the `async with get_session() as session:` block — synchronous pdfplumber I/O must not run inside an open async DB transaction (it blocks the event loop). The CPU-only extraction runs early (it may also precede the dry-run gate, since it performs no writes); the resulting dicts are passed into the session-writing block. The DB writes themselves remain gated after the dry-run check.
 
 ---
 

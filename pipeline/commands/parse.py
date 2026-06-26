@@ -142,6 +142,8 @@ async def _run_parse_inner(args) -> None:
     advocate_sides = extract_advocate_sides(pdf_path)
     if cover_meta:
         print(f"Cover metadata extracted: {list(cover_meta.keys())}")
+    if advocate_sides:
+        print(f"Advocate sides mapped: {advocate_sides}")
 
     async with get_session() as session:
         # -------------------------------------------------------------------
@@ -338,6 +340,15 @@ async def _run_parse_inner(args) -> None:
                 print(f"case_name written: {cover_meta['case_name']!r}")
             else:
                 print("case_name not written: no lead CaseArgument row found.")
+
+        # -------------------------------------------------------------------
+        # Phase 16 PARSE-02: Update argument_participants.side from TOC mapping
+        # Placed after step 7b flush (rows exist) and after dry-run gate (Pitfall 3).
+        # D-08: unmatched participants stay UNKNOWN; partial updates are accepted.
+        # -------------------------------------------------------------------
+        if advocate_sides and run.argument_id is not None:
+            sides_updated = await _update_participant_sides(session, run.argument_id, advocate_sides)
+            print(f"Participant sides updated: {sides_updated} row(s) from TOC mapping.")
 
         # -------------------------------------------------------------------
         # Step 8: Transition running → completed (PIPE-10)

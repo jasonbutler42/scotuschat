@@ -14,6 +14,17 @@
 			goto('/admin/people?incomplete=1');
 		}
 	}
+
+	// TenureGapsToggle state — mirrors the server-side tenure_gaps flag (D-15).
+	let tenureGaps = $derived(data.tenure_gaps ?? false);
+
+	function handleTenureGapsToggle() {
+		if (tenureGaps) {
+			goto('/admin/people');
+		} else {
+			goto('/admin/people?tenure_gaps=1');
+		}
+	}
 </script>
 
 <main style="background-color: #0f1117; min-height: 100vh;">
@@ -27,38 +38,75 @@
 
 	<div style="max-width: 860px; margin: 0 auto; padding: 48px 24px;">
 
-		<!-- IncompleteToggle (D-05) -->
-		<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
-			<button
-				role="switch"
-				aria-checked={checked}
-				aria-label="Show incomplete only"
-				onclick={handleToggle}
-				style="
-					position: relative;
-					width: 44px;
-					height: 24px;
-					border-radius: 12px;
-					border: 1px solid {checked ? '#93c5fd' : '#334155'};
-					background-color: {checked ? 'rgba(147,197,253,0.2)' : '#0f1117'};
-					cursor: pointer;
-					padding: 0;
-					flex-shrink: 0;
-				"
-			>
-				<span
+		<!-- Filter toggles row -->
+		<div style="display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 16px;">
+			<!-- IncompleteToggle (D-05) -->
+			<div style="display: flex; align-items: center; gap: 8px;">
+				<button
+					role="switch"
+					aria-checked={checked}
+					aria-label="Show incomplete only"
+					onclick={handleToggle}
 					style="
-						position: absolute;
-						top: 50%;
-						transform: translateY(-50%) translateX({checked ? '22px' : '2px'});
-						width: 18px;
-						height: 18px;
-						border-radius: 50%;
-						background-color: {checked ? '#93c5fd' : '#94a3b8'};
+						position: relative;
+						width: 44px;
+						height: 24px;
+						border-radius: 12px;
+						border: 1px solid {checked ? '#93c5fd' : '#334155'};
+						background-color: {checked ? 'rgba(147,197,253,0.2)' : '#0f1117'};
+						cursor: pointer;
+						padding: 0;
+						flex-shrink: 0;
 					"
-				></span>
-			</button>
-			<span style="font-size: 14px; font-weight: 400; color: #94a3b8;">Show incomplete only</span>
+				>
+					<span
+						style="
+							position: absolute;
+							top: 50%;
+							transform: translateY(-50%) translateX({checked ? '22px' : '2px'});
+							width: 18px;
+							height: 18px;
+							border-radius: 50%;
+							background-color: {checked ? '#93c5fd' : '#94a3b8'};
+						"
+					></span>
+				</button>
+				<span style="font-size: 14px; font-weight: 400; color: #94a3b8;">Show incomplete only</span>
+			</div>
+
+			<!-- TenureGapsToggle (D-15) -->
+			<div style="display: flex; align-items: center; gap: 8px;">
+				<button
+					role="switch"
+					aria-checked={tenureGaps}
+					aria-label="Justices with tenure gaps"
+					onclick={handleTenureGapsToggle}
+					style="
+						position: relative;
+						width: 44px;
+						height: 24px;
+						border-radius: 12px;
+						border: 1px solid {tenureGaps ? '#93c5fd' : '#334155'};
+						background-color: {tenureGaps ? 'rgba(147,197,253,0.2)' : '#0f1117'};
+						cursor: pointer;
+						padding: 0;
+						flex-shrink: 0;
+					"
+				>
+					<span
+						style="
+							position: absolute;
+							top: 50%;
+							transform: translateY(-50%) translateX({tenureGaps ? '22px' : '2px'});
+							width: 18px;
+							height: 18px;
+							border-radius: 50%;
+							background-color: {tenureGaps ? '#93c5fd' : '#94a3b8'};
+						"
+					></span>
+				</button>
+				<span style="font-size: 14px; font-weight: 400; color: #94a3b8;">Justices with tenure gaps</span>
+			</div>
 		</div>
 
 		<!-- PeopleTable (D-06) -->
@@ -194,7 +242,11 @@
 					text-align: center;
 				"
 			>
-				{#if data.incomplete}
+				{#if data.tenure_gaps}
+					<p style="font-size: 14px; font-weight: 400; color: #94a3b8; margin: 0;">
+						No Justices with tenure gaps found.
+					</p>
+				{:else if data.incomplete}
 					<p style="font-size: 16px; font-weight: 600; color: #e2e8f0; margin: 0 0 8px 0;">
 						No incomplete records
 					</p>

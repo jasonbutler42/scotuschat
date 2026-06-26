@@ -21,12 +21,12 @@
 		}
 	}
 
-	// StatusBadge helpers — same logic as list page.
-	function badgeStyle(resolved_at: string | null, published_at: string | null): string {
+	// StatusBadge helpers — reads argument.status enum (Phase 15: pipeline/draft/published).
+	function badgeStyle(status: string): string {
 		let color: string;
-		if (published_at) {
+		if (status === 'published') {
 			color = '#4ade80';
-		} else if (resolved_at) {
+		} else if (status === 'draft') {
 			color = '#a78bfa';
 		} else {
 			color = '#94a3b8';
@@ -34,11 +34,14 @@
 		return `border: 1px solid ${color}; border-radius: 4px; padding: 2px 8px; font-size: 14px; font-weight: 400; background-color: #1e293b; color: ${color}; display: inline-block;`;
 	}
 
-	function badgeLabel(resolved_at: string | null, published_at: string | null): string {
-		if (published_at) return 'Published';
-		if (resolved_at) return 'Resolved';
-		return 'Pending';
+	function badgeLabel(status: string): string {
+		if (status === 'published') return 'Published';
+		if (status === 'draft') return 'Draft';
+		return 'Pipeline';
 	}
+
+	// Advocate Roles section — per-participant save state keyed by participant_id.
+	let savingRoleId = $state<number | null>(null);
 
 	// Convert ISO timestamp or date string to value compatible with <input type="date"> (YYYY-MM-DD).
 	function toDateInputValue(iso: string | null): string {
@@ -237,8 +240,8 @@
 			</h2>
 
 			<div style="margin-bottom: 12px;">
-				<span style={badgeStyle(data.argument.resolved_at, data.argument.published_at)}>
-					{badgeLabel(data.argument.resolved_at, data.argument.published_at)}
+				<span style={badgeStyle(data.argument.status ?? 'pipeline')}>
+					{badgeLabel(data.argument.status ?? 'pipeline')}
 				</span>
 			</div>
 
@@ -258,6 +261,126 @@
 				Slug: {data.argument.slug}
 			</p>
 		</div>
+
+		<!-- Card 3: Advocate Roles — per-advocate dropdown + Save button (D-12, ROLE-03) -->
+		{#if data.argument.participants && data.argument.participants.length > 0}
+			<div
+				style="
+					background-color: #1e293b;
+					border: 1px solid #334155;
+					border-radius: 8px;
+					padding: 24px;
+					margin-bottom: 16px;
+				"
+			>
+				<h2 style="font-size: 20px; font-weight: 600; color: #e2e8f0; margin: 0 0 8px 0;">
+					Advocate Roles
+				</h2>
+				<p style="font-size: 14px; font-weight: 400; color: #94a3b8; margin: 0 0 24px 0;">
+					Set the role each advocate held in this specific argument. Changing a role here does not affect other arguments.
+				</p>
+
+				{#each data.argument.participants as participant}
+					<div style="margin-bottom: 16px;">
+						<p style="font-size: 14px; font-weight: 400; color: #94a3b8; margin: 0 0 8px 0;">
+							{participant.full_name}
+						</p>
+						<form
+							method="POST"
+							action="?/updateParticipantSide"
+							use:enhance={() => {
+								savingRoleId = participant.participant_id;
+								return async ({ update }) => {
+									savingRoleId = null;
+									await update();
+								};
+							}}
+							style="display: flex; gap: 8px; align-items: center;"
+						>
+							<input type="hidden" name="participant_id" value={participant.participant_id} />
+							<select
+								name="side"
+								value={participant.side}
+								style="
+									flex: 1;
+									background-color: #0f1117;
+									border: 1px solid #334155;
+									border-radius: 6px;
+									padding: 8px 12px;
+									font-size: 16px;
+									font-weight: 400;
+									color: #e2e8f0;
+									min-height: 36px;
+								"
+							>
+								<option value="PETITIONER">Petitioner's Counsel</option>
+								<option value="RESPONDENT">Respondent's Counsel</option>
+								<option value="AMICUS">Amicus Curiae</option>
+								<option value="UNKNOWN">Counsel</option>
+							</select>
+							<button
+								type="submit"
+								disabled={savingRoleId === participant.participant_id}
+								style="
+									min-height: 36px;
+									padding: 8px 16px;
+									background-color: #1e293b;
+									border: 1px solid #93c5fd;
+									border-radius: 6px;
+									font-size: 14px;
+									font-weight: 400;
+									color: #e2e8f0;
+									cursor: {savingRoleId === participant.participant_id ? 'not-allowed' : 'pointer'};
+									opacity: {savingRoleId === participant.participant_id ? 0.7 : 1};
+									white-space: nowrap;
+								"
+							>
+								{savingRoleId === participant.participant_id ? 'Saving…' : 'Save'}
+							</button>
+						</form>
+					</div>
+				{/each}
+
+				<!-- Role error message (shown on form.roleError) -->
+				{#if form?.roleError}
+					<p
+						role="alert"
+						style="
+							color: #ef4444;
+							font-size: 14px;
+							font-weight: 400;
+							margin: 8px 0 0 0;
+						"
+					>{form.roleError}</p>
+				{/if}
+			</div>
+		{/if}
+
+		<!-- TenureGapWarning banners — one per affected bench speaker (D-15) -->
+		{#each data.argument.tenure_gap_warnings ?? [] as warning}
+			<div
+				role="status"
+				style="
+					background-color: #0f1117;
+					border: 1px solid #fbbf24;
+					border-radius: 6px;
+					padding: 12px 16px;
+					margin-bottom: 16px;
+				"
+			>
+				<p style="font-size: 14px; font-weight: 400; color: #fbbf24; margin: 0 0 4px 0;">
+					{warning.full_name}'s role could not be resolved from tenure data
+				</p>
+				<p style="font-size: 14px; font-weight: 400; color: #94a3b8; margin: 0;">
+					argued_date {warning.argued_date} falls outside all recorded tenures.
+					Showing most recent tenure as fallback.
+					<a
+						href="/admin/people/{warning.person_id}"
+						style="color: #93c5fd; text-decoration: underline;"
+					>Edit person</a>
+				</p>
+			</div>
+		{/each}
 
 		<!-- Publish button — only when resolved and not yet published (D-07) -->
 		{#if data.argument.resolved_at && !data.argument.published_at}

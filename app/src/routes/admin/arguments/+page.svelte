@@ -16,23 +16,24 @@
 		}
 	}
 
-	// StatusBadge helpers for argument status.
-	function badgeStyle(resolved_at: string | null, published_at: string | null): string {
+	// StatusBadge helpers — reads argument.status enum (Phase 15: draft/published).
+	// Pipeline-state arguments are excluded from this list (D-02).
+	function badgeStyle(status: string): string {
 		let color: string;
-		if (published_at) {
+		if (status === 'published') {
 			color = '#4ade80'; // Published — green
-		} else if (resolved_at) {
-			color = '#a78bfa'; // Resolved — violet
+		} else if (status === 'draft') {
+			color = '#a78bfa'; // Draft — violet
 		} else {
-			color = '#94a3b8'; // Pending — muted
+			color = '#94a3b8'; // Pipeline — muted (fallback, should not appear in this list)
 		}
 		return `border: 1px solid ${color}; border-radius: 4px; padding: 2px 8px; font-size: 14px; font-weight: 400; background-color: #1e293b; color: ${color}; display: inline-block;`;
 	}
 
-	function badgeLabel(resolved_at: string | null, published_at: string | null): string {
-		if (published_at) return 'Published';
-		if (resolved_at) return 'Resolved';
-		return 'Pending';
+	function badgeLabel(status: string): string {
+		if (status === 'published') return 'Published';
+		if (status === 'draft') return 'Draft';
+		return 'Pipeline';
 	}
 </script>
 
@@ -59,11 +60,8 @@
 					text-align: center;
 				"
 			>
-				<p style="font-size: 16px; font-weight: 600; color: #e2e8f0; margin: 0 0 8px 0;">
-					No arguments yet
-				</p>
 				<p style="font-size: 16px; color: #94a3b8; margin: 0;">
-					No arguments have been ingested. Start a new pipeline run to add one.
+					No arguments yet. Start a pipeline run to ingest a transcript.
 				</p>
 			</div>
 		{:else}
@@ -138,8 +136,8 @@
 									white-space: nowrap;
 								"
 							>
-								<span style={badgeStyle(arg.resolved_at, arg.published_at)}>
-									{badgeLabel(arg.resolved_at, arg.published_at)}
+								<span style={badgeStyle(arg.status ?? 'pipeline')}>
+									{badgeLabel(arg.status ?? 'pipeline')}
 								</span>
 							</td>
 							<td

@@ -278,10 +278,15 @@ Plans:
   3. Pre-populated fields are editable — the operator can correct any extraction error before publishing
   4. Arguments from transcripts where extraction fails (older/non-standard formats) fall back to blank fields without breaking the parse step
 
-**Plans**: 0/2 plans — pending
+**Plans**: 2 plans
 
-- [ ] 16-01-PLAN.md — Parser: extract cover-page metadata (case name, docket, date) and write to argument record at parse time
-- [ ] 16-02-PLAN.md — Parser: detect advocate side from transcript section headers; write initial role to argument_participants
+**Wave 1**
+
+- [ ] 16-01-PLAN.md — Parser: extract cover-page metadata (case name + argued date) via regex; write argued_date to Argument and case_name to lead Case after the dry-run gate (PARSE-01)
+
+**Wave 2** *(blocked on 16-01 — same files: cover_extractor.py, parse.py)*
+
+- [ ] 16-02-PLAN.md — Parser: detect advocate sides from the TOC page; map by last name and UPDATE argument_participants.side after step 7b (PARSE-02)
 
 ### Phase 17: Pipeline UI Polish
 

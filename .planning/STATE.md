@@ -5,8 +5,8 @@ milestone_name: Speaker Accuracy + Pipeline Confidence — PLANNED
 current_phase: 17
 current_phase_name: Pipeline UI Polish
 status: verifying
-stopped_at: Completed 16-02-PLAN.md
-last_updated: "2026-06-26T19:03:34.236Z"
+stopped_at: Phase 17 context gathered
+last_updated: "2026-06-26T19:25:08.863Z"
 last_activity: 2026-06-26
 last_activity_desc: Phase 16 complete, transitioned to Phase 17
 progress:
@@ -155,6 +155,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-26T18:44:13.902Z
-Stopped at: Completed 16-02-PLAN.md
-Resume file: None
+Last session: 2026-06-26T19:25:08.851Z
+Stopped at: Phase 17 context gathered
+Resume file: .planning/phases/17-pipeline-ui-polish/17-CONTEXT.md

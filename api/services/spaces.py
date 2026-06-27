@@ -50,6 +50,23 @@ def upload_pdf_to_spaces(file_bytes: bytes, key: str) -> str:
     return key
 
 
+def generate_pdf_presigned_url(key: str, expires_in: int = 900) -> str:
+    """Generate a pre-signed GET URL for a Spaces-backed PDF.
+
+    Returns a URL valid for `expires_in` seconds (default 15 minutes).
+    Synchronous — wrap in run_in_executor when called from an async route.
+
+    Used by the GET /api/admin/jobs/{job_id}/pdf endpoint to serve Spaces-backed
+    PDFs without streaming bytes through the FastAPI process.
+    """
+    client = get_spaces_client()
+    return client.generate_presigned_url(
+        "get_object",
+        Params={"Bucket": settings.do_spaces_bucket, "Key": key},
+        ExpiresIn=expires_in,
+    )
+
+
 def upload_photo_to_spaces(file_bytes: bytes, key: str, content_type: str) -> str:
     """Upload image bytes to DO Spaces under the given key.
 

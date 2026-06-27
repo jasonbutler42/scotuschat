@@ -44,12 +44,13 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, UploadFile
 from PIL import Image, UnidentifiedImageError
-from sqlalchemy import update
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.responses import FileResponse, RedirectResponse, Response
 
 from api.core.config import settings
 from api.core.database import get_db
-from api.models.models import AdminJob, AdminJobStatus, AdminJobStep
+from api.models.models import AdminJob, AdminJobStatus, AdminJobStep, PipelineRun
 from api.schemas.admin_jobs import (
     AdminJobResponse,
     PersonCreate,
@@ -299,6 +300,58 @@ async def get_job(
     # PAUSED, FAILED, COMPLETED — do nothing (terminal for polling)
 
     return job  # type: ignore[return-value]
+
+
+@router.get("/jobs/{job_id}/pdf")
+async def get_job_pdf(
+    job_id: int,
+    db: AsyncSession = Depends(get_db),
+) -> Response:
+    """Serve the source PDF for a pipeline job.
+
+    Branches on job.spaces_key FIRST (Pitfall 2 — spaces_key short-circuit):
+    - Spaces-backed (spaces_key set): 302 redirect to a pre-signed DO Spaces URL
+      with 15-minute TTL. The redirect is generated synchronously via boto3 and
+      wrapped in run_in_executor so it does not block the event loop.
+    - Disk-backed (no spaces_key): stream the PDF from PipelineRun.pdf_path via
+      FileResponse with Content-Disposition: inline.
+
+    Auth: inherited from router-level verify_admin_token dependency (T-17-01 mitigated).
+    The route return annotation is Response with NO response_model — the handler
+    returns either RedirectResponse or FileResponse, not a Pydantic model (Pitfall 6).
+
+    404 raised for: unknown job, missing ingest run, missing pdf_path.
+    """
+    job = await jobs_service.get_job(db, job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    if job.spaces_key:
+        # Spaces-backed: generate a pre-signed URL and redirect (302)
+        loop = asyncio.get_running_loop()
+        url = await loop.run_in_executor(
+            None,
+            spaces_service.generate_pdf_presigned_url,
+            job.spaces_key,
+        )
+        return RedirectResponse(url=url, status_code=302)
+    else:
+        # Disk-backed: read pdf_path from the ingest PipelineRun row
+        run_id = await jobs_service.get_run_id_for_step(db, job_id, "ingest")
+        if run_id is None:
+            raise HTTPException(status_code=404, detail="PDF not available")
+        run_result = await db.execute(select(PipelineRun).where(PipelineRun.id == run_id))
+        run = run_result.scalar_one_or_none()
+        if run is None or run.pdf_path is None:
+            raise HTTPException(status_code=404, detail="PDF path not recorded")
+        # Use original_filename if captured; fall back to a derived name (T-17-04:
+        # original_filename is display-only, never used as a server-side path)
+        filename = job.original_filename or f"argument-{job_id}.pdf"
+        return FileResponse(
+            path=run.pdf_path,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'inline; filename="{filename}"'},
+        )
 
 
 @router.post("/jobs/{job_id}/resolve", response_model=AdminJobResponse)

@@ -5,15 +5,15 @@ milestone_name: Speaker Accuracy + Pipeline Confidence — PLANNED
 current_phase: 17
 current_phase_name: Pipeline UI Polish
 status: executing
-stopped_at: Phase 17 UI-SPEC approved
-last_updated: "2026-06-27T11:27:41.398Z"
-last_activity: 2026-06-26
-last_activity_desc: Phase 16 complete, transitioned to Phase 17
+stopped_at: Completed 17-01-PLAN.md backend
+last_updated: "2026-06-27T11:39:16.427Z"
+last_activity: 2026-06-27
+last_activity_desc: Phase 17 execution started
 progress:
   total_phases: 17
   completed_phases: 8
-  total_plans: 27
-  completed_plans: 27
+  total_plans: 29
+  completed_plans: 28
   percent: 47
 ---
 
@@ -24,14 +24,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-18 after v1.2 milestone start)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** Phase 16 — parser-improvements
+**Current focus:** Phase 17 — Pipeline UI Polish
 
 ## Current Position
 
-Phase: 17 — Pipeline UI Polish
-Plan: Not started
+Phase: 17 (Pipeline UI Polish) — EXECUTING
+Plan: 2 of 2
 Status: Ready to execute
-Last activity: 2026-06-26 — Phase 16 complete, transitioned to Phase 17
+Last activity: 2026-06-27 — Phase 17 execution started
 
 ## Performance Metrics
 
@@ -75,6 +75,7 @@ Last activity: 2026-06-26 — Phase 16 complete, transitioned to Phase 17
 | Phase 15 P03 | 35 | 2 tasks | 5 files |
 | Phase 16 P01 | 35 | 3 tasks | 3 files |
 | Phase 16 P02 | 30 | 3 tasks | 2 files |
+| Phase 17 P01 | 25 | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -132,6 +133,8 @@ Full log in PROJECT.md Key Decisions table. Key decisions for v1.2:
 - [Phase ?]: [15-03] ParticipantItem extended with participant_id + side for advocate dropdown wiring
 - [Phase ?]: [15-03] use:enhance FormData injection chosen over nested HTML forms for advocate side submission
 - [Phase ?]: [16-02]: _normalize_label_last_name added to parse.py — module self-contained; ORM mutation for side UPDATE matches step 7b pattern; call site after step 7b flush and dry-run gate (T-16-07, T-16-08 mitigated)
+- [Phase ?]: [17-01]: ParseStats assembled from scalar COUNT results — no from_attributes; AdminJobResponse retains from_attributes
+- [Phase ?]: [17-01]: PDF endpoint branches spaces_key FIRST; disk fallback reads PipelineRun.pdf_path from ingest run (T-17-02 mitigated)
 
 ### Pending Todos
 
@@ -155,6 +158,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-26T19:33:44.947Z
-Stopped at: Phase 17 UI-SPEC approved
-Resume file: .planning/phases/17-pipeline-ui-polish/17-UI-SPEC.md
+Last session: 2026-06-27T11:39:16.416Z
+Stopped at: Completed 17-01-PLAN.md backend
+Resume file: None

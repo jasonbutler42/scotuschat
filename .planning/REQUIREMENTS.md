@@ -58,8 +58,8 @@ Requirements for the next milestone. Phases 15–17.
 
 ### Pipeline Confidence
 
-- [ ] **PIPE-21**: Each pipeline stage card shows detailed stats — Ingest shows the source filename; Parse shows utterance count, speaker count, and any extracted case metadata
-- [ ] **PIPE-22**: Operator can access the original source PDF for any ingested argument directly from the pipeline admin to verify speaker assignments against the transcript
+- [x] **PIPE-21**: Each pipeline stage card shows detailed stats — Ingest shows the source filename; Parse shows utterance count, speaker count, and any extracted case metadata
+- [x] **PIPE-22**: Operator can access the original source PDF for any ingested argument directly from the pipeline admin to verify speaker assignments against the transcript
 
 ## Future Requirements
 
@@ -116,8 +116,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ROLE-03 | Phase 15 | Complete |
 | PARSE-01 | Phase 16 | Complete |
 | PARSE-02 | Phase 16 | Complete |
-| PIPE-21 | Phase 17 | Pending |
-| PIPE-22 | Phase 17 | Pending |
+| PIPE-21 | Phase 17 | Complete |
+| PIPE-22 | Phase 17 | Complete |
 
 **Coverage:**
 

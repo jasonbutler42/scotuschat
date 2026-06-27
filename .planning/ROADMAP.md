@@ -237,7 +237,7 @@ Plans:
 | 14. Speaker Popover Card | v1.2 | 3/3 | Complete   | 2026-06-25 |
 | 15. Speaker Role Accuracy | v1.3 | 3/4 | In Progress|  |
 | 16. Parser Improvements | v1.3 | 2/2 | Complete    | 2026-06-26 |
-| 17. Pipeline UI Polish | v1.3 | 0/2 | Pending | — |
+| 17. Pipeline UI Polish | v1.3 | 1/2 | In Progress|  |
 
 ### Phase 15: Speaker Role Accuracy
 
@@ -300,11 +300,11 @@ Plans:
   3. Operator can open or download the original source PDF for any argument directly from the pipeline job detail page
   4. Stats and file link are visible without leaving the pipeline admin view
 
-**Plans**: 2 plans — pending
+**Plans**: 1/2 plans executed
 
 **Wave 1**
 
-- [ ] 17-01-PLAN.md — Backend: migration 0009 (original_filename), parse-stats query in get_job, GET /jobs/{id}/pdf endpoint
+- [x] 17-01-PLAN.md — Backend: migration 0009 (original_filename), parse-stats query in get_job, GET /jobs/{id}/pdf endpoint
 
 **Wave 2** *(blocked on 17-01)*
 

@@ -43,7 +43,7 @@ Full phase details: `.planning/milestones/v1.1-ROADMAP.md`
 
 - [ ] **Phase 15: Speaker Role Accuracy** - Justice role in popover determined by tenure date lookup; advocate roles stored and editable per argument
 - [x] **Phase 16: Parser Improvements** - Parse step extracts case metadata and advocate sides from transcript PDF (completed 2026-06-26)
-- [ ] **Phase 17: Pipeline UI Polish** - Stage stat cards, pre-populated argument fields, source PDF access
+- [x] **Phase 17: Pipeline UI Polish** - Stage stat cards, pre-populated argument fields, source PDF access (completed 2026-06-27)
 
 ### ✅ v1.2 Pre-Launch Polish — SHIPPED 2026-06-25
 
@@ -237,7 +237,7 @@ Plans:
 | 14. Speaker Popover Card | v1.2 | 3/3 | Complete   | 2026-06-25 |
 | 15. Speaker Role Accuracy | v1.3 | 3/4 | In Progress|  |
 | 16. Parser Improvements | v1.3 | 2/2 | Complete    | 2026-06-26 |
-| 17. Pipeline UI Polish | v1.3 | 1/2 | In Progress|  |
+| 17. Pipeline UI Polish | v1.3 | 2/2 | Complete   | 2026-06-27 |
 
 ### Phase 15: Speaker Role Accuracy
 
@@ -300,7 +300,7 @@ Plans:
   3. Operator can open or download the original source PDF for any argument directly from the pipeline job detail page
   4. Stats and file link are visible without leaving the pipeline admin view
 
-**Plans**: 1/2 plans executed
+**Plans**: 2/2 plans complete
 
 **Wave 1**
 
@@ -308,7 +308,7 @@ Plans:
 
 **Wave 2** *(blocked on 17-01)*
 
-- [ ] 17-02-PLAN.md — Frontend: Ingest source row + Parse stat rows + "View source PDF" link via same-origin SvelteKit PDF proxy (human-verify checkpoint)
+- [x] 17-02-PLAN.md — Frontend: Ingest source row + Parse stat rows + "View source PDF" link via same-origin SvelteKit PDF proxy (human-verify checkpoint)
 
 ## Backlog
 

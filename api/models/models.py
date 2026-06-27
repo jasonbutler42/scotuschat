@@ -337,6 +337,7 @@ class AdminJob(Base):
     argument_id = Column(Integer, ForeignKey("arguments.id"), nullable=True)
     pdf_url = Column(Text, nullable=True)
     spaces_key = Column(Text, nullable=True)
+    original_filename = Column(Text, nullable=True)
     discrepancies = Column(JSONB, nullable=True)
     error_message = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)

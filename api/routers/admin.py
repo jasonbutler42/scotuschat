@@ -172,7 +172,11 @@ async def create_job(
             raise HTTPException(status_code=422, detail="Uploaded file must be a PDF.")
 
         file_bytes = await pdf_file.read()
-        job = await jobs_service.create_job(db, spaces_key=None)
+        job = await jobs_service.create_job(
+            db,
+            spaces_key=None,
+            original_filename=pdf_file.filename,
+        )
 
         if settings.do_spaces_bucket:
             # Object storage configured — upload and pass the key to ingest.

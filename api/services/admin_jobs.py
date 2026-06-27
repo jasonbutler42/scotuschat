@@ -48,18 +48,24 @@ async def create_job(
     *,
     pdf_url: str | None = None,
     spaces_key: str | None = None,
+    original_filename: str | None = None,
 ) -> AdminJob:
     """Insert a new AdminJob row and return it.
 
     Status starts as PENDING; current_step starts as INGEST.
     The caller (router) is responsible for spawning the pipeline subprocess
     after this returns.
+
+    original_filename: browser-supplied filename for upload-mode jobs (Pitfall 3:
+    may be None for malformed uploads — stored as-is without assertion).
+    URL-mode jobs pass None (D-03).
     """
     job = AdminJob(
         status=AdminJobStatus.PENDING,
         current_step=AdminJobStep.INGEST,
         pdf_url=pdf_url,
         spaces_key=spaces_key,
+        original_filename=original_filename,
     )
     db.add(job)
     await db.commit()

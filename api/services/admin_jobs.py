@@ -74,11 +74,51 @@ async def create_job(
 
 
 async def get_job(db: AsyncSession, job_id: int) -> AdminJob | None:
-    """Load a single AdminJob by primary key."""
+    """Load a single AdminJob by primary key.
+
+    Attaches parse_stats as a non-ORM attribute when a parse run exists for
+    the job's argument_id. parse_stats is None when:
+      - The job row does not exist
+      - argument_id is None (ingest not yet finished)
+      - No parse PipelineRun exists for this argument
+
+    Reuses get_run_id_for_step(db, job_id, "parse") which orders by created_at
+    DESC LIMIT 1 — correctly reflects the latest run when re-runs occurred (D-09).
+    """
     result = await db.execute(
         select(AdminJob).where(AdminJob.id == job_id)
     )
-    return result.scalar_one_or_none()
+    job = result.scalar_one_or_none()
+    if job is None:
+        return None
+
+    # Attach parse_stats as a dynamic attribute — AdminJobResponse reads it via
+    # the parse_stats field when model_validate(job, from_attributes=True) is called.
+    parse_run_id = await get_run_id_for_step(db, job_id, "parse")
+    if parse_run_id is not None and job.argument_id is not None:
+        # COUNT queries always return a row — use scalar_one(), never scalar_one_or_none()
+        utt_result = await db.execute(
+            select(func.count(Utterance.id)).where(
+                Utterance.pipeline_run_id == parse_run_id
+            )
+        )
+        utterance_count = utt_result.scalar_one()
+
+        spk_result = await db.execute(
+            select(func.count(ArgumentParticipant.raw_speaker_label.distinct())).where(
+                ArgumentParticipant.argument_id == job.argument_id
+            )
+        )
+        speaker_count = spk_result.scalar_one()
+
+        job.__dict__["parse_stats"] = {
+            "utterance_count": utterance_count,
+            "speaker_count": speaker_count,
+        }
+    else:
+        job.__dict__["parse_stats"] = None
+
+    return job
 
 
 async def list_jobs(

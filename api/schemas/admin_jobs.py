@@ -14,6 +14,17 @@ class AdminJobCreateURL(BaseModel):
     pdf_url: str
 
 
+class ParseStats(BaseModel):
+    """Parse step stats embedded in AdminJobResponse.
+
+    Assembled from scalar COUNT query results at render time — not an ORM row.
+    No from_attributes config needed (constructed from plain dicts, not ORM objects).
+    """
+
+    utterance_count: int
+    speaker_count: int
+
+
 class AdminJobResponse(BaseModel):
     """Full admin job row returned by the poll endpoint and job creation."""
 
@@ -23,6 +34,8 @@ class AdminJobResponse(BaseModel):
     argument_id: Optional[int] = None
     pdf_url: Optional[str] = None
     spaces_key: Optional[str] = None
+    original_filename: Optional[str] = None
+    parse_stats: Optional[ParseStats] = None
     discrepancies: Optional[list[dict]] = None
     error_message: Optional[str] = None
     created_at: datetime.datetime

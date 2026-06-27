@@ -23,12 +23,29 @@
 		candidates: Candidate[];
 	}
 
+	interface ParseStats {
+		utterance_count: number;
+		speaker_count: number;
+	}
+
 	interface Job {
 		id: number;
 		status: string;
 		current_step: string;
 		error_message?: string | null;
 		discrepancies?: Discrepancy[] | null;
+		pdf_url?: string | null;
+		spaces_key?: string | null;
+		original_filename?: string | null;
+		parse_stats?: ParseStats | null;
+	}
+
+	// Standalone script-level date formatter — reusable from any template scope
+	// (including the {#each STEP_ORDER} loop). NOT the same as the {@const formatArgDate}
+	// scoped inside {#if data.argument} (Pitfall 5 — that one is not accessible here).
+	function formatDate(iso: string | null | undefined): string {
+		if (!iso) return '—';
+		return new Date(iso).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 	}
 
 	// ──────────────────────────────────────────────────────────────────────────

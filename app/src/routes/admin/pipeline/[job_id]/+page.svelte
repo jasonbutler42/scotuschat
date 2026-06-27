@@ -467,6 +467,26 @@
 			{/if}
 		{/if}
 
+		<!-- View source PDF link card (D-06/PIPE-22): shown when a PDF source exists -->
+		{#if data.job.spaces_key || data.job.pdf_url}
+			<div
+				style="
+					background-color: #1e293b;
+					border: 1px solid #334155;
+					border-radius: 8px;
+					padding: 24px;
+					margin-bottom: 24px;
+				"
+			>
+				<a
+					href="/admin/pipeline/{data.job.id}/pdf"
+					target="_blank"
+					rel="noopener noreferrer"
+					style="font-size: 14px; color: #93c5fd; text-decoration: underline;"
+				>View source PDF</a>
+			</div>
+		{/if}
+
 		<!-- Step cards container — aria-live polite so screen readers announce step changes -->
 		<div
 			aria-live="polite"
@@ -519,6 +539,39 @@
 							{label}
 						</span>
 					</div>
+
+					<!-- Addition A: Ingest source identifier row (D-01/PIPE-21) -->
+					{#if step === 'ingest' && (data.job.original_filename || data.job.pdf_url)}
+						<div style="margin-top: 12px;">
+							<span style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 4px;">Source file</span>
+							<span style="font-size: 16px; color: #e2e8f0; word-break: break-all;">{data.job.original_filename ?? data.job.pdf_url}</span>
+						</div>
+					{/if}
+
+					<!-- Addition B: Parse stat rows (D-10/PIPE-21) — only when parse completed -->
+					{#if step === 'parse' && status === 'completed' && data.job.parse_stats}
+						{@const ps = data.job.parse_stats}
+						<div style="margin-top: 12px; display: flex; flex-direction: column;">
+							<div style="margin-bottom: 12px;">
+								<span style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 4px;">Utterances</span>
+								<span style="font-size: 16px; color: #e2e8f0;">{ps.utterance_count}</span>
+							</div>
+							<div style="margin-bottom: 12px;">
+								<span style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 4px;">Distinct speakers</span>
+								<span style="font-size: 16px; color: #e2e8f0;">{ps.speaker_count}</span>
+							</div>
+							{#if data.argument}
+								<div style="margin-bottom: 12px;">
+									<span style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 4px;">Case name</span>
+									<span style="font-size: 16px; color: #e2e8f0;">{data.argument.case_name || '—'}</span>
+								</div>
+								<div style="margin-bottom: 12px;">
+									<span style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 4px;">Argued</span>
+									<span style="font-size: 16px; color: #e2e8f0;">{formatDate(data.argument.argued_date)}</span>
+								</div>
+							{/if}
+						</div>
+					{/if}
 
 					<!-- Discrepancy review (D-11–D-14): only when resolve step is paused -->
 					{#if step === 'resolve' && data.job.status === 'paused' && data.peopleLoadError}

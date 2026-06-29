@@ -1,37 +1,37 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.3
-milestone_name: Speaker Accuracy + Pipeline Confidence — PLANNED
+milestone_name: Speaker Accuracy + Pipeline Confidence
 current_phase: 17
-current_phase_name: pipeline-ui-polish
-status: executing
-stopped_at: context exhaustion at 75% (2026-06-29)
-last_updated: "2026-06-29T15:05:22.461Z"
+status: milestone_complete
+stopped_at: Phase 17 UAT complete — v1.3 milestone done (2026-06-29)
+last_updated: "2026-06-29T00:00:00.000Z"
 last_activity: 2026-06-29
-last_activity_desc: Phase 17 execution started
+last_activity_desc: Phase 17 complete — v1.3 milestone complete
 progress:
   total_phases: 17
-  completed_phases: 9
+  completed_phases: 17
   total_plans: 30
   completed_plans: 30
-  percent: 53
+  percent: 100
+current_phase_name: pipeline-ui-polish
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-06-18 after v1.2 milestone start)
+See: .planning/PROJECT.md (updated 2026-06-29 after Phase 17 complete — v1.3 milestone done)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** Phase 17 — pipeline-ui-polish
+**Current focus:** v1.3 complete — ready for /gsd-complete-milestone v1.3
 
 ## Current Position
 
-Phase: 17 (pipeline-ui-polish) — EXECUTING
-Plan: 2 of 3
-Status: Ready to execute
-Last activity: 2026-06-29 — Phase 17 execution started
+Phase: 17 (pipeline-ui-polish) — COMPLETE
+Plan: 3/3 complete
+Status: Milestone complete
+Last activity: 2026-06-29 — Phase 17 UAT passed, v1.3 milestone complete
 
 ## Performance Metrics
 
@@ -144,11 +144,9 @@ None yet.
 
 ### Blockers/Concerns
 
-- `BODY_SIZE_LIMIT` default 512KB blocks real SCOTUS PDFs — must set `BODY_SIZE_LIMIT=10M` in DO App Platform env (carried from v1.1)
-- `ORIGIN` env var missing on DO causes silent CSRF 403 at login — set `ORIGIN`, `PROTOCOL_HEADER`, `HOST_HEADER` (carried from v1.1)
-- `admin.scotuschat.com` DNS entry must be created before deployment smoke test (carried from v1.1)
-- DO Spaces ACL: enable bucket-level public access for `people/` prefix; verify with test upload before Phase 12
-- Decide `photo_url` format before Phase 12: store Spaces key or full URL
+- `BODY_SIZE_LIMIT` default 512KB blocks real SCOTUS PDFs — must set `BODY_SIZE_LIMIT=10M` in DO App Platform env (v1.4 deployment)
+- `ORIGIN` env var missing on DO causes silent CSRF 403 at login — set `ORIGIN`, `PROTOCOL_HEADER`, `HOST_HEADER` (v1.4 deployment)
+- `admin.scotuschat.com` DNS entry must be created before deployment smoke test (v1.4 deployment)
 
 ## Deferred Items
 
@@ -160,6 +158,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-29T15:05:22.450Z
-Stopped at: context exhaustion at 75% (2026-06-29)
+Last session: 2026-06-29
+Stopped at: Phase 17 complete, v1.3 milestone complete — ready for /gsd-complete-milestone v1.3
 Resume file: None

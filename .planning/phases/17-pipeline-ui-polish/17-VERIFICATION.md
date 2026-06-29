@@ -1,7 +1,7 @@
 ---
 phase: 17-pipeline-ui-polish
 verified: 2026-06-29T16:00:00Z
-status: human_needed
+status: passed
 score: 9/9 must-haves verified
 behavior_unverified: 4
 overrides_applied: 0
@@ -9,36 +9,45 @@ re_verification:
   previous_status: human_needed
   previous_score: 8/9 must-haves verified
   gaps_closed:
+
     - "View source PDF link card gate extended to include original_filename (17-03 fix at +page.svelte:471)"
   gaps_remaining: []
   regressions: []
 behavior_unverified_items:
+
   - truth: "The Ingest stage card shows the source filename (upload) or full source URL (URL mode)"
     test: "Apply migration 0009; upload a PDF; open job detail page"
     expected: "Source file label row present with uploaded filename; absent for pre-migration rows with both fields null"
     why_human: "Conditional render gated on data.job.original_filename || data.job.pdf_url — requires a live DB row with migration 0009 applied"
+
   - truth: "The Parse stage card shows utterance count, distinct speaker count, case name, and argued date when parse is completed"
     test: "Open a job detail page while parse is running, then after parse completes"
     expected: "No stat rows while pending/running; all four rows appear after completion with raw integer counts"
     why_human: "D-10 gate (status === 'completed' && data.job.parse_stats) is timing-dependent; requires a completed parse run in a live DB"
+
   - truth: "Operator can click 'View source PDF' and the original PDF opens in a new browser tab"
     test: "Click the 'View source PDF' link on a job detail page"
     expected: "PDF opens in a new tab; Spaces-backed shows DO Spaces pre-signed URL; disk-backed streams inline; ADMIN_TOKEN never visible in address bar"
     why_human: "Token-safety of redirect pass-through and the opaque-redirect fallback path require a running SvelteKit + FastAPI stack with network inspection"
+
   - truth: "View source PDF link is absent when spaces_key, pdf_url, and original_filename are all null"
     test: "Open a job detail page where all three PDF source fields are null"
     expected: "The View source PDF link card does not appear"
     why_human: "Three-way OR condition requires a DB row with all three values null to confirm the absent branch"
 human_verification:
+
   - test: "Apply migration 0009 (alembic upgrade head). Upload a transcript PDF through /admin/pipeline. Open the job detail page /admin/pipeline/{job_id}. Inspect the Ingest stage card."
     expected: "A 'Source file' label row appears with the uploaded filename (e.g. transcript.pdf). For a URL-sourced job the row shows the full source URL verbatim with long-URL wrapping. For an old pre-migration job with both original_filename and pdf_url null, the row is entirely absent."
     why_human: "Conditional render gated on data.job.original_filename || data.job.pdf_url — requires a live DB row to exercise both present and absent branches"
+
   - test: "Open a job detail page while the Parse step is still pending or running. Then wait for parse to complete and reload."
     expected: "While parse is running/pending: no Utterances, Distinct speakers, Case name, or Argued rows on the Parse card. After parse completes: all four rows appear with correct values. Raw integer counts only — no percentages, totals, or ratios."
     why_human: "D-10 gate is timing-dependent; the pending-state branch cannot be exercised without a running job"
+
   - test: "Click the 'View source PDF' link on a job with a completed ingest step. Observe the browser address bar and network requests."
     expected: "PDF opens in a new browser tab. For a Spaces-backed job: address bar shows a DO Spaces pre-signed URL (not /api/admin/... and not /admin/pipeline/...). For a disk-backed local dev job: PDF streams inline. The X-Admin-Token value must never appear in the address bar, response headers, or any visible network request."
     why_human: "Token-safety of the redirect pass-through and opaque-redirect fallback require a running SvelteKit + FastAPI stack with network inspection"
+
   - test: "Navigate to a job detail page where spaces_key, pdf_url, and original_filename are all null (e.g. a URL-mode job before ingest, where no PDF URL was stored)."
     expected: "The 'View source PDF' link card does not appear between the Argument card and the step cards. No broken anchor or placeholder text is visible."
     why_human: "Three-way OR condition at +page.svelte:471 — requires a DB row with all three values null to confirm the absent branch (condition was corrected by 17-03; need live confirmation of the new gate)"
@@ -170,6 +179,7 @@ The original VERIFICATION.md human item #4 noted: "Conditional render gated on `
 This was not just a live-stack item — it described the buggy two-way OR condition. UAT test 5 confirmed the bug: local file-upload jobs (where only `original_filename` is set) never showed the card.
 
 Plan 17-03 fixed this with a single-line change:
+
 - Before: `{#if data.job.spaces_key || data.job.pdf_url}`
 - After: `{#if data.job.spaces_key || data.job.pdf_url || data.job.original_filename}`
 
@@ -180,6 +190,7 @@ The fix is confirmed at +page.svelte:471. Human item #4 above now tests the corr
 ## Summary
 
 All nine must-haves are now satisfied at the static/structural level:
+
 - Migration 0009, ORM column, schema fields, service queries, and PDF endpoint: all VERIFIED (unchanged from initial verification)
 - SvelteKit PDF proxy and +page.svelte interface extensions: VERIFIED (unchanged)
 - Addition C gate: VERIFIED with three-way OR after 17-03 fix

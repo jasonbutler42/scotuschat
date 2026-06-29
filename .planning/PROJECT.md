@@ -68,7 +68,7 @@ Anyone can open a SCOTUS oral argument and immediately follow the conversation �
 
 - [ ] Speaker role accuracy — Justice tenure date-range lookup for popover role; per-argument advocate roles stored and editable (ROLE-01, ROLE-02, ROLE-03)
 - ✓ Parser improvements — parse step extracts case name, docket, argued date, and advocate side from transcript PDF (PARSE-01, PARSE-02) — Validated in Phase 16
-- [ ] Pipeline UI polish — stage stat cards; source PDF accessible from job detail; pre-populated argument fields (PIPE-21, PIPE-22)
+- ✓ Pipeline UI polish — parse stat cards for completed parse runs, source PDF link card accessible from job detail (PIPE-21, PIPE-22) — Phase 17
 - [ ] Application deployed to Digital Ocean App Platform (SvelteKit + FastAPI as separate services, managed Postgres) (DEPLOY-01, v1.4)
 - [ ] Continuous deployment from GitHub main branch (DEPLOY-03, v1.4)
 
@@ -138,6 +138,10 @@ Anyone can open a SCOTUS oral argument and immediately follow the conversation �
 | `bits-ui ^2.18.1` for speaker popover (Phase 14) | Only Svelte 5-native headless popover after `@skeletonlabs/floating-ui-svelte` archived Oct 2025 | ✓ Good — customAnchor prop + plain buttons pattern worked correctly |
 | `argument_participants.side` BENCH/ADVOCATE binary (Phase 1) | Simple classification sufficient at MVP; advocate sub-roles deferred | ⚠️ Revisit — Phase 15 expands to per-argument roles for correct popover display |
 | `Person.role_id` as popover role source (Phase 14) | Expedient at build time; person's primary role used as fallback | ⚠️ Revisit — Phase 15 replaces with tenure date-range lookup for Justices |
+| `ParseStats` assembled from scalar COUNT results, no `from_attributes` (Phase 17) | ORM object has no `parse_stats` attribute; injected via `job.__dict__` before `model_validate` reads the ORM row | ✓ Good — avoids constructing `AdminJobResponse` manually in every route |
+| PDF proxy uses `redirect:'manual'` to pass Spaces 302 to browser (Phase 17) | Token stays server-side; pre-signed URL goes directly to the browser without transiting SvelteKit memory | ✓ Good — open-redirect threat mitigated by sourcing Location from FastAPI (server-controlled) |
+| Same-origin SvelteKit proxy at `/admin/pipeline/{id}/pdf` (Phase 17) | Browser has no direct FastAPI route; ADMIN_TOKEN must stay server-side (Architecture Rule 2) | ✓ Good — enforced via `$env/static/private` only |
+| `formatDate()` declared at script level, not inside `{#if}` block (Phase 17) | `{@const}` inside `{#if}` is scoped to that block; script-level function accessible from `{#each STEP_ORDER}` loop | ✓ Good — pitfall documented for future Svelte date helpers |
 
 ## Evolution
 
@@ -157,4 +161,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-26 after Phase 16 complete (parser improvements — PARSE-01, PARSE-02)*
+*Last updated: 2026-06-29 after Phase 17 complete (pipeline-ui-polish — PIPE-21, PIPE-22) — v1.3 milestone complete*

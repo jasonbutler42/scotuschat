@@ -3,17 +3,17 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Admin Completeness
 current_phase: 18
-current_phase_name: next to plan
-status: roadmapped
-stopped_at: Phase 18 UI-SPEC approved
-last_updated: "2026-06-29T20:32:09.216Z"
+current_phase_name: people-schema-editor
+status: executing
+stopped_at: Completed 18-01 is_justice schema migration
+last_updated: "2026-06-29T21:05:02.143Z"
 last_activity: 2026-06-29
-last_activity_desc: v1.4 roadmap created (Phases 18–21)
+last_activity_desc: Phase 18 execution started
 progress:
   total_phases: 4
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 3
+  completed_plans: 1
   percent: 0
 ---
 
@@ -24,14 +24,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-29 after Phase 17 complete — v1.3 milestone done)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** v1.4 Admin Completeness — roadmap defined, ready to plan Phase 18
+**Current focus:** Phase 18 — people-schema-editor
 
 ## Current Position
 
-Phase: 18 (next to plan)
-Plan: —
-Status: Roadmapped — awaiting /gsd-plan-phase 18
-Last activity: 2026-06-29 — v1.4 roadmap created (Phases 18–21)
+Phase: 18 (people-schema-editor) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
+Last activity: 2026-06-29 — Phase 18 execution started
 
 Progress: ░░░░░░░░░░ 0% (0/4 phases)
 
@@ -80,6 +80,7 @@ Progress: ░░░░░░░░░░ 0% (0/4 phases)
 | Phase 17 P01 | 25 | 3 tasks | 7 files |
 | Phase 17 P02 | 15 | 3 tasks | 2 files |
 | Phase 17 P03 | 5 | 1 tasks | 1 files |
+| Phase 18 P01 | 15 | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -139,6 +140,7 @@ Full log in PROJECT.md Key Decisions table. Key decisions for v1.2:
 - [Phase ?]: [16-02]: _normalize_label_last_name added to parse.py — module self-contained; ORM mutation for side UPDATE matches step 7b pattern; call site after step 7b flush and dry-run gate (T-16-07, T-16-08 mitigated)
 - [Phase ?]: [17-01]: ParseStats assembled from scalar COUNT results — no from_attributes; AdminJobResponse retains from_attributes
 - [Phase ?]: [17-01]: PDF endpoint branches spaces_key FIRST; disk fallback reads PipelineRun.pdf_path from ingest run (T-17-02 mitigated)
+- [Phase ?]: [18-01]: Migration 0010 adds is_justice BOOLEAN NOT NULL DEFAULT FALSE to people; backfill from court_tenures only (D-01, D-02)
 
 ### Pending Todos
 
@@ -162,6 +164,6 @@ Full log in PROJECT.md Key Decisions table. Key decisions for v1.2:
 
 ## Session Continuity
 
-Last session: 2026-06-29T20:32:09.206Z
-Stopped at: Phase 18 UI-SPEC approved
-Resume file: .planning/phases/18-people-schema-editor/18-UI-SPEC.md
+Last session: 2026-06-29T21:05:02.133Z
+Stopped at: Completed 18-01 is_justice schema migration
+Resume file: None

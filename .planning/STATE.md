@@ -2,9 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Admin Completeness
+current_phase: 18
+current_phase_name: next to plan
 status: roadmapped
-last_updated: "2026-06-29"
+stopped_at: Phase 18 context gathered
+last_updated: "2026-06-29T20:24:52.382Z"
 last_activity: 2026-06-29
+last_activity_desc: v1.4 roadmap created (Phases 18–21)
 progress:
   total_phases: 4
   completed_phases: 0
@@ -158,6 +162,6 @@ Full log in PROJECT.md Key Decisions table. Key decisions for v1.2:
 
 ## Session Continuity
 
-Last session: 2026-06-29
-Stopped at: v1.4 roadmap created — Phases 18–21 defined; ready to plan Phase 18
-Resume file: None
+Last session: 2026-06-29T20:24:52.370Z
+Stopped at: Phase 18 context gathered
+Resume file: .planning/phases/18-people-schema-editor/18-CONTEXT.md

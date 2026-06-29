@@ -70,8 +70,16 @@ Anyone can open a SCOTUS oral argument and immediately follow the conversation �
 
 ### Active
 
-- [ ] Application deployed to Digital Ocean App Platform (SvelteKit + FastAPI as separate services, managed Postgres) (DEPLOY-01, v1.4)
-- [ ] Continuous deployment from GitHub main branch (DEPLOY-03, v1.4)
+- [ ] Explicit is_justice boolean on people table — Alembic migration + backfill from tenures (PEOPLE-05)
+- [ ] People editor conditionally shows bench-only fields (Role, Court Tenure, Appointment) based on is_justice; operator can toggle flag (PEOPLE-06)
+- [ ] Operator can delete a mis-created argument from the admin UI (ADMIN-01)
+- [ ] Operator can delete a bad pipeline run from the admin UI (ADMIN-02)
+- [ ] Pipeline list page and job detail page both update job/step status live without manual reload (PIPE-23)
+- [ ] System prevents duplicate argument creation — DB unique constraint + UI warning before starting a new run (PIPE-24)
+- [ ] Argument metadata (case name, docket, date) pre-populated from cover extraction during pipeline run (PIPE-25)
+- [ ] Admin header nav style unified with public nav (NAV-02)
+- [ ] Application deployed to Digital Ocean App Platform (SvelteKit + FastAPI as separate services, managed Postgres) (DEPLOY-01, future)
+- [ ] Continuous deployment from GitHub main branch (DEPLOY-03, future)
 
 ### Out of Scope
 
@@ -163,5 +171,17 @@ This document evolves at phase transitions and milestone boundaries.
 3. Audit Out of Scope — reasons still valid?
 4. Update Context with current state
 
+## Current Milestone: v1.4 Admin Completeness
+
+**Goal:** Make the admin interface fully self-sufficient — all data entities manageable without raw DB access, pipeline status trustworthy without manual refreshes, and the people editor accurate for both bench and non-bench people.
+
+**Target features:**
+- is_justice flag + conditional people editor (bench-only fields hidden for non-justice people)
+- Argument delete and pipeline run delete from admin UI
+- Live polling on pipeline list and job detail pages
+- Duplicate argument prevention (DB constraint + UI guard)
+- Argument metadata prefill from cover extraction
+- Unified admin navigation
+
 ---
-*Last updated: 2026-06-29 after v1.3 milestone — Speaker Accuracy + Pipeline Confidence (Phases 15–17)*
+*Last updated: 2026-06-29 after v1.4 milestone started — Admin Completeness*

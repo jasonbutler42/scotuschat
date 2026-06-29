@@ -1,20 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.3
-milestone_name: Speaker Accuracy + Pipeline Confidence
-current_phase: 17
-status: milestone_complete
-stopped_at: Phase 17 UAT complete — v1.3 milestone done (2026-06-29)
-last_updated: "2026-06-29T00:00:00.000Z"
+milestone: v1.4
+milestone_name: Admin Completeness
+status: planning
+last_updated: "2026-06-29T18:49:44.649Z"
 last_activity: 2026-06-29
-last_activity_desc: Phase 17 complete — v1.3 milestone complete
 progress:
-  total_phases: 17
-  completed_phases: 17
-  total_plans: 30
-  completed_plans: 30
-  percent: 100
-current_phase_name: pipeline-ui-polish
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -28,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-06-29 after Phase 17 complete — v1.3 m
 
 ## Current Position
 
-Phase: 17 (pipeline-ui-polish) — COMPLETE
-Plan: 3/3 complete
-Status: Milestone complete
-Last activity: 2026-06-29 — Phase 17 UAT passed, v1.3 milestone complete
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-06-29 — Milestone v1.4 started
 
 ## Performance Metrics
 

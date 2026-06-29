@@ -15,7 +15,7 @@ DB-guarded: all tests are skipped when DATABASE_URL is not configured.
 """
 
 import os
-from datetime import datetime, timezone, timedelta
+from datetime import date, datetime, timezone, timedelta
 
 import pytest
 import pytest_asyncio
@@ -129,18 +129,9 @@ async def test_get_job_parse_stats_counts_from_latest_parse_run(db_session: Asyn
     )
     from api.services.admin_jobs import get_job
 
-    # Seed a Case first (arguments.case_id is FK)
-    from api.models.models import Case
-    case = Case(name="Test Case for Stats", docket_number="22-999")
-    db_session.add(case)
-    await db_session.flush()
-
-    # Seed an argument
+    # Seed an argument (Argument has no case_id FK — cases link via CaseArgument M:M)
     arg = Argument(
-        case_id=case.id,
-        docket_number="22-999",
-        case_name="Test Case for Stats",
-        slug="test-case-for-stats",
+        argued_date=date(2022, 10, 1),
         status="pipeline",
     )
     db_session.add(arg)
@@ -223,16 +214,8 @@ async def test_get_job_parse_stats_none_when_no_parse_run(db_session: AsyncSessi
     from api.models.models import AdminJob, AdminJobStatus, AdminJobStep, Argument
     from api.services.admin_jobs import get_job
 
-    from api.models.models import Case
-    case = Case(name="Test Case No Parse", docket_number="22-998")
-    db_session.add(case)
-    await db_session.flush()
-
     arg = Argument(
-        case_id=case.id,
-        docket_number="22-998",
-        case_name="Test Case No Parse",
-        slug="test-case-no-parse",
+        argued_date=date(2022, 10, 2),
         status="pipeline",
     )
     db_session.add(arg)
@@ -301,16 +284,8 @@ async def test_get_job_parse_stats_uses_latest_parse_run_when_two_exist(db_sessi
     )
     from api.services.admin_jobs import get_job
 
-    from api.models.models import Case
-    case = Case(name="Test Case Two Runs", docket_number="22-997")
-    db_session.add(case)
-    await db_session.flush()
-
     arg = Argument(
-        case_id=case.id,
-        docket_number="22-997",
-        case_name="Test Case Two Runs",
-        slug="test-case-two-runs",
+        argued_date=date(2022, 10, 3),
         status="pipeline",
     )
     db_session.add(arg)

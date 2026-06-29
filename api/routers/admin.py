@@ -35,7 +35,10 @@ Prefix:
 
 import asyncio
 import hmac
+import os
+import re
 import urllib.parse
+from urllib.parse import quote
 
 import httpx
 from io import BytesIO
@@ -344,13 +347,25 @@ async def get_job_pdf(
         run = run_result.scalar_one_or_none()
         if run is None or run.pdf_path is None:
             raise HTTPException(status_code=404, detail="PDF path not recorded")
+        if not os.path.isfile(run.pdf_path):
+            raise HTTPException(status_code=404, detail="PDF file not found on disk")
         # Use original_filename if captured; fall back to a derived name (T-17-04:
         # original_filename is display-only, never used as a server-side path)
         filename = job.original_filename or f"argument-{job_id}.pdf"
+        # Sanitize filename for Content-Disposition header to prevent header injection.
+        # Strip CR, LF, NUL, backslash, and double-quote which break RFC 6266 syntax
+        # or allow response splitting (CR-01).
+        safe_filename = re.sub(r'[\r\n"\x00-\x1f\\]', '_', filename)
+        headers = {
+            "Content-Disposition": (
+                f"inline; filename=\"{safe_filename}\"; "
+                f"filename*=UTF-8''{quote(filename, safe='')}"
+            )
+        }
         return FileResponse(
             path=run.pdf_path,
             media_type="application/pdf",
-            headers={"Content-Disposition": f'inline; filename="{filename}"'},
+            headers=headers,
         )
 
 

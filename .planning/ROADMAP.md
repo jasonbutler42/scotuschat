@@ -69,7 +69,7 @@ Full phase details: `.planning/milestones/v1.3-ROADMAP.md`
 
 ### v1.4 Admin Completeness (Phases 18–21)
 
-- [ ] **Phase 18: People Schema + Editor** - is_justice boolean migration, backfill, and conditional editor UI
+- [x] **Phase 18: People Schema + Editor** - is_justice boolean migration, backfill, and conditional editor UI (completed 2026-06-29)
 - [ ] **Phase 19: Pipeline Reliability** - Duplicate argument prevention and metadata prefill
 - [ ] **Phase 20: Live Pipeline Status** - Real-time polling on list and job detail pages
 - [ ] **Phase 21: Admin UI Surface** - Delete actions for arguments and pipeline runs; unified admin navigation
@@ -88,7 +88,7 @@ Full phase details: `.planning/milestones/v1.3-ROADMAP.md`
   3. When viewing a non-Justice person's edit page, Role, Court Tenure, and Appointment sections are absent from the form
   4. Operator can toggle `is_justice` on a person record and the editor immediately reflects the new field visibility on save
 
-**Plans**: 2/3 plans executed
+**Plans**: 3/3 plans complete
 **Wave 1**
 
 - [x] 18-01-PLAN.md — Migration 0010 + Person.is_justice column with tenure-based backfill (PEOPLE-05)
@@ -99,7 +99,7 @@ Full phase details: `.planning/milestones/v1.3-ROADMAP.md`
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 18-03-PLAN.md — Editor checkbox + conditional bench sections + save wiring + directory Justice badge (PEOPLE-06, PEOPLE-07)
+- [x] 18-03-PLAN.md — Editor checkbox + conditional bench sections + save wiring + directory Justice badge (PEOPLE-06, PEOPLE-07)
 
 ### Phase 19: Pipeline Reliability
 
@@ -166,7 +166,7 @@ Full phase details: `.planning/milestones/v1.3-ROADMAP.md`
 | 15. Speaker Role Accuracy | v1.3 | 4/4 | Complete | 2026-06-26 |
 | 16. Parser Improvements | v1.3 | 2/2 | Complete | 2026-06-26 |
 | 17. Pipeline UI Polish | v1.3 | 3/3 | Complete | 2026-06-29 |
-| 18. People Schema + Editor | v1.4 | 2/3 | In Progress|  |
+| 18. People Schema + Editor | v1.4 | 3/3 | Complete   | 2026-06-29 |
 | 19. Pipeline Reliability | v1.4 | 0/? | Not started | - |
 | 20. Live Pipeline Status | v1.4 | 0/? | Not started | - |
 | 21. Admin UI Surface | v1.4 | 0/? | Not started | - |

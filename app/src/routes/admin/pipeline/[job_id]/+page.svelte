@@ -468,7 +468,7 @@
 		{/if}
 
 		<!-- View source PDF link card (D-06/PIPE-22): shown when a PDF source exists -->
-		{#if data.job.spaces_key || data.job.pdf_url}
+		{#if data.job.spaces_key || data.job.pdf_url || data.job.original_filename}
 			<div
 				style="
 					background-color: #1e293b;

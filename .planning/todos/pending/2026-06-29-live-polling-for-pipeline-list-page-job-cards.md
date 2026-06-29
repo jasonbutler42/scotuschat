@@ -2,6 +2,7 @@
 created: 2026-06-29T16:19:39.209Z
 title: Live polling for pipeline list page job cards
 area: ui
+resolves_phase: 20
 files:
   - app/src/routes/admin/pipeline/+page.svelte
   - app/src/routes/admin/pipeline/[job_id]/+page.svelte

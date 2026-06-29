@@ -36,6 +36,7 @@ class PersonListItem(BaseModel):
 
     missing: list of field labels that are NULL on this person record.
     Possible values: "role", "bio", "photo" (see D-04, D-06).
+    Phase 18 addition: is_justice for directory badge (D-10 — migration 0010).
     """
 
     id: int
@@ -43,6 +44,8 @@ class PersonListItem(BaseModel):
     role_id: Optional[int] = None
     role_name: Optional[str] = None
     missing: list[str]
+    # Phase 18 addition — migration 0010
+    is_justice: bool = False
 
     model_config = {"from_attributes": True}
 
@@ -52,6 +55,7 @@ class PersonDetail(BaseModel):
 
     Includes all tenure rows for display in the edit form (D-07, D-08).
     Phase 9 additions: six structured name and appointment fields (all optional).
+    Phase 18 addition: is_justice boolean for the editor toggle (D-11 — migration 0010).
     """
 
     id: int
@@ -68,6 +72,8 @@ class PersonDetail(BaseModel):
     name_suffix: Optional[str] = None
     appointing_president: Optional[str] = None
     appointing_president_party: Optional[str] = None
+    # Phase 18 addition — migration 0010
+    is_justice: bool = False
 
     model_config = {"from_attributes": True}
 
@@ -81,6 +87,7 @@ class PersonUpdate(BaseModel):
     Mass-assignment guard: ONLY explicitly-declared fields are writable.
     Phase 9 extends the allow-list with six structured name and appointment
     fields (T-09-01 — prevents writing arbitrary Person attributes).
+    Phase 18 addition: is_justice Optional[bool] — None means leave unchanged (D-08, D-11).
     """
 
     full_name: Optional[str] = None
@@ -95,6 +102,8 @@ class PersonUpdate(BaseModel):
     name_suffix: Optional[str] = None
     appointing_president: Optional[str] = None
     appointing_president_party: Optional[str] = None
+    # Phase 18 addition — migration 0010 (None = leave unchanged per D-08)
+    is_justice: Optional[bool] = None
 
 
 class RoleCreate(BaseModel):

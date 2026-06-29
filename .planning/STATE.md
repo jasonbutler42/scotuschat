@@ -140,7 +140,8 @@ Full log in PROJECT.md Key Decisions table. Key decisions for v1.2:
 
 ### Pending Todos
 
-None yet.
+- Live polling for pipeline list page job cards (ui) — deferred to v1.4
+- Prevent duplicate argument creation during ingest (pipeline) — deferred to v1.4
 
 ### Blockers/Concerns
 
@@ -156,9 +157,11 @@ None yet.
 | verification | 03-VERIFICATION.md | human_needed (stale — 03-HUMAN-UAT.md: complete) | 2026-06-15 |
 | verification | 04-VERIFICATION.md | human_needed (stale — 04-UAT.md: passed) | 2026-06-15 |
 | verification | 11-VERIFICATION.md | human_needed (v1.2 carry-over — Argument Metadata Editing human UAT not formally closed) | 2026-06-29 |
+| todo | live-polling-for-pipeline-list-page-job-cards | pending — no real-time polling on pipeline list page; job badges freeze until manual reload | 2026-06-29 |
+| todo | prevent-duplicate-argument-creation-during-ingest | pending — no unique constraint; re-running ingest creates second Argument row silently | 2026-06-29 |
 
 ## Session Continuity
 
 Last session: 2026-06-29
-Stopped at: Phase 17 complete, v1.3 milestone complete — ready for /gsd-complete-milestone v1.3
+Stopped at: v1.3 milestone closed — 2 todos deferred to v1.4; ready for /gsd-new-milestone
 Resume file: None

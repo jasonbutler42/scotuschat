@@ -132,7 +132,7 @@ Plans:
 
 ### Phase 999.5: improve in-argument navigation (BACKLOG)
 
-**Goal:** [Captured for future planning]
+**Goal:** In-argument navigation — jumping between sections (amicus, petitioner, respondent, etc.) within a single argument view on the public site.
 **Requirements:** TBD
 **Plans:** 0 plans
 

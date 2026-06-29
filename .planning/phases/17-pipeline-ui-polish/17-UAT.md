@@ -1,5 +1,5 @@
 ---
-status: testing
+status: complete
 phase: 17-pipeline-ui-polish
 source: 17-01-SUMMARY.md, 17-02-SUMMARY.md, 17-03-SUMMARY.md
 started: 2026-06-27T00:00:00Z
@@ -9,8 +9,6 @@ updated: 2026-06-29T00:00:00Z
 ## Current Test
 
 <!-- OVERWRITE each test - shows where we are -->
-
-## Current Test
 
 [testing complete]
 
@@ -35,8 +33,7 @@ result: pass
 
 ### 5. View source PDF link card visible
 expected: On a job detail page where spaces_key, pdf_url, or original_filename is set, a "View source PDF" link card appears between the Argument card and the step cards. The link is styled in blue underline text and opens in a new tab.
-result: pending
-note: "Gap resolved by plan 17-03 — condition at +page.svelte:471 now includes original_filename. Needs live re-verification."
+result: pass
 
 ### 6. View source PDF opens PDF correctly without token leakage
 expected: Click the "View source PDF" link. For a Spaces-backed job the address bar in the new tab shows a DO Spaces pre-signed URL (not /api/admin/... and not /admin/pipeline/...). For a local disk-backed job the PDF streams inline. The X-Admin-Token value must NOT appear in the address bar, visible response headers, or any network request visible to the browser. The admin token must remain server-side.
@@ -44,15 +41,14 @@ result: pass
 
 ### 7. View source PDF link absent when no PDF source
 expected: On a job detail page where spaces_key, pdf_url, and original_filename are all null, the "View source PDF" link card does not appear between the Argument card and the step cards. No broken anchor or placeholder text is visible.
-result: pending
-note: "Unblocked by 17-03 fix — now testable with a job that has all three fields null."
+result: pass
 
 ## Summary
 
 total: 7
-passed: 5
+passed: 7
 issues: 0
-pending: 2
+pending: 0
 skipped: 0
 blocked: 0
 

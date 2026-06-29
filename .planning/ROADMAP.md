@@ -6,6 +6,7 @@
 - ✅ **v1.1 Operator Admin Interface** — Phases 5–8 (shipped 2026-06-18)
 - ✅ **v1.2 Pre-Launch Polish** — Phases 9–14 (shipped 2026-06-25)
 - ✅ **v1.3 Speaker Accuracy + Pipeline Confidence** — Phases 15–17 (shipped 2026-06-29)
+- 🔄 **v1.4 Admin Completeness** — Phases 18–21 (in progress)
 
 ## Phases
 
@@ -66,6 +67,61 @@ Full phase details: `.planning/milestones/v1.3-ROADMAP.md`
 
 </details>
 
+### v1.4 Admin Completeness (Phases 18–21)
+
+- [ ] **Phase 18: People Schema + Editor** - is_justice boolean migration, backfill, and conditional editor UI
+- [ ] **Phase 19: Pipeline Reliability** - Duplicate argument prevention and metadata prefill
+- [ ] **Phase 20: Live Pipeline Status** - Real-time polling on list and job detail pages
+- [ ] **Phase 21: Admin UI Surface** - Delete actions for arguments and pipeline runs; unified admin navigation
+
+## Phase Details
+
+### Phase 18: People Schema + Editor
+**Goal**: The people editor accurately represents bench vs. non-bench people — Justices show tenure and appointment fields, non-Justice people do not, and the operator can correct the classification on any record
+**Depends on**: Phase 17
+**Requirements**: PEOPLE-05, PEOPLE-06, PEOPLE-07
+**Success Criteria** (what must be TRUE):
+  1. After migration runs, every person with existing tenure records has `is_justice = True` and all others default to `False`
+  2. When viewing a Justice's edit page, Role, Court Tenure, and Appointment sections are visible
+  3. When viewing a non-Justice person's edit page, Role, Court Tenure, and Appointment sections are absent from the form
+  4. Operator can toggle `is_justice` on a person record and the editor immediately reflects the new field visibility on save
+**Plans**: TBD
+
+### Phase 19: Pipeline Reliability
+**Goal**: The pipeline cannot silently create duplicate arguments, and argument metadata extracted from the PDF cover is visible to the operator without manual entry
+**Depends on**: Phase 17
+**Requirements**: PIPE-25, PIPE-26
+**Success Criteria** (what must be TRUE):
+  1. The database enforces a unique constraint on arguments such that re-running ingest for the same source cannot produce a second Argument row
+  2. Operator sees a warning in the pipeline start UI before submitting if a matching argument already exists
+  3. After a pipeline run completes parse, case name, docket, and argued date fields are pre-populated from cover extraction results without the operator typing them manually
+  4. Operator can still override any pre-populated metadata field before publishing
+**Plans**: TBD
+
+### Phase 20: Live Pipeline Status
+**Goal**: Operator can watch pipeline progress on both the list page and the job detail page without manually reloading — status badges and step cards update automatically while a run is active
+**Depends on**: Phase 17
+**Requirements**: PIPE-23, PIPE-24
+**Success Criteria** (what must be TRUE):
+  1. On the pipeline list page, job status badges reflect the current run state and update automatically while any run is active
+  2. When the operator navigates away from a running job and returns to the list, the badge shows the correct current state without a manual reload
+  3. On the job detail page, step cards (Ingest / Parse / Resolve) update to show step completion in real time while the run is active
+  4. Polling stops automatically once the run reaches a terminal state (completed, failed, needs_review)
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 21: Admin UI Surface
+**Goal**: Operator can delete mis-created arguments and bad pipeline runs from the admin UI without touching the database, and the admin navigation is visually and structurally consistent with the public navigation
+**Depends on**: Phase 17
+**Requirements**: ADMIN-01, ADMIN-02, NAV-02
+**Success Criteria** (what must be TRUE):
+  1. Operator can delete an argument from the admin UI after a confirmation step; the action is blocked if the argument has published utterances
+  2. Operator can delete a pipeline run from the admin UI after a confirmation step
+  3. The admin header navigation matches the public navigation in visual style and shares the same component or structure (no duplicate ad-hoc markup)
+  4. Deleting an argument or pipeline run returns the operator to the correct listing page with the deleted item gone
+**Plans**: TBD
+**UI hint**: yes
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -87,6 +143,10 @@ Full phase details: `.planning/milestones/v1.3-ROADMAP.md`
 | 15. Speaker Role Accuracy | v1.3 | 4/4 | Complete | 2026-06-26 |
 | 16. Parser Improvements | v1.3 | 2/2 | Complete | 2026-06-26 |
 | 17. Pipeline UI Polish | v1.3 | 3/3 | Complete | 2026-06-29 |
+| 18. People Schema + Editor | v1.4 | 0/? | Not started | - |
+| 19. Pipeline Reliability | v1.4 | 0/? | Not started | - |
+| 20. Live Pipeline Status | v1.4 | 0/? | Not started | - |
+| 21. Admin UI Surface | v1.4 | 0/? | Not started | - |
 
 ## Backlog
 

@@ -2,11 +2,11 @@
 gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Admin Completeness
-status: planning
-last_updated: "2026-06-29T18:49:44.649Z"
+status: roadmapped
+last_updated: "2026-06-29"
 last_activity: 2026-06-29
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -20,14 +20,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-29 after Phase 17 complete — v1.3 milestone done)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** v1.3 shipped — run /gsd-new-milestone to start v1.4
+**Current focus:** v1.4 Admin Completeness — roadmap defined, ready to plan Phase 18
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 18 (next to plan)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-06-29 — Milestone v1.4 started
+Status: Roadmapped — awaiting /gsd-plan-phase 18
+Last activity: 2026-06-29 — v1.4 roadmap created (Phases 18–21)
+
+Progress: ░░░░░░░░░░ 0% (0/4 phases)
 
 ## Performance Metrics
 
@@ -136,8 +138,8 @@ Full log in PROJECT.md Key Decisions table. Key decisions for v1.2:
 
 ### Pending Todos
 
-- Live polling for pipeline list page job cards (ui) — deferred to v1.4
-- Prevent duplicate argument creation during ingest (pipeline) — deferred to v1.4
+- is_justice schema decision: add boolean to people table — migration + backfill from tenures (PEOPLE-05, Phase 18)
+- People editor conditional fields based on is_justice (PEOPLE-06, PEOPLE-07, Phase 18)
 
 ### Blockers/Concerns
 
@@ -153,11 +155,9 @@ Full log in PROJECT.md Key Decisions table. Key decisions for v1.2:
 | verification | 03-VERIFICATION.md | human_needed (stale — 03-HUMAN-UAT.md: complete) | 2026-06-15 |
 | verification | 04-VERIFICATION.md | human_needed (stale — 04-UAT.md: passed) | 2026-06-15 |
 | verification | 11-VERIFICATION.md | human_needed (v1.2 carry-over — Argument Metadata Editing human UAT not formally closed) | 2026-06-29 |
-| todo | live-polling-for-pipeline-list-page-job-cards | pending — no real-time polling on pipeline list page; job badges freeze until manual reload | 2026-06-29 |
-| todo | prevent-duplicate-argument-creation-during-ingest | pending — no unique constraint; re-running ingest creates second Argument row silently | 2026-06-29 |
 
 ## Session Continuity
 
 Last session: 2026-06-29
-Stopped at: v1.3 milestone closed — 2 todos deferred to v1.4; ready for /gsd-new-milestone
+Stopped at: v1.4 roadmap created — Phases 18–21 defined; ready to plan Phase 18
 Resume file: None

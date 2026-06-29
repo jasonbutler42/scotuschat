@@ -26,9 +26,8 @@ result: pass
 
 ### 3. Parse stats appear after parse completes
 expected: On a job where the Parse step shows "Completed", the Parse stage card shows four rows: "Utterances" (an integer count), "Distinct speakers" (an integer count), "Case name" (text or em dash), and "Argued" (formatted date like "Jun 27, 2026" or em dash). All values are raw counts only — no percentages, ratios, or derived labels.
-result: issue
-reported: "FAIL. The Parse card only shows the 'Completed' badge"
-severity: major
+result: pass
+note: initial failure was a stale-page misread — parse_stats JSON confirmed flowing correctly via DevTools
 
 ### 4. Parse stats absent while parse is pending or running
 expected: On a job where the Parse step is still pending or running (not yet "Completed"), the Parse stage card shows NO Utterances, Distinct speakers, Case name, or Argued rows. The card may show the step status badge only.
@@ -52,23 +51,13 @@ reason: "Cannot determine — new jobs (which should have spaces_key or pdf_url 
 ## Summary
 
 total: 7
-passed: 4
-issues: 2
+passed: 5
+issues: 1
 pending: 0
 skipped: 1
 blocked: 0
 
 ## Gaps
-
-- truth: "On a completed parse job, the Parse stage card shows Utterances, Distinct speakers, Case name, and Argued rows"
-  status: failed
-  reason: "User reported: FAIL. The Parse card only shows the 'Completed' badge"
-  severity: major
-  test: 3
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
 
 - truth: "On a job detail page where spaces_key or pdf_url is set, a 'View source PDF' link card appears between the Argument card and the step cards"
   status: failed

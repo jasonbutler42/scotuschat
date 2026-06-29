@@ -48,7 +48,7 @@ Full phase details: `.planning/milestones/v1.1-ROADMAP.md`
   - Plans:
     - [x] 17-01-PLAN.md — Backend job detail endpoint + parse stats
     - [x] 17-02-PLAN.md — Frontend job detail page rendering
-    - [ ] 17-03-PLAN.md — Fix PDF card visibility for local file-upload jobs (gap closure)
+    - [x] 17-03-PLAN.md — Fix PDF card visibility for local file-upload jobs (gap closure)
 
 ### ✅ v1.2 Pre-Launch Polish — SHIPPED 2026-06-25
 
@@ -242,7 +242,7 @@ Plans:
 | 14. Speaker Popover Card | v1.2 | 3/3 | Complete   | 2026-06-25 |
 | 15. Speaker Role Accuracy | v1.3 | 3/4 | In Progress|  |
 | 16. Parser Improvements | v1.3 | 2/2 | Complete    | 2026-06-26 |
-| 17. Pipeline UI Polish | v1.3 | 2/2 | Verified (human_needed) | 2026-06-27 |
+| 17. Pipeline UI Polish | v1.3 | 3/3 | Complete   | 2026-06-27 |
 
 ### Phase 15: Speaker Role Accuracy
 
@@ -305,7 +305,7 @@ Plans:
   3. Operator can open or download the original source PDF for any argument directly from the pipeline job detail page
   4. Stats and file link are visible without leaving the pipeline admin view
 
-**Plans**: 2/2 plans complete
+**Plans**: 3/3 plans complete
 
 **Wave 1**
 

@@ -110,6 +110,53 @@
 
 ---
 
+## Milestone: v1.3 — Speaker Accuracy + Pipeline Confidence
+
+**Shipped:** 2026-06-29
+**Phases:** 3 (15–17) | **Plans:** 9 | **Timeline:** 5 days (2026-06-25 → 2026-06-29)
+**Commits:** 84 | **Files changed:** 73 | **Net lines:** +11,791 / -177
+
+### What Was Built
+
+- Tenure-aware speaker popovers — `_tenure_role_name()` date-range lookup for Justices; ADVOCATE_LABEL_MAP for per-argument advocate roles; approve action transitions pipeline→draft
+- PDF cover-page metadata extraction — `cover_extractor.py` regex extraction of argued_date and case_name; TOC-based advocate side detection seeding argument_participants.side
+- Pipeline UI polish — original_filename stored at ingest; ParseStats COUNT queries; same-origin PDF proxy with ADMIN_TOKEN server-side throughout
+
+### What Worked
+
+- **Phase 15 TDD discipline** — 16 unit tests for `_tenure_role_name` written before implementation (RED/GREEN); all boundary cases (boundary dates, open-ended tenure, None argued_date, outside-all-windows fallback) caught in tests rather than production
+- **Cover extractor as isolated module** — `cover_extractor.py` separated from `extractor.py`; pdfplumber I/O runs before async DB session (Pitfall 1 guard); fail-safe `try/except → {}` on all public functions prevented parse failures from non-standard PDFs
+- **Gap closure as first-class plan** — Plan 17-03 (PDF card gate fix) was a single-line change discovered via UAT; treating it as a separate plan gave it a SUMMARY.md and commit trail, making the fix fully traceable
+- **Atomic approve flow** — double-approve guard via ArgumentStatusEnum.PIPELINE pre-check (T-15-02-RACE) + IDOR-scoped PATCH (argument_id AND participant_id) — no additional bugs discovered in human testing
+
+### What Was Inefficient
+
+- **ROADMAP.md Phase 15 checkbox not updated after 15-04 completed** — 15-04-SUMMARY.md confirmed completion but the ROADMAP.md checkbox was never marked [x]; caused a false "in-progress" reading at milestone close
+- **v1.2 close workflow never ran** — v1.2 was marked shipped in ROADMAP.md/STATE.md but no archive files were created; Phase 9-14 details remained inline in ROADMAP.md, requiring retroactive archival at v1.3 close
+- **Phase 15 has no VERIFICATION.md** — Phase 15 had SUMMARY.md files for each plan but no phase-level VERIFICATION.md; verification status relied on per-plan self-checks and UAT notes
+
+### Patterns Established
+
+- `op.execute("COMMIT")` as first statement in Alembic upgrade() before any `ALTER TYPE ... ADD VALUE` call — PG forbids ADD VALUE inside transaction block; this guard is now a required pattern for all future enum expansions
+- `each_key_duplicate` in Svelte — always use the table PK as the each-key (participant_id), never a FK that can repeat (person_id) across rows in the same argument
+- Cover/TOC extraction before async DB session — synchronous pdfplumber I/O belongs outside `async with get_session()` block; locals computed synchronously, then used inside the session after the dry-run gate
+- PDF proxy: `redirect:'manual'` + opaque redirect fallback re-fetch pattern — standard pattern for passing pre-signed storage URLs through SvelteKit without transiting the token or PDF bytes
+
+### Key Lessons
+
+1. **Mark ROADMAP.md checkboxes at plan completion, not milestone close.** The 15-04 inconsistency required investigation at close to confirm the plan was actually done. Should be updated in the same commit as the SUMMARY.md.
+2. **Run the prior milestone close before starting the next one.** v1.2 close was deferred; archiving it retroactively at v1.3 close added friction and created a gap in MILESTONES.md history.
+3. **Phase VERIFICATION.md should be created even if all verification is in plan SUMMARYs.** Phase 15 had no VERIFICATION.md; the phase-level verification artifact is what the audit tool checks.
+4. **UAT the gap closure as a named plan.** 17-03 was a one-line fix found during UAT — wrapping it in a plan (with SUMMARY.md + commit) gave it full traceability and prevented the fix from being an anonymous hot-patch.
+
+### Cost Observations
+
+- Model mix: Sonnet primary throughout
+- Sessions: ~6 sessions over 5 days
+- Notable: Phase 16 (parser extraction) was the most self-contained — isolated module, TDD, all tests green first attempt; Phase 15 was the most complex (schema + service + 2 UI plans + IDOR threat model)
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -118,6 +165,8 @@
 |-----------|--------|-------|------------|
 | v1.0 MVP | 4 | 15 | First milestone; established baseline patterns |
 | v1.1 Operator Admin Interface | 4 | 19 | First admin/auth work; fire-and-poll pattern; gap-closure plans as first-class artifacts |
+| v1.2 Pre-Launch Polish | 6 | 21 | Largest milestone; UI-heavy (5/6 phases had UI hints); bits-ui introduced; milestone close deferred |
+| v1.3 Speaker Accuracy + Pipeline Confidence | 3 | 9 | TDD applied to tenure logic; cover extractor module; gap-closure plan (17-03) as named artifact |
 
 ### Cumulative Quality
 

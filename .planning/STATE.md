@@ -24,7 +24,7 @@ current_phase_name: pipeline-ui-polish
 See: .planning/PROJECT.md (updated 2026-06-29 after Phase 17 complete — v1.3 milestone done)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** v1.3 complete — ready for /gsd-complete-milestone v1.3
+**Current focus:** v1.3 shipped — run /gsd-new-milestone to start v1.4
 
 ## Current Position
 
@@ -155,6 +155,7 @@ None yet.
 | verification | 01-VERIFICATION.md | human_needed (stale — human UAT completed per commits) | 2026-06-15 |
 | verification | 03-VERIFICATION.md | human_needed (stale — 03-HUMAN-UAT.md: complete) | 2026-06-15 |
 | verification | 04-VERIFICATION.md | human_needed (stale — 04-UAT.md: passed) | 2026-06-15 |
+| verification | 11-VERIFICATION.md | human_needed (v1.2 carry-over — Argument Metadata Editing human UAT not formally closed) | 2026-06-29 |
 
 ## Session Continuity
 

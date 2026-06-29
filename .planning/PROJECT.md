@@ -8,15 +8,6 @@ A website that displays Supreme Court oral arguments as a chat-style interface �
 
 Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
 
-## Current Milestone: v1.3 Speaker Accuracy + Pipeline Confidence
-
-**Goal:** Fix speaker role accuracy on the live popover, make the ingestion pipeline reliable enough to process large volumes of older transcripts, and give the operator enough visibility to trust the process.
-
-**Target features:**
-- Speaker role accuracy — Justices show tenure-derived role at argument date; advocates have per-argument roles (ROLE-01–03)
-- Parser improvements — extract case metadata and advocate sides from transcript PDF at parse time (PARSE-01–02)
-- Pipeline UI polish — stage stat cards, pre-populated argument fields, source PDF access (PIPE-21–22)
-
 ## Requirements
 
 ### Validated
@@ -63,12 +54,22 @@ Anyone can open a SCOTUS oral argument and immediately follow the conversation �
 - ✓ Operator can filter the directory to show only people with one or more missing metadata fields — v1.1 (PEOPLE-02)
 - ✓ Operator can edit a person's name, role, bio text, photo URL, and tenure dates — v1.1 (PEOPLE-03)
 - ✓ After a pipeline run, operator can review resolved participants and fill in missing metadata inline — v1.1 (PEOPLE-04)
+- ✓ Structured name parts (first/last/middle/suffix) and appointing president on person records — v1.2 (PEOP-01, PEOP-02)
+- ✓ Unified top navigation shared by admin and public pages — v1.2 (NAV-01)
+- ✓ Argument metadata editing (case title, docket, date) before publish; read-only after — v1.2 (ARG-01, ARG-02)
+- ✓ Photo upload/URL, orphan delete, and merge for people admin — v1.2 (PADM-01–04)
+- ✓ Pipeline step badge accuracy, alias typeahead, incomplete filter toggle — v1.2 (PIPE-18–20)
+- ✓ Speaker popover card on argument page — v1.2 (PUB-01–03)
+- ✓ Justice role in popover determined by tenure date-range lookup at argument date — v1.3 (ROLE-01)
+- ✓ Per-argument advocate roles stored and displayed (petitioner/respondent/amicus) — v1.3 (ROLE-02)
+- ✓ Operator can edit advocate role per argument without affecting other arguments — v1.3 (ROLE-03)
+- ✓ Parse step extracts case name and argued date from transcript PDF cover page — v1.3 (PARSE-01)
+- ✓ Parse step detects advocate sides from TOC and seeds argument_participants.side — v1.3 (PARSE-02)
+- ✓ Pipeline stage stat cards (Ingest: source filename; Parse: utterance/speaker counts + metadata) — v1.3 (PIPE-21)
+- ✓ Operator can access source PDF from pipeline job detail page — v1.3 (PIPE-22)
 
 ### Active
 
-- [ ] Speaker role accuracy — Justice tenure date-range lookup for popover role; per-argument advocate roles stored and editable (ROLE-01, ROLE-02, ROLE-03)
-- ✓ Parser improvements — parse step extracts case name, docket, argued date, and advocate side from transcript PDF (PARSE-01, PARSE-02) — Validated in Phase 16
-- ✓ Pipeline UI polish — parse stat cards for completed parse runs, source PDF link card accessible from job detail (PIPE-21, PIPE-22) — Phase 17
 - [ ] Application deployed to Digital Ocean App Platform (SvelteKit + FastAPI as separate services, managed Postgres) (DEPLOY-01, v1.4)
 - [ ] Continuous deployment from GitHub main branch (DEPLOY-03, v1.4)
 
@@ -88,15 +89,13 @@ Anyone can open a SCOTUS oral argument and immediately follow the conversation �
 
 ## Context
 
-- Shipped v1.0 with ~4,895 LOC across TypeScript, Svelte, and Python (Phase 1–4)
-- Shipped v1.1 with ~52,872 total LOC (120 files changed, 23,277 insertions; 155 commits from Phase 5–8; 4 days 2026-06-15 → 2026-06-18)
-- Tech stack confirmed: SvelteKit 2.x + Svelte 5 Runes (frontend), FastAPI 0.115+ + Pydantic v2 (API), PostgreSQL 16 + SQLAlchemy 2.0 async + Alembic (database), Python 3.12 + pdfplumber + Anthropic SDK + instructor + tenacity (pipeline)
-- Admin interface: stateless HMAC session cookie, DO Spaces PDF storage (boto3), fire-and-poll job state, people directory + edit form
-- One hand-picked case (Obergefell v. Hodges) ingested and verified end-to-end; `arguments.resolved_at` gate controls public visibility
-- No photo URLs populated yet — avatar initials fallback in use throughout
+- Shipped v1.3 — 84 commits, 73 files changed, +11,791 / -177 lines (Phases 15–17, 5 days 2026-06-25 → 2026-06-29)
+- Shipped v1.0–v1.3 cumulatively; tech stack finalized: SvelteKit 2.x + Svelte 5 Runes (frontend), FastAPI 0.115+ + Pydantic v2 (API), PostgreSQL 16 + SQLAlchemy 2.0 async + Alembic (database), Python 3.12 + pdfplumber + Anthropic SDK + instructor + tenacity (pipeline)
+- Alembic migrations through 0009: schema now includes argument_status enum (pipeline/draft/published), SideEnum expansion (PETITIONER/RESPONDENT/AMICUS), original_filename on admin_jobs
+- Admin interface: HMAC session cookie, DO Spaces PDF storage (boto3), fire-and-poll job state, full people admin (photo/merge/delete), argument editing, speaker role assignment, pipeline stat cards + PDF proxy
+- Parser now auto-extracts case metadata and advocate sides from PDF at parse time; operator reviews pre-populated fields
 - Repo is public on GitHub
-- Hosting: Digital Ocean App Platform + managed Postgres (owner has existing account; DEPLOY-01/03 are v1.2 work)
-- PgBouncer transaction mode constraint fully addressed: `statement_cache_size=0` in `connect_args` (not top-level engine kwarg)
+- Hosting: Digital Ocean App Platform + managed Postgres (deployment blockers documented in STATE.md — v1.4 work)
 - Known deployment blockers: `BODY_SIZE_LIMIT=10M`, `ORIGIN`/`PROTOCOL_HEADER`/`HOST_HEADER` env vars, `admin.scotuschat.com` DNS entry
 
 ## Constraints
@@ -136,8 +135,12 @@ Anyone can open a SCOTUS oral argument and immediately follow the conversation �
 | ArgumentParticipant seeding in parse Step 7b (Phase 8) | resolve.py Step 5 ran UPDATE against rows that never existed; fix seeds one row per unique speaker label (person_id=NULL) during parse Step 7b; select-before-insert guards re-runs | ✓ Good — participants section renders on completed job detail pages after any new run |
 | People editor uses SvelteKit form actions + use:enhance throughout (Phase 8) | Consistent with existing admin UI patterns; AddNewPersonForm uses raw fetch for role creation (needs JSON response inspection) | ✓ Good — clean server validation via FastAPI Pydantic models |
 | `bits-ui ^2.18.1` for speaker popover (Phase 14) | Only Svelte 5-native headless popover after `@skeletonlabs/floating-ui-svelte` archived Oct 2025 | ✓ Good — customAnchor prop + plain buttons pattern worked correctly |
-| `argument_participants.side` BENCH/ADVOCATE binary (Phase 1) | Simple classification sufficient at MVP; advocate sub-roles deferred | ⚠️ Revisit — Phase 15 expands to per-argument roles for correct popover display |
-| `Person.role_id` as popover role source (Phase 14) | Expedient at build time; person's primary role used as fallback | ⚠️ Revisit — Phase 15 replaces with tenure date-range lookup for Justices |
+| `argument_participants.side` BENCH/ADVOCATE binary (Phase 1) | Simple classification sufficient at MVP; advocate sub-roles deferred | ✓ Resolved — Phase 15 expanded SideEnum to PETITIONER/RESPONDENT/AMICUS; ADVOCATE backfilled to UNKNOWN |
+| `Person.role_id` as popover role source (Phase 14) | Expedient at build time; person's primary role used as fallback | ✓ Resolved — Phase 15 replaced with `_tenure_role_name()` tenure date-range lookup for Justices; ADVOCATE_LABEL_MAP for advocates |
+| Migration 0008 commits Alembic transaction before ALTER TYPE ADD VALUE (Phase 15) | PG forbids ADD VALUE inside a transaction block; `op.execute("COMMIT")` placed first in upgrade() | ✓ Good — pattern established for future PG enum expansions |
+| SideEnum.ADVOCATE retained as legacy value (Phase 15) | PG cannot drop enum values; ADVOCATE→UNKNOWN backfill in migration; code should never produce ADVOCATE going forward | ✓ Good — backward-compatible; UI never displays ADVOCATE label |
+| _tenure_role_name uses datetime.date objects not strings (Phase 15) | Avoids lexicographic sort bugs on ISO strings with None values; D-14 fallback to most-recent tenure when argued_date outside all windows | ✓ Good — 16 unit tests pass covering boundary cases |
+| cover_extractor.py is a new module (not extending extractor.py) (Phase 16) | Separates cover-page concern; pdfplumber I/O runs before async DB session (Pitfall 1 guard) | ✓ Good — 21 unit tests; fail-safe returns {} on any exception |
 | `ParseStats` assembled from scalar COUNT results, no `from_attributes` (Phase 17) | ORM object has no `parse_stats` attribute; injected via `job.__dict__` before `model_validate` reads the ORM row | ✓ Good — avoids constructing `AdminJobResponse` manually in every route |
 | PDF proxy uses `redirect:'manual'` to pass Spaces 302 to browser (Phase 17) | Token stays server-side; pre-signed URL goes directly to the browser without transiting SvelteKit memory | ✓ Good — open-redirect threat mitigated by sourcing Location from FastAPI (server-controlled) |
 | Same-origin SvelteKit proxy at `/admin/pipeline/{id}/pdf` (Phase 17) | Browser has no direct FastAPI route; ADMIN_TOKEN must stay server-side (Architecture Rule 2) | ✓ Good — enforced via `$env/static/private` only |
@@ -161,4 +164,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-29 after Phase 17 complete (pipeline-ui-polish — PIPE-21, PIPE-22) — v1.3 milestone complete*
+*Last updated: 2026-06-29 after v1.3 milestone — Speaker Accuracy + Pipeline Confidence (Phases 15–17)*

@@ -192,6 +192,7 @@ async def list_people(
             "role_id": person.role_id,
             "role_name": role_name,
             "missing": _missing_fields(person),
+            "is_justice": person.is_justice,
         }
         for person, role_name in rows
     ]
@@ -244,6 +245,8 @@ async def get_person_detail(db: AsyncSession, person_id: int) -> dict | None:
         "name_suffix": person.name_suffix,
         "appointing_president": person.appointing_president,
         "appointing_president_party": person.appointing_president_party,
+        # Phase 18 addition — must be explicit to avoid silent default on reload (Pitfall 2)
+        "is_justice": person.is_justice,
     }
 
 
@@ -293,6 +296,12 @@ async def update_person(
             body.last_name,
             body.name_suffix,
         )
+
+    # Phase 18: write is_justice only when body supplies a non-None value (D-08)
+    # None = "leave unchanged" — consistent with other Optional fields on PersonUpdate.
+    # Does NOT clear role_id or delete tenure rows when is_justice is False (D-06, D-07).
+    if body.is_justice is not None:
+        person.is_justice = body.is_justice
 
     if body.tenures is not None:
         # May raise ValueError on malformed date — caller catches and returns 422

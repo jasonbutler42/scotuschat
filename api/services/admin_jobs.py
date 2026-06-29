@@ -443,6 +443,7 @@ async def rerun_job(db: AsyncSession, job_id: int) -> AdminJob:
         db,
         pdf_url=original.pdf_url,
         spaces_key=original.spaces_key,
+        original_filename=original.original_filename,
     )
     return new_job
 

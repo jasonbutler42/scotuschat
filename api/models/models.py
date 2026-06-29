@@ -14,6 +14,7 @@ from sqlalchemy import (
     Date,
     DateTime,
     Enum as SAEnum,
+    false,
     ForeignKey,
     Index,
     Integer,
@@ -111,6 +112,8 @@ class Person(Base):
     name_suffix = Column(String(50), nullable=True)
     appointing_president = Column(String(200), nullable=True)
     appointing_president_party = Column(String(50), nullable=True)
+    # Phase 18 — migration 0010
+    is_justice = Column(Boolean, nullable=False, server_default=false())
 
 
 # ---------------------------------------------------------------------------

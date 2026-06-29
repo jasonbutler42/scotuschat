@@ -70,6 +70,9 @@ async def create_job(
     db.add(job)
     await db.commit()
     await db.refresh(job)
+    # parse_stats is not an ORM column — inject None so Pydantic from_attributes
+    # can read the field without raising AttributeError during response serialization.
+    job.__dict__["parse_stats"] = None
     return job
 
 
@@ -218,14 +221,19 @@ async def get_run_id_for_step(
     pipeline_runs by (argument_id, step), so a re-entrant poll after the
     operator closed and reopened the browser re-derives the correct run-id.
     """
-    job = await get_job(db, job_id)
-    if job is None or job.argument_id is None:
+    # Query argument_id directly — do NOT call get_job() here; get_job() calls
+    # this function, which would create infinite mutual recursion.
+    job_row = await db.execute(
+        select(AdminJob.argument_id).where(AdminJob.id == job_id)
+    )
+    argument_id = job_row.scalar_one_or_none()
+    if argument_id is None:
         return None
 
     result = await db.execute(
         select(PipelineRun.id)
         .where(
-            PipelineRun.argument_id == job.argument_id,
+            PipelineRun.argument_id == argument_id,
             PipelineRun.step == step,
         )
         .order_by(PipelineRun.created_at.desc())

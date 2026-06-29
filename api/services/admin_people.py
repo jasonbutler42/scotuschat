@@ -271,8 +271,11 @@ async def update_person(
 
     if body.full_name is not None:
         person.full_name = body.full_name
-    # role_id may be explicitly set to None (remove role) or a new id
-    person.role_id = body.role_id
+    # role_id: None means "field absent/not submitted" (leave unchanged) — consistent
+    # with all other Optional fields on PersonUpdate. Phase 18 hides the role select
+    # inside {#if isJustice}, so absent = don't touch the existing role (D-06).
+    if body.role_id is not None:
+        person.role_id = body.role_id
     # Normalize empty strings to None (Pitfall 5) — ensures IS NULL filter works
     person.bio_text = body.bio_text if body.bio_text else None
     person.photo_url = body.photo_url if body.photo_url else None

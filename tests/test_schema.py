@@ -119,6 +119,53 @@ async def test_utterances_unique_constraint(db_conn):
 # ---------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------
+# Test 4: people.is_justice column exists, is NOT NULL, and has DEFAULT FALSE
+# ---------------------------------------------------------------------------
+
+
+@requires_db
+@pytest.mark.asyncio
+async def test_people_has_is_justice_column(db_conn):
+    """
+    people.is_justice must exist as a BOOLEAN NOT NULL column with a DEFAULT FALSE.
+
+    Asserts:
+    - Exactly one row returned from information_schema.columns for the column
+    - data_type is 'boolean'
+    - is_nullable is 'NO' (NOT NULL constraint)
+    - column_default is not NULL and contains 'false' (case-insensitive)
+
+    Added by migration 0010 (Phase 18 — PEOPLE-05).
+    """
+    rows = await db_conn.fetch(
+        """
+        SELECT data_type, is_nullable, column_default
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'people'
+          AND column_name = 'is_justice'
+        """
+    )
+    assert len(rows) == 1, (
+        f"Expected exactly 1 row for people.is_justice in information_schema.columns, "
+        f"got {len(rows)}. Has migration 0010 been applied?"
+    )
+    row = rows[0]
+    assert row["data_type"] == "boolean", (
+        f"Expected data_type='boolean', got '{row['data_type']}'"
+    )
+    assert row["is_nullable"] == "NO", (
+        f"Expected is_nullable='NO' (NOT NULL), got '{row['is_nullable']}'"
+    )
+    assert row["column_default"] is not None, (
+        "Expected a non-NULL column_default (DEFAULT FALSE), got NULL"
+    )
+    assert "false" in row["column_default"].lower(), (
+        f"Expected column_default to contain 'false', got '{row['column_default']}'"
+    )
+
+
 def test_no_create_all_in_codebase():
     """
     No Base.metadata.create_all() call must exist in production source files.

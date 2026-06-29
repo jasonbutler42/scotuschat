@@ -10,7 +10,7 @@
 
 - [x] **PEOPLE-05**: `is_justice` boolean column added to `people` table via Alembic migration; backfilled `True` for any person with existing tenure records
 - [ ] **PEOPLE-06**: People editor shows bench-only sections (Role, Court Tenure, Appointment) only when `is_justice` is `True`; hides them entirely for non-justice people
-- [ ] **PEOPLE-07**: Operator can toggle `is_justice` on a person record in the people editor
+- [x] **PEOPLE-07**: Operator can toggle `is_justice` on a person record in the people editor
 
 ### Admin Data Management
 
@@ -48,7 +48,7 @@
 |-------------|-------|--------|
 | PEOPLE-05 | Phase 18 | Complete |
 | PEOPLE-06 | Phase 18 | Pending |
-| PEOPLE-07 | Phase 18 | Pending |
+| PEOPLE-07 | Phase 18 | Complete |
 | PIPE-25 | Phase 19 | Pending |
 | PIPE-26 | Phase 19 | Pending |
 | PIPE-23 | Phase 20 | Pending |

@@ -88,14 +88,14 @@ Full phase details: `.planning/milestones/v1.3-ROADMAP.md`
   3. When viewing a non-Justice person's edit page, Role, Court Tenure, and Appointment sections are absent from the form
   4. Operator can toggle `is_justice` on a person record and the editor immediately reflects the new field visibility on save
 
-**Plans**: 1/3 plans executed
+**Plans**: 2/3 plans executed
 **Wave 1**
 
 - [x] 18-01-PLAN.md — Migration 0010 + Person.is_justice column with tenure-based backfill (PEOPLE-05)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 18-02-PLAN.md — Wire is_justice through PersonDetail/PersonUpdate/PersonListItem schemas + service read/write (PEOPLE-05, PEOPLE-07)
+- [x] 18-02-PLAN.md — Wire is_justice through PersonDetail/PersonUpdate/PersonListItem schemas + service read/write (PEOPLE-05, PEOPLE-07)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -166,7 +166,7 @@ Full phase details: `.planning/milestones/v1.3-ROADMAP.md`
 | 15. Speaker Role Accuracy | v1.3 | 4/4 | Complete | 2026-06-26 |
 | 16. Parser Improvements | v1.3 | 2/2 | Complete | 2026-06-26 |
 | 17. Pipeline UI Polish | v1.3 | 3/3 | Complete | 2026-06-29 |
-| 18. People Schema + Editor | v1.4 | 1/3 | In Progress|  |
+| 18. People Schema + Editor | v1.4 | 2/3 | In Progress|  |
 | 19. Pipeline Reliability | v1.4 | 0/? | Not started | - |
 | 20. Live Pipeline Status | v1.4 | 0/? | Not started | - |
 | 21. Admin UI Surface | v1.4 | 0/? | Not started | - |

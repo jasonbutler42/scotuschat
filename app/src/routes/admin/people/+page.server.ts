@@ -7,6 +7,7 @@ type PersonListItem = {
 	role_id: number | null;
 	role_name: string | null;
 	missing: string[];
+	is_justice: boolean;
 };
 
 export const load: PageServerLoad = async ({ fetch, url }) => {

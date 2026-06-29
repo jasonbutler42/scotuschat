@@ -174,7 +174,7 @@
 									border-bottom: 1px solid #334155;
 									padding: 12px 0;
 								"
-							>{person.full_name}</td>
+							>{person.full_name}{#if person.is_justice}<span style="display: inline-block; background-color: rgba(147,197,253,0.15); border: 1px solid #93c5fd; color: #93c5fd; border-radius: 4px; padding: 2px 6px; font-size: 14px; font-weight: 400; line-height: 1.4; margin-left: 8px;">Justice</span>{/if}</td>
 							<td
 								style="
 									font-size: 16px;

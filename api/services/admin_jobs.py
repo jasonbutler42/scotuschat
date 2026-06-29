@@ -144,7 +144,13 @@ async def list_jobs(
         )
     query = query.order_by(AdminJob.created_at.desc()).limit(limit)
     result = await db.execute(query)
-    return list(result.scalars().all())
+    jobs = list(result.scalars().all())
+    # Inject parse_stats=None so Pydantic's from_attributes mode can serialize the
+    # field without raising AttributeError (WR-03). get_job injects the real value;
+    # list_jobs only needs a safe default since the list view does not display parse_stats.
+    for job in jobs:
+        job.__dict__.setdefault("parse_stats", None)
+    return jobs
 
 
 # ---------------------------------------------------------------------------

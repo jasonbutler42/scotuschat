@@ -166,7 +166,7 @@ Full phase details: `.planning/milestones/v1.3-ROADMAP.md`
 | 15. Speaker Role Accuracy | v1.3 | 4/4 | Complete | 2026-06-26 |
 | 16. Parser Improvements | v1.3 | 2/2 | Complete | 2026-06-26 |
 | 17. Pipeline UI Polish | v1.3 | 3/3 | Complete | 2026-06-29 |
-| 18. People Schema + Editor | v1.4 | 3/3 | Complete   | 2026-06-29 |
+| 18. People Schema + Editor | v1.4 | 3/3 | Complete    | 2026-06-29 |
 | 19. Pipeline Reliability | v1.4 | 0/? | Not started | - |
 | 20. Live Pipeline Status | v1.4 | 0/? | Not started | - |
 | 21. Admin UI Surface | v1.4 | 0/? | Not started | - |

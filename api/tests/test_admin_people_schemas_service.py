@@ -290,3 +290,33 @@ def test_derive_full_name_blank_middle_omitted() -> None:
 
     result = _derive_full_name("Elena", "", "Kagan", None)
     assert result == "Elena Kagan"
+
+
+# ---------------------------------------------------------------------------
+# Phase 18: is_justice field tests (no DB required)
+# ---------------------------------------------------------------------------
+
+
+def test_person_update_is_justice_optional() -> None:
+    """PersonUpdate.is_justice defaults None; can carry True or False explicitly."""
+    from api.schemas.admin_people import PersonUpdate
+
+    assert PersonUpdate().is_justice is None
+    assert PersonUpdate(is_justice=True).is_justice is True
+    assert PersonUpdate(is_justice=False).is_justice is False
+
+
+def test_person_detail_is_justice_default_false() -> None:
+    """PersonDetail.is_justice defaults False; can be set True."""
+    from api.schemas.admin_people import PersonDetail
+
+    assert PersonDetail(id=1, full_name="X").is_justice is False
+    assert PersonDetail(id=1, full_name="X", is_justice=True).is_justice is True
+
+
+def test_person_list_item_is_justice() -> None:
+    """PersonListItem.is_justice can be set True."""
+    from api.schemas.admin_people import PersonListItem
+
+    item = PersonListItem(id=1, full_name="X", missing=[], is_justice=True)
+    assert item.is_justice is True

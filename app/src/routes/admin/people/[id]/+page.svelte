@@ -38,6 +38,9 @@
 	// Whether the inline add-role form is visible
 	let showAddRoleForm = $state(false);
 
+	// Is Justice toggle — seeded from server data; drives conditional bench sections (D-09)
+	let isJustice = $state<boolean>(data.person.is_justice ?? false);
+
 	// The role id that was selected before the sentinel was chosen; restored on cancel
 	let roleIdBeforeSentinel = $state<string>('');
 
@@ -128,6 +131,7 @@
 		mergePreview = null;
 		mergeError = null;
 		mergeLoading = false;
+		isJustice = data.person.is_justice ?? false;
 	});
 
 	async function fetchMergePreview(targetId: string) {
@@ -203,6 +207,12 @@
 				>
 					Basic Info
 				</h2>
+
+				<!-- Is Justice checkbox (D-03, D-04, D-09) -->
+				<div style="margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+					<input type="checkbox" name="is_justice" id="is_justice" bind:checked={isJustice} />
+					<label for="is_justice" style="font-size: 16px; font-weight: 400; color: #e2e8f0;">Is Justice</label>
+				</div>
 
 				<!-- Full name -->
 				<div style="margin-bottom: 16px;">
@@ -287,7 +297,8 @@
 					</div>
 				</div>
 
-				<!-- Role select -->
+				<!-- Role select — only shown for Justices (D-05) -->
+				{#if isJustice}
 				<div style="margin-bottom: 0;">
 					<label
 						for="role_id"
@@ -384,9 +395,11 @@
 						</div>
 					{/if}
 				</div>
+				{/if}
 			</div>
 
-			<!-- ── Section 3: Court Tenure ── -->
+			<!-- ── Section 3: Court Tenure — only shown for Justices (D-07) ── -->
+			{#if isJustice}
 			<div
 				style="background-color: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 24px; margin-bottom: 24px;"
 			>
@@ -475,8 +488,10 @@
 				<!-- Hidden field carrying the serialized tenure array (Pattern 1 / Pitfall 3) -->
 				<input type="hidden" name="tenures" value={JSON.stringify(tenureRows)} />
 			</div>
+			{/if}
 
-			<!-- ── Section 4: Appointment ── -->
+			<!-- ── Section 4: Appointment — only shown for Justices (D-07) ── -->
+			{#if isJustice}
 			<div
 				style="background-color: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 24px; margin-bottom: 24px;"
 			>
@@ -526,6 +541,7 @@
 					</select>
 				</div>
 			</div>
+			{/if}
 
 		</form>
 

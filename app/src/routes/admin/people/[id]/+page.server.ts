@@ -30,6 +30,8 @@ interface PersonDetail {
 	name_suffix: string | null;
 	appointing_president: string | null;
 	appointing_president_party: string | null;
+	// Phase 18 addition
+	is_justice: boolean;
 }
 
 interface PersonListItem {
@@ -161,6 +163,8 @@ export const actions: Actions = {
 		const name_suffix = ((formData.get('name_suffix') as string) ?? '').trim() || null;
 		const appointing_president = ((formData.get('appointing_president') as string) ?? '').trim() || null;
 		const appointing_president_party = ((formData.get('appointing_president_party') as string) ?? '').trim() || null;
+		// Checkbox submits 'on' when checked; absent from FormData when unchecked (D-04)
+		const is_justice = formData.get('is_justice') === 'on';
 		const tenuresRaw = (formData.get('tenures') as string) ?? '[]';
 
 		if (!full_name) {
@@ -193,6 +197,7 @@ export const actions: Actions = {
 					full_name, role_id, tenures,
 					first_name, last_name, middle_name, name_suffix,
 					appointing_president, appointing_president_party,
+					is_justice,
 					// bio_text omitted intentionally — managed by photo action (Pitfall 7 extended)
 					// photo_url omitted intentionally — managed by photo action (Pitfall 7)
 				}),

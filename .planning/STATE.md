@@ -5,8 +5,8 @@ milestone_name: Admin Completeness
 current_phase: 18
 current_phase_name: next to plan
 status: roadmapped
-stopped_at: Phase 18 context gathered
-last_updated: "2026-06-29T20:24:52.382Z"
+stopped_at: Phase 18 UI-SPEC approved
+last_updated: "2026-06-29T20:32:09.216Z"
 last_activity: 2026-06-29
 last_activity_desc: v1.4 roadmap created (Phases 18–21)
 progress:
@@ -162,6 +162,6 @@ Full log in PROJECT.md Key Decisions table. Key decisions for v1.2:
 
 ## Session Continuity
 
-Last session: 2026-06-29T20:24:52.370Z
-Stopped at: Phase 18 context gathered
-Resume file: .planning/phases/18-people-schema-editor/18-CONTEXT.md
+Last session: 2026-06-29T20:32:09.206Z
+Stopped at: Phase 18 UI-SPEC approved
+Resume file: .planning/phases/18-people-schema-editor/18-UI-SPEC.md

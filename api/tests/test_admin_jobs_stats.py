@@ -114,17 +114,15 @@ def test_admin_job_response_retains_from_attributes() -> None:
 async def test_get_job_parse_stats_counts_from_latest_parse_run(db_session: AsyncSession) -> None:
     """
     Test 1: get_job returns parse_stats with utterance_count == N seeded utterances
-    and speaker_count == M distinct raw_speaker_label values.
+    and speaker_count == N distinct raw_speaker_label values in the current parse run.
     """
     from api.models.models import (
         Argument,
-        ArgumentParticipant,
         AdminJob,
         AdminJobStatus,
         AdminJobStep,
         PipelineRun,
         PipelineRunStatus,
-        SideEnum,
         Utterance,
     )
     from api.services.admin_jobs import get_job
@@ -177,21 +175,12 @@ async def test_get_job_parse_stats_counts_from_latest_parse_run(db_session: Asyn
         db_session.add(utt)
     await db_session.flush()
 
-    # Seed M=3 argument_participants with distinct raw_speaker_label
-    M = 3
-    for i in range(M):
-        ap = ArgumentParticipant(
-            argument_id=arg.id,
-            raw_speaker_label=f"LABEL_{i}",
-            side=SideEnum.BENCH,
-        )
-        db_session.add(ap)
-    await db_session.flush()
-
     # Act
     result = await get_job(db_session, job.id)
 
     # Assert
+    # speaker_count is now scoped to the current parse run via Utterance.raw_speaker_label
+    # (WR-02 fix) — each of the N utterances has a distinct label, so speaker_count == N.
     assert result is not None, "get_job returned None"
     assert result.__dict__["parse_stats"] is not None, (
         "parse_stats should not be None when parse run exists"
@@ -200,8 +189,8 @@ async def test_get_job_parse_stats_counts_from_latest_parse_run(db_session: Asyn
     assert ps["utterance_count"] == N, (
         f"Expected utterance_count={N}, got {ps['utterance_count']}"
     )
-    assert ps["speaker_count"] == M, (
-        f"Expected speaker_count={M}, got {ps['speaker_count']}"
+    assert ps["speaker_count"] == N, (
+        f"Expected speaker_count={N} (distinct labels in parse run), got {ps['speaker_count']}"
     )
 
 
@@ -278,9 +267,7 @@ async def test_get_job_parse_stats_uses_latest_parse_run_when_two_exist(db_sessi
         AdminJobStep,
         PipelineRun,
         PipelineRunStatus,
-        SideEnum,
         Utterance,
-        ArgumentParticipant,
     )
     from api.services.admin_jobs import get_job
 
@@ -341,15 +328,6 @@ async def test_get_job_parse_stats_uses_latest_parse_run_when_two_exist(db_sessi
         ))
     await db_session.flush()
 
-    # Seed 4 distinct argument_participants (speaker_count comes from these, not utterances)
-    for i in range(4):
-        db_session.add(ArgumentParticipant(
-            argument_id=arg.id,
-            raw_speaker_label=f"PARTICIPANT_{i}",
-            side=SideEnum.BENCH,
-        ))
-    await db_session.flush()
-
     # Act
     result = await get_job(db_session, job.id)
 
@@ -357,11 +335,13 @@ async def test_get_job_parse_stats_uses_latest_parse_run_when_two_exist(db_sessi
     ps = result.__dict__["parse_stats"]
     assert ps is not None, "parse_stats must not be None when latest parse run has utterances"
 
-    # Must reflect the LATEST parse run (7 utterances, not 2)
+    # Must reflect the LATEST parse run (7 utterances, not 2).
+    # speaker_count is scoped to the latest parse run via Utterance.raw_speaker_label
+    # (WR-02 fix): the latest run has 7 utterances with 7 distinct labels (NEW_SPEAKER_0..6).
     assert ps["utterance_count"] == 7, (
         f"Expected utterance_count=7 (latest run), got {ps['utterance_count']} — "
         "D-09: stats must reflect the latest parse run"
     )
-    assert ps["speaker_count"] == 4, (
-        f"Expected speaker_count=4, got {ps['speaker_count']}"
+    assert ps["speaker_count"] == 7, (
+        f"Expected speaker_count=7 (distinct labels in latest parse run), got {ps['speaker_count']}"
     )

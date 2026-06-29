@@ -107,10 +107,12 @@ async def get_job(db: AsyncSession, job_id: int) -> AdminJob | None:
         )
         utterance_count = utt_result.scalar_one()
 
+        # Scope distinct speaker count to the current parse run so re-parsed jobs
+        # do not accumulate stale labels from earlier runs (WR-02).
         spk_result = await db.execute(
-            select(func.count(ArgumentParticipant.raw_speaker_label.distinct())).where(
-                ArgumentParticipant.argument_id == job.argument_id
-            )
+            select(func.count(Utterance.raw_speaker_label.distinct()))
+            .where(Utterance.pipeline_run_id == parse_run_id)
+            .where(Utterance.raw_speaker_label.isnot(None))
         )
         speaker_count = spk_result.scalar_one()
 

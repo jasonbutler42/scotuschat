@@ -17,3 +17,27 @@ Unscheduled items for future phases.
 **Area:** Admin — Pipeline job detail (`/admin/pipeline/[id]`)
 **Added:** 2026-06-18
 **Context:** The resolved participants section lists people by name but the names are plain text. Each participant name should be a link to their people editor entry at `/admin/people/[id]` so the operator can navigate directly from a job result to the person's edit form.
+
+---
+
+## B-005 — Animate bench section show/hide when toggling Is Justice
+
+**Area:** Admin — People editor (`/admin/people/[id]`)
+**Added:** 2026-06-29
+**Context:** The Role, Court Tenure, and Appointment sections currently snap in/out of existence when the Is Justice checkbox is toggled. A smooth transition (e.g., fade or slide) would feel less jarring.
+
+---
+
+## B-004 — Unify Role and Court Tenure Seat into a context-aware role interface
+
+**Area:** Admin — People editor (`/admin/people/[id]`)
+**Added:** 2026-06-29
+**Context:** The current design has a "Role" dropdown in Basic Info and a separate "Seat" field under Court Tenure — these overlap conceptually. Proposed: collapse into a single role interface that adapts by person type. Justices get an enumerated Seat picker (Justice-specific roles). Advocates need no role field at all. May be partially or fully addressed by an upcoming phase — keep in backlog and delete if redundant.
+
+---
+
+## B-003 — Move Justice-only fields to a dedicated card with Is Justice checkbox
+
+**Area:** Admin — People editor (`/admin/people/[id]`)
+**Added:** 2026-06-29
+**Context:** Currently the Is Justice checkbox is in Basic Info and the Justice-only sections (Role, Court Tenure, Appointment) appear below inline. UX would be cleaner with a dedicated "Justice Details" card that contains the Is Justice checkbox plus the conditional bench sections, keeping Basic Info clean.

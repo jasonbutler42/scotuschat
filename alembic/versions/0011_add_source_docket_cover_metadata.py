@@ -71,6 +71,10 @@ def upgrade() -> None:
 def downgrade() -> None:
     # Reverse order of upgrade operations.
     op.drop_constraint("uq_arguments_source_docket_question", "arguments", type_="unique")
+    # CR-03: backfill NULL argued_dates before reinstating NOT NULL constraint.
+    # After job-driven ingest runs, some rows will have argued_date = NULL.
+    # ALTER TABLE cannot tighten to NOT NULL while null values exist.
+    op.execute("UPDATE arguments SET argued_date = CURRENT_DATE WHERE argued_date IS NULL")
     op.alter_column("arguments", "argued_date", nullable=False)
     op.drop_column("arguments", "cover_metadata")
     op.drop_column("arguments", "source_docket")

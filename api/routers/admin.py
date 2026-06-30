@@ -141,6 +141,8 @@ async def admin_health() -> dict:
 async def create_job(
     pdf_url: Optional[str] = Form(None),
     pdf_file: Optional[UploadFile] = File(None),
+    primary_docket: Optional[str] = Form(None),  # CR-01: pass through to ingest for D-01 deduplication
+    question_number: int = Form(1),              # CR-01: pass through to ingest for D-01 deduplication
     db: AsyncSession = Depends(get_db),
 ) -> AdminJobResponse:
     """
@@ -159,7 +161,11 @@ async def create_job(
         # URL mode: validate + create job + spawn ingest
         _validate_pdf_url(pdf_url)
         job = await jobs_service.create_job(db, pdf_url=pdf_url)
-        spawn_pipeline_step("ingest", job.id, ["--url", pdf_url])
+        # CR-01: include --primary-docket and --question so D-01 deduplication fires
+        ingest_args = ["--url", pdf_url, "--question", str(question_number)]
+        if primary_docket:
+            ingest_args += ["--primary-docket", primary_docket]
+        spawn_pipeline_step("ingest", job.id, ingest_args)
         return job  # type: ignore[return-value]
 
     elif pdf_file is not None:
@@ -218,7 +224,11 @@ async def create_job(
             )
             await db.commit()
             await db.refresh(job)
-            spawn_pipeline_step("ingest", job.id, ["--spaces-key", key])
+            # CR-01: pass --primary-docket and --question through upload path too
+            spaces_ingest_args = ["--spaces-key", key, "--question", str(question_number)]
+            if primary_docket:
+                spaces_ingest_args += ["--primary-docket", primary_docket]
+            spawn_pipeline_step("ingest", job.id, spaces_ingest_args)
         else:
             # No object storage configured — save locally for dev use.
             uploads_dir = Path("data/uploads")
@@ -227,7 +237,11 @@ async def create_job(
             local_path.write_bytes(file_bytes)
             await db.commit()
             await db.refresh(job)
-            spawn_pipeline_step("ingest", job.id, ["--local-file", str(local_path.resolve())])
+            # CR-01: pass --primary-docket and --question through local-file path too
+            local_ingest_args = ["--local-file", str(local_path.resolve()), "--question", str(question_number)]
+            if primary_docket:
+                local_ingest_args += ["--primary-docket", primary_docket]
+            spawn_pipeline_step("ingest", job.id, local_ingest_args)
 
         return job  # type: ignore[return-value]
 

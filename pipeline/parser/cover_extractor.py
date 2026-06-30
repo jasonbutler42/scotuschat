@@ -45,8 +45,11 @@ HERITAGE_DATE_RE = re.compile(
     re.IGNORECASE,
 )
 
-# Case caption separator line — Alderson uses soft hyphens (\xad), Heritage uses dashes
-CAPTION_SEP_RE = re.compile(r'^[\xad\-\s–—xX\*]+$')
+# Case caption separator line — Alderson uses soft hyphens (\xad), Heritage uses dashes.
+# WR-04: The trailing 'x' in Alderson separators is always preceded by whitespace;
+# anchor it as an optional suffix rather than a free class member so a petitioner
+# name line consisting solely of 'X' is not silently dropped as a separator.
+CAPTION_SEP_RE = re.compile(r'^[\xad\-\s–—\*]+(?:\s+[xX])?$')
 
 # Trailing case-caption punctuation to strip from name lines (e.g., ' :' ' )' ' ,')
 CAPTION_PUNCT_RE = re.compile(r'\s*[:),]\s*$')

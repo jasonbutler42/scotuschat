@@ -49,6 +49,14 @@
 			const res = await fetch(
 				`/admin/pipeline/check-duplicate?docket=${encodeURIComponent(docketInput.trim())}&question=${encodeURIComponent(questionInput)}`
 			);
+			// WR-02: check res.ok before parsing — a non-OK response (e.g. 400, 502) returns
+			// a JSON body without 'exists', which is falsy and would silently bypass the duplicate gate.
+			if (!res.ok) {
+				console.warn('[preflight] check-duplicate returned', res.status, '— proceeding');
+				preflightCleared = true;
+				(e.target as HTMLFormElement).requestSubmit();
+				return;
+			}
 			const data = await res.json();
 			if (data.exists) {
 				duplicateWarning = { argumentId: data.argument_id, docket: docketInput.trim(), question: questionInput };

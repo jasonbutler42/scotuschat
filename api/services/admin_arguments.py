@@ -457,13 +457,21 @@ async def update_argument_metadata(
         else None
     )
 
-    # c. Update Argument row (argued_date and source_docket)
-    await db.execute(
-        update(Argument)
-        .where(Argument.id == argument_id)
-        .values(argued_date=parsed_date, source_docket=body.source_docket)
-        .execution_options(synchronize_session=False)
-    )
+    # c. Update Argument row — only write fields that were explicitly provided.
+    # WR-01: always writing source_docket=body.source_docket would NULL an existing
+    # docket when the operator saves the form with that field left blank.
+    values_to_set: dict = {}
+    if body.argued_date is not None or parsed_date is not None:
+        values_to_set["argued_date"] = parsed_date
+    if body.source_docket is not None:
+        values_to_set["source_docket"] = body.source_docket
+    if values_to_set:
+        await db.execute(
+            update(Argument)
+            .where(Argument.id == argument_id)
+            .values(**values_to_set)
+            .execution_options(synchronize_session=False)
+        )
 
     # d. Update lead Case.case_name if provided
     if body.case_name is not None:

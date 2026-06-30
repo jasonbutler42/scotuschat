@@ -161,7 +161,8 @@ class Argument(Base):
     __tablename__ = "arguments"
 
     id = Column(Integer, primary_key=True)
-    argued_date = Column(Date, nullable=False)
+    # Phase 19 (D-08): nullable — job-driven ingest leaves NULL instead of a synthetic date.
+    argued_date = Column(Date, nullable=True)
     question_number = Column(Integer, nullable=False, default=1)  # Q1 or Q2
     # NULL = resolve not yet completed; retains its pipeline-completion meaning.
     # resolved_at IS NOT NULL means the pipeline resolve step has stamped this argument.
@@ -179,7 +180,24 @@ class Argument(Base):
         nullable=False,
         default=ArgumentStatusEnum.PIPELINE,
     )
+    # Phase 19 (D-01): primary docket used at ingest time; NULL when operator did not supply one.
+    # Used with question_number for the unique deduplication constraint (see __table_args__).
+    source_docket = Column(String(50), nullable=True)
+    # Phase 19 (D-07): raw cover extractor output written unconditionally by parse step.
+    # Read by the job detail page to render "Extracted: [value]" hint text.
+    cover_metadata = Column(JSONB, nullable=True)
     # cases linked via case_arguments M:M join table
+
+    __table_args__ = (
+        # Prevents duplicate argument rows when docket is known (D-01).
+        # NULL semantics: multiple rows with source_docket = NULL do NOT violate
+        # this constraint — deduplication only applies when docket is known.
+        UniqueConstraint(
+            "source_docket",
+            "question_number",
+            name="uq_arguments_source_docket_question",
+        ),
+    )
 
 
 # ---------------------------------------------------------------------------

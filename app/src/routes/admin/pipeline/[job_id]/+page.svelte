@@ -467,6 +467,101 @@
 			{/if}
 		{/if}
 
+		<!-- Argument Metadata card (D-13/D-14/D-15, UI-SPEC Component 4) — shown when argument_id is set -->
+		{#if data.argument != null}
+			<div style="background-color: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 24px; margin-bottom: 24px;">
+				<h2 style="font-size: 20px; font-weight: 600; color: #e2e8f0; margin: 0 0 16px 0; line-height: 1.2;">Argument Metadata</h2>
+				<form method="POST" action="?/saveMetadata" use:enhance>
+					<!-- Case name field (UI-SPEC Component 5) -->
+					<div style="margin-bottom: 16px;">
+						<label for="meta_case_name" style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;">Case name</label>
+						<input
+							type="text"
+							name="case_name"
+							id="meta_case_name"
+							value={data.argument.case_name ?? ''}
+							style="
+								background-color: #0f1117;
+								border: 1px solid #334155;
+								border-radius: 6px;
+								padding: 8px 12px;
+								font-size: 16px;
+								color: #e2e8f0;
+								width: 100%;
+								box-sizing: border-box;
+							"
+						/>
+						{#if data.argument?.cover_metadata?.case_name != null && data.argument?.cover_metadata?.case_name !== data.argument.case_name}
+							<p style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-top: 4px;">Extracted: {data.argument.cover_metadata.case_name}</p>
+						{/if}
+					</div>
+
+					<!-- Docket field (UI-SPEC Component 6) -->
+					<div style="margin-bottom: 16px;">
+						<label for="meta_docket" style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;">Docket</label>
+						<input
+							type="text"
+							name="source_docket"
+							id="meta_docket"
+							value={data.argument.source_docket ?? ''}
+							style="
+								background-color: #0f1117;
+								border: 1px solid #334155;
+								border-radius: 6px;
+								padding: 8px 12px;
+								font-size: 16px;
+								color: #e2e8f0;
+								width: 100%;
+								box-sizing: border-box;
+							"
+						/>
+						{#if data.argument?.cover_metadata?.primary_docket != null && data.argument?.cover_metadata?.primary_docket !== data.argument.source_docket}
+							<p style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-top: 4px;">Extracted: {data.argument.cover_metadata.primary_docket}</p>
+						{/if}
+					</div>
+
+					<!-- Argued date field (UI-SPEC Component 7) — empty input when null per D-11 -->
+					<div style="margin-bottom: 16px;">
+						<label for="meta_argued_date" style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;">Argued date</label>
+						<input
+							type="date"
+							name="argued_date"
+							id="meta_argued_date"
+							value={data.argument.argued_date != null ? data.argument.argued_date.slice(0, 10) : ''}
+							style="
+								background-color: #0f1117;
+								border: 1px solid #334155;
+								border-radius: 6px;
+								padding: 8px 12px;
+								font-size: 16px;
+								color: #e2e8f0;
+								width: 100%;
+								box-sizing: border-box;
+							"
+						/>
+						{#if data.argument?.cover_metadata?.argued_date != null && data.argument?.cover_metadata?.argued_date !== data.argument.argued_date}
+							<p style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-top: 4px;">Extracted: {data.argument.cover_metadata.argued_date}</p>
+						{/if}
+					</div>
+
+					{#if form?.metadataSaved}
+						<p style="color: #4ade80; font-size: 14px; margin: 8px 0 0 0;">Metadata saved.</p>
+					{/if}
+					{#if form?.metadataError}
+						<p role="alert" style="color: #ef4444; font-size: 14px; margin: 8px 0 0 0;">{form.metadataError}</p>
+					{/if}
+
+					<!-- Save metadata button (UI-SPEC Component 8) -->
+					<button
+						type="submit"
+						style="display: block; width: 100%; min-height: 44px; background-color: #1e293b; border: 1px solid #93c5fd; border-radius: 6px; font-size: 16px; font-weight: 600; color: #e2e8f0; cursor: pointer; margin-top: 8px;"
+					>
+						Save metadata
+					</button>
+				</form>
+			</div>
+		{/if}
+
 		<!-- View source PDF link card (D-06/PIPE-22): shown when a PDF source exists -->
 		{#if data.job.spaces_key || data.job.pdf_url || data.job.original_filename}
 			<div

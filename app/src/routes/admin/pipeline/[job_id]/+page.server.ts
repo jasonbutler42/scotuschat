@@ -18,6 +18,8 @@ interface ArgumentPreview {
 	resolved_at: string | null;
 	published_at: string | null;
 	status: string | null;
+	source_docket: string | null;
+	cover_metadata: Record<string, unknown> | null;
 }
 
 export const load: PageServerLoad = async ({ params }) => {
@@ -292,5 +294,57 @@ export const actions: Actions = {
 		};
 		// Return the created person so the Svelte component can add them to the dropdown.
 		return { personCreated: true, person: enrichedPerson };
+	},
+
+	/**
+	 * saveMetadata — PATCH the argument metadata (case_name, source_docket, argued_date).
+	 * Fetches the job first to get argument_id (same two-step pattern as approve action).
+	 * Returns fail(400) when no argument is linked, fail(502) on network error,
+	 * fail(422) on non-OK FastAPI response, { metadataSaved: true } on success.
+	 * (D-13, D-14, D-15 — UI-SPEC Component 4/5/6/7/8)
+	 */
+	saveMetadata: async ({ request, params }) => {
+		const data = await request.formData();
+		const case_name = ((data.get('case_name') as string) ?? '').trim() || null;
+		const source_docket = ((data.get('source_docket') as string) ?? '').trim() || null;
+		const argued_date = ((data.get('argued_date') as string) ?? '').trim() || null;
+
+		// Fetch the job to get argument_id — same two-step pattern as approve action
+		let argumentId: number | null = null;
+		try {
+			const jobRes = await fetch(`${FASTAPI_BASE_URL}/api/admin/jobs/${params.job_id}`, {
+				headers: { 'X-Admin-Token': ADMIN_TOKEN },
+			});
+			if (jobRes.ok) {
+				const job = await jobRes.json();
+				argumentId = job.argument_id ?? null;
+			}
+		} catch {
+			return fail(502, { metadataError: 'Could not save metadata. Please try again.' });
+		}
+
+		if (argumentId === null) {
+			return fail(400, { metadataError: 'No argument linked to this job yet.' });
+		}
+
+		let res: Response;
+		try {
+			res = await fetch(`${FASTAPI_BASE_URL}/api/admin/arguments/${argumentId}/metadata`, {
+				method: 'PATCH',
+				headers: {
+					'X-Admin-Token': ADMIN_TOKEN,
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({ case_name, source_docket, argued_date }),
+			});
+		} catch {
+			return fail(502, { metadataError: 'Could not save metadata. Please try again.' });
+		}
+
+		if (!res.ok) {
+			return fail(422, { metadataError: 'Could not save metadata. Please try again.' });
+		}
+
+		return { metadataSaved: true };
 	},
 };

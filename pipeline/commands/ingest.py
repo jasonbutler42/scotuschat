@@ -85,13 +85,18 @@ def _derive_slug(case_name: str) -> str:
     Derive a URL-safe slug from a case name.
 
     Example: "Obergefell v. Hodges" → "obergefell-v-hodges"
+    Example: "Smith & Jones" → "smith-and-jones"
+    Example: "City/County v. State" → "city-county-v-state"
     """
-    return (
-        case_name.lower()
-        .replace(" ", "-")
-        .replace(".", "")
-        .replace(",", "")
-    )
+    import re
+    slug = case_name.lower()
+    slug = slug.replace("'", "")        # apostrophes: Women's → womens
+    slug = slug.replace("&", "and")     # ampersands: RFC 3986 unsafe in path segment
+    slug = slug.replace("/", "-")       # slashes: create phantom path segments
+    slug = slug.replace("(", "").replace(")", "")  # parentheses
+    slug = slug.replace(" ", "-").replace(".", "").replace(",", "")
+    slug = re.sub(r"-{2,}", "-", slug)  # WR-03: collapse consecutive dashes
+    return slug.strip("-")
 
 
 def _get_spaces_client():

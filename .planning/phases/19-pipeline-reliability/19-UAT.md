@@ -65,7 +65,11 @@ blocked: 0
   reason: "User reported: If I click Start anyway the admin site logs me out and does not start another run"
   severity: major
   test: 5
-  root_cause: ""
-  artifacts: []
-  missing: []
+  root_cause: "Start anyway onclick calls document.querySelector('form')?.requestSubmit(), which re-fires the submit event and triggers handleSubmit. handleSubmit sets submitting=true (disabling the submit button) then returns without preventDefault. Svelte flushes the disabled state before the browser finalises the submission. When the submit button is disabled at submission time, browser/SvelteKit aborts the submission — leaving submitting=true (button stuck as 'Starting…') and causing a fallback navigation that appears as a logout."
+  artifacts:
+    - path: "app/src/routes/admin/pipeline/+page.svelte"
+      issue: "Start anyway onclick uses requestSubmit() which re-enters handleSubmit; handleSubmit sets submitting=true disabling the button before submission completes"
+  missing:
+    - "Bind form element ref via bind:this={formEl} and call formEl.submit() from Start anyway onclick instead of requestSubmit() — form.submit() does not fire the submit event so handleSubmit is bypassed and the button stays enabled"
+    - "Set submitting=true directly in the Start anyway onclick (after clearing duplicateWarning) so the button label updates correctly"
   debug_session: ""

@@ -40,6 +40,7 @@ from pathlib import Path
 
 import httpx
 from sqlalchemy import select, update
+from sqlalchemy.exc import IntegrityError
 
 from api.models.models import (
     AdminJob,
@@ -251,19 +252,12 @@ async def _run_ingest_inner(args) -> None:
         case_name = args.case_name
         argued_date = args.argued_date
     else:
-        # Job-driven path — derive missing metadata from spaces_key / job_id
-        spaces_key = getattr(args, "spaces_key", None)
-        primary_docket = args.primary_docket
-        case_name = args.case_name
-        argued_date = args.argued_date
-
-        if not primary_docket or not case_name or not argued_date:
-            derived_docket, derived_name, derived_date = _derive_metadata_from_key(
-                spaces_key or "", args.job_id
-            )
-            primary_docket = primary_docket or derived_docket
-            case_name = case_name or derived_name
-            argued_date = argued_date or derived_date
+        # Job-driven path — use operator-supplied args as-is; may be None.
+        # D-03/D-08: synthetic placeholder behavior removed for job-driven ingest.
+        # Null fields are left NULL; parse step auto-populates from cover extractor (D-09).
+        primary_docket = args.primary_docket  # may be None
+        case_name = args.case_name            # may be None
+        argued_date = args.argued_date        # may be None
 
     # ------------------------------------------------------------------
     # Step 2: URL validation — MUST be before any httpx call (T-03-01)
@@ -274,9 +268,25 @@ async def _run_ingest_inner(args) -> None:
 
     # ------------------------------------------------------------------
     # Step 3: Derive slug and local PDF path
+    # Fallbacks when operator did not supply docket/case_name/argued_date (D-08):
+    #   - pdf_filename uses job_id when primary_docket is None (avoids "None-q1.pdf")
+    #   - base_slug uses job_id when case_name is None
+    #   - term_year uses today's year when argued_date is None (Case requires term_year)
     # ------------------------------------------------------------------
-    base_slug = _derive_slug(case_name)
-    pdf_filename = f"{primary_docket}-q{args.question}.pdf"
+    if case_name is not None:
+        base_slug = _derive_slug(case_name)
+    else:
+        base_slug = f"job-{args.job_id}" if args.job_id is not None else "unknown"
+
+    if primary_docket is not None:
+        pdf_filename = f"{primary_docket}-q{args.question}.pdf"
+    else:
+        pdf_filename = (
+            f"job-{args.job_id}-q{args.question}.pdf"
+            if args.job_id is not None
+            else f"unknown-q{args.question}.pdf"
+        )
+
     pdf_dir = Path("data/pdfs")
     pdf_dir.mkdir(parents=True, exist_ok=True)
     pdf_path = pdf_dir / pdf_filename
@@ -312,7 +322,19 @@ async def _run_ingest_inner(args) -> None:
     # Step 5: Create DB records
     # ------------------------------------------------------------------
     # Build the list of all dockets: primary first, then consolidated.
-    all_dockets: list[str] = [primary_docket] + list(args.dockets or [])
+    # When primary_docket is None (operator did not supply it), only consolidated
+    # dockets are included; Case creation is skipped for the null-docket slot.
+    all_dockets: list[str] = (
+        ([primary_docket] if primary_docket is not None else [])
+        + list(args.dockets or [])
+    )
+
+    # Derive term_year: use argued_date year when available, fall back to current year
+    # (Case.term_year is NOT NULL, so we must always supply a value — D-08).
+    if argued_date is not None:
+        term_year = int(argued_date.split("-")[0])
+    else:
+        term_year = date.today().year
 
     async with get_session() as session:
         # ---- a. Case records (idempotent) ----
@@ -338,7 +360,7 @@ async def _run_ingest_inner(args) -> None:
                     docket_number=docket,
                     docket_number_norm=docket.replace("-", ""),
                     case_name=case_name,
-                    term_year=int(argued_date.split("-")[0]),
+                    term_year=term_year,
                     slug=case_slug,
                 )
                 session.add(new_case)
@@ -349,11 +371,17 @@ async def _run_ingest_inner(args) -> None:
 
         # ---- b. Argument record ----
         argument = Argument(
-            argued_date=date.fromisoformat(argued_date),
+            argued_date=date.fromisoformat(argued_date) if argued_date else None,  # D-08: nullable
             question_number=args.question,
+            source_docket=primary_docket or None,  # D-01: NULL when operator did not supply
         )
         session.add(argument)
-        await session.flush()  # get argument.id
+        try:
+            await session.flush()  # get argument.id; raises IntegrityError on duplicate
+        except IntegrityError:
+            raise ValueError(
+                f"Duplicate argument: docket {primary_docket!r} Q{args.question} already exists."
+            )
 
         # ---- c. CaseArgument rows (idempotent) ----
         for case in cases:

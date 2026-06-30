@@ -113,7 +113,13 @@ Full phase details: `.planning/milestones/v1.3-ROADMAP.md`
   3. After a pipeline run completes parse, case name, docket, and argued date fields are pre-populated from cover extraction results without the operator typing them manually
   4. Operator can still override any pre-populated metadata field before publishing
 
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 19-01-PLAN.md — Migration 0011: source_docket, cover_metadata JSONB, argued_date nullable, unique constraint (PIPE-25, PIPE-26)
+- [ ] 19-02-PLAN.md — Pipeline layer: cover extractor docket extraction, ingest source_docket + IntegrityError, parse cover_metadata write-back (PIPE-25, PIPE-26)
+- [ ] 19-03-PLAN.md — FastAPI layer: MetadataUpdate schema, check-duplicate + metadata PATCH endpoints, ArgumentDetail extension (PIPE-25, PIPE-26)
+- [ ] 19-04-PLAN.md — UI layer: check-duplicate proxy, start form preflight + banner, job detail metadata card (PIPE-25, PIPE-26)
 
 ### Phase 20: Live Pipeline Status
 

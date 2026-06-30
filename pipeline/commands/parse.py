@@ -311,11 +311,12 @@ async def _run_parse_inner(args) -> None:
         # Always overwrite — D-04 (no write-if-blank conditional).
         # -------------------------------------------------------------------
 
-        # Block A: argued_date → Argument row (D-02, always overwrite per D-04)
+        # Block A: argued_date → Argument row — only if currently NULL (D-09, Phase 19).
+        # Operator-entered values are never overwritten.
         if cover_meta.get("argued_date") is not None:
             await session.execute(
                 update(Argument)
-                .where(Argument.id == source_run.argument_id)
+                .where(Argument.id == source_run.argument_id, Argument.argued_date.is_(None))
                 .values(argued_date=cover_meta["argued_date"])
                 .execution_options(synchronize_session=False)
             )
@@ -340,6 +341,29 @@ async def _run_parse_inner(args) -> None:
                 print(f"case_name written: {cover_meta['case_name']!r}")
             else:
                 print("case_name not written: no lead CaseArgument row found.")
+
+        # Block C: cover_metadata unconditional write (D-07, D-09a, Phase 19).
+        # Always writes raw extraction output regardless of whether extraction found anything.
+        # Stores None when cover_meta is empty so the metadata card shows no hints.
+        await session.execute(
+            update(Argument)
+            .where(Argument.id == source_run.argument_id)
+            .values(cover_metadata=cover_meta if cover_meta else None)
+            .execution_options(synchronize_session=False)
+        )
+        if cover_meta:
+            print(f"cover_metadata written ({len(cover_meta)} keys)")
+
+        # Block D: source_docket conditional write — only if Argument.source_docket IS NULL (D-09b, Phase 19).
+        # Operator-entered values are never overwritten.
+        if cover_meta.get("primary_docket") is not None:
+            await session.execute(
+                update(Argument)
+                .where(Argument.id == source_run.argument_id, Argument.source_docket.is_(None))
+                .values(source_docket=cover_meta["primary_docket"])
+                .execution_options(synchronize_session=False)
+            )
+            print(f"source_docket written from cover: {cover_meta['primary_docket']!r}")
 
         # -------------------------------------------------------------------
         # Phase 16 PARSE-02: Update argument_participants.side from TOC mapping

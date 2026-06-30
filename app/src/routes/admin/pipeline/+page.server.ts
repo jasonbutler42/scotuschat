@@ -32,6 +32,10 @@ export const actions: Actions = {
 		const data = await request.formData();
 		const mode = data.get('mode') as string;
 
+		// Read docket and question fields (D-03) — present in both url and upload branches
+		const primary_docket = ((data.get('primary_docket') as string) ?? '').trim() || null;
+		const question_number = ((data.get('question_number') as string) ?? '').trim() || '1';
+
 		if (mode === 'url') {
 			// URL mode: forward the pdf_url as multipart FormData to FastAPI.
 			const pdf_url = (data.get('pdf_url') as string) ?? '';
@@ -41,6 +45,10 @@ export const actions: Actions = {
 
 			const body = new FormData();
 			body.append('pdf_url', pdf_url);
+			if (primary_docket !== null) {
+				body.append('primary_docket', primary_docket);
+			}
+			body.append('question_number', question_number);
 
 			// Do NOT set Content-Type — let fetch set the multipart boundary automatically.
 			let res: Response;
@@ -71,6 +79,10 @@ export const actions: Actions = {
 
 			const body = new FormData();
 			body.append('pdf_file', file);
+			if (primary_docket !== null) {
+				body.append('primary_docket', primary_docket);
+			}
+			body.append('question_number', question_number);
 
 			// NOTE: BODY_SIZE_LIMIT=10M must be set in DO App Platform env vars for
 			// SvelteKit to accept payloads larger than the 512 KB default (documented

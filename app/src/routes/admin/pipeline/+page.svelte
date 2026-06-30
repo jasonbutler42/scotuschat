@@ -25,12 +25,42 @@
 	// Submitting state: used to disable the Start Run button and change its label.
 	let submitting = $state(false);
 
+	// Docket preflight state (D-03/D-04/D-05/D-06)
+	let docketInput = $state('');
+	let questionInput = $state('1');
+	let duplicateWarning = $state<{ argumentId: number; docket: string; question: string } | null>(null);
+	let preflightCleared = $state(false);
+
 	function setMode(m: 'url' | 'upload') {
 		mode = m;
 	}
 
-	function handleSubmit() {
-		submitting = true;
+	async function handleSubmit(e: SubmitEvent) {
+		// If docket is empty OR preflight already cleared → let the form submit normally
+		if (!docketInput.trim() || preflightCleared) {
+			submitting = true;
+			return;
+		}
+
+		// Docket is filled and not yet cleared — run preflight
+		e.preventDefault();
+
+		try {
+			const res = await fetch(
+				`/admin/pipeline/check-duplicate?docket=${encodeURIComponent(docketInput.trim())}&question=${encodeURIComponent(questionInput)}`
+			);
+			const data = await res.json();
+			if (data.exists) {
+				duplicateWarning = { argumentId: data.argument_id, docket: docketInput.trim(), question: questionInput };
+			} else {
+				preflightCleared = true;
+				(e.target as HTMLFormElement).requestSubmit();
+			}
+		} catch {
+			// Network error — allow submit to proceed so the operator is not blocked
+			preflightCleared = true;
+			(e.target as HTMLFormElement).requestSubmit();
+		}
 	}
 
 	// StatusBadge helper: returns inline style string for a given job status.
@@ -246,6 +276,89 @@
 								box-sizing: border-box;
 							"
 						/>
+					</div>
+				{/if}
+
+				<!-- Docket number field (D-03, UI-SPEC Component 1) — optional; triggers preflight when filled -->
+				<div style="margin-bottom: 16px;">
+					<label
+						for="primary_docket"
+						style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
+					>
+						Docket number
+					</label>
+					<input
+						type="text"
+						name="primary_docket"
+						id="primary_docket"
+						placeholder="e.g. 14-556 (optional)"
+						bind:value={docketInput}
+						style="
+							background-color: #0f1117;
+							border: 1px solid #334155;
+							border-radius: 6px;
+							padding: 8px 12px;
+							font-size: 16px;
+							color: #e2e8f0;
+							width: 100%;
+							box-sizing: border-box;
+						"
+					/>
+				</div>
+
+				<!-- Question number selector (D-03, UI-SPEC Component 2) -->
+				<div style="margin-bottom: 16px;">
+					<label
+						for="question_number"
+						style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
+					>
+						Question number
+					</label>
+					<select
+						name="question_number"
+						id="question_number"
+						bind:value={questionInput}
+						style="
+							background-color: #0f1117;
+							border: 1px solid #334155;
+							border-radius: 6px;
+							padding: 8px 12px;
+							font-size: 16px;
+							color: #e2e8f0;
+							min-height: 44px;
+							width: 100%;
+							box-sizing: border-box;
+						"
+					>
+						<option value="1">Q1</option>
+						<option value="2">Q2</option>
+					</select>
+				</div>
+
+				<!-- Duplicate warning banner (D-04/D-05/D-06, UI-SPEC Component 3) — shown when preflight finds a match -->
+				{#if duplicateWarning}
+					<div role="alert" style="background-color: #1e293b; border: 1px solid #fbbf24; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+						<p style="font-size: 16px; font-weight: 600; color: #e2e8f0; margin: 0 0 8px 0;">⚠ Argument already exists</p>
+						<p style="font-size: 14px; color: #94a3b8; margin: 0 0 12px 0;">
+							Docket {duplicateWarning.docket} Q{duplicateWarning.question} already has an argument.
+							<a href="/admin/arguments/{duplicateWarning.argumentId}" style="color: #93c5fd; text-decoration: underline;">View existing argument →</a>
+						</p>
+						<div style="display: flex; gap: 8px;">
+							<button
+								type="button"
+								onclick={() => { duplicateWarning = null; preflightCleared = false; }}
+								style="font-size: 14px; font-weight: 400; color: #94a3b8; background: transparent; border: 1px solid #334155; border-radius: 6px; padding: 8px 16px; min-height: 36px; cursor: pointer;"
+							>
+								Cancel
+							</button>
+							<button
+								type="button"
+								onclick={() => { preflightCleared = true; duplicateWarning = null; document.querySelector('form')?.requestSubmit(); }}
+								style="font-size: 14px; font-weight: 600; color: #e2e8f0; background: transparent; border: 1px solid #93c5fd; border-radius: 6px; padding: 8px 16px; min-height: 36px; cursor: pointer;"
+							>
+								Start anyway
+							</button>
+						</div>
 					</div>
 				{/if}
 

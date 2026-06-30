@@ -1,7 +1,8 @@
 ---
 phase: 19
 slug: pipeline-reliability
-status: draft
+status: approved
+reviewed_at: 2026-06-30
 shadcn_initialized: false
 preset: none
 created: 2026-06-30

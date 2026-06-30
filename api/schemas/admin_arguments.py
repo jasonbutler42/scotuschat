@@ -70,10 +70,11 @@ class ArgumentListItem(BaseModel):
     so the list page can render status badges without a per-row detail fetch.
     status (Phase 15) is the explicit lifecycle enum value.  The list only
     returns DRAFT and PUBLISHED rows (pipeline-state arguments are excluded, D-02).
+    argued_date is Optional[datetime.date] after migration 0011 (D-08 / Phase 19).
     """
 
     id: int
-    argued_date: datetime.date
+    argued_date: Optional[datetime.date] = None  # nullable after migration 0011 (D-08)
     case_name: str          # lead case
     docket_number: str      # lead case
     resolved_at: Optional[datetime.datetime] = None
@@ -107,10 +108,12 @@ class ArgumentDetail(BaseModel):
     argued_date falls outside all their CourtTenure rows.
     participants (Phase 15, D-12): list of resolved advocate participants for
     the per-argument role editor — excludes BENCH participants.
+    source_docket (Phase 19, D-01): new column; exposed for job detail metadata card.
+    cover_metadata (Phase 19, D-07): raw cover extractor output; exposed for hint text.
     """
 
     id: int
-    argued_date: datetime.date
+    argued_date: Optional[datetime.date] = None  # nullable after migration 0011 (D-08)
     case_name: str
     docket_number: str
     slug: str
@@ -120,6 +123,8 @@ class ArgumentDetail(BaseModel):
     consolidated_dockets: list[ConsolidatedDocket] = []
     tenure_gap_warnings: list[TenureGapWarning] = []       # Phase 15
     participants: list[AdvocateParticipant] = []           # Phase 15 D-12
+    source_docket: Optional[str] = None                   # Phase 19 D-01
+    cover_metadata: Optional[dict] = None                 # Phase 19 D-07
 
     model_config = {"from_attributes": True}
 
@@ -142,4 +147,22 @@ class ArgumentUpdate(BaseModel):
 
     case_name: Optional[str] = None
     docket_number: Optional[str] = None
+    argued_date: Optional[str] = None  # ISO date string "YYYY-MM-DD"
+
+
+class MetadataUpdate(BaseModel):
+    """PATCH body for argument metadata from job detail page (D-15, Phase 19).
+
+    Mass-assignment guard (T-19-03-01): ONLY case_name, source_docket, and
+    argued_date are writable via this schema.  No other Argument or Case field
+    can be set here.
+
+    argued_date is accepted as an ISO 8601 string "YYYY-MM-DD"; parsed by the
+    service layer with datetime.date.fromisoformat() (V5 Input Validation pattern).
+    source_docket is the primary docket string (e.g. "14-556") from the pipeline
+    start form or cover extractor — stored on Argument.source_docket (D-01).
+    """
+
+    case_name: Optional[str] = None
+    source_docket: Optional[str] = None
     argued_date: Optional[str] = None  # ISO date string "YYYY-MM-DD"

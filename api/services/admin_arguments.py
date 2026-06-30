@@ -31,7 +31,7 @@ from api.models.models import (
     Person,
     SideEnum,
 )
-from api.schemas.admin_arguments import ArgumentUpdate
+from api.schemas.admin_arguments import ArgumentUpdate, MetadataUpdate
 from pipeline.commands.ingest import _derive_slug  # noqa: F401 — re-exported for tests
 
 
@@ -203,6 +203,8 @@ async def get_argument_detail(db: AsyncSession, argument_id: int) -> dict | None
         ],
         "tenure_gap_warnings": tenure_gap_warnings,
         "participants": participants,
+        "source_docket": argument.source_docket,    # Phase 19 D-01
+        "cover_metadata": argument.cover_metadata,  # Phase 19 D-07
     }
 
 
@@ -405,3 +407,80 @@ async def unpublish_argument(db: AsyncSession, argument_id: int) -> dict | None:
     )
     await db.commit()
     return await get_argument_detail(db, argument_id)
+
+
+async def check_duplicate_argument(db: AsyncSession, docket: str, question: int) -> dict:
+    """Check if an argument with (source_docket, question_number) already exists.
+
+    Returns dict with keys 'exists' (bool) and 'argument_id' (int | None).
+    Called by the JS preflight endpoint (D-04, Phase 19).
+
+    No 404 — absence of a match is a valid 200 response.
+    Uses parameterized query (T-19-03-03: no string interpolation, SQLAlchemy bind params).
+    """
+    result = await db.execute(
+        select(Argument.id).where(
+            Argument.source_docket == docket,
+            Argument.question_number == question,
+        )
+    )
+    row = result.scalar_one_or_none()
+    return {"exists": row is not None, "argument_id": row}
+
+
+async def update_argument_metadata(
+    db: AsyncSession, argument_id: int, body: MetadataUpdate
+) -> bool:
+    """Update Argument.argued_date, Argument.source_docket, and lead Case.case_name
+    from the job detail metadata card (D-15, Phase 19).
+
+    Returns False if argument_id not found (router converts to 404 — T-19-03-02).
+
+    Mass-assignment guard (T-19-03-01): ONLY argued_date, source_docket on Argument
+    and case_name on the lead Case are writable via this function.
+
+    Critical: every UPDATE statement uses .execution_options(synchronize_session=False)
+    (Pitfall 5 — project-wide critical guard).
+    """
+    # a. Fetch Argument by id
+    result = await db.execute(
+        select(Argument).where(Argument.id == argument_id)
+    )
+    argument = result.scalar_one_or_none()
+    if argument is None:
+        return False
+
+    # b. Parse argued_date from ISO string if provided
+    parsed_date: datetime.date | None = (
+        datetime.date.fromisoformat(body.argued_date)
+        if body.argued_date
+        else None
+    )
+
+    # c. Update Argument row (argued_date and source_docket)
+    await db.execute(
+        update(Argument)
+        .where(Argument.id == argument_id)
+        .values(argued_date=parsed_date, source_docket=body.source_docket)
+        .execution_options(synchronize_session=False)
+    )
+
+    # d. Update lead Case.case_name if provided
+    if body.case_name is not None:
+        lead_result = await db.execute(
+            select(CaseArgument).where(
+                CaseArgument.argument_id == argument_id,
+                CaseArgument.is_lead == True,  # noqa: E712
+            )
+        )
+        lead_ca = lead_result.scalar_one_or_none()
+        if lead_ca is not None:
+            await db.execute(
+                update(Case)
+                .where(Case.id == lead_ca.case_id)
+                .values(case_name=body.case_name)
+                .execution_options(synchronize_session=False)
+            )
+
+    await db.commit()
+    return True

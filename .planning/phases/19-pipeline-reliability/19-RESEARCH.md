@@ -628,17 +628,19 @@ Step 2.6 SKIPPED — no new external tools, CLIs, or services required. All chan
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Route ordering for `GET /api/admin/arguments/check-duplicate`**
    - What we know: FastAPI registers routes in order; a `/arguments/{argument_id}` parameterized route already exists in `admin.py`.
    - What's unclear: Whether `/arguments/check-duplicate` will be shadowed by `/arguments/{argument_id}`.
    - Recommendation: Register `GET /arguments/check-duplicate` **before** any `GET /arguments/{argument_id}` route in `admin.py`. FastAPI resolves literal path segments before parameters. Verify registration order in `admin.py` before writing the endpoint.
+   - **RESOLVED:** Plan 19-03 Task 3 addresses this explicitly with a CRITICAL note and a verification command to confirm route ordering.
 
 2. **Ingest CLI arg for `--question` forwarding**
    - What we know: `spawn_pipeline_step("ingest", job.id, ["--url", pdf_url])` in `admin.py` does NOT currently pass `--question`.
    - What's unclear: Whether `--question` is already an accepted CLI arg in `ingest.py` (it appears in `args.question` usage in the body but the argparse registration isn't shown in the read portion).
    - Recommendation: Planner should verify `pipeline/main.py` argparse config includes `--question` as an arg that is already wired, then ensure `spawn_pipeline_step` forwards both `--primary-docket` and `--question` from the form submission.
+   - **RESOLVED:** Plan 19-02 Task 2 reads `pipeline/main.py` first and handles both `--primary-docket` and `--question` forwarding.
 
 ---
 

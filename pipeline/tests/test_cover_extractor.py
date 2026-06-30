@@ -348,3 +348,51 @@ def test_extract_advocate_sides_returns_dict():
     assert isinstance(result, dict), (
         f"Expected dict, got: {type(result)!r}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Test 8: DOCKET_RE — docket number extraction regex (D-12, Phase 19)
+# ---------------------------------------------------------------------------
+
+
+def test_docket_re_matches_alderson_format():
+    """DOCKET_RE matches 'No. 14-556' (Alderson cover-page docket format)."""
+    from pipeline.parser.cover_extractor import DOCKET_RE
+
+    m = DOCKET_RE.search("IN THE SUPREME COURT\nNo. 14-556\nObergefell v. Hodges")
+    assert m is not None, "DOCKET_RE should match 'No. 14-556' in Alderson cover text"
+    assert m.group(1) == "14-556", (
+        f"Expected group(1) == '14-556', got: {m.group(1)!r}"
+    )
+
+
+def test_docket_re_matches_longer_number():
+    """DOCKET_RE matches 'No. 23-1003' (4-digit case number)."""
+    from pipeline.parser.cover_extractor import DOCKET_RE
+
+    m = DOCKET_RE.search("No. 23-1003")
+    assert m is not None, "DOCKET_RE should match 'No. 23-1003'"
+    assert m.group(1) == "23-1003", (
+        f"Expected group(1) == '23-1003', got: {m.group(1)!r}"
+    )
+
+
+def test_docket_re_no_match_when_absent():
+    """DOCKET_RE.search returns None when no docket pattern is present."""
+    from pipeline.parser.cover_extractor import DOCKET_RE
+
+    m = DOCKET_RE.search("IN THE SUPREME COURT\nNo docket here.")
+    assert m is None, (
+        f"Expected None when no docket pattern found, got: {m!r}"
+    )
+
+
+def test_extract_cover_metadata_still_failsafe():
+    """extract_cover_metadata returns a dict (not raises) for a non-existent PDF — D-10 fail-safe."""
+    from pathlib import Path
+    from pipeline.parser.cover_extractor import extract_cover_metadata
+
+    result = extract_cover_metadata(Path("/nonexistent/no-pdf-here.pdf"))
+    assert isinstance(result, dict), (
+        f"Expected dict from fail-safe path, got: {type(result)!r}"
+    )

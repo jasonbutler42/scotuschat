@@ -54,7 +54,7 @@ def _normalize_dashes(text: str) -> str:
     # All remaining en dashes, em dashes, soft hyphens → plain hyphen
     text = text.replace('–', '-')
     text = text.replace('—', '-')
-    text = text.replace('­', '-')
+    text = text.replace('\u00ad', '-')  # U+00AD SOFT HYPHEN (explicit escape, not invisible literal)
     return text
 
 

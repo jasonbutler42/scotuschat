@@ -338,6 +338,13 @@ async def _run_ingest_inner(args) -> None:
 
     async with get_session() as session:
         # ---- a. Case records (idempotent) ----
+        # CR-02: when case_name is None (operator did not supply it), use a placeholder
+        # that satisfies Case.case_name NOT NULL constraint; operator can edit it later.
+        effective_case_name = case_name or f"Pending review (job {args.job_id})"
+        # CR-02: designate lead docket — first in all_dockets when primary_docket is None,
+        # so at least one CaseArgument row has is_lead=True (required by get_argument_detail).
+        lead_docket = primary_docket if primary_docket is not None else (all_dockets[0] if all_dockets else None)
+
         cases: list[Case] = []
         for docket in all_dockets:
             result = await session.execute(
@@ -359,7 +366,7 @@ async def _run_ingest_inner(args) -> None:
                 new_case = Case(
                     docket_number=docket,
                     docket_number_norm=docket.replace("-", ""),
-                    case_name=case_name,
+                    case_name=effective_case_name,  # CR-02: never None
                     term_year=term_year,
                     slug=case_slug,
                 )
@@ -395,7 +402,7 @@ async def _run_ingest_inner(args) -> None:
                 link = CaseArgument(
                     case_id=case.id,
                     argument_id=argument.id,
-                    is_lead=(case.docket_number == primary_docket),
+                    is_lead=(case.docket_number == lead_docket),  # CR-02: use lead_docket (not primary_docket which may be None)
                 )
                 session.add(link)
 

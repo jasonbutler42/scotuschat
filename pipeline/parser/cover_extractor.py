@@ -66,6 +66,10 @@ TOC_SIDE_RE = re.compile(
 # TOC amicus line: 'For the United States, as amicus curiae' / 'as amicus curiae'
 TOC_AMICUS_RE = re.compile(r'amicus\s+curiae', re.IGNORECASE)
 
+# Docket number on cover page — Alderson: 'No. 14-556'.
+# Heritage format may differ — partial match is the acceptable fallback per D-10, A1.
+DOCKET_RE = re.compile(r'No\.\s+(\d{1,2}-\d+)', re.IGNORECASE)
+
 # Month name → integer mapping (first 3 lowercase letters)
 _MONTH_MAP = {
     "jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6,
@@ -256,7 +260,11 @@ def extract_cover_metadata(pdf_path: Path) -> dict:
                 name = _extract_case_name(_clean_lines(raw))
                 if name:
                     result["case_name"] = name
-            if len(result) == 2:
+            if "primary_docket" not in result:
+                m = DOCKET_RE.search(raw)
+                if m:
+                    result["primary_docket"] = m.group(1)
+            if len(result) == 3:
                 break
     except Exception:
         pass  # D-05: never raise; caller receives partial result or {}

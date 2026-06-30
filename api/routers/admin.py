@@ -64,6 +64,7 @@ from api.schemas.admin_arguments import (
     ArgumentDetail,
     ArgumentListItem,
     ArgumentUpdate,
+    MetadataUpdate,
     ParticipantSideUpdate,
 )
 from api.schemas.admin_people import (
@@ -627,6 +628,26 @@ async def list_arguments(
     return [ArgumentListItem(**a) for a in args]
 
 
+@router.get("/arguments/check-duplicate")
+async def check_duplicate_argument(
+    docket: str,
+    question: int,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """
+    JS preflight: check if (source_docket, question_number) already exists (D-04, Phase 19).
+
+    Returns 200 always — absence of a match is a valid response.
+    Response: {"exists": bool, "argument_id": int | null}.
+    Auth inherited at router level (T-19-03-04).
+
+    CRITICAL ordering note (T-19-03-05): this literal route MUST be registered
+    before GET /arguments/{argument_id} so FastAPI resolves the literal segment
+    "check-duplicate" first rather than consuming it as the argument_id param.
+    """
+    return await arguments_service.check_duplicate_argument(db, docket, question)
+
+
 @router.get("/arguments/{argument_id}", response_model=ArgumentDetail)
 async def get_argument(
     argument_id: int,
@@ -710,6 +731,27 @@ async def unpublish_argument(
     if result is None:
         raise HTTPException(status_code=404, detail="Argument not found")
     return ArgumentDetail(**result)
+
+
+@router.patch("/arguments/{argument_id}/metadata")
+async def update_argument_metadata(
+    argument_id: int,
+    body: MetadataUpdate,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """
+    Save operator-reviewed metadata from job detail page (D-15, Phase 19).
+
+    Updates Argument.argued_date, Argument.source_docket, and lead Case.case_name.
+    Auth inherited at router level (T-19-03-04).
+
+    Returns 404 if the argument does not exist (T-19-03-02 IDOR guard).
+    Returns {"success": True} on success.
+    """
+    result = await arguments_service.update_argument_metadata(db, argument_id, body)
+    if result is False:
+        raise HTTPException(status_code=404, detail="Argument not found")
+    return {"success": True}
 
 
 @router.post("/roles", status_code=201, response_model=RoleResponse)

@@ -71,7 +71,7 @@ Full phase details: `.planning/milestones/v1.3-ROADMAP.md`
 
 - [x] **Phase 18: People Schema + Editor** - is_justice boolean migration, backfill, and conditional editor UI (completed 2026-06-29)
 - [x] **Phase 19: Pipeline Reliability** - Duplicate argument prevention and metadata prefill (completed 2026-06-30)
-- [ ] **Phase 20: Live Pipeline Status** - Real-time polling on list and job detail pages
+- [x] **Phase 20: Live Pipeline Status** - Real-time polling on list and job detail pages (completed 2026-07-01)
 - [ ] **Phase 21: Admin UI Surface** - Delete actions for arguments and pipeline runs; unified admin navigation
 
 ## Phase Details
@@ -134,11 +134,11 @@ Plans:
   3. On the job detail page, step cards (Ingest / Parse / Resolve) update to show step completion in real time while the run is active
   4. Polling stops automatically once the run reaches a terminal state (completed, failed, needs_review)
 
-**Plans**: 1 plan
+**Plans**: 1/1 plans complete
 
 Plans:
 
-- [ ] 20-01-PLAN.md — Add 1s list-page polling $effect (PIPE-23) + human-verify detail-page live step cards (PIPE-24)
+- [x] 20-01-PLAN.md — Add 1s list-page polling $effect (PIPE-23) + human-verify detail-page live step cards (PIPE-24)
 
 **UI hint**: yes
 
@@ -180,7 +180,7 @@ Plans:
 | 17. Pipeline UI Polish | v1.3 | 3/3 | Complete | 2026-06-29 |
 | 18. People Schema + Editor | v1.4 | 3/3 | Complete    | 2026-06-29 |
 | 19. Pipeline Reliability | v1.4 | 5/5 | Complete    | 2026-06-30 |
-| 20. Live Pipeline Status | v1.4 | 0/1 | Not started | - |
+| 20. Live Pipeline Status | v1.4 | 1/1 | Complete   | 2026-07-01 |
 | 21. Admin UI Surface | v1.4 | 0/? | Not started | - |
 
 ## Backlog

@@ -532,9 +532,13 @@ async def upload_person_photo(
         content_type = photo_file.content_type or f"image/{ext}"
         result = await people_service.upload_photo(db, person_id, file_bytes, ext, content_type)
     elif photo_url is not None:
+        from urllib.parse import urlparse as _urlparse
+        _parsed_url = _urlparse(photo_url)
+        if _parsed_url.scheme != 'https':
+            raise HTTPException(status_code=422, detail="Photo URL must use HTTPS.")
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
-                r = await client.get(photo_url, follow_redirects=True)
+                r = await client.get(photo_url, follow_redirects=False)
                 r.raise_for_status()
                 file_bytes = r.content
         except Exception:

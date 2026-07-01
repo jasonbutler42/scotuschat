@@ -1,10 +1,11 @@
 """
-Pure-logic and import tests for admin_arguments service (Phase 11 Plan 02).
+Pure-logic and import tests for admin_arguments service (Phase 11 Plan 02 / Phase 21 Plan 01).
 
 Scope:
-  - Verify all five public service functions and the _derive_slug helper import correctly.
+  - Verify all public service functions and the _derive_slug helper import correctly.
   - Verify _derive_slug output matches the canonical pipeline transform.
   - Verify ArgumentUpdate schema has exactly the correct allow-list (mass-assignment guard).
+  - Verify delete_argument structural guards (FK order, synchronize_session=False).
   - DB-touching tests are guarded behind DATABASE_URL skip marker.
 
 These tests do NOT require a live database for the import and schema assertions.
@@ -32,8 +33,9 @@ def _db_configured() -> bool:
 
 
 def test_service_functions_import() -> None:
-    """All five public service functions must be importable from admin_arguments."""
+    """All public service functions must be importable from admin_arguments."""
     from api.services.admin_arguments import (  # noqa: F401
+        delete_argument,
         get_argument_detail,
         list_arguments,
         publish_argument,
@@ -149,6 +151,116 @@ def test_service_file_has_synchronize_session_false() -> None:
         f"Found {update_count} update() calls but only {sync_false_count} "
         "synchronize_session=False guards. Every update() needs the guard (Pitfall 5)."
     )
+
+
+# ---------------------------------------------------------------------------
+# delete_argument structural guards (Phase 21 Plan 01)
+# ---------------------------------------------------------------------------
+
+
+def test_delete_argument_importable() -> None:
+    """delete_argument must be importable from admin_arguments (Phase 21)."""
+    from api.services.admin_arguments import delete_argument  # noqa: F401
+
+
+def test_delete_argument_utterances_before_pipeline_runs() -> None:
+    """delete(Utterance) must appear before delete(PipelineRun) in delete_argument
+    (Pitfall 2 — utterances.pipeline_run_id FK requires utterances deleted first).
+    """
+    import inspect
+
+    from api.services import admin_arguments
+
+    source = inspect.getsource(admin_arguments)
+    # Find the delete_argument function body
+    func_start = source.find("def delete_argument(")
+    assert func_start != -1, "delete_argument not found in source"
+    # Find the next top-level function after delete_argument
+    next_func = source.find("\nasync def ", func_start + 1)
+    if next_func == -1:
+        next_func = source.find("\ndef ", func_start + 1)
+    func_body = source[func_start:next_func] if next_func != -1 else source[func_start:]
+    # Utterance delete must appear before PipelineRun delete
+    utterance_pos = func_body.find("delete(Utterance)")
+    pipeline_run_pos = func_body.find("delete(PipelineRun)")
+    assert utterance_pos != -1, "delete(Utterance) not found in delete_argument body"
+    assert pipeline_run_pos != -1, "delete(PipelineRun) not found in delete_argument body"
+    assert utterance_pos < pipeline_run_pos, (
+        "delete(Utterance) must appear before delete(PipelineRun) "
+        "(Pitfall 2: utterances.pipeline_run_id FK order)"
+    )
+
+
+def test_delete_argument_admin_job_nulled_before_argument_deleted() -> None:
+    """update(AdminJob) setting argument_id=None must appear before delete(Argument)
+    in delete_argument body (Pitfall 1 — AdminJob FK would violate RESTRICT).
+    """
+    import inspect
+
+    from api.services import admin_arguments
+
+    source = inspect.getsource(admin_arguments)
+    func_start = source.find("def delete_argument(")
+    assert func_start != -1, "delete_argument not found in source"
+    next_func = source.find("\nasync def ", func_start + 1)
+    if next_func == -1:
+        next_func = source.find("\ndef ", func_start + 1)
+    func_body = source[func_start:next_func] if next_func != -1 else source[func_start:]
+    admin_job_update_pos = func_body.find("update(AdminJob)")
+    argument_delete_pos = func_body.find("delete(Argument)")
+    assert admin_job_update_pos != -1, "update(AdminJob) not found in delete_argument body (Pitfall 1)"
+    assert argument_delete_pos != -1, "delete(Argument) not found in delete_argument body"
+    assert admin_job_update_pos < argument_delete_pos, (
+        "update(AdminJob) must appear before delete(Argument) "
+        "(Pitfall 1: AdminJob.argument_id FK has no ondelete)"
+    )
+
+
+def test_delete_argument_all_deletes_have_synchronize_session_false() -> None:
+    """Every delete() call inside delete_argument must include
+    .execution_options(synchronize_session=False) (Pitfall 3).
+    """
+    import inspect
+
+    from api.services import admin_arguments
+
+    source = inspect.getsource(admin_arguments)
+    func_start = source.find("def delete_argument(")
+    assert func_start != -1, "delete_argument not found in source"
+    next_func = source.find("\nasync def ", func_start + 1)
+    if next_func == -1:
+        next_func = source.find("\ndef ", func_start + 1)
+    func_body = source[func_start:next_func] if next_func != -1 else source[func_start:]
+    # Count db.execute(delete(...)) calls — each needs synchronize_session=False
+    delete_call_count = func_body.count("delete(")
+    # We expect at least 5 delete() calls (Utterance, PipelineRun, ArgumentParticipant,
+    # CaseArgument, Argument) and at least 1 update() call (AdminJob).
+    # Every delete() and update() must have execution_options guard.
+    exec_opts_count = func_body.count("synchronize_session=False")
+    assert delete_call_count >= 5, (
+        f"Expected at least 5 delete() calls in delete_argument, found {delete_call_count}"
+    )
+    assert exec_opts_count >= delete_call_count, (
+        f"Found {delete_call_count} delete() calls but only {exec_opts_count} "
+        "synchronize_session=False guards in delete_argument (Pitfall 3)."
+    )
+
+
+# ---------------------------------------------------------------------------
+# DB-guarded delete_argument behavioral tests (Phase 21 Plan 01)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_delete_argument_returns_none_for_missing() -> None:
+    """delete_argument() must return None for a non-existent argument id."""
+    from api.core.database import AsyncSessionLocal
+    from api.services.admin_arguments import delete_argument
+
+    async with AsyncSessionLocal() as db:
+        result = await delete_argument(db, 999999)
+    assert result is None
 
 
 # ---------------------------------------------------------------------------

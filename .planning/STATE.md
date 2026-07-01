@@ -4,9 +4,9 @@ milestone: v1.4
 milestone_name: Admin Completeness
 current_phase: 21
 current_phase_name: Admin UI Surface
-status: planning
-stopped_at: Phase 21 context gathered
-last_updated: "2026-07-01T18:28:38.176Z"
+status: executing
+stopped_at: Phase 21 UI-SPEC approved
+last_updated: "2026-07-01T18:58:26.110Z"
 last_activity: 2026-07-01
 last_activity_desc: Phase 20 PIPE-23/24 human-verified and closed
 progress:
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-06-29 after Phase 17 complete — v1.3 m
 
 Phase: 21 (Admin UI Surface) — NOT STARTED
 Plan: TBD
-Status: Phase 20 complete; awaiting Phase 21 planning
+Status: Ready to execute
 Last activity: 2026-07-01 — Phase 20 PIPE-23/24 human-verified and closed
 
 Progress: ███████░░░ 75% (3/4 phases)
@@ -166,6 +166,6 @@ Full log in PROJECT.md Key Decisions table. Key decisions for v1.2:
 
 ## Session Continuity
 
-Last session: 2026-07-01T18:28:38.165Z
-Stopped at: Phase 21 context gathered
-Resume file: .planning/phases/21-admin-ui-surface/21-CONTEXT.md
+Last session: 2026-07-01T18:39:23.806Z
+Stopped at: Phase 21 UI-SPEC approved
+Resume file: .planning/phases/21-admin-ui-surface/21-UI-SPEC.md

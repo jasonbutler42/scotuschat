@@ -3,7 +3,7 @@
 </svelte:head>
 
 <script lang="ts">
-	import { goto } from '$app/navigation';
+	import { goto, invalidateAll } from '$app/navigation';
 
 	let { data, form } = $props();
 
@@ -31,6 +31,18 @@
 	let duplicateWarning = $state<{ argumentId: number; docket: string; question: string } | null>(null);
 	let preflightCleared = $state(false);
 	let formEl: HTMLFormElement;
+
+	// D-03: Poll while at least one job has status === 'running'.
+	// D-04: paused and pending do NOT keep polling alive — only 'running' sustains the interval.
+	$effect(() => {
+		if (!data.jobs.some((j: { status: string }) => j.status === 'running')) return;
+
+		const interval = setInterval(async () => {
+			await invalidateAll();
+		}, 1000);
+
+		return () => clearInterval(interval);
+	});
 
 	function setMode(m: 'url' | 'upload') {
 		mode = m;

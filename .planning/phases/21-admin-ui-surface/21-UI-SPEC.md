@@ -44,9 +44,9 @@ Declared values (must be multiples of 4):
 
 Exceptions:
 - Touch targets (buttons): `min-height: 44px` — WCAG 2.1 SC 2.5.5; applies to all delete/confirm/cancel buttons
-- Admin sub-nav strip: `padding: 12px 24px` — matches existing TopNav strip height (12px ≠ xs/lg but is the established nav convention)
+- Admin sub-nav strip: `padding: 12px 24px` — **codebase-legacy carve-out only.** Confirmed at `app/src/lib/components/TopNav.svelte` line 13: the existing TopNav `<nav>` uses `padding: 12px 24px` verbatim. `AdminSubNav` must match this exact value so the two stacked nav rows are visually identical in height. `12px` is not on the 4-point grid and MUST NOT be used on any other new component in this phase or future phases.
 
-Source: Derived from existing inline styles across `admin/people/[id]/+page.svelte`, `admin/arguments/[id]/+page.svelte`, `TopNav.svelte`.
+Source: Derived from existing inline styles across `admin/people/[id]/+page.svelte`, `admin/arguments/[id]/+page.svelte`, `TopNav.svelte` (line 13).
 
 ---
 

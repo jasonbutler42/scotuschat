@@ -72,7 +72,7 @@ Full phase details: `.planning/milestones/v1.3-ROADMAP.md`
 - [x] **Phase 18: People Schema + Editor** - is_justice boolean migration, backfill, and conditional editor UI (completed 2026-06-29)
 - [x] **Phase 19: Pipeline Reliability** - Duplicate argument prevention and metadata prefill (completed 2026-06-30)
 - [x] **Phase 20: Live Pipeline Status** - Real-time polling on list and job detail pages (completed 2026-07-01)
-- [ ] **Phase 21: Admin UI Surface** - Delete actions for arguments and pipeline runs; unified admin navigation
+- [x] **Phase 21: Admin UI Surface** - Delete actions for arguments and pipeline runs; unified admin navigation (completed 2026-07-01)
 
 ## Phase Details
 
@@ -154,7 +154,7 @@ Plans:
   3. The admin header navigation matches the public navigation in visual style and shares the same component or structure (no duplicate ad-hoc markup)
   4. Deleting an argument or pipeline run returns the operator to the correct listing page with the deleted item gone
 
-**Plans**: 2/3 plans executed
+**Plans**: 3/3 plans complete
 
 Plans:
 
@@ -165,7 +165,7 @@ Plans:
 
 **Wave 2** *(blocked on 21-01 — shares api/routers/admin.py)*
 
-- [ ] 21-02-PLAN.md — Pipeline run delete: delete_job service (admin_job row only) + DELETE endpoint + job-detail two-step confirm UI (ADMIN-02)
+- [x] 21-02-PLAN.md — Pipeline run delete: delete_job service (admin_job row only) + DELETE endpoint + job-detail two-step confirm UI (ADMIN-02)
 
 **UI hint**: yes
 
@@ -193,7 +193,7 @@ Plans:
 | 18. People Schema + Editor | v1.4 | 3/3 | Complete    | 2026-06-29 |
 | 19. Pipeline Reliability | v1.4 | 5/5 | Complete    | 2026-06-30 |
 | 20. Live Pipeline Status | v1.4 | 1/1 | Complete   | 2026-07-01 |
-| 21. Admin UI Surface | v1.4 | 2/3 | In Progress|  |
+| 21. Admin UI Surface | v1.4 | 3/3 | Complete   | 2026-07-01 |
 
 ## Backlog
 

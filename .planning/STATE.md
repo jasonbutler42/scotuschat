@@ -4,17 +4,17 @@ milestone: v1.4
 milestone_name: Admin Completeness
 current_phase: 21
 current_phase_name: admin-ui-surface
-status: executing
+status: verifying
 stopped_at: Phase 21 UI-SPEC approved
-last_updated: "2026-07-01T19:26:24.484Z"
+last_updated: "2026-07-01T19:36:57.711Z"
 last_activity: 2026-07-01
 last_activity_desc: Phase 21 execution started
 progress:
   total_phases: 4
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 12
-  completed_plans: 11
-  percent: 75
+  completed_plans: 12
+  percent: 100
 ---
 
 # Project State
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-06-29 after Phase 17 complete — v1.3 m
 
 Phase: 21 (admin-ui-surface) — EXECUTING
 Plan: 3 of 3
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-07-01 — Phase 21 execution started
 
 Progress: ███████░░░ 75% (3/4 phases)
@@ -85,6 +85,7 @@ Progress: ███████░░░ 75% (3/4 phases)
 | Phase 18 P03 | 18 | 3 tasks | 4 files |
 | Phase 21 P01 | 25 | 3 tasks | 5 files |
 | Phase 21 P03 | 126 | 3 tasks | 3 files |
+| Phase 21 P02 | 20 | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -149,6 +150,8 @@ Full log in PROJECT.md Key Decisions table. Key decisions for v1.2:
 - [Phase ?]: [21-01]: can_delete = argument.status !== 'published'; $effect resets deleteConfirming on soft nav (Pitfall 7); ADMIN-01 complete
 - [Phase ?]: .planning/phases/21-admin-ui-surface/21-03-SUMMARY.md
 - [Phase ?]: .planning/phases/21-admin-ui-surface/21-03-SUMMARY.md
+- [Phase ?]: delete_job returns bool not bool-or-None; no blocked state for jobs; False equals not-found
+- [Phase ?]: No can_delete gate on job delete; jobs always deletable; D-08 published guard is arguments-only
 
 ### Pending Todos
 
@@ -172,6 +175,6 @@ Full log in PROJECT.md Key Decisions table. Key decisions for v1.2:
 
 ## Session Continuity
 
-Last session: 2026-07-01T19:25:34.142Z
+Last session: 2026-07-01T19:36:50.782Z
 Stopped at: Phase 21 UI-SPEC approved
 Resume file: .planning/phases/21-admin-ui-surface/21-UI-SPEC.md

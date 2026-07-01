@@ -15,7 +15,7 @@
 ### Admin Data Management
 
 - [x] **ADMIN-01**: Operator can delete a mis-created argument from the admin UI (with confirmation; blocked if argument has published utterances)
-- [ ] **ADMIN-02**: Operator can delete a pipeline run from the admin UI (with confirmation)
+- [x] **ADMIN-02**: Operator can delete a pipeline run from the admin UI (with confirmation)
 
 ### Pipeline Reliability
 
@@ -54,7 +54,7 @@
 | PIPE-23 | Phase 20 | Pending |
 | PIPE-24 | Phase 20 | Pending |
 | ADMIN-01 | Phase 21 | Complete |
-| ADMIN-02 | Phase 21 | Pending |
+| ADMIN-02 | Phase 21 | Complete |
 | NAV-02 | Phase 21 | Complete |
 
 **Coverage:**

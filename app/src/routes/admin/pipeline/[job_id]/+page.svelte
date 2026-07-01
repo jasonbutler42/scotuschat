@@ -45,7 +45,8 @@
 	// scoped inside {#if data.argument} (Pitfall 5 — that one is not accessible here).
 	function formatDate(iso: string | null | undefined): string {
 		if (!iso) return '—';
-		return new Date(iso).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+		const [y, m, d] = iso.slice(0, 10).split('-').map(Number);
+		return new Date(y, m - 1, d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 	}
 
 	// ──────────────────────────────────────────────────────────────────────────
@@ -369,7 +370,7 @@
 			{@const argStatus = arg.status ?? (arg.published_at != null ? 'published' : arg.resolved_at != null ? 'draft' : 'pipeline')}
 			{@const argBadgeColor = argStatus === 'published' ? '#4ade80' : argStatus === 'draft' ? '#a78bfa' : '#94a3b8'}
 			{@const argBadgeLabel = argStatus === 'published' ? 'Published' : argStatus === 'draft' ? 'Draft' : 'Pipeline'}
-			{@const formatArgDate = (iso: string | null) => iso ? new Date(iso).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '—'}
+			{@const formatArgDate = (iso: string | null) => { if (!iso) return '—'; const [y, m, d] = iso.slice(0, 10).split('-').map(Number); return new Date(y, m - 1, d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }); }}
 			<div
 				style="
 					background-color: #1e293b;

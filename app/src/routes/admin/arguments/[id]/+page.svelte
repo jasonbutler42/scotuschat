@@ -11,11 +11,8 @@
 	// Format ISO date string for display — identical to list page formatDate.
 	function formatDate(iso: string): string {
 		try {
-			return new Date(iso).toLocaleDateString('en-US', {
-				year: 'numeric',
-				month: 'short',
-				day: 'numeric',
-			});
+			const [y, m, d] = iso.slice(0, 10).split('-').map(Number);
+			return new Date(y, m - 1, d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 		} catch {
 			return iso;
 		}

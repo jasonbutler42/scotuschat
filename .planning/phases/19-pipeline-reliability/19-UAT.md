@@ -1,5 +1,5 @@
 ---
-status: testing
+status: complete
 phase: 19-pipeline-reliability
 source: 19-01-SUMMARY.md, 19-02-SUMMARY.md, 19-03-SUMMARY.md, 19-04-SUMMARY.md
 started: 2026-06-30T16:17:28Z
@@ -9,11 +9,7 @@ updated: 2026-07-01T00:01:00Z
 ## Current Test
 <!-- OVERWRITE each test - shows where we are -->
 
-number: 7
-name: Metadata card — hint text from cover extraction (re-test after argued_date JSONB fix)
-expected: |
-  Run the pipeline with a purposely incorrect docket number. After the job completes parse, navigate to its detail page. In the Argument Metadata card, the Docket field should show faint hint text "Extracted: [value]" if the PDF cover's docket differs from what you typed as the argument's docket. Fields where extracted and stored values match show no hint text.
-awaiting: user response
+[testing complete]
 
 ## Tests
 
@@ -43,8 +39,13 @@ result: pass
 
 ### 7. Metadata card — hint text from cover extraction
 expected: For a job where the PDF cover extractor found a docket or date different from what is currently stored, the relevant field shows faint hint text like "Extracted: 14-556". Fields where extracted and stored values match, or where cover_metadata is null, show no hint text.
-result: [pending]
-note: Re-testing after cover_extractor.py fix — argued_date was stored as a date object (not JSON-serializable); changed to .isoformat() string in commit pending. Run the pipeline again with a purposely incorrect docket to create a suitable test job.
+result: pass
+notes: |
+  Docket hint confirmed working (04-1528 extracted from consolidated case PDF, shown under field).
+  Two additional bugs found and fixed during this test:
+  - cover_metadata JSONB write: argued_date date object not JSON-serializable — fixed in parse.py Block C (ISO string serialization at JSONB write boundary).
+  - Date display off-by-one: new Date(iso) parses ISO date strings as UTC midnight, shifting back one day in US timezones — fixed across all 4 admin formatDate functions.
+  Case name extraction artifact noted (separator fused with name on same line in some PDFs) — logged as known limitation, not a new bug.
 
 ### 8. Metadata card — save succeeds
 expected: Edit one of the metadata fields (e.g., change case_name or source_docket) and click Save metadata. A green "Metadata saved." success message appears below the button. Refreshing the page shows the updated value pre-populated.
@@ -53,9 +54,9 @@ result: pass
 ## Summary
 
 total: 8
-passed: 7
+passed: 8
 issues: 0
-pending: 1
+pending: 0
 skipped: 0
 blocked: 0
 

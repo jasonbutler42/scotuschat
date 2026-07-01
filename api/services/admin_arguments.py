@@ -260,7 +260,10 @@ async def update_argument(
 
     # 3. Apply argued_date (T-11-VALID)
     if body.argued_date is not None:
-        argument.argued_date = datetime.date.fromisoformat(body.argued_date)
+        try:
+            argument.argued_date = datetime.date.fromisoformat(body.argued_date)
+        except ValueError:
+            raise ValueError("invalid_date_format")
 
     # 4. Apply docket_number with collision check (T-11-DOCKET)
     if body.docket_number is not None:

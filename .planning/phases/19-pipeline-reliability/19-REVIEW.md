@@ -391,3 +391,25 @@ before v1.3 deployment.
 _Reviewed: 2026-06-30_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
+
+---
+
+## Plan 05 Supplement (2026-07-01)
+
+**Files reviewed:** `app/src/routes/admin/pipeline/+page.svelte` (3-line gap closure fix)
+**Correctness bugs:** 0
+**Cleanup findings:** 2 (PLAUSIBLE, low severity)
+
+### P05-C1: `formEl` typed as `HTMLFormElement` without `| undefined` (cleanup)
+
+**File:** `app/src/routes/admin/pipeline/+page.svelte:33`
+
+`let formEl: HTMLFormElement;` declares the binding without an initializer. TypeScript accepts `formEl.requestSubmit()` without a null check because the type excludes `undefined`. In practice, `bind:this` sets `formEl` synchronously on mount and the button is inside the form (so both mount together), making this safe at runtime. No action required; this is the standard Svelte `bind:this` pattern.
+
+### P05-C2: Three `(e.target as HTMLFormElement).requestSubmit()` calls in `handleSubmit` inconsistent with new `formEl` ref (cleanup)
+
+**File:** `app/src/routes/admin/pipeline/+page.svelte:58,66,71`
+
+The new diff introduces `formEl` via `bind:this` for imperative submission, but the three existing resubmit calls inside `handleSubmit` still use `(e.target as HTMLFormElement).requestSubmit()`. Both reference the same element and are correct; the inconsistency is cosmetic only. Could be unified in a future cleanup pass.
+
+**Status:** advisory — no blocking issues in plan 05 changes.

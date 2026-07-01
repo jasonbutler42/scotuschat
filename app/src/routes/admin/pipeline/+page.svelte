@@ -3,19 +3,13 @@
 </svelte:head>
 
 <script lang="ts">
-	import { goto } from '$app/navigation';
+	import { goto, invalidateAll } from '$app/navigation';
 
 	let { data, form } = $props();
 
 	// IncompleteToggle state — mirrors the server-side incomplete flag (D-11, D-13).
 	// $derived keeps it in sync when the load re-runs after navigation.
 	let incomplete = $derived(data.incomplete ?? false);
-
-	// liveJobs: $state copy updated by direct 1s fetch — bypasses the
-	// invalidateAll→prop-update chain (known project issue, CR-03).
-	// The sync effect keeps it in step with SvelteKit load re-runs (Ctrl+R, nav).
-	let liveJobs = $state(data.jobs);
-	$effect(() => { liveJobs = data.jobs; });
 
 	function handleToggle() {
 		if (incomplete) {
@@ -41,23 +35,21 @@
 	// D-03: Poll while at least one job has status === 'running'.
 	// D-04: paused and pending do NOT keep polling alive — only 'running' sustains the interval.
 	$effect(() => {
-		if (!liveJobs.some((j: { status: string }) => j.status === 'running')) return;
+		if (!data.jobs.some((j: { status: string }) => j.status === 'running')) return;
 
 		const interval = setInterval(async () => {
-			const res = await fetch('/admin/pipeline', { headers: { Accept: 'application/json' } });
-			if (res.ok) liveJobs = await res.json();
+			await invalidateAll();
 		}, 1000);
 
 		return () => clearInterval(interval);
 	});
 
-	// On bfcache restore (Back after a form-action redirect), fetch fresh jobs
-	// directly rather than relying on invalidateAll to propagate through props.
+	// On bfcache restore (Back after a form-action redirect), reload page data
+	// so the job list reflects the current state without a manual refresh.
 	$effect(() => {
 		async function onPageShow(e: PageTransitionEvent) {
 			if (!e.persisted) return;
-			const res = await fetch('/admin/pipeline', { headers: { Accept: 'application/json' } });
-			if (res.ok) liveJobs = await res.json();
+			await invalidateAll();
 		}
 		window.addEventListener('pageshow', onPageShow);
 		return () => window.removeEventListener('pageshow', onPageShow);
@@ -499,7 +491,7 @@
 				</div>
 			</div>
 
-			{#if incomplete && (!liveJobs || liveJobs.length === 0)}
+			{#if incomplete && (!data.jobs || data.jobs.length === 0)}
 				<!-- Filter-on empty state: no paused/failed jobs (13-UI-SPEC §Component Inventory 3) -->
 				<div
 					style="
@@ -531,7 +523,7 @@
 						All recent runs completed or are running. Toggle off to see the full history.
 					</p>
 				</div>
-			{:else if !liveJobs || liveJobs.length === 0}
+			{:else if !data.jobs || data.jobs.length === 0}
 				<!-- Default empty state per 07-UI-SPEC Copywriting Contract -->
 				<div
 					style="
@@ -630,7 +622,7 @@
 							</tr>
 						</thead>
 						<tbody>
-							{#each liveJobs as job}
+							{#each data.jobs as job}
 								<tr>
 									<td
 										style="

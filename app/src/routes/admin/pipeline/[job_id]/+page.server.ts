@@ -166,18 +166,19 @@ export const actions: Actions = {
 			}
 		}
 
-		// Fetch the job to get argument_id for the PATCH endpoint
+		// Fetch the job to get argument_id for the PATCH endpoint (best-effort for side assignments)
 		let argumentId: number | null = null;
 		try {
 			const jobRes = await fetch(`${FASTAPI_BASE_URL}/api/admin/jobs/${params.job_id}`, {
 				headers: { 'X-Admin-Token': ADMIN_TOKEN },
 			});
-			if (jobRes.ok) {
-				const job = await jobRes.json();
-				argumentId = job.argument_id ?? null;
+			if (!jobRes.ok) {
+				return fail(502, { approveError: 'Could not load job. Try again.' });
 			}
+			const job = await jobRes.json();
+			argumentId = job.argument_id ?? null;
 		} catch {
-			// Continue — PATCH is best-effort; approve still proceeds
+			return fail(502, { approveError: 'Could not load job. Try again.' });
 		}
 
 		// PATCH each advocate side (non-blocking — approve proceeds even if a PATCH fails)

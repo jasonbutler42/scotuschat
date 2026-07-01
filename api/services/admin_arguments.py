@@ -537,7 +537,7 @@ async def update_argument_metadata(
     # WR-01: always writing source_docket=body.source_docket would NULL an existing
     # docket when the operator saves the form with that field left blank.
     values_to_set: dict = {}
-    if body.argued_date is not None or parsed_date is not None:
+    if parsed_date is not None:
         values_to_set["argued_date"] = parsed_date
     if body.source_docket is not None:
         values_to_set["source_docket"] = body.source_docket

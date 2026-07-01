@@ -44,6 +44,19 @@
 		return () => clearInterval(interval);
 	});
 
+	// When the browser restores this page from bfcache (e.g. after a form-action
+	// redirect to the detail page followed by pressing Back), the snapshot of
+	// data.jobs is stale and the polling $effect above evaluates it as "no running
+	// jobs" and exits immediately. Calling invalidateAll() here forces a fresh
+	// server load so the polling $effect gets accurate data on bfcache restore.
+	$effect(() => {
+		function onPageShow(e: PageTransitionEvent) {
+			if (e.persisted) invalidateAll();
+		}
+		window.addEventListener('pageshow', onPageShow);
+		return () => window.removeEventListener('pageshow', onPageShow);
+	});
+
 	function setMode(m: 'url' | 'upload') {
 		mode = m;
 	}

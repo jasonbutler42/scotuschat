@@ -42,11 +42,22 @@ Declared values (must be multiples of 4):
 | 2xl | 48px | Page content padding-top (main content area) |
 | 3xl | 64px | — (reserved, not used in admin pages) |
 
-Exceptions:
+Exception:
 - Touch targets (buttons): `min-height: 44px` — WCAG 2.1 SC 2.5.5; applies to all delete/confirm/cancel buttons
-- Admin sub-nav strip: `padding: 12px 24px` — **codebase-legacy carve-out only.** Confirmed at `app/src/lib/components/TopNav.svelte` line 13: the existing TopNav `<nav>` uses `padding: 12px 24px` verbatim. `AdminSubNav` must match this exact value so the two stacked nav rows are visually identical in height. `12px` is not on the 4-point grid and MUST NOT be used on any other new component in this phase or future phases.
 
 Source: Derived from existing inline styles across `admin/people/[id]/+page.svelte`, `admin/arguments/[id]/+page.svelte`, `TopNav.svelte` (line 13).
+
+---
+
+## Codebase Overrides
+
+The following values exist in the codebase and are documented here as implementation references only. They are NOT spacing tokens and MUST NOT be used on any new component created in this phase.
+
+| Component | Property | Value | Source | Constraint |
+|-----------|----------|-------|--------|------------|
+| `AdminSubNav` | `padding` | `12px 24px` | `app/src/lib/components/TopNav.svelte` line 13 — existing `<nav>` uses this value verbatim | Inherit verbatim to match TopNav height; do not apply to any other component |
+
+`12px` is not on the 4-point grid. `AdminSubNav` inherits it solely to produce identical row height to the existing `TopNav` nav element stacked above it. This is a codebase compatibility constraint, not a design decision.
 
 ---
 

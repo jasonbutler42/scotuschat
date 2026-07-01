@@ -4,23 +4,23 @@ reviewed: 2026-07-01T00:00:00Z
 depth: standard
 files_reviewed: 12
 files_reviewed_list:
-  - api/services/admin_arguments.py
-  - api/tests/test_admin_arguments_service.py
   - api/routers/admin.py
+  - api/services/admin_arguments.py
+  - api/services/admin_jobs.py
+  - api/tests/test_admin_arguments_service.py
+  - api/tests/test_admin_jobs_service.py
+  - app/src/lib/components/AdminSubNav.svelte
+  - app/src/lib/components/TopNav.svelte
+  - app/src/routes/admin/+layout.svelte
   - app/src/routes/admin/arguments/[id]/+page.server.ts
   - app/src/routes/admin/arguments/[id]/+page.svelte
-  - api/tests/test_admin_jobs_service.py
-  - api/services/admin_jobs.py
   - app/src/routes/admin/pipeline/[job_id]/+page.server.ts
   - app/src/routes/admin/pipeline/[job_id]/+page.svelte
-  - app/src/lib/components/AdminSubNav.svelte
-  - app/src/routes/admin/+layout.svelte
-  - app/src/lib/components/TopNav.svelte
 findings:
   critical: 4
-  warning: 7
+  warning: 6
   info: 3
-  total: 14
+  total: 13
 status: issues_found
 ---
 
@@ -33,250 +33,394 @@ status: issues_found
 
 ## Summary
 
-Phase 21 adds two delete flows (argument delete, job/run delete), a polling-based pipeline detail view, the argument detail editor with participant role assignment, and three nav components. The backend service logic is generally sound and the FK-ordered cascade in `delete_argument` is correctly implemented. The most serious defects are a logic bug that silently blocks all published-argument deletes via the wrong status check, an open-redirect / SSRF vector in the photo-URL fetch endpoint, a client-side polling loop fetching the wrong URL shape, and a condition bug in `update_argument_metadata` that can write a NULL date when the operator clears a date field.
+This phase surfaces admin argument and pipeline-run management UIs and the
+delete-run/delete-argument backend plumbing. The backend service layer is
+solid overall — the FK-ordered cascade in `delete_argument`, the
+`synchronize_session=False` guards on every bulk statement, and the atomic
+rowcount-based step-advance pattern are all correctly implemented.
+
+Four blockers were found: an unhandled exception that crashes the server when
+`update_argument_metadata` receives a malformed date string; a client-side
+polling loop that may silently fail if SvelteKit routes polling requests to the
+page handler instead of the `+server.ts` API endpoint; a `TopNav` component
+that declares only `'public'` as a valid variant type but the prop is never
+read, making it dead code while the admin layout shows the public nav
+(Cases/Admin links) to logged-in operators; and `aria-selected={false}`
+hardcoded on all combobox options, permanently suppressing keyboard-highlight
+state for screen readers.
+
+Six warnings cover a missing `try/except` wrapper at the router level for
+`update_argument_metadata`, silent empty-string storage for `source_docket`,
+missing test coverage for three new service functions, ambiguous
+`deleteSubmitting` reset timing, verbatim `error_message` display, and an
+unusual `$effect` inside a Svelte action.
 
 ---
 
 ## Critical Issues
 
-### CR-01: `delete_argument` checks `status == PUBLISHED` but published arguments use `published_at`, not necessarily `status`
+### CR-01: `update_argument_metadata` crashes on malformed argued_date — unhandled ValueError propagates as 500
 
-**File:** `api/services/admin_arguments.py:463`
-**Issue:** The guard `if argument.status == ArgumentStatusEnum.PUBLISHED: return False` blocks deletion only when the ORM status column equals `PUBLISHED`. However, `publish_argument` stamps `published_at` via a Core `UPDATE` with `synchronize_session=False`, which **does not update the in-session ORM object**. The in-memory `argument.status` loaded on line 459 still reflects the value from the `SELECT` issued on line 458. If `status` and `published_at` can drift (e.g. `published_at` is set but `status` is still `DRAFT` because a migration or manual fix put the rows out of sync), the guard would pass and allow deletion of a published argument. More critically, the symmetry is backwards: `publish_argument` only sets `published_at`; it does **not** change `status`. The status column tracks pipeline state (`PIPELINE → DRAFT → PUBLISHED`) — verify that `publish_argument` actually transitions `status` to `PUBLISHED`. If it does not, then a published argument (one with `published_at IS NOT NULL`) whose `status` column is still `DRAFT` will pass the guard on line 463 and be deletable. The router docstring says "Returns 409 if `argument.status == 'published'`" but the real safety net should be `published_at IS NOT NULL`.
+**File:** `api/services/admin_arguments.py:533-536`
 
-**Fix:** Guard on `published_at` instead of (or in addition to) `status`, since `published_at` is the authoritative stamp:
+**Issue:** `datetime.date.fromisoformat(body.argued_date)` is called without a
+`try/except`. If the operator submits a non-ISO string (e.g. a browser
+auto-fill value like `"07/01/2026"`) the call raises `ValueError`. This
+propagates to the router at `api/routers/admin.py:769-772`, which does **not**
+wrap `update_argument_metadata` in a `try/except ValueError` — it only checks
+`result is False`. The request produces an unhandled 500 instead of a 422.
+
+Compare with the sibling `update_argument` service (line 262-266) which wraps
+the same `fromisoformat` call correctly.
+
+**Fix — service:**
 ```python
-# In delete_argument, after loading the argument row:
-if argument.published_at is not None:
-    return False
+# api/services/admin_arguments.py
+parsed_date: datetime.date | None = None
+if body.argued_date:
+    try:
+        parsed_date = datetime.date.fromisoformat(body.argued_date)
+    except ValueError:
+        raise ValueError("invalid_date_format")
 ```
-Additionally, confirm that `publish_argument` transitions `argument.status` to `PUBLISHED` atomically with the `published_at` stamp, so both checks are consistent.
 
----
-
-### CR-02: `update_argument_metadata` condition bug — always writes `argued_date` even when input is empty/None
-
-**File:** `api/services/admin_arguments.py:540`
-**Issue:** The condition for including `argued_date` in the update is:
+**Fix — router:**
 ```python
-if body.argued_date is not None or parsed_date is not None:
-    values_to_set["argued_date"] = parsed_date
-```
-`parsed_date` is set to `None` when `body.argued_date` is falsy (empty string or `None`) on lines 531–534:
-```python
-parsed_date: datetime.date | None = (
-    datetime.date.fromisoformat(body.argued_date)
-    if body.argued_date
-    else None
-)
-```
-The condition `body.argued_date is not None or parsed_date is not None` evaluates `True` when `body.argued_date` is a non-None value — including an **empty string `""`**. An empty string passes `is not None`, so `parsed_date` is `None` (the `if body.argued_date` branch is falsy for `""`), and the UPDATE writes `argued_date = NULL`. This silently NULLs the argued_date whenever the operator submits the saveMetadata form with an empty date field.
-
-The comment on line 537 ("WR-01: always writing source_docket=body.source_docket would NULL an existing docket...") shows the author recognized this same problem for `source_docket` but did not apply the same protection to `argued_date`.
-
-**Fix:** Only include `argued_date` in the update dict when `body.argued_date` is a non-empty, non-None string (i.e. when `parsed_date` is actually a date):
-```python
-if parsed_date is not None:
-    values_to_set["argued_date"] = parsed_date
+# api/routers/admin.py  update_argument_metadata handler
+try:
+    result = await arguments_service.update_argument_metadata(db, argument_id, body)
+except ValueError as exc:
+    raise HTTPException(status_code=422, detail=str(exc)) from exc
+if result is False:
+    raise HTTPException(status_code=404, detail="Argument not found")
+return {"success": True}
 ```
 
 ---
 
-### CR-03: Client-side polling fetches the page URL, not a data-only endpoint — may trigger HTML response or infinite state loop
+### CR-02: Polling loop may silently parse HTML as JSON when SvelteKit routes to the page handler
 
-**File:** `app/src/routes/admin/pipeline/[job_id]/+page.svelte:74`
-**Issue:** The polling effect fetches:
-```javascript
+**File:** `app/src/routes/admin/pipeline/[job_id]/+page.svelte:73-83`
+
+**Issue:** The polling effect sends:
+```js
 const res = await fetch(`/admin/pipeline/${liveJob.id}`, {
     headers: { Accept: 'application/json' },
 });
 ```
-This sends a request to the SvelteKit page route (`/admin/pipeline/[job_id]`), not to the FastAPI job endpoint (`/api/admin/jobs/{job_id}`). SvelteKit page routes respond with HTML by default; although `Accept: application/json` triggers SvelteKit's data-only response mode (returns the `+page.server.ts` load data as JSON), this is an undocumented internal behaviour that depends on SvelteKit version and whether the page has a `+page.server.ts` load function. The load function at `+page.server.ts:28-109` makes **four nested HTTP calls** on every poll (jobs, people, participants, argument) — running this once per second is extremely wasteful and compounds latency. More critically, the load function also triggers the `GET /api/admin/jobs/{job_id}` **step-advance side effect** in `admin.py:298-316`, meaning the step-advance fires from the poll. While the step-advance is idempotent (rowcount guard), this is unintended coupling.
 
-If the SvelteKit JSON data-response fails (wrong Content-Type, wrong shape), `fresh = await res.json()` at line 79 would throw and the `if (!res.ok) return` guard at line 77 would not protect against it since `res.ok` could still be true.
+When the `Accept: application/json` header is honored SvelteKit correctly routes
+this to `+server.ts`, which returns the JSON `AdminJobResponse`. However, if
+SvelteKit content-negotiation does not activate (misconfigured CDN, middleware
+stripping headers, or a future SvelteKit version change), the request hits the
+SSR page handler which returns HTML. The code then calls `res.json()` on that
+HTML body, which throws, is caught by the empty `catch { return; }` block, and
+silently skips the tick. Because the response status is 200 (not an error),
+`if (!res.ok) return` does not fire either. The result is that the poll loop
+runs continuously but never updates `liveJob` — the operator sees the spinner
+indefinitely with no error.
 
-**Fix:** Poll the FastAPI endpoint directly from the server action, or add a dedicated lightweight `+server.ts` endpoint. If the current approach is kept, add a `try/catch` around the JSON parse:
-```javascript
-let fresh: Job | null = null;
+**Fix:** Validate the `Content-Type` before parsing:
+```js
+if (!res.ok) return;
+const ct = res.headers.get('content-type') ?? '';
+if (!ct.includes('application/json')) {
+    // Routing failure — content-negotiation did not activate
+    console.error('[poll] expected JSON, got:', ct);
+    return;
+}
+let fresh: typeof liveJob | null = null;
 try {
     fresh = await res.json();
 } catch {
-    return; // malformed response — skip this tick
+    return;
 }
-if (!fresh) return;
 ```
-The four-request fan-out in the load function per poll tick is a design concern that should be addressed with a dedicated lightweight poll endpoint.
 
 ---
 
-### CR-04: `upload_person_photo` URL path — operator-supplied URL fetched server-side without allowlist (SSRF)
+### CR-03: `TopNav` renders public site navigation (Cases + Admin links) inside the admin shell, `variant` prop is dead code
 
-**File:** `api/routers/admin.py:536-541`
-**Issue:** The `photo_url` parameter in `POST /api/admin/people/{person_id}/photo` is fetched directly by the server:
-```python
-async with httpx.AsyncClient(timeout=10.0) as client:
-    r = await client.get(photo_url, follow_redirects=True)
+**File:** `app/src/lib/components/TopNav.svelte:2` / `app/src/routes/admin/+layout.svelte:10`
+
+**Issue:** `TopNav.svelte` declares `let { variant }: { variant: 'public' } = $props();`
+but `variant` is never referenced in the template — the prop is a dead
+declaration. The admin layout at `+layout.svelte:10` passes `variant="public"`
+and the component unconditionally renders the Cases link (public-facing) and an
+Admin link (pointing back to `/admin` while already on `/admin/*`). An operator
+mid-task sees public navigation controls that take them off the admin surface.
+This is an architectural correctness defect: the admin shell should not include
+`/cases` and `/admin` links visible in every admin page header.
+
+**Fix (minimal):** Add an `adminShell` boolean prop and suppress the public
+links when truthy:
+```svelte
+<!-- TopNav.svelte -->
+let { variant, adminShell = false }: { variant: 'public'; adminShell?: boolean } = $props();
+
+{#if !adminShell}
+<a href="/cases" ...>Cases</a>
+<a href="/admin" ...>Admin</a>
+{/if}
 ```
-There is no scheme enforcement, no hostname allowlist, and `follow_redirects=True` is enabled. An operator (or anyone with the admin token) can supply `http://169.254.169.254/latest/meta-data/` (AWS metadata endpoint), `http://localhost:5432/` (internal Postgres), or any other internal network address. While this is an admin-only endpoint, the CLAUDE.md constraint set mentions PCI DSS and CWE-918 is applicable. The comment says "Auth inherited from router-level dependency" but that does not address SSRF. Note that `_validate_pdf_url` exists for the PDF URL path but no equivalent function guards the photo URL.
+Then in `+layout.svelte`: `<TopNav variant="public" adminShell={true} />`
 
-**Fix:** Enforce `https` scheme and optionally restrict to known image CDN hosts, or at minimum reject private/loopback IP ranges before fetching. At minimum:
-```python
-from urllib.parse import urlparse
+Alternatively, replace `TopNav` with `AdminSubNav` only in the admin layout
+and remove `TopNav` from the admin shell entirely.
 
-parsed = urlparse(photo_url)
-if parsed.scheme != 'https':
-    raise HTTPException(status_code=422, detail="Photo URL must use HTTPS.")
+---
+
+### CR-04: `aria-selected={false}` hardcoded on all combobox `<li>` options — keyboard highlight never communicated to screen readers
+
+**File:** `app/src/routes/admin/pipeline/[job_id]/+page.svelte:909` and line ~931
+
+**Issue:** Every `<li role="option">` in the custom combobox listbox has
+`aria-selected={false}` as a static literal. WAI-ARIA 1.2 requires that the
+currently highlighted option carries `aria-selected="true"`. The
+`s.comboHighlight` index drives background-color styling correctly but is never
+wired to `aria-selected`. A screen reader user navigating with arrow keys will
+always hear "not selected" for every item regardless of which is highlighted.
+
+**Fix:**
+```svelte
+{#each filteredCandidates as candidate, idx (candidate.id)}
+    <li
+        role="option"
+        aria-selected={s.comboHighlight === idx}
+        ...
+    >
 ```
-Disable `follow_redirects` or limit redirect depth to avoid redirect-based SSRF bypass.
+And for the "Add new person" sentinel:
+```svelte
+<li
+    role="option"
+    aria-selected={s.comboHighlight === filteredCandidates.length}
+    ...
+>
+```
 
 ---
 
 ## Warnings
 
-### WR-01: `test_service_file_has_synchronize_session_false` — structural guard counts `update(Argument)` calls only, misses `delete()` and `update(AdminJob)` calls in the same file
+### WR-01: `update_argument_metadata` stores empty string for `source_docket` when caller sends `""`
 
-**File:** `api/tests/test_admin_arguments_service.py:147-153`
-**Issue:** The test counts `source.count("update(Argument)")` and compares against `source.count("synchronize_session=False")`. The service file now contains `update(ArgumentParticipant)`, `update(AdminJob)`, `delete(Utterance)`, `delete(PipelineRun)`, etc. — all of which also require the guard. The count of `update(Argument)` occurrences (which is 4) will be less than the total `synchronize_session=False` count (which is more), so the assertion passes, but it does not actually verify that every non-`Argument` update/delete also has the guard. This is a false sense of security.
+**File:** `api/services/admin_arguments.py:545-546`
 
-**Fix:** Count all `update(` and `delete(` calls rather than only `update(Argument)`:
+**Issue:** The guard is `if body.source_docket is not None`, which passes empty
+string `""` through and writes it to the database column. The SvelteKit action
+at `+page.server.ts:337` converts an empty form field to `null`
+(`trim() || null`), so the normal UI path is safe. But a direct API call with
+`{"source_docket": ""}` stores an empty string rather than `NULL`. The existing
+code comment ("WR-01: always writing source_docket=body.source_docket would NULL
+an existing docket") acknowledges the null concern but does not address the
+empty-string case.
+
+**Fix:**
 ```python
-update_count = source.count(".execution_options") - 0  # already present
-# Or count all update() + delete() calls:
-import re
-stmt_count = len(re.findall(r'\b(update|delete)\(', source))
-sync_false_count = source.count("synchronize_session=False")
-assert sync_false_count >= stmt_count
+if body.source_docket is not None and body.source_docket.strip() != "":
+    values_to_set["source_docket"] = body.source_docket
 ```
 
 ---
 
-### WR-02: `update_argument` — `ValueError` from `datetime.date.fromisoformat()` leaks the raw exception message to the HTTP client
+### WR-02: No test coverage for `update_argument_metadata`, `check_duplicate_argument`, or `update_participant_side`
 
-**File:** `api/services/admin_arguments.py:263` and `api/routers/admin.py:700-703`
-**Issue:** `body.argued_date` is parsed with `datetime.date.fromisoformat(body.argued_date)` without a try/except in the service. The router catches `ValueError` generically:
+**File:** `api/tests/test_admin_arguments_service.py` (entire file)
+
+**Issue:** Three service functions added in phases 15 and 19 have zero test
+coverage — no import test, no structural guard, no DB-guarded behavioral test.
+The structural guard `test_service_file_has_synchronize_session_false` (line
+137-154) counts every `update()`/`delete()` call file-wide so new calls in
+those functions inflate `stmt_count`, but their specific behaviors (including the
+CR-01 date bug in `update_argument_metadata`) are not validated. The `update_argument`
+service was similarly untested before the CR-01 date bug was introduced in the
+`update_argument_metadata` refactor.
+
+**Fix:** Add at minimum:
 ```python
-except ValueError as exc:
-    raise HTTPException(status_code=422, detail=str(exc)) from exc
+def test_update_argument_metadata_importable() -> None:
+    from api.services.admin_arguments import update_argument_metadata
+
+def test_check_duplicate_argument_importable() -> None:
+    from api.services.admin_arguments import check_duplicate_argument
+
+def test_update_participant_side_importable() -> None:
+    from api.services.admin_arguments import update_participant_side
 ```
-Python's `fromisoformat` raises `ValueError: Invalid isoformat string: '...'` which includes the raw user-supplied string in the exception message, and that string is echoed back verbatim in the 422 detail. While this is a minor information disclosure (the operator typed the value themselves), it is inconsistent with the project pattern of using controlled error strings (`"slug_collision"`, `"docket_collision"`). A future change where `argued_date` comes from a different source could leak unexpected content.
+Plus DB-guarded tests for `check_duplicate_argument` positive/negative cases.
 
-**Fix:** Wrap the parse in the service with a controlled message:
+---
+
+### WR-03: Router does not wrap `update_argument_metadata` call in `try/except ValueError`
+
+**File:** `api/routers/admin.py:769-772`
+
+**Issue:** This is the router-side half of CR-01. Even after fixing the service
+to raise `ValueError` on bad dates (CR-01 fix), the router handler must be
+updated to catch it and convert to HTTPException 422. Currently the handler is:
 ```python
-if body.argued_date is not None:
-    try:
-        argument.argued_date = datetime.date.fromisoformat(body.argued_date)
-    except ValueError:
-        raise ValueError("invalid_date_format")
+result = await arguments_service.update_argument_metadata(db, argument_id, body)
+if result is False:
+    raise HTTPException(status_code=404, detail="Argument not found")
+return {"success": True}
+```
+Every other mutating endpoint in this router (`update_argument`, `publish_argument`,
+`unpublish_argument`, `update_participant_side`, `merge_person`, etc.) wraps the
+service call in `try/except ValueError`. This endpoint is the sole exception.
+Listed separately from CR-01 since the service fix and router fix are independent
+changes that could be missed independently.
+
+**Fix:** Wrap the service call as shown in CR-01 fix.
+
+---
+
+### WR-04: `deleteSubmitting` reset in `use:enhance` callback may not run before navigation on success
+
+**File:** `app/src/routes/admin/arguments/[id]/+page.svelte:481-488` / `app/src/routes/admin/pipeline/[job_id]/+page.svelte:1515-1520`
+
+**Issue:** The delete Danger Zone form sets `deleteSubmitting = true` on submit
+and resets it in the `enhance` callback:
+```js
+use:enhance={() => {
+    deleteSubmitting = true;
+    return async ({ update }) => {
+        deleteSubmitting = false;
+        await update();
+    };
+}}
+```
+On a **successful** delete, the server action calls `throw redirect(303, ...)`.
+SvelteKit navigates away; whether the callback fires before the component
+unmounts is not guaranteed. If navigation completes first, `deleteSubmitting`
+is never reset — cosmetically harmless since the component unmounts, but it
+leaves the button in a disabled state visible for a flash before navigation.
+More importantly, if a future refactor changes the success path to return data
+instead of redirecting, the pattern would leave the button permanently disabled.
+
+**Fix:**
+```js
+return async ({ update }) => {
+    deleteSubmitting = false;  // always reset before update
+    await update();
+};
 ```
 
 ---
 
-### WR-03: `+page.server.ts` (pipeline detail) — `approve` action fetches the job a second time to get `argument_id`, creating a TOCTOU window
+### WR-05: `liveJob.error_message` rendered verbatim in monospace block — pipeline path data may leak
 
-**File:** `app/src/routes/admin/pipeline/[job_id]/+page.server.ts:170-180`
-**Issue:** The `approve` action fetches `/api/admin/jobs/{job_id}` to retrieve `argument_id`, then uses that `argument_id` to PATCH participant sides. Between the fetch and the PATCH, the job could have been deleted or its `argument_id` could have changed. If the fetch fails (non-OK), the code silently continues (`// Continue — PATCH is best-effort`) and calls `/api/admin/jobs/{job_id}/approve` regardless, which may approve a job with no `argument_id`.
+**File:** `app/src/routes/admin/pipeline/[job_id]/+page.svelte:1419-1426`
 
-```typescript
-} catch {
-    // Continue — PATCH is best-effort; approve still proceeds
+**Issue:** `error_message` from pipeline subprocess stderr is displayed without
+any truncation or sanitization (Svelte's template escaping prevents XSS).
+Subprocess error messages frequently include full file system paths (e.g.
+`FileNotFoundError: [Errno 2] No such file or directory: '/data/uploads/42.pdf'`).
+While this endpoint is admin-only, it reveals server-side file paths to anyone
+with the admin token. This is a mild information disclosure but noteworthy for
+an operator-facing surface.
+
+**Fix:** Truncate long messages or strip path-like substrings before display:
+```svelte
+{liveJob.error_message?.length > 500
+  ? liveJob.error_message.slice(0, 500) + '…'
+  : liveJob.error_message}
+```
+
+---
+
+### WR-06: `comboOutsideClick` Svelte action contains `$effect` — causes double event listener registration
+
+**File:** `app/src/routes/admin/pipeline/[job_id]/+page.svelte:373-393`
+
+**Issue:** The action body calls `$effect(...)` internally, which is not a
+standard Svelte action pattern. Svelte actions (used via `use:`) are expected
+to return a `{ destroy() }` object; placing `$effect` inside creates a nested
+reactive context that executes during component initialization. The result is
+that `handleClick` is registered twice — once via the `$effect` (line 384) and
+once conceptually through the action's mounting. The `destroy()` method removes
+only one registration (the one created by the `$effect`). In practice only one
+listener fires (the DOM deduplicates identical listener + function reference
+pairs), but the pattern is fragile and relies on undocumented Svelte internals.
+
+**Fix:** Remove the `$effect` and register directly:
+```js
+function comboOutsideClick(container: HTMLElement, rowKey: string) {
+    function handleClick(e: MouseEvent) {
+        if (!container.contains(e.target as Node)) {
+            const s = rowStates[rowKey];
+            if (s) s.comboOpen = false;
+        }
+    }
+    document.addEventListener('click', handleClick);
+    return {
+        destroy() {
+            document.removeEventListener('click', handleClick);
+        }
+    };
 }
 ```
-
-The approve endpoint itself will raise a 422 if `argument_id` is None, but the silent swallow of the job-fetch failure hides the real problem and makes debugging difficult.
-
-**Fix:** If the job fetch fails, return `fail(502, { approveError: 'Could not load job. Try again.' })` rather than silently continuing. The PATCH of participant sides should be clearly documented as best-effort separately from the approve call.
-
----
-
-### WR-04: `+layout.svelte` — renders `TopNav` with `variant="public"` for all admin pages, including admin-only pages
-
-**File:** `app/src/routes/admin/+layout.svelte:10`
-**Issue:** The layout always renders `<TopNav variant="public" />` (which shows the "Cases" and "Admin" links from the public site nav) followed by `<AdminSubNav />` (which shows pipeline/arguments/people links). The public nav's "Admin" link on the admin-side pages is a dead self-link that provides no value and may confuse operators. More importantly, the `TopNav` component prop type is `{ variant: 'public' }` (only one valid value), meaning the component was designed for public pages and is being reused here without an admin-specific variant.
-
-This is not a security issue (the page is already behind auth), but it is a quality defect — the admin layout renders two nav bars (one public, one admin-specific) which is redundant. The admin subnav alone is sufficient.
-
-**Fix:** Remove the `<TopNav variant="public" />` line from `+layout.svelte`, or add an `admin` variant to `TopNav` that hides the "Admin" self-link.
-
----
-
-### WR-05: `delete_argument` — `status == PUBLISHED` check diverges from `unpublish_argument` which checks `published_at`
-
-**File:** `api/services/admin_arguments.py:463` vs `api/services/admin_arguments.py:402`
-**Issue:** `delete_argument` guards with `argument.status == ArgumentStatusEnum.PUBLISHED` while `unpublish_argument` guards with `argument.published_at is None`. These two checks are not equivalent and can diverge if status and published_at drift. (This is related to CR-01 but is a distinct observation: the inconsistency between the two functions' guards creates a maintenance hazard even if the current data is always consistent.) If `published_at` is set but `status` is still `DRAFT`, `delete_argument` would allow deletion while `unpublish_argument` would correctly see the argument as published.
-
-**Fix:** Standardize all publish-state checks on `published_at` across both functions, consistent with how `publish_argument` works.
-
----
-
-### WR-06: `+page.svelte` (argument detail) — `select` element uses `value={participant.side}` but Svelte 5 `<select>` controlled value requires `bind:value` or `selected` attribute on `<option>`
-
-**File:** `app/src/routes/admin/arguments/[id]/+page.svelte:312-329`
-**Issue:** The advocate role `<select>` is rendered as:
-```svelte
-<select name="side" value={participant.side} ...>
-    <option value="PETITIONER">...</option>
-    ...
-</select>
-```
-In Svelte 5, the `value` attribute on `<select>` does not control which option is selected — it sets the element's `value` DOM property on initial render but does not reactively update the selected option when the data changes, nor does it pre-select the correct option after a form error re-render. The correct Svelte 5 approach is to use `bind:value` (for reactive two-way binding) or mark the matching `<option>` with `selected={participant.side === 'PETITIONER'}`. Without this, the select always defaults to the first option (`PETITIONER`) rather than showing the participant's current side.
-
-**Fix:** Either add `bind:value` (requires a mutable `$state` variable per participant) or set `selected` on each option:
-```svelte
-<option value="PETITIONER" selected={participant.side === 'PETITIONER'}>Petitioner's Counsel</option>
-<option value="RESPONDENT" selected={participant.side === 'RESPONDENT'}>Respondent's Counsel</option>
-<option value="AMICUS" selected={participant.side === 'AMICUS'}>Amicus Curiae</option>
-<option value="UNKNOWN" selected={participant.side === 'UNKNOWN'}>Counsel</option>
-```
-
----
-
-### WR-07: `get_argument_detail` — N+1 query in tenure gap check issues one EXISTS subquery per bench participant
-
-**File:** `api/services/admin_arguments.py:143-165`
-**Issue:** For each bench participant (could be 9 Justices), the code issues an individual EXISTS query:
-```python
-for person_id, full_name in bench_rows:
-    covering = exists(select(CourtTenure.id).where(...))
-    has_covering = (await db.execute(select(covering))).scalar()
-```
-This is O(n) round-trips to the database where n is the number of bench participants. While performance is out of v1 scope per the review instructions, this pattern will raise a correctness issue if the database session is under transaction pressure from concurrent writes — each sequential await is a separate round-trip through PgBouncer's transaction-mode pooling, and the session may not see its own prior uncommitted data consistently across the loop. The bigger issue is that a missing `CourtTenure` for a newly-added Justice could silently produce spurious warnings if the tenure rows were not yet committed when this path executes.
-
-This is flagged as WARNING rather than BLOCKER because the query is correct in isolation; it only degrades under concurrent write load.
-
-**Fix:** Consolidate into a single query that LEFT JOINs `CourtTenure` and uses an aggregate to identify gaps, eliminating the N+1 pattern.
 
 ---
 
 ## Info
 
-### IN-01: `admin_arguments.py` — `_derive_slug` imported with `# noqa: F401 — re-exported for tests` but this re-export pattern is fragile
+### IN-01: `variant` prop in `TopNav` is declared but never read — dead prop declaration
 
-**File:** `api/services/admin_arguments.py:38`
-**Issue:** `_derive_slug` is imported from `pipeline.commands.ingest` and re-exported for tests via the `noqa` comment. This creates an implicit API surface for the tests. If the import is removed during a refactor (it's only used locally within the module), the tests will break without a clear error message since they import from the service, not from the pipeline directly.
+**File:** `app/src/lib/components/TopNav.svelte:2`
 
-**Fix:** Export `_derive_slug` from `pipeline/commands/ingest.py` as a public symbol (`derive_slug` without leading underscore), and have the tests import it from there directly. This removes the service-layer re-export and makes the dependency explicit.
+**Issue:** `let { variant }: { variant: 'public' } = $props()` destructures
+`variant` but the variable is never used in the template. TypeScript does not
+warn because destructuring itself counts as usage. The prop is vestigial.
+
+**Fix:** Remove the prop (as part of the CR-03 fix) or add a `@ts-expect-error`
+comment documenting why it is declared but unused if intentionally reserved for
+future use.
 
 ---
 
-### IN-02: `+layout.svelte` — `page.url.pathname !== '/admin/login'` comparison is fragile and duplicates route logic
+### IN-02: Source-scanning structural guard may over-count `update(` occurrences in docstrings
 
-**File:** `app/src/routes/admin/+layout.svelte:9`
-**Issue:** The nav visibility is gated by a hardcoded string comparison against the URL pathname. If the login route is ever renamed or moved, this check will silently break — the nav will render on the login page (leaking the admin subnav before authentication). SvelteKit provides `$page.route.id` for route-based conditional logic which is more robust than pathname matching.
+**File:** `api/tests/test_admin_arguments_service.py:146-154`
 
-**Fix:** Use `$page.route.id` rather than `$page.url.pathname`:
-```svelte
-{#if page.route.id !== '/admin/login'}
+**Issue:** `re.findall(r'\b(update|delete)\(', source)` matches the substring
+anywhere in the file text, including in docstrings and comments. The current
+`admin_arguments.py` docstrings contain phrases like "update() statement" which
+happen to not match the regex (the regex requires an identifier word boundary
+before `update`). However, future edits to docstrings or comments that include
+`update(` or `delete(` patterns would falsely inflate `stmt_count`, causing the
+assertion to require more `synchronize_session=False` guards than the code
+actually has.
+
+**Fix:** Strip string literals before scanning, or use `ast.parse` to walk
+only function bodies:
+```python
+import ast
+tree = ast.parse(source)
+# walk Call nodes only inside FunctionDef bodies
 ```
-Or better: move the login page outside the admin layout entirely so no conditional is needed.
 
 ---
 
-### IN-03: `AdminSubNav.svelte` — logout button POSTs to `/admin?/logout` but no `logout` action is visible in the reviewed files
+### IN-03: `console.debug` fires on every poll tick in production
 
-**File:** `app/src/lib/components/AdminSubNav.svelte:26`
-**Issue:** The logout button posts to `/admin?/logout`. No `logout` action was found in the reviewed files (the admin layout `+layout.svelte` has no `<script>` block with server-side actions, and `+layout.server.ts` was not in the file list). If this action does not exist, the logout button silently fails (SvelteKit returns a 404 action error, not a user-visible message). The button provides no visual feedback on failure.
+**File:** `app/src/routes/admin/pipeline/[job_id]/+page.svelte:87`
 
-**Fix:** Confirm that `src/routes/admin/+layout.server.ts` exports a `logout` action. If the action exists, add a `use:enhance` callback to the logout form to handle failures gracefully.
+**Issue:**
+```js
+console.debug('[poll]', { status: liveJob.status, current_step: liveJob.current_step });
+```
+This fires every 1 second while a job is running. In Chromium DevTools `console.debug`
+is suppressed at the default log level, but the call still allocates the argument
+object on every tick. In Firefox and some log aggregators `console.debug` is
+visible by default.
+
+**Fix:**
+```js
+if (import.meta.env.DEV) {
+    console.debug('[poll]', { status: liveJob.status, current_step: liveJob.current_step });
+}
+```
 
 ---
 

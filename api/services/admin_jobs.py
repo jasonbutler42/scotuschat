@@ -16,7 +16,7 @@ Critical guards (mirroring pipeline/commands/resolve.py):
   - normalize_label imported from pipeline.commands.resolve (single source of truth)
 """
 
-from sqlalchemy import select, update
+from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from sqlalchemy import func
@@ -74,6 +74,31 @@ async def create_job(
     # can read the field without raising AttributeError during response serialization.
     job.__dict__["parse_stats"] = None
     return job
+
+
+async def delete_job(db: AsyncSession, job_id: int) -> bool:
+    """Delete a single AdminJob row by primary key.
+
+    CRITICAL — scope: this function deletes ONLY the admin_job row (D-10, D-11, Pitfall 6).
+    It MUST NOT touch Argument, PipelineRun, Utterance, ArgumentParticipant, or CaseArgument.
+    Pipeline runs are disposable scaffolding; the linked argument is the permanent record.
+
+    Implementation:
+      - Single DELETE against AdminJob WHERE id = job_id with synchronize_session=False
+      - rowcount == 1 → True (row was deleted)
+      - rowcount == 0 → False (no row matched; job not found)
+
+    Returns:
+        True  — job row was deleted
+        False — no row matched (job_id not found)
+    """
+    result = await db.execute(
+        delete(AdminJob)
+        .where(AdminJob.id == job_id)
+        .execution_options(synchronize_session=False)
+    )
+    await db.commit()
+    return result.rowcount == 1
 
 
 async def get_job(db: AsyncSession, job_id: int) -> AdminJob | None:

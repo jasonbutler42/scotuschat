@@ -155,3 +155,13 @@ None — delete is fully wired end-to-end.
 ## Next Phase Readiness
 
 - Plan 03 (AdminSubNav) can proceed immediately — does not depend on this plan's outputs
+
+## Self-Check: PASSED
+
+- api/tests/test_admin_jobs_service.py: FOUND
+- api/services/admin_jobs.py: FOUND
+- api/routers/admin.py: FOUND
+- app/src/routes/admin/pipeline/[job_id]/+page.server.ts: FOUND
+- app/src/routes/admin/pipeline/[job_id]/+page.svelte: FOUND
+- .planning/phases/21-admin-ui-surface/21-02-SUMMARY.md: FOUND
+- Commits: 33e1f06b (RED), db9b8059 (GREEN), 4fd45dac (Task 2), 2931ef14 (Task 3), 912246fd (docs) — all verified

@@ -459,7 +459,7 @@ async def delete_argument(db: AsyncSession, argument_id: int) -> bool | None:
     argument = result.scalar_one_or_none()
     if argument is None:
         return None
-    if argument.status == ArgumentStatusEnum.PUBLISHED:
+    if argument.published_at is not None:
         return False
 
     # Step 1: Delete utterances referencing this argument (must be before pipeline_runs)

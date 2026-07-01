@@ -18,10 +18,11 @@ Critical guards (project-wide pattern from admin_jobs.py):
 
 import datetime
 
-from sqlalchemy import and_, exists, func as sqlfunc, not_, or_, select, update
+from sqlalchemy import and_, delete, exists, func as sqlfunc, not_, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.models.models import (
+    AdminJob,
     Argument,
     ArgumentParticipant,
     ArgumentStatusEnum,
@@ -29,7 +30,9 @@ from api.models.models import (
     CaseArgument,
     CourtTenure,
     Person,
+    PipelineRun,
     SideEnum,
+    Utterance,
 )
 from api.schemas.admin_arguments import ArgumentUpdate, MetadataUpdate
 from pipeline.commands.ingest import _derive_slug  # noqa: F401 — re-exported for tests
@@ -426,6 +429,79 @@ async def check_duplicate_argument(db: AsyncSession, docket: str, question: int)
     )
     row = result.scalar_one_or_none()
     return {"exists": row is not None, "argument_id": row}
+
+
+async def delete_argument(db: AsyncSession, argument_id: int) -> bool | None:
+    """Delete an argument and all dependent data (ADMIN-01).
+
+    Returns True on success, False if argument is published (→ router 409),
+    None if argument not found (→ router 404).
+
+    FK-ordered cascade (no ORM relationship cascades exist — manual only):
+      1. Utterances (references both pipeline_runs.id AND arguments.id — must go first)
+      2. PipelineRuns (references arguments.id — after utterances)
+      3. ArgumentParticipants (references arguments.id)
+      4. CaseArguments (references arguments.id)
+      5. AdminJob.argument_id NULLed (FK nullable, no ondelete — Pitfall 1: RESTRICT default)
+      6. Argument (last — all children cleared)
+
+    All delete() and update() statements use .execution_options(synchronize_session=False)
+    (Pitfall 3 — project-wide critical guard for async SQLAlchemy).
+
+    Critical ordering note (Pitfall 2): Utterance.pipeline_run_id FK references
+    pipeline_runs.id — deleting pipeline_runs before utterances raises ForeignKeyViolation.
+    Utterances MUST be deleted before pipeline_runs.
+
+    Published arguments are blocked server-side (T-21-01-PUB) — client disabled state
+    is defense-in-depth only.
+    """
+    result = await db.execute(select(Argument).where(Argument.id == argument_id))
+    argument = result.scalar_one_or_none()
+    if argument is None:
+        return None
+    if argument.status == ArgumentStatusEnum.PUBLISHED:
+        return False
+
+    # Step 1: Delete utterances referencing this argument (must be before pipeline_runs)
+    await db.execute(
+        delete(Utterance)
+        .where(Utterance.argument_id == argument_id)
+        .execution_options(synchronize_session=False)
+    )
+    # Step 2: Delete pipeline_run rows for this argument (after utterances)
+    await db.execute(
+        delete(PipelineRun)
+        .where(PipelineRun.argument_id == argument_id)
+        .execution_options(synchronize_session=False)
+    )
+    # Step 3: Delete argument_participants
+    await db.execute(
+        delete(ArgumentParticipant)
+        .where(ArgumentParticipant.argument_id == argument_id)
+        .execution_options(synchronize_session=False)
+    )
+    # Step 4: Delete case_arguments join rows
+    await db.execute(
+        delete(CaseArgument)
+        .where(CaseArgument.argument_id == argument_id)
+        .execution_options(synchronize_session=False)
+    )
+    # Step 5: NULL out AdminJob.argument_id — FK is nullable but has no ondelete clause;
+    # PostgreSQL default RESTRICT will raise ForeignKeyViolation if not NULLed first (Pitfall 1)
+    await db.execute(
+        update(AdminJob)
+        .where(AdminJob.argument_id == argument_id)
+        .values(argument_id=None)
+        .execution_options(synchronize_session=False)
+    )
+    # Step 6: Delete the argument itself
+    await db.execute(
+        delete(Argument)
+        .where(Argument.id == argument_id)
+        .execution_options(synchronize_session=False)
+    )
+    await db.commit()
+    return True
 
 
 async def update_argument_metadata(

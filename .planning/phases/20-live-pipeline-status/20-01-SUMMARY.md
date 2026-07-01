@@ -26,7 +26,7 @@ metrics:
   completed: "2026-07-01"
   tasks_completed: 1
   tasks_total: 2
-status: paused-at-checkpoint
+status: complete
 ---
 
 # Phase 20 Plan 01: Live Pipeline Status Summary
@@ -68,34 +68,32 @@ $effect(() => {
 | Criterion | Result |
 |-----------|--------|
 | Import includes `invalidateAll` | PASS |
-| Exactly one `$effect(` block | PASS (grep -c returns 1) |
-| Stop condition uses `.some(` and `=== 'running'` | PASS |
+| `$effect` polls unconditionally at 1s | PASS |
 | `invalidateAll()` inside `setInterval(..., 1000)` | PASS |
 | Cleanup `return () => clearInterval(interval)` | PASS |
 | `TERMINAL` absent from file | PASS |
 | `lastKnownStep` absent from file | PASS |
-| `+page.server.ts` unchanged | PASS (git diff shows no changes) |
-| `svelte-check` 0 errors | PASS (0 errors, 17 warnings pre-existing) |
+| `+page.server.ts` unchanged | PASS |
+| `svelte-check` 0 errors | PASS (0 errors, 18 warnings pre-existing) |
+| PIPE-23 human-verified live | PASS (2026-07-01) |
+| PIPE-24 human-verified live | PASS (2026-07-01) |
 
 ## Commits
 
 | Task | Commit | Description |
 |------|--------|-------------|
 | Task 1: Add polling $effect | `0f273659` | feat(20-01): add 1s polling $effect to pipeline list page |
-
-## Paused At
-
-**Task 2 — checkpoint:human-verify (gate=blocking)**
-
-PIPE-23 and PIPE-24 require live verification against a running pipeline job. The operator must start a run and confirm:
-- List-page badges auto-update without reload (PIPE-23)
-- Detail-page step cards advance in real time (PIPE-24)
-- Polling stops when no job is `running`
-- Form `$state` survives `invalidateAll()` refreshes
+| Bug fix — PIPE-24 detail post-completion | `69100a7c` | fix(pipe-24): invalidateAll on terminal state to refresh argument+participants |
+| Bug fix — PIPE-23 list-page fetch routing | `f651cd4f` | fix(pipe-23): switch list-page polling to invalidateAll() |
+| Bug fix — bfcache Back navigation | `8b86f865` | fix(pipe-23): refresh stale bfcache snapshot on Back navigation |
+| Bug fix — unconditional polling | `070aaafc` | fix(pipe-23): poll list page unconditionally to detect runs started in other tabs |
 
 ## Deviations from Plan
 
-None — plan executed exactly as written.
+The plan assumed the stop-condition guard (`data.jobs.some(running)`) would be sufficient. Two UAT bugs required unplanned fixes:
+
+1. **Direct fetch routing bug** — `fetch('/admin/pipeline', Accept: application/json)` silently returned HTML on a static SvelteKit route; switched all polling to `invalidateAll()`.
+2. **Unconditional polling required** — The guard caused a deadlock when no jobs were running on page load; a run started in another tab could never wake the effect. Fix: always poll, let `invalidateAll()` be cheap.
 
 ## Threat Surface Scan
 

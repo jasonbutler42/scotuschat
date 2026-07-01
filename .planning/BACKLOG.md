@@ -41,3 +41,11 @@ Unscheduled items for future phases.
 **Area:** Admin — People editor (`/admin/people/[id]`)
 **Added:** 2026-06-29
 **Context:** Currently the Is Justice checkbox is in Basic Info and the Justice-only sections (Role, Court Tenure, Appointment) appear below inline. UX would be cleaner with a dedicated "Justice Details" card that contains the Is Justice checkbox plus the conditional bench sections, keeping Basic Info clean.
+
+---
+
+## B-006 — Pipeline list badge: show active step alongside run status
+
+**Area:** Admin — Pipeline list (`/admin/pipeline`)
+**Added:** 2026-07-01
+**Context:** The status badge on the pipeline list page shows only the run-level state (e.g. "Running"). While a run is in progress, the badge should also show the current step so the operator knows where in the pipeline it is — format: "Parse | Failed" or "Resolve | Running". Once the run reaches a terminal state (Completed, Failed, Needs Review), the step suffix is dropped and just the run status is shown.

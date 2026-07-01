@@ -14,15 +14,15 @@
 
 ### Admin Data Management
 
-- [ ] **ADMIN-01**: Operator can delete a mis-created argument from the admin UI (with confirmation; blocked if argument has published utterances)
+- [x] **ADMIN-01**: Operator can delete a mis-created argument from the admin UI (with confirmation; blocked if argument has published utterances)
 - [ ] **ADMIN-02**: Operator can delete a pipeline run from the admin UI (with confirmation)
 
 ### Pipeline Reliability
 
 - [ ] **PIPE-23**: Pipeline list page updates job status badges automatically while any run is active — no manual reload needed
 - [ ] **PIPE-24**: Pipeline job detail page updates step cards live while the run is active — operator can watch step progression in real time
-- [ ] **PIPE-25**: System enforces a unique DB constraint preventing duplicate arguments; UI warns the operator before starting a new run if a matching argument already exists
-- [ ] **PIPE-26**: Argument metadata (case name, docket, argued date) pre-populated from cover extraction results visible to operator during/after the pipeline run
+- [x] **PIPE-25**: System enforces a unique DB constraint preventing duplicate arguments; UI warns the operator before starting a new run if a matching argument already exists
+- [x] **PIPE-26**: Argument metadata (case name, docket, argued date) pre-populated from cover extraction results visible to operator during/after the pipeline run
 
 ### Admin Navigation
 
@@ -49,11 +49,11 @@
 | PEOPLE-05 | Phase 18 | Complete |
 | PEOPLE-06 | Phase 18 | Complete |
 | PEOPLE-07 | Phase 18 | Complete |
-| PIPE-25 | Phase 19 | Pending |
-| PIPE-26 | Phase 19 | Pending |
+| PIPE-25 | Phase 19 | Complete |
+| PIPE-26 | Phase 19 | Complete |
 | PIPE-23 | Phase 20 | Pending |
 | PIPE-24 | Phase 20 | Pending |
-| ADMIN-01 | Phase 21 | Pending |
+| ADMIN-01 | Phase 21 | Complete |
 | ADMIN-02 | Phase 21 | Pending |
 | NAV-02 | Phase 21 | Pending |
 

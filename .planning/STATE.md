@@ -3,17 +3,17 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Admin Completeness
 current_phase: 21
-current_phase_name: Admin UI Surface
+current_phase_name: admin-ui-surface
 status: executing
 stopped_at: Phase 21 UI-SPEC approved
-last_updated: "2026-07-01T18:58:26.110Z"
+last_updated: "2026-07-01T19:21:34.482Z"
 last_activity: 2026-07-01
-last_activity_desc: Phase 20 PIPE-23/24 human-verified and closed
+last_activity_desc: Phase 21 execution started
 progress:
   total_phases: 4
   completed_phases: 3
-  total_plans: 9
-  completed_plans: 9
+  total_plans: 12
+  completed_plans: 10
   percent: 75
 ---
 
@@ -24,14 +24,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-29 after Phase 17 complete — v1.3 milestone done)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** Phase 20 — Live Pipeline Status
+**Current focus:** Phase 21 — admin-ui-surface
 
 ## Current Position
 
-Phase: 21 (Admin UI Surface) — NOT STARTED
-Plan: TBD
+Phase: 21 (admin-ui-surface) — EXECUTING
+Plan: 2 of 3
 Status: Ready to execute
-Last activity: 2026-07-01 — Phase 20 PIPE-23/24 human-verified and closed
+Last activity: 2026-07-01 — Phase 21 execution started
 
 Progress: ███████░░░ 75% (3/4 phases)
 
@@ -83,6 +83,7 @@ Progress: ███████░░░ 75% (3/4 phases)
 | Phase 18 P01 | 15 | 3 tasks | 3 files |
 | Phase 18 P02 | 12 | 3 tasks | 3 files |
 | Phase 18 P03 | 18 | 3 tasks | 4 files |
+| Phase 21 P01 | 25 | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -143,6 +144,8 @@ Full log in PROJECT.md Key Decisions table. Key decisions for v1.2:
 - [Phase ?]: [17-01]: ParseStats assembled from scalar COUNT results — no from_attributes; AdminJobResponse retains from_attributes
 - [Phase ?]: [17-01]: PDF endpoint branches spaces_key FIRST; disk fallback reads PipelineRun.pdf_path from ingest run (T-17-02 mitigated)
 - [Phase ?]: [18-01]: Migration 0010 adds is_justice BOOLEAN NOT NULL DEFAULT FALSE to people; backfill from court_tenures only (D-01, D-02)
+- [Phase ?]: delete_argument returns bool | None; FK order: Utterance before PipelineRun (Pitfall 2); AdminJob NULLed before Argument (Pitfall 1)
+- [Phase ?]: [21-01]: can_delete = argument.status !== 'published'; $effect resets deleteConfirming on soft nav (Pitfall 7); ADMIN-01 complete
 
 ### Pending Todos
 
@@ -166,6 +169,6 @@ Full log in PROJECT.md Key Decisions table. Key decisions for v1.2:
 
 ## Session Continuity
 
-Last session: 2026-07-01T18:39:23.806Z
+Last session: 2026-07-01T19:21:20.387Z
 Stopped at: Phase 21 UI-SPEC approved
 Resume file: .planning/phases/21-admin-ui-surface/21-UI-SPEC.md

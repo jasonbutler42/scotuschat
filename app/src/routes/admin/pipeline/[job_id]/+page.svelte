@@ -84,6 +84,11 @@
 			if (liveJob.current_step !== null && liveJob.current_step !== undefined) {
 				lastKnownStep = liveJob.current_step;
 			}
+			// On terminal transition, refresh data.argument and data.participants —
+			// those props come from the server load and are not covered by job polling.
+			if (TERMINAL.has(fresh.status)) {
+				await invalidateAll();
+			}
 		}, 1000);
 
 		return () => clearInterval(interval);

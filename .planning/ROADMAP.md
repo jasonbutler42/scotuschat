@@ -134,7 +134,12 @@ Plans:
   3. On the job detail page, step cards (Ingest / Parse / Resolve) update to show step completion in real time while the run is active
   4. Polling stops automatically once the run reaches a terminal state (completed, failed, needs_review)
 
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+
+- [ ] 20-01-PLAN.md — Add 1s list-page polling $effect (PIPE-23) + human-verify detail-page live step cards (PIPE-24)
+
 **UI hint**: yes
 
 ### Phase 21: Admin UI Surface
@@ -175,7 +180,7 @@ Plans:
 | 17. Pipeline UI Polish | v1.3 | 3/3 | Complete | 2026-06-29 |
 | 18. People Schema + Editor | v1.4 | 3/3 | Complete    | 2026-06-29 |
 | 19. Pipeline Reliability | v1.4 | 5/5 | Complete    | 2026-06-30 |
-| 20. Live Pipeline Status | v1.4 | 0/? | Not started | - |
+| 20. Live Pipeline Status | v1.4 | 0/1 | Not started | - |
 | 21. Admin UI Surface | v1.4 | 0/? | Not started | - |
 
 ## Backlog

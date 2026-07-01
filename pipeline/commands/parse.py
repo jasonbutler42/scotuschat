@@ -345,10 +345,15 @@ async def _run_parse_inner(args) -> None:
         # Block C: cover_metadata unconditional write (D-07, D-09a, Phase 19).
         # Always writes raw extraction output regardless of whether extraction found anything.
         # Stores None when cover_meta is empty so the metadata card shows no hints.
+        # Date objects must be serialized to ISO strings for JSONB compatibility.
+        cover_meta_json = (
+            {k: v.isoformat() if hasattr(v, "isoformat") else v for k, v in cover_meta.items()}
+            if cover_meta else None
+        )
         await session.execute(
             update(Argument)
             .where(Argument.id == source_run.argument_id)
-            .values(cover_metadata=cover_meta if cover_meta else None)
+            .values(cover_metadata=cover_meta_json)
             .execution_options(synchronize_session=False)
         )
         if cover_meta:

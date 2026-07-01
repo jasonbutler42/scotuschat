@@ -398,8 +398,9 @@ def test_extract_cover_metadata_still_failsafe():
     )
 
 
-def test_extract_cover_metadata_argued_date_is_string():
-    """argued_date in cover_metadata must be an ISO string, not a date object (JSONB-safe)."""
+def test_extract_cover_metadata_argued_date_is_date_object():
+    """argued_date returned by extract_cover_metadata is a date object (parse.py serializes for JSONB)."""
+    from datetime import date
     from pathlib import Path
     from unittest.mock import MagicMock, patch
     from pipeline.parser.cover_extractor import extract_cover_metadata
@@ -415,9 +416,10 @@ def test_extract_cover_metadata_argued_date_is_string():
         result = extract_cover_metadata(Path("fake.pdf"))
 
     assert "argued_date" in result, f"Expected argued_date in result, got: {result!r}"
-    assert isinstance(result["argued_date"], str), (
-        f"argued_date must be an ISO string for JSONB serialization, got: {type(result['argued_date']).__name__!r}"
+    assert isinstance(result["argued_date"], date), (
+        f"argued_date must be a date object (not {type(result['argued_date']).__name__}); "
+        "parse.py is responsible for ISO-string serialization before JSONB write"
     )
-    assert result["argued_date"] == "2015-04-28", (
-        f"Expected '2015-04-28', got: {result['argued_date']!r}"
+    assert result["argued_date"] == date(2015, 4, 28), (
+        f"Expected date(2015, 4, 28), got: {result['argued_date']!r}"
     )

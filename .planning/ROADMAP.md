@@ -154,7 +154,7 @@ Plans:
   3. The admin header navigation matches the public navigation in visual style and shares the same component or structure (no duplicate ad-hoc markup)
   4. Deleting an argument or pipeline run returns the operator to the correct listing page with the deleted item gone
 
-**Plans**: 4 plans (3 complete + 1 gap closure)
+**Plans**: 4/4 plans complete
 
 Plans:
 
@@ -169,7 +169,7 @@ Plans:
 
 **Wave 4** *(gap closure — blocked on 21-03)*
 
-- [ ] 21-04-PLAN.md — NAV-02 gap closure: add TopNav import + two-row render to admin layout (admin/+layout.svelte)
+- [x] 21-04-PLAN.md — NAV-02 gap closure: add TopNav import + two-row render to admin layout (admin/+layout.svelte)
 
 **UI hint**: yes
 
@@ -197,7 +197,7 @@ Plans:
 | 18. People Schema + Editor | v1.4 | 3/3 | Complete    | 2026-06-29 |
 | 19. Pipeline Reliability | v1.4 | 5/5 | Complete    | 2026-06-30 |
 | 20. Live Pipeline Status | v1.4 | 1/1 | Complete   | 2026-07-01 |
-| 21. Admin UI Surface | v1.4 | 3/4 | Gap closure in progress | 2026-07-01 |
+| 21. Admin UI Surface | v1.4 | 4/4 | Complete   | 2026-07-01 |
 
 ## Backlog
 

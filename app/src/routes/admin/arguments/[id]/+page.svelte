@@ -310,8 +310,7 @@
 							<input type="hidden" name="participant_id" value={participant.participant_id} />
 							<select
 								name="side"
-								value={participant.side}
-								style="
+									style="
 									flex: 1;
 									background-color: #0f1117;
 									border: 1px solid #334155;
@@ -323,10 +322,10 @@
 									min-height: 36px;
 								"
 							>
-								<option value="PETITIONER">Petitioner's Counsel</option>
-								<option value="RESPONDENT">Respondent's Counsel</option>
-								<option value="AMICUS">Amicus Curiae</option>
-								<option value="UNKNOWN">Counsel</option>
+								<option value="PETITIONER" selected={participant.side === 'PETITIONER'}>Petitioner's Counsel</option>
+								<option value="RESPONDENT" selected={participant.side === 'RESPONDENT'}>Respondent's Counsel</option>
+								<option value="AMICUS" selected={participant.side === 'AMICUS'}>Amicus Curiae</option>
+								<option value="UNKNOWN" selected={participant.side === 'UNKNOWN'}>Counsel</option>
 							</select>
 							<button
 								type="submit"

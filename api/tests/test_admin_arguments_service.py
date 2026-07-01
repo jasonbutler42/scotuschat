@@ -135,21 +135,22 @@ def test_argument_update_no_id() -> None:
 
 
 def test_service_file_has_synchronize_session_false() -> None:
-    """Every update() call in admin_arguments.py must be guarded with
+    """Every update() and delete() call in admin_arguments.py must be guarded with
     .execution_options(synchronize_session=False) (Pitfall 5).
     """
     import inspect
+    import re
 
     from api.services import admin_arguments
 
     source = inspect.getsource(admin_arguments)
-    # Count update() calls (both sqlalchemy core update() and any usage)
-    update_count = source.count("update(Argument)")
+    # Count all update() and delete() SQLAlchemy Core calls — not just update(Argument)
+    stmt_count = len(re.findall(r'\b(update|delete)\(', source))
     sync_false_count = source.count("synchronize_session=False")
-    assert update_count > 0, "No update() calls found — service may not be implemented"
-    assert sync_false_count >= update_count, (
-        f"Found {update_count} update() calls but only {sync_false_count} "
-        "synchronize_session=False guards. Every update() needs the guard (Pitfall 5)."
+    assert stmt_count > 0, "No update() or delete() calls found — service may not be implemented"
+    assert sync_false_count >= stmt_count, (
+        f"Found {stmt_count} update()/delete() calls but only {sync_false_count} "
+        "synchronize_session=False guards. Every update()/delete() needs the guard (Pitfall 5)."
     )
 
 

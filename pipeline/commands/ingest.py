@@ -327,12 +327,22 @@ async def _run_ingest_inner(args) -> None:
     # Step 5: Create DB records
     # ------------------------------------------------------------------
     # Build the list of all dockets: primary first, then consolidated.
-    # When primary_docket is None (operator did not supply it), only consolidated
-    # dockets are included; Case creation is skipped for the null-docket slot.
     all_dockets: list[str] = (
         ([primary_docket] if primary_docket is not None else [])
         + list(args.dockets or [])
     )
+
+    # CR-03: Guarantee at least one Case row exists for the argument.
+    # get_argument_detail requires a CaseArgument row with is_lead=True to
+    # resolve the lead case; without it the service returns None → router 404.
+    # When the operator didn't supply a docket, create a synthetic placeholder
+    # docket (job-{id}) that they can edit after the parse step fills in the
+    # cover metadata (D-08). This restores the Case-creation guarantee that
+    # was lost when _derive_metadata_from_key was removed.
+    if not all_dockets and args.job_id is not None:
+        synthetic_docket = f"job-{args.job_id}"
+        all_dockets = [synthetic_docket]
+        primary_docket = synthetic_docket
 
     # Derive term_year: use argued_date year when available, fall back to current year
     # (Case.term_year is NOT NULL, so we must always supply a value — D-08).

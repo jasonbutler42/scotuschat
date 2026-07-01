@@ -297,6 +297,33 @@ export const actions: Actions = {
 	},
 
 	/**
+	 * delete — DELETE the admin_job row for this pipeline run (ADMIN-02).
+	 *
+	 * Issues DELETE /api/admin/jobs/{job_id} with X-Admin-Token header.
+	 * On non-OK or network error: return fail(502) so the operator can retry.
+	 * On success: redirect to /admin/pipeline (D-12).
+	 *
+	 * No can_delete gate — jobs are always deletable (D-08 applies to arguments, not jobs).
+	 */
+	delete: async ({ params }) => {
+		let res: Response;
+		try {
+			res = await fetch(`${FASTAPI_BASE_URL}/api/admin/jobs/${params.job_id}`, {
+				method: 'DELETE',
+				headers: { 'X-Admin-Token': ADMIN_TOKEN },
+			});
+		} catch {
+			return fail(502, { deleteError: 'Could not delete run. Try again.' });
+		}
+
+		if (!res.ok) {
+			return fail(502, { deleteError: 'Could not delete run. Try again.' });
+		}
+
+		throw redirect(303, '/admin/pipeline');
+	},
+
+	/**
 	 * saveMetadata — PATCH the argument metadata (case_name, source_docket, argued_date).
 	 * Fetches the job first to get argument_id (same two-step pattern as approve action).
 	 * Returns fail(400) when no argument is linked, fail(502) on network error,

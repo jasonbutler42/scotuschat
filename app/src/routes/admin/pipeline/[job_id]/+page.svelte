@@ -285,6 +285,21 @@
 	let rerunSubmitting = $state(false);
 
 	// ──────────────────────────────────────────────────────────────────────────
+	// Phase 21 Plan 02: Delete run two-step confirm state (ADMIN-02)
+	// Pitfall 7: $effect resets state when navigating between job pages.
+	// ──────────────────────────────────────────────────────────────────────────
+
+	let deleteConfirming = $state(false);
+	let deleteSubmitting = $state(false);
+
+	$effect(() => {
+		// Reference data.job.id so this effect re-runs on soft navigation to a different job.
+		data.job.id;
+		deleteConfirming = false;
+		deleteSubmitting = false;
+	});
+
+	// ──────────────────────────────────────────────────────────────────────────
 	// Row action handlers
 	// ──────────────────────────────────────────────────────────────────────────
 
@@ -1476,6 +1491,66 @@
 				</a>
 			</div>
 		{/if}
+
+		<!-- Danger Zone — pipeline run delete section (ADMIN-02, D-09) -->
+		<!-- Last card on the page per UI-SPEC Layout Contract. -->
+		<div style="background-color: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 24px; margin-bottom: 24px;">
+			<h2 style="font-size: 20px; font-weight: 600; color: #e2e8f0; margin: 0 0 16px 0; line-height: 1.2;">
+				Danger Zone
+			</h2>
+
+			{#if deleteConfirming}
+				<!-- State 2: Two-button row — replaces delete button in-place (D-02) -->
+				<!-- No layout shift; same row height as the initial button. -->
+				<div style="display: flex; gap: 8px;">
+					<form
+						method="POST"
+						action="?/delete"
+						style="flex: 1;"
+						use:enhance={() => {
+							deleteSubmitting = true;
+							return async ({ update }) => {
+								deleteSubmitting = false;
+								await update();
+							};
+						}}
+					>
+						<button
+							type="submit"
+							disabled={deleteSubmitting}
+							style="display: block; width: 100%; min-height: 44px; background: transparent; border: 1px solid #ef4444; border-radius: 6px; font-size: 16px; font-weight: 600; color: #ef4444; cursor: {deleteSubmitting ? 'not-allowed' : 'pointer'}; opacity: {deleteSubmitting ? 0.7 : 1};"
+						>
+							{deleteSubmitting ? 'Deleting…' : 'Confirm delete'}
+						</button>
+					</form>
+					<button
+						type="button"
+						onclick={() => { deleteConfirming = false; }}
+						style="flex: 1; min-height: 44px; background: transparent; border: 1px solid #334155; border-radius: 6px; font-size: 16px; font-weight: 400; color: #94a3b8; cursor: pointer;"
+					>
+						Cancel
+					</button>
+				</div>
+			{:else}
+				<!-- State 1: Initial delete button — first click sets deleteConfirming (no submit) -->
+				<button
+					type="button"
+					onclick={() => { deleteConfirming = true; }}
+					style="display: block; width: 100%; min-height: 44px; background: transparent; border: 1px solid #ef4444; border-radius: 6px; font-size: 16px; font-weight: 600; color: #ef4444; cursor: pointer;"
+				>
+					Delete run
+				</button>
+			{/if}
+
+			<!-- Delete error (returned by fail() from the delete action) -->
+			{#if form?.deleteError}
+				<p
+					role="alert"
+					style="color: #ef4444; font-size: 14px; font-weight: 400; margin: 8px 0 0 0;"
+				>{form.deleteError}</p>
+			{/if}
+		</div>
+
 	</div>
 </main>
 

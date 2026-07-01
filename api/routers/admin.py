@@ -896,6 +896,33 @@ async def rerun_job(
     return new_job  # type: ignore[return-value]
 
 
+@router.delete("/jobs/{job_id}", status_code=200)
+async def delete_job(
+    job_id: int,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """
+    Delete a pipeline run (admin_job row) by id (ADMIN-02).
+
+    Removes ONLY the admin_jobs row — the linked argument, its pipeline_run step rows,
+    and its utterances are all unaffected (D-10, D-11, Pitfall 6).
+
+    Returns 200 + {"deleted": True} on success.
+    Returns 404 if the job does not exist.
+
+    Auth inherited from router-level verify_admin_token dependency (T-21-02-AUTH).
+    job_id is typed int — FastAPI validates path param (T-21-02-IDOR).
+
+    ORDERING NOTE: This route is placed after all literal-path /jobs/{job_id}/* sub-routes
+    (pdf, resolve, people, approve, rerun) so parameterized sub-routes are resolved before
+    this DELETE handler.
+    """
+    deleted = await jobs_service.delete_job(db, job_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Run not found")
+    return {"deleted": True}
+
+
 @router.patch(
     "/arguments/{argument_id}/participants/{participant_id}",
     response_model=dict,

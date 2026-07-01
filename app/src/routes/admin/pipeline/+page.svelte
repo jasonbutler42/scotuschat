@@ -30,6 +30,7 @@
 	let questionInput = $state('1');
 	let duplicateWarning = $state<{ argumentId: number; docket: string; question: string } | null>(null);
 	let preflightCleared = $state(false);
+	let formEl: HTMLFormElement;
 
 	function setMode(m: 'url' | 'upload') {
 		mode = m;
@@ -213,6 +214,7 @@
 				method="POST"
 				enctype="multipart/form-data"
 				onsubmit={handleSubmit}
+				bind:this={formEl}
 			>
 				<!-- Hidden mode field — read by actions.default in +page.server.ts -->
 				<input type="hidden" name="mode" value={mode} />
@@ -361,7 +363,7 @@
 							</button>
 							<button
 								type="button"
-								onclick={() => { preflightCleared = true; duplicateWarning = null; document.querySelector('form')?.requestSubmit(); }}
+								onclick={() => { preflightCleared = true; duplicateWarning = null; formEl.requestSubmit(); }}
 								style="font-size: 14px; font-weight: 600; color: #e2e8f0; background: transparent; border: 1px solid #93c5fd; border-radius: 6px; padding: 8px 16px; min-height: 36px; cursor: pointer;"
 							>
 								Start anyway

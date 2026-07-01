@@ -32,11 +32,9 @@
 	let preflightCleared = $state(false);
 	let formEl: HTMLFormElement;
 
-	// D-03: Poll while at least one job has status === 'running'.
-	// D-04: paused and pending do NOT keep polling alive — only 'running' sustains the interval.
+	// Poll unconditionally — we need to detect runs started in other tabs, so we can't
+	// guard on data.jobs (which only updates after an invalidation we'd never start).
 	$effect(() => {
-		if (!data.jobs.some((j: { status: string }) => j.status === 'running')) return;
-
 		const interval = setInterval(async () => {
 			await invalidateAll();
 		}, 1000);

@@ -396,3 +396,28 @@ def test_extract_cover_metadata_still_failsafe():
     assert isinstance(result, dict), (
         f"Expected dict from fail-safe path, got: {type(result)!r}"
     )
+
+
+def test_extract_cover_metadata_argued_date_is_string():
+    """argued_date in cover_metadata must be an ISO string, not a date object (JSONB-safe)."""
+    from pathlib import Path
+    from unittest.mock import MagicMock, patch
+    from pipeline.parser.cover_extractor import extract_cover_metadata
+
+    fake_page = MagicMock()
+    fake_page.extract_text.return_value = "Tuesday, April 28, 2015\nNo. 14-556\nSUPREME COURT OF THE UNITED STATES"
+    fake_pdf = MagicMock()
+    fake_pdf.__enter__ = MagicMock(return_value=fake_pdf)
+    fake_pdf.__exit__ = MagicMock(return_value=False)
+    fake_pdf.pages = [fake_page]
+
+    with patch("pipeline.parser.cover_extractor.pdfplumber.open", return_value=fake_pdf):
+        result = extract_cover_metadata(Path("fake.pdf"))
+
+    assert "argued_date" in result, f"Expected argued_date in result, got: {result!r}"
+    assert isinstance(result["argued_date"], str), (
+        f"argued_date must be an ISO string for JSONB serialization, got: {type(result['argued_date']).__name__!r}"
+    )
+    assert result["argued_date"] == "2015-04-28", (
+        f"Expected '2015-04-28', got: {result['argued_date']!r}"
+    )

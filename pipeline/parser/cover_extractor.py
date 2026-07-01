@@ -258,7 +258,7 @@ def extract_cover_metadata(pdf_path: Path) -> dict:
             if "argued_date" not in result:
                 m = DATE_LINE_RE.search(raw) or HERITAGE_DATE_RE.search(raw)
                 if m:
-                    result["argued_date"] = _parse_date(m)
+                    result["argued_date"] = _parse_date(m).isoformat()
             if "case_name" not in result:
                 name = _extract_case_name(_clean_lines(raw))
                 if name:

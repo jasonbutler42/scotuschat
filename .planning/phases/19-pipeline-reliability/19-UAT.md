@@ -1,15 +1,19 @@
 ---
-status: complete
+status: testing
 phase: 19-pipeline-reliability
 source: 19-01-SUMMARY.md, 19-02-SUMMARY.md, 19-03-SUMMARY.md, 19-04-SUMMARY.md
 started: 2026-06-30T16:17:28Z
-updated: 2026-06-30T16:25:00Z
+updated: 2026-07-01T00:01:00Z
 ---
 
 ## Current Test
 <!-- OVERWRITE each test - shows where we are -->
 
-[testing complete]
+number: 7
+name: Metadata card — hint text from cover extraction (re-test after argued_date JSONB fix)
+expected: |
+  Run the pipeline with a purposely incorrect docket number. After the job completes parse, navigate to its detail page. In the Argument Metadata card, the Docket field should show faint hint text "Extracted: [value]" if the PDF cover's docket differs from what you typed as the argument's docket. Fields where extracted and stored values match show no hint text.
+awaiting: user response
 
 ## Tests
 
@@ -29,11 +33,9 @@ result: pass
 expected: After the duplicate warning banner appears (test 3), click Cancel. The banner disappears and both the docket field and question selector remain editable so the operator can change them and retry preflight.
 result: pass
 
-### 5. Duplicate banner — Start anyway proceeds
-expected: Trigger the duplicate warning again, then click "Start anyway". The pipeline run starts despite the detected duplicate (the DB unique constraint is the authoritative backstop). No secondary prompt; the run proceeds.
-result: issue
-reported: "If I click Start anyway the admin site logs me out and does not start another run"
-severity: major
+### 5. Duplicate banner — Start anyway proceeds (re-test after Plan 05 fix)
+expected: Trigger the duplicate warning again, then click "Start anyway". The pipeline run starts despite the detected duplicate (the DB unique constraint is the authoritative backstop). No secondary prompt; the run proceeds. The operator is navigated to the new job detail page — NOT logged out.
+result: pass
 
 ### 6. Job detail — Argument Metadata card present
 expected: Navigate to a completed job's detail page that has an argument linked. An "Argument Metadata" card appears between the argument preview and the View source PDF card, with Case name, Docket, and Argued date input fields pre-populated from the stored argument data, and a "Save metadata" button at the bottom.
@@ -41,8 +43,8 @@ result: pass
 
 ### 7. Metadata card — hint text from cover extraction
 expected: For a job where the PDF cover extractor found a docket or date different from what is currently stored, the relevant field shows faint hint text like "Extracted: 14-556". Fields where extracted and stored values match, or where cover_metadata is null, show no hint text.
-result: skipped
-reason: no job with differing extracted vs. stored values available to test against
+result: [pending]
+note: Re-testing after cover_extractor.py fix — argued_date was stored as a date object (not JSON-serializable); changed to .isoformat() string in commit pending. Run the pipeline again with a purposely incorrect docket to create a suitable test job.
 
 ### 8. Metadata card — save succeeds
 expected: Edit one of the metadata fields (e.g., change case_name or source_docket) and click Save metadata. A green "Metadata saved." success message appears below the button. Refreshing the page shows the updated value pre-populated.
@@ -51,25 +53,12 @@ result: pass
 ## Summary
 
 total: 8
-passed: 6
-issues: 1
-pending: 0
-skipped: 1
+passed: 7
+issues: 0
+pending: 1
 skipped: 0
 blocked: 0
 
 ## Gaps
 
-- truth: "Clicking 'Start anyway' starts the pipeline run despite the detected duplicate, with no secondary prompt"
-  status: failed
-  reason: "User reported: If I click Start anyway the admin site logs me out and does not start another run"
-  severity: major
-  test: 5
-  root_cause: "Start anyway onclick calls document.querySelector('form')?.requestSubmit(), which re-fires the submit event and triggers handleSubmit. handleSubmit sets submitting=true (disabling the submit button) then returns without preventDefault. Svelte flushes the disabled state before the browser finalises the submission. When the submit button is disabled at submission time, browser/SvelteKit aborts the submission — leaving submitting=true (button stuck as 'Starting…') and causing a fallback navigation that appears as a logout."
-  artifacts:
-    - path: "app/src/routes/admin/pipeline/+page.svelte"
-      issue: "Start anyway onclick uses requestSubmit() which re-enters handleSubmit; handleSubmit sets submitting=true disabling the button before submission completes"
-  missing:
-    - "Bind form element ref via bind:this={formEl} and call formEl.submit() from Start anyway onclick instead of requestSubmit() — form.submit() does not fire the submit event so handleSubmit is bypassed and the button stays enabled"
-    - "Set submitting=true directly in the Start anyway onclick (after clearing duplicateWarning) so the button label updates correctly"
-  debug_session: ""
+[none — previous gap (test 5) addressed by Plan 05 fix; re-verification in progress]

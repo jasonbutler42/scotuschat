@@ -768,6 +768,42 @@ async def update_argument_metadata(
     return {"success": True}
 
 
+@router.delete("/arguments/{argument_id}", status_code=200)
+async def delete_argument(
+    argument_id: int,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """
+    Delete an argument only if it is not published (ADMIN-01).
+
+    Cascades deletion of all dependent rows in FK order:
+    utterances → pipeline_runs → argument_participants → case_arguments → argument.
+    AdminJob.argument_id rows are NULLed before the argument is deleted (Pitfall 1).
+
+    Returns 200 + {"deleted": True} on success.
+    Returns 404 if the argument does not exist (T-21-01-IDOR).
+    Returns 409 if argument.status == 'published' (T-21-01-PUB — server-side guard;
+    client disabled state is defense-in-depth only).
+
+    Auth inherited from router-level verify_admin_token dependency (T-21-01-AUTH).
+    argument_id is typed int — FastAPI validates path param (T-21-01-IDOR, V5).
+
+    ORDERING NOTE: This route is placed after all literal-path /arguments/* routes
+    (check-duplicate, publish, unpublish, metadata) so the literal segments are
+    resolved before the {argument_id} parameterized path (consistent with the
+    ordering note at the check-duplicate route).
+    """
+    result = await arguments_service.delete_argument(db, argument_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Argument not found")
+    if result is False:
+        raise HTTPException(
+            status_code=409,
+            detail="Published arguments cannot be deleted. Unpublish first.",
+        )
+    return {"deleted": True}
+
+
 @router.post("/roles", status_code=201, response_model=RoleResponse)
 async def create_role(
     body: RoleCreate,

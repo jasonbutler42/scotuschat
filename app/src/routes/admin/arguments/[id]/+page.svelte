@@ -46,6 +46,19 @@
 		// Take only the date portion (first 10 chars of ISO 8601)
 		return iso.slice(0, 10);
 	}
+
+	// Danger Zone delete state (ADMIN-01).
+	// Two-step confirm: first click sets deleteConfirming = true; second click submits form.
+	// Pitfall 7: $effect resets state when argument id changes (SvelteKit soft nav reuses component).
+	let deleteConfirming = $state(false);
+	let deleteSubmitting = $state(false);
+
+	$effect(() => {
+		// Reference data.argument.id so this effect re-runs on soft navigation to a different argument.
+		data.argument.id;
+		deleteConfirming = false;
+		deleteSubmitting = false;
+	});
 </script>
 
 <svelte:head>
@@ -449,6 +462,82 @@
 				</button>
 			</form>
 		{/if}
+
+		<!-- Danger Zone — argument delete section (ADMIN-01, D-03) -->
+		<!-- Last card on the page per UI-SPEC Layout Contract (delete section position). -->
+		<div style="background-color: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 24px; margin-bottom: 24px; margin-top: 16px;">
+			<h2 style="font-size: 20px; font-weight: 600; color: #e2e8f0; margin: 0 0 16px 0; line-height: 1.2;">
+				Danger Zone
+			</h2>
+
+			{#if data.can_delete}
+				{#if deleteConfirming}
+					<!-- State 2: Two-button row — replaces delete button in-place (D-02) -->
+					<!-- No layout shift; same row height as the initial button. -->
+					<div style="display: flex; gap: 8px;">
+						<form
+							method="POST"
+							action="?/delete"
+							style="flex: 1;"
+							use:enhance={() => {
+								deleteSubmitting = true;
+								return async ({ update }) => {
+									deleteSubmitting = false;
+									await update();
+								};
+							}}
+						>
+							<button
+								type="submit"
+								disabled={deleteSubmitting}
+								style="display: block; width: 100%; min-height: 44px; background: transparent; border: 1px solid #ef4444; border-radius: 6px; font-size: 16px; font-weight: 600; color: #ef4444; cursor: {deleteSubmitting ? 'not-allowed' : 'pointer'}; opacity: {deleteSubmitting ? 0.7 : 1};"
+							>
+								{deleteSubmitting ? 'Deleting…' : 'Confirm delete'}
+							</button>
+						</form>
+						<button
+							type="button"
+							onclick={() => { deleteConfirming = false; }}
+							style="flex: 1; min-height: 44px; background: transparent; border: 1px solid #334155; border-radius: 6px; font-size: 16px; font-weight: 400; color: #94a3b8; cursor: pointer;"
+						>
+							Cancel
+						</button>
+					</div>
+				{:else}
+					<!-- State 1: Initial delete button — first click sets deleteConfirming (no submit) -->
+					<button
+						type="button"
+						onclick={() => { deleteConfirming = true; }}
+						style="display: block; width: 100%; min-height: 44px; background: transparent; border: 1px solid #ef4444; border-radius: 6px; font-size: 16px; font-weight: 600; color: #ef4444; cursor: pointer;"
+					>
+						Delete argument
+					</button>
+				{/if}
+
+				<!-- Delete error (returned by fail() from the delete action) -->
+				{#if form?.deleteError}
+					<p
+						role="alert"
+						style="color: #ef4444; font-size: 14px; font-weight: 400; margin: 8px 0 0 0;"
+					>{form.deleteError}</p>
+				{/if}
+			{:else}
+				<!-- Blocked state — argument is published; disable button + tooltip (D-04, T-21-01-PUB) -->
+				<button
+					disabled
+					aria-describedby="delete-tip"
+					style="display: block; width: 100%; min-height: 44px; background: transparent; border: 1px solid #334155; border-radius: 6px; font-size: 16px; font-weight: 600; color: #94a3b8; cursor: not-allowed; opacity: 0.7;"
+				>
+					Delete argument
+				</button>
+				<p
+					id="delete-tip"
+					style="font-size: 14px; color: #94a3b8; margin-top: 8px; text-align: center;"
+				>
+					Published arguments cannot be deleted. Unpublish first.
+				</p>
+			{/if}
+		</div>
 
 	</div>
 </main>

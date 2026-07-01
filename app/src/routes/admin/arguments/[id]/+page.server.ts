@@ -48,7 +48,12 @@ export const load: PageServerLoad = async ({ fetch, params }) => {
 
 	const argument: ArgumentDetail = await res.json();
 
-	return { argument };
+	// can_delete: server-side gate — derived from already-loaded argument data (D-05).
+	// No extra API call needed; argument.status is in the ArgumentDetail response.
+	// Published arguments cannot be deleted (T-21-01-PUB, Pitfall 4).
+	const can_delete = argument.status !== 'published';
+
+	return { argument, can_delete };
 };
 
 export const actions: Actions = {
@@ -182,5 +187,35 @@ export const actions: Actions = {
 		}
 
 		throw redirect(303, '/admin/arguments/' + params.id);
+	},
+
+	/**
+	 * delete — DELETE /api/admin/arguments/{id}.
+	 * Server-side: only unpublished arguments can be deleted (T-21-01-PUB).
+	 * On 409 (published): return fail with error copy (server already blocks; copy is fine).
+	 * On success: redirect to /admin/arguments (D-06).
+	 * Auth: X-Admin-Token header passed server-side; never exposed to client (CLAUDE.md).
+	 */
+	delete: async ({ params, fetch }) => {
+		let res: Response;
+		try {
+			res = await fetch(`${FASTAPI_BASE_URL}/api/admin/arguments/${params.id}`, {
+				method: 'DELETE',
+				headers: { 'X-Admin-Token': ADMIN_TOKEN },
+			});
+		} catch {
+			return fail(502, { deleteError: 'Could not delete argument. Try again.' });
+		}
+
+		if (!res.ok) {
+			if (res.status === 409) {
+				return fail(409, {
+					deleteError: 'Published arguments cannot be deleted. Unpublish first.',
+				});
+			}
+			return fail(502, { deleteError: 'Could not delete argument. Try again.' });
+		}
+
+		throw redirect(303, '/admin/arguments');
 	},
 };

@@ -51,8 +51,9 @@
 
 	// ──────────────────────────────────────────────────────────────────────────
 	// Polling (D-15/D-16 — Pattern 1 from RESEARCH.md)
-	// Effect re-runs when data.job.status changes — restarts polling after
-	// Continue Resolve flips paused → running.
+	// liveJob mirrors data.job but is updated by direct 1s fetch polling.
+	// invalidateAll() has a known latency in propagating prop changes in this
+	// project (CR-03); direct $state + fetch bypasses that entirely.
 	// ──────────────────────────────────────────────────────────────────────────
 
 	// PIPE-18 (D-03): last-known-step fallback — when current_step is null during
@@ -60,17 +61,28 @@
 	// rather than flashing all badges to pending.
 	let lastKnownStep = $state<string | null>(data?.job?.current_step ?? null);
 
+	// liveJob: $state copy of the job that polling updates directly.
+	// The sync effect below keeps it in step with SvelteKit load re-runs (Ctrl+R, nav).
+	let liveJob = $state(data.job);
+	$effect(() => { liveJob = data.job; });
+
 	$effect(() => {
 		const TERMINAL = new Set(['completed', 'failed', 'paused']);
-		if (!data?.job?.status || TERMINAL.has(data.job.status)) return;
+		if (!liveJob?.status || TERMINAL.has(liveJob.status)) return;
 
 		const interval = setInterval(async () => {
-			await invalidateAll();
-			// PIPE-18 (D-02): diagnostic log — captures null current_step transitions in the browser console
-			console.debug('[poll]', { status: data.job.status, current_step: data.job.current_step });
+			const res = await fetch(`/admin/pipeline/${liveJob.id}`, {
+				headers: { Accept: 'application/json' },
+			});
+			if (!res.ok) return;
+			const fresh = await res.json();
+			if (!fresh) return;
+			liveJob = fresh;
+			// PIPE-18 (D-02): diagnostic log — captures null current_step transitions
+			console.debug('[poll]', { status: liveJob.status, current_step: liveJob.current_step });
 			// PIPE-18 (D-03): update lastKnownStep whenever current_step is non-null
-			if (data.job.current_step !== null && data.job.current_step !== undefined) {
-				lastKnownStep = data.job.current_step;
+			if (liveJob.current_step !== null && liveJob.current_step !== undefined) {
+				lastKnownStep = liveJob.current_step;
 			}
 		}, 1000);
 
@@ -108,7 +120,7 @@
 	// HIT rows (auto_resolved === true) start pre-dispositioned as 'confirmed' so no
 	// explicit Confirm click is required ([07-07] Gap 1a fix).
 	$effect(() => {
-		const disc = data.job.discrepancies;
+		const disc = liveJob.discrepancies;
 		if (!disc) return;
 		const incomingKeys = new Set(disc.map((r: Discrepancy) => r.raw_speaker_label));
 		for (const key of Object.keys(rowStates)) {
@@ -142,7 +154,7 @@
 	// Requires both disposition set AND person_id resolved (not null),
 	// so a "Confirm" with no auto_match_id cannot prematurely enable the button.
 	let allDispositioned = $derived.by(() => {
-		const disc = data.job.discrepancies;
+		const disc = liveJob.discrepancies;
 		if (!disc || disc.length === 0) return false;
 		return disc.every((row: Discrepancy) => {
 			const s = rowStates[row.raw_speaker_label];
@@ -152,7 +164,7 @@
 
 	// Build the JSON matches array for the hidden form field.
 	let matchesJson = $derived.by(() => {
-		const disc = data.job.discrepancies;
+		const disc = liveJob.discrepancies;
 		if (!disc) return '[]';
 		const arr = disc
 			.map((row: Discrepancy) => {
@@ -359,7 +371,7 @@
 <main style="background-color: #0f1117; min-height: 100vh;">
 	<header style="background-color: #1e293b; border-bottom: 1px solid #334155; padding: 16px 24px;">
 		<h1 style="font-size: 20px; font-weight: 600; color: #e2e8f0; margin: 0;">
-			Run #{data.job.id}
+			Run #{liveJob.id}
 		</h1>
 	</header>
 
@@ -431,7 +443,7 @@
 			</div>
 
 			<!-- Ready to publish CTA (D-04): only when completed and argument is draft (not yet published) -->
-			{#if data.job.status === 'completed' && argStatus === 'draft'}
+			{#if liveJob.status === 'completed' && argStatus === 'draft'}
 				<div
 					style="
 						border: 1px solid #93c5fd;
@@ -564,7 +576,7 @@
 		{/if}
 
 		<!-- View source PDF link card (D-06/PIPE-22): shown when a PDF source exists -->
-		{#if data.job.spaces_key || data.job.pdf_url || data.job.original_filename}
+		{#if liveJob.spaces_key || liveJob.pdf_url || liveJob.original_filename}
 			<div
 				style="
 					background-color: #1e293b;
@@ -575,7 +587,7 @@
 				"
 			>
 				<a
-					href="/admin/pipeline/{data.job.id}/pdf"
+					href="/admin/pipeline/{liveJob.id}/pdf"
 					target="_blank"
 					rel="noopener noreferrer"
 					style="font-size: 14px; color: #93c5fd; text-decoration: underline;"
@@ -589,9 +601,9 @@
 			style="display: flex; flex-direction: column; gap: 16px;"
 		>
 			{#each STEP_ORDER as step}
-				{@const effectiveJob = (data.job.status === 'running' && data.job.current_step === null)
-					? { ...data.job, current_step: lastKnownStep }
-					: data.job}
+				{@const effectiveJob = (liveJob.status === 'running' && liveJob.current_step === null)
+					? { ...liveJob, current_step: lastKnownStep }
+					: liveJob}
 				{@const status = stepStatus(step, effectiveJob as Job)}
 				{@const color = BADGE_COLOR[status]}
 				{@const glyph = BADGE_GLYPH[status]}
@@ -637,16 +649,16 @@
 					</div>
 
 					<!-- Addition A: Ingest source identifier row (D-01/PIPE-21) -->
-					{#if step === 'ingest' && (data.job.original_filename || data.job.pdf_url)}
+					{#if step === 'ingest' && (liveJob.original_filename || liveJob.pdf_url)}
 						<div style="margin-top: 12px;">
 							<span style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 4px;">Source file</span>
-							<span style="font-size: 16px; color: #e2e8f0; word-break: break-all;">{data.job.original_filename ?? data.job.pdf_url}</span>
+							<span style="font-size: 16px; color: #e2e8f0; word-break: break-all;">{liveJob.original_filename ?? liveJob.pdf_url}</span>
 						</div>
 					{/if}
 
 					<!-- Addition B: Parse stat rows (D-10/PIPE-21) — only when parse completed -->
-					{#if step === 'parse' && status === 'completed' && data.job.parse_stats}
-						{@const ps = data.job.parse_stats}
+					{#if step === 'parse' && status === 'completed' && liveJob.parse_stats}
+						{@const ps = liveJob.parse_stats}
 						<div style="margin-top: 12px; display: flex; flex-direction: column;">
 							<div style="margin-bottom: 12px;">
 								<span style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 4px;">Utterances</span>
@@ -670,12 +682,12 @@
 					{/if}
 
 					<!-- Discrepancy review (D-11–D-14): only when resolve step is paused -->
-					{#if step === 'resolve' && data.job.status === 'paused' && data.peopleLoadError}
+					{#if step === 'resolve' && liveJob.status === 'paused' && data.peopleLoadError}
 						<p role="alert" style="margin-top: 12px; font-size: 13px; color: #fbbf24; font-family: monospace;">
 							Warning: could not load people list — typeahead may be incomplete. ({data.peopleLoadError})
 						</p>
 					{/if}
-					{#if step === 'resolve' && data.job.status === 'paused' && data.job.discrepancies?.length}
+					{#if step === 'resolve' && liveJob.status === 'paused' && liveJob.discrepancies?.length}
 						<table
 							style="width: 100%; border-collapse: collapse; margin-top: 16px;"
 						>
@@ -732,7 +744,7 @@
 								</tr>
 							</thead>
 							<tbody>
-								{#each data.job.discrepancies as row (row.raw_speaker_label)}
+								{#each liveJob.discrepancies as row (row.raw_speaker_label)}
 									{@const rowKey = row.raw_speaker_label}
 									{@const s = rowStates[rowKey]}
 
@@ -1181,7 +1193,7 @@
 		</div>
 
 		<!-- Continue Resolve button (D-14): only when paused AND all rows dispositioned -->
-		{#if data.job.status === 'paused' && allDispositioned}
+		{#if liveJob.status === 'paused' && allDispositioned}
 			<form
 				method="POST"
 				action="?/resolve"
@@ -1194,7 +1206,7 @@
 							await update();
 						} else {
 							// Reset before update so re-render sees correct state even if
-							// invalidateAll is slow to flip data.job.status (CR-03 race fix)
+							// invalidateAll is slow to flip liveJob.status (CR-03 race fix)
 							continueSubmitting = false;
 							await update({ reset: false });
 						}
@@ -1366,7 +1378,7 @@
 		{/if}
 
 		<!-- Error panel (D-17): when status=failed; error_message rendered verbatim; no retry -->
-		{#if data.job.status === 'failed'}
+		{#if liveJob.status === 'failed'}
 			<div
 				style="
 					margin-top: 24px;
@@ -1379,12 +1391,12 @@
 				<h2 style="font-size: 20px; font-weight: 600; color: #e2e8f0; margin: 0 0 12px 0;">
 					This run failed.
 				</h2>
-				{#if data.job.error_message}
+				{#if liveJob.error_message}
 					<p
 						role="alert"
 						style="font-size: 16px; color: #ef4444; margin: 0 0 16px 0; font-family: monospace; white-space: pre-wrap; word-break: break-word;"
 					>
-						Error: {data.job.error_message}
+						Error: {liveJob.error_message}
 					</p>
 				{/if}
 				<a
@@ -1397,7 +1409,7 @@
 		{/if}
 
 		<!-- ParticipantList (PEOPLE-04, D-02, D-03): only when completed AND participants exist -->
-		{#if data.job.status === 'completed' && data.participants.length > 0}
+		{#if liveJob.status === 'completed' && data.participants.length > 0}
 			<div
 				style="
 					margin-top: 32px;

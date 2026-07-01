@@ -3,13 +3,19 @@
 </svelte:head>
 
 <script lang="ts">
-	import { goto, invalidateAll } from '$app/navigation';
+	import { goto } from '$app/navigation';
 
 	let { data, form } = $props();
 
 	// IncompleteToggle state — mirrors the server-side incomplete flag (D-11, D-13).
 	// $derived keeps it in sync when the load re-runs after navigation.
 	let incomplete = $derived(data.incomplete ?? false);
+
+	// liveJobs: $state copy updated by direct 1s fetch — bypasses the
+	// invalidateAll→prop-update chain (known project issue, CR-03).
+	// The sync effect keeps it in step with SvelteKit load re-runs (Ctrl+R, nav).
+	let liveJobs = $state(data.jobs);
+	$effect(() => { liveJobs = data.jobs; });
 
 	function handleToggle() {
 		if (incomplete) {
@@ -35,23 +41,23 @@
 	// D-03: Poll while at least one job has status === 'running'.
 	// D-04: paused and pending do NOT keep polling alive — only 'running' sustains the interval.
 	$effect(() => {
-		if (!data.jobs.some((j: { status: string }) => j.status === 'running')) return;
+		if (!liveJobs.some((j: { status: string }) => j.status === 'running')) return;
 
 		const interval = setInterval(async () => {
-			await invalidateAll();
+			const res = await fetch('/admin/pipeline', { headers: { Accept: 'application/json' } });
+			if (res.ok) liveJobs = await res.json();
 		}, 1000);
 
 		return () => clearInterval(interval);
 	});
 
-	// When the browser restores this page from bfcache (e.g. after a form-action
-	// redirect to the detail page followed by pressing Back), the snapshot of
-	// data.jobs is stale and the polling $effect above evaluates it as "no running
-	// jobs" and exits immediately. Calling invalidateAll() here forces a fresh
-	// server load so the polling $effect gets accurate data on bfcache restore.
+	// On bfcache restore (Back after a form-action redirect), fetch fresh jobs
+	// directly rather than relying on invalidateAll to propagate through props.
 	$effect(() => {
-		function onPageShow(e: PageTransitionEvent) {
-			if (e.persisted) invalidateAll();
+		async function onPageShow(e: PageTransitionEvent) {
+			if (!e.persisted) return;
+			const res = await fetch('/admin/pipeline', { headers: { Accept: 'application/json' } });
+			if (res.ok) liveJobs = await res.json();
 		}
 		window.addEventListener('pageshow', onPageShow);
 		return () => window.removeEventListener('pageshow', onPageShow);
@@ -493,7 +499,7 @@
 				</div>
 			</div>
 
-			{#if incomplete && (!data.jobs || data.jobs.length === 0)}
+			{#if incomplete && (!liveJobs || liveJobs.length === 0)}
 				<!-- Filter-on empty state: no paused/failed jobs (13-UI-SPEC §Component Inventory 3) -->
 				<div
 					style="
@@ -525,7 +531,7 @@
 						All recent runs completed or are running. Toggle off to see the full history.
 					</p>
 				</div>
-			{:else if !data.jobs || data.jobs.length === 0}
+			{:else if !liveJobs || liveJobs.length === 0}
 				<!-- Default empty state per 07-UI-SPEC Copywriting Contract -->
 				<div
 					style="
@@ -624,7 +630,7 @@
 							</tr>
 						</thead>
 						<tbody>
-							{#each data.jobs as job}
+							{#each liveJobs as job}
 								<tr>
 									<td
 										style="

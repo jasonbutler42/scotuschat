@@ -75,7 +75,12 @@
 				headers: { Accept: 'application/json' },
 			});
 			if (!res.ok) return;
-			const fresh = await res.json();
+			let fresh: typeof liveJob | null = null;
+			try {
+				fresh = await res.json();
+			} catch {
+				return; // malformed response — skip this tick
+			}
 			if (!fresh) return;
 			liveJob = fresh;
 			// PIPE-18 (D-02): diagnostic log — captures null current_step transitions

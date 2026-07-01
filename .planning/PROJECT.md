@@ -75,8 +75,8 @@ Anyone can open a SCOTUS oral argument and immediately follow the conversation �
 - [ ] Operator can delete a mis-created argument from the admin UI (ADMIN-01)
 - [ ] Operator can delete a bad pipeline run from the admin UI (ADMIN-02)
 - [ ] Pipeline list page and job detail page both update job/step status live without manual reload (PIPE-23)
-- [ ] System prevents duplicate argument creation — DB unique constraint + UI warning before starting a new run (PIPE-24)
-- [ ] Argument metadata (case name, docket, date) pre-populated from cover extraction during pipeline run (PIPE-25)
+- ✓ System prevents duplicate argument creation — DB unique constraint + UI warning before starting a new run (PIPE-24) — Phase 19
+- ✓ Argument metadata (case name, docket, date) pre-populated from cover extraction during pipeline run (PIPE-25) — Phase 19
 - [ ] Admin header nav style unified with public nav (NAV-02)
 - [ ] Application deployed to Digital Ocean App Platform (SvelteKit + FastAPI as separate services, managed Postgres) (DEPLOY-01, future)
 - [ ] Continuous deployment from GitHub main branch (DEPLOY-03, future)
@@ -184,4 +184,4 @@ This document evolves at phase transitions and milestone boundaries.
 - Unified admin navigation
 
 ---
-*Last updated: 2026-06-29 after v1.4 milestone started — Admin Completeness*
+*Last updated: 2026-07-01 after Phase 19 complete — Pipeline Reliability*

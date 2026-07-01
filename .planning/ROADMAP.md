@@ -70,7 +70,7 @@ Full phase details: `.planning/milestones/v1.3-ROADMAP.md`
 ### v1.4 Admin Completeness (Phases 18–21)
 
 - [x] **Phase 18: People Schema + Editor** - is_justice boolean migration, backfill, and conditional editor UI (completed 2026-06-29)
-- [ ] **Phase 19: Pipeline Reliability** - Duplicate argument prevention and metadata prefill
+- [x] **Phase 19: Pipeline Reliability** - Duplicate argument prevention and metadata prefill (completed 2026-06-30)
 - [ ] **Phase 20: Live Pipeline Status** - Real-time polling on list and job detail pages
 - [ ] **Phase 21: Admin UI Surface** - Delete actions for arguments and pipeline runs; unified admin navigation
 
@@ -113,13 +113,14 @@ Full phase details: `.planning/milestones/v1.3-ROADMAP.md`
   3. After a pipeline run completes parse, case name, docket, and argued date fields are pre-populated from cover extraction results without the operator typing them manually
   4. Operator can still override any pre-populated metadata field before publishing
 
-**Plans**: 4 plans
+**Plans**: 4/4 plans complete
 
 Plans:
-- [ ] 19-01-PLAN.md — Migration 0011: source_docket, cover_metadata JSONB, argued_date nullable, unique constraint (PIPE-25, PIPE-26)
-- [ ] 19-02-PLAN.md — Pipeline layer: cover extractor docket extraction, ingest source_docket + IntegrityError, parse cover_metadata write-back (PIPE-25, PIPE-26)
-- [ ] 19-03-PLAN.md — FastAPI layer: MetadataUpdate schema, check-duplicate + metadata PATCH endpoints, ArgumentDetail extension (PIPE-25, PIPE-26)
-- [ ] 19-04-PLAN.md — UI layer: check-duplicate proxy, start form preflight + banner, job detail metadata card (PIPE-25, PIPE-26)
+
+- [x] 19-01-PLAN.md — Migration 0011: source_docket, cover_metadata JSONB, argued_date nullable, unique constraint (PIPE-25, PIPE-26)
+- [x] 19-02-PLAN.md — Pipeline layer: cover extractor docket extraction, ingest source_docket + IntegrityError, parse cover_metadata write-back (PIPE-25, PIPE-26)
+- [x] 19-03-PLAN.md — FastAPI layer: MetadataUpdate schema, check-duplicate + metadata PATCH endpoints, ArgumentDetail extension (PIPE-25, PIPE-26)
+- [x] 19-04-PLAN.md — UI layer: check-duplicate proxy, start form preflight + banner, job detail metadata card (PIPE-25, PIPE-26)
 
 ### Phase 20: Live Pipeline Status
 
@@ -173,7 +174,7 @@ Plans:
 | 16. Parser Improvements | v1.3 | 2/2 | Complete | 2026-06-26 |
 | 17. Pipeline UI Polish | v1.3 | 3/3 | Complete | 2026-06-29 |
 | 18. People Schema + Editor | v1.4 | 3/3 | Complete    | 2026-06-29 |
-| 19. Pipeline Reliability | v1.4 | 0/? | Not started | - |
+| 19. Pipeline Reliability | v1.4 | 5/5 | Complete    | 2026-06-30 |
 | 20. Live Pipeline Status | v1.4 | 0/? | Not started | - |
 | 21. Admin UI Surface | v1.4 | 0/? | Not started | - |
 
@@ -183,7 +184,7 @@ Plans:
 
 **Goal:** [Captured for future planning]
 **Requirements:** TBD
-**Plans:** 3/3 plans complete
+**Plans:** 5/5 plans complete
 
 Plans:
 

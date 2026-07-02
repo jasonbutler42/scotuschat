@@ -42,7 +42,7 @@ from api.models.models import (
     Utterance,
 )
 from pipeline.db import get_session
-from pipeline.parser.cover_extractor import extract_cover_metadata, extract_advocate_sides
+from pipeline.parser.cover_extractor import extract_cover_metadata, extract_toc_data
 from pipeline.parser.extractor import extract_pages
 from pipeline.parser.llm_pass import parse_with_llm
 from pipeline.parser.state_machine import parse_transcript
@@ -139,11 +139,16 @@ async def _run_parse_inner(args) -> None:
     # Cover metadata extraction (CPU-only, synchronous pdfplumber — runs before
     # the async DB session per Pitfall 1). Returns {} on any failure (D-05).
     cover_meta = extract_cover_metadata(pdf_path)
-    advocate_sides = extract_advocate_sides(pdf_path)
+    # Single TOC read for both sides and titles (D-12). Returns empty maps on any failure (D-11).
+    toc = extract_toc_data(pdf_path)
+    advocate_sides = toc["sides"]
+    advocate_titles = toc["titles"]
     if cover_meta:
         print(f"Cover metadata extracted: {list(cover_meta.keys())}")
     if advocate_sides:
         print(f"Advocate sides mapped: {advocate_sides}")
+    if advocate_titles:
+        print(f"Advocate titles mapped: {advocate_titles}")
 
     async with get_session() as session:
         # -------------------------------------------------------------------
@@ -380,6 +385,15 @@ async def _run_parse_inner(args) -> None:
             print(f"Participant sides updated: {sides_updated} row(s) from TOC mapping.")
 
         # -------------------------------------------------------------------
+        # Phase 22 PJOB-13: Update argument_participants.title from TOC subtitle lines.
+        # Mirrors the sides update — same session, same placement after 7b flush.
+        # D-11: missing subtitle → NULL title; never raises.
+        # -------------------------------------------------------------------
+        if advocate_titles and run.argument_id is not None:
+            titles_updated = await _update_participant_titles(session, run.argument_id, advocate_titles)
+            print(f"Participant titles updated: {titles_updated} row(s) from TOC mapping.")
+
+        # -------------------------------------------------------------------
         # Step 8: Transition running → completed (PIPE-10)
         # -------------------------------------------------------------------
         run.status = PipelineRunStatus.COMPLETED
@@ -459,6 +473,40 @@ async def _update_participant_sides(
         label_last = _normalize_label_last_name(p.raw_speaker_label)
         if label_last and label_last.upper() in sides_map:
             p.side = SideEnum(sides_map[label_last.upper()])
+            updated += 1
+
+    return updated
+
+
+async def _update_participant_titles(
+    session: AsyncSession,
+    argument_id: int,
+    titles_map: "dict[str, str]",
+) -> int:
+    """
+    Update argument_participants.title for advocates whose normalized last name
+    matches a key in titles_map ({last_name_upper: title_string}).
+
+    Returns count of participant rows updated. Unmatched participants keep
+    NULL title (D-11). Title is stored as a plain string — no enum cast.
+    """
+    if not titles_map:
+        return 0
+
+    result = await session.execute(
+        select(ArgumentParticipant).where(
+            ArgumentParticipant.argument_id == argument_id
+        )
+    )
+    participants = result.scalars().all()
+
+    updated = 0
+    for p in participants:
+        if p.raw_speaker_label is None:
+            continue
+        label_last = _normalize_label_last_name(p.raw_speaker_label)
+        if label_last and label_last.upper() in titles_map:
+            p.title = titles_map[label_last.upper()]
             updated += 1
 
     return updated

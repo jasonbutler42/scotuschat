@@ -110,77 +110,77 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DASH-01 | — | Pending |
-| DASH-02 | — | Pending |
-| DASH-03 | — | Pending |
-| DASH-04 | — | Pending |
-| DASH-05 | — | Pending |
-| PLIST-01 | — | Pending |
-| PLIST-02 | — | Pending |
-| PLIST-03 | — | Pending |
-| PLIST-04 | — | Pending |
-| PLIST-05 | — | Pending |
-| PJOB-01 | — | Pending |
-| PJOB-02 | — | Pending |
-| PJOB-03 | — | Pending |
-| PJOB-04 | — | Pending |
-| PJOB-05 | — | Pending |
-| PJOB-06 | — | Pending |
-| PJOB-07 | — | Pending |
-| PJOB-08 | — | Pending |
-| PJOB-09 | — | Pending |
-| PJOB-10 | — | Pending |
-| PJOB-11 | — | Pending |
-| PJOB-12 | — | Pending |
-| PJOB-13 | — | Pending |
-| PJOB-14 | — | Pending |
-| PJOB-15 | — | Pending |
-| PJOB-16 | — | Pending |
-| PJOB-17 | — | Pending |
-| PJOB-18 | — | Pending |
-| PJOB-19 | — | Pending |
-| PJOB-20 | — | Pending |
-| PJOB-21 | — | Pending |
-| PJOB-22 | — | Pending |
-| PJOB-23 | — | Pending |
-| ALIST-01 | — | Pending |
-| ALIST-02 | — | Pending |
-| ALIST-03 | — | Pending |
-| ALIST-04 | — | Pending |
-| AEDIT-01 | — | Pending |
-| AEDIT-02 | — | Pending |
-| AEDIT-03 | — | Pending |
-| AEDIT-04 | — | Pending |
-| AEDIT-05 | — | Pending |
-| AEDIT-06 | — | Pending |
-| AEDIT-07 | — | Pending |
-| AEDIT-08 | — | Pending |
-| AEDIT-09 | — | Pending |
-| PDIR-01 | — | Pending |
-| PDIR-02 | — | Pending |
-| PDIR-03 | — | Pending |
-| PDIR-04 | — | Pending |
-| PDIR-05 | — | Pending |
-| PDIR-06 | — | Pending |
-| PDIR-07 | — | Pending |
-| PEDIT-01 | — | Pending |
-| PEDIT-02 | — | Pending |
-| PEDIT-03 | — | Pending |
-| PEDIT-04 | — | Pending |
-| PEDIT-05 | — | Pending |
-| PEDIT-06 | — | Pending |
-| PEDIT-07 | — | Pending |
-| PEDIT-08 | — | Pending |
-| PEDIT-09 | — | Pending |
-| PEDIT-10 | — | Pending |
-| PEDIT-11 | — | Pending |
-| PEDIT-12 | — | Pending |
+| DASH-01 | Phase 28 | Pending |
+| DASH-02 | Phase 28 | Pending |
+| DASH-03 | Phase 28 | Pending |
+| DASH-04 | Phase 28 | Pending |
+| DASH-05 | Phase 28 | Pending |
+| PLIST-01 | Phase 24 | Pending |
+| PLIST-02 | Phase 24 | Pending |
+| PLIST-03 | Phase 24 | Pending |
+| PLIST-04 | Phase 24 | Pending |
+| PLIST-05 | Phase 24 | Pending |
+| PJOB-01 | Phase 25 | Pending |
+| PJOB-02 | Phase 25 | Pending |
+| PJOB-03 | Phase 23 | Pending |
+| PJOB-04 | Phase 23 | Pending |
+| PJOB-05 | Phase 23 | Pending |
+| PJOB-06 | Phase 23 | Pending |
+| PJOB-07 | Phase 23 | Pending |
+| PJOB-08 | Phase 25 | Pending |
+| PJOB-09 | Phase 23 | Pending |
+| PJOB-10 | Phase 23 | Pending |
+| PJOB-11 | Phase 23 | Pending |
+| PJOB-12 | Phase 23 | Pending |
+| PJOB-13 | Phase 22 | Pending |
+| PJOB-14 | Phase 25 | Pending |
+| PJOB-15 | Phase 25 | Pending |
+| PJOB-16 | Phase 25 | Pending |
+| PJOB-17 | Phase 25 | Pending |
+| PJOB-18 | Phase 25 | Pending |
+| PJOB-19 | Phase 25 | Pending |
+| PJOB-20 | Phase 25 | Pending |
+| PJOB-21 | Phase 25 | Pending |
+| PJOB-22 | Phase 25 | Pending |
+| PJOB-23 | Phase 25 | Pending |
+| ALIST-01 | Phase 22 | Pending |
+| ALIST-02 | Phase 26 | Pending |
+| ALIST-03 | Phase 26 | Pending |
+| ALIST-04 | Phase 26 | Pending |
+| AEDIT-01 | Phase 26 | Pending |
+| AEDIT-02 | Phase 22 | Pending |
+| AEDIT-03 | Phase 23 | Pending |
+| AEDIT-04 | Phase 23 | Pending |
+| AEDIT-05 | Phase 26 | Pending |
+| AEDIT-06 | Phase 26 | Pending |
+| AEDIT-07 | Phase 26 | Pending |
+| AEDIT-08 | Phase 26 | Pending |
+| AEDIT-09 | Phase 26 | Pending |
+| PDIR-01 | Phase 27 | Pending |
+| PDIR-02 | Phase 27 | Pending |
+| PDIR-03 | Phase 27 | Pending |
+| PDIR-04 | Phase 27 | Pending |
+| PDIR-05 | Phase 27 | Pending |
+| PDIR-06 | Phase 27 | Pending |
+| PDIR-07 | Phase 27 | Pending |
+| PEDIT-01 | Phase 27 | Pending |
+| PEDIT-02 | Phase 27 | Pending |
+| PEDIT-03 | Phase 27 | Pending |
+| PEDIT-04 | Phase 27 | Pending |
+| PEDIT-05 | Phase 27 | Pending |
+| PEDIT-06 | Phase 27 | Pending |
+| PEDIT-07 | Phase 27 | Pending |
+| PEDIT-08 | Phase 27 | Pending |
+| PEDIT-09 | Phase 27 | Pending |
+| PEDIT-10 | Phase 22 | Pending |
+| PEDIT-11 | Phase 27 | Pending |
+| PEDIT-12 | Phase 27 | Pending |
 
 **Coverage:**
 - v1.5 requirements: 57 total
-- Mapped to phases: 0
-- Unmapped: 57 ⚠️
+- Mapped to phases: 57
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-07-02*
-*Last updated: 2026-07-02 after initial definition*
+*Last updated: 2026-07-02 after roadmap creation — all 57 requirements mapped to Phases 22–28*

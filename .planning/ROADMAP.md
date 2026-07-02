@@ -7,6 +7,7 @@
 - ✅ **v1.2 Pre-Launch Polish** — Phases 9–14 (shipped 2026-06-25)
 - ✅ **v1.3 Speaker Accuracy + Pipeline Confidence** — Phases 15–17 (shipped 2026-06-29)
 - ✅ **v1.4 Admin Completeness** — Phases 18–21 (shipped 2026-07-02)
+- 🚧 **v1.5 Admin Screens Cleanup** — Phases 22–28 (in progress)
 
 ## Phases
 
@@ -81,6 +82,109 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 
 </details>
 
+### 🚧 v1.5 Admin Screens Cleanup (In Progress)
+
+**Milestone Goal:** Screen-by-screen audit and refinement of all 7 admin screens — defining what belongs on each, removing redundant elements, and adding missing capabilities now that the admin interface is functionally complete.
+
+- [ ] **Phase 22: Schema Foundations** - Cross-cutting Alembic migrations and pipeline changes that all v1.5 screens depend on
+- [ ] **Phase 23: Shared Argument Details Component** - Reusable docket/question/date card used on both pipeline job detail and argument edit pages
+- [ ] **Phase 24: Pipeline List Page** - Redesigned run-start form and run table at `/admin/pipeline/`
+- [ ] **Phase 25: Pipeline Job Detail Page** - Restructured job detail layout with run status card, resolve redesign, and no floating buttons at `/admin/pipeline/[id]`
+- [ ] **Phase 26: Arguments Admin** - New `unpublished` status lifecycle + refined list and edit screens at `/admin/arguments/` and `/admin/arguments/[id]`
+- [ ] **Phase 27: People Admin** - Benchmarks/advocate tabs, tenure-per-row appointment data, and create-person flow at `/admin/people/` and `/admin/people/[id]`
+- [ ] **Phase 28: Dashboard** - Intentional stat cards, "needs attention" section, and actionable CTAs at `/admin/`
+
+## Phase Details
+
+### Phase 22: Schema Foundations
+**Goal**: All new database tables, columns, enum values, and pipeline data changes required by v1.5 UI are in place — migrations run clean, data is backfilled, and downstream phases can build UI without waiting on schema
+**Depends on**: Phase 21
+**Requirements**: ALIST-01, AEDIT-02, PJOB-13, PEDIT-10
+**Success Criteria** (what must be TRUE):
+  1. Alembic migration adds `unpublished` to `argument_status` enum and runs without error on existing data
+  2. Alembic migration creates `argument_status_log` table with required columns and FK to arguments; existing arguments each receive a `created` log entry via backfill
+  3. `argument_participants.title` VARCHAR column exists; parse step extracts advocate title from PDF TOC and writes it on new runs
+  4. `appointed_by` and `appointing_president_party` columns exist on `court_tenures` (not `people`), with data backfilled from `people` and old columns removed via migration
+**Plans**: TBD
+
+### Phase 23: Shared Argument Details Component
+**Goal**: A single reusable Argument Details card component exists that renders docket pill/tag input, free-text question number, argued date, and extracted hints from `cover_metadata` — wired up on the pipeline job detail page as its first consumer
+**Depends on**: Phase 22
+**Requirements**: AEDIT-03, AEDIT-04, PJOB-03, PJOB-04, PJOB-05, PJOB-06, PJOB-07, PJOB-09, PJOB-10, PJOB-11, PJOB-12
+**Success Criteria** (what must be TRUE):
+  1. Pipeline job detail page shows "Argument Details" card with docket pill/tag input, free-text question number, argued date, and extracted hints alongside each editable field (or "N/A" when nothing was extracted)
+  2. Docket pill/tag UI allows adding multiple docket numbers one at a time and removing individual pills — consistent with PLIST-02 target behavior
+  3. Parse stat card shows utterance count, speaker counts (Bench / Advocate / Total), case name, argued date, docket(s), and question number(s); fields not extracted display "N/A" rather than being hidden
+  4. Saving Argument Details saves run metadata only and does not create the argument
+  5. Ingest card no longer shows the source file (moved to run status card in Phase 25)
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 24: Pipeline List Page
+**Goal**: The pipeline list page at `/admin/pipeline/` has a free-text question number field, a docket pill/tag input consistent with Phase 23, a complete runs table, the "show incomplete only" toggle, and accurate compound status badges
+**Depends on**: Phase 23
+**Requirements**: PLIST-01, PLIST-02, PLIST-03, PLIST-04, PLIST-05
+**Success Criteria** (what must be TRUE):
+  1. Operator can type any free text into the question number field when starting a run (not constrained to a dropdown)
+  2. Operator can add multiple docket numbers as pills and remove individual pills before submitting — matching the Phase 23 component behavior
+  3. Runs table shows all pipeline runs, not just recent ones
+  4. "Show incomplete only" toggle is present and functional
+  5. Status badges display compound labels (e.g., "Parse · Running", "Resolve · Needs Review", "Completed") that accurately reflect current stage and status
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 25: Pipeline Job Detail Page
+**Goal**: The pipeline job detail page at `/admin/pipeline/[id]` has a run status card as the primary status element, a fully restructured resolve card, and all previously floating action buttons moved into contextually appropriate cards
+**Depends on**: Phase 23
+**Requirements**: PJOB-01, PJOB-02, PJOB-08, PJOB-14, PJOB-15, PJOB-16, PJOB-17, PJOB-18, PJOB-19, PJOB-20, PJOB-21, PJOB-22, PJOB-23
+**Success Criteria** (what must be TRUE):
+  1. Run status card shows status badge and source file link and has 3 states: Not ready (lists blockers), Ready ("Create Argument" CTA), Already created (link to argument edit page)
+  2. Failed step card shows the error message and contextual next-step actions including re-run — no standalone floating "Re-run" button exists anywhere on the page
+  3. Resolve card columns show: Raw label, Resolved as (avatar + name), Bench/Advocate side, Argument Role, Title (advocates only), and Action — no confirmation checkmark column
+  4. Resolve card is fully editable in Not ready and Ready states and read-only in Already created state; bench roles display tenure lookup result or "Missing tenure" when no matching tenure exists
+  5. Saving Argument Details triggers bench role recalculation visible in the resolve card; "Create Argument" and "Continue Resolve" actions live inside their respective cards, not as floating buttons
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 26: Arguments Admin
+**Goal**: The arguments admin screens accurately represent the three-state argument lifecycle (Draft / Published / Unpublished), the arguments list excludes pipeline-only rows, and the argument edit page has a status log, a unified Argument Details card, and a speakers section replacing the old advocate roles card
+**Depends on**: Phase 22, Phase 23
+**Requirements**: ALIST-02, ALIST-03, ALIST-04, AEDIT-01, AEDIT-02 (UI surface), AEDIT-05, AEDIT-06, AEDIT-07, AEDIT-08, AEDIT-09
+**Success Criteria** (what must be TRUE):
+  1. Arguments list shows only Draft / Published / Unpublished rows — arguments in pipeline-only status do not appear
+  2. Status column displays distinct badges for all three statuses; "Created" column shows the date/time the argument was first created
+  3. Argument edit page shows a status card with the current badge, created date, and published date; below it a full status log with a timestamped entry for every transition
+  4. Speakers section lists all argument participants with utterance counts; advocate rows have a role dropdown (PETITIONER / RESPONDENT / AMICUS), a title field, and inline save without full-page refresh; bench rows show tenure-derived role or "Missing tenure" with edit link
+  5. Publish / Unpublish / re-Publish transitions are all functional: Draft → Published, Published → Unpublished, Unpublished → Published
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 27: People Admin
+**Goal**: The people list is split into Bench and Advocate tabs with columns appropriate to each, a "Create person" button works before any argument exists, and the person editor consolidates all Justice-specific fields into a collapsible Justice Details card with appointment data now stored per tenure row
+**Depends on**: Phase 22
+**Requirements**: PDIR-01, PDIR-02, PDIR-03, PDIR-04, PDIR-05, PDIR-06, PDIR-07, PEDIT-01, PEDIT-02, PEDIT-03, PEDIT-04, PEDIT-05, PEDIT-06, PEDIT-07, PEDIT-08, PEDIT-09, PEDIT-10 (UI surface), PEDIT-11, PEDIT-12
+**Success Criteria** (what must be TRUE):
+  1. People list page is titled "People" and has Bench and Advocate tabs; Bench tab columns include tenure coverage and tenure gap indicator; Advocate tab columns include argument count
+  2. "Incomplete only" filter works per tab; "Justices with tenure gaps" filter is present and functional on the Bench tab only
+  3. "Create person" button navigates to a blank person editor — operator can create a Justice before any argument is uploaded
+  4. Justice Details card is collapsed by default; checking "Is Justice" opens it with animation; unchecking hides the fields without deleting tenure or appointment data
+  5. Each tenure row in the editor contains Seat, Appointed by, Appointing president's party, Start date, and End date — data reads correctly from the migrated `court_tenures` columns
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 28: Dashboard
+**Goal**: The `/admin/` dashboard presents intentionally designed stat cards with actionable CTAs, a "needs attention" section surfacing real operator tasks, and a web traffic placeholder card — giving the operator an at-a-glance view of the admin state on every login
+**Depends on**: Phase 22, Phase 26, Phase 27
+**Requirements**: DASH-01, DASH-02, DASH-03, DASH-04, DASH-05
+**Success Criteria** (what must be TRUE):
+  1. Stat cards show: Arguments (total / published / draft / unpublished), People (total / incomplete), Utterances (total), and Pipeline runs (recent count + last activity date)
+  2. Each applicable stat card has an inline CTA linking to the relevant admin screen (e.g., "12 people missing fields → Review")
+  3. "Needs attention" section shows people with incomplete fields, Justices with tenure gaps, and draft arguments — intentionally unpublished arguments are excluded from this section
+  4. A web traffic placeholder card is present and labelled "coming soon"
+  5. Dashboard layout is intentionally designed — not a generic table dump; visual hierarchy guides the operator to the most urgent items
+**Plans**: TBD
+**UI hint**: yes
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -102,10 +206,17 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 | 15. Speaker Role Accuracy | v1.3 | 4/4 | Complete | 2026-06-26 |
 | 16. Parser Improvements | v1.3 | 2/2 | Complete | 2026-06-26 |
 | 17. Pipeline UI Polish | v1.3 | 3/3 | Complete | 2026-06-29 |
-| 18. People Schema + Editor | v1.4 | 3/3 | Complete    | 2026-06-29 |
-| 19. Pipeline Reliability | v1.4 | 5/5 | Complete    | 2026-06-30 |
-| 20. Live Pipeline Status | v1.4 | 1/1 | Complete   | 2026-07-01 |
-| 21. Admin UI Surface | v1.4 | 4/4 | Complete   | 2026-07-01 |
+| 18. People Schema + Editor | v1.4 | 3/3 | Complete | 2026-06-29 |
+| 19. Pipeline Reliability | v1.4 | 5/5 | Complete | 2026-06-30 |
+| 20. Live Pipeline Status | v1.4 | 1/1 | Complete | 2026-07-01 |
+| 21. Admin UI Surface | v1.4 | 4/4 | Complete | 2026-07-01 |
+| 22. Schema Foundations | v1.5 | 0/TBD | Not started | - |
+| 23. Shared Argument Details Component | v1.5 | 0/TBD | Not started | - |
+| 24. Pipeline List Page | v1.5 | 0/TBD | Not started | - |
+| 25. Pipeline Job Detail Page | v1.5 | 0/TBD | Not started | - |
+| 26. Arguments Admin | v1.5 | 0/TBD | Not started | - |
+| 27. People Admin | v1.5 | 0/TBD | Not started | - |
+| 28. Dashboard | v1.5 | 0/TBD | Not started | - |
 
 ## Backlog
 

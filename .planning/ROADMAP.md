@@ -87,7 +87,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 **Milestone Goal:** Screen-by-screen audit and refinement of all 7 admin screens — defining what belongs on each, removing redundant elements, and adding missing capabilities now that the admin interface is functionally complete.
 
 - [x] **Phase 22: Schema Foundations** - Cross-cutting Alembic migrations and pipeline changes that all v1.5 screens depend on (completed 2026-07-02)
-- [ ] **Phase 23: Shared Argument Details Component** - Reusable docket/question/date card used on both pipeline job detail and argument edit pages
+- [x] **Phase 23: Shared Argument Details Component** - Reusable docket/question/date card used on both pipeline job detail and argument edit pages (completed 2026-07-02)
 - [ ] **Phase 24: Pipeline List Page** - Redesigned run-start form and run table at `/admin/pipeline/`
 - [ ] **Phase 25: Pipeline Job Detail Page** - Restructured job detail layout with run status card, resolve redesign, and no floating buttons at `/admin/pipeline/[id]`
 - [ ] **Phase 26: Arguments Admin** - New `unpublished` status lifecycle + refined list and edit screens at `/admin/arguments/` and `/admin/arguments/[id]`
@@ -134,7 +134,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
   4. Saving Argument Details saves run metadata only and does not create the argument
   5. Ingest card no longer shows the source file (moved to run status card in Phase 25)
 
-**Plans**: 2/3 plans executed
+**Plans**: 3/3 plans complete
 
 **Wave 1** *(parallel — disjoint files)*
 
@@ -143,7 +143,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 
 **Wave 2** *(blocked on Wave 1)*
 
-- [ ] 23-03-PLAN.md — Wire pipeline job detail: saveJobMetadata action, render ArgumentDetailsCard, expand parse stat card, remove ingest source file row (AEDIT-04, PJOB-04, PJOB-05, PJOB-06, PJOB-07, PJOB-09, PJOB-10, PJOB-11, PJOB-12)
+- [x] 23-03-PLAN.md — Wire pipeline job detail: saveJobMetadata action, render ArgumentDetailsCard, expand parse stat card, remove ingest source file row (AEDIT-04, PJOB-04, PJOB-05, PJOB-06, PJOB-07, PJOB-09, PJOB-10, PJOB-11, PJOB-12)
 
 **UI hint**: yes
 
@@ -253,7 +253,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 | 20. Live Pipeline Status | v1.4 | 1/1 | Complete | 2026-07-01 |
 | 21. Admin UI Surface | v1.4 | 4/4 | Complete | 2026-07-01 |
 | 22. Schema Foundations | v1.5 | 3/3 | Complete    | 2026-07-02 |
-| 23. Shared Argument Details Component | v1.5 | 2/3 | In Progress|  |
+| 23. Shared Argument Details Component | v1.5 | 3/3 | Complete   | 2026-07-02 |
 | 24. Pipeline List Page | v1.5 | 0/TBD | Not started | - |
 | 25. Pipeline Job Detail Page | v1.5 | 0/TBD | Not started | - |
 | 26. Arguments Admin | v1.5 | 0/TBD | Not started | - |

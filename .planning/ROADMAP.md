@@ -134,7 +134,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
   4. Saving Argument Details saves run metadata only and does not create the argument
   5. Ingest card no longer shows the source file (moved to run status card in Phase 25)
 
-**Plans**: 3/3 plans complete
+**Plans**: 4 plans (3 complete + 1 gap closure)
 
 **Wave 1** *(parallel — disjoint files)*
 
@@ -144,6 +144,10 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 **Wave 2** *(blocked on Wave 1)*
 
 - [x] 23-03-PLAN.md — Wire pipeline job detail: saveJobMetadata action, render ArgumentDetailsCard, expand parse stat card, remove ingest source file row (AEDIT-04, PJOB-04, PJOB-05, PJOB-06, PJOB-07, PJOB-09, PJOB-10, PJOB-11, PJOB-12)
+
+**Wave 3** *(gap closure — blocked on Wave 2 UAT)*
+
+- [ ] 23-04-PLAN.md — Gap closure: remove orphaned Argument card and View Source PDF card, fix docket-clear save bug, freeze question_number hint to null, move docket instruction to static label
 
 **UI hint**: yes
 

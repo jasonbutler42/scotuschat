@@ -20,6 +20,7 @@ interface ArgumentPreview {
 	status: string | null;
 	source_docket: string | null;
 	cover_metadata: Record<string, unknown> | null;
+	question_number: number | null;
 }
 
 export const load: PageServerLoad = async ({ params }) => {
@@ -105,7 +106,37 @@ export const load: PageServerLoad = async ({ params }) => {
 		}
 	}
 
-	return { job, people, peopleLoadError, participants, argument };
+	// Construct savedValues and hints for ArgumentDetailsCard (Plan 23-03).
+	// savedValues: operator-confirmed values from the Argument record.
+	// hints: raw extraction output from cover_metadata JSONB.
+	// Both are null when no argument is linked (PJOB-07 guard: component not rendered).
+	let savedValues: { dockets: string[]; question_number: string; argued_date: string | null } | null =
+		null;
+	let hints: {
+		dockets: string[];
+		question_number: string | null;
+		argued_date: string | null;
+		case_name: string | null;
+	} | null = null;
+
+	if (argument != null) {
+		savedValues = {
+			dockets: argument.source_docket ? [argument.source_docket] : [],
+			question_number: argument.question_number != null ? String(argument.question_number) : '',
+			argued_date: argument.argued_date ? argument.argued_date.slice(0, 10) : null,
+		};
+		hints = {
+			dockets: argument.cover_metadata?.primary_docket
+				? [String(argument.cover_metadata.primary_docket)]
+				: [],
+			question_number:
+				argument.question_number != null ? String(argument.question_number) : null,
+			argued_date: (argument.cover_metadata?.argued_date as string) ?? null,
+			case_name: (argument.cover_metadata?.case_name as string) ?? null,
+		};
+	}
+
+	return { job, people, peopleLoadError, participants, argument, savedValues, hints };
 };
 
 export const actions: Actions = {
@@ -374,5 +405,75 @@ export const actions: Actions = {
 		}
 
 		return { metadataSaved: true };
+	},
+
+	/**
+	 * saveJobMetadata — persist dockets, question_number, and argued_date for the linked argument.
+	 *
+	 * Reads docket[] via getAll (D-05 pill serialization). Fetches the job to derive argument_id
+	 * server-side (T-23-03-01: IDOR guard — argument_id never accepted from form data).
+	 * Guards: never creates an argument (PJOB-07); argument_id null → fail(400).
+	 * Always echoes dockets in fail() payload (D-06 pill restore on failed save).
+	 * PATCHes existing /api/admin/arguments/{id}/metadata endpoint (source_docket = dockets[0]).
+	 */
+	saveJobMetadata: async ({ request, params }) => {
+		const data = await request.formData();
+		const dockets = (data.getAll('docket[]') as string[])
+			.map((v) => v.trim())
+			.filter(Boolean);
+		const question_number = ((data.get('question_number') as string) ?? '').trim();
+		const argued_date = ((data.get('argued_date') as string) ?? '').trim() || null;
+
+		// Fetch the job to get argument_id server-side (T-23-03-01: never accept from form)
+		let argumentId: number | null = null;
+		try {
+			const jobRes = await fetch(`${FASTAPI_BASE_URL}/api/admin/jobs/${params.job_id}`, {
+				headers: { 'X-Admin-Token': ADMIN_TOKEN },
+			});
+			if (jobRes.ok) {
+				const job = await jobRes.json();
+				argumentId = job.argument_id ?? null;
+			} else {
+				return fail(502, { saveError: 'Could not save. Try again.', dockets });
+			}
+		} catch {
+			return fail(502, { saveError: 'Could not save. Try again.', dockets });
+		}
+
+		// PJOB-07: never create an argument — guard argument_id null
+		if (argumentId === null) {
+			return fail(400, {
+				saveError: 'No argument linked to this run yet.',
+				dockets,
+			});
+		}
+
+		// PATCH the argument metadata (source_docket, argued_date, question_number)
+		let res: Response;
+		try {
+			res = await fetch(
+				`${FASTAPI_BASE_URL}/api/admin/arguments/${argumentId}/metadata`,
+				{
+					method: 'PATCH',
+					headers: {
+						'X-Admin-Token': ADMIN_TOKEN,
+						'Content-Type': 'application/json',
+					},
+					body: JSON.stringify({
+						source_docket: dockets[0] ?? null,
+						argued_date,
+						question_number: question_number || null,
+					}),
+				},
+			);
+		} catch {
+			return fail(502, { saveError: 'Could not save. Try again.', dockets });
+		}
+
+		if (!res.ok) {
+			return fail(422, { saveError: 'Could not save. Try again.', dockets });
+		}
+
+		return { saved: true };
 	},
 };

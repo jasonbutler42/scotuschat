@@ -1,7 +1,8 @@
 """
 SQLAlchemy ORM models for SCOTUS Chat.
 
-All 11 tables are defined here. Alembic is the sole DDL authority —
+All 13 tables are defined here (including admin_jobs and argument_status_log
+added in phases 15 and 22 respectively). Alembic is the sole DDL authority —
 schema is managed exclusively via migrations in alembic/versions/.
 """
 
@@ -67,6 +68,7 @@ class ArgumentStatusEnum(str, enum.Enum):
     PIPELINE = "pipeline"
     DRAFT = "draft"
     PUBLISHED = "published"
+    UNPUBLISHED = "unpublished"
 
 
 # ---------------------------------------------------------------------------
@@ -334,7 +336,30 @@ class SpeakerAlias(Base):
 
 
 # ---------------------------------------------------------------------------
-# Table 12: admin_jobs
+# Table 12: argument_status_log
+# Audit log of argument status changes. One row per status transition.
+# Seeded at migration 0012 with one row per existing argument (backfill).
+# Minimal schema (D-06): no previous_status, notes, or triggered_by in v1.5.
+# The status column binds to the existing argument_status PG enum type
+# (name="argument_status") — it does NOT create a shadow type.
+# ---------------------------------------------------------------------------
+
+
+class ArgumentStatusLog(Base):
+    __tablename__ = "argument_status_log"
+
+    id = Column(Integer, primary_key=True)
+    argument_id = Column(Integer, ForeignKey("arguments.id"), nullable=False)
+    status = Column(
+        SAEnum(ArgumentStatusEnum, name="argument_status",
+               values_callable=lambda e: [x.value for x in e]),
+        nullable=False,
+    )
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+# ---------------------------------------------------------------------------
+# Table 13: admin_jobs
 # Tracks operator-initiated pipeline jobs submitted via the admin UI.
 # status and current_step use PG enums defined in migration 0003.
 # argument_id is nullable FK — NULL until ingest creates the argument row (D-02).

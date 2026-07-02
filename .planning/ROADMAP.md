@@ -86,7 +86,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 
 **Milestone Goal:** Screen-by-screen audit and refinement of all 7 admin screens — defining what belongs on each, removing redundant elements, and adding missing capabilities now that the admin interface is functionally complete.
 
-- [ ] **Phase 22: Schema Foundations** - Cross-cutting Alembic migrations and pipeline changes that all v1.5 screens depend on
+- [x] **Phase 22: Schema Foundations** - Cross-cutting Alembic migrations and pipeline changes that all v1.5 screens depend on (completed 2026-07-02)
 - [ ] **Phase 23: Shared Argument Details Component** - Reusable docket/question/date card used on both pipeline job detail and argument edit pages
 - [ ] **Phase 24: Pipeline List Page** - Redesigned run-start form and run table at `/admin/pipeline/`
 - [ ] **Phase 25: Pipeline Job Detail Page** - Restructured job detail layout with run status card, resolve redesign, and no floating buttons at `/admin/pipeline/[id]`
@@ -108,7 +108,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
   3. `argument_participants.title` VARCHAR column exists; parse step extracts advocate title from PDF TOC and writes it on new runs
   4. `appointed_by` and `appointing_president_party` columns exist on `court_tenures` (not `people`), with data backfilled from `people` and old columns removed via migration
 
-**Plans**: 2/3 plans executed
+**Plans**: 3/3 plans complete
 **Wave 1**
 
 - [x] 22-01-PLAN.md — Migration 0012: unpublished enum value + argument_status_log table + backfill (ALIST-01, AEDIT-02)
@@ -119,7 +119,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 22-03-PLAN.md — Parse step advocate-title extraction from PDF TOC (PJOB-13 logic)
+- [x] 22-03-PLAN.md — Parse step advocate-title extraction from PDF TOC (PJOB-13 logic)
 
 ### Phase 23: Shared Argument Details Component
 
@@ -242,7 +242,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 | 19. Pipeline Reliability | v1.4 | 5/5 | Complete | 2026-06-30 |
 | 20. Live Pipeline Status | v1.4 | 1/1 | Complete | 2026-07-01 |
 | 21. Admin UI Surface | v1.4 | 4/4 | Complete | 2026-07-01 |
-| 22. Schema Foundations | v1.5 | 2/3 | In Progress|  |
+| 22. Schema Foundations | v1.5 | 3/3 | Complete   | 2026-07-02 |
 | 23. Shared Argument Details Component | v1.5 | 0/TBD | Not started | - |
 | 24. Pipeline List Page | v1.5 | 0/TBD | Not started | - |
 | 25. Pipeline Job Detail Page | v1.5 | 0/TBD | Not started | - |

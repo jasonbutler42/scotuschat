@@ -4,11 +4,11 @@ milestone: v1.4
 milestone_name: Admin Completeness
 current_phase: 21
 current_phase_name: admin-ui-surface
-status: executing
-stopped_at: Phase 21 UI-SPEC approved
-last_updated: "2026-07-01T22:28:56.284Z"
-last_activity: 2026-07-01
-last_activity_desc: Phase 21 execution started
+status: complete
+stopped_at: Phase 21 UAT passed — v1.4 milestone complete
+last_updated: "2026-07-02T00:00:00.000Z"
+last_activity: 2026-07-02
+last_activity_desc: Phase 21 UAT complete — all 3 tests passed
 progress:
   total_phases: 4
   completed_phases: 4
@@ -24,16 +24,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-29 after Phase 17 complete — v1.3 milestone done)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** Phase 21 — admin-ui-surface
+**Current focus:** v1.4 milestone complete — ready for /gsd-new-milestone
 
 ## Current Position
 
-Phase: 21 (admin-ui-surface) — EXECUTING
-Plan: 2 of 4
-Status: Ready to execute
-Last activity: 2026-07-01 — Phase 21 execution started
+Phase: 21 (admin-ui-surface) — COMPLETE (UAT passed 2026-07-02)
+Status: All 4/4 phases complete; v1.4 milestone done
+Last activity: 2026-07-02 — Phase 21 UAT passed
 
-Progress: ███████░░░ 75% (3/4 phases)
+Progress: ██████████ 100% (4/4 phases)
 
 ## Performance Metrics
 

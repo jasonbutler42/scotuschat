@@ -208,6 +208,7 @@ async def get_argument_detail(db: AsyncSession, argument_id: int) -> dict | None
         "participants": participants,
         "source_docket": argument.source_docket,    # Phase 19 D-01
         "cover_metadata": argument.cover_metadata,  # Phase 19 D-07
+        "question_number": argument.question_number,  # Phase 23 PJOB-07
     }
 
 
@@ -544,6 +545,13 @@ async def update_argument_metadata(
         values_to_set["argued_date"] = parsed_date
     if body.source_docket is not None:
         values_to_set["source_docket"] = body.source_docket
+    # Phase 23 (PJOB-07 / T-23-02): parse question_number from free-text string.
+    # Non-numeric input is silently skipped (never raises 500 per T-23-02).
+    if body.question_number is not None and body.question_number.strip():
+        try:
+            values_to_set["question_number"] = int(body.question_number)
+        except ValueError:
+            pass  # Non-numeric value — skip silently per T-23-02
     if values_to_set:
         await db.execute(
             update(Argument)

@@ -31,6 +31,7 @@ from api.models.models import (
     Person,
     PipelineRun,
     Role,
+    SideEnum,
     SpeakerAlias,
     Utterance,
 )
@@ -141,9 +142,52 @@ async def get_job(db: AsyncSession, job_id: int) -> AdminJob | None:
         )
         speaker_count = spk_result.scalar_one()
 
+        # Phase 23 (PJOB-10): bench/advocate counts scoped to this argument.
+        # COUNT queries always return a row — use scalar_one(), never scalar_one_or_none().
+        # Only resolved participants (person_id IS NOT NULL) are counted.
+        bench_result = await db.execute(
+            select(func.count(ArgumentParticipant.id)).where(
+                ArgumentParticipant.argument_id == job.argument_id,
+                ArgumentParticipant.side == SideEnum.BENCH,
+                ArgumentParticipant.person_id.isnot(None),
+            )
+        )
+        bench_count = bench_result.scalar_one()
+
+        advocate_result = await db.execute(
+            select(func.count(ArgumentParticipant.id)).where(
+                ArgumentParticipant.argument_id == job.argument_id,
+                ArgumentParticipant.side != SideEnum.BENCH,
+                ArgumentParticipant.person_id.isnot(None),
+            )
+        )
+        advocate_count = advocate_result.scalar_one()
+
+        total_speaker_count = bench_count + advocate_count
+
+        # Phase 23 (PJOB-12): cover_metadata + question_number from Argument row.
+        # cover_metadata is nullable JSONB — read defensively with (cover_metadata or {}).
+        # CRITICAL: question_number comes from Argument.question_number column,
+        # NOT from cover_metadata (which has no question_number key).
+        arg_result = await db.execute(
+            select(Argument.cover_metadata, Argument.question_number).where(
+                Argument.id == job.argument_id
+            )
+        )
+        arg_row = arg_result.one_or_none()
+        cover_meta = (arg_row.cover_metadata or {}) if arg_row else {}
+        question_number_val = arg_row.question_number if arg_row else None
+
         job.__dict__["parse_stats"] = {
             "utterance_count": utterance_count,
-            "speaker_count": speaker_count,
+            "speaker_count": speaker_count,       # backward compat
+            "bench_count": bench_count,
+            "advocate_count": advocate_count,
+            "total_speaker_count": total_speaker_count,
+            "case_name": cover_meta.get("case_name"),
+            "argued_date": cover_meta.get("argued_date"),
+            "primary_docket": cover_meta.get("primary_docket"),
+            "question_number": question_number_val,
         }
     else:
         job.__dict__["parse_stats"] = None

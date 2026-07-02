@@ -1,0 +1,186 @@
+# Requirements: SCOTUS Chat
+
+**Defined:** 2026-07-02
+**Milestone:** v1.5 Admin Screens Cleanup
+**Core Value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
+
+## v1.5 Requirements
+
+### Dashboard (`/admin/`)
+
+- [ ] **DASH-01** Stat cards: Arguments (total / published / draft / unpublished), People (total / incomplete), Utterances (total), Pipeline runs (recent + last activity date)
+- [ ] **DASH-02** Each stat card includes an inline actionable CTA where applicable (e.g. "12 people missing fields → Review")
+- [ ] **DASH-03** "Needs attention" section: people with incomplete fields, Justices with tenure gaps, draft arguments — excludes intentionally unpublished arguments
+- [ ] **DASH-04** Web traffic placeholder card ("coming soon")
+- [ ] **DASH-05** Intentional visual design — not a generic table dump
+
+### Pipeline List (`/admin/pipeline/`)
+
+- [ ] **PLIST-01** Question number: free text field replacing 2-option dropdown
+- [ ] **PLIST-02** Docket input: pill/tag UI — add one at a time, remove individually, supports multiple dockets for consolidated arguments
+- [ ] **PLIST-03** Runs table shows all pipeline runs (not just recent)
+- [ ] **PLIST-04** "Show incomplete only" toggle retained
+- [ ] **PLIST-05** Status badges show stage + status (e.g. "Parse · Running", "Resolve · Needs Review", "Completed")
+
+### Pipeline Job Detail (`/admin/pipeline/[id]`)
+
+- [ ] **PJOB-01** Pipeline Run status card: status badge + source file linked to PDF — replaces non-editable argument preview card
+- [ ] **PJOB-02** Run status card has 3 states: Not ready (lists what's blocking creation) / Ready ("Create Argument" CTA) / Already created (link to argument edit page)
+- [ ] **PJOB-03** Argument metadata section renamed to "Argument Details"
+- [ ] **PJOB-04** Extracted hints always visible alongside editable fields, even after fields are filled; "N/A" if nothing was extracted — gives operator a historic view of what the pipeline pulled
+- [ ] **PJOB-05** Docket: pill/tag UI (consistent with PLIST-02)
+- [ ] **PJOB-06** Question number: free text field (consistent with PLIST-01)
+- [ ] **PJOB-07** Save saves run metadata only — does not create the argument
+- [ ] **PJOB-08** Failed step card: shows error message + contextual next-step actions inside the card
+- [ ] **PJOB-09** Ingest card: remove source file display (now shown in run status card)
+- [ ] **PJOB-10** Parse card shows: Utterances, Speakers (Bench / Advocate / Total), Case Name, Argued Date, Docket(s), Question Number(s)
+- [ ] **PJOB-11** Parse card shows unextracted fields alongside extracted values — what should have been captured but wasn't
+- [ ] **PJOB-12** Parse card extracted values match the hints shown in the Argument Details card
+- [ ] **PJOB-13** Extract advocate title + role from PDF TOC per argument — new `title` VARCHAR field on `argument_participants`, parse step changes, and Alembic migration
+- [ ] **PJOB-14** Resolve card: Not ready + Ready states are fully editable; Already created state is read-only
+- [ ] **PJOB-15** Resolve card columns: Raw label · Resolved as (avatar + name, no confirmation checkmark) · Bench/Advocate · Argument Role · Title (advocates only) · Action
+- [ ] **PJOB-16** Bench Argument Role: tenure lookup at argued date; "Missing tenure" displayed when no matching tenure found
+- [ ] **PJOB-17** Saving Argument Details triggers bench role recalculation in the resolve card
+- [ ] **PJOB-18** Person selection in resolve: operator confirms Bench/Advocate side first, then typeahead to find existing person
+- [ ] **PJOB-19** New person mini-form in resolve: Name + Bench/Advocate toggle; sets `is_justice` on person record AND `side` on `argument_participants`; all other details filled later in people editor
+- [ ] **PJOB-20** "Create Argument" action lives in run status card CTA — no standalone floating button
+- [ ] **PJOB-21** "Continue Resolve" action lives at bottom of resolve card when all rows are dispositioned — no standalone floating button
+- [ ] **PJOB-22** "Re-run" action lives inside the failed step card as a contextual action — no standalone floating button
+- [ ] **PJOB-23** Danger Zone: delete run — unchanged
+
+### Arguments List (`/admin/arguments/`)
+
+- [ ] **ALIST-01** New `unpublished` argument status — distinct from Draft: Draft (never published, slug editable) / Published (slug locked, visible on public site) / Unpublished (was public, now hidden, slug locked) — new enum value + Alembic migration; unpublish action transitions to `unpublished`, not back to `draft`
+- [ ] **ALIST-02** Arguments list shows only Draft / Published / Unpublished rows — pipeline-status arguments excluded (they live on pipeline job detail)
+- [ ] **ALIST-03** Status column accurately reflects all three statuses with distinct badges
+- [ ] **ALIST-04** "Created" column added showing date/time argument was first created
+
+### Argument Edit (`/admin/arguments/[id]`)
+
+- [ ] **AEDIT-01** Argument Status card: current status badge, created date, published date
+- [ ] **AEDIT-02** Full status log with timestamps for every transition (Created, Published, Unpublished, re-Published, etc.) — requires new `argument_status_log` table + migration; log written from both the argument edit page (publish/unpublish) AND the pipeline job detail (argument creation event)
+- [ ] **AEDIT-03** Argument Details card mirrors the pipeline job detail version: docket pill/tag, question number free text, argued date, extracted hints always visible from `cover_metadata`; "N/A" if nothing extracted
+- [ ] **AEDIT-04** Argument Details card is a shared component — same UI on pipeline/[id] and arguments/[id], different save targets (run metadata vs. argument record)
+- [ ] **AEDIT-05** Speakers section replaces Advocate Roles card and tenure gap warnings: all argument participants listed with utterance count each
+- [ ] **AEDIT-06** Advocates in speakers section: role dropdown (PETITIONER / RESPONDENT / AMICUS) + title field (per argument) + inline save without full page refresh
+- [ ] **AEDIT-07** Bench in speakers section: all bench participants listed with role derived from tenure at argued date; "Missing tenure" warning + edit person link when gap exists
+- [ ] **AEDIT-08** Publish/Unpublish transitions: Draft → Published / Published → Unpublished / Unpublished → Published (re-publish)
+- [ ] **AEDIT-09** Danger Zone: delete — unchanged
+
+### People List (`/admin/people/`)
+
+- [ ] **PDIR-01** Page title: "People" (was "People Editor")
+- [ ] **PDIR-02** Bench / Advocate tab or toggle at top of page
+- [ ] **PDIR-03** Bench view columns: name, tenure coverage, tenure gaps indicator, photo/bio completeness
+- [ ] **PDIR-04** Advocate view columns: name, argument count, photo/bio completeness
+- [ ] **PDIR-05** "Incomplete only" filter retained, scoped per tab
+- [ ] **PDIR-06** "Justices with tenure gaps" filter retained (bench tab only)
+- [ ] **PDIR-07** "Create person" button on list page — navigates to full person editor starting blank; enables creating Justices before any argument is uploaded
+
+### Person Editor (`/admin/people/[id]`)
+
+- [ ] **PEDIT-01** Full name fields: first / middle / last / suffix — same structure for bench and advocates
+- [ ] **PEDIT-02** Optional birthdate field added to Basic Info card
+- [ ] **PEDIT-03** No prefix/rank field on person record — rank captured per-argument via `argument_participants.title` (PJOB-13)
+- [ ] **PEDIT-04** Role field: Justice-only, lives inside Justice Details card; not shown for advocates
+- [ ] **PEDIT-05** Bio & Photo card: button label changed from "Save photo" to "Upload photo"
+- [ ] **PEDIT-06** Justice Details card: collapsed by default, consolidates is_justice checkbox, role, tenures, and appointment data into one card
+- [ ] **PEDIT-07** "Is Justice" checkbox opens Justice Details card with animation; unchecking hides fields but does not delete tenure or appointment data
+- [ ] **PEDIT-08** Role field (Chief Justice / Associate Justice) lives inside Justice Details card
+- [ ] **PEDIT-09** Tenure rows each contain: Seat (Chief / Associate), Appointed by, Appointing president's party, Start date, End date — add / remove rows as before
+- [ ] **PEDIT-10** Schema change: move `appointed_by` and `appointing_president_party` from `people` table to `court_tenures` table — Alembic migration with data backfill
+- [ ] **PEDIT-11** Merge card — unchanged
+- [ ] **PEDIT-12** Delete card — unchanged
+
+## Future Requirements
+
+### Public URL
+
+- **URL-01** Rename public URL `/cases/` → `/arguments/` to accurately reflect the entity name
+
+## Out of Scope
+
+| Feature | Reason |
+|---------|--------|
+| Public URL rename (`/cases/` → `/arguments/`) | SEO and link-rot risk; warrants its own milestone with redirect strategy |
+| New pipeline step features (enrich, citations) | Not admin UX scope |
+| Any changes to public-facing argument/case view | v1.5 is operator-only admin cleanup |
+
+## Traceability
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| DASH-01 | — | Pending |
+| DASH-02 | — | Pending |
+| DASH-03 | — | Pending |
+| DASH-04 | — | Pending |
+| DASH-05 | — | Pending |
+| PLIST-01 | — | Pending |
+| PLIST-02 | — | Pending |
+| PLIST-03 | — | Pending |
+| PLIST-04 | — | Pending |
+| PLIST-05 | — | Pending |
+| PJOB-01 | — | Pending |
+| PJOB-02 | — | Pending |
+| PJOB-03 | — | Pending |
+| PJOB-04 | — | Pending |
+| PJOB-05 | — | Pending |
+| PJOB-06 | — | Pending |
+| PJOB-07 | — | Pending |
+| PJOB-08 | — | Pending |
+| PJOB-09 | — | Pending |
+| PJOB-10 | — | Pending |
+| PJOB-11 | — | Pending |
+| PJOB-12 | — | Pending |
+| PJOB-13 | — | Pending |
+| PJOB-14 | — | Pending |
+| PJOB-15 | — | Pending |
+| PJOB-16 | — | Pending |
+| PJOB-17 | — | Pending |
+| PJOB-18 | — | Pending |
+| PJOB-19 | — | Pending |
+| PJOB-20 | — | Pending |
+| PJOB-21 | — | Pending |
+| PJOB-22 | — | Pending |
+| PJOB-23 | — | Pending |
+| ALIST-01 | — | Pending |
+| ALIST-02 | — | Pending |
+| ALIST-03 | — | Pending |
+| ALIST-04 | — | Pending |
+| AEDIT-01 | — | Pending |
+| AEDIT-02 | — | Pending |
+| AEDIT-03 | — | Pending |
+| AEDIT-04 | — | Pending |
+| AEDIT-05 | — | Pending |
+| AEDIT-06 | — | Pending |
+| AEDIT-07 | — | Pending |
+| AEDIT-08 | — | Pending |
+| AEDIT-09 | — | Pending |
+| PDIR-01 | — | Pending |
+| PDIR-02 | — | Pending |
+| PDIR-03 | — | Pending |
+| PDIR-04 | — | Pending |
+| PDIR-05 | — | Pending |
+| PDIR-06 | — | Pending |
+| PDIR-07 | — | Pending |
+| PEDIT-01 | — | Pending |
+| PEDIT-02 | — | Pending |
+| PEDIT-03 | — | Pending |
+| PEDIT-04 | — | Pending |
+| PEDIT-05 | — | Pending |
+| PEDIT-06 | — | Pending |
+| PEDIT-07 | — | Pending |
+| PEDIT-08 | — | Pending |
+| PEDIT-09 | — | Pending |
+| PEDIT-10 | — | Pending |
+| PEDIT-11 | — | Pending |
+| PEDIT-12 | — | Pending |
+
+**Coverage:**
+- v1.5 requirements: 57 total
+- Mapped to phases: 0
+- Unmapped: 57 ⚠️
+
+---
+*Requirements defined: 2026-07-02*
+*Last updated: 2026-07-02 after initial definition*

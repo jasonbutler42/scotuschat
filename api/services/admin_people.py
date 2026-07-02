@@ -243,8 +243,7 @@ async def get_person_detail(db: AsyncSession, person_id: int) -> dict | None:
         "last_name": person.last_name,
         "middle_name": person.middle_name,
         "name_suffix": person.name_suffix,
-        "appointing_president": person.appointing_president,
-        "appointing_president_party": person.appointing_president_party,
+        # Phase 22 — migration 0013: appointment columns removed from Person (PEDIT-10)
         # Phase 18 addition — must be explicit to avoid silent default on reload (Pitfall 2)
         "is_justice": person.is_justice,
     }
@@ -286,8 +285,7 @@ async def update_person(
     person.last_name = body.last_name if body.last_name else None
     person.middle_name = body.middle_name if body.middle_name else None
     person.name_suffix = body.name_suffix if body.name_suffix else None
-    person.appointing_president = body.appointing_president if body.appointing_president else None
-    person.appointing_president_party = body.appointing_president_party if body.appointing_president_party else None
+    # Phase 22 — migration 0013: appointment writes removed from Person (PEDIT-10)
 
     # Derivation: overwrite full_name only when BOTH first_name and last_name are non-empty (D-04/D-05)
     # Note: D-04 says "when first_name is non-empty" but requiring both first_name AND last_name

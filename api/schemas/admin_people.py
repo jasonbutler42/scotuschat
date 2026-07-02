@@ -70,8 +70,7 @@ class PersonDetail(BaseModel):
     last_name: Optional[str] = None
     middle_name: Optional[str] = None
     name_suffix: Optional[str] = None
-    appointing_president: Optional[str] = None
-    appointing_president_party: Optional[str] = None
+    # Phase 22 — migration 0013: appointment columns moved to court_tenures (PEDIT-10)
     # Phase 18 addition — migration 0010
     is_justice: bool = False
 
@@ -100,8 +99,7 @@ class PersonUpdate(BaseModel):
     last_name: Optional[str] = None
     middle_name: Optional[str] = None
     name_suffix: Optional[str] = None
-    appointing_president: Optional[str] = None
-    appointing_president_party: Optional[str] = None
+    # Phase 22 — migration 0013: appointment columns moved to court_tenures (PEDIT-10)
     # Phase 18 addition — migration 0010 (None = leave unchanged per D-08)
     is_justice: Optional[bool] = None
 

@@ -194,7 +194,9 @@ async def get_argument_speakers(
                 "full_name": person.full_name,
                 "role_name": role_name,
                 "photo_url": person.photo_url,
-                "appointing_president": person.appointing_president,
+                # Phase 22 — migration 0013: appointing_president removed from Person (PEDIT-10)
+                # Phase 27 will wire this from court_tenures.appointed_by
+                "appointing_president": None,
                 # appointing_president_party intentionally excluded (T-14-02)
                 "tenure": str_tenures_by_person[person.id],
                 "side": side.value if side is not None else None,

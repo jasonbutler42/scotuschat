@@ -24,7 +24,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-29 after Phase 17 complete — v1.3 milestone done)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** v1.4 milestone complete — ready for /gsd-new-milestone
+**Current focus:** v1.4 archived — ready for /gsd-new-milestone (v1.5 deployment)
 
 ## Current Position
 

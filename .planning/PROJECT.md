@@ -67,19 +67,18 @@ Anyone can open a SCOTUS oral argument and immediately follow the conversation �
 - ✓ Parse step detects advocate sides from TOC and seeds argument_participants.side — v1.3 (PARSE-02)
 - ✓ Pipeline stage stat cards (Ingest: source filename; Parse: utterance/speaker counts + metadata) — v1.3 (PIPE-21)
 - ✓ Operator can access source PDF from pipeline job detail page — v1.3 (PIPE-22)
+- ✓ `is_justice` boolean + Alembic migration + backfill; people editor conditionally shows bench-only sections; operator can toggle flag — v1.4 (PEOPLE-05, PEOPLE-06, PEOPLE-07)
+- ✓ Duplicate argument prevention: DB UNIQUE constraint + preflight UI warning before run start — v1.4 (PIPE-25)
+- ✓ Argument metadata pre-populated from cover extraction; operator can override before publish — v1.4 (PIPE-26)
+- ✓ Pipeline list page and job detail page update status live without manual reload — v1.4 (PIPE-23, PIPE-24)
+- ✓ Argument delete from admin UI (confirmation + published guard) — v1.4 (ADMIN-01)
+- ✓ Pipeline run delete from admin UI (confirmation; argument survives) — v1.4 (ADMIN-02)
+- ✓ Admin nav unified with public nav: AdminSubNav + TopNav variant=public in admin layout — v1.4 (NAV-02)
 
 ### Active
 
-- [ ] Explicit is_justice boolean on people table — Alembic migration + backfill from tenures (PEOPLE-05)
-- [ ] People editor conditionally shows bench-only fields (Role, Court Tenure, Appointment) based on is_justice; operator can toggle flag (PEOPLE-06)
-- [ ] Operator can delete a mis-created argument from the admin UI (ADMIN-01)
-- [ ] Operator can delete a bad pipeline run from the admin UI (ADMIN-02)
-- [ ] Pipeline list page and job detail page both update job/step status live without manual reload (PIPE-23)
-- ✓ System prevents duplicate argument creation — DB unique constraint + UI warning before starting a new run (PIPE-24) — Phase 19
-- ✓ Argument metadata (case name, docket, date) pre-populated from cover extraction during pipeline run (PIPE-25) — Phase 19
-- [ ] Admin header nav style unified with public nav (NAV-02)
-- [ ] Application deployed to Digital Ocean App Platform (SvelteKit + FastAPI as separate services, managed Postgres) (DEPLOY-01, future)
-- [ ] Continuous deployment from GitHub main branch (DEPLOY-03, future)
+- [ ] Application deployed to Digital Ocean App Platform (SvelteKit + FastAPI as separate services, managed Postgres) (DEPLOY-01)
+- [ ] Continuous deployment from GitHub main branch (DEPLOY-03)
 
 ### Out of Scope
 
@@ -97,13 +96,13 @@ Anyone can open a SCOTUS oral argument and immediately follow the conversation �
 
 ## Context
 
-- Shipped v1.3 — 84 commits, 73 files changed, +11,791 / -177 lines (Phases 15–17, 5 days 2026-06-25 → 2026-06-29)
-- Shipped v1.0–v1.3 cumulatively; tech stack finalized: SvelteKit 2.x + Svelte 5 Runes (frontend), FastAPI 0.115+ + Pydantic v2 (API), PostgreSQL 16 + SQLAlchemy 2.0 async + Alembic (database), Python 3.12 + pdfplumber + Anthropic SDK + instructor + tenacity (pipeline)
-- Alembic migrations through 0009: schema now includes argument_status enum (pipeline/draft/published), SideEnum expansion (PETITIONER/RESPONDENT/AMICUS), original_filename on admin_jobs
-- Admin interface: HMAC session cookie, DO Spaces PDF storage (boto3), fire-and-poll job state, full people admin (photo/merge/delete), argument editing, speaker role assignment, pipeline stat cards + PDF proxy
-- Parser now auto-extracts case metadata and advocate sides from PDF at parse time; operator reviews pre-populated fields
+- Shipped v1.4 — 94 files changed, +11,903 / -330 lines (Phases 18–21, 3 days 2026-06-29 → 2026-07-02)
+- Shipped v1.0–v1.4 cumulatively; tech stack finalized: SvelteKit 2.x + Svelte 5 Runes (frontend), FastAPI 0.115+ + Pydantic v2 (API), PostgreSQL 16 + SQLAlchemy 2.0 async + Alembic (database), Python 3.12 + pdfplumber + Anthropic SDK + instructor + tenacity (pipeline)
+- Alembic migrations through 0011: schema includes argument_status enum (pipeline/draft/published), SideEnum (PETITIONER/RESPONDENT/AMICUS), original_filename on admin_jobs, is_justice on people, source_docket + cover_metadata JSONB + argued_date nullable on arguments, UNIQUE(source_docket, question_number)
+- Admin interface: full operator self-service — HMAC auth, DO Spaces PDFs, pipeline runner with live status polling, full people admin (photo/merge/delete/is_justice), argument editing + delete, pipeline run delete, speaker role assignment, duplicate preflight, metadata prefill, unified nav
+- Parser auto-extracts case metadata, advocate sides, and docket from PDF; operator reviews pre-populated fields in admin UI
 - Repo is public on GitHub
-- Hosting: Digital Ocean App Platform + managed Postgres (deployment blockers documented in STATE.md — v1.4 work)
+- Hosting: Digital Ocean App Platform + managed Postgres — deployment is next milestone (DEPLOY-01, DEPLOY-03)
 - Known deployment blockers: `BODY_SIZE_LIMIT=10M`, `ORIGIN`/`PROTOCOL_HEADER`/`HOST_HEADER` env vars, `admin.scotuschat.com` DNS entry
 
 ## Constraints
@@ -153,6 +152,13 @@ Anyone can open a SCOTUS oral argument and immediately follow the conversation �
 | PDF proxy uses `redirect:'manual'` to pass Spaces 302 to browser (Phase 17) | Token stays server-side; pre-signed URL goes directly to the browser without transiting SvelteKit memory | ✓ Good — open-redirect threat mitigated by sourcing Location from FastAPI (server-controlled) |
 | Same-origin SvelteKit proxy at `/admin/pipeline/{id}/pdf` (Phase 17) | Browser has no direct FastAPI route; ADMIN_TOKEN must stay server-side (Architecture Rule 2) | ✓ Good — enforced via `$env/static/private` only |
 | `formatDate()` declared at script level, not inside `{#if}` block (Phase 17) | `{@const}` inside `{#if}` is scoped to that block; script-level function accessible from `{#each STEP_ORDER}` loop | ✓ Good — pitfall documented for future Svelte date helpers |
+| `is_justice BOOLEAN NOT NULL DEFAULT FALSE` backfill from court_tenures only (Phase 18) | Backfill from tenure records is conservative and correct; avoids false-positive Justice classification | ✓ Good — migration 0010 clean; all 3 PEOPLE requirements verified |
+| `(source_docket, question_number)` UNIQUE on arguments (Phase 19) | Natural dedup key for SCOTUS arguments; pre-real-docket synthetic values (`job-{id}`) safely pass through because they're unique per-job | ✓ Good — IntegrityError deduplication in ingest; preflight UI check layered on top |
+| `cover_metadata` JSONB written unconditionally at parse; nullable fields auto-populated conditionally (Phase 19) | Separates extraction (always) from promotion (only when still null) — allows re-run without overwriting manual corrections | ✓ Good — D-09 pattern; saveMetadata action lets operator persist changes from UI |
+| Unconditional list-page polling instead of `data.jobs.some(running)` guard (Phase 20) | Guard created deadlock — if no jobs were running on load, a run started from another tab would never wake the effect | ✓ Good — `invalidateAll()` is cheap; unconditional polling solves multi-tab visibility |
+| `delete_argument` returns `bool \| None`: True=deleted, False=published (409), None=not found (404) (Phase 21) | Tri-state distinguishes "refused because published" from "not found"; router maps cleanly without catching exceptions | ✓ Good — can_delete flag in load function prevents UI-level 409s for most cases |
+| FK cascade order: Utterance → PipelineRun → ArgumentParticipant → CaseArgument → NULL AdminJob.argument_id → Argument (Phase 21) | NULL AdminJob before deletion avoids FK violation on admin_jobs.argument_id; order mirrors logical dependency chain | ✓ Good — Pitfall 1/2 mitigated; all cascade paths tested in test_admin_arguments_service.py |
+| `AdminSubNav` component + `TopNav variant=public` in admin layout (Phase 21) | Two-row admin nav: shared public TopNav + admin-only tab row; no markup duplication; dead `variant=admin` branch removed | ✓ Good — NAV-02 gap closed via Plan 21-04; root layout guard kept to prevent double-render |
 
 ## Evolution
 
@@ -171,17 +177,5 @@ This document evolves at phase transitions and milestone boundaries.
 3. Audit Out of Scope — reasons still valid?
 4. Update Context with current state
 
-## Current Milestone: v1.4 Admin Completeness
-
-**Goal:** Make the admin interface fully self-sufficient — all data entities manageable without raw DB access, pipeline status trustworthy without manual refreshes, and the people editor accurate for both bench and non-bench people.
-
-**Target features:**
-- is_justice flag + conditional people editor (bench-only fields hidden for non-justice people)
-- Argument delete and pipeline run delete from admin UI
-- Live polling on pipeline list and job detail pages
-- Duplicate argument prevention (DB constraint + UI guard)
-- Argument metadata prefill from cover extraction
-- Unified admin navigation
-
 ---
-*Last updated: 2026-07-01 after Phase 19 complete — Pipeline Reliability*
+*Last updated: 2026-07-02 after v1.4 milestone complete — Admin Completeness*

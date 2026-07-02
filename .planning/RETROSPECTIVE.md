@@ -157,6 +157,55 @@
 
 ---
 
+## Milestone: v1.4 — Admin Completeness
+
+**Shipped:** 2026-07-02
+**Phases:** 4 (18–21) | **Plans:** 13 | **Timeline:** 3 days (2026-06-29 → 2026-07-02)
+**Files changed:** 94 | **Net lines:** +11,903 / -330
+
+### What Was Built
+
+- `is_justice` boolean migration (0010) with tenure-based backfill; conditional bench-only editor sections; Justice badge in directory listing
+- Duplicate argument prevention: DB UNIQUE on `(source_docket, question_number)` + preflight UI warning with duplicate banner
+- Argument metadata prefill: `cover_extractor` docket extraction, `cover_metadata` JSONB at parse, job detail metadata card with override
+- Live pipeline status: unconditional 1s `$effect`/`invalidateAll()` on list page; detail-page step cards human-verified
+- Argument delete with FK-ordered cascade + published guard + two-step confirm UI
+- Pipeline run delete (admin_job row only; argument and utterances survive) + two-step confirm UI
+- Unified admin nav: `AdminSubNav` + `TopNav variant=public`; dead `variant=admin` branch removed
+
+### What Worked
+
+- **Short milestone** — 3 days, 4 phases, clean execution throughout; no gap-closure plans beyond NAV-02 fix (Plan 21-04, scoped gap found in verification)
+- **FK cascade order worked first time** — documenting the full cascade chain (Utterance → PipelineRun → ArgumentParticipant → CaseArgument → NULL AdminJob.argument_id → Argument) in the plan before writing code; no FK violation surprises
+- **UAT closed immediately** — all 3 human-verification items resolved in a single UAT session; no outstanding items
+- **Unconditional polling insight** — recognizing the dead-lock in the `data.jobs.some(running)` guard from UAT feedback and fixing to unconditional was fast; the root cause was clear from the symptom description
+
+### What Was Inefficient
+
+- **PIPE-23/PIPE-24 checkboxes not updated in REQUIREMENTS.md** — Phase 20 SUMMARY confirmed human verification on 2026-07-01 but the checkboxes remained unchecked; required correction at milestone close (same lesson as v1.0/v1.1)
+- **Two stale pending todos** — both todos were created before the phases that resolved them; should have been moved to completed at phase completion
+- **No milestone audit** — `/gsd-audit-milestone` was not run before `/gsd-complete-milestone`; pre-flight found the stale items but formal audit would have surfaced them earlier
+
+### Patterns Established
+
+- Tri-state service return (`bool | None`) for delete operations: True=deleted, False=refused (business rule), None=not found; maps cleanly to HTTP status codes without exception flow
+- `cover_metadata` JSONB write-unconditionally + promote-conditionally pattern: always capture extracted data, only apply it where the field is still null; safe for re-runs without overwriting manual edits
+- Unconditional list-page polling: `$effect + setInterval + invalidateAll()` without any condition guard — guards cause dead-lock when no active state on page load; `invalidateAll()` is cheap enough to always run
+
+### Key Lessons
+
+1. **Update REQUIREMENTS.md at phase completion, not milestone close.** PIPE-23/PIPE-24 unchecked is the fourth time this pattern appeared across milestones. The fix is behavioral: include REQUIREMENTS.md checkbox update in the plan summary commit.
+2. **Move todos to completed when the phase closes.** Two stale todos required manual cleanup at milestone close; they should have moved when the phase shipped.
+3. **Run `/gsd-audit-milestone` before close.** Established lesson from v1.0; still not applied here. The stale items were minor but the audit would have surfaced them before the close ceremony.
+
+### Cost Observations
+
+- Model mix: Sonnet primary throughout
+- Sessions: ~6 sessions over 3 days
+- Notable: Shortest milestone yet at 3 days — well-scoped admin completeness work with clear requirements from the start
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -167,6 +216,7 @@
 | v1.1 Operator Admin Interface | 4 | 19 | First admin/auth work; fire-and-poll pattern; gap-closure plans as first-class artifacts |
 | v1.2 Pre-Launch Polish | 6 | 21 | Largest milestone; UI-heavy (5/6 phases had UI hints); bits-ui introduced; milestone close deferred |
 | v1.3 Speaker Accuracy + Pipeline Confidence | 3 | 9 | TDD applied to tenure logic; cover extractor module; gap-closure plan (17-03) as named artifact |
+| v1.4 Admin Completeness | 4 | 13 | Shortest milestone (3 days); tri-state delete pattern; unconditional polling fix; stale todos/requirements repeated lesson |
 
 ### Cumulative Quality
 

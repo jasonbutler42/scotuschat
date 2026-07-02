@@ -1,5 +1,24 @@
 # Milestones
 
+## v1.4 Admin Completeness (Shipped: 2026-07-02)
+
+**Phases completed:** 4 phases (18–21), 13 plans
+**Timeline:** 2026-06-29 → 2026-07-02 (3 days)
+**Files changed:** 94 | **Net lines:** +11,903 / -330
+**Closeout type:** verified_closeout (10/10 requirements shipped; 2 stale todos closed at milestone)
+
+**Key accomplishments:**
+
+- `is_justice` boolean migration (0010) with tenure-based backfill; people editor conditionally renders bench-only sections (Role, Court Tenure, Appointment) based on `is_justice`; Justice badge in directory listing (PEOPLE-05/06/07)
+- Duplicate argument prevention — DB UNIQUE constraint on `(source_docket, question_number)` via migration 0011; preflight UI check before pipeline run start with duplicate warning banner (PIPE-25)
+- Argument metadata prefill — `cover_extractor` extracts docket from PDF cover; `cover_metadata` JSONB written at parse; job detail Argument Metadata card with auto-populated fields operator can override (PIPE-26)
+- Live pipeline status — unconditional 1s `$effect`/`invalidateAll()` polling on list page; detail-page step card polling human-verified live (PIPE-23/24)
+- Argument delete with FK-ordered cascade (Utterance → PipelineRun → ArgumentParticipant → CaseArgument → NULL AdminJob.argument_id → Argument); published guard returns 409; two-step inline confirm UI (ADMIN-01)
+- Pipeline run delete — `delete_job` removes admin_job row only; argument and its utterances survive; two-step confirm UI with redirect to /admin/pipeline (ADMIN-02)
+- Unified admin nav — `AdminSubNav` component + `TopNav variant=public` in admin layout; dead `variant=admin` TopNav branch removed; NAV-02 gap closed via Plan 21-04 (NAV-02)
+
+---
+
 ## v1.3 Speaker Accuracy + Pipeline Confidence (Shipped: 2026-06-29)
 
 **Phases completed:** 3 phases (15–17), 9 plans

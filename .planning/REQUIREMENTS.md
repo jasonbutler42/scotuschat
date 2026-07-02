@@ -19,8 +19,8 @@
 
 ### Pipeline Reliability
 
-- [ ] **PIPE-23**: Pipeline list page updates job status badges automatically while any run is active — no manual reload needed
-- [ ] **PIPE-24**: Pipeline job detail page updates step cards live while the run is active — operator can watch step progression in real time
+- [x] **PIPE-23**: Pipeline list page updates job status badges automatically while any run is active — no manual reload needed
+- [x] **PIPE-24**: Pipeline job detail page updates step cards live while the run is active — operator can watch step progression in real time
 - [x] **PIPE-25**: System enforces a unique DB constraint preventing duplicate arguments; UI warns the operator before starting a new run if a matching argument already exists
 - [x] **PIPE-26**: Argument metadata (case name, docket, argued date) pre-populated from cover extraction results visible to operator during/after the pipeline run
 
@@ -51,8 +51,8 @@
 | PEOPLE-07 | Phase 18 | Complete |
 | PIPE-25 | Phase 19 | Complete |
 | PIPE-26 | Phase 19 | Complete |
-| PIPE-23 | Phase 20 | Pending |
-| PIPE-24 | Phase 20 | Pending |
+| PIPE-23 | Phase 20 | Complete |
+| PIPE-24 | Phase 20 | Complete |
 | ADMIN-01 | Phase 21 | Complete |
 | ADMIN-02 | Phase 21 | Complete |
 | NAV-02 | Phase 21 | Complete |

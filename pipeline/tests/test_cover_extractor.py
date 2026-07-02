@@ -423,3 +423,124 @@ def test_extract_cover_metadata_argued_date_is_date_object():
     assert result["argued_date"] == date(2015, 4, 28), (
         f"Expected date(2015, 4, 28), got: {result['argued_date']!r}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Test 9: _parse_toc_titles — title extraction from TOC lines (PJOB-13)
+# ---------------------------------------------------------------------------
+
+
+def test_parse_toc_titles_name_plus_subtitle_plus_side():
+    """_parse_toc_titles on a name + subtitle + side block returns {LASTNAME: subtitle}."""
+    from pipeline.parser.cover_extractor import _parse_toc_titles
+
+    lines = [
+        "MARY L. BONAUTO, ESQ.",
+        "  Solicitor General",
+        "On behalf of the Petitioner 3",
+    ]
+    result = _parse_toc_titles(lines)
+    assert result.get("BONAUTO") == "Solicitor General", (
+        f"Expected BONAUTO -> 'Solicitor General', got: {result!r}"
+    )
+
+
+def test_parse_toc_titles_name_directly_followed_by_side_yields_no_entry():
+    """_parse_toc_titles on a name line immediately followed by a side line returns no entry."""
+    from pipeline.parser.cover_extractor import _parse_toc_titles
+
+    lines = [
+        "SHAY DVORETZKY, ESQ.",
+        "On behalf of the Petitioner 3",
+    ]
+    result = _parse_toc_titles(lines)
+    assert "DVORETZKY" not in result, (
+        f"Expected no title entry when side follows name directly, got: {result!r}"
+    )
+
+
+def test_parse_toc_titles_name_directly_followed_by_amicus_yields_no_entry():
+    """_parse_toc_titles on a name line immediately followed by an amicus line yields no entry."""
+    from pipeline.parser.cover_extractor import _parse_toc_titles
+
+    lines = [
+        "GEN. DONALD B. VERRILLI, JR., ESQ.",
+        "For the United States, as amicus curiae,",
+    ]
+    result = _parse_toc_titles(lines)
+    assert "VERRILLI" not in result, (
+        f"Expected no title entry when amicus follows name directly, got: {result!r}"
+    )
+
+
+def test_parse_toc_titles_empty_input_returns_empty_dict():
+    """_parse_toc_titles on empty input returns {}."""
+    from pipeline.parser.cover_extractor import _parse_toc_titles
+
+    result = _parse_toc_titles([])
+    assert result == {}, (
+        f"Expected {{}} for empty input, got: {result!r}"
+    )
+
+
+def test_parse_toc_titles_no_esq_lines_returns_empty_dict():
+    """_parse_toc_titles on lines with no ESQ. advocate lines returns {}."""
+    from pipeline.parser.cover_extractor import _parse_toc_titles
+
+    lines = [
+        "C O N T E N T S",
+        "Some heading",
+        "Argument body text...",
+    ]
+    result = _parse_toc_titles(lines)
+    assert result == {}, (
+        f"Expected {{}} for lines with no ESQ patterns, got: {result!r}"
+    )
+
+
+def test_parse_toc_titles_multiple_advocates():
+    """_parse_toc_titles captures titles for multiple advocates in the same TOC."""
+    from pipeline.parser.cover_extractor import _parse_toc_titles
+
+    lines = [
+        "MARY L. BONAUTO, ESQ.",
+        "Solicitor General",
+        "On behalf of the Petitioner 3",
+        "FREDERICK LIU, ESQ.",
+        "Counsel of Record",
+        "On behalf of the Respondent 59",
+    ]
+    result = _parse_toc_titles(lines)
+    assert result.get("BONAUTO") == "Solicitor General", (
+        f"Expected BONAUTO -> 'Solicitor General', got: {result!r}"
+    )
+    assert result.get("LIU") == "Counsel of Record", (
+        f"Expected LIU -> 'Counsel of Record', got: {result!r}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Test 10: extract_toc_data — shared PDF-open entry point (PJOB-13, D-12)
+# ---------------------------------------------------------------------------
+
+
+def test_extract_toc_data_missing_pdf_returns_empty_maps():
+    """extract_toc_data on a non-existent path returns {"sides": {}, "titles": {}} and never raises."""
+    from pathlib import Path
+    from pipeline.parser.cover_extractor import extract_toc_data
+
+    result = extract_toc_data(Path("does-not-exist-at-all.pdf"))
+    assert result == {"sides": {}, "titles": {}}, (
+        f"Expected {{'sides': {{}}, 'titles': {{}}}} for missing PDF, got: {result!r}"
+    )
+
+
+def test_extract_toc_data_returns_dict_with_sides_and_titles_keys():
+    """extract_toc_data always returns a dict with 'sides' and 'titles' keys."""
+    from pathlib import Path
+    from pipeline.parser.cover_extractor import extract_toc_data
+
+    result = extract_toc_data(Path("/nonexistent/totally-fake.pdf"))
+    assert isinstance(result, dict), f"Expected dict, got: {type(result)!r}"
+    assert "sides" in result, f"Expected 'sides' key in result, got: {result!r}"
+    assert "titles" in result, f"Expected 'titles' key in result, got: {result!r}"

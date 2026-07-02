@@ -188,4 +188,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-02 after v1.5 milestone start — Admin Screens Cleanup*
+*Last updated: 2026-07-02 — Phase 22 complete (schema-foundations): migration 0012/0013, argument_status_log, argument_participants.title, court_tenures tenure columns, TOC title extraction*

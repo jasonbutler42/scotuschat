@@ -105,7 +105,10 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
   2. Alembic migration creates `argument_status_log` table with required columns and FK to arguments; existing arguments each receive a `created` log entry via backfill
   3. `argument_participants.title` VARCHAR column exists; parse step extracts advocate title from PDF TOC and writes it on new runs
   4. `appointed_by` and `appointing_president_party` columns exist on `court_tenures` (not `people`), with data backfilled from `people` and old columns removed via migration
-**Plans**: TBD
+**Plans**: 3 plans
+- [ ] 22-01-PLAN.md — Migration 0012: unpublished enum value + argument_status_log table + backfill (ALIST-01, AEDIT-02)
+- [ ] 22-02-PLAN.md — Migration 0013: participant title column + move appointed_by to court_tenures + all code-layer cleanup (PEDIT-10, PJOB-13 schema)
+- [ ] 22-03-PLAN.md — Parse step advocate-title extraction from PDF TOC (PJOB-13 logic)
 
 ### Phase 23: Shared Argument Details Component
 **Goal**: A single reusable Argument Details card component exists that renders docket pill/tag input, free-text question number, argued date, and extracted hints from `cover_metadata` — wired up on the pipeline job detail page as its first consumer
@@ -210,7 +213,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 | 19. Pipeline Reliability | v1.4 | 5/5 | Complete | 2026-06-30 |
 | 20. Live Pipeline Status | v1.4 | 1/1 | Complete | 2026-07-01 |
 | 21. Admin UI Surface | v1.4 | 4/4 | Complete | 2026-07-01 |
-| 22. Schema Foundations | v1.5 | 0/TBD | Not started | - |
+| 22. Schema Foundations | v1.5 | 0/3 | Not started | - |
 | 23. Shared Argument Details Component | v1.5 | 0/TBD | Not started | - |
 | 24. Pipeline List Page | v1.5 | 0/TBD | Not started | - |
 | 25. Pipeline Job Detail Page | v1.5 | 0/TBD | Not started | - |

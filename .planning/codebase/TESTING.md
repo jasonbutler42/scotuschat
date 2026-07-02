@@ -305,3 +305,18 @@ async def test_get_utterances_returns_404_for_unknown_argument(
 ---
 
 *Testing analysis: 2026-06-15*
+
+## Incremental Remap — 2026-07-02
+
+Root config files confirmed present as of 2026-07-02 (scope: `.gitignore`, `CLAUDE.md`, `requirements.txt`, `requirements-dev.txt`):
+
+- `requirements-dev.txt` — Confirms test framework versions: `pytest>=8.0`, `pytest-asyncio>=0.23`, `httpx>=0.27`. No new test dependencies added.
+- `requirements.txt` — No test-specific packages in runtime deps (no `pytest-cov`; coverage tool still not in requirements as noted).
+- `.gitignore` — `.pytest_cache/` and `.mypy_cache/` excluded, confirming pytest and mypy are active toolchain members.
+- `CLAUDE.md` — No changes to testing constraints or architecture rules detected.
+
+No changes to existing testing patterns content.
+
+---
+
+*Testing analysis: 2026-06-15 | Last incremental remap: 2026-07-02*

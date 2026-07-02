@@ -206,3 +206,18 @@ import SectionRail from '$lib/components/SectionRail.svelte';
 ---
 
 *Conventions analysis: 2026-06-15*
+
+## Incremental Remap — 2026-07-02
+
+Root config files confirmed present as of 2026-07-02 (scope: `.gitignore`, `CLAUDE.md`, `requirements.txt`, `requirements-dev.txt`):
+
+- `.gitignore` — Excludes `.env`, `__pycache__/`, `.pytest_cache/`, `.mypy_cache/`, `.ruff_cache/`, `node_modules/`, `app/.svelte-kit/`, and `data/pdfs/*.pdf`. Confirms Ruff is part of the Python toolchain (cache dir present).
+- `CLAUDE.md` — Project guide checked into the codebase. Defines key constraints, stack, architecture rules, and GSD workflow. No convention changes detected.
+- `requirements.txt` — Runtime dependencies confirmed: FastAPI 0.115+, SQLAlchemy 2.0, asyncpg, Alembic, instructor[anthropic], anthropic, tenacity, pdfplumber, httpx, pydantic-settings, boto3, uvicorn.
+- `requirements-dev.txt` — Dev dependencies confirmed: pytest>=8.0, pytest-asyncio>=0.23, httpx>=0.27 (extends requirements.txt via `-r requirements.txt`).
+
+No changes to existing conventions content.
+
+---
+
+*Conventions analysis: 2026-06-15 | Last incremental remap: 2026-07-02*

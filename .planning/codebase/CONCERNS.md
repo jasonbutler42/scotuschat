@@ -1,6 +1,6 @@
 # Codebase Concerns
 
-**Analysis Date:** 2026-06-15
+**Analysis Date:** 2026-07-02
 
 ## Tech Debt
 
@@ -81,7 +81,7 @@
 **Utterance sequence numbering and section hints — cascading state**
 
 - Files: `pipeline/parser/state_machine.py` (lines 150–250, not fully shown)
-- Why fragile: The parse state machine maintains `pending_section_hint` and `current_section_hint` to track section transitions. If a TOC marker is missed by the regex, or if the section hint mapping in `SECTION_HINT_MAP` (lines 83–89) is incomplete, subsequen utterances lose their section context. The F04 fix added `ON\s+BEHALF\s+OF` to `TOC_SECTION_RE`, but other variants (e.g., consolidated case section headers) might exist in transcripts the team hasn't tested.
+- Why fragile: The parse state machine maintains `pending_section_hint` and `current_section_hint` to track section transitions. If a TOC marker is missed by the regex, or if the section hint mapping in `SECTION_HINT_MAP` (lines 83–89) is incomplete, subsequent utterances lose their section context. The F04 fix added `ON\s+BEHALF\s+OF` to `TOC_SECTION_RE`, but other variants (e.g., consolidated case section headers) might exist in transcripts the team hasn't tested.
 - Safe modification: Add new TOC patterns to `TOC_SECTION_RE` with test coverage. Test against all spike-tested transcripts (Obergefell, Masterpiece, Dobbs, Rahimi) before committing. Add a new test case if modifying the state machine.
 - Test coverage: `pipeline/tests/test_parse.py` has 397 lines and covers the rule-based pass extensively. Gaps: no test for all four section hint types ("petitioner", "respondent", "rebuttal", "amicus") across all spike transcripts. Adding parametrized tests for each transcript + section type would reduce fragility.
 
@@ -216,4 +216,4 @@
 
 ---
 
-*Concerns audit: 2026-06-15*
+*Concerns audit: 2026-07-02*

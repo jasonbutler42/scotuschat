@@ -30,12 +30,12 @@
 - [ ] **PJOB-04** Extracted hints always visible alongside editable fields, even after fields are filled; "N/A" if nothing was extracted — gives operator a historic view of what the pipeline pulled
 - [ ] **PJOB-05** Docket: pill/tag UI (consistent with PLIST-02)
 - [ ] **PJOB-06** Question number: free text field (consistent with PLIST-01)
-- [ ] **PJOB-07** Save saves run metadata only — does not create the argument
+- [x] **PJOB-07** Save saves run metadata only — does not create the argument
 - [ ] **PJOB-08** Failed step card: shows error message + contextual next-step actions inside the card
 - [ ] **PJOB-09** Ingest card: remove source file display (now shown in run status card)
-- [ ] **PJOB-10** Parse card shows: Utterances, Speakers (Bench / Advocate / Total), Case Name, Argued Date, Docket(s), Question Number(s)
-- [ ] **PJOB-11** Parse card shows unextracted fields alongside extracted values — what should have been captured but wasn't
-- [ ] **PJOB-12** Parse card extracted values match the hints shown in the Argument Details card
+- [x] **PJOB-10** Parse card shows: Utterances, Speakers (Bench / Advocate / Total), Case Name, Argued Date, Docket(s), Question Number(s)
+- [x] **PJOB-11** Parse card shows unextracted fields alongside extracted values — what should have been captured but wasn't
+- [x] **PJOB-12** Parse card extracted values match the hints shown in the Argument Details card
 - [x] **PJOB-13** Extract advocate title + role from PDF TOC per argument — new `title` VARCHAR field on `argument_participants`, parse step changes, and Alembic migration
 - [ ] **PJOB-14** Resolve card: Not ready + Ready states are fully editable; Already created state is read-only
 - [ ] **PJOB-15** Resolve card columns: Raw label · Resolved as (avatar + name, no confirmation checkmark) · Bench/Advocate · Argument Role · Title (advocates only) · Action
@@ -126,12 +126,12 @@
 | PJOB-04 | Phase 23 | Pending |
 | PJOB-05 | Phase 23 | Pending |
 | PJOB-06 | Phase 23 | Pending |
-| PJOB-07 | Phase 23 | Pending |
+| PJOB-07 | Phase 23 | Complete |
 | PJOB-08 | Phase 25 | Pending |
 | PJOB-09 | Phase 23 | Pending |
-| PJOB-10 | Phase 23 | Pending |
-| PJOB-11 | Phase 23 | Pending |
-| PJOB-12 | Phase 23 | Pending |
+| PJOB-10 | Phase 23 | Complete |
+| PJOB-11 | Phase 23 | Complete |
+| PJOB-12 | Phase 23 | Complete |
 | PJOB-13 | Phase 22 | Complete |
 | PJOB-14 | Phase 25 | Pending |
 | PJOB-15 | Phase 25 | Pending |

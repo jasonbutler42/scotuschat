@@ -5,15 +5,15 @@ milestone_name: Admin Screens Cleanup
 current_phase: 23
 current_phase_name: Shared Argument Details Component
 status: executing
-stopped_at: Phase 23 UI-SPEC approved
-last_updated: "2026-07-02T20:24:19.953Z"
+stopped_at: Completed 23-01-PLAN.md
+last_updated: "2026-07-02T20:35:06.291Z"
 last_activity: 2026-07-02
-last_activity_desc: Phase 22 complete, transitioned to Phase 23
+last_activity_desc: Phase 23 execution started
 progress:
   total_phases: 7
   completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
+  total_plans: 6
+  completed_plans: 4
   percent: 14
 ---
 
@@ -24,14 +24,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-02 after v1.5 milestone start)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** Phase 22 — schema-foundations
+**Current focus:** Phase 23 — Shared Argument Details Component
 
 ## Current Position
 
-Phase: 23 — Shared Argument Details Component
-Plan: Not started
+Phase: 23 (Shared Argument Details Component) — EXECUTING
+Plan: 2 of 3
 Status: Ready to execute
-Last activity: 2026-07-02 — Phase 22 complete, transitioned to Phase 23
+Last activity: 2026-07-02 — Phase 23 execution started
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -54,6 +54,9 @@ Full log in PROJECT.md Key Decisions table. Key decisions entering v1.5:
 - [Phase ?]: 22-01: Backfill uses status::argument_status; unpublished enum value retained (PG cannot remove enum values)
 - [Phase ?]: 22-01: ArgumentStatusLog minimal schema (D-06) — no previous_status, notes, or triggered_by in v1.5
 - [Phase ?]: Migration 0013: court_tenures.appointed_by column rename-by-move from people.appointing_president; no backfill (D-08)
+- [Phase ?]: 23-01: ParseStats expanded with flat cover_metadata fields; speaker_count retained for TS backward compat
+- [Phase ?]: 23-01: MetadataUpdate.question_number free text; service parses to int with guarded try/except (T-23-02)
+- [Phase ?]: 23-01: question_number from Argument.question_number column only (NOT cover_metadata)
 
 ### Pending Todos
 
@@ -77,9 +80,10 @@ Deployment blockers (v1.4, unresolved — not in v1.5 scope):
 | verification | 11-VERIFICATION.md | human_needed (v1.2 carry-over — Argument Metadata Editing human UAT not formally closed) | 2026-06-29 |
 | Phase 22 P01 | 2 | 3 tasks | 3 files |
 | Phase 22 P02 | 15m | 3 tasks | 7 files |
+| Phase 23 P01 | 2m | 2 tasks | 4 files |
 
 ## Session Continuity
 
-Last session: 2026-07-02T20:06:56.888Z
-Stopped at: Phase 23 UI-SPEC approved
-Resume file: .planning/phases/23-shared-argument-details-component/23-UI-SPEC.md
+Last session: 2026-07-02T20:35:06.278Z
+Stopped at: Completed 23-01-PLAN.md
+Resume file: None

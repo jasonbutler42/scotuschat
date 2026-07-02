@@ -36,7 +36,7 @@
 - [ ] **PJOB-10** Parse card shows: Utterances, Speakers (Bench / Advocate / Total), Case Name, Argued Date, Docket(s), Question Number(s)
 - [ ] **PJOB-11** Parse card shows unextracted fields alongside extracted values — what should have been captured but wasn't
 - [ ] **PJOB-12** Parse card extracted values match the hints shown in the Argument Details card
-- [ ] **PJOB-13** Extract advocate title + role from PDF TOC per argument — new `title` VARCHAR field on `argument_participants`, parse step changes, and Alembic migration
+- [x] **PJOB-13** Extract advocate title + role from PDF TOC per argument — new `title` VARCHAR field on `argument_participants`, parse step changes, and Alembic migration
 - [ ] **PJOB-14** Resolve card: Not ready + Ready states are fully editable; Already created state is read-only
 - [ ] **PJOB-15** Resolve card columns: Raw label · Resolved as (avatar + name, no confirmation checkmark) · Bench/Advocate · Argument Role · Title (advocates only) · Action
 - [ ] **PJOB-16** Bench Argument Role: tenure lookup at argued date; "Missing tenure" displayed when no matching tenure found
@@ -88,7 +88,7 @@
 - [ ] **PEDIT-07** "Is Justice" checkbox opens Justice Details card with animation; unchecking hides fields but does not delete tenure or appointment data
 - [ ] **PEDIT-08** Role field (Chief Justice / Associate Justice) lives inside Justice Details card
 - [ ] **PEDIT-09** Tenure rows each contain: Seat (Chief / Associate), Appointed by, Appointing president's party, Start date, End date — add / remove rows as before
-- [ ] **PEDIT-10** Schema change: move `appointed_by` and `appointing_president_party` from `people` table to `court_tenures` table — Alembic migration with data backfill
+- [x] **PEDIT-10** Schema change: move `appointed_by` and `appointing_president_party` from `people` table to `court_tenures` table — Alembic migration with data backfill
 - [ ] **PEDIT-11** Merge card — unchanged
 - [ ] **PEDIT-12** Delete card — unchanged
 
@@ -132,7 +132,7 @@
 | PJOB-10 | Phase 23 | Pending |
 | PJOB-11 | Phase 23 | Pending |
 | PJOB-12 | Phase 23 | Pending |
-| PJOB-13 | Phase 22 | Pending |
+| PJOB-13 | Phase 22 | Complete |
 | PJOB-14 | Phase 25 | Pending |
 | PJOB-15 | Phase 25 | Pending |
 | PJOB-16 | Phase 25 | Pending |
@@ -172,7 +172,7 @@
 | PEDIT-07 | Phase 27 | Pending |
 | PEDIT-08 | Phase 27 | Pending |
 | PEDIT-09 | Phase 27 | Pending |
-| PEDIT-10 | Phase 22 | Pending |
+| PEDIT-10 | Phase 22 | Complete |
 | PEDIT-11 | Phase 27 | Pending |
 | PEDIT-12 | Phase 27 | Pending |
 

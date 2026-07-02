@@ -28,8 +28,7 @@ interface PersonDetail {
 	last_name: string | null;
 	middle_name: string | null;
 	name_suffix: string | null;
-	appointing_president: string | null;
-	appointing_president_party: string | null;
+	// Phase 22 — migration 0013: appointment fields removed from person (PEDIT-10)
 	// Phase 18 addition
 	is_justice: boolean;
 }
@@ -161,8 +160,7 @@ export const actions: Actions = {
 		const last_name = ((formData.get('last_name') as string) ?? '').trim() || null;
 		const middle_name = ((formData.get('middle_name') as string) ?? '').trim() || null;
 		const name_suffix = ((formData.get('name_suffix') as string) ?? '').trim() || null;
-		const appointing_president = ((formData.get('appointing_president') as string) ?? '').trim() || null;
-		const appointing_president_party = ((formData.get('appointing_president_party') as string) ?? '').trim() || null;
+		// Phase 22 — migration 0013: appointment fields removed from person form (PEDIT-10)
 		// Checkbox submits 'on' when checked; absent from FormData when unchecked (D-04)
 		const is_justice = formData.get('is_justice') === 'on';
 		const tenuresRaw = (formData.get('tenures') as string) ?? '[]';
@@ -196,7 +194,7 @@ export const actions: Actions = {
 				body: JSON.stringify({
 					full_name, role_id, tenures,
 					first_name, last_name, middle_name, name_suffix,
-					appointing_president, appointing_president_party,
+					// Phase 22 — appointment fields removed (PEDIT-10)
 					is_justice,
 					// bio_text omitted intentionally — managed by photo action (Pitfall 7 extended)
 					// photo_url omitted intentionally — managed by photo action (Pitfall 7)

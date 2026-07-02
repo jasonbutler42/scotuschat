@@ -8,6 +8,16 @@ A website that displays Supreme Court oral arguments as a chat-style interface �
 
 Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
 
+## Current Milestone: v1.5 Admin Screens Cleanup
+
+**Goal:** Screen-by-screen audit and refinement of all 7 admin screens — defining what belongs on each, removing redundant elements, and adding missing capabilities now that the admin interface is functionally complete.
+
+**Target features:**
+- Screen audit and polish: `/admin/`, `/admin/pipeline/`, `/admin/pipeline/[id]`, `/admin/arguments/`, `/admin/arguments/[id]`, `/admin/people/`, `/admin/people/[id]`
+- Remove redundant argument preview card on job detail page
+- Clarify run vs. argument distinction in language and visual design across admin
+- Justice roster by date tool for operator verification
+
 ## Requirements
 
 ### Validated
@@ -178,4 +188,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-02 after v1.4 milestone complete — Admin Completeness*
+*Last updated: 2026-07-02 after v1.5 milestone start — Admin Screens Cleanup*

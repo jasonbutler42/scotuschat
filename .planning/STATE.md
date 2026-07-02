@@ -1,20 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.4
-milestone_name: Admin Completeness
-current_phase: 21
-current_phase_name: admin-ui-surface
-status: complete
-stopped_at: Phase 21 UAT passed — v1.4 milestone complete
-last_updated: "2026-07-02T00:00:00.000Z"
+milestone: v1.5
+milestone_name: Admin Screens Cleanup
+status: planning
+last_updated: "2026-07-02T15:09:58.002Z"
 last_activity: 2026-07-02
-last_activity_desc: Phase 21 UAT complete — all 3 tests passed
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 13
-  completed_plans: 13
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -28,11 +24,10 @@ See: .planning/PROJECT.md (updated 2026-06-29 after Phase 17 complete — v1.3 m
 
 ## Current Position
 
-Phase: 21 (admin-ui-surface) — COMPLETE (UAT passed 2026-07-02)
-Status: All 4/4 phases complete; v1.4 milestone done
-Last activity: 2026-07-02 — Phase 21 UAT passed
-
-Progress: ██████████ 100% (4/4 phases)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-07-02 — Milestone v1.5 started
 
 ## Performance Metrics
 

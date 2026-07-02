@@ -26,10 +26,10 @@
 
 - [ ] **PJOB-01** Pipeline Run status card: status badge + source file linked to PDF — replaces non-editable argument preview card
 - [ ] **PJOB-02** Run status card has 3 states: Not ready (lists what's blocking creation) / Ready ("Create Argument" CTA) / Already created (link to argument edit page)
-- [ ] **PJOB-03** Argument metadata section renamed to "Argument Details"
-- [ ] **PJOB-04** Extracted hints always visible alongside editable fields, even after fields are filled; "N/A" if nothing was extracted — gives operator a historic view of what the pipeline pulled
-- [ ] **PJOB-05** Docket: pill/tag UI (consistent with PLIST-02)
-- [ ] **PJOB-06** Question number: free text field (consistent with PLIST-01)
+- [x] **PJOB-03** Argument metadata section renamed to "Argument Details"
+- [x] **PJOB-04** Extracted hints always visible alongside editable fields, even after fields are filled; "N/A" if nothing was extracted — gives operator a historic view of what the pipeline pulled
+- [x] **PJOB-05** Docket: pill/tag UI (consistent with PLIST-02)
+- [x] **PJOB-06** Question number: free text field (consistent with PLIST-01)
 - [x] **PJOB-07** Save saves run metadata only — does not create the argument
 - [ ] **PJOB-08** Failed step card: shows error message + contextual next-step actions inside the card
 - [ ] **PJOB-09** Ingest card: remove source file display (now shown in run status card)
@@ -59,8 +59,8 @@
 
 - [ ] **AEDIT-01** Argument Status card: current status badge, created date, published date
 - [x] **AEDIT-02** Full status log with timestamps for every transition (Created, Published, Unpublished, re-Published, etc.) — requires new `argument_status_log` table + migration; log written from both the argument edit page (publish/unpublish) AND the pipeline job detail (argument creation event)
-- [ ] **AEDIT-03** Argument Details card mirrors the pipeline job detail version: docket pill/tag, question number free text, argued date, extracted hints always visible from `cover_metadata`; "N/A" if nothing extracted
-- [ ] **AEDIT-04** Argument Details card is a shared component — same UI on pipeline/[id] and arguments/[id], different save targets (run metadata vs. argument record)
+- [x] **AEDIT-03** Argument Details card mirrors the pipeline job detail version: docket pill/tag, question number free text, argued date, extracted hints always visible from `cover_metadata`; "N/A" if nothing extracted
+- [x] **AEDIT-04** Argument Details card is a shared component — same UI on pipeline/[id] and arguments/[id], different save targets (run metadata vs. argument record)
 - [ ] **AEDIT-05** Speakers section replaces Advocate Roles card and tenure gap warnings: all argument participants listed with utterance count each
 - [ ] **AEDIT-06** Advocates in speakers section: role dropdown (PETITIONER / RESPONDENT / AMICUS) + title field (per argument) + inline save without full page refresh
 - [ ] **AEDIT-07** Bench in speakers section: all bench participants listed with role derived from tenure at argued date; "Missing tenure" warning + edit person link when gap exists
@@ -122,10 +122,10 @@
 | PLIST-05 | Phase 24 | Pending |
 | PJOB-01 | Phase 25 | Pending |
 | PJOB-02 | Phase 25 | Pending |
-| PJOB-03 | Phase 23 | Pending |
-| PJOB-04 | Phase 23 | Pending |
-| PJOB-05 | Phase 23 | Pending |
-| PJOB-06 | Phase 23 | Pending |
+| PJOB-03 | Phase 23 | Complete |
+| PJOB-04 | Phase 23 | Complete |
+| PJOB-05 | Phase 23 | Complete |
+| PJOB-06 | Phase 23 | Complete |
 | PJOB-07 | Phase 23 | Complete |
 | PJOB-08 | Phase 25 | Pending |
 | PJOB-09 | Phase 23 | Pending |
@@ -149,8 +149,8 @@
 | ALIST-04 | Phase 26 | Pending |
 | AEDIT-01 | Phase 26 | Pending |
 | AEDIT-02 | Phase 22 | Complete |
-| AEDIT-03 | Phase 23 | Pending |
-| AEDIT-04 | Phase 23 | Pending |
+| AEDIT-03 | Phase 23 | Complete |
+| AEDIT-04 | Phase 23 | Complete |
 | AEDIT-05 | Phase 26 | Pending |
 | AEDIT-06 | Phase 26 | Pending |
 | AEDIT-07 | Phase 26 | Pending |

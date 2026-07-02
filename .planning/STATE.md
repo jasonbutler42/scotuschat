@@ -5,15 +5,15 @@ milestone_name: Admin Screens Cleanup
 current_phase: 23
 current_phase_name: Shared Argument Details Component
 status: executing
-stopped_at: Completed 23-01-PLAN.md
-last_updated: "2026-07-02T20:35:06.291Z"
+stopped_at: Completed 23-02-PLAN.md
+last_updated: "2026-07-02T20:41:08.435Z"
 last_activity: 2026-07-02
 last_activity_desc: Phase 23 execution started
 progress:
   total_phases: 7
   completed_phases: 1
   total_plans: 6
-  completed_plans: 4
+  completed_plans: 5
   percent: 14
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-07-02 after v1.5 milestone start)
 ## Current Position
 
 Phase: 23 (Shared Argument Details Component) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-07-02 — Phase 23 execution started
 
@@ -57,6 +57,7 @@ Full log in PROJECT.md Key Decisions table. Key decisions entering v1.5:
 - [Phase ?]: 23-01: ParseStats expanded with flat cover_metadata fields; speaker_count retained for TS backward compat
 - [Phase ?]: 23-01: MetadataUpdate.question_number free text; service parses to int with guarded try/except (T-23-02)
 - [Phase ?]: 23-01: question_number from Argument.question_number column only (NOT cover_metadata)
+- [Phase ?]: 23-02: ArgumentDetailsCard owns its own use:enhance form; action prop drives save target; update({reset:false}) mandatory on success to preserve pill $state
 
 ### Pending Todos
 
@@ -81,9 +82,10 @@ Deployment blockers (v1.4, unresolved — not in v1.5 scope):
 | Phase 22 P01 | 2 | 3 tasks | 3 files |
 | Phase 22 P02 | 15m | 3 tasks | 7 files |
 | Phase 23 P01 | 2m | 2 tasks | 4 files |
+| Phase 23 P02 | 2 | 1 tasks | 1 files |
 
 ## Session Continuity
 
-Last session: 2026-07-02T20:35:06.278Z
-Stopped at: Completed 23-01-PLAN.md
+Last session: 2026-07-02T20:41:08.424Z
+Stopped at: Completed 23-02-PLAN.md
 Resume file: None

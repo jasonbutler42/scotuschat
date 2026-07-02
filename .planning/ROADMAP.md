@@ -134,12 +134,12 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
   4. Saving Argument Details saves run metadata only and does not create the argument
   5. Ingest card no longer shows the source file (moved to run status card in Phase 25)
 
-**Plans**: 1/3 plans executed
+**Plans**: 2/3 plans executed
 
 **Wave 1** *(parallel — disjoint files)*
 
 - [x] 23-01-PLAN.md — Backend: expand ParseStats (bench/advocate/total + cover_metadata fields) and add question_number to MetadataUpdate/ArgumentDetail (PJOB-07, PJOB-10, PJOB-11, PJOB-12)
-- [ ] 23-02-PLAN.md — ArgumentDetailsCard.svelte: docket pills, free-text question number, argued date, always-visible extracted hints (AEDIT-03, AEDIT-04, PJOB-03, PJOB-04, PJOB-05, PJOB-06)
+- [x] 23-02-PLAN.md — ArgumentDetailsCard.svelte: docket pills, free-text question number, argued date, always-visible extracted hints (AEDIT-03, AEDIT-04, PJOB-03, PJOB-04, PJOB-05, PJOB-06)
 
 **Wave 2** *(blocked on Wave 1)*
 
@@ -253,7 +253,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 | 20. Live Pipeline Status | v1.4 | 1/1 | Complete | 2026-07-01 |
 | 21. Admin UI Surface | v1.4 | 4/4 | Complete | 2026-07-01 |
 | 22. Schema Foundations | v1.5 | 3/3 | Complete    | 2026-07-02 |
-| 23. Shared Argument Details Component | v1.5 | 1/3 | In Progress|  |
+| 23. Shared Argument Details Component | v1.5 | 2/3 | In Progress|  |
 | 24. Pipeline List Page | v1.5 | 0/TBD | Not started | - |
 | 25. Pipeline Job Detail Page | v1.5 | 0/TBD | Not started | - |
 | 26. Arguments Admin | v1.5 | 0/TBD | Not started | - |

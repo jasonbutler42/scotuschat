@@ -274,6 +274,43 @@ def extract_cover_metadata(pdf_path: Path) -> dict:
     return result
 
 
+def _parse_toc_titles(lines: list[str]) -> "dict[str, str]":
+    """
+    Parse ESQ. name + subtitle pairs from TOC lines.
+
+    The subtitle is the line immediately following the advocate name line that
+    is not a side attribution ('On behalf of') or amicus line — e.g.,
+    'Solicitor General', 'Counsel of Record', 'Attorney General of [State]'.
+
+    Returns {last_name_upper: subtitle_string} mapping. If a name line is
+    immediately followed by a side/amicus line (no subtitle between them),
+    no entry is recorded for that advocate (D-10).
+
+    Returns {} when lines contain no recognizable advocate name lines.
+    Same last-name-collision behavior as _parse_toc_sides (second mapping
+    overwrites first — accepted for Phase 22).
+    """
+    mapping: dict[str, str] = {}
+    pending_name: str | None = None
+
+    for line in lines:
+        if TOC_ESQ_RE.match(line):
+            last = _toc_last_name(line)
+            pending_name = last.upper() if last else None
+            continue
+
+        if pending_name:
+            if TOC_AMICUS_RE.search(line) or TOC_SIDE_RE.search(line):
+                # Side/amicus line follows name directly — no subtitle captured (D-10)
+                pending_name = None
+            else:
+                # This line is the subtitle (e.g. "Solicitor General")
+                mapping[pending_name] = line.strip()
+                pending_name = None
+
+    return mapping
+
+
 def extract_advocate_sides(pdf_path: Path) -> "dict[str, str]":
     """
     Build a last_name_upper → SideEnum_value mapping from the TOC page.
@@ -284,6 +321,9 @@ def extract_advocate_sides(pdf_path: Path) -> "dict[str, str]":
     The parse step continues normally if side extraction fails; all
     argument_participants rows stay UNKNOWN and the operator assigns via
     the Phase 15 advocate role dropdown.
+
+    Kept for backward compatibility. New callers should use extract_toc_data
+    to avoid opening the PDF twice.
     """
     try:
         with pdfplumber.open(pdf_path) as pdf:
@@ -294,3 +334,28 @@ def extract_advocate_sides(pdf_path: Path) -> "dict[str, str]":
     except Exception:
         pass  # D-09: never raise
     return {}
+
+
+def extract_toc_data(pdf_path: Path) -> dict:
+    """
+    Extract both advocate sides and titles from the TOC page in a single PDF open (D-12).
+
+    Scans pages 0–3 for 'C O N T E N T S', computes _clean_lines once, and
+    returns both parsers' output:
+      {"sides": {last_name_upper: SideEnum_value}, "titles": {last_name_upper: subtitle_str}}
+
+    Returns {"sides": {}, "titles": {}} on any failure (D-11). Never raises.
+    """
+    try:
+        with pdfplumber.open(pdf_path) as pdf:
+            for i in range(min(4, len(pdf.pages))):
+                raw = pdf.pages[i].extract_text(layout=False) or ""
+                if "C O N T E N T S" in raw:
+                    lines = _clean_lines(raw)
+                    return {
+                        "sides": _parse_toc_sides(lines),
+                        "titles": _parse_toc_titles(lines),
+                    }
+    except Exception:
+        pass  # D-11: never raise
+    return {"sides": {}, "titles": {}}

@@ -112,8 +112,7 @@ class Person(Base):
     last_name = Column(String(150), nullable=True)
     middle_name = Column(String(150), nullable=True)
     name_suffix = Column(String(50), nullable=True)
-    appointing_president = Column(String(200), nullable=True)
-    appointing_president_party = Column(String(50), nullable=True)
+    # Phase 22 — migration 0013: appointment columns moved to court_tenures
     # Phase 18 — migration 0010
     is_justice = Column(Boolean, nullable=False, server_default=false())
 
@@ -132,6 +131,9 @@ class CourtTenure(Base):
     seat = Column(String(100))  # e.g. "Associate Justice Seat 3"
     start_date = Column(Date)
     end_date = Column(Date, nullable=True)  # null = currently active
+    # Phase 22 — migration 0013: moved from people table (PEDIT-10)
+    appointed_by = Column(String(200), nullable=True)
+    appointing_president_party = Column(String(50), nullable=True)
 
 
 # ---------------------------------------------------------------------------
@@ -253,6 +255,8 @@ class ArgumentParticipant(Base):
     person_id = Column(Integer, ForeignKey("people.id"), nullable=True)  # null until resolved
     raw_speaker_label = Column(String(200), nullable=False)
     side = Column(SAEnum(SideEnum, name="side", values_callable=lambda e: [x.value for x in e]), nullable=False)
+    # Phase 22 — migration 0013: TOC subtitle from cover extractor (PJOB-13)
+    title = Column(String(500), nullable=True)
 
 
 # ---------------------------------------------------------------------------

@@ -3,17 +3,17 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: Admin Screens Cleanup
 current_phase: 22
-current_phase_name: Schema Foundations
+current_phase_name: schema-foundations
 status: executing
-stopped_at: Phase 22 context gathered
-last_updated: "2026-07-02T19:08:20.640Z"
+stopped_at: context exhaustion at 75% (2026-07-02)
+last_updated: "2026-07-02T19:22:54.661Z"
 last_activity: 2026-07-02
-last_activity_desc: Roadmap created for v1.5 (7 phases, 57 requirements mapped)
+last_activity_desc: Phase 22 execution started
 progress:
   total_phases: 7
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 3
+  completed_plans: 1
   percent: 0
 ---
 
@@ -24,14 +24,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-02 after v1.5 milestone start)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** v1.5 Admin Screens Cleanup — Phase 22 ready to plan
+**Current focus:** Phase 22 — schema-foundations
 
 ## Current Position
 
-Phase: 22 of 28 (Schema Foundations)
-Plan: —
+Phase: 22 (schema-foundations) — EXECUTING
+Plan: 2 of 3
 Status: Ready to execute
-Last activity: 2026-07-02 — Roadmap created for v1.5 (7 phases, 57 requirements mapped)
+Last activity: 2026-07-02 — Phase 22 execution started
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -51,6 +51,8 @@ Full log in PROJECT.md Key Decisions table. Key decisions entering v1.5:
 - [v1.4]: `AdminSubNav` + `TopNav variant=public` pattern established for admin layout (NAV-02)
 - [v1.4]: Migration 0008 commits Alembic transaction before ALTER TYPE ADD VALUE — required pattern for future PG enum expansions (applies to Phase 22 `unpublished` value)
 - [v1.4]: SideEnum.ADVOCATE retained as legacy value; code never produces it going forward — same discipline needed for any new enum values
+- [Phase ?]: 22-01: Backfill uses status::argument_status; unpublished enum value retained (PG cannot remove enum values)
+- [Phase ?]: 22-01: ArgumentStatusLog minimal schema (D-06) — no previous_status, notes, or triggered_by in v1.5
 
 ### Pending Todos
 
@@ -72,9 +74,10 @@ Deployment blockers (v1.4, unresolved — not in v1.5 scope):
 | verification | 03-VERIFICATION.md | human_needed (stale — 03-HUMAN-UAT.md: complete) | 2026-06-15 |
 | verification | 04-VERIFICATION.md | human_needed (stale — 04-UAT.md: passed) | 2026-06-15 |
 | verification | 11-VERIFICATION.md | human_needed (v1.2 carry-over — Argument Metadata Editing human UAT not formally closed) | 2026-06-29 |
+| Phase 22 P01 | 2 | 3 tasks | 3 files |
 
 ## Session Continuity
 
-Last session: 2026-07-02T18:26:19.447Z
-Stopped at: Phase 22 context gathered
+Last session: 2026-07-02T19:22:39.733Z
+Stopped at: context exhaustion at 75% (2026-07-02)
 Resume file: .planning/phases/22-schema-foundations/22-CONTEXT.md

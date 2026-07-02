@@ -50,7 +50,7 @@
 
 ### Arguments List (`/admin/arguments/`)
 
-- [ ] **ALIST-01** New `unpublished` argument status — distinct from Draft: Draft (never published, slug editable) / Published (slug locked, visible on public site) / Unpublished (was public, now hidden, slug locked) — new enum value + Alembic migration; unpublish action transitions to `unpublished`, not back to `draft`
+- [x] **ALIST-01** New `unpublished` argument status — distinct from Draft: Draft (never published, slug editable) / Published (slug locked, visible on public site) / Unpublished (was public, now hidden, slug locked) — new enum value + Alembic migration; unpublish action transitions to `unpublished`, not back to `draft`
 - [ ] **ALIST-02** Arguments list shows only Draft / Published / Unpublished rows — pipeline-status arguments excluded (they live on pipeline job detail)
 - [ ] **ALIST-03** Status column accurately reflects all three statuses with distinct badges
 - [ ] **ALIST-04** "Created" column added showing date/time argument was first created
@@ -58,7 +58,7 @@
 ### Argument Edit (`/admin/arguments/[id]`)
 
 - [ ] **AEDIT-01** Argument Status card: current status badge, created date, published date
-- [ ] **AEDIT-02** Full status log with timestamps for every transition (Created, Published, Unpublished, re-Published, etc.) — requires new `argument_status_log` table + migration; log written from both the argument edit page (publish/unpublish) AND the pipeline job detail (argument creation event)
+- [x] **AEDIT-02** Full status log with timestamps for every transition (Created, Published, Unpublished, re-Published, etc.) — requires new `argument_status_log` table + migration; log written from both the argument edit page (publish/unpublish) AND the pipeline job detail (argument creation event)
 - [ ] **AEDIT-03** Argument Details card mirrors the pipeline job detail version: docket pill/tag, question number free text, argued date, extracted hints always visible from `cover_metadata`; "N/A" if nothing extracted
 - [ ] **AEDIT-04** Argument Details card is a shared component — same UI on pipeline/[id] and arguments/[id], different save targets (run metadata vs. argument record)
 - [ ] **AEDIT-05** Speakers section replaces Advocate Roles card and tenure gap warnings: all argument participants listed with utterance count each
@@ -143,12 +143,12 @@
 | PJOB-21 | Phase 25 | Pending |
 | PJOB-22 | Phase 25 | Pending |
 | PJOB-23 | Phase 25 | Pending |
-| ALIST-01 | Phase 22 | Pending |
+| ALIST-01 | Phase 22 | Complete |
 | ALIST-02 | Phase 26 | Pending |
 | ALIST-03 | Phase 26 | Pending |
 | ALIST-04 | Phase 26 | Pending |
 | AEDIT-01 | Phase 26 | Pending |
-| AEDIT-02 | Phase 22 | Pending |
+| AEDIT-02 | Phase 22 | Complete |
 | AEDIT-03 | Phase 23 | Pending |
 | AEDIT-04 | Phase 23 | Pending |
 | AEDIT-05 | Phase 26 | Pending |
@@ -177,6 +177,7 @@
 | PEDIT-12 | Phase 27 | Pending |
 
 **Coverage:**
+
 - v1.5 requirements: 57 total
 - Mapped to phases: 57
 - Unmapped: 0 ✓

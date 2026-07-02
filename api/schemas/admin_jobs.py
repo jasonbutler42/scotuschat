@@ -19,10 +19,25 @@ class ParseStats(BaseModel):
 
     Assembled from scalar COUNT query results at render time — not an ORM row.
     No from_attributes config needed (constructed from plain dicts, not ORM objects).
+
+    Phase 23 expansion (PJOB-10/11/12):
+      speaker_count retained for backward compat with polling TS interface.
+      bench_count / advocate_count / total_speaker_count: speaker breakdown.
+      case_name / argued_date / primary_docket: cover_metadata pass-through.
+      question_number: from Argument.question_number integer column (NOT cover_metadata).
     """
 
     utterance_count: int
-    speaker_count: int
+    speaker_count: int  # retained for backward compat; equals total_speaker_count
+    # Phase 23 — speaker breakdown (PJOB-10)
+    bench_count: Optional[int] = None
+    advocate_count: Optional[int] = None
+    total_speaker_count: Optional[int] = None
+    # Phase 23 — cover_metadata pass-through (PJOB-10/12)
+    case_name: Optional[str] = None
+    argued_date: Optional[str] = None      # ISO date string "YYYY-MM-DD"
+    primary_docket: Optional[str] = None
+    question_number: Optional[int] = None  # from Argument.question_number column
 
 
 class AdminJobResponse(BaseModel):

@@ -125,6 +125,7 @@ class ArgumentDetail(BaseModel):
     participants: list[AdvocateParticipant] = []           # Phase 15 D-12
     source_docket: Optional[str] = None                   # Phase 19 D-01
     cover_metadata: Optional[dict] = None                 # Phase 19 D-07
+    question_number: Optional[int] = None                 # Phase 23 PJOB-07
 
     model_config = {"from_attributes": True}
 
@@ -153,16 +154,19 @@ class ArgumentUpdate(BaseModel):
 class MetadataUpdate(BaseModel):
     """PATCH body for argument metadata from job detail page (D-15, Phase 19).
 
-    Mass-assignment guard (T-19-03-01): ONLY case_name, source_docket, and
-    argued_date are writable via this schema.  No other Argument or Case field
-    can be set here.
+    Mass-assignment guard (T-19-03-01, extended Phase 23 T-23-01):
+    ONLY case_name, source_docket, argued_date, and question_number are
+    writable via this schema.  No other Argument or Case field can be set here.
 
     argued_date is accepted as an ISO 8601 string "YYYY-MM-DD"; parsed by the
     service layer with datetime.date.fromisoformat() (V5 Input Validation pattern).
     source_docket is the primary docket string (e.g. "14-556") from the pipeline
     start form or cover extractor — stored on Argument.source_docket (D-01).
+    question_number is accepted as free text (PJOB-06); the service parses to int
+    via a guarded int() call, skipping silently on ValueError (T-23-02).
     """
 
     case_name: Optional[str] = None
     source_docket: Optional[str] = None
-    argued_date: Optional[str] = None  # ISO date string "YYYY-MM-DD"
+    argued_date: Optional[str] = None   # ISO date string "YYYY-MM-DD"
+    question_number: Optional[str] = None  # free text; parsed to int in service (PJOB-06)

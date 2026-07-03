@@ -531,11 +531,12 @@ async def update_argument_metadata(
         return False
 
     # b. Parse argued_date from ISO string if provided
-    parsed_date: datetime.date | None = (
-        datetime.date.fromisoformat(body.argued_date)
-        if body.argued_date
-        else None
-    )
+    parsed_date: datetime.date | None = None
+    if body.argued_date:
+        try:
+            parsed_date = datetime.date.fromisoformat(body.argued_date)
+        except ValueError:
+            raise ValueError("invalid_date_format")
 
     # c. Update Argument row — only write fields that were explicitly provided.
     # WR-01: always writing source_docket=body.source_docket would NULL an existing

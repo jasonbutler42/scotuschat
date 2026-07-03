@@ -410,74 +410,23 @@
 	</header>
 
 	<div style="max-width: 860px; margin: 0 auto; padding: 48px 24px;">
-		<!-- Argument metadata preview card (D-03, Plan 04): shown above step timeline when argument_id is set -->
-		{#if data.argument}
+		<!-- Argument Details card (D-02, AEDIT-04, PJOB-03/04/05/06) — replaces old Argument Metadata form -->
+		<!-- ArgumentDetailsCard owns its own form; action prop drives save target (D-01) -->
+		<!-- data.savedValues/hints are guaranteed non-null when data.argument != null (load() contract) -->
+		{#if data.argument != null}
+			<ArgumentDetailsCard
+				savedValues={data.savedValues!}
+				hints={data.hints!}
+				action="?/saveJobMetadata"
+				form={form}
+			/>
+		{/if}
+
+		<!-- Ready to publish CTA: shown when run is completed and argument is in draft status -->
+		{#if data.argument && liveJob.status === 'completed'}
 			{@const arg = data.argument}
 			{@const argStatus = arg.status ?? (arg.published_at != null ? 'published' : arg.resolved_at != null ? 'draft' : 'pipeline')}
-			{@const argBadgeColor = argStatus === 'published' ? '#4ade80' : argStatus === 'draft' ? '#a78bfa' : '#94a3b8'}
-			{@const argBadgeLabel = argStatus === 'published' ? 'Published' : argStatus === 'draft' ? 'Draft' : 'Pipeline'}
-			{@const formatArgDate = (iso: string | null) => { if (!iso) return '—'; const [y, m, d] = iso.slice(0, 10).split('-').map(Number); return new Date(y, m - 1, d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }); }}
-			<div
-				style="
-					background-color: #1e293b;
-					border: 1px solid #334155;
-					border-radius: 8px;
-					padding: 24px;
-					margin-bottom: 24px;
-				"
-			>
-				<h2 style="font-size: 20px; font-weight: 600; color: #e2e8f0; margin: 0 0 16px 0; line-height: 1.2;">
-					Argument
-				</h2>
-
-				<!-- Case title row -->
-				<div style="margin-bottom: 12px;">
-					<span style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 4px;">Case title</span>
-					<span style="font-size: 16px; color: #e2e8f0;">{arg.case_name}</span>
-				</div>
-
-				<!-- Docket row -->
-				<div style="margin-bottom: 12px;">
-					<span style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 4px;">Docket</span>
-					<span style="font-size: 16px; color: #e2e8f0;">{arg.docket_number}</span>
-				</div>
-
-				<!-- Argued date row -->
-				<div style="margin-bottom: 12px;">
-					<span style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 4px;">Argued</span>
-					<span style="font-size: 16px; color: #e2e8f0;">{formatArgDate(arg.argued_date)}</span>
-				</div>
-
-				<!-- Status badge row -->
-				<div style="margin-bottom: 16px;">
-					<span style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 4px;">Status</span>
-					<span
-						style="
-							border: 1px solid {argBadgeColor};
-							border-radius: 4px;
-							padding: 2px 8px;
-							font-size: 14px;
-							font-weight: 400;
-							color: {argBadgeColor};
-							background-color: #1e293b;
-							display: inline-block;
-						"
-					>
-						{argBadgeLabel}
-					</span>
-				</div>
-
-				<!-- Edit link -->
-				<a
-					href="/admin/arguments/{arg.id}"
-					style="font-size: 14px; color: #93c5fd; text-decoration: underline;"
-				>
-					Edit argument metadata
-				</a>
-			</div>
-
-			<!-- Ready to publish CTA (D-04): only when completed and argument is draft (not yet published) -->
-			{#if liveJob.status === 'completed' && argStatus === 'draft'}
+			{#if argStatus === 'draft'}
 				<div
 					style="
 						border: 1px solid #93c5fd;
@@ -512,38 +461,6 @@
 					</a>
 				</div>
 			{/if}
-		{/if}
-
-		<!-- Argument Details card (D-02, AEDIT-04, PJOB-03/04/05/06) — replaces old Argument Metadata form -->
-		<!-- ArgumentDetailsCard owns its own form; action prop drives save target (D-01) -->
-		<!-- data.savedValues/hints are guaranteed non-null when data.argument != null (load() contract) -->
-		{#if data.argument != null}
-			<ArgumentDetailsCard
-				savedValues={data.savedValues!}
-				hints={data.hints!}
-				action="?/saveJobMetadata"
-				form={form}
-			/>
-		{/if}
-
-		<!-- View source PDF link card (D-06/PIPE-22): shown when a PDF source exists -->
-		{#if liveJob.spaces_key || liveJob.pdf_url || liveJob.original_filename}
-			<div
-				style="
-					background-color: #1e293b;
-					border: 1px solid #334155;
-					border-radius: 8px;
-					padding: 24px;
-					margin-bottom: 24px;
-				"
-			>
-				<a
-					href="/admin/pipeline/{liveJob.id}/pdf"
-					target="_blank"
-					rel="noopener noreferrer"
-					style="font-size: 14px; color: #93c5fd; text-decoration: underline;"
-				>View source PDF</a>
-			</div>
 		{/if}
 
 		<!-- Step cards container — aria-live polite so screen readers announce step changes -->

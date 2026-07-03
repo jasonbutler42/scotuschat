@@ -134,7 +134,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
   4. Saving Argument Details saves run metadata only and does not create the argument
   5. Ingest card no longer shows the source file (moved to run status card in Phase 25)
 
-**Plans**: 4 plans (3 complete + 1 gap closure)
+**Plans**: 4/4 plans complete
 
 **Wave 1** *(parallel — disjoint files)*
 
@@ -147,7 +147,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 
 **Wave 3** *(gap closure — blocked on Wave 2 UAT)*
 
-- [ ] 23-04-PLAN.md — Gap closure: remove orphaned Argument card and View Source PDF card, fix docket-clear save bug, freeze question_number hint to null, move docket instruction to static label
+- [x] 23-04-PLAN.md — Gap closure: remove orphaned Argument card and View Source PDF card, fix docket-clear save bug, freeze question_number hint to null, move docket instruction to static label
 
 **UI hint**: yes
 
@@ -257,7 +257,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 | 20. Live Pipeline Status | v1.4 | 1/1 | Complete | 2026-07-01 |
 | 21. Admin UI Surface | v1.4 | 4/4 | Complete | 2026-07-01 |
 | 22. Schema Foundations | v1.5 | 3/3 | Complete    | 2026-07-02 |
-| 23. Shared Argument Details Component | v1.5 | 3/3 | Complete   | 2026-07-02 |
+| 23. Shared Argument Details Component | v1.5 | 4/4 | Complete   | 2026-07-02 |
 | 24. Pipeline List Page | v1.5 | 0/TBD | Not started | - |
 | 25. Pipeline Job Detail Page | v1.5 | 0/TBD | Not started | - |
 | 26. Arguments Admin | v1.5 | 0/TBD | Not started | - |

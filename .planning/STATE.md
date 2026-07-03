@@ -3,17 +3,17 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: Admin Screens Cleanup
 current_phase: 23
-current_phase_name: Shared Argument Details Component
-status: verifying
-stopped_at: Completed 23-03-PLAN.md
-last_updated: "2026-07-02T20:50:24.908Z"
-last_activity: 2026-07-02
+current_phase_name: shared-argument-details-component
+status: executing
+stopped_at: Completed 23-04-PLAN.md
+last_updated: "2026-07-03T01:03:18.118Z"
+last_activity: 2026-07-03
 last_activity_desc: Phase 23 execution started
 progress:
   total_phases: 7
   completed_phases: 2
-  total_plans: 6
-  completed_plans: 6
+  total_plans: 7
+  completed_plans: 7
   percent: 29
 ---
 
@@ -24,14 +24,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-02 after v1.5 milestone start)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** Phase 23 — Shared Argument Details Component
+**Current focus:** Phase 23 — shared-argument-details-component
 
 ## Current Position
 
-Phase: 23 (Shared Argument Details Component) — EXECUTING
-Plan: 3 of 3
-Status: Phase complete — ready for verification
-Last activity: 2026-07-02 — Phase 23 execution started
+Phase: 23 (shared-argument-details-component) — EXECUTING
+Plan: 2 of 4
+Status: Ready to execute
+Last activity: 2026-07-03 — Phase 23 execution started
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -59,6 +59,8 @@ Full log in PROJECT.md Key Decisions table. Key decisions entering v1.5:
 - [Phase ?]: 23-01: question_number from Argument.question_number column only (NOT cover_metadata)
 - [Phase ?]: 23-02: ArgumentDetailsCard owns its own use:enhance form; action prop drives save target; update({reset:false}) mandatory on success to preserve pill $state
 - [Phase ?]: 23-03: saveJobMetadata derives argument_id server-side; parse stats source from ps.* (cover_metadata passthrough)
+- [Phase ?]: 23-04: Empty-string sentinel distinguishes operator-cleared dockets from unsent field; service converts to None
+- [Phase ?]: 23-04: hints.question_number frozen to null in load() — Argument.question_number is operator-editable, not an immutable extraction source
 
 ### Pending Todos
 
@@ -85,9 +87,10 @@ Deployment blockers (v1.4, unresolved — not in v1.5 scope):
 | Phase 23 P01 | 2m | 2 tasks | 4 files |
 | Phase 23 P02 | 2 | 1 tasks | 1 files |
 | Phase 23 P03 | 5m | 2 tasks | 2 files |
+| Phase 23 P04 | 10m | 5 tasks | 4 files |
 
 ## Session Continuity
 
-Last session: 2026-07-02T20:50:24.898Z
-Stopped at: Completed 23-03-PLAN.md
+Last session: 2026-07-03T01:03:18.108Z
+Stopped at: Completed 23-04-PLAN.md
 Resume file: None

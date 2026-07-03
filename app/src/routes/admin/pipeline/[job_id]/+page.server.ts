@@ -129,8 +129,7 @@ export const load: PageServerLoad = async ({ params }) => {
 			dockets: argument.cover_metadata?.primary_docket
 				? [String(argument.cover_metadata.primary_docket)]
 				: [],
-			question_number:
-				argument.question_number != null ? String(argument.question_number) : null,
+			question_number: null,
 			argued_date: (argument.cover_metadata?.argued_date as string) ?? null,
 			case_name: (argument.cover_metadata?.case_name as string) ?? null,
 		};
@@ -460,7 +459,7 @@ export const actions: Actions = {
 						'Content-Type': 'application/json',
 					},
 					body: JSON.stringify({
-						source_docket: dockets[0] ?? null,
+						source_docket: dockets[0] ?? '',
 						argued_date,
 						question_number: question_number || null,
 					}),

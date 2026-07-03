@@ -355,58 +355,6 @@ export const actions: Actions = {
 	},
 
 	/**
-	 * saveMetadata — PATCH the argument metadata (case_name, source_docket, argued_date).
-	 * Fetches the job first to get argument_id (same two-step pattern as approve action).
-	 * Returns fail(400) when no argument is linked, fail(502) on network error,
-	 * fail(422) on non-OK FastAPI response, { metadataSaved: true } on success.
-	 * (D-13, D-14, D-15 — UI-SPEC Component 4/5/6/7/8)
-	 */
-	saveMetadata: async ({ request, params }) => {
-		const data = await request.formData();
-		const case_name = ((data.get('case_name') as string) ?? '').trim() || null;
-		const source_docket = ((data.get('source_docket') as string) ?? '').trim() || null;
-		const argued_date = ((data.get('argued_date') as string) ?? '').trim() || null;
-
-		// Fetch the job to get argument_id — same two-step pattern as approve action
-		let argumentId: number | null = null;
-		try {
-			const jobRes = await fetch(`${FASTAPI_BASE_URL}/api/admin/jobs/${params.job_id}`, {
-				headers: { 'X-Admin-Token': ADMIN_TOKEN },
-			});
-			if (jobRes.ok) {
-				const job = await jobRes.json();
-				argumentId = job.argument_id ?? null;
-			}
-		} catch {
-			return fail(502, { metadataError: 'Could not save metadata. Please try again.' });
-		}
-
-		if (argumentId === null) {
-			return fail(400, { metadataError: 'No argument linked to this job yet.' });
-		}
-
-		let res: Response;
-		try {
-			res = await fetch(`${FASTAPI_BASE_URL}/api/admin/arguments/${argumentId}/metadata`, {
-				method: 'PATCH',
-				headers: {
-					'X-Admin-Token': ADMIN_TOKEN,
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify({ case_name, source_docket, argued_date }),
-			});
-		} catch {
-			return fail(502, { metadataError: 'Could not save metadata. Please try again.' });
-		}
-
-		if (!res.ok) {
-			return fail(422, { metadataError: 'Could not save metadata. Please try again.' });
-		}
-
-		return { metadataSaved: true };
-	},
-
-	/**
 	 * saveJobMetadata — persist dockets, question_number, and argued_date for the linked argument.
 	 *
 	 * Reads docket[] via getAll (D-05 pill serialization). Fetches the job to derive argument_id
@@ -422,6 +370,14 @@ export const actions: Actions = {
 			.filter(Boolean);
 		const question_number = ((data.get('question_number') as string) ?? '').trim();
 		const argued_date = ((data.get('argued_date') as string) ?? '').trim() || null;
+
+		// CR-02: source_docket is a single string column � fail fast rather than silently drop extras
+		if (dockets.length > 1) {
+			return fail(400, {
+				saveError: 'Only one docket number is supported. Please remove the extra entries.',
+				dockets,
+			});
+		}
 
 		// Fetch the job to get argument_id server-side (T-23-03-01: never accept from form)
 		let argumentId: number | null = null;
@@ -459,6 +415,9 @@ export const actions: Actions = {
 						'Content-Type': 'application/json',
 					},
 					body: JSON.stringify({
+						// WR-02: case_name is intentionally omitted here � it is not editable
+						// from the job detail page. case_name edits are handled via the
+						// argument edit page (/admin/arguments/{id}) only.
 						source_docket: dockets[0] ?? '',
 						argued_date,
 						question_number: question_number || null,

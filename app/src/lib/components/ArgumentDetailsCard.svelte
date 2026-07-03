@@ -165,11 +165,13 @@
 			{/if}
 
 			<!-- Docket text input (Pitfall 2: Enter must call e.preventDefault() before addPill) -->
+			<p style="font-size: 13px; font-weight: 400; color: #64748b; margin: 0 0 4px 0;">
+				Type a docket number and press Enter to add it.
+			</p>
 			<input
 				id="docket-input"
 				type="text"
 				bind:value={docketInput}
-				placeholder="Add docket and press Enter…"
 				disabled={readonly}
 				onkeydown={(e) => {
 					if (e.key === 'Enter') {

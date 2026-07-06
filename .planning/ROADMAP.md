@@ -134,7 +134,9 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
   4. Saving Argument Details saves run metadata only and does not create the argument
   5. Ingest card no longer shows the source file (moved to run status card in Phase 25)
 
-**Plans**: 4/4 plans complete
+**Plans**: 5/5 plans complete
+
+- [x] 23-05-PLAN.md
 
 **Wave 1** *(parallel — disjoint files)*
 
@@ -257,7 +259,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 | 20. Live Pipeline Status | v1.4 | 1/1 | Complete | 2026-07-01 |
 | 21. Admin UI Surface | v1.4 | 4/4 | Complete | 2026-07-01 |
 | 22. Schema Foundations | v1.5 | 3/3 | Complete    | 2026-07-02 |
-| 23. Shared Argument Details Component | v1.5 | 4/4 | Complete   | 2026-07-02 |
+| 23. Shared Argument Details Component | v1.5 | 5/5 | Complete   | 2026-07-02 |
 | 24. Pipeline List Page | v1.5 | 0/TBD | Not started | - |
 | 25. Pipeline Job Detail Page | v1.5 | 0/TBD | Not started | - |
 | 26. Arguments Admin | v1.5 | 0/TBD | Not started | - |

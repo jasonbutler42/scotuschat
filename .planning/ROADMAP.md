@@ -134,7 +134,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
   4. Saving Argument Details saves run metadata only and does not create the argument
   5. Ingest card no longer shows the source file (moved to run status card in Phase 25)
 
-**Plans**: 6/7 plans executed
+**Plans**: 7/7 plans complete
 
 - [x] 23-05-PLAN.md
 
@@ -154,7 +154,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 **Wave 4** *(gap closure — UAT round 2)*
 
 - [x] 23-06-PLAN.md — Gap closure: restore "View source PDF" link inside the Ingest step card (deleted whole in 4278c9fb)
-- [ ] 23-07-PLAN.md — Gap closure: full-stack multi-docket support (source_dockets text[] column + array-aware schema/service/action/component; source_docket retained as dedup key)
+- [x] 23-07-PLAN.md — Gap closure: full-stack multi-docket support (source_dockets text[] column + array-aware schema/service/action/component; source_docket retained as dedup key)
 
 **UI hint**: yes
 
@@ -264,7 +264,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 | 20. Live Pipeline Status | v1.4 | 1/1 | Complete | 2026-07-01 |
 | 21. Admin UI Surface | v1.4 | 4/4 | Complete | 2026-07-01 |
 | 22. Schema Foundations | v1.5 | 3/3 | Complete    | 2026-07-02 |
-| 23. Shared Argument Details Component | v1.5 | 6/7 | In Progress|  |
+| 23. Shared Argument Details Component | v1.5 | 7/7 | Complete   | 2026-07-06 |
 | 24. Pipeline List Page | v1.5 | 0/TBD | Not started | - |
 | 25. Pipeline Job Detail Page | v1.5 | 0/TBD | Not started | - |
 | 26. Arguments Admin | v1.5 | 0/TBD | Not started | - |

@@ -1,18 +1,14 @@
 ---
-status: testing
+status: complete
 phase: 23-shared-argument-details-component
 source: [23-01-SUMMARY.md, 23-02-SUMMARY.md, 23-03-SUMMARY.md, 23-04-SUMMARY.md]
 started: 2026-07-02T00:00:00Z
-updated: 2026-07-03T00:00:00Z
+updated: 2026-07-06T12:00:00Z
 ---
 
 ## Current Test
 
-number: 7
-name: Docket pill save and pre-population
-expected: |
-  Add a docket pill, save, reload — pill is pre-populated. Remove all pills, save, reload — no pills shown.
-awaiting: user response
+[testing complete]
 
 ## Tests
 
@@ -51,26 +47,29 @@ resolved_by: 23-04 (commits d8a657cb + a1f41371 — empty-string sentinel chain:
 
 ### 7. Docket pill save and pre-population (re-verify)
 expected: Add a docket pill (e.g. "21-1271"), click Save, reload the page — the pill is pre-populated. Then remove that pill, click Save, reload — no pills are shown (cleared state persists).
-result: pending
+result: issue
+reported: "when I try to add a new docket pill, I get this message: Only one docket number is supported. Please remove the extra entries."
+severity: major
 
 ### 8. Clearing all docket pills persists NULL
 expected: Remove every docket pill so the docket input is empty, click Save. On reload, the docket field shows no pills and the "Extracted:" hint row still shows the original extracted docket (not the cleared operator value). The DB stores NULL for source_docket.
-result: pending
+result: pass
 
 ### 9. Question number hint stays italic N/A after save
 expected: Enter a question number (e.g. "1"), click Save. On reload, the question number input shows the saved value ("1"), but the "Extracted: N/A" hint row below it still shows italic N/A — it does not change to "1".
-result: pending
+result: pass
 
 ### 10. Ready-to-publish CTA renders standalone
 expected: On a job with status "completed" and a linked argument in "draft" status, a "Ready to publish" CTA block appears immediately after the ArgumentDetailsCard. It is a standalone block — not nested inside any other card. On jobs that don't meet both conditions, it is not visible.
-result: pending
+result: pass
+note: "All current arguments are in draft status (published/unpublished status transitions not yet implemented), so the conditional was only testable against the draft branch — CTA visibility and placement confirmed correct."
 
 ## Summary
 
 total: 10
-passed: 4
-issues: 0
-pending: 4
+passed: 7
+issues: 1
+pending: 0
 skipped: 0
 blocked: 0
 
@@ -95,3 +94,13 @@ blocked: 0
 - truth: "Extracted hints always reflect the raw extraction output and never change when the operator saves a value"
   status: resolved
   resolved_by: "23-04 (commit a1f41371)"
+
+- truth: "Add a docket pill (e.g. '21-1271'), click Save, reload — pill is pre-populated; remove that pill, click Save, reload — no pills shown"
+  status: failed
+  reason: "User reported: when I try to add a new docket pill, I get this message: Only one docket number is supported. Please remove the extra entries."
+  severity: major
+  test: 7
+  root_cause: ""
+  artifacts: []
+  missing: []
+  debug_session: ""

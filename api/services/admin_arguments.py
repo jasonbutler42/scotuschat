@@ -206,8 +206,9 @@ async def get_argument_detail(db: AsyncSession, argument_id: int) -> dict | None
         ],
         "tenure_gap_warnings": tenure_gap_warnings,
         "participants": participants,
-        "source_docket": argument.source_docket,    # Phase 19 D-01
-        "cover_metadata": argument.cover_metadata,  # Phase 19 D-07
+        "source_docket": argument.source_docket,          # Phase 19 D-01
+        "source_dockets": argument.source_dockets or [],  # Phase 23 D-MULTI-DOCKET
+        "cover_metadata": argument.cover_metadata,        # Phase 19 D-07
         "question_number": argument.question_number,  # Phase 23 PJOB-07
     }
 
@@ -544,7 +545,20 @@ async def update_argument_metadata(
     values_to_set: dict = {}
     if parsed_date is not None:
         values_to_set["argued_date"] = parsed_date
-    if body.source_docket is not None:
+    if body.source_dockets is not None:
+        # D-MULTI-DOCKET: normalize the full docket array — strip, drop empties, de-duplicate
+        # preserving order. Empty list → NULL (matches WR-01 NULL-when-cleared semantics).
+        seen: set[str] = set()
+        normalized: list[str] = []
+        for d in body.source_dockets:
+            stripped = d.strip()
+            if stripped and stripped not in seen:
+                seen.add(stripped)
+                normalized.append(stripped)
+        values_to_set["source_dockets"] = normalized if normalized else None
+        # Keep source_docket (canonical dedup key) in sync with dockets[0] per D-MULTI-DOCKET.
+        values_to_set["source_docket"] = normalized[0] if normalized else None
+    elif body.source_docket is not None:
         values_to_set["source_docket"] = body.source_docket or None
     # Phase 23 (PJOB-07 / T-23-02): parse question_number from free-text string.
     # Non-numeric input is silently skipped (never raises 500 per T-23-02).

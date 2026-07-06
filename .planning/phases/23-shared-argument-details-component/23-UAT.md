@@ -1,9 +1,9 @@
 ---
-status: resolved
+status: complete
 phase: 23-shared-argument-details-component
 source: [23-01-SUMMARY.md, 23-02-SUMMARY.md, 23-03-SUMMARY.md, 23-04-SUMMARY.md, 23-05-SUMMARY.md]
 started: 2026-07-02T00:00:00Z
-updated: 2026-07-06T13:50:00Z
+updated: 2026-07-06T14:45:00Z
 ---
 
 ## Current Test
@@ -18,13 +18,13 @@ result: pass
 
 ### 2. Source File Row Removed
 expected: The pipeline job detail page has no "View Source PDF" card or ingest source-file row visible anywhere in the UI.
-result: resolved
-resolved_by: 23-04 (commit 4278c9fb — removed standalone View source PDF card block)
+result: issue
+reported: "yes, it's gone but it's not exactly what I wanted. I wanted the separate standalone card with the view source pdf link gone. You've done that, but I still need a link to it. It should be in the Ingest card as a link to the source PDF, not in a standalone card. I'm not sure how the card was written to delete the link entirely, but it should be where I said, in the Ingest card."
+severity: major
 
 ### 3. ArgumentDetailsCard Replaces Old Metadata Form
 expected: On a pipeline job detail page that has a linked argument, the "Argument Details" card is visible with no residual static "Argument" preview card above it. A standalone "Ready to publish" CTA appears after the ArgumentDetailsCard when the job is completed and the argument is in draft status.
-result: resolved
-resolved_by: 23-04 (commit 4278c9fb — removed orphaned Argument preview card; standalone CTA added)
+result: pass
 
 ### 4. Docket Pill Add and Remove
 expected: Type a docket number (e.g., "21-1271") into the Docket input and press Enter. The docket appears as an editable pill with a × remove button. Clicking × removes it. Entering the same docket a second time is silently ignored (no duplicate pill added).
@@ -32,23 +32,21 @@ result: pass
 
 ### 4b. Docket Input — Enter-to-add instruction visibility
 expected: The instruction to press Enter to add a docket is visible while the operator is typing (not only before they start). A static label "Type a docket number and press Enter to add it." appears above the text input at all times.
-result: resolved
-resolved_by: 23-04 (commit 5ac10e1a — promoted placeholder to always-visible static label above input)
+result: pass
 
 ### 5. Extracted Hints Always Visible
 expected: Hint rows are always visible. The question number hint row always shows italic "N/A" regardless of what the operator saves — it never reflects a previously saved value.
-result: resolved
-resolved_by: 23-04 (commit a1f41371 — hints.question_number frozen to null literal in load())
+result: pass
 
 ### 6. Save Argument Details — docket persistence
 expected: After editing docket pills and clicking Save, on page reload the saved dockets are pre-populated as pills. Removing all pills and saving persists the cleared state (no pills on reload).
-result: resolved
-resolved_by: 23-04 (commits d8a657cb + a1f41371 — empty-string sentinel chain: frontend sends '' → service converts to None → DB stores NULL)
+result: issue
+reported: "I can still only add one docket pill, but the expected behavior is that I can add multiple docket pills to an argument"
+severity: major
 
 ### 7. Docket pill save and pre-population (re-verify)
 expected: Add a docket pill (e.g. "21-1271"), click Save, reload the page — the pill is pre-populated. Then remove that pill, click Save, reload — no pills are shown (cleared state persists).
-result: resolved
-resolved_by: 23-05 (commit 89c04d9a — addPill() max-count guard, disabled input, Enter-key guard, inline hint)
+result: pass
 
 ### 8. Clearing all docket pills persists NULL
 expected: Remove every docket pill so the docket input is empty, click Save. On reload, the docket field shows no pills and the "Extracted:" hint row still shows the original extracted docket (not the cleared operator value). The DB stores NULL for source_docket.
@@ -67,16 +65,32 @@ note: "All current arguments are in draft status (published/unpublished status t
 
 total: 10
 passed: 8
-issues: 0
+issues: 2
 pending: 0
 skipped: 0
 blocked: 0
 
 ## Gaps
 
-- truth: "The pipeline job detail page has no Source file or ingest source-file row visible anywhere in the UI"
-  status: resolved
-  resolved_by: "23-04 (commit 4278c9fb)"
+- truth: "Multiple docket pills can be added to an argument (one per docket number in a consolidated case)"
+  status: failed
+  reason: "User reported: I can still only add one docket pill, but the expected behavior is that I can add multiple docket pills to an argument"
+  severity: major
+  test: 6
+  root_cause: ""
+  artifacts: []
+  missing: []
+  debug_session: ""
+
+- truth: "Source PDF link is accessible from the Ingest card (not as a standalone card, but still reachable)"
+  status: failed
+  reason: "User reported: standalone card is gone but the source PDF link was deleted entirely — it should have been moved into the Ingest card as a link"
+  severity: major
+  test: 2
+  root_cause: ""
+  artifacts: []
+  missing: []
+  debug_session: ""
 
 - truth: "The old argument metadata form is replaced entirely by ArgumentDetailsCard — no residual static Argument card remains"
   status: resolved

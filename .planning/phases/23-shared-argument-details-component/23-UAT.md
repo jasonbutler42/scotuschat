@@ -1,5 +1,5 @@
 ---
-status: complete
+status: diagnosed
 phase: 23-shared-argument-details-component
 source: [23-01-SUMMARY.md, 23-02-SUMMARY.md, 23-03-SUMMARY.md, 23-04-SUMMARY.md]
 started: 2026-07-02T00:00:00Z
@@ -100,7 +100,14 @@ blocked: 0
   reason: "User reported: when I try to add a new docket pill, I get this message: Only one docket number is supported. Please remove the extra entries."
   severity: major
   test: 7
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "addPill() in ArgumentDetailsCard.svelte has no max-count guard — it only deduplicates. When the page loads with a pre-populated pill from savedValues, the user can add a second pill client-side; on submit the CR-02 server guard fires and rejects the request."
+  artifacts:
+    - path: "app/src/lib/components/ArgumentDetailsCard.svelte"
+      issue: "addPill() allows pills.length to reach 2 — needs early return when pills.length >= 1, or disable the input when a pill exists"
+    - path: "app/src/routes/admin/pipeline/[job_id]/+page.server.ts"
+      issue: "CR-02 server guard (lines 374–379) fires correctly but only at submit time, after UX already let the user add a second pill"
+  missing:
+    - "Add max-pill guard in addPill(): if (pills.length >= 1) return; — or disable the <input> with disabled={readonly || pills.length >= 1}"
+    - "Block Enter key handler too when pills.length >= 1"
+    - "Surface an inline hint when input is disabled: 'Remove the existing entry to add a different one.'"
+  debug_session: ".planning/debug/docket-pill-multi-entry-guard.md"

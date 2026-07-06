@@ -19,6 +19,7 @@ interface ArgumentPreview {
 	published_at: string | null;
 	status: string | null;
 	source_docket: string | null;
+	source_dockets: string[] | null;
 	cover_metadata: Record<string, unknown> | null;
 	question_number: number | null;
 }
@@ -121,7 +122,7 @@ export const load: PageServerLoad = async ({ params }) => {
 
 	if (argument != null) {
 		savedValues = {
-			dockets: argument.source_docket ? [argument.source_docket] : [],
+			dockets: argument.source_dockets ?? (argument.source_docket ? [argument.source_docket] : []),
 			question_number: argument.question_number != null ? String(argument.question_number) : '',
 			argued_date: argument.argued_date ? argument.argued_date.slice(0, 10) : null,
 		};
@@ -371,14 +372,6 @@ export const actions: Actions = {
 		const question_number = ((data.get('question_number') as string) ?? '').trim();
 		const argued_date = ((data.get('argued_date') as string) ?? '').trim() || null;
 
-		// CR-02: source_docket is a single string column — fail fast rather than silently drop extras
-		if (dockets.length > 1) {
-			return fail(400, {
-				saveError: 'Only one docket number is supported. Please remove the extra entries.',
-				dockets,
-			});
-		}
-
 		// Fetch the job to get argument_id server-side (T-23-03-01: never accept from form)
 		let argumentId: number | null = null;
 		try {
@@ -415,10 +408,12 @@ export const actions: Actions = {
 						'Content-Type': 'application/json',
 					},
 					body: JSON.stringify({
-						// WR-02: case_name is intentionally omitted here — it is not editable
+						// WR-02: case_name is intentionally omitted here ï¿½ it is not editable
 						// from the job detail page. case_name edits are handled via the
 						// argument edit page (/admin/arguments/{id}) only.
-						source_docket: dockets[0] ?? '',
+						// D-MULTI-DOCKET: send full array; service writes source_dockets and
+						// keeps source_docket = dockets[0] as the canonical dedup key.
+						source_dockets: dockets,
 						argued_date,
 						question_number: question_number || null,
 					}),

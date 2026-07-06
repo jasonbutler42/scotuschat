@@ -181,7 +181,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 **Wave 2** *(blocked on 24-02 — both consume DocketPillInput; disjoint files from each other)*
 
 - [ ] 24-03-PLAN.md — Refactor ArgumentDetailsCard.svelte to consume DocketPillInput, behavior-identical (PLIST-02)
-- [ ] 24-04-PLAN.md — Pipeline list page: free-text question, DocketPillInput + per-pill preflight, compound badge, Step column removed, All Runs heading, first-pill action (PLIST-01, PLIST-02, PLIST-04, PLIST-05)
+- [ ] 24-04-PLAN.md — Pipeline list page: free-text question, DocketPillInput + per-pill preflight, full multi-docket run-start persistence, compound badge, Step column removed, All Runs heading (PLIST-01, PLIST-02, PLIST-04, PLIST-05)
 
 **UI hint**: yes
 

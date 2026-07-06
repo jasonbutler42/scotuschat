@@ -274,3 +274,12 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 ## Backlog
 
 See `.planning/BACKLOG.md` for unscheduled items (B-001 through B-012).
+
+### Phase 999.1: Click-to-copy extracted values design pattern (BACKLOG)
+
+**Goal:** Whenever a value has been extracted from a source PDF, use a consistent design pattern that lets the operator click the value to copy it to their clipboard. If a value was not extracted (showing N/A), clicking to copy is disabled. Includes an appropriate icon and tooltip. Expected to decompose into at least: (1) reusable tooltip component, (2) click-to-copy implementation for extracted hint values, and possibly others.
+**Requirements:** TBD
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (promote with /gsd-review-backlog when ready)

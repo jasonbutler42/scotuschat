@@ -11,7 +11,7 @@ Endpoints:
     Spawns ingest subprocess immediately. Returns 202 + AdminJobResponse.
 
   GET /api/admin/jobs
-    Return the 10 most recent AdminJob rows.
+    Return all AdminJob rows, newest first.
 
   GET /api/admin/jobs/{job_id}
     Poll endpoint — returns the full AdminJob row. As a side effect, advances
@@ -257,13 +257,13 @@ async def list_jobs(
     incomplete: bool = False,
     db: AsyncSession = Depends(get_db),
 ) -> list[AdminJobResponse]:
-    """Return the 10 most recent pipeline jobs, newest first.
+    """Return all pipeline jobs, newest first.
 
     Query param:
     - incomplete=false (default): return all jobs regardless of status
     - incomplete=true: return only PAUSED and FAILED jobs (require operator action, PIPE-20)
     """
-    return await jobs_service.list_jobs(db, limit=10, incomplete=incomplete)  # type: ignore[return-value]
+    return await jobs_service.list_jobs(db, incomplete=incomplete)  # type: ignore[return-value]
 
 
 @router.get("/jobs/{job_id}", response_model=AdminJobResponse)

@@ -196,13 +196,12 @@ async def get_job(db: AsyncSession, job_id: int) -> AdminJob | None:
 
 
 async def list_jobs(
-    db: AsyncSession, limit: int = 10, incomplete: bool = False
+    db: AsyncSession, incomplete: bool = False
 ) -> list[AdminJob]:
-    """Return the most recent `limit` AdminJob rows, newest first.
+    """Return all AdminJob rows, newest first.
 
     Args:
         db: Async database session.
-        limit: Maximum number of rows to return (default 10).
         incomplete: When True, filter to only PAUSED and FAILED jobs (D-10 / PIPE-20).
                     When False (default), return all jobs regardless of status.
     """
@@ -211,7 +210,7 @@ async def list_jobs(
         query = query.where(
             AdminJob.status.in_([AdminJobStatus.PAUSED, AdminJobStatus.FAILED])
         )
-    query = query.order_by(AdminJob.created_at.desc()).limit(limit)
+    query = query.order_by(AdminJob.created_at.desc())
     result = await db.execute(query)
     jobs = list(result.scalars().all())
     # Inject parse_stats=None so Pydantic's from_attributes mode can serialize the

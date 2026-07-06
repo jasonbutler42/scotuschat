@@ -604,6 +604,16 @@
 						</div>
 					{/if}
 
+					<!-- View source PDF link (PJOB-09): inside Ingest card only -->
+					{#if step === 'ingest' && (liveJob.spaces_key || liveJob.pdf_url || liveJob.original_filename)}
+						<div style="margin-top: 12px;">
+							<a
+								href="/admin/pipeline/{liveJob.id}/pdf"
+								style="font-size: 14px; color: #93c5fd; text-decoration: none;"
+							>View source PDF</a>
+						</div>
+					{/if}
+
 					<!-- Discrepancy review (D-11–D-14): only when resolve step is paused -->
 					{#if step === 'resolve' && liveJob.status === 'paused' && data.peopleLoadError}
 						<p role="alert" style="margin-top: 12px; font-size: 13px; color: #fbbf24; font-family: monospace;">

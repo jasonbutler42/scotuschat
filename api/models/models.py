@@ -24,7 +24,7 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
 )
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import DeclarativeBase
 
 
@@ -187,6 +187,10 @@ class Argument(Base):
     # Phase 19 (D-01): primary docket used at ingest time; NULL when operator did not supply one.
     # Used with question_number for the unique deduplication constraint (see __table_args__).
     source_docket = Column(String(50), nullable=True)
+    # Phase 23 (D-MULTI-DOCKET): full ordered list of dockets for consolidated cases.
+    # source_docket = source_dockets[0] — service keeps these in sync on every write.
+    # UNIQUE constraint remains on source_docket (not this array) — dedup logic unchanged.
+    source_dockets = Column(ARRAY(String(50)), nullable=True)
     # Phase 19 (D-07): raw cover extractor output written unconditionally by parse step.
     # Read by the job detail page to render "Extracted: [value]" hint text.
     cover_metadata = Column(JSONB, nullable=True)

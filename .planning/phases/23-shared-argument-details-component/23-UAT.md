@@ -1,9 +1,9 @@
 ---
-status: diagnosed
+status: resolved
 phase: 23-shared-argument-details-component
-source: [23-01-SUMMARY.md, 23-02-SUMMARY.md, 23-03-SUMMARY.md, 23-04-SUMMARY.md]
+source: [23-01-SUMMARY.md, 23-02-SUMMARY.md, 23-03-SUMMARY.md, 23-04-SUMMARY.md, 23-05-SUMMARY.md]
 started: 2026-07-02T00:00:00Z
-updated: 2026-07-06T12:00:00Z
+updated: 2026-07-06T13:50:00Z
 ---
 
 ## Current Test
@@ -47,9 +47,8 @@ resolved_by: 23-04 (commits d8a657cb + a1f41371 — empty-string sentinel chain:
 
 ### 7. Docket pill save and pre-population (re-verify)
 expected: Add a docket pill (e.g. "21-1271"), click Save, reload the page — the pill is pre-populated. Then remove that pill, click Save, reload — no pills are shown (cleared state persists).
-result: issue
-reported: "when I try to add a new docket pill, I get this message: Only one docket number is supported. Please remove the extra entries."
-severity: major
+result: resolved
+resolved_by: 23-05 (commit 89c04d9a — addPill() max-count guard, disabled input, Enter-key guard, inline hint)
 
 ### 8. Clearing all docket pills persists NULL
 expected: Remove every docket pill so the docket input is empty, click Save. On reload, the docket field shows no pills and the "Extracted:" hint row still shows the original extracted docket (not the cleared operator value). The DB stores NULL for source_docket.
@@ -67,8 +66,8 @@ note: "All current arguments are in draft status (published/unpublished status t
 ## Summary
 
 total: 10
-passed: 7
-issues: 1
+passed: 8
+issues: 0
 pending: 0
 skipped: 0
 blocked: 0
@@ -96,18 +95,6 @@ blocked: 0
   resolved_by: "23-04 (commit a1f41371)"
 
 - truth: "Add a docket pill (e.g. '21-1271'), click Save, reload — pill is pre-populated; remove that pill, click Save, reload — no pills shown"
-  status: failed
-  reason: "User reported: when I try to add a new docket pill, I get this message: Only one docket number is supported. Please remove the extra entries."
-  severity: major
-  test: 7
-  root_cause: "addPill() in ArgumentDetailsCard.svelte has no max-count guard — it only deduplicates. When the page loads with a pre-populated pill from savedValues, the user can add a second pill client-side; on submit the CR-02 server guard fires and rejects the request."
-  artifacts:
-    - path: "app/src/lib/components/ArgumentDetailsCard.svelte"
-      issue: "addPill() allows pills.length to reach 2 — needs early return when pills.length >= 1, or disable the input when a pill exists"
-    - path: "app/src/routes/admin/pipeline/[job_id]/+page.server.ts"
-      issue: "CR-02 server guard (lines 374–379) fires correctly but only at submit time, after UX already let the user add a second pill"
-  missing:
-    - "Add max-pill guard in addPill(): if (pills.length >= 1) return; — or disable the <input> with disabled={readonly || pills.length >= 1}"
-    - "Block Enter key handler too when pills.length >= 1"
-    - "Surface an inline hint when input is disabled: 'Remove the existing entry to add a different one.'"
+  status: resolved
+  resolved_by: "23-05 (commit 89c04d9a — four coordinated guards: addPill() early-return, disabled input, Enter-key guard, inline hint)"
   debug_session: ".planning/debug/docket-pill-multi-entry-guard.md"

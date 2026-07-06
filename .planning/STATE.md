@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: Admin Screens Cleanup
-current_phase: 23
-current_phase_name: shared-argument-details-component
+current_phase: 24
+current_phase_name: pipeline-list-page
 status: executing
-stopped_at: Phase 24 UI-SPEC approved
-last_updated: "2026-07-06T17:54:40.687Z"
+stopped_at: Completed 24-01-PLAN.md
+last_updated: "2026-07-06T18:13:03.762Z"
 last_activity: 2026-07-06
-last_activity_desc: Phase 23 execution started
+last_activity_desc: Phase 24 execution started
 progress:
   total_phases: 7
   completed_phases: 2
-  total_plans: 10
-  completed_plans: 10
+  total_plans: 14
+  completed_plans: 11
   percent: 29
 ---
 
@@ -24,14 +24,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-02 after v1.5 milestone start)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** Phase 23 — shared-argument-details-component
+**Current focus:** Phase 24 — pipeline-list-page
 
 ## Current Position
 
-Phase: 23 (shared-argument-details-component) — EXECUTING
-Plan: 1 of 1
+Phase: 24 (pipeline-list-page) — EXECUTING
+Plan: 2 of 4
 Status: Ready to execute
-Last activity: 2026-07-06 — Phase 23 execution started
+Last activity: 2026-07-06 — Phase 24 execution started
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -62,6 +62,7 @@ Full log in PROJECT.md Key Decisions table. Key decisions entering v1.5:
 - [Phase ?]: 23-04: Empty-string sentinel distinguishes operator-cleared dockets from unsent field; service converts to None
 - [Phase ?]: 23-04: hints.question_number frozen to null in load() — Argument.question_number is operator-editable, not an immutable extraction source
 - [Phase ?]: 23-05: Docket pill max-count guard — client UX convenience; CR-02 server guard is authoritative
+- [Phase 24]: Removed the list_jobs limit parameter entirely instead of making it optional, matching PLIST-03 and D-10. — PLIST-03 requires all pipeline runs, and D-10/D-12 explicitly remove the cap with no pagination UI for this phase.
 
 ### Pending Todos
 
@@ -91,9 +92,10 @@ Deployment blockers (v1.4, unresolved — not in v1.5 scope):
 | Phase 23 P04 | 10m | 5 tasks | 4 files |
 | Phase 23 P05 | 5m | 1 tasks | 1 files |
 | Phase 23 P07 | 12 | 3 tasks | 6 files |
+| Phase 24 P01 | 35m | 1 tasks | 3 files |
 
 ## Session Continuity
 
-Last session: 2026-07-06T15:19:05.650Z
-Stopped at: Phase 24 UI-SPEC approved
-Resume file: .planning/phases/24-pipeline-list-page/24-UI-SPEC.md
+Last session: 2026-07-06T18:13:03.750Z
+Stopped at: Completed 24-01-PLAN.md
+Resume file: None

@@ -1,6 +1,6 @@
 ---
 phase: 23-shared-argument-details-component
-reviewed: 2026-07-02T00:00:00Z
+reviewed: 2026-07-06T00:00:00Z
 depth: standard
 files_reviewed: 7
 files_reviewed_list:
@@ -12,134 +12,173 @@ files_reviewed_list:
   - app/src/routes/admin/pipeline/[job_id]/+page.server.ts
   - app/src/routes/admin/pipeline/[job_id]/+page.svelte
 findings:
-  critical: 2
+  critical: 1
   warning: 3
   info: 2
-  total: 7
+  total: 6
 status: issues_found
 ---
 
 # Phase 23: Code Review Report
 
-**Reviewed:** 2026-07-02
+**Reviewed:** 2026-07-06T00:00:00Z
 **Depth:** standard
 **Files Reviewed:** 7
 **Status:** issues_found
 
 ## Summary
 
-Phase 23 delivered the `ArgumentDetailsCard` shared component and wired it into the pipeline job detail page via the `saveJobMetadata` action. The backend schemas and services for both arguments and jobs are well-structured with clear mass-assignment guards and IDOR protections.
+Phase 23 delivered the `ArgumentDetailsCard` shared component and wired it into the pipeline job detail page via the `saveJobMetadata` action. The previous review findings (CR-01 bare fromisoformat, CR-02 multi-docket silent drop, WR-01 dead saveMetadata action) have all been addressed in this revision — the try/except guard, the multi-docket fail-fast, and the saveMetadata removal are all confirmed present.
 
-Two blockers were found. The first is an unguarded `datetime.date.fromisoformat()` call in `update_argument_metadata` that raises an unhandled `ValueError` — and therefore a 500 — when a malformed date string reaches it; the parallel `update_argument` function wraps the same call in a try/except and raises a proper `ValueError("invalid_date_format")`, making the inconsistency clear. The second is a silent multi-docket data-loss bug: the `saveJobMetadata` action forwards only `dockets[0]` to the API even when the operator has added multiple docket pills, silently discarding everything beyond the first.
+One new blocker was found: the `approve` action silently discards participant side-assignment PATCH failures, meaning an argument can be approved with incorrect advocate roles when any PATCH to `/api/admin/arguments/{id}/participants/{pid}` fails. The silence is explicit in the code but the consequence — wrong side data in the permanent argument record — is not recoverable without manual correction.
 
-Three warnings were found: a dead `saveMetadata` action that was superseded by `saveJobMetadata` but not removed, a missing `case_name` field in the `saveJobMetadata` PATCH payload that causes the field update path in the service to be permanently dead from this caller, and a mismatched `form` key that causes success and error feedback from `saveJobMetadata` to be invisible in `ArgumentDetailsCard`.
+Three warnings were found: two `# type: ignore[return-value]` suppressions that hide a potential None-return-as-AdminJob type violation, a hints construction that hard-codes `question_number: null` contradicting the component's prop contract, and a polling loop that updates `liveJob` via direct state mutation but never updates `data.savedValues` or `data.hints`, leaving the ArgumentDetailsCard stale after a terminal-state poll transition until `invalidateAll()` completes.
 
 ---
 
 ## Critical Issues
 
-### CR-01: Unguarded `fromisoformat` in `update_argument_metadata` — 500 on bad date input
+### CR-01: Silently discarded PATCH failures in `approve` action allow argument approval with wrong advocate sides
 
-**File:** `api/services/admin_arguments.py:534-538`
+**File:** `app/src/routes/admin/pipeline/[job_id]/+page.server.ts:216-231`
 
-**Issue:** `update_argument_metadata` calls `datetime.date.fromisoformat(body.argued_date)` in a bare ternary expression with no try/except. A malformed date string from the form (e.g. `"not-a-date"`, or a partial value) raises `ValueError` that propagates uncaught through the service, causing the FastAPI router to return a 500. The analogous function `update_argument` (line 262-267) wraps the same call in a try/except and re-raises a descriptive `ValueError("invalid_date_format")` which the router can catch and return as a 422. This function needs the same treatment. The `saveJobMetadata` action in the SvelteKit server sends the raw `argued_date` string from `FormData.get('argued_date')` without any client-side format validation, so a browser with JS disabled or a crafted request can reach this path with invalid data.
+**Issue:** The `approve` action uses `Promise.allSettled` to fire side-assignment PATCHes and then unconditionally proceeds to POST `/approve` regardless of whether any PATCH succeeded. Each `.catch(() => undefined)` inside the `map` ensures rejections are swallowed at the Promise level, and `allSettled` ensures no rejection propagates. If the FastAPI `/api/admin/arguments/{id}/participants/{pid}` endpoint returns a non-OK status for any participant, the side assignment for that participant is silently lost — but the argument is still approved and transitions to DRAFT state. The operator has no feedback that their role assignments were not saved.
 
-**Fix:**
-```python
-# api/services/admin_arguments.py — lines 533-538
-# b. Parse argued_date from ISO string if provided
-parsed_date: datetime.date | None = None
-if body.argued_date:
-    try:
-        parsed_date = datetime.date.fromisoformat(body.argued_date)
-    except ValueError:
-        raise ValueError("invalid_date_format")
-```
+The consequence is silent corrupt data: an argument is marked DRAFT with one or more advocate participants still in the wrong `side` state (e.g., UNKNOWN instead of PETITIONER). This cannot be recovered without manually editing the argument afterwards, and the admin pipeline page shows no indicator that side assignments failed.
 
----
-
-### CR-02: Multi-docket data loss — `saveJobMetadata` silently drops all pills after the first
-
-**File:** `app/src/routes/admin/pipeline/[job_id]/+page.server.ts:461-463`
-
-**Issue:** `saveJobMetadata` reads all `docket[]` pills from the form (`dockets` is a `string[]`) but sends only `dockets[0] ?? ''` to the PATCH endpoint. When the operator adds two or more docket pills, every pill except the first is silently discarded. The API's `MetadataUpdate.source_docket` is a single nullable string, so multiple dockets cannot be sent in one call, but the bug is the silent drop: the UI pill control allows multiple entries, and the server component accepts them all via `getAll('docket[]')` — the operator is given no feedback that extras were ignored.
-
-There are two parts to this fix:
-1. Either constrain the UI to a single docket pill (if source_docket is intentionally a single value), or
-2. Detect multiple dockets before the PATCH and return a validation error.
-
-The minimal safe fix consistent with the current schema (single `source_docket` column):
+**Fix:** Collect the `allSettled` results and check for rejections. Return `fail(502, { approveError: ... })` if any PATCH yielded a non-OK response before proceeding to POST approve:
 
 ```typescript
-// +page.server.ts — saveJobMetadata action, after dockets is computed (line ~421)
-if (dockets.length > 1) {
-    return fail(400, {
-        saveError: 'Only one docket number is supported. Please remove the extra entries.',
-        dockets,
-    });
+const sideResults = await Promise.allSettled(
+  sideEntries.map(({ participant_id, side }) =>
+    fetch(
+      `${FASTAPI_BASE_URL}/api/admin/arguments/${argumentId}/participants/${participant_id}`,
+      {
+        method: 'PATCH',
+        headers: {
+          'X-Admin-Token': ADMIN_TOKEN,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ side }),
+      },
+    ),
+  ),
+);
+
+const sideFailures = sideResults.filter(
+  (r): r is PromiseRejectedResult | PromiseFulfilledResult<Response> =>
+    r.status === 'rejected' || (r.status === 'fulfilled' && !r.value.ok),
+);
+if (sideFailures.length > 0) {
+  return fail(502, {
+    approveError: 'Could not save advocate role assignments. Check your selections and try again.',
+  });
 }
 ```
-
-If multiple dockets are a legitimate future requirement, this is a schema-level change (`source_docket` → array or a separate table) that needs a migration; the current silent truncation is incorrect regardless.
 
 ---
 
 ## Warnings
 
-### WR-01: Dead `saveMetadata` action — superseded by `saveJobMetadata` but not removed
+### WR-01: `get_job` / `resolve_job` / `approve_job` suppress `None` return with `# type: ignore` — no null guard
 
-**File:** `app/src/routes/admin/pipeline/[job_id]/+page.server.ts:364-407`
+**File:** `api/services/admin_jobs.py:446` and `api/services/admin_jobs.py:504`
 
-**Issue:** The `saveMetadata` action (lines 364-407) was the previous metadata save handler. It is never invoked from any form in the current `+page.svelte` (the `ArgumentDetailsCard` uses `action="?/saveJobMetadata"`). The dead action accepts `case_name`, `source_docket`, and `argued_date` from form data; it is reachable by a POST to `?/saveMetadata` with a custom form, creating an ambiguous second write path to `/api/admin/arguments/{id}/metadata` that bypasses the docket-pill serialization and `question_number` logic added in Phase 23. It should be removed before shipping.
+**Issue:** Both `resolve_job` and `approve_job` reload the job after their commit with `updated = await get_job(db, job_id)` and then return `updated # type: ignore[return-value]`. `get_job` is typed to return `AdminJob | None`. The `# type: ignore` suppresses the type error rather than asserting or handling the `None` case. In theory, a job that was just committed and confirmed to exist moments earlier should not return `None` on immediate reload. In practice, this assumption could be violated by a concurrent `delete_job` call (the API does not serialize deletes against resolves). If it is violated, the router receives `None` where it expects `AdminJob`, and Pydantic serialization will raise an `AttributeError` or `ValidationError` that surfaces as a 500.
 
-**Fix:** Delete the entire `saveMetadata` action block (lines 364-407). Verify no other route or component references `?/saveMetadata`.
+**Fix:** Add an assertion or explicit guard after the reload:
 
----
-
-### WR-02: `saveJobMetadata` does not send `case_name` — the field's service code path is permanently dead from this caller
-
-**File:** `app/src/routes/admin/pipeline/[job_id]/+page.server.ts:460-465`
-
-**Issue:** `saveJobMetadata` sends `source_docket`, `argued_date`, and `question_number` in the PATCH body but never sends `case_name`. `MetadataUpdate.case_name` defaults to `None`, so the service's update path for `Case.case_name` (lines 564-578 of `admin_arguments.py`) is never reached from this caller. `ArgumentDetailsCard` has no `case_name` input field either — it accepts only dockets, question number, and argued date. If `case_name` editing from the job detail page is intentional per the spec, this field is missing from both the component and the action. If it is not required from this page, `MetadataUpdate.case_name` should be documented as only usable from the legacy `saveMetadata` action (which will be removed per WR-01), and the service should be updated to reflect that.
-
-**Fix (if case_name is not needed from this page):** Add a comment to `update_argument_metadata` and `MetadataUpdate` noting that `case_name` is only populated from the argument edit page (`/admin/arguments/{id}`), and remove it from `MetadataUpdate` or mark it deprecated. If it is required, add a `case_name` field and text input to `ArgumentDetailsCard`.
+```python
+# api/services/admin_jobs.py — apply in both resolve_job and approve_job
+updated = await get_job(db, job_id)
+if updated is None:
+    raise ValueError(f"AdminJob {job_id} disappeared after commit — possible concurrent delete")
+return updated
+```
 
 ---
 
-### WR-03: Form feedback keys mismatch — `ArgumentDetailsCard` reads `form.saved`/`form.saveError` but `saveJobMetadata` returns `{ saved: true }` only on success and `{ saveError: ... }` only on failure; the `metadataSaved`/`metadataError` keys from `saveMetadata` (the dead action) are misnamed and ignored
+### WR-02: `hints.question_number` is always `null` — component prop contract says it should reflect extracted value
 
-**File:** `app/src/lib/components/ArgumentDetailsCard.svelte:310-331` and `app/src/routes/admin/pipeline/[job_id]/+page.server.ts:476, 436, 439, 445, 469, 473`
+**File:** `app/src/routes/admin/pipeline/[job_id]/+page.server.ts:132`
 
-**Issue:** `ArgumentDetailsCard` displays success feedback when `form?.saved` is truthy (line 310) and error feedback when `form?.saveError` is set (line 321). `saveJobMetadata` correctly returns `{ saved: true }` on success and `{ saveError: ..., dockets: [...] }` on failure, so the success and error paths in the card *do* match for `saveJobMetadata`. However, the dead `saveMetadata` action (WR-01) returns `{ metadataSaved: true }` on success and `{ metadataError: ... }` on failure — keys the component never reads. This confirms the two actions are inconsistently keyed. If `saveMetadata` is kept (contrary to WR-01), its return values must be updated to use `{ saved: true }` and `{ saveError: ... }`. More importantly, when the `form` prop is from a *different* action (e.g., `approve`, `rerun`, `delete`), `form?.saved` and `form?.saveError` will be `undefined` but this is harmless — those actions use distinct keys.
+**Issue:** The `hints` object is built at lines 128-135 with `question_number: null` hardcoded. The `ArgumentDetailsCard` component renders `Extracted: {hints.question_number ?? 'N/A'}` for the question number hint row. The result is always "Extracted: N/A" regardless of what `cover_metadata` contains. The comment at line 132 is absent — there is no explanation of why the hint is permanently null.
 
-The substantive risk is that if `saveMetadata` is invoked from any path, the operator gets no success or error feedback in the card at all. Removing `saveMetadata` (WR-01) eliminates this risk.
+Per `admin_jobs.py` line 170-171, `cover_metadata` does not have a `question_number` key — that value comes from `Argument.question_number`. However, the `ArgumentPreview` interface at line 24 exposes `question_number: number | null` from the Argument record. The current hints construction skips this and simply renders N/A, which is misleading if `argument.question_number` is already set (the saved value and the "extracted" hint would both say the same thing but from different sources).
 
-**Fix:** After removing `saveMetadata` (WR-01 fix), this inconsistency is fully resolved. No code change needed in `ArgumentDetailsCard` itself.
+The correct behavior is one of:
+- Intentionally show N/A because there is no cover-metadata source for question_number (then add a comment explaining this).
+- Show `argument.question_number` as the extracted hint (if the intent is to echo the previously saved value as the hint).
+
+Either way, the current code is silently incorrect because it provides no extracted hint even when data is available.
+
+**Fix (option A — document the intentional N/A):** Add a comment:
+
+```typescript
+hints = {
+  dockets: argument.cover_metadata?.primary_docket
+    ? [String(argument.cover_metadata.primary_docket)]
+    : [],
+  // question_number has no cover_metadata source; Argument.question_number is the
+  // operator-saved value shown in savedValues, not a pipeline extraction hint.
+  question_number: null,
+  argued_date: (argument.cover_metadata?.argued_date as string) ?? null,
+  case_name: (argument.cover_metadata?.case_name as string) ?? null,
+};
+```
+
+**Fix (option B — use the saved value as the hint when no extracted value exists):**
+
+```typescript
+question_number: argument.question_number != null ? String(argument.question_number) : null,
+```
+
+---
+
+### WR-03: `invalidateAll()` in the poll loop does not update `data.savedValues` / `data.hints` — `ArgumentDetailsCard` shows stale data after terminal transition
+
+**File:** `app/src/routes/admin/pipeline/[job_id]/+page.svelte:103-106`
+
+**Issue:** When the poll detects a terminal job status, it calls `invalidateAll()` to refresh the server load data, which re-fetches `data.argument`, `data.savedValues`, and `data.hints`. However, there is a race window between the terminal status being written to `liveJob` (line 94) and `invalidateAll()` completing. During this window, `ArgumentDetailsCard` continues to display the stale `data.savedValues` (the pre-terminal values). If the pipeline step just completed updates `Argument.question_number`, `source_docket`, or `argued_date`, the card will briefly show old values.
+
+More importantly, `liveJob` is a direct `$state` copy updated from the poll, but `data.savedValues` and `data.hints` are server-load props that only update after `invalidateAll()` resolves. They are NOT derived from `liveJob`. The `$effect(() => { liveJob = data.job; })` sync at line 76 keeps `liveJob` in step with load re-runs, but there is no equivalent sync that rebuilds `savedValues`/`hints` from the polled job data. The ArgumentDetailsCard prop values can therefore be permanently stale if `invalidateAll()` fails silently or if SvelteKit's re-hydration does not propagate the load result to the component.
+
+**Fix:** After `invalidateAll()`, check that `data.savedValues` was updated. Alternatively, derive `savedValues` reactively from `data.argument` using `$derived`, so any time `data.argument` changes (including after `invalidateAll()`), the card reflects it automatically. This is a reactive model concern inherent to the `liveJob` + `data.*` split, not a bug in the polling logic itself.
 
 ---
 
 ## Info
 
-### IN-01: `AdvocateParticipant.side` typed as `str` instead of `SideEnum`
+### IN-01: `AdvocateParticipant.side` typed as `str` instead of `SideEnum` weakens schema validation
 
 **File:** `api/schemas/admin_arguments.py:99`
 
-**Issue:** `AdvocateParticipant.side` is typed as `str` with a comment `# SideEnum value as string`. The service serializes it as `row.side.value` (admin_arguments.py:190), which is correct. However, the schema type allows any string to be set in this field if the schema is ever used for input. The comment acknowledges the deliberate choice, but Pydantic v2 can coerce `SideEnum` → string automatically via `model_config = {"use_enum_values": True}`, making the type safer with no downstream change. This is a minor type safety gap, not a current bug.
+**Issue:** `AdvocateParticipant.side` is declared as `side: str  # SideEnum value as string`. The service populates this via `row.side.value` (a correct `.value` serialization of the enum). However, if this schema were ever used as input validation, `str` would accept any string including values outside the `SideEnum` domain. Pydantic v2's `use_enum_values: True` config can serialize an enum to its string value automatically, making the type safer.
 
-**Fix:** Change `side: str` to `side: SideEnum` and add `use_enum_values: True` to `AdvocateParticipant`'s `model_config`, or keep `str` but add a `field_validator` to enforce enum membership.
+**Fix:** Change the field type to `SideEnum` and add `use_enum_values: True` to the model's config, or add a `field_validator` to enforce enum membership:
+
+```python
+class AdvocateParticipant(BaseModel):
+    participant_id: int
+    person_id: int
+    full_name: str
+    side: SideEnum
+
+    model_config = {"from_attributes": True, "use_enum_values": True}
+```
 
 ---
 
-### IN-02: Polling endpoint reads `liveJob.id` which is from the initial server load — stale if the job is replaced by a rerun
+### IN-02: `comboOutsideClick` Svelte action registers a global `click` listener on `document` and also removes it in `destroy` — double-removal risk
 
-**File:** `app/src/routes/admin/pipeline/[job_id]/+page.svelte:83`
+**File:** `app/src/routes/admin/pipeline/[job_id]/+page.svelte:382-402`
 
-**Issue:** The poll loop fetches `/admin/pipeline/${liveJob.id}` — `liveJob.id` is initialized from `data.job` which is the server-load value. After a successful `rerun` the browser is redirected to the new job's page (line 283 of `+page.server.ts`), so the stale-id scenario can only arise if `invalidateAll()` fires and somehow re-sets `liveJob` to a different id, which SvelteKit's current re-hydration does not do. This is a theoretical concern with the `$effect(() => { liveJob = data.job; })` sync at line 76, but in practice the redirect prevents it. Noting for awareness.
+**Issue:** The `comboOutsideClick` Svelte action adds `handleClick` to `document` via `$effect` (which returns a teardown) and also removes it in the `destroy` method. When the action is destroyed, both the `$effect` teardown AND the `destroy` cleanup both call `document.removeEventListener('click', handleClick)`. The second call is a no-op (removing a listener that was already removed) and does not cause a bug, but it indicates the two cleanup paths are redundant. If the `$effect` dependency is re-evaluated while the element is live, a new listener is added each time, accumulating multiple listeners — though in this case the `$effect` inside the action has no reactive dependencies that would trigger re-execution after mount.
 
-**Fix:** No immediate action required. If the redirect behavior changes in future, consider deriving the poll URL from `data.job.id` rather than `liveJob.id`.
+**Fix:** Remove the redundant `destroy` teardown since the `$effect` inside the action already handles cleanup, or keep `destroy` and remove the `$effect`. Do not maintain both.
 
 ---
 
-_Reviewed: 2026-07-02_
+_Reviewed: 2026-07-06T00:00:00Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_

@@ -1,5 +1,5 @@
 ---
-status: complete
+status: diagnosed
 phase: 23-shared-argument-details-component
 source: [23-01-SUMMARY.md, 23-02-SUMMARY.md, 23-03-SUMMARY.md, 23-04-SUMMARY.md, 23-05-SUMMARY.md]
 started: 2026-07-02T00:00:00Z
@@ -77,20 +77,43 @@ blocked: 0
   reason: "User reported: I can still only add one docket pill, but the expected behavior is that I can add multiple docket pills to an argument"
   severity: major
   test: 6
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "The one-pill cap (addPill() returns if pills.length >= 1; input disabled at same threshold) is intentional and matches the backend — source_docket is a single String(50) column in the DB, the Pydantic schema is Optional[str], and the server action explicitly rejects dockets.length > 1 with a 400. The full stack is single-docket by design; this is a requirements conflict, not a code defect."
+  artifacts:
+    - path: "app/src/lib/components/ArgumentDetailsCard.svelte"
+      issue: "addPill() returns early at pills.length >= 1; input disabled at same threshold — intentional cap matching backend constraint"
+      line_hint: "lines 42, 176, 180"
+    - path: "app/src/routes/admin/pipeline/[job_id]/+page.server.ts"
+      issue: "saveJobMetadata action rejects dockets.length > 1 with fail(400)"
+      line_hint: "lines 374–379"
+    - path: "api/models/models.py"
+      issue: "source_docket = Column(String(50), nullable=True) — single varchar, not an array"
+      line_hint: "line 189"
+    - path: "api/schemas/admin_arguments.py"
+      issue: "source_docket: Optional[str] = None — single string in PATCH body"
+      line_hint: "line 170"
+  missing:
+    - "DB migration: change source_docket String(50) to source_dockets ARRAY or a separate argument_dockets join table"
+    - "SQLAlchemy model: replace source_docket Column(String(50)) with array-capable type"
+    - "Pydantic schema: source_dockets: list[str] = [] in PATCH body"
+    - "Service layer: write all dockets, not just dockets[0]"
+    - "Server action: remove dockets.length > 1 guard; pass full array to PATCH body"
+    - "Frontend: remove pills.length >= 1 guard in addPill() and disabled binding; add duplicate-only guard"
+    - "Update all query/display paths that read source_docket throughout API and frontend"
+  debug_session: "The existing .planning/debug/docket-pill-multi-entry-guard.md already noted this: the one-pill cap and server-side guard were added together in 23-05 (commit ee7fc92a) as a consistent pair. The UAT expectation assumed multi-docket support but the entire stack was deliberately designed for a single source_docket string."
 
 - truth: "Source PDF link is accessible from the Ingest card (not as a standalone card, but still reachable)"
   status: failed
   reason: "User reported: standalone card is gone but the source PDF link was deleted entirely — it should have been moved into the Ingest card as a link"
   severity: major
   test: 2
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "Commit 4278c9fb deleted the standalone View Source PDF card without moving the link into the Ingest step card — the UI element was simply removed, but all three source-PDF fields (spaces_key, pdf_url, original_filename) are still present in AdminJobResponse and still arrive in liveJob"
+  artifacts:
+    - path: "app/src/routes/admin/pipeline/[job_id]/+page.svelte"
+      issue: "Ingest step card has no View source PDF link — the {#if step === 'ingest'} branch with the PDF anchor was deleted with no replacement; unlike the parse step which has a stat block, the ingest card body is empty"
+      line_hint: "lines 471–518 (each STEP_ORDER loop, Ingest card header block)"
+  missing:
+    - "Inside the Ingest step card (after the badge row), add: {#if step === 'ingest' && (liveJob.spaces_key || liveJob.pdf_url || liveJob.original_filename)} <a href='/admin/pipeline/{liveJob.id}/pdf'>View source PDF</a> {/if} — no backend changes needed, all three fields already present in Job interface and AdminJobResponse"
+  debug_session: "Pure UI omission — the PDF-serving route /admin/pipeline/[job_id]/pdf/+server.ts still exists and all PDF source fields are in the API response; only the anchor element inside the Ingest card is missing"
 
 - truth: "The old argument metadata form is replaced entirely by ArgumentDetailsCard — no residual static Argument card remains"
   status: resolved

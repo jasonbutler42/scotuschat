@@ -609,6 +609,8 @@
 						<div style="margin-top: 12px;">
 							<a
 								href="/admin/pipeline/{liveJob.id}/pdf"
+								target="_blank"
+								rel="noopener noreferrer"
 								style="font-size: 14px; color: #93c5fd; text-decoration: none;"
 							>View source PDF</a>
 						</div>

@@ -38,6 +38,7 @@ from typing import Sequence, Union
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.dialects.postgresql import ENUM as pgENUM
 
 # revision identifiers, used by Alembic.
 revision: str = "0012"
@@ -74,7 +75,7 @@ def upgrade() -> None:
         sa.Column("argument_id", sa.Integer, sa.ForeignKey("arguments.id"), nullable=False),
         sa.Column(
             "status",
-            sa.Enum("pipeline", "draft", "published", "unpublished", name="argument_status"),
+            pgENUM(name="argument_status", create_type=False),
             nullable=False,
         ),
         sa.Column(

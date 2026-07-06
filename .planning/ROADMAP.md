@@ -134,7 +134,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
   4. Saving Argument Details saves run metadata only and does not create the argument
   5. Ingest card no longer shows the source file (moved to run status card in Phase 25)
 
-**Plans**: 5/5 plans complete
+**Plans**: 5/7 plans complete (2 gap-closure plans pending — 23-06, 23-07)
 
 - [x] 23-05-PLAN.md
 
@@ -150,6 +150,11 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 **Wave 3** *(gap closure — blocked on Wave 2 UAT)*
 
 - [x] 23-04-PLAN.md — Gap closure: remove orphaned Argument card and View Source PDF card, fix docket-clear save bug, freeze question_number hint to null, move docket instruction to static label
+
+**Wave 4** *(gap closure — UAT round 2)*
+
+- [ ] 23-06-PLAN.md — Gap closure: restore "View source PDF" link inside the Ingest step card (deleted whole in 4278c9fb)
+- [ ] 23-07-PLAN.md — Gap closure: full-stack multi-docket support (source_dockets text[] column + array-aware schema/service/action/component; source_docket retained as dedup key)
 
 **UI hint**: yes
 

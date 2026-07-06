@@ -39,6 +39,7 @@
 	});
 
 	function addPill() {
+		if (pills.length >= 1) return;
 		const v = docketInput.trim();
 		// Silently reject empty and duplicate values (D-04)
 		if (v && !pills.includes(v)) {
@@ -172,11 +173,11 @@
 				id="docket-input"
 				type="text"
 				bind:value={docketInput}
-				disabled={readonly}
+				disabled={readonly || pills.length >= 1}
 				onkeydown={(e) => {
 					if (e.key === 'Enter') {
 						e.preventDefault();
-						addPill();
+						if (!readonly && pills.length < 1) addPill();
 					}
 				}}
 				style="
@@ -191,6 +192,11 @@
 					font-family: inherit;
 				"
 			/>
+			{#if pills.length >= 1 && !readonly}
+				<p style="font-size: 13px; font-weight: 400; color: #64748b; margin: 4px 0 0 0; font-style: italic;">
+					Remove the existing entry to add a different one.
+				</p>
+			{/if}
 
 			<!-- Docket hint row: always visible (D-07/PJOB-04); read-only pills (D-09) -->
 			<div style="margin-top: 4px; display: flex; align-items: center; flex-wrap: wrap; gap: 4px;">

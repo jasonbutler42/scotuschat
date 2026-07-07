@@ -5,15 +5,15 @@ milestone_name: Admin Screens Cleanup
 current_phase: 24
 current_phase_name: pipeline-list-page
 status: executing
-stopped_at: Completed 24-01-PLAN.md
-last_updated: "2026-07-06T18:13:03.762Z"
-last_activity: 2026-07-06
+stopped_at: Completed 24-02-PLAN.md
+last_updated: "2026-07-07T13:58:25.300Z"
+last_activity: 2026-07-07
 last_activity_desc: Phase 24 execution started
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 14
-  completed_plans: 11
+  completed_plans: 12
   percent: 29
 ---
 
@@ -31,7 +31,7 @@ See: .planning/PROJECT.md (updated 2026-07-02 after v1.5 milestone start)
 Phase: 24 (pipeline-list-page) — EXECUTING
 Plan: 2 of 4
 Status: Ready to execute
-Last activity: 2026-07-06 — Phase 24 execution started
+Last activity: 2026-07-07 — Phase 24 execution started
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -63,6 +63,7 @@ Full log in PROJECT.md Key Decisions table. Key decisions entering v1.5:
 - [Phase ?]: 23-04: hints.question_number frozen to null in load() — Argument.question_number is operator-editable, not an immutable extraction source
 - [Phase ?]: 23-05: Docket pill max-count guard — client UX convenience; CR-02 server guard is authoritative
 - [Phase 24]: Removed the list_jobs limit parameter entirely instead of making it optional, matching PLIST-03 and D-10. — PLIST-03 requires all pipeline runs, and D-10/D-12 explicitly remove the cap with no pagination UI for this phase.
+- [Phase ?]: 24-02: DocketPillInput id prop defaults to 'docket-input' to preserve ArgumentDetailsCard's existing label/for wiring; list page can override to avoid duplicate-id conflicts
 
 ### Pending Todos
 
@@ -93,9 +94,10 @@ Deployment blockers (v1.4, unresolved — not in v1.5 scope):
 | Phase 23 P05 | 5m | 1 tasks | 1 files |
 | Phase 23 P07 | 12 | 3 tasks | 6 files |
 | Phase 24 P01 | 35m | 1 tasks | 3 files |
+| Phase 24 P02 | 2min | 1 tasks | 1 files |
 
 ## Session Continuity
 
-Last session: 2026-07-06T18:13:03.750Z
-Stopped at: Completed 24-01-PLAN.md
+Last session: 2026-07-07T13:58:25.291Z
+Stopped at: Completed 24-02-PLAN.md
 Resume file: None

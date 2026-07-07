@@ -101,3 +101,8 @@ None - no external service configuration required.
 ---
 *Phase: 24-pipeline-list-page*
 *Completed: 2026-07-07*
+
+## Self-Check: PASSED
+
+- FOUND: app/src/lib/components/DocketPillInput.svelte
+- FOUND: 6659687d (Task 1 commit)

@@ -30,10 +30,66 @@ import sys
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
+from sqlalchemy import update
+
+from api.models.models import AdminJob, AdminJobStatus
 from pipeline.commands.ingest import run_ingest
 from pipeline.commands.parse import run_parse
 from pipeline.commands.resolve import run_resolve
 from pipeline.commands.seed_aliases import run_seed_aliases
+from pipeline.db import get_session
+
+
+def _scrape_job_id(argv: list[str]) -> int | None:
+    """
+    Extract the integer following --job-id in argv, or None if absent/unparseable.
+
+    T-24-10: only the integer job-id is trusted/used from argv here — no other
+    operator-supplied token is echoed anywhere, so there is no log-injection
+    surface from a rejected/malformed docket value.
+    """
+    try:
+        idx = argv.index("--job-id")
+        return int(argv[idx + 1])
+    except (ValueError, IndexError):
+        return None
+
+
+def _write_early_failure(job_id: int | None, message: str) -> None:
+    """
+    Best-effort write of a bounded FAILED status for a job that crashed before
+    run_ingest (or any other command) ever executed (T-24-09: startup guard).
+
+    Mirrors the FAILED-write shape in pipeline/commands/ingest.py:201-218 (same
+    columns, same execution_options). Never raises out of this function — a
+    failure here must not mask or replace the original SystemExit being
+    re-propagated by the caller.
+
+    No-op when job_id is None (mirrors run_ingest's own args.job_id is not None
+    guard) — there is nothing to write back to.
+    """
+    if job_id is None:
+        return
+    # T-24-10: bound the message before it reaches the DB — an argparse usage/
+    # error string must never bloat the error_message Text column unbounded.
+    bounded_message = message[:500]
+
+    async def _write() -> None:
+        async with get_session() as session:
+            await session.execute(
+                update(AdminJob)
+                .where(AdminJob.id == job_id)
+                .values(
+                    status=AdminJobStatus.FAILED,
+                    error_message=bounded_message,
+                )
+                .execution_options(synchronize_session=False)
+            )
+
+    try:
+        asyncio.run(_write())
+    except Exception as write_err:
+        print(f"Warning: could not write early-failure status for job {job_id}: {write_err}")
 
 
 def main() -> None:
@@ -181,7 +237,25 @@ def main() -> None:
         ),
     )
 
-    args = parser.parse_args()
+    try:
+        args = parser.parse_args()
+    except SystemExit as exc:
+        # T-24-09: argparse raises SystemExit before any command logic runs
+        # (e.g. a flag-like docket value rejected as an unrecognized option).
+        # Because pipeline_spawn.py launches this subprocess with stdout/stderr
+        # DEVNULL, this failure would otherwise be completely invisible — the
+        # admin_jobs row would stay stuck at PENDING/INGEST forever. Scrape
+        # --job-id and write a best-effort FAILED status before re-raising so
+        # the process still exits non-zero (exit code 0, e.g. --help, is left
+        # alone — only a truthy non-zero exit code indicates a real failure).
+        if exc.code:
+            job_id = _scrape_job_id(sys.argv[1:])
+            _write_early_failure(
+                job_id,
+                f"Pipeline failed at argument parsing (exit {exc.code}). "
+                "Argv rejected before ingest logic ran.",
+            )
+        raise
 
     if args.command == "ingest":
         asyncio.run(run_ingest(args))

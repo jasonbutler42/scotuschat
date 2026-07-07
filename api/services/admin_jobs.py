@@ -35,7 +35,14 @@ from api.models.models import (
     SpeakerAlias,
     Utterance,
 )
-from api.schemas.admin_jobs import PersonCreate, ResolveMatch
+from api.schemas.admin_jobs import (
+    FailedStepRecovery,
+    PersonCreate,
+    ReadinessBlocker,
+    ResolveMatch,
+    ResolveRowUpdate,
+    RunReadiness,
+)
 from pipeline.commands.resolve import normalize_label
 
 
@@ -534,6 +541,228 @@ async def rerun_job(db: AsyncSession, job_id: int) -> AdminJob:
         source_dockets=original.source_dockets,
     )
     return new_job
+
+
+# ---------------------------------------------------------------------------
+# Phase 25: Run readiness and failed-step recovery (D-01 through D-08, D-18, D-20)
+# ---------------------------------------------------------------------------
+
+
+_FAILED_STEP_GUIDANCE: dict[AdminJobStep, str] = {
+    AdminJobStep.INGEST: "Check the PDF source or upload, then start a new run.",
+    AdminJobStep.PARSE: (
+        "Check whether the transcript format is supported. If the source is "
+        "correct, start a new run after adjusting the input."
+    ),
+    AdminJobStep.RESOLVE: (
+        "Check speaker aliases and people records, then start a new run if the "
+        "underlying data has changed."
+    ),
+}
+_DEFAULT_FAILED_GUIDANCE = "Correct the issue, then start a new run from the pipeline page."
+
+
+def derive_failed_step_recovery(
+    current_step: AdminJobStep | None,
+    error_message: str | None,
+) -> FailedStepRecovery:
+    """Pure derivation of step-specific failed-run guidance (D-05 through D-08, PJOB-22).
+
+    Guidance is returned separately from raw_error so the UI can show human
+    guidance first and put the raw technical error in an expandable details
+    block (T-25-03). href always points at the pipeline list page — this
+    function never recommends a same-source rerun as the primary recovery
+    action (D-05); 25-UI-SPEC.md supersedes the older PJOB-22 rerun wording.
+    """
+    guidance = (
+        _FAILED_STEP_GUIDANCE.get(current_step, _DEFAULT_FAILED_GUIDANCE)
+        if current_step is not None
+        else _DEFAULT_FAILED_GUIDANCE
+    )
+    return FailedStepRecovery(
+        step=current_step.value if current_step is not None else None,
+        guidance=guidance,
+        href="/admin/pipeline/",
+        raw_error=error_message,
+    )
+
+
+async def get_failed_step_recovery(db: AsyncSession, job_id: int) -> FailedStepRecovery:
+    """Load an AdminJob and derive its failed-step recovery guidance (D-05 through D-08).
+
+    Raises ValueError if the job does not exist.
+    """
+    job = await get_job(db, job_id)
+    if job is None:
+        raise ValueError(f"AdminJob {job_id} not found")
+    return derive_failed_step_recovery(job.current_step, job.error_message)
+
+
+async def get_job_readiness(db: AsyncSession, job_id: int) -> RunReadiness:
+    """Derive backend-owned Create Argument readiness for a job (D-01 through D-04, D-18, D-20).
+
+    already_created short-circuits every other check: once the linked argument's
+    status is no longer PIPELINE, the run is reported already_created regardless
+    of any other blocker state — the argument already exists and the page
+    becomes read-only provenance (D-18, D-20). argument_edit_href points at the
+    argument editor, never at a rerun action (D-04).
+
+    Otherwise, strict blockers are derived (D-02):
+      - linked argument exists
+      - at least one docket is present (source_docket or source_dockets)
+      - question_number is present
+      - argued_date is present
+      - every ArgumentParticipant row for the argument is dispositioned
+        (person_id IS NOT NULL)
+      - the job is not currently FAILED or RUNNING
+
+    state is "ready" only when no blockers remain (D-03); otherwise "not_ready".
+    Raises ValueError if the job does not exist.
+    """
+    job = await get_job(db, job_id)
+    if job is None:
+        raise ValueError(f"AdminJob {job_id} not found")
+
+    argument = None
+    if job.argument_id is not None:
+        arg_result = await db.execute(
+            select(Argument).where(Argument.id == job.argument_id)
+        )
+        argument = arg_result.scalar_one_or_none()
+
+    if argument is not None and argument.status != ArgumentStatusEnum.PIPELINE:
+        return RunReadiness(
+            state="already_created",
+            blockers=[],
+            argument_edit_href=f"/admin/arguments/{argument.id}",
+        )
+
+    blockers: list[ReadinessBlocker] = []
+
+    if argument is None:
+        blockers.append(
+            ReadinessBlocker(code="no_argument", message="No linked argument yet.")
+        )
+    else:
+        has_docket = bool(argument.source_docket) or bool(argument.source_dockets)
+        if not has_docket:
+            blockers.append(
+                ReadinessBlocker(code="no_docket", message="Add at least one docket.")
+            )
+        if argument.question_number is None:
+            blockers.append(
+                ReadinessBlocker(
+                    code="no_question_number", message="Add a question number."
+                )
+            )
+        if argument.argued_date is None:
+            blockers.append(
+                ReadinessBlocker(code="no_argued_date", message="Add an argued date.")
+            )
+
+        undisp_result = await db.execute(
+            select(func.count(ArgumentParticipant.id)).where(
+                ArgumentParticipant.argument_id == argument.id,
+                ArgumentParticipant.person_id.is_(None),
+            )
+        )
+        if undisp_result.scalar_one() > 0:
+            blockers.append(
+                ReadinessBlocker(
+                    code="unresolved_rows", message="Finish resolving speakers."
+                )
+            )
+
+    if job.status == AdminJobStatus.FAILED:
+        blockers.append(
+            ReadinessBlocker(
+                code="job_failed", message="Resolve the failed pipeline step."
+            )
+        )
+    elif job.status == AdminJobStatus.RUNNING:
+        blockers.append(
+            ReadinessBlocker(
+                code="job_running", message="Wait for the current step to finish."
+            )
+        )
+
+    return RunReadiness(state="not_ready" if blockers else "ready", blockers=blockers)
+
+
+# ---------------------------------------------------------------------------
+# Phase 25: Job-scoped resolve-row mutation (D-14, D-18, PJOB-14, PJOB-18)
+# ---------------------------------------------------------------------------
+
+
+async def update_resolve_row_for_job(
+    db: AsyncSession,
+    job_id: int,
+    body: ResolveRowUpdate,
+) -> ArgumentParticipant:
+    """Update ArgumentParticipant.side (BENCH allowed) and .title for a job-owned row.
+
+    This is the resolve-scoped write path RESEARCH.md's Common Pitfalls table and
+    Open Question #1 call for — it does NOT route through
+    admin_arguments.update_participant_side, which rejects BENCH by design.
+
+    Guards, in order (T-25-14, T-25-15):
+      1. AdminJob must exist and have a linked argument.
+      2. The linked argument.status must be 'pipeline' — edits are rejected once
+         the argument has left the pipeline lifecycle state (D-18, D-19).
+      3. The target ArgumentParticipant must belong to that argument (IDOR guard)
+         — participant_id is never trusted on its own.
+
+    title is forced to null whenever side == BENCH, regardless of what the
+    client sent, so bench rows never carry an advocate title (PJOB-15).
+
+    Raises ValueError on any guard failure. Returns the updated ArgumentParticipant.
+    """
+    job = await get_job(db, job_id)
+    if job is None:
+        raise ValueError(f"AdminJob {job_id} not found")
+    if job.argument_id is None:
+        raise ValueError(f"AdminJob {job_id} has no linked argument")
+
+    arg_result = await db.execute(
+        select(Argument).where(Argument.id == job.argument_id)
+    )
+    argument = arg_result.scalar_one_or_none()
+    if argument is None:
+        raise ValueError("Argument not found for this job")
+    if argument.status != ArgumentStatusEnum.PIPELINE:
+        raise ValueError(
+            f"Argument {argument.id} is no longer in 'pipeline' state "
+            f"(current status: {argument.status.value!r}); resolve rows are "
+            "read-only once the argument has been created (D-18, D-19)."
+        )
+
+    participant_result = await db.execute(
+        select(ArgumentParticipant).where(
+            ArgumentParticipant.id == body.participant_id,
+            ArgumentParticipant.argument_id == argument.id,
+        )
+    )
+    participant = participant_result.scalar_one_or_none()
+    if participant is None:
+        raise ValueError(
+            f"ArgumentParticipant {body.participant_id} not found under "
+            f"AdminJob {job_id}'s linked argument"
+        )
+
+    title = None if body.side == SideEnum.BENCH else body.title
+
+    await db.execute(
+        update(ArgumentParticipant)
+        .where(
+            ArgumentParticipant.id == body.participant_id,
+            ArgumentParticipant.argument_id == argument.id,
+        )
+        .values(side=body.side, title=title)
+        .execution_options(synchronize_session=False)
+    )
+    await db.commit()
+    await db.refresh(participant)
+    return participant
 
 
 # ---------------------------------------------------------------------------

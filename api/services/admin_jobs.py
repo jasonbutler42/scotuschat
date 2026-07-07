@@ -815,7 +815,22 @@ async def create_person_for_job(
     WR-02: validates that the AdminJob exists and is PAUSED before creating
     the Person — prevents phantom person rows from spurious or wrong-state POSTs.
 
-    Bio, photo, and tenure fields are Phase 8 (D-13 deferred).
+    Phase 25 mini create-person popover (D-12, D-13, PJOB-19): when
+    body.raw_speaker_label is set, this is a job-scoped resolve mutation, not a
+    bare person insert:
+      - The target ArgumentParticipant is looked up scoped to
+        (job.argument_id, raw_speaker_label) — this doubles as the IDOR guard
+        (T-25-01): a request cannot reach a participant belonging to a
+        different argument, because the row is only reachable through this
+        job's own argument_id.
+      - Person.is_justice is set from body.side == BENCH.
+      - The matched participant's person_id and side are updated in the same
+        transaction as the Person insert.
+    An unknown raw_speaker_label (no matching participant under this job's
+    argument) is rejected with ValueError before any row is created (validate
+    before mutate — mirrors resolve_job's Pitfall 5 ordering).
+
+    Full bio/photo/tenure fields remain Phase 27 scope (D-13 deferred).
     """
     job = await get_job(db, job_id)
     if job is None:
@@ -825,6 +840,28 @@ async def create_person_for_job(
             f"AdminJob {job_id} is not PAUSED (status: {job.status.value!r}); "
             "people can only be created for a paused job."
         )
+
+    # Phase 25 (T-25-01 IDOR guard): resolve and validate the target participant
+    # BEFORE creating any Person row. Scoping by job.argument_id means a
+    # raw_speaker_label belonging to a different argument can never be reached.
+    participant = None
+    if body.raw_speaker_label is not None:
+        if job.argument_id is None:
+            raise ValueError(
+                f"AdminJob {job_id} has no linked argument; cannot attach a participant"
+            )
+        participant_result = await db.execute(
+            select(ArgumentParticipant).where(
+                ArgumentParticipant.argument_id == job.argument_id,
+                ArgumentParticipant.raw_speaker_label == body.raw_speaker_label,
+            )
+        )
+        participant = participant_result.scalar_one_or_none()
+        if participant is None:
+            raise ValueError(
+                f"No participant with raw_speaker_label={body.raw_speaker_label!r} "
+                f"under AdminJob {job_id}'s linked argument"
+            )
 
     role_id = body.role_id
 
@@ -840,9 +877,22 @@ async def create_person_for_job(
             await db.flush()
         role_id = role.id
 
-    person = Person(full_name=body.full_name, role_id=role_id)
+    is_justice = body.side == SideEnum.BENCH if body.side is not None else False
+    person = Person(full_name=body.full_name, role_id=role_id, is_justice=is_justice)
     db.add(person)
     await db.flush()
+
+    if participant is not None and body.side is not None:
+        await db.execute(
+            update(ArgumentParticipant)
+            .where(
+                ArgumentParticipant.id == participant.id,
+                ArgumentParticipant.argument_id == job.argument_id,
+            )
+            .values(person_id=person.id, side=body.side)
+            .execution_options(synchronize_session=False)
+        )
+
     await db.commit()
     await db.refresh(person)
     return person

@@ -501,7 +501,14 @@ async def create_person_for_job(
 
     Used by the "Add new person" flow in the Resolve step card. The created
     person is immediately selectable as the corrected alias for a discrepancy.
-    Bio, photo, and tenure dates are Phase 8 (People Editor).
+
+    Phase 25 mini create-person popover (D-12, PJOB-19): when the request body
+    includes raw_speaker_label and side, this also sets Person.is_justice from
+    side == BENCH and updates the matching job-owned ArgumentParticipant's
+    person_id/side in the same guarded transaction (see
+    jobs_service.create_person_for_job for the IDOR guard).
+
+    Bio, photo, and tenure dates remain Phase 27 scope (People Editor).
     """
     try:
         person = await jobs_service.create_person_for_job(db, job_id, body)

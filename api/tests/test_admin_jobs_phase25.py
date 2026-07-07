@@ -377,3 +377,254 @@ async def test_get_job_readiness_raises_for_missing_job(db_session) -> None:
 
     with pytest.raises(ValueError):
         await get_job_readiness(db_session, 999999)
+
+
+# ===========================================================================
+# Task 2: Mini create-person job support with side and is_justice
+# ===========================================================================
+
+
+# ---------------------------------------------------------------------------
+# Schema tests (no DB required)
+# ---------------------------------------------------------------------------
+
+
+def test_person_create_accepts_raw_speaker_label_and_side() -> None:
+    from api.models.models import SideEnum
+    from api.schemas.admin_jobs import PersonCreate
+
+    body = PersonCreate(
+        full_name="Ketanji Brown Jackson",
+        raw_speaker_label="JUSTICE JACKSON",
+        side=SideEnum.BENCH,
+    )
+    assert body.raw_speaker_label == "JUSTICE JACKSON"
+    assert body.side == SideEnum.BENCH
+
+
+def test_person_create_backward_compatible_without_side() -> None:
+    """Legacy callers that omit raw_speaker_label/side must still validate (backward compat)."""
+    from api.schemas.admin_jobs import PersonCreate
+
+    body = PersonCreate(full_name="Jane Doe", role_name="Law Clerk")
+    assert body.raw_speaker_label is None
+    assert body.side is None
+
+
+# ---------------------------------------------------------------------------
+# Structural guards (no DB required)
+# ---------------------------------------------------------------------------
+
+
+def test_create_person_for_job_validates_participant_before_person_insert() -> None:
+    """Guard ordering (Pitfall 5 pattern): the participant lookup/validation must
+    happen before Person(...) is constructed, so an unknown raw_speaker_label
+    never creates a phantom Person row."""
+    from api.services import admin_jobs
+
+    source = inspect.getsource(admin_jobs)
+    func_start = source.find("async def create_person_for_job(")
+    assert func_start != -1
+    next_func = source.find("\nasync def ", func_start + 1)
+    func_body = source[func_start:next_func] if next_func != -1 else source[func_start:]
+
+    participant_check_idx = func_body.find("participant_result")
+    person_insert_idx = func_body.find("person = Person(")
+    assert participant_check_idx != -1
+    assert person_insert_idx != -1
+    assert participant_check_idx < person_insert_idx, (
+        "Participant validation must run before the Person row is constructed"
+    )
+
+
+# ---------------------------------------------------------------------------
+# DB-guarded behavioral tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_create_person_for_job_bench_sets_is_justice_and_participant_side(db_session) -> None:
+    """Test 1: a BENCH mini person request creates Person.is_justice true and
+    updates the target argument_participants row to BENCH for the job's linked
+    argument per D-12."""
+    from api.models.models import (
+        AdminJob,
+        AdminJobStatus,
+        AdminJobStep,
+        Argument,
+        ArgumentParticipant,
+        ArgumentStatusEnum,
+        SideEnum,
+    )
+    from api.schemas.admin_jobs import PersonCreate
+    from api.services.admin_jobs import create_person_for_job
+
+    arg = Argument(status=ArgumentStatusEnum.PIPELINE, question_number=1)
+    db_session.add(arg)
+    await db_session.flush()
+
+    participant = ArgumentParticipant(
+        argument_id=arg.id,
+        person_id=None,
+        raw_speaker_label="JUSTICE JACKSON",
+        side=SideEnum.UNKNOWN,
+    )
+    db_session.add(participant)
+    await db_session.flush()
+
+    job = AdminJob(status=AdminJobStatus.PAUSED, current_step=AdminJobStep.RESOLVE, argument_id=arg.id)
+    db_session.add(job)
+    await db_session.flush()
+
+    body = PersonCreate(
+        full_name="Ketanji Brown Jackson",
+        raw_speaker_label="JUSTICE JACKSON",
+        side=SideEnum.BENCH,
+    )
+    person = await create_person_for_job(db_session, job.id, body)
+
+    assert person.is_justice is True
+
+    await db_session.refresh(participant)
+    assert participant.person_id == person.id
+    assert participant.side == SideEnum.BENCH
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_create_person_for_job_advocate_sets_is_justice_false(db_session) -> None:
+    """Test 2: an advocate mini person request creates Person.is_justice false
+    and updates the target participant side to the submitted advocate side
+    per PJOB-19."""
+    from api.models.models import (
+        AdminJob,
+        AdminJobStatus,
+        AdminJobStep,
+        Argument,
+        ArgumentParticipant,
+        ArgumentStatusEnum,
+        SideEnum,
+    )
+    from api.schemas.admin_jobs import PersonCreate
+    from api.services.admin_jobs import create_person_for_job
+
+    arg = Argument(status=ArgumentStatusEnum.PIPELINE, question_number=1)
+    db_session.add(arg)
+    await db_session.flush()
+
+    participant = ArgumentParticipant(
+        argument_id=arg.id,
+        person_id=None,
+        raw_speaker_label="MR. SMITH",
+        side=SideEnum.UNKNOWN,
+    )
+    db_session.add(participant)
+    await db_session.flush()
+
+    job = AdminJob(status=AdminJobStatus.PAUSED, current_step=AdminJobStep.RESOLVE, argument_id=arg.id)
+    db_session.add(job)
+    await db_session.flush()
+
+    body = PersonCreate(
+        full_name="John Smith",
+        raw_speaker_label="MR. SMITH",
+        side=SideEnum.PETITIONER,
+    )
+    person = await create_person_for_job(db_session, job.id, body)
+
+    assert person.is_justice is False
+
+    await db_session.refresh(participant)
+    assert participant.person_id == person.id
+    assert participant.side == SideEnum.PETITIONER
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_create_person_for_job_rejects_wrong_job_state(db_session) -> None:
+    """Test 3a: a non-PAUSED job rejects the mini create-person request."""
+    from api.models.models import AdminJob, AdminJobStatus, AdminJobStep
+    from api.schemas.admin_jobs import PersonCreate
+    from api.services.admin_jobs import create_person_for_job
+
+    job = AdminJob(status=AdminJobStatus.RUNNING, current_step=AdminJobStep.RESOLVE)
+    db_session.add(job)
+    await db_session.flush()
+
+    body = PersonCreate(full_name="Someone", raw_speaker_label="MR. X")
+    with pytest.raises(ValueError):
+        await create_person_for_job(db_session, job.id, body)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_create_person_for_job_rejects_unknown_raw_speaker_label(db_session) -> None:
+    """Test 3b: an unknown raw_speaker_label is rejected before any Person row is created."""
+    from sqlalchemy import select
+
+    from api.models.models import AdminJob, AdminJobStatus, AdminJobStep, Argument, ArgumentStatusEnum, Person
+    from api.schemas.admin_jobs import PersonCreate
+    from api.services.admin_jobs import create_person_for_job
+
+    arg = Argument(status=ArgumentStatusEnum.PIPELINE, question_number=1)
+    db_session.add(arg)
+    await db_session.flush()
+
+    job = AdminJob(status=AdminJobStatus.PAUSED, current_step=AdminJobStep.RESOLVE, argument_id=arg.id)
+    db_session.add(job)
+    await db_session.flush()
+
+    body = PersonCreate(full_name="Nobody", raw_speaker_label="NO SUCH LABEL")
+    with pytest.raises(ValueError):
+        await create_person_for_job(db_session, job.id, body)
+
+    # No phantom Person row created
+    result = await db_session.execute(select(Person).where(Person.full_name == "Nobody"))
+    assert result.scalar_one_or_none() is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_create_person_for_job_rejects_participant_outside_job_argument(db_session) -> None:
+    """Test 3c: a raw_speaker_label that matches a participant on a DIFFERENT
+    argument is rejected — the lookup is scoped to job.argument_id only."""
+    from api.models.models import (
+        AdminJob,
+        AdminJobStatus,
+        AdminJobStep,
+        Argument,
+        ArgumentParticipant,
+        ArgumentStatusEnum,
+        SideEnum,
+    )
+    from api.schemas.admin_jobs import PersonCreate
+    from api.services.admin_jobs import create_person_for_job
+
+    other_arg = Argument(status=ArgumentStatusEnum.PIPELINE, question_number=1)
+    job_arg = Argument(status=ArgumentStatusEnum.PIPELINE, question_number=1)
+    db_session.add_all([other_arg, job_arg])
+    await db_session.flush()
+
+    # Participant with a matching label lives under a DIFFERENT argument.
+    other_participant = ArgumentParticipant(
+        argument_id=other_arg.id,
+        person_id=None,
+        raw_speaker_label="SHARED LABEL",
+        side=SideEnum.UNKNOWN,
+    )
+    db_session.add(other_participant)
+    await db_session.flush()
+
+    job = AdminJob(status=AdminJobStatus.PAUSED, current_step=AdminJobStep.RESOLVE, argument_id=job_arg.id)
+    db_session.add(job)
+    await db_session.flush()
+
+    body = PersonCreate(full_name="Cross Argument", raw_speaker_label="SHARED LABEL", side=SideEnum.BENCH)
+    with pytest.raises(ValueError):
+        await create_person_for_job(db_session, job.id, body)
+
+    await db_session.refresh(other_participant)
+    assert other_participant.person_id is None, (
+        "The participant under the OTHER argument must never be mutated (IDOR guard)"
+    )

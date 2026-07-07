@@ -1,28 +1,26 @@
 ---
-status: diagnosed
+status: testing
 phase: 25-pipeline-job-detail-page
 source: [25-VERIFICATION.md]
 started: 2026-07-07T19:30:58Z
-updated: 2026-07-07T19:50:00Z
+updated: 2026-07-07T20:25:00Z
 ---
 
 ## Current Test
 
-[testing paused — 1 item outstanding]
+[testing complete]
 
 ## Tests
 
 ### 1. Create new person via Resolve card popover, then blur Title on same row (CR-01 regression check)
 expected: The just-created person's Bench/Advocate side is NOT reverted — it persists as chosen in the popover. (Exercises dc8ad284 / CR-01 fix.)
-result: issue
-reported: "Looks like there's no trigger on the resolve card to create or even switch people"
-severity: major
+result: pass
+note: "Retest against a genuinely paused job — original 'no trigger' report was caused by testing against a non-paused job (see debug_session on the diagnosed Gap). Inline person creation works; side persists on Title blur. Separately observed (not a fix, captured as a note): the match itself isn't durable until the row is saved — a refresh loses the resolved state, though the created person still appears in the dropdown to re-select."
 
 ### 2. Continue Resolve with zero discrepancies (WR-04 regression check)
 expected: Pause a job whose discrepancies array is empty (or becomes empty after all rows are resolved via inline saveResolveRow edits). "Continue Resolve" is visible and clicking it POSTs an empty matches:[] array and the job moves from paused to completed. (Exercises 8492f515 / WR-04 fix.)
-result: issue
-reported: "I don't see anything like this"
-severity: major
+result: pass
+note: "Retest against a genuinely paused job — original report was caused by testing against a non-paused job (see debug_session on the diagnosed Gap). Continue Resolve renders and behaves as coded."
 
 ### 3. Full five-state lifecycle walkthrough
 expected: Walk a single run through all five lifecycle states end-to-end: not-ready → ready → Create Argument → already-created (read-only), plus a failed run and a paused/resolve run. RunStatusCard shows correct badge/copy/CTA in each state; ArgumentDetailsCard and ResolveCard become read-only exactly once the argument leaves "pipeline" status; FailedStepGuidance shows step-specific copy for Ingest/Parse/Resolve failures; resolve-row side-first gate, per-row saveResolveRow persistence, and Missing-tenure/Edit-person link all behave as coded. Also confirms bench-role recalculation after saving Argument Details (roadmap SC #5) is visible in the resolve card without a manual page reload.
@@ -31,23 +29,23 @@ reason: "User cannot test in current state. User also raised out-of-scope feedba
 
 ### 4. Mobile/responsive check on Resolve card and CreatePersonPopover
 expected: On a narrow/mobile viewport, the horizontally-scrollable table wrapper avoids row text overlap; the popover stays within calc(100vw - 32px) and traps/returns focus correctly on open/close.
-result: blocked
-blocked_by: prior-phase
-reason: "Table portion passed on mobile (no row text overlap). Popover portion (viewport-bounded width, focus trap/return) cannot be tested yet because the Resolve card has no visible trigger to open Create/Switch Person — see Test 1."
+result: pass
+note: "Table portion passed on mobile (no row text overlap). Popover portion retested against a genuinely paused job after the Test 1 precondition issue was resolved — stays within viewport, focus trap/return behaves correctly."
 
 ## Summary
 
 total: 4
-passed: 0
-issues: 2
+passed: 3
+issues: 0
 pending: 0
 skipped: 1
-blocked: 1
+blocked: 0
 
 ## Gaps
 
 - truth: "The just-created person's Bench/Advocate side is NOT reverted — it persists as chosen in the popover. (Exercises dc8ad284 / CR-01 fix.)"
-  status: failed
+  status: resolved
+  resolution: "Retested 2026-07-07 against a genuinely paused job (user-confirmed) — PASS. Confirms the diagnosis: original failure was caused by testing against a non-paused job, not a code defect. No code change made."
   reason: "User reported: Looks like there's no trigger on the resolve card to create or even switch people"
   severity: major
   test: 1
@@ -63,7 +61,8 @@ blocked: 1
   debug_session: ".planning/debug/resolve-card-missing-create-switch-person-trigger.md"
 
 - truth: "\"Continue Resolve\" is visible and clicking it POSTs an empty matches:[] array and the job moves from paused to completed. (Exercises 8492f515 / WR-04 fix.)"
-  status: failed
+  status: resolved
+  resolution: "Retested 2026-07-07 against a genuinely paused job (user-confirmed) — PASS. Confirms the diagnosis: original failure was caused by testing against a non-paused job, not a code defect. No code change made."
   reason: "User reported: I don't see anything like this"
   severity: major
   test: 2

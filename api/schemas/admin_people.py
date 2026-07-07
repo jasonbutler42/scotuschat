@@ -1,7 +1,7 @@
 """Pydantic v2 request/response models for the admin people API endpoints.
 
-These schemas back the Phase 8 People Editor routes and the Phase 12 People Admin
-Improvements routes:
+These schemas back the Phase 8 People Editor routes, the Phase 12 People Admin
+Improvements routes, and the Phase 25 Resolve card contract:
   - PersonListItem  — directory listing row with missing-fields derivation
   - PersonDetail    — full person data for the edit form (includes tenures)
   - PersonUpdate    — PATCH body (all fields optional; tenures=None means keep existing)
@@ -11,11 +11,14 @@ Improvements routes:
   - ParticipantItem — one resolved participant for GET /api/admin/jobs/{id}/participants
   - MergeRequest    — POST body for POST /api/admin/people/{id}/merge (PADM-03)
   - MergePreview    — response from GET /api/admin/people/{id}/merge-preview (PADM-04)
+  - ResolveRow      — one Resolve card row for GET /api/admin/jobs/{id}/resolve-rows (Phase 25)
 """
 
 from typing import Optional
 
 from pydantic import BaseModel
+
+from api.models.models import SideEnum
 
 
 class TenureRow(BaseModel):
@@ -157,5 +160,51 @@ class MergePreview(BaseModel):
     aliases: int
     appearances: int
     argument_participants: int
+
+    model_config = {"from_attributes": True}
+
+
+class ResolveRow(BaseModel):
+    """A single Resolve card row, returned by GET /api/admin/jobs/{id}/resolve-rows (Phase 25).
+
+    One row per ArgumentParticipant on the job's linked argument — including
+    rows where person_id IS NULL, so raw_speaker_label is always preserved even
+    before the pipeline resolves a speaker (D-10, D-11). This is a superset of
+    ParticipantItem: ParticipantItem only covers resolved rows for the older
+    participants list; ResolveRow covers every row and adds the locked column
+    contract for the restructured Resolve card (25-UI-SPEC.md, PJOB-14/15/16).
+
+    Column contract (locked order): raw_speaker_label, resolved-as (person_id/
+    full_name/photo_url), side (Bench/Advocate), argument_role, title
+    (advocate-only), then the frontend Action column derives from the fields
+    above (no separate schema field needed).
+
+    Bench rows (side == BENCH): argument_role/bench_role carry the tenure seat
+    covering Argument.argued_date when one exists; when none covers the date,
+    both are null, missing_tenure is true, and person_edit_href points at the
+    person editor (D-15, D-16, PJOB-16). title/title_hint are always null —
+    the Title column is advocate-only (PJOB-15).
+
+    Non-bench rows: argument_role is the side's advocate label (e.g. "Petitioner's
+    Counsel"); title/title_hint carry ArgumentParticipant.title. bench_role,
+    missing_tenure, and person_edit_href are always null/false for these rows.
+
+    editable is false once the linked argument has left the 'pipeline' status —
+    the Resolve card renders every row read-only in that state (D-18, D-19).
+    """
+
+    participant_id: int
+    raw_speaker_label: str
+    person_id: Optional[int] = None
+    full_name: Optional[str] = None
+    photo_url: Optional[str] = None
+    side: SideEnum
+    argument_role: Optional[str] = None
+    title: Optional[str] = None
+    title_hint: Optional[str] = None
+    bench_role: Optional[str] = None
+    missing_tenure: bool = False
+    person_edit_href: Optional[str] = None
+    editable: bool = True
 
     model_config = {"from_attributes": True}

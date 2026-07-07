@@ -31,6 +31,7 @@ from api.models.models import (
     AdminJob,
     Argument,
     ArgumentParticipant,
+    ArgumentStatusEnum,
     CaseAppearance,
     CourtTenure,
     Person,
@@ -40,6 +41,7 @@ from api.models.models import (
     Utterance,
 )
 from api.schemas.admin_people import PersonUpdate, TenureRow
+from api.services.speakers import ADVOCATE_LABEL_MAP
 
 
 # ---------------------------------------------------------------------------
@@ -552,3 +554,160 @@ async def list_participants_for_job(
         }
         for row in rows
     ]
+
+
+# ---------------------------------------------------------------------------
+# Phase 25: Resolve card row shape (D-10 through D-19, PJOB-14/15/16/18/19/21)
+# ---------------------------------------------------------------------------
+
+
+def _bench_role_and_missing_tenure(
+    tenures: list[CourtTenure],
+    argued_date: Optional[datetime.date],
+) -> tuple[Optional[str], bool]:
+    """Return (bench_role, missing_tenure) for a BENCH participant (D-15, D-16, PJOB-16).
+
+    Unlike speakers._tenure_role_name (which falls back to the most-recent
+    tenure per D-14 for the public speaker popover), the Resolve card must show
+    an EXPLICIT "Missing tenure" state when no tenure covers argued_date — no
+    fallback is applied here (D-15). This intentionally diverges from the
+    speaker-popover helper's behavior; do not reuse it for this purpose.
+
+    missing_tenure is also true when argued_date is None or tenures is empty,
+    since coverage cannot be determined without both.
+    """
+    if argued_date is not None:
+        for t in tenures:
+            if t.start_date is not None and argued_date >= t.start_date:
+                if t.end_date is None or argued_date <= t.end_date:
+                    return t.seat, False
+    return None, True
+
+
+async def list_resolve_rows_for_job(db: AsyncSession, job_id: int) -> list[dict]:
+    """Return Resolve card rows for the argument linked to a job (D-10 through D-19).
+
+    Unlike list_participants_for_job (D-02, resolved-only), this returns EVERY
+    ArgumentParticipant row for the job's linked argument, including rows where
+    person_id IS NULL — raw_speaker_label must always be preserved so the
+    Resolve card can render rows that still need operator intervention (D-10,
+    D-11). list_participants_for_job's older behavior is left intact for any
+    existing callers (per Task 1 direction).
+
+    Raises ValueError if the job does not exist or has no linked argument, or
+    if the linked argument row is somehow missing — the router (Task 3) maps
+    this to a 4xx response rather than a 500 (T-25-06 IDOR/scoping guard:
+    argument_id is always derived from job_id, never trusted from the client).
+
+    editable is False for every row once the linked argument has left the
+    'pipeline' status (D-18, D-19) — the Resolve card renders read-only.
+
+    Bench rows (side == BENCH) get bench_role/missing_tenure/person_edit_href
+    from a CourtTenure date-window lookup against Argument.argued_date
+    (_bench_role_and_missing_tenure); argument_role mirrors bench_role for
+    these rows. title/title_hint are always None (PJOB-15 — Title column is
+    advocate-only). person_edit_href is only set when person_id is known
+    (there is nothing to edit for an unresolved row).
+
+    Non-bench rows get argument_role from ADVOCATE_LABEL_MAP; title/title_hint
+    are sourced from ArgumentParticipant.title (there is no separate stored
+    "originally extracted" value for title — unlike cover_metadata for argued
+    date/docket, ArgumentParticipant.title is written once by the parse-time
+    TOC extraction and is the same column the operator edits). bench_role,
+    missing_tenure, and person_edit_href are always None/False for these rows.
+    """
+    job_result = await db.execute(select(AdminJob).where(AdminJob.id == job_id))
+    job = job_result.scalar_one_or_none()
+    if job is None:
+        raise ValueError(f"AdminJob {job_id} not found")
+    if job.argument_id is None:
+        raise ValueError(f"AdminJob {job_id} has no linked argument")
+
+    arg_result = await db.execute(
+        select(Argument).where(Argument.id == job.argument_id)
+    )
+    argument = arg_result.scalar_one_or_none()
+    if argument is None:
+        raise ValueError(f"Argument not found for job {job_id}")
+
+    editable = argument.status == ArgumentStatusEnum.PIPELINE
+
+    participants_result = await db.execute(
+        select(
+            ArgumentParticipant,
+            Person.full_name,
+            Person.photo_url,
+        )
+        .outerjoin(Person, ArgumentParticipant.person_id == Person.id)
+        .where(ArgumentParticipant.argument_id == argument.id)
+        .order_by(ArgumentParticipant.id.asc())
+    )
+    participant_rows = participants_result.all()
+
+    # Pre-fetch tenures for every resolved BENCH participant in one query,
+    # avoiding an N+1 lookup per row (mirrors speakers.get_argument_speakers).
+    bench_person_ids = [
+        p.person_id
+        for p, _full_name, _photo_url in participant_rows
+        if p.side == SideEnum.BENCH and p.person_id is not None
+    ]
+    tenures_by_person: dict[int, list[CourtTenure]] = {}
+    if bench_person_ids:
+        tenures_result = await db.execute(
+            select(CourtTenure).where(CourtTenure.person_id.in_(bench_person_ids))
+        )
+        for t in tenures_result.scalars().all():
+            tenures_by_person.setdefault(t.person_id, []).append(t)
+
+    rows: list[dict] = []
+    for participant, full_name, photo_url in participant_rows:
+        if participant.side == SideEnum.BENCH:
+            bench_role, missing_tenure = (
+                _bench_role_and_missing_tenure(
+                    tenures_by_person.get(participant.person_id, []),
+                    argument.argued_date,
+                )
+                if participant.person_id is not None
+                else (None, False)
+            )
+            person_edit_href = (
+                f"/admin/people/{participant.person_id}"
+                if missing_tenure and participant.person_id is not None
+                else None
+            )
+            rows.append(
+                {
+                    "participant_id": participant.id,
+                    "raw_speaker_label": participant.raw_speaker_label,
+                    "person_id": participant.person_id,
+                    "full_name": full_name,
+                    "photo_url": photo_url,
+                    "side": participant.side.value,
+                    "argument_role": bench_role,
+                    "title": None,
+                    "title_hint": None,
+                    "bench_role": bench_role,
+                    "missing_tenure": missing_tenure,
+                    "person_edit_href": person_edit_href,
+                    "editable": editable,
+                }
+            )
+        else:
+            rows.append(
+                {
+                    "participant_id": participant.id,
+                    "raw_speaker_label": participant.raw_speaker_label,
+                    "person_id": participant.person_id,
+                    "full_name": full_name,
+                    "photo_url": photo_url,
+                    "side": participant.side.value,
+                    "argument_role": ADVOCATE_LABEL_MAP.get(participant.side),
+                    "title": participant.title,
+                    "title_hint": participant.title,
+                    "bench_role": None,
+                    "missing_tenure": False,
+                    "person_edit_href": None,
+                    "editable": editable,
+                }
+            )
+    return rows

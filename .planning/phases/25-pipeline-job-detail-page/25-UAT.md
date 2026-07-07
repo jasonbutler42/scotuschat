@@ -1,5 +1,5 @@
 ---
-status: partial
+status: diagnosed
 phase: 25-pipeline-job-detail-page
 source: [25-VERIFICATION.md]
 started: 2026-07-07T19:30:58Z
@@ -51,16 +51,29 @@ blocked: 1
   reason: "User reported: Looks like there's no trigger on the resolve card to create or even switch people"
   severity: major
   test: 1
-  artifacts: []
-  missing: []
+  root_cause: "NOT A CODE DEFECT. ResolveCard.svelte gates every discrepancy-resolution control (Confirm/Select/Change buttons, CreatePersonPopover trigger, Continue Resolve footer) behind a single isPaused = (jobStatus === 'paused') flag. The job the tester viewed almost certainly had status 'completed' (its Argument already created), not 'paused' — in that state ResolveCard intentionally renders read-only text/'—' everywhere a control would appear. 'paused' is set exclusively by the offline pipeline resolve step when it finds at least one unresolvable speaker label (pipeline/commands/resolve.py:280-399); when every speaker auto-resolves, the job goes straight to 'completed' and 'paused' is never reached. There is no in-UI way to force a job into 'paused'."
+  artifacts:
+    - path: "app/src/lib/components/ResolveCard.svelte"
+      issue: "All paused-only interactive controls (rows 72, 114-122, 249-258, 399-541, 650-680, 688-731) are correctly gated behind isPaused, but the UI gives no explicit messaging when isPaused is false and the row/table has no pending review, so a tester on a completed job sees a blank/dash Action column indistinguishable from a broken trigger."
+    - path: "pipeline/commands/resolve.py"
+      issue: "Lines 280-399: job reaches COMPLETED directly (bypassing PAUSED) whenever the resolve step has zero misses — determines whether the reviewable UI is ever reachable for a given job."
+  missing:
+    - "A genuinely PAUSED AdminJob to re-test Test 1 against (seed a transcript with a speaker label lacking an existing alias so resolve.py takes the misses branch)."
+    - "Optional: operator-facing messaging in ResolveCard for the 'no pending review / all auto-resolved' case so a blank Action column doesn't read as a missing/broken trigger."
+  debug_session: ".planning/debug/resolve-card-missing-create-switch-person-trigger.md"
 
 - truth: "\"Continue Resolve\" is visible and clicking it POSTs an empty matches:[] array and the job moves from paused to completed. (Exercises 8492f515 / WR-04 fix.)"
   status: failed
   reason: "User reported: I don't see anything like this"
   severity: major
   test: 2
-  artifacts: []
-  missing: []
+  root_cause: "NOT A CODE DEFECT — same root cause as Test 1's gap. The WR-04 fix is correctly implemented: allDispositioned (ResolveCard.svelte:187-199) returns true when discrepancies is empty/null, and the footer's render condition ({#if isPaused && allDispositioned}, line 688) consumes that same value directly with no separate/stale visibility flag. But the footer is gated behind isPaused first — if the tester's job was not literally 'paused' (most likely already 'completed' with its Argument created), the button cannot render regardless of discrepancy count. paused is set exclusively by the offline pipeline resolve step finding real match gaps; there is no operator-facing way to force a job into paused from the admin UI."
+  artifacts:
+    - path: "app/src/lib/components/ResolveCard.svelte"
+      issue: "Continue Resolve footer (line 688) correctly implements WR-04 but is unreachable unless isPaused is true."
+  missing:
+    - "A genuinely PAUSED AdminJob with zero remaining discrepancies to directly exercise the WR-04 edge case and confirm Continue Resolve renders/works."
+  debug_session: ".planning/debug/continue-resolve-not-visible-for-zero-discrepancies.md"
 
 - truth: "Resolve card status card and resolve table card render as visually distinct, properly spaced cards."
   status: failed

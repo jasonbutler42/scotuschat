@@ -828,7 +828,12 @@ async def create_person_for_job(
         transaction as the Person insert.
     An unknown raw_speaker_label (no matching participant under this job's
     argument) is rejected with ValueError before any row is created (validate
-    before mutate — mirrors resolve_job's Pitfall 5 ordering).
+    before mutate — mirrors resolve_job's Pitfall 5 ordering). Likewise, if
+    raw_speaker_label is set, body.side must also be set — otherwise the
+    Person insert and the participant linkage would fall out of sync (a
+    Person could be created with no corresponding ArgumentParticipant
+    update), so this is also rejected with ValueError before any row is
+    created.
 
     Full bio/photo/tenure fields remain Phase 27 scope (D-13 deferred).
     """
@@ -861,6 +866,11 @@ async def create_person_for_job(
             raise ValueError(
                 f"No participant with raw_speaker_label={body.raw_speaker_label!r} "
                 f"under AdminJob {job_id}'s linked argument"
+            )
+        if body.side is None:
+            raise ValueError(
+                "body.side is required when raw_speaker_label is provided; "
+                "cannot link a participant without a side"
             )
 
     role_id = body.role_id

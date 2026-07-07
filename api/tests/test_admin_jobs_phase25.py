@@ -628,3 +628,271 @@ async def test_create_person_for_job_rejects_participant_outside_job_argument(db
     assert other_participant.person_id is None, (
         "The participant under the OTHER argument must never be mutated (IDOR guard)"
     )
+
+
+# ===========================================================================
+# Task 3: Guarded resolve-row side and title mutation
+# ===========================================================================
+
+
+# ---------------------------------------------------------------------------
+# Schema tests (no DB required)
+# ---------------------------------------------------------------------------
+
+
+def test_resolve_row_update_schema_allows_bench() -> None:
+    """Unlike ParticipantSideUpdate, ResolveRowUpdate must allow BENCH."""
+    from api.models.models import SideEnum
+    from api.schemas.admin_jobs import ResolveRowUpdate
+
+    body = ResolveRowUpdate(participant_id=7, side=SideEnum.BENCH, title=None)
+    assert body.side == SideEnum.BENCH
+    assert body.title is None
+
+
+def test_resolve_row_update_schema_fields() -> None:
+    from api.models.models import SideEnum
+    from api.schemas.admin_jobs import ResolveRowUpdate
+
+    body = ResolveRowUpdate(participant_id=7, side=SideEnum.PETITIONER, title="Counsel for Petitioner")
+    assert body.participant_id == 7
+    assert body.side == SideEnum.PETITIONER
+    assert body.title == "Counsel for Petitioner"
+
+
+# ---------------------------------------------------------------------------
+# Structural guards (no DB required)
+# ---------------------------------------------------------------------------
+
+
+def test_update_resolve_row_for_job_does_not_reuse_advocate_side_endpoint() -> None:
+    """RESEARCH.md Common Pitfalls: this function must NOT route through
+    admin_arguments.update_participant_side, which rejects BENCH by design."""
+    from api.services import admin_jobs
+
+    source = inspect.getsource(admin_jobs)
+    func_start = source.find("async def update_resolve_row_for_job(")
+    assert func_start != -1
+    next_func = source.find("\nasync def ", func_start + 1)
+    func_body = source[func_start:next_func] if next_func != -1 else source[func_start:]
+
+    assert "update_participant_side(" not in func_body, (
+        "update_resolve_row_for_job must not call update_participant_side — "
+        "that path rejects BENCH by design"
+    )
+    assert "ArgumentStatusEnum.PIPELINE" in func_body, (
+        "update_resolve_row_for_job must guard on argument.status == pipeline (D-18, D-19)"
+    )
+    assert "synchronize_session=False" in func_body
+
+
+# ---------------------------------------------------------------------------
+# DB-guarded behavioral tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_update_resolve_row_bench_side_persists(db_session) -> None:
+    """Test 1: updating an already-resolved bench participant to BENCH succeeds
+    and persists ArgumentParticipant.side on the job's linked argument (D-18,
+    PJOB-18) — the old advocate-side path rejects BENCH."""
+    from api.models.models import (
+        AdminJob,
+        AdminJobStatus,
+        AdminJobStep,
+        Argument,
+        ArgumentParticipant,
+        ArgumentStatusEnum,
+        Person,
+        SideEnum,
+    )
+    from api.schemas.admin_jobs import ResolveRowUpdate
+    from api.services.admin_jobs import update_resolve_row_for_job
+
+    person = Person(full_name="Justice Example")
+    db_session.add(person)
+    await db_session.flush()
+
+    arg = Argument(status=ArgumentStatusEnum.PIPELINE, question_number=1)
+    db_session.add(arg)
+    await db_session.flush()
+
+    participant = ArgumentParticipant(
+        argument_id=arg.id,
+        person_id=person.id,
+        raw_speaker_label="JUSTICE EXAMPLE",
+        side=SideEnum.UNKNOWN,
+    )
+    db_session.add(participant)
+    await db_session.flush()
+
+    job = AdminJob(status=AdminJobStatus.PAUSED, current_step=AdminJobStep.RESOLVE, argument_id=arg.id)
+    db_session.add(job)
+    await db_session.flush()
+
+    body = ResolveRowUpdate(participant_id=participant.id, side=SideEnum.BENCH, title=None)
+    updated = await update_resolve_row_for_job(db_session, job.id, body)
+
+    assert updated.side == SideEnum.BENCH
+    assert updated.title is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_update_resolve_row_advocate_title_persists_bench_title_forced_null(db_session) -> None:
+    """Test 2: updating an advocate row persists title and the selected non-bench
+    side (D-14, PJOB-14), while a bench-row payload stores title as null (PJOB-15)."""
+    from api.models.models import (
+        AdminJob,
+        AdminJobStatus,
+        AdminJobStep,
+        Argument,
+        ArgumentParticipant,
+        ArgumentStatusEnum,
+        Person,
+        SideEnum,
+    )
+    from api.schemas.admin_jobs import ResolveRowUpdate
+    from api.services.admin_jobs import update_resolve_row_for_job
+
+    advocate_person = Person(full_name="Advocate Example")
+    bench_person = Person(full_name="Bench Example", is_justice=True)
+    db_session.add_all([advocate_person, bench_person])
+    await db_session.flush()
+
+    arg = Argument(status=ArgumentStatusEnum.PIPELINE, question_number=1)
+    db_session.add(arg)
+    await db_session.flush()
+
+    advocate_participant = ArgumentParticipant(
+        argument_id=arg.id,
+        person_id=advocate_person.id,
+        raw_speaker_label="MR. ADVOCATE",
+        side=SideEnum.UNKNOWN,
+    )
+    bench_participant = ArgumentParticipant(
+        argument_id=arg.id,
+        person_id=bench_person.id,
+        raw_speaker_label="JUSTICE BENCH",
+        side=SideEnum.UNKNOWN,
+    )
+    db_session.add_all([advocate_participant, bench_participant])
+    await db_session.flush()
+
+    job = AdminJob(status=AdminJobStatus.PAUSED, current_step=AdminJobStep.RESOLVE, argument_id=arg.id)
+    db_session.add(job)
+    await db_session.flush()
+
+    advocate_body = ResolveRowUpdate(
+        participant_id=advocate_participant.id,
+        side=SideEnum.RESPONDENT,
+        title="Counsel for Respondent",
+    )
+    updated_advocate = await update_resolve_row_for_job(db_session, job.id, advocate_body)
+    assert updated_advocate.side == SideEnum.RESPONDENT
+    assert updated_advocate.title == "Counsel for Respondent"
+
+    # Bench payload sends a title too — service must force it to null (PJOB-15).
+    bench_body = ResolveRowUpdate(
+        participant_id=bench_participant.id,
+        side=SideEnum.BENCH,
+        title="Should be discarded",
+    )
+    updated_bench = await update_resolve_row_for_job(db_session, job.id, bench_body)
+    assert updated_bench.side == SideEnum.BENCH
+    assert updated_bench.title is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_update_resolve_row_rejects_participant_outside_job_argument(db_session) -> None:
+    """Test 3a: a participant_id outside the job's linked argument is rejected
+    before any mutation (IDOR guard)."""
+    from api.models.models import (
+        AdminJob,
+        AdminJobStatus,
+        AdminJobStep,
+        Argument,
+        ArgumentParticipant,
+        ArgumentStatusEnum,
+        SideEnum,
+    )
+    from api.schemas.admin_jobs import ResolveRowUpdate
+    from api.services.admin_jobs import update_resolve_row_for_job
+
+    other_arg = Argument(status=ArgumentStatusEnum.PIPELINE, question_number=1)
+    job_arg = Argument(status=ArgumentStatusEnum.PIPELINE, question_number=1)
+    db_session.add_all([other_arg, job_arg])
+    await db_session.flush()
+
+    other_participant = ArgumentParticipant(
+        argument_id=other_arg.id,
+        person_id=None,
+        raw_speaker_label="OTHER ARG SPEAKER",
+        side=SideEnum.UNKNOWN,
+    )
+    db_session.add(other_participant)
+    await db_session.flush()
+
+    job = AdminJob(status=AdminJobStatus.PAUSED, current_step=AdminJobStep.RESOLVE, argument_id=job_arg.id)
+    db_session.add(job)
+    await db_session.flush()
+
+    body = ResolveRowUpdate(participant_id=other_participant.id, side=SideEnum.BENCH, title=None)
+    with pytest.raises(ValueError):
+        await update_resolve_row_for_job(db_session, job.id, body)
+
+    await db_session.refresh(other_participant)
+    assert other_participant.side == SideEnum.UNKNOWN, (
+        "The participant under the OTHER argument must never be mutated (IDOR guard)"
+    )
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_update_resolve_row_rejects_edit_when_argument_not_pipeline(db_session) -> None:
+    """Test 3b: any resolve-row edit is rejected when the linked argument.status
+    is not pipeline (D-18, D-19)."""
+    from api.models.models import (
+        AdminJob,
+        AdminJobStatus,
+        AdminJobStep,
+        Argument,
+        ArgumentParticipant,
+        ArgumentStatusEnum,
+        Person,
+        SideEnum,
+    )
+    from api.schemas.admin_jobs import ResolveRowUpdate
+    from api.services.admin_jobs import update_resolve_row_for_job
+
+    person = Person(full_name="Already Created Example")
+    db_session.add(person)
+    await db_session.flush()
+
+    arg = Argument(status=ArgumentStatusEnum.DRAFT, question_number=1)
+    db_session.add(arg)
+    await db_session.flush()
+
+    participant = ArgumentParticipant(
+        argument_id=arg.id,
+        person_id=person.id,
+        raw_speaker_label="ALREADY RESOLVED",
+        side=SideEnum.PETITIONER,
+    )
+    db_session.add(participant)
+    await db_session.flush()
+
+    job = AdminJob(status=AdminJobStatus.COMPLETED, current_step=AdminJobStep.RESOLVE, argument_id=arg.id)
+    db_session.add(job)
+    await db_session.flush()
+
+    body = ResolveRowUpdate(participant_id=participant.id, side=SideEnum.BENCH, title=None)
+    with pytest.raises(ValueError):
+        await update_resolve_row_for_job(db_session, job.id, body)
+
+    await db_session.refresh(participant)
+    assert participant.side == SideEnum.PETITIONER, (
+        "No mutation may occur once the argument has left the pipeline state"
+    )

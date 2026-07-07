@@ -59,6 +59,7 @@ from api.schemas.admin_jobs import (
     PersonCreate,
     PersonResponse,
     ResolveRequest,
+    ResolveRowUpdate,
 )
 from api.schemas.admin_arguments import (
     ArgumentDetail,
@@ -466,6 +467,35 @@ async def resolve_job(
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return updated_job  # type: ignore[return-value]
+
+
+@router.patch("/jobs/{job_id}/resolve-rows", response_model=dict)
+async def update_resolve_row(
+    job_id: int,
+    body: ResolveRowUpdate,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """
+    Update a resolve row's side (BENCH allowed) and advocate title (D-14, D-18,
+    PJOB-14, PJOB-18).
+
+    This is the resolve-scoped mutation path — separate from
+    PATCH /arguments/{argument_id}/participants/{participant_id}, which rejects
+    BENCH by design (T-15-02-BENCH). Argument ownership is derived from job_id
+    (never trusted from the client); the target participant must belong to that
+    argument (T-25-14 IDOR guard). Rejected once the linked argument has left
+    the 'pipeline' status (D-18, D-19). title is forced to null server-side
+    whenever side == BENCH regardless of what the client sends (PJOB-15).
+
+    Returns 422 on any guard failure (job/argument not found or not pipeline,
+    participant not found under this job's argument).
+    Auth inherited from router-level verify_admin_token dependency.
+    """
+    try:
+        participant = await jobs_service.update_resolve_row_for_job(db, job_id, body)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return {"id": participant.id, "side": participant.side.value, "title": participant.title}
 
 
 @router.get("/people", response_model=list[PersonListItem])

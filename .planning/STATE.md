@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: Admin Screens Cleanup
-current_phase: 24
-current_phase_name: pipeline-list-page
-status: executing
+current_phase: 25
+current_phase_name: Pipeline Job Detail Page
+status: completed
 stopped_at: Completed 24-05-PLAN.md (gap closure — CR-01 docket argv safety)
-last_updated: "2026-07-07T14:58:10.303Z"
+last_updated: "2026-07-07T15:11:03.303Z"
 last_activity: 2026-07-07
-last_activity_desc: Phase 24 Plan 05 executed
+last_activity_desc: Phase 24 complete, transitioned to Phase 25
 progress:
   total_phases: 7
   completed_phases: 3
@@ -28,10 +28,10 @@ See: .planning/PROJECT.md (updated 2026-07-02 after v1.5 milestone start)
 
 ## Current Position
 
-Phase: 24 (pipeline-list-page) — EXECUTING
-Plan: 5 of 5
+Phase: 25 — Pipeline Job Detail Page
+Plan: Not started
 Status: Completed 24-05-PLAN.md (gap closure — CR-01 docket argv safety)
-Last activity: 2026-07-07 — Phase 24 Plan 05 executed
+Last activity: 2026-07-07 — Phase 24 complete, transitioned to Phase 25
 
 Progress: [██████████] 100%
 

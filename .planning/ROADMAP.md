@@ -280,7 +280,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 | 21. Admin UI Surface | v1.4 | 4/4 | Complete | 2026-07-01 |
 | 22. Schema Foundations | v1.5 | 3/3 | Complete    | 2026-07-02 |
 | 23. Shared Argument Details Component | v1.5 | 7/7 | Complete   | 2026-07-06 |
-| 24. Pipeline List Page | v1.5 | 5/5 | Complete   | 2026-07-07 |
+| 24. Pipeline List Page | v1.5 | 5/5 | Complete    | 2026-07-07 |
 | 25. Pipeline Job Detail Page | v1.5 | 0/TBD | Not started | - |
 | 26. Arguments Admin | v1.5 | 0/TBD | Not started | - |
 | 27. People Admin | v1.5 | 0/TBD | Not started | - |
@@ -294,7 +294,7 @@ See `.planning/BACKLOG.md` for unscheduled items (B-001 through B-012).
 
 **Goal:** Whenever a value has been extracted from a source PDF, use a consistent design pattern that lets the operator click the value to copy it to their clipboard. If a value was not extracted (showing N/A), clicking to copy is disabled. Includes an appropriate icon and tooltip. Expected to decompose into at least: (1) reusable tooltip component, (2) click-to-copy implementation for extracted hint values, and possibly others.
 **Requirements:** TBD
-**Plans:** 0 plans
+**Plans:** 5/5 plans complete
 
 Plans:
 

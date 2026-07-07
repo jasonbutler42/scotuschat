@@ -111,3 +111,10 @@ None - no external service configuration required.
 ---
 *Phase: 24-pipeline-list-page*
 *Completed: 2026-07-07*
+
+## Self-Check: PASSED
+
+- FOUND: app/src/lib/components/ArgumentDetailsCard.svelte
+- FOUND: .planning/phases/24-pipeline-list-page/24-03-SUMMARY.md
+- FOUND: fcdbe43d
+- FOUND: bb17bd25

@@ -84,6 +84,7 @@ Anyone can open a SCOTUS oral argument and immediately follow the conversation �
 - ✓ Argument delete from admin UI (confirmation + published guard) — v1.4 (ADMIN-01)
 - ✓ Pipeline run delete from admin UI (confirmation; argument survives) — v1.4 (ADMIN-02)
 - ✓ Admin nav unified with public nav: AdminSubNav + TopNav variant=public in admin layout — v1.4 (NAV-02)
+- ✓ Pipeline list page: free-text question number, shared docket pill input, full runs table, incomplete toggle, compound status badges — v1.5 (PLIST-01–05)
 
 ### Active
 
@@ -188,4 +189,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-02 — Phase 22 complete (schema-foundations): migration 0012/0013, argument_status_log, argument_participants.title, court_tenures tenure columns, TOC title extraction*
+*Last updated: 2026-07-07 — Phase 24 complete (pipeline-list-page): free-text question number, shared DocketPillInput, uncapped runs table, compound status badges; gap-closure plan 24-05 closed CR-01 (docket argv-injection into spawned pipeline subprocess)*

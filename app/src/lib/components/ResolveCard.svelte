@@ -187,7 +187,11 @@
 	let allDispositioned = $derived.by(() => {
 		if (!isPaused) return false;
 		const disc = discrepancies ?? [];
-		if (disc.length === 0) return false;
+		// WR-04: an empty discrepancy list while paused means every speaker was
+		// already resolved (auto-match or inline saveResolveRow) — there is
+		// nothing left to disposition, so "Continue Resolve" must still render
+		// rather than being permanently stuck behind a vacuously-false check.
+		if (disc.length === 0) return true;
 		return disc.every((d) => {
 			const s = rowMatchStates[d.raw_speaker_label];
 			return s?.disposition != null && s?.personId != null;

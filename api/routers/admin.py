@@ -75,6 +75,7 @@ from api.schemas.admin_people import (
     PersonDetail,
     PersonListItem,
     PersonUpdate,
+    ResolveRow,
     RoleCreate,
     RoleResponse,
 )
@@ -496,6 +497,31 @@ async def update_resolve_row(
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return {"id": participant.id, "side": participant.side.value, "title": participant.title}
+
+
+@router.get("/jobs/{job_id}/resolve-rows", response_model=list[ResolveRow])
+async def list_resolve_rows(
+    job_id: int,
+    db: AsyncSession = Depends(get_db),
+) -> list[ResolveRow]:
+    """
+    Return every Resolve card row for the argument linked to this job (Phase 25,
+    PJOB-14/15/16/18/19/21).
+
+    Read-only counterpart to PATCH /jobs/{job_id}/resolve-rows above: this GET
+    route is the concrete data source the SvelteKit load calls to render the
+    restructured Resolve card, backed by admin_people.list_resolve_rows_for_job
+    (T-25-04, T-25-06 — scoped by job_id, never a client-supplied argument_id).
+
+    Returns 422 if the job does not exist or has no linked argument (mapped
+    from the service's ValueError, matching the sibling PATCH route above).
+    Auth inherited from router-level verify_admin_token dependency.
+    """
+    try:
+        rows = await people_service.list_resolve_rows_for_job(db, job_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return [ResolveRow(**r) for r in rows]
 
 
 @router.get("/people", response_model=list[PersonListItem])

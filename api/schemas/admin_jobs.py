@@ -3,7 +3,7 @@
 import datetime
 from typing import Literal, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from api.models.models import AdminJobStatus, AdminJobStep, SideEnum
 
@@ -171,8 +171,13 @@ class ResolveRowUpdate(BaseModel):
     be BENCH — this is the resolve-scoped write path, not the advocate-only
     argument-editor path. title is ignored (forced to null) server-side whenever
     side == BENCH (PJOB-15).
+
+    WR-03: title is capped at 500 characters to match
+    ArgumentParticipant.title (String(500)) — without this, an over-length
+    title would raise an unhandled asyncpg DataError (500) instead of the
+    422 validation-error pattern used everywhere else in this file.
     """
 
     participant_id: int
     side: SideEnum
-    title: Optional[str] = None
+    title: Optional[str] = Field(default=None, max_length=500)

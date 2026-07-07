@@ -56,10 +56,12 @@ from api.core.database import get_db
 from api.models.models import AdminJob, AdminJobStatus, AdminJobStep, PipelineRun
 from api.schemas.admin_jobs import (
     AdminJobResponse,
+    FailedStepRecovery,
     PersonCreate,
     PersonResponse,
     ResolveRequest,
     ResolveRowUpdate,
+    RunReadiness,
 )
 from api.schemas.admin_arguments import (
     ArgumentDetail,
@@ -384,6 +386,46 @@ async def get_job(
     # PAUSED, FAILED, COMPLETED — do nothing (terminal for polling)
 
     return job  # type: ignore[return-value]
+
+
+@router.get("/jobs/{job_id}/readiness", response_model=RunReadiness)
+async def get_job_readiness_endpoint(
+    job_id: int,
+    db: AsyncSession = Depends(get_db),
+) -> RunReadiness:
+    """
+    Backend-derived Create Argument readiness for the run status card (Phase 25,
+    D-01 through D-04, D-18, D-20, PJOB-01, PJOB-02, PJOB-20).
+
+    Wraps admin_jobs.get_job_readiness. Maps the service's ValueError (missing
+    job) to a 422 rather than a 404, matching the sibling Phase 25
+    resolve-rows endpoints below (T-25-04/T-25-06 pattern).
+    Auth inherited from router-level verify_admin_token dependency.
+    """
+    try:
+        return await jobs_service.get_job_readiness(db, job_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.get("/jobs/{job_id}/failed-recovery", response_model=FailedStepRecovery)
+async def get_job_failed_recovery_endpoint(
+    job_id: int,
+    db: AsyncSession = Depends(get_db),
+) -> FailedStepRecovery:
+    """
+    Step-specific failed-run guidance for the failed step card, kept separate
+    from the raw technical error (Phase 25, D-05 through D-08, PJOB-08,
+    PJOB-22 supersession — never recommends same-source rerun).
+
+    Wraps admin_jobs.get_failed_step_recovery. Maps the service's ValueError
+    (missing job) to a 422, matching the sibling Phase 25 endpoints above.
+    Auth inherited from router-level verify_admin_token dependency.
+    """
+    try:
+        return await jobs_service.get_failed_step_recovery(db, job_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.get("/jobs/{job_id}/pdf")

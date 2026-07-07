@@ -24,6 +24,42 @@ interface ArgumentPreview {
 	question_number: number | null;
 }
 
+// Phase 25 backend-derived card contracts (api/schemas/admin_jobs.py, api/schemas/admin_people.py).
+
+interface ReadinessBlocker {
+	code: string;
+	message: string;
+}
+
+interface RunReadiness {
+	state: 'not_ready' | 'ready' | 'already_created';
+	blockers: ReadinessBlocker[];
+	argument_edit_href: string | null;
+}
+
+interface FailedStepRecovery {
+	step: string | null;
+	guidance: string;
+	href: string;
+	raw_error: string | null;
+}
+
+interface ResolveRow {
+	participant_id: number;
+	raw_speaker_label: string;
+	person_id: number | null;
+	full_name: string | null;
+	photo_url: string | null;
+	side: string;
+	argument_role: string | null;
+	title: string | null;
+	title_hint: string | null;
+	bench_role: string | null;
+	missing_tenure: boolean;
+	person_edit_href: string | null;
+	editable: boolean;
+}
+
 export const load: PageServerLoad = async ({ params }) => {
 	// Fetch the specific job from the admin jobs endpoint.
 	// X-Admin-Token is required for all SvelteKit → FastAPI calls.
@@ -107,6 +143,76 @@ export const load: PageServerLoad = async ({ params }) => {
 		}
 	}
 
+	// Fetch backend-derived Create Argument readiness for the run status card
+	// (Phase 25, D-01 through D-04, D-18, D-20, PJOB-01, PJOB-02, PJOB-20).
+	// Non-critical — degrade to null on failure so the existing page still renders;
+	// Plan 25-04's RunStatusCard guards for a null readiness prop.
+	let readiness: RunReadiness | null = null;
+	try {
+		const readinessRes = await fetch(
+			`${FASTAPI_BASE_URL}/api/admin/jobs/${params.job_id}/readiness`,
+			{ headers: { 'X-Admin-Token': ADMIN_TOKEN } },
+		);
+		if (readinessRes.ok) {
+			readiness = await readinessRes.json();
+		} else {
+			console.error(
+				`[load] readiness fetch failed: GET /api/admin/jobs/${params.job_id}/readiness returned ${readinessRes.status}`,
+			);
+		}
+	} catch (err) {
+		console.error('[load] readiness fetch threw:', err instanceof Error ? err.message : String(err));
+	}
+
+	// Fetch step-specific failed-run guidance only when the job is failed
+	// (Phase 25, D-05 through D-08, PJOB-08, PJOB-22 supersession).
+	let failedRecovery: FailedStepRecovery | null = null;
+	if (job.status === 'failed') {
+		try {
+			const failedRes = await fetch(
+				`${FASTAPI_BASE_URL}/api/admin/jobs/${params.job_id}/failed-recovery`,
+				{ headers: { 'X-Admin-Token': ADMIN_TOKEN } },
+			);
+			if (failedRes.ok) {
+				failedRecovery = await failedRes.json();
+			} else {
+				console.error(
+					`[load] failed-recovery fetch failed: GET /api/admin/jobs/${params.job_id}/failed-recovery returned ${failedRes.status}`,
+				);
+			}
+		} catch (err) {
+			console.error(
+				'[load] failed-recovery fetch threw:',
+				err instanceof Error ? err.message : String(err),
+			);
+		}
+	}
+
+	// Fetch every Resolve card row (including unresolved rows) for the job's linked
+	// argument (Phase 25, D-10 through D-19). Only valid once an argument is linked
+	// (the backend 422s otherwise, per Plan 25-02); degrades to [] on any failure.
+	let resolveRows: ResolveRow[] = [];
+	if (job.argument_id != null) {
+		try {
+			const resolveRowsRes = await fetch(
+				`${FASTAPI_BASE_URL}/api/admin/jobs/${params.job_id}/resolve-rows`,
+				{ headers: { 'X-Admin-Token': ADMIN_TOKEN } },
+			);
+			if (resolveRowsRes.ok) {
+				resolveRows = await resolveRowsRes.json();
+			} else {
+				console.error(
+					`[load] resolve-rows fetch failed: GET /api/admin/jobs/${params.job_id}/resolve-rows returned ${resolveRowsRes.status}`,
+				);
+			}
+		} catch (err) {
+			console.error(
+				'[load] resolve-rows fetch threw:',
+				err instanceof Error ? err.message : String(err),
+			);
+		}
+	}
+
 	// Construct savedValues and hints for ArgumentDetailsCard (Plan 23-03).
 	// savedValues: operator-confirmed values from the Argument record.
 	// hints: raw extraction output from cover_metadata JSONB.
@@ -136,7 +242,24 @@ export const load: PageServerLoad = async ({ params }) => {
 		};
 	}
 
-	return { job, people, peopleLoadError, participants, argument, savedValues, hints };
+	// readonlyMode: the page becomes read-only provenance once the linked argument
+	// has left the 'pipeline' lifecycle state (Phase 25, D-18, D-19). No linked
+	// argument yet means the run is still in-progress, never read-only.
+	const readonlyMode = argument != null && argument.status !== 'pipeline';
+
+	return {
+		job,
+		people,
+		peopleLoadError,
+		participants,
+		argument,
+		savedValues,
+		hints,
+		readiness,
+		failedRecovery,
+		resolveRows,
+		readonlyMode,
+	};
 };
 
 export const actions: Actions = {

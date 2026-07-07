@@ -16,11 +16,11 @@
 
 ### Pipeline List (`/admin/pipeline/`)
 
-- [ ] **PLIST-01** Question number: free text field replacing 2-option dropdown
+- [x] **PLIST-01** Question number: free text field replacing 2-option dropdown
 - [x] **PLIST-02** Docket input: pill/tag UI — add one at a time, remove individually, supports multiple dockets for consolidated arguments
 - [x] **PLIST-03** Runs table shows all pipeline runs (not just recent)
-- [ ] **PLIST-04** "Show incomplete only" toggle retained
-- [ ] **PLIST-05** Status badges show stage + status (e.g. "Parse · Running", "Resolve · Needs Review", "Completed")
+- [x] **PLIST-04** "Show incomplete only" toggle retained
+- [x] **PLIST-05** Status badges show stage + status (e.g. "Parse · Running", "Resolve · Needs Review", "Completed")
 
 ### Pipeline Job Detail (`/admin/pipeline/[id]`)
 
@@ -115,11 +115,11 @@
 | DASH-03 | Phase 28 | Pending |
 | DASH-04 | Phase 28 | Pending |
 | DASH-05 | Phase 28 | Pending |
-| PLIST-01 | Phase 24 | Pending |
+| PLIST-01 | Phase 24 | Complete |
 | PLIST-02 | Phase 24 | Complete |
 | PLIST-03 | Phase 24 | Complete |
-| PLIST-04 | Phase 24 | Pending |
-| PLIST-05 | Phase 24 | Pending |
+| PLIST-04 | Phase 24 | Complete |
+| PLIST-05 | Phase 24 | Complete |
 | PJOB-01 | Phase 25 | Pending |
 | PJOB-02 | Phase 25 | Pending |
 | PJOB-03 | Phase 23 | Complete |

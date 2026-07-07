@@ -5,16 +5,16 @@ milestone_name: Admin Screens Cleanup
 current_phase: 24
 current_phase_name: pipeline-list-page
 status: executing
-stopped_at: Completed 24-02-PLAN.md
-last_updated: "2026-07-07T14:06:13.600Z"
+stopped_at: Completed 24-04-PLAN.md
+last_updated: "2026-07-07T14:15:18.630Z"
 last_activity: 2026-07-07
 last_activity_desc: Phase 24 execution started
 progress:
   total_phases: 7
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 14
-  completed_plans: 13
-  percent: 29
+  completed_plans: 14
+  percent: 43
 ---
 
 # Project State
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-07-02 after v1.5 milestone start)
 ## Current Position
 
 Phase: 24 (pipeline-list-page) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 Status: Ready to execute
 Last activity: 2026-07-07 — Phase 24 execution started
 
@@ -65,6 +65,8 @@ Full log in PROJECT.md Key Decisions table. Key decisions entering v1.5:
 - [Phase 24]: Removed the list_jobs limit parameter entirely instead of making it optional, matching PLIST-03 and D-10. — PLIST-03 requires all pipeline runs, and D-10/D-12 explicitly remove the cap with no pagination UI for this phase.
 - [Phase ?]: 24-02: DocketPillInput id prop defaults to 'docket-input' to preserve ArgumentDetailsCard's existing label/for wiring; list page can override to avoid duplicate-id conflicts
 - [Phase 24-03]: effectiveDockets state replaces the old direct pills state as the parent-owned docket source of truth, keyed via effectiveDockets.join to force DocketPillInput to re-seed from initialValues on failed-save restoration — D-04 requires ArgumentDetailsCard to consume the shared DocketPillInput component while preserving Phase 23 failed-save state restoration
+- [Phase ?]: 24-04: D-07 supersession — full docket list carried via admin_jobs.source_dockets (run-start metadata) instead of an immediate metadata PATCH, since argument_id is null until ingest completes
+- [Phase ?]: 24-04: rerun_job copies original.source_dockets onto the new job so reruns preserve the originally submitted docket list
 
 ### Pending Todos
 
@@ -97,9 +99,10 @@ Deployment blockers (v1.4, unresolved — not in v1.5 scope):
 | Phase 24 P01 | 35m | 1 tasks | 3 files |
 | Phase 24 P02 | 2min | 1 tasks | 1 files |
 | Phase 24 P03 | 10min | 1 tasks | 1 files |
+| Phase 24 P04 | 35m | 2 tasks | 9 files |
 
 ## Session Continuity
 
-Last session: 2026-07-07T14:05:45.172Z
-Stopped at: Completed 24-02-PLAN.md
+Last session: 2026-07-07T14:15:18.621Z
+Stopped at: Completed 24-04-PLAN.md
 Resume file: None

@@ -88,7 +88,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 
 - [x] **Phase 22: Schema Foundations** - Cross-cutting Alembic migrations and pipeline changes that all v1.5 screens depend on (completed 2026-07-02)
 - [x] **Phase 23: Shared Argument Details Component** - Reusable docket/question/date card used on both pipeline job detail and argument edit pages (completed 2026-07-02)
-- [ ] **Phase 24: Pipeline List Page** - Redesigned run-start form and run table at `/admin/pipeline/`
+- [x] **Phase 24: Pipeline List Page** - Redesigned run-start form and run table at `/admin/pipeline/` (completed 2026-07-07)
 - [ ] **Phase 25: Pipeline Job Detail Page** - Restructured job detail layout with run status card, resolve redesign, and no floating buttons at `/admin/pipeline/[id]`
 - [ ] **Phase 26: Arguments Admin** - New `unpublished` status lifecycle + refined list and edit screens at `/admin/arguments/` and `/admin/arguments/[id]`
 - [ ] **Phase 27: People Admin** - Benchmarks/advocate tabs, tenure-per-row appointment data, and create-person flow at `/admin/people/` and `/admin/people/[id]`
@@ -171,7 +171,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
   4. "Show incomplete only" toggle is present and functional
   5. Status badges display compound labels (e.g., "Parse · Running", "Resolve · Needs Review", "Completed") that accurately reflect current stage and status
 
-**Plans**: 3/4 plans executed
+**Plans**: 4/4 plans complete
 
 **Wave 1** *(parallel — disjoint files)*
 
@@ -181,7 +181,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 **Wave 2** *(blocked on 24-02 — both consume DocketPillInput; disjoint files from each other)*
 
 - [x] 24-03-PLAN.md — Refactor ArgumentDetailsCard.svelte to consume DocketPillInput, behavior-identical (PLIST-02)
-- [ ] 24-04-PLAN.md — Pipeline list page: free-text question, DocketPillInput + per-pill preflight, full multi-docket run-start persistence, compound badge, Step column removed, All Runs heading (PLIST-01, PLIST-02, PLIST-04, PLIST-05)
+- [x] 24-04-PLAN.md — Pipeline list page: free-text question, DocketPillInput + per-pill preflight, full multi-docket run-start persistence, compound badge, Step column removed, All Runs heading (PLIST-01, PLIST-02, PLIST-04, PLIST-05)
 
 **UI hint**: yes
 
@@ -276,7 +276,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 | 21. Admin UI Surface | v1.4 | 4/4 | Complete | 2026-07-01 |
 | 22. Schema Foundations | v1.5 | 3/3 | Complete    | 2026-07-02 |
 | 23. Shared Argument Details Component | v1.5 | 7/7 | Complete   | 2026-07-06 |
-| 24. Pipeline List Page | v1.5 | 3/4 | In Progress|  |
+| 24. Pipeline List Page | v1.5 | 4/4 | Complete   | 2026-07-07 |
 | 25. Pipeline Job Detail Page | v1.5 | 0/TBD | Not started | - |
 | 26. Arguments Admin | v1.5 | 0/TBD | Not started | - |
 | 27. People Admin | v1.5 | 0/TBD | Not started | - |

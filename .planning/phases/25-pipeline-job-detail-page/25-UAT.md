@@ -1,9 +1,9 @@
 ---
-status: testing
+status: complete
 phase: 25-pipeline-job-detail-page
 source: [25-VERIFICATION.md]
 started: 2026-07-07T19:30:58Z
-updated: 2026-07-07T20:25:00Z
+updated: 2026-07-07T20:35:00Z
 ---
 
 ## Current Test
@@ -24,8 +24,8 @@ note: "Retest against a genuinely paused job — original report was caused by t
 
 ### 3. Full five-state lifecycle walkthrough
 expected: Walk a single run through all five lifecycle states end-to-end: not-ready → ready → Create Argument → already-created (read-only), plus a failed run and a paused/resolve run. RunStatusCard shows correct badge/copy/CTA in each state; ArgumentDetailsCard and ResolveCard become read-only exactly once the argument leaves "pipeline" status; FailedStepGuidance shows step-specific copy for Ingest/Parse/Resolve failures; resolve-row side-first gate, per-row saveResolveRow persistence, and Missing-tenure/Edit-person link all behave as coded. Also confirms bench-role recalculation after saving Argument Details (roadmap SC #5) is visible in the resolve card without a manual page reload.
-result: skipped
-reason: "User cannot test in current state. User also raised out-of-scope feedback: (1) requests a new 'Archived' status (grey/neutral color) for pipeline runs whose argument has been created and are now read-only, distinct from 'completed'; (2) observed the Resolve status card and the resolve table card render with no visual spacing between them, reading as malformed/merged HTML; (3) intends to write up further requirements for reworking the resolve table as part of this milestone. Not converted to a Gap — see note below Gaps."
+result: pass
+note: "Retested after Tests 1/2/4 passed against a genuinely paused job. User signed off: 'All testing passes' — meets the phase's agreed requirements, though user has follow-up UX ideas for the Resolve table already captured separately (SEED-001, the cosmetic spacing gap below, and the 2026-07-07-phase-25-uat-retest.md note)."
 
 ### 4. Mobile/responsive check on Resolve card and CreatePersonPopover
 expected: On a narrow/mobile viewport, the horizontally-scrollable table wrapper avoids row text overlap; the popover stays within calc(100vw - 32px) and traps/returns focus correctly on open/close.
@@ -35,10 +35,10 @@ note: "Table portion passed on mobile (no row text overlap). Popover portion ret
 ## Summary
 
 total: 4
-passed: 3
+passed: 4
 issues: 0
 pending: 0
-skipped: 1
+skipped: 0
 blocked: 0
 
 ## Gaps

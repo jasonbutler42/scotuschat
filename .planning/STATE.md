@@ -84,7 +84,7 @@ Full log in PROJECT.md Key Decisions table. Key decisions entering v1.5:
 
 ### Pending Todos
 
-None active. v1.4 todos closed at milestone.
+- Add Archived pipeline run status (grey/neutral) for runs whose argument has been created and are now read-only — distinct from "completed" (`.planning/todos/pending/2026-07-07-add-archived-pipeline-run-status.md`, surfaced during Phase 25 UAT)
 
 ### Blockers/Concerns
 

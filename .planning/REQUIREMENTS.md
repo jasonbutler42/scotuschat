@@ -24,28 +24,28 @@
 
 ### Pipeline Job Detail (`/admin/pipeline/[id]`)
 
-- [ ] **PJOB-01** Pipeline Run status card: status badge + source file linked to PDF — replaces non-editable argument preview card
-- [ ] **PJOB-02** Run status card has 3 states: Not ready (lists what's blocking creation) / Ready ("Create Argument" CTA) / Already created (link to argument edit page)
+- [x] **PJOB-01** Pipeline Run status card: status badge + source file linked to PDF — replaces non-editable argument preview card
+- [x] **PJOB-02** Run status card has 3 states: Not ready (lists what's blocking creation) / Ready ("Create Argument" CTA) / Already created (link to argument edit page)
 - [x] **PJOB-03** Argument metadata section renamed to "Argument Details"
 - [x] **PJOB-04** Extracted hints always visible alongside editable fields, even after fields are filled; "N/A" if nothing was extracted — gives operator a historic view of what the pipeline pulled
 - [x] **PJOB-05** Docket: pill/tag UI (consistent with PLIST-02)
 - [x] **PJOB-06** Question number: free text field (consistent with PLIST-01)
 - [x] **PJOB-07** Save saves run metadata only — does not create the argument
-- [ ] **PJOB-08** Failed step card: shows error message + contextual next-step actions inside the card
+- [x] **PJOB-08** Failed step card: shows error message + contextual next-step actions inside the card
 - [x] **PJOB-09** Ingest card: remove source file display (now shown in run status card)
 - [x] **PJOB-10** Parse card shows: Utterances, Speakers (Bench / Advocate / Total), Case Name, Argued Date, Docket(s), Question Number(s)
 - [x] **PJOB-11** Parse card shows unextracted fields alongside extracted values — what should have been captured but wasn't
 - [x] **PJOB-12** Parse card extracted values match the hints shown in the Argument Details card
 - [x] **PJOB-13** Extract advocate title + role from PDF TOC per argument — new `title` VARCHAR field on `argument_participants`, parse step changes, and Alembic migration
-- [ ] **PJOB-14** Resolve card: Not ready + Ready states are fully editable; Already created state is read-only
+- [x] **PJOB-14** Resolve card: Not ready + Ready states are fully editable; Already created state is read-only
 - [ ] **PJOB-15** Resolve card columns: Raw label · Resolved as (avatar + name, no confirmation checkmark) · Bench/Advocate · Argument Role · Title (advocates only) · Action
 - [ ] **PJOB-16** Bench Argument Role: tenure lookup at argued date; "Missing tenure" displayed when no matching tenure found
 - [ ] **PJOB-17** Saving Argument Details triggers bench role recalculation in the resolve card
-- [ ] **PJOB-18** Person selection in resolve: operator confirms Bench/Advocate side first, then typeahead to find existing person
-- [ ] **PJOB-19** New person mini-form in resolve: Name + Bench/Advocate toggle; sets `is_justice` on person record AND `side` on `argument_participants`; all other details filled later in people editor
-- [ ] **PJOB-20** "Create Argument" action lives in run status card CTA — no standalone floating button
+- [x] **PJOB-18** Person selection in resolve: operator confirms Bench/Advocate side first, then typeahead to find existing person
+- [x] **PJOB-19** New person mini-form in resolve: Name + Bench/Advocate toggle; sets `is_justice` on person record AND `side` on `argument_participants`; all other details filled later in people editor
+- [x] **PJOB-20** "Create Argument" action lives in run status card CTA — no standalone floating button
 - [ ] **PJOB-21** "Continue Resolve" action lives at bottom of resolve card when all rows are dispositioned — no standalone floating button
-- [ ] **PJOB-22** "Re-run" action lives inside the failed step card as a contextual action — no standalone floating button
+- [x] **PJOB-22** "Re-run" action lives inside the failed step card as a contextual action — no standalone floating button
 - [ ] **PJOB-23** Danger Zone: delete run — unchanged
 
 ### Arguments List (`/admin/arguments/`)
@@ -120,28 +120,28 @@
 | PLIST-03 | Phase 24 | Complete |
 | PLIST-04 | Phase 24 | Complete |
 | PLIST-05 | Phase 24 | Complete |
-| PJOB-01 | Phase 25 | Pending |
-| PJOB-02 | Phase 25 | Pending |
+| PJOB-01 | Phase 25 | Complete |
+| PJOB-02 | Phase 25 | Complete |
 | PJOB-03 | Phase 23 | Complete |
 | PJOB-04 | Phase 23 | Complete |
 | PJOB-05 | Phase 23 | Complete |
 | PJOB-06 | Phase 23 | Complete |
 | PJOB-07 | Phase 23 | Complete |
-| PJOB-08 | Phase 25 | Pending |
+| PJOB-08 | Phase 25 | Complete |
 | PJOB-09 | Phase 23 | Complete |
 | PJOB-10 | Phase 23 | Complete |
 | PJOB-11 | Phase 23 | Complete |
 | PJOB-12 | Phase 23 | Complete |
 | PJOB-13 | Phase 22 | Complete |
-| PJOB-14 | Phase 25 | Pending |
+| PJOB-14 | Phase 25 | Complete |
 | PJOB-15 | Phase 25 | Pending |
 | PJOB-16 | Phase 25 | Pending |
 | PJOB-17 | Phase 25 | Pending |
-| PJOB-18 | Phase 25 | Pending |
-| PJOB-19 | Phase 25 | Pending |
-| PJOB-20 | Phase 25 | Pending |
+| PJOB-18 | Phase 25 | Complete |
+| PJOB-19 | Phase 25 | Complete |
+| PJOB-20 | Phase 25 | Complete |
 | PJOB-21 | Phase 25 | Pending |
-| PJOB-22 | Phase 25 | Pending |
+| PJOB-22 | Phase 25 | Complete |
 | PJOB-23 | Phase 25 | Pending |
 | ALIST-01 | Phase 22 | Complete |
 | ALIST-02 | Phase 26 | Pending |

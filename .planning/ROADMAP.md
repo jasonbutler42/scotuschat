@@ -202,7 +202,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
   4. Resolve card is fully editable in Not ready and Ready states and read-only in Already created state; bench roles display tenure lookup result or "Missing tenure" when no matching tenure exists
   5. Saving Argument Details triggers bench role recalculation visible in the resolve card; "Create Argument" and "Continue Resolve" actions live inside their respective cards, not as floating buttons
 
-**Plans**: TBD
+**Plans**: 1/4 plans executed
 **UI hint**: yes
 
 ### Phase 26: Arguments Admin
@@ -281,7 +281,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 | 22. Schema Foundations | v1.5 | 3/3 | Complete    | 2026-07-02 |
 | 23. Shared Argument Details Component | v1.5 | 7/7 | Complete   | 2026-07-06 |
 | 24. Pipeline List Page | v1.5 | 5/5 | Complete    | 2026-07-07 |
-| 25. Pipeline Job Detail Page | v1.5 | 0/TBD | Not started | - |
+| 25. Pipeline Job Detail Page | v1.5 | 1/4 | In Progress|  |
 | 26. Arguments Admin | v1.5 | 0/TBD | Not started | - |
 | 27. People Admin | v1.5 | 0/TBD | Not started | - |
 | 28. Dashboard | v1.5 | 0/TBD | Not started | - |
@@ -297,5 +297,10 @@ See `.planning/BACKLOG.md` for unscheduled items (B-001 through B-012).
 **Plans:** 5/5 plans complete
 
 Plans:
+
+- [x] 25-01-PLAN.md
+- [ ] 25-02-PLAN.md
+- [ ] 25-03-PLAN.md
+- [ ] 25-04-PLAN.md
 
 - [ ] TBD (promote with /gsd-review-backlog when ready)

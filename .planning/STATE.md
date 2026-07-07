@@ -3,17 +3,17 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: Admin Screens Cleanup
 current_phase: 25
-current_phase_name: Pipeline Job Detail Page
-status: completed
-stopped_at: Phase 25 planned — 4 plans ready
-last_updated: "2026-07-07T17:37:25.000Z"
+current_phase_name: pipeline-job-detail-page
+status: executing
+stopped_at: Completed 25-01-PLAN.md
+last_updated: "2026-07-07T17:58:05.315Z"
 last_activity: 2026-07-07
-last_activity_desc: Phase 25 planning complete — 4 plans ready to execute
+last_activity_desc: Phase 25 execution started
 progress:
   total_phases: 7
   completed_phases: 3
-  total_plans: 15
-  completed_plans: 15
+  total_plans: 19
+  completed_plans: 16
   percent: 43
 ---
 
@@ -24,14 +24,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-02 after v1.5 milestone start)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** Phase 24 — pipeline-list-page
+**Current focus:** Phase 25 — pipeline-job-detail-page
 
 ## Current Position
 
-Phase: 25 — Pipeline Job Detail Page
-Plan: Not started
-Status: Ready to execute — Phase 25 planned (4 plans, waves 1-4)
-Last activity: 2026-07-07 — Phase 25 planning complete, 4 plans ready
+Phase: 25 (pipeline-job-detail-page) — EXECUTING
+Plan: 2 of 4
+Status: Ready to execute
+Last activity: 2026-07-07 — Phase 25 execution started
 
 Progress: [██████████] 100%
 
@@ -69,6 +69,9 @@ Full log in PROJECT.md Key Decisions table. Key decisions entering v1.5:
 - [Phase ?]: 24-04: rerun_job copies original.source_dockets onto the new job so reruns preserve the originally submitted docket list
 - [Phase ?]: 24-05: Rejection guard lives inside a single nested _add(raw) helper in _normalize_dockets (T-24-08) — both primary_docket and source_dockets share identical strip/dedupe/reject logic
 - [Phase ?]: 24-05: pipeline/__main__.py startup guard wraps parser.parse_args() in try/except SystemExit, scrapes --job-id from argv, and writes a bounded (message[:500]) best-effort FAILED status before re-raising — runs entirely inside the child process, pipeline_spawn.py and fire-and-forget invariant D-01 unchanged
+- [Phase ?]: 25-01: get_job_readiness treats already_created as a short-circuit on argument.status != PIPELINE, independent of any other blocker (D-01, D-04, D-18, D-20)
+- [Phase ?]: 25-01: update_resolve_row_for_job is a new job-scoped mutation (not a reuse of admin_arguments.update_participant_side, which rejects BENCH by design) — forces title null whenever side == BENCH (D-14, D-18, D-19, PJOB-14, PJOB-18, PJOB-15)
+- [Phase ?]: 25-01: create_person_for_job validates the target ArgumentParticipant belongs to the job's own argument BEFORE creating any Person row (validate-before-mutate IDOR guard, D-12, PJOB-19)
 
 ### Pending Todos
 
@@ -103,9 +106,10 @@ Deployment blockers (v1.4, unresolved — not in v1.5 scope):
 | Phase 24 P03 | 10min | 1 tasks | 1 files |
 | Phase 24 P04 | 35m | 2 tasks | 9 files |
 | Phase 24 P05 | 20m | 2 tasks | 4 files |
+| Phase 25 P01 | 45min | 3 tasks | 5 files |
 
 ## Session Continuity
 
-Last session: 2026-07-07T16:30:49.072Z
-Stopped at: Phase 25 UI-SPEC approved
-Resume file: .planning/phases/25-pipeline-job-detail-page/25-UI-SPEC.md
+Last session: 2026-07-07T17:58:05.305Z
+Stopped at: Completed 25-01-PLAN.md
+Resume file: None

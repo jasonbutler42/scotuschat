@@ -5,8 +5,8 @@ milestone_name: Admin Screens Cleanup
 current_phase: 25
 current_phase_name: Pipeline Job Detail Page
 status: completed
-stopped_at: Phase 25 context gathered
-last_updated: "2026-07-07T16:26:27.861Z"
+stopped_at: Phase 25 UI-SPEC approved
+last_updated: "2026-07-07T16:30:49.082Z"
 last_activity: 2026-07-07
 last_activity_desc: Phase 24 complete, transitioned to Phase 25
 progress:
@@ -106,6 +106,6 @@ Deployment blockers (v1.4, unresolved — not in v1.5 scope):
 
 ## Session Continuity
 
-Last session: 2026-07-07T16:26:27.850Z
-Stopped at: Phase 25 context gathered
-Resume file: .planning/phases/25-pipeline-job-detail-page/25-CONTEXT.md
+Last session: 2026-07-07T16:30:49.072Z
+Stopped at: Phase 25 UI-SPEC approved
+Resume file: .planning/phases/25-pipeline-job-detail-page/25-UI-SPEC.md

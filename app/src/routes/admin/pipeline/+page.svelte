@@ -4,6 +4,7 @@
 
 <script lang="ts">
 	import { goto, invalidateAll } from '$app/navigation';
+	import DocketPillInput from '$lib/components/DocketPillInput.svelte';
 
 	let { data, form } = $props();
 
@@ -26,7 +27,6 @@
 	let submitting = $state(false);
 
 	// Docket preflight state (D-03/D-04/D-05/D-06)
-	let docketInput = $state('');
 	let questionInput = $state('1');
 	let duplicateWarning = $state<{ argumentId: number; docket: string; question: string } | null>(null);
 	let preflightCleared = $state(false);
@@ -58,39 +58,50 @@
 	}
 
 	async function handleSubmit(e: SubmitEvent) {
-		// If docket is empty OR preflight already cleared → let the form submit normally
-		if (!docketInput.trim() || preflightCleared) {
+		// Read pill values from the form's hidden inputs (Pitfall 4) — docketInput no
+		// longer exists in this scope after the DocketPillInput extraction.
+		const pillValues = [
+			...(formEl.querySelectorAll('input[name="docket[]"]') as NodeListOf<HTMLInputElement>)
+		].map((i) => i.value);
+
+		// If no pills OR preflight already cleared → let the form submit normally
+		if (pillValues.length === 0 || preflightCleared) {
 			submitting = true;
 			return;
 		}
 
-		// Docket is filled and not yet cleared — run preflight
+		// One or more pills present and not yet cleared — run per-pill preflight
 		e.preventDefault();
 
-		try {
-			const res = await fetch(
-				`/admin/pipeline/check-duplicate?docket=${encodeURIComponent(docketInput.trim())}&question=${encodeURIComponent(questionInput)}`
-			);
-			// WR-02: check res.ok before parsing — a non-OK response (e.g. 400, 502) returns
-			// a JSON body without 'exists', which is falsy and would silently bypass the duplicate gate.
-			if (!res.ok) {
-				console.warn('[preflight] check-duplicate returned', res.status, '— proceeding');
+		for (const docket of pillValues) {
+			try {
+				const res = await fetch(
+					`/admin/pipeline/check-duplicate?docket=${encodeURIComponent(docket)}&question=${encodeURIComponent(questionInput)}`
+				);
+				// WR-02: check res.ok before parsing — a non-OK response (e.g. 400, 502) returns
+				// a JSON body without 'exists', which is falsy and would silently bypass the duplicate gate.
+				if (!res.ok) {
+					console.warn('[preflight] check-duplicate returned', res.status, '— proceeding');
+					preflightCleared = true;
+					(e.target as HTMLFormElement).requestSubmit();
+					return;
+				}
+				const data = await res.json();
+				if (data.exists) {
+					duplicateWarning = { argumentId: data.argument_id, docket, question: questionInput };
+					return; // stop on first match — banner names this specific docket (D-09)
+				}
+			} catch {
+				// Network error — allow submit to proceed so the operator is not blocked
 				preflightCleared = true;
 				(e.target as HTMLFormElement).requestSubmit();
 				return;
 			}
-			const data = await res.json();
-			if (data.exists) {
-				duplicateWarning = { argumentId: data.argument_id, docket: docketInput.trim(), question: questionInput };
-			} else {
-				preflightCleared = true;
-				(e.target as HTMLFormElement).requestSubmit();
-			}
-		} catch {
-			// Network error — allow submit to proceed so the operator is not blocked
-			preflightCleared = true;
-			(e.target as HTMLFormElement).requestSubmit();
 		}
+
+		// All pills cleared preflight with no match
+		preflightCleared = true;
+		(e.target as HTMLFormElement).requestSubmit();
 	}
 
 	// StatusBadge helper: returns inline style string for a given job status.
@@ -106,16 +117,27 @@
 		return `border: 1px solid ${color}; border-radius: 4px; padding: 2px 8px; font-size: 14px; font-weight: 400; background-color: #1e293b; color: ${color}; display: inline-block;`;
 	}
 
-	// Copywriting: "paused" maps to operator-friendly label "Needs review".
-	function badgeLabel(status: string): string {
-		const labels: Record<string, string> = {
+	// Compound badge (D-13/D-15/D-16): combines current_step and status, e.g. "Parse · Running".
+	// "paused" maps to operator-friendly label "Needs Review".
+	function badgeLabel(status: string, currentStep: string | null | undefined): string {
+		const statusLabels: Record<string, string> = {
 			pending: 'Pending',
 			running: 'Running',
 			completed: 'Completed',
-			paused: 'Needs review',
+			paused: 'Needs Review',
 			failed: 'Failed',
 		};
-		return labels[status] ?? status;
+		const stepLabels: Record<string, string> = {
+			ingest: 'Ingest',
+			parse: 'Parse',
+			resolve: 'Resolve',
+		};
+		const statusLabel = statusLabels[status] ?? status;
+		if (status === 'completed' || !currentStep) {
+			return statusLabel;
+		}
+		const stepLabel = stepLabels[currentStep] ?? currentStep;
+		return stepLabel + ' · ' + statusLabel;
 	}
 
 	// Format ISO date string for display (date only — time detail not needed in history).
@@ -307,7 +329,7 @@
 					</div>
 				{/if}
 
-				<!-- Docket number field (D-03, UI-SPEC Component 1) — optional; triggers preflight when filled -->
+				<!-- Docket pill input (PLIST-02, D-05/D-06, UI-SPEC Component 1) — optional; triggers preflight when filled -->
 				<div style="margin-bottom: 16px;">
 					<label
 						for="primary_docket"
@@ -315,26 +337,10 @@
 					>
 						Docket number
 					</label>
-					<input
-						type="text"
-						name="primary_docket"
-						id="primary_docket"
-						placeholder="e.g. 14-556 (optional)"
-						bind:value={docketInput}
-						style="
-							background-color: #0f1117;
-							border: 1px solid #334155;
-							border-radius: 6px;
-							padding: 8px 12px;
-							font-size: 16px;
-							color: #e2e8f0;
-							width: 100%;
-							box-sizing: border-box;
-						"
-					/>
+					<DocketPillInput initialValues={[]} name="docket[]" id="primary_docket" />
 				</div>
 
-				<!-- Question number selector (D-03, UI-SPEC Component 2) -->
+				<!-- Question number free-text field (PLIST-01, D-01/D-02, UI-SPEC Component 1) -->
 				<div style="margin-bottom: 16px;">
 					<label
 						for="question_number"
@@ -342,7 +348,8 @@
 					>
 						Question number
 					</label>
-					<select
+					<input
+						type="text"
 						name="question_number"
 						id="question_number"
 						bind:value={questionInput}
@@ -357,10 +364,7 @@
 							width: 100%;
 							box-sizing: border-box;
 						"
-					>
-						<option value="1">Q1</option>
-						<option value="2">Q2</option>
-					</select>
+					/>
 				</div>
 
 				<!-- Duplicate warning banner (D-04/D-05/D-06, UI-SPEC Component 3) — shown when preflight finds a match -->
@@ -431,7 +435,7 @@
 			</form>
 		</div>
 
-		<!-- Recent Runs history section -->
+		<!-- All Runs history section -->
 		<div style="margin-top: 32px;">
 			<!-- Section header row: h2 left, incomplete toggle right (D-13, 13-UI-SPEC §Layout Contract) -->
 			<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
@@ -444,7 +448,7 @@
 						line-height: 1.2;
 					"
 				>
-					Recent Runs
+					All Runs
 				</h2>
 
 				<!-- IncompleteToggle (PIPE-20) — mirrors /admin/people pattern exactly -->
@@ -589,19 +593,6 @@
 										border-bottom: 1px solid #334155;
 									"
 								>
-									Step
-								</th>
-								<th
-									scope="col"
-									style="
-										font-size: 14px;
-										font-weight: 400;
-										color: #94a3b8;
-										text-align: left;
-										padding: 8px 0;
-										border-bottom: 1px solid #334155;
-									"
-								>
 									Created
 								</th>
 								<th
@@ -631,18 +622,8 @@
 										"
 									>
 										<span style={badgeStyle(job.status)}>
-											{badgeLabel(job.status)}
+											{badgeLabel(job.status, job.current_step)}
 										</span>
-									</td>
-									<td
-										style="
-											font-size: 14px;
-											color: #94a3b8;
-											padding: 12px 0;
-											border-bottom: 1px solid #334155;
-										"
-									>
-										{job.current_step ?? '—'}
 									</td>
 									<td
 										style="

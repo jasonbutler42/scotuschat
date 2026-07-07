@@ -5,10 +5,10 @@ milestone_name: Admin Screens Cleanup
 current_phase: 25
 current_phase_name: Pipeline Job Detail Page
 status: completed
-stopped_at: Phase 25 UI-SPEC approved
-last_updated: "2026-07-07T16:30:49.082Z"
+stopped_at: Phase 25 planned — 4 plans ready
+last_updated: "2026-07-07T17:37:25.000Z"
 last_activity: 2026-07-07
-last_activity_desc: Phase 24 complete, transitioned to Phase 25
+last_activity_desc: Phase 25 planning complete — 4 plans ready to execute
 progress:
   total_phases: 7
   completed_phases: 3
@@ -30,8 +30,8 @@ See: .planning/PROJECT.md (updated 2026-07-02 after v1.5 milestone start)
 
 Phase: 25 — Pipeline Job Detail Page
 Plan: Not started
-Status: Completed 24-05-PLAN.md (gap closure — CR-01 docket argv safety)
-Last activity: 2026-07-07 — Phase 24 complete, transitioned to Phase 25
+Status: Ready to execute — Phase 25 planned (4 plans, waves 1-4)
+Last activity: 2026-07-07 — Phase 25 planning complete, 4 plans ready
 
 Progress: [██████████] 100%
 

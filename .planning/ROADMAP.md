@@ -171,7 +171,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
   4. "Show incomplete only" toggle is present and functional
   5. Status badges display compound labels (e.g., "Parse · Running", "Resolve · Needs Review", "Completed") that accurately reflect current stage and status
 
-**Plans**: 4/4 plans complete
+**Plans**: 5 plans (4 complete + 1 gap closure)
 
 **Wave 1** *(parallel — disjoint files)*
 
@@ -182,6 +182,10 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 
 - [x] 24-03-PLAN.md — Refactor ArgumentDetailsCard.svelte to consume DocketPillInput, behavior-identical (PLIST-02)
 - [x] 24-04-PLAN.md — Pipeline list page: free-text question, DocketPillInput + per-pill preflight, full multi-docket run-start persistence, compound badge, Step column removed, All Runs heading (PLIST-01, PLIST-02, PLIST-04, PLIST-05)
+
+**Gap closure** *(from 24-VERIFICATION.md CR-01 — independent, no deps)*
+
+- [ ] 24-05-PLAN.md — Reject `-`-prefixed docket values at API boundary (422) + startup guard writes best-effort FAILED on pre-run_ingest exit, closing the silent-stuck-job argv-injection gap (PLIST-02)
 
 **UI hint**: yes
 

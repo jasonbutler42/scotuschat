@@ -50,6 +50,7 @@ class AdminJobResponse(BaseModel):
     pdf_url: Optional[str] = None
     spaces_key: Optional[str] = None
     original_filename: Optional[str] = None
+    source_dockets: Optional[list[str]] = None
     parse_stats: Optional[ParseStats] = None
     discrepancies: Optional[list[dict]] = None
     error_message: Optional[str] = None

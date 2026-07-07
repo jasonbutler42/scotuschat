@@ -77,8 +77,9 @@ def main() -> None:
         nargs="+",
         default=[],
         help=(
-            "Additional consolidated docket numbers beyond the primary "
-            "(e.g. --dockets 14-562 14-571 14-574)"
+            "Additional consolidated docket numbers beyond --primary-docket "
+            "(e.g. --dockets 14-562 14-571 14-574). Ingest persists the full "
+            "ordered list (primary + these) to Argument.source_dockets."
         ),
     )
     ingest_p.add_argument(

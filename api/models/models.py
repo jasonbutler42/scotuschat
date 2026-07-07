@@ -392,6 +392,10 @@ class AdminJob(Base):
     pdf_url = Column(Text, nullable=True)
     spaces_key = Column(Text, nullable=True)
     original_filename = Column(Text, nullable=True)
+    # Run-start docket list (D-07 supersession, Phase 24 Plan 04): the full ordered
+    # list of docket pills submitted at run creation, before Argument exists.
+    # Carried through to Argument.source_dockets by the ingest subprocess.
+    source_dockets = Column(ARRAY(String(50)), nullable=True)
     discrepancies = Column(JSONB, nullable=True)
     error_message = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)

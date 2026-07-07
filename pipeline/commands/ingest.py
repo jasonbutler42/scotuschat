@@ -4,7 +4,9 @@ Pipeline ingest command.
 Downloads a transcript PDF from supremecourt.gov (or fetches from DO Spaces)
 and creates the following database records:
     - Case row(s) — one per docket number (primary + consolidated)
-    - Argument row — one per hearing session
+    - Argument row — one per hearing session. Argument.source_docket is set to
+      the primary/first docket (canonical dedup key); Argument.source_dockets
+      is set to the full ordered docket list (primary + --dockets).
     - CaseArgument rows — M:M join (one per case, with is_lead=True for primary)
     - PipelineRun row — status=COMPLETED (ingest is synchronous)
 
@@ -392,10 +394,16 @@ async def _run_ingest_inner(args) -> None:
         await session.flush()
 
         # ---- b. Argument record ----
+        # Phase 24 Plan 04 (D-07 supersession): persist the full ordered docket
+        # list to source_dockets while keeping source_docket synced to the
+        # primary/first docket — the canonical dedup key used by the UNIQUE
+        # constraint (source_docket, question_number). Dedup logic is unchanged;
+        # it still keys off source_docket alone, never source_dockets.
         argument = Argument(
             argued_date=date.fromisoformat(argued_date) if argued_date else None,  # D-08: nullable
             question_number=args.question,
-            source_docket=primary_docket or None,  # D-01: NULL when operator did not supply
+            source_docket=primary_docket or (all_dockets[0] if all_dockets else None),
+            source_dockets=all_dockets or None,
         )
         session.add(argument)
         try:

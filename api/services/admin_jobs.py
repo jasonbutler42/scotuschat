@@ -50,6 +50,7 @@ async def create_job(
     pdf_url: str | None = None,
     spaces_key: str | None = None,
     original_filename: str | None = None,
+    source_dockets: list[str] | None = None,
 ) -> AdminJob:
     """Insert a new AdminJob row and return it.
 
@@ -60,6 +61,10 @@ async def create_job(
     original_filename: browser-supplied filename for upload-mode jobs (Pitfall 3:
     may be None for malformed uploads — stored as-is without assertion).
     URL-mode jobs pass None (D-03).
+
+    source_dockets: full ordered docket list submitted at run creation (D-07
+    supersession, Phase 24 Plan 04). Stored here because Argument does not exist
+    yet; the ingest subprocess later writes the same list to Argument.source_dockets.
     """
     job = AdminJob(
         status=AdminJobStatus.PENDING,
@@ -67,6 +72,7 @@ async def create_job(
         pdf_url=pdf_url,
         spaces_key=spaces_key,
         original_filename=original_filename,
+        source_dockets=source_dockets,
     )
     db.add(job)
     await db.commit()
@@ -510,6 +516,11 @@ async def rerun_job(db: AsyncSession, job_id: int) -> AdminJob:
 
     The caller (router) is responsible for spawning the ingest subprocess
     for the NEW job after this returns — same pattern as POST /api/admin/jobs.
+
+    Also copies original.source_dockets onto the new job (Phase 24 Plan 04) so
+    a rerun preserves the originally submitted docket list; the router uses
+    new_job.source_dockets to rebuild --primary-docket/--dockets for the
+    re-spawned ingest subprocess.
     """
     original = await get_job(db, job_id)
     if original is None:
@@ -520,6 +531,7 @@ async def rerun_job(db: AsyncSession, job_id: int) -> AdminJob:
         pdf_url=original.pdf_url,
         spaces_key=original.spaces_key,
         original_filename=original.original_filename,
+        source_dockets=original.source_dockets,
     )
     return new_job
 

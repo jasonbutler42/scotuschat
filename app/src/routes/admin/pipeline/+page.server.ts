@@ -32,8 +32,22 @@ export const actions: Actions = {
 		const data = await request.formData();
 		const mode = data.get('mode') as string;
 
-		// Read docket and question fields (D-03) — present in both url and upload branches
-		const primary_docket = ((data.get('primary_docket') as string) ?? '').trim() || null;
+		// Read docket pills (PLIST-02) and question field — present in both url and upload
+		// branches. Normalize the same way as the FastAPI router (trim, drop blanks, dedupe
+		// preserving order) so the effective primary docket is consistent client- and
+		// server-side. No metadata PATCH is used — the full list is forwarded as repeated
+		// source_dockets and persisted through job creation + ingest (D-07 supersession).
+		const rawDockets = data.getAll('docket[]') as string[];
+		const seen = new Set<string>();
+		const dockets: string[] = [];
+		for (const d of rawDockets) {
+			const trimmed = (d ?? '').trim();
+			if (trimmed && !seen.has(trimmed)) {
+				seen.add(trimmed);
+				dockets.push(trimmed);
+			}
+		}
+		const primary_docket = dockets.length > 0 ? dockets[0] : null;
 		const question_number = ((data.get('question_number') as string) ?? '').trim() || '1';
 
 		if (mode === 'url') {
@@ -47,6 +61,9 @@ export const actions: Actions = {
 			body.append('pdf_url', pdf_url);
 			if (primary_docket !== null) {
 				body.append('primary_docket', primary_docket);
+			}
+			for (const docket of dockets) {
+				body.append('source_dockets', docket);
 			}
 			body.append('question_number', question_number);
 
@@ -81,6 +98,9 @@ export const actions: Actions = {
 			body.append('pdf_file', file);
 			if (primary_docket !== null) {
 				body.append('primary_docket', primary_docket);
+			}
+			for (const docket of dockets) {
+				body.append('source_dockets', docket);
 			}
 			body.append('question_number', question_number);
 

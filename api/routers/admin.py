@@ -108,6 +108,46 @@ router = APIRouter(
 )
 
 
+def _normalize_dockets(
+    primary_docket: Optional[str], source_dockets: list[str]
+) -> list[str]:
+    """Normalize the run-start docket list submitted by the New Run form.
+
+    Trims whitespace, drops blanks, and dedupes preserving order (mirrors the
+    admin_arguments.update_argument_metadata normalization pattern, D-MULTI-DOCKET).
+    If primary_docket is present but not already in source_dockets, it is inserted
+    at index 0 — this keeps backward compatibility with callers that only send
+    primary_docket (legacy single-docket form submissions).
+    """
+    seen: set[str] = set()
+    normalized: list[str] = []
+    if primary_docket:
+        stripped = primary_docket.strip()
+        if stripped:
+            seen.add(stripped)
+            normalized.append(stripped)
+    for d in source_dockets:
+        stripped = d.strip()
+        if stripped and stripped not in seen:
+            seen.add(stripped)
+            normalized.append(stripped)
+    return normalized
+
+
+def _dockets_to_ingest_args(normalized_dockets: list[str]) -> list[str]:
+    """Build --primary-docket / --dockets CLI args from a normalized docket list.
+
+    Returns an empty list when normalized_dockets is empty (no docket args appended).
+    """
+    if not normalized_dockets:
+        return []
+    args = ["--primary-docket", normalized_dockets[0]]
+    if len(normalized_dockets) > 1:
+        args.append("--dockets")
+        args.extend(normalized_dockets[1:])
+    return args
+
+
 def _validate_pdf_url(url: str) -> None:
     """
     Validate that the URL is a safe, https supremecourt.gov URL (T-07-01 SSRF mitigation).
@@ -141,7 +181,8 @@ async def admin_health() -> dict:
 async def create_job(
     pdf_url: Optional[str] = Form(None),
     pdf_file: Optional[UploadFile] = File(None),
-    primary_docket: Optional[str] = Form(None),  # CR-01: pass through to ingest for D-01 deduplication
+    primary_docket: Optional[str] = Form(None),  # CR-01: backward-compat single-docket callers
+    source_dockets: list[str] = Form(default=[]),  # Phase 24 Plan 04: full run-start docket list
     question_number: int = Form(1),              # CR-01: pass through to ingest for D-01 deduplication
     db: AsyncSession = Depends(get_db),
 ) -> AdminJobResponse:
@@ -154,17 +195,26 @@ async def create_job(
     - Upload mode: pdf_file must have content_type 'application/pdf' (T-07-04).
       Bytes are uploaded to DO Spaces; the spaces_key is stored on the job.
 
+    Docket normalization (T-24-07): primary_docket and repeated source_dockets
+    values are merged, trimmed, de-duplicated preserving order via
+    _normalize_dockets. The normalized list's first element is the effective
+    primary docket; the full list is stored on admin_jobs.source_dockets and
+    passed to the ingest subprocess as --primary-docket plus --dockets.
+
     Returns 202 + AdminJobResponse. The job starts in PENDING/INGEST state;
     the ingest subprocess will advance it to RUNNING and then COMPLETED/FAILED.
     """
+    normalized_dockets = _normalize_dockets(primary_docket, source_dockets)
+
     if pdf_url is not None:
         # URL mode: validate + create job + spawn ingest
         _validate_pdf_url(pdf_url)
-        job = await jobs_service.create_job(db, pdf_url=pdf_url)
-        # CR-01: include --primary-docket and --question so D-01 deduplication fires
+        job = await jobs_service.create_job(
+            db, pdf_url=pdf_url, source_dockets=normalized_dockets or None
+        )
+        # CR-01: include --primary-docket/--dockets and --question so D-01 deduplication fires
         ingest_args = ["--url", pdf_url, "--question", str(question_number)]
-        if primary_docket:
-            ingest_args += ["--primary-docket", primary_docket]
+        ingest_args += _dockets_to_ingest_args(normalized_dockets)
         spawn_pipeline_step("ingest", job.id, ingest_args)
         return job  # type: ignore[return-value]
 
@@ -187,6 +237,7 @@ async def create_job(
             db,
             spaces_key=None,
             original_filename=pdf_file.filename,
+            source_dockets=normalized_dockets or None,
         )
 
         if settings.do_spaces_bucket:
@@ -224,10 +275,9 @@ async def create_job(
             )
             await db.commit()
             await db.refresh(job)
-            # CR-01: pass --primary-docket and --question through upload path too
+            # CR-01: pass --primary-docket/--dockets and --question through upload path too
             spaces_ingest_args = ["--spaces-key", key, "--question", str(question_number)]
-            if primary_docket:
-                spaces_ingest_args += ["--primary-docket", primary_docket]
+            spaces_ingest_args += _dockets_to_ingest_args(normalized_dockets)
             spawn_pipeline_step("ingest", job.id, spaces_ingest_args)
         else:
             # No object storage configured — save locally for dev use.
@@ -237,10 +287,9 @@ async def create_job(
             local_path.write_bytes(file_bytes)
             await db.commit()
             await db.refresh(job)
-            # CR-01: pass --primary-docket and --question through local-file path too
+            # CR-01: pass --primary-docket/--dockets and --question through local-file path too
             local_ingest_args = ["--local-file", str(local_path.resolve()), "--question", str(question_number)]
-            if primary_docket:
-                local_ingest_args += ["--primary-docket", primary_docket]
+            local_ingest_args += _dockets_to_ingest_args(normalized_dockets)
             spawn_pipeline_step("ingest", job.id, local_ingest_args)
 
         return job  # type: ignore[return-value]
@@ -884,6 +933,10 @@ async def rerun_job(
     Returns 202 + new AdminJobResponse so the caller can redirect to the new job.
     Returns 422 if the original job is not found.
 
+    Docket persistence (Phase 24 Plan 04): rerun_job copies original.source_dockets
+    onto the new job; this route rebuilds --primary-docket/--dockets from that list
+    so the re-ingested Argument receives the same full docket list as the original run.
+
     Auth inherited from router-level verify_admin_token dependency (T-15-02-AUTH).
     """
     try:
@@ -891,11 +944,13 @@ async def rerun_job(
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
+    docket_args = _dockets_to_ingest_args(new_job.source_dockets or [])
+
     # Spawn ingest for the new job — same pattern as POST /api/admin/jobs
     if new_job.spaces_key:
-        spawn_pipeline_step("ingest", new_job.id, ["--spaces-key", new_job.spaces_key])
+        spawn_pipeline_step("ingest", new_job.id, ["--spaces-key", new_job.spaces_key] + docket_args)
     elif new_job.pdf_url:
-        spawn_pipeline_step("ingest", new_job.id, ["--url", new_job.pdf_url])
+        spawn_pipeline_step("ingest", new_job.id, ["--url", new_job.pdf_url] + docket_args)
 
     return new_job  # type: ignore[return-value]
 

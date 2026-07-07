@@ -1,0 +1,33 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-07-07T15:36:46.553Z",
+  "phase": "25",
+  "phase_name": "Pipeline Job Detail Page",
+  "phase_dir": null,
+  "plan": null,
+  "task": null,
+  "total_tasks": null,
+  "status": "paused",
+  "completed_tasks": [
+    { "id": 1, "name": "Execute plan 24-05 (gap closure: CR-01 docket argv safety)", "status": "done", "commit": "0aeef43d" },
+    { "id": 2, "name": "Code review Phase 24 (all 13 touched files)", "status": "done", "commit": "05e44d7e" },
+    { "id": 3, "name": "Verify Phase 24 goal achievement", "status": "done", "commit": "fc013e0b" },
+    { "id": 4, "name": "Mark Phase 24 complete, evolve PROJECT.md", "status": "done", "commit": "ba67285c" },
+    { "id": 5, "name": "Retroactive security audit: Phase 22", "status": "done", "commit": "78eca27a" },
+    { "id": 6, "name": "Retroactive security audit: Phase 23", "status": "done", "commit": "42722cb7" },
+    { "id": 7, "name": "Retroactive security audit: Phase 24", "status": "done", "commit": "67ded396" }
+  ],
+  "remaining_tasks": [
+    { "id": 8, "name": "Phase 25 (Pipeline Job Detail Page) — not started, no CONTEXT.md or PLAN.md yet", "status": "not_started" }
+  ],
+  "blockers": [],
+  "async_jobs": [],
+  "human_actions_pending": [],
+  "decisions": [
+    { "decision": "Retroactive security audits for Phases 22/23/24 resolved via L1 grep-depth orchestrator verification, not the gsd-security-auditor agent", "rationale": "threats_open: 0, register_authored_at_plan_time: true, asvs_level: 1 — meets the documented short-circuit rule in secure-phase.md", "phase": "22, 23, 24" },
+    { "decision": "CR-01 fix (docket argv-injection) lives in a single nested _add(raw) helper inside _normalize_dockets", "rationale": "shares identical strip/dedupe/reject logic between primary_docket and source_dockets, matching plan 24-05's exact prescribed shape", "phase": "24" }
+  ],
+  "uncommitted_files": [],
+  "next_action": "Phase 24 and its retroactive security audits (22/23/24) are fully complete and committed — there is no in-progress work to resume. To continue the project, run /gsd-discuss-phase 25 to start Phase 25 (Pipeline Job Detail Page).",
+  "context_notes": "This is a clean session boundary, not a mid-task pause. Session covered: (1) finishing Phase 24 by executing its last gap-closure plan (24-05), running code review + phase verification, and marking it complete; (2) fixing a local dev-DB migration drift (alembic was at 0014, code expected 0015) that was blocking new pipeline runs — resolved by the user running `alembic upgrade head`; (3) at the user's request, running retroactive /gsd-secure-phase audits for Phases 22, 23, and 24 since no SECURITY.md had ever existed for this project despite threat_model blocks since Phase 22. All three came back threats_open: 0. Two non-blocking items were surfaced to the user but NOT acted on: (a) api/services/speakers.py:199 hardcodes appointing_president to None (deferred to Phase 27 per existing code comment — functional gap, not security), and (b) the repo-wide pytest suite has ~20 pre-existing failures unrelated to this session, traced via git log to phases 1/19/22/23/24-04."
+}

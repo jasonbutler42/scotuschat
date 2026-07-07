@@ -6,14 +6,14 @@ current_phase: 25
 current_phase_name: pipeline-job-detail-page
 status: executing
 stopped_at: Completed 25-01-PLAN.md
-last_updated: "2026-07-07T17:58:05.315Z"
+last_updated: "2026-07-07T18:16:29.407Z"
 last_activity: 2026-07-07
 last_activity_desc: Phase 25 execution started
 progress:
   total_phases: 7
   completed_phases: 3
   total_plans: 19
-  completed_plans: 16
+  completed_plans: 17
   percent: 43
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-07-02 after v1.5 milestone start)
 ## Current Position
 
 Phase: 25 (pipeline-job-detail-page) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-07-07 — Phase 25 execution started
 
@@ -72,6 +72,9 @@ Full log in PROJECT.md Key Decisions table. Key decisions entering v1.5:
 - [Phase ?]: 25-01: get_job_readiness treats already_created as a short-circuit on argument.status != PIPELINE, independent of any other blocker (D-01, D-04, D-18, D-20)
 - [Phase ?]: 25-01: update_resolve_row_for_job is a new job-scoped mutation (not a reuse of admin_arguments.update_participant_side, which rejects BENCH by design) — forces title null whenever side == BENCH (D-14, D-18, D-19, PJOB-14, PJOB-18, PJOB-15)
 - [Phase ?]: 25-01: create_person_for_job validates the target ArgumentParticipant belongs to the job's own argument BEFORE creating any Person row (validate-before-mutate IDOR guard, D-12, PJOB-19)
+- [Phase ?]: 25-02: title_hint is sourced from the same ArgumentParticipant.title column as title (no separate stored extraction snapshot exists for advocate title, unlike cover_metadata for argued_date/docket)
+- [Phase ?]: 25-02: _bench_role_and_missing_tenure is a new Phase-25-specific helper (no fallback to most-recent tenure) — intentionally distinct from speakers._tenure_role_name's D-14 fallback used by the public speaker popover
+- [Phase ?]: 25-02: list_resolve_rows_for_job raises ValueError for missing job/unlinked argument (not None), matching admin_jobs.py's established pattern so the router maps it to 422
 
 ### Pending Todos
 
@@ -107,9 +110,10 @@ Deployment blockers (v1.4, unresolved — not in v1.5 scope):
 | Phase 24 P04 | 35m | 2 tasks | 9 files |
 | Phase 24 P05 | 20m | 2 tasks | 4 files |
 | Phase 25 P01 | 45min | 3 tasks | 5 files |
+| Phase 25 P02 | 35min | 3 tasks | 4 files |
 
 ## Session Continuity
 
-Last session: 2026-07-07T17:58:05.305Z
+Last session: 2026-07-07T18:16:19.772Z
 Stopped at: Completed 25-01-PLAN.md
 Resume file: None

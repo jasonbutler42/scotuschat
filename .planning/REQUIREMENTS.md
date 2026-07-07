@@ -38,13 +38,13 @@
 - [x] **PJOB-12** Parse card extracted values match the hints shown in the Argument Details card
 - [x] **PJOB-13** Extract advocate title + role from PDF TOC per argument — new `title` VARCHAR field on `argument_participants`, parse step changes, and Alembic migration
 - [x] **PJOB-14** Resolve card: Not ready + Ready states are fully editable; Already created state is read-only
-- [ ] **PJOB-15** Resolve card columns: Raw label · Resolved as (avatar + name, no confirmation checkmark) · Bench/Advocate · Argument Role · Title (advocates only) · Action
-- [ ] **PJOB-16** Bench Argument Role: tenure lookup at argued date; "Missing tenure" displayed when no matching tenure found
+- [x] **PJOB-15** Resolve card columns: Raw label · Resolved as (avatar + name, no confirmation checkmark) · Bench/Advocate · Argument Role · Title (advocates only) · Action
+- [x] **PJOB-16** Bench Argument Role: tenure lookup at argued date; "Missing tenure" displayed when no matching tenure found
 - [ ] **PJOB-17** Saving Argument Details triggers bench role recalculation in the resolve card
 - [x] **PJOB-18** Person selection in resolve: operator confirms Bench/Advocate side first, then typeahead to find existing person
 - [x] **PJOB-19** New person mini-form in resolve: Name + Bench/Advocate toggle; sets `is_justice` on person record AND `side` on `argument_participants`; all other details filled later in people editor
 - [x] **PJOB-20** "Create Argument" action lives in run status card CTA — no standalone floating button
-- [ ] **PJOB-21** "Continue Resolve" action lives at bottom of resolve card when all rows are dispositioned — no standalone floating button
+- [x] **PJOB-21** "Continue Resolve" action lives at bottom of resolve card when all rows are dispositioned — no standalone floating button
 - [x] **PJOB-22** "Re-run" action lives inside the failed step card as a contextual action — no standalone floating button
 - [ ] **PJOB-23** Danger Zone: delete run — unchanged
 
@@ -134,13 +134,13 @@
 | PJOB-12 | Phase 23 | Complete |
 | PJOB-13 | Phase 22 | Complete |
 | PJOB-14 | Phase 25 | Complete |
-| PJOB-15 | Phase 25 | Pending |
-| PJOB-16 | Phase 25 | Pending |
+| PJOB-15 | Phase 25 | Complete |
+| PJOB-16 | Phase 25 | Complete |
 | PJOB-17 | Phase 25 | Pending |
 | PJOB-18 | Phase 25 | Complete |
 | PJOB-19 | Phase 25 | Complete |
 | PJOB-20 | Phase 25 | Complete |
-| PJOB-21 | Phase 25 | Pending |
+| PJOB-21 | Phase 25 | Complete |
 | PJOB-22 | Phase 25 | Complete |
 | PJOB-23 | Phase 25 | Pending |
 | ALIST-01 | Phase 22 | Complete |

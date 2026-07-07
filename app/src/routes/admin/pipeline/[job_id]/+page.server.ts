@@ -409,13 +409,22 @@ export const actions: Actions = {
 
 	/**
 	 * addPerson — create a new person inline during discrepancy review (D-13).
-	 * Accepts full_name and role_name from formData.
+	 *
+	 * Accepts full_name and (optional) role_name from formData for the older
+	 * typeahead-driven flow, plus raw_speaker_label and side for the Phase 25
+	 * mini create-person popover (D-12, PJOB-19) — when both are present the
+	 * backend also sets Person.is_justice from side == BENCH and updates the
+	 * matching job-owned ArgumentParticipant's person_id/side. role_name is no
+	 * longer a required field for the mini popover path, but is still forwarded
+	 * (as null when absent) so the older typeahead flow keeps working.
 	 * On success: returns the created person { id, full_name } for client-side dropdown update.
 	 */
 	addPerson: async ({ request, params }) => {
 		const data = await request.formData();
 		const full_name = (data.get('full_name') as string) ?? '';
 		const role_name = (data.get('role_name') as string) ?? '';
+		const raw_speaker_label = (data.get('raw_speaker_label') as string) ?? '';
+		const side = (data.get('side') as string) ?? '';
 
 		if (!full_name.trim()) {
 			return fail(400, { error: 'Full name is required.' });
@@ -429,7 +438,12 @@ export const actions: Actions = {
 					'X-Admin-Token': ADMIN_TOKEN,
 					'Content-Type': 'application/json',
 				},
-				body: JSON.stringify({ full_name: full_name.trim(), role_name: role_name.trim() || null }),
+				body: JSON.stringify({
+					full_name: full_name.trim(),
+					role_name: role_name.trim() || null,
+					raw_speaker_label: raw_speaker_label.trim() || null,
+					side: side.trim() || null,
+				}),
 			});
 		} catch {
 			return fail(400, { error: 'Could not create person. Please try again.' });
@@ -449,6 +463,60 @@ export const actions: Actions = {
 		};
 		// Return the created person so the Svelte component can add them to the dropdown.
 		return { personCreated: true, person: enrichedPerson };
+	},
+
+	/**
+	 * saveResolveRow — persist a Resolve card row's side (BENCH allowed) and
+	 * advocate title edit (Phase 25, D-14, D-18, PJOB-14, PJOB-18).
+	 *
+	 * Reads participant_id, side, and optional title from form data. job_id
+	 * (the route param) is the only trust boundary consulted here — argument
+	 * ownership is derived and re-verified server-side inside the FastAPI PATCH
+	 * handler, so this action never accepts or forwards a client-supplied
+	 * argument_id (T-25-16 elevation-of-privilege guard). Backend 4xx guard
+	 * failures (IDOR, non-pipeline argument) surface as a scoped resolveRowError.
+	 */
+	saveResolveRow: async ({ request, params }) => {
+		const data = await request.formData();
+		const participantIdRaw = (data.get('participant_id') as string) ?? '';
+		const side = ((data.get('side') as string) ?? '').trim();
+		const title = ((data.get('title') as string) ?? '').trim();
+
+		const participant_id = Number(participantIdRaw);
+		if (!Number.isInteger(participant_id) || participant_id <= 0) {
+			return fail(400, { resolveRowError: 'Missing or invalid participant.' });
+		}
+		if (!side) {
+			return fail(400, { resolveRowError: 'Side is required.' });
+		}
+
+		let res: Response;
+		try {
+			res = await fetch(
+				`${FASTAPI_BASE_URL}/api/admin/jobs/${params.job_id}/resolve-rows`,
+				{
+					method: 'PATCH',
+					headers: {
+						'X-Admin-Token': ADMIN_TOKEN,
+						'Content-Type': 'application/json',
+					},
+					body: JSON.stringify({
+						participant_id,
+						side,
+						title: title || null,
+					}),
+				},
+			);
+		} catch {
+			return fail(502, { resolveRowError: 'Could not save. Try again.' });
+		}
+
+		if (!res.ok) {
+			// Backend maps IDOR / non-pipeline-argument guard failures to 422 (Plan 25-01).
+			return fail(422, { resolveRowError: 'Could not save. Check the row and try again.' });
+		}
+
+		return { resolveRowSaved: true };
 	},
 
 	/**
@@ -486,6 +554,13 @@ export const actions: Actions = {
 	 * Guards: never creates an argument (PJOB-07); argument_id null → fail(400).
 	 * Always echoes dockets in fail() payload (D-06 pill restore on failed save).
 	 * PATCHes existing /api/admin/arguments/{id}/metadata endpoint (source_docket = dockets[0]).
+	 *
+	 * refreshResolveRows: true (Phase 25, D-17, PJOB-17) signals the page that
+	 * an argued_date change may shift bench tenure-role derivation, so the
+	 * Resolve card's data should be refreshed. ArgumentDetailsCard's use:enhance
+	 * already calls the default update() on success, which invalidates the load
+	 * function (refetching resolveRows) — this flag lets Plan 25-04's page
+	 * composition assert that behavior explicitly rather than relying on it implicitly.
 	 */
 	saveJobMetadata: async ({ request, params }) => {
 		const data = await request.formData();
@@ -550,6 +625,6 @@ export const actions: Actions = {
 			return fail(422, { saveError: 'Could not save. Try again.', dockets });
 		}
 
-		return { saved: true };
+		return { saved: true, refreshResolveRows: true };
 	},
 };

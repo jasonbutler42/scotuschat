@@ -151,3 +151,7 @@ None — no external service configuration required.
 
 *Phase: 25-pipeline-job-detail-page*
 *Completed: 2026-07-07*
+
+## Self-Check: PASSED
+
+All created/modified files exist on disk and all task commit hashes (`d89e6934`, `d5c90670`, `948c460b`) are present in git history.

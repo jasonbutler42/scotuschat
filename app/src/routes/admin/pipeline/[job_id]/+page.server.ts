@@ -303,57 +303,12 @@ export const actions: Actions = {
 
 	/**
 	 * approve — POST to /api/admin/jobs/{job_id}/approve to transition the argument from
-	 * pipeline → draft state. Also PATCHes advocate participant sides from the form data
-	 * before approving (atomic capture of side assignments at approve time, D-09).
+	 * pipeline → draft state. Side/title persistence now happens per-row via ResolveCard's
+	 * own ?/saveResolveRow action (Phase 25) — this action only triggers the transition.
 	 * On success: redirect to the same page so it re-renders in read-only state.
 	 * On failure: return fail with approveError key so the UI shows a scoped error.
 	 */
-	approve: async ({ request, params }) => {
-		const data = await request.formData();
-
-		// PATCH advocate side assignments before approving — collect participant_side[id]=SIDE fields
-		const sideEntries: Array<{ participant_id: string; side: string }> = [];
-		for (const [key, value] of data.entries()) {
-			const match = key.match(/^participant_side\[(\d+)\]$/);
-			if (match) {
-				sideEntries.push({ participant_id: match[1], side: value as string });
-			}
-		}
-
-		// Fetch the job to get argument_id for the PATCH endpoint (best-effort for side assignments)
-		let argumentId: number | null = null;
-		try {
-			const jobRes = await fetch(`${FASTAPI_BASE_URL}/api/admin/jobs/${params.job_id}`, {
-				headers: { 'X-Admin-Token': ADMIN_TOKEN },
-			});
-			if (!jobRes.ok) {
-				return fail(502, { approveError: 'Could not load job. Try again.' });
-			}
-			const job = await jobRes.json();
-			argumentId = job.argument_id ?? null;
-		} catch {
-			return fail(502, { approveError: 'Could not load job. Try again.' });
-		}
-
-		// PATCH each advocate side (non-blocking — approve proceeds even if a PATCH fails)
-		if (argumentId != null && sideEntries.length > 0) {
-			await Promise.allSettled(
-				sideEntries.map(({ participant_id, side }) =>
-					fetch(
-						`${FASTAPI_BASE_URL}/api/admin/arguments/${argumentId}/participants/${participant_id}`,
-						{
-							method: 'PATCH',
-							headers: {
-								'X-Admin-Token': ADMIN_TOKEN,
-								'Content-Type': 'application/json',
-							},
-							body: JSON.stringify({ side }),
-						},
-					).catch(() => undefined),
-				),
-			);
-		}
-
+	approve: async ({ params }) => {
 		// POST approve — transitions argument to draft state
 		let res: Response;
 		try {

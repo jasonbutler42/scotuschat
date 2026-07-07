@@ -18,10 +18,8 @@ result: pass
 
 ### 2. Source File Row Removed
 expected: The pipeline job detail page has no standalone "View Source PDF" card. Instead, a "View source PDF" link appears inside the Ingest step card body (visible when any of spaces_key, pdf_url, or original_filename is present). Clicking it opens the source PDF.
-result: issue
-reported: "yes, but the link should open in a new tab"
-severity: minor
-fix: added target="_blank" rel="noopener noreferrer" to anchor — fixed inline
+result: pass
+note: "Originally reported missing target=\"_blank\"; fixed inline same session (target=\"_blank\" rel=\"noopener noreferrer\" added to anchor) and confirmed present in +page.svelte line 612-613."
 
 ### 3. ArgumentDetailsCard Replaces Old Metadata Form
 expected: On a pipeline job detail page that has a linked argument, the "Argument Details" card is visible with no residual static "Argument" preview card above it. A standalone "Ready to publish" CTA appears after the ArgumentDetailsCard when the job is completed and the argument is in draft status.
@@ -63,8 +61,8 @@ note: "All current arguments are in draft status (published/unpublished status t
 ## Summary
 
 total: 10
-passed: 9
-issues: 1
+passed: 10
+issues: 0
 pending: 0
 skipped: 0
 blocked: 0

@@ -1,11 +1,12 @@
 ---
 phase: 23-shared-argument-details-component
 verified: 2026-07-02T18:00:00Z
-status: human_needed
-score: 9/13
-behavior_unverified: 4
+status: passed
+score: 13/13
+behavior_unverified: 0
 overrides_applied: 0
-re_verification: false
+re_verification: true
+human_verification_confirmed_by: 23-UAT.md (2026-07-06T15:15:00Z)
 human_verification:
   - test: "Save with all docket pills removed — confirm source_docket becomes NULL in DB"
     expected: "After removing all docket pills in ArgumentDetailsCard and clicking Save, reload the page and confirm no docket pill appears. Confirm via DB or API that Argument.source_docket is NULL."
@@ -42,8 +43,8 @@ behavior_unverified_items:
 
 **Phase Goal:** A single reusable Argument Details card component exists that renders docket pill/tag input, free-text question number, argued date, and extracted hints from `cover_metadata` — wired up on the pipeline job detail page as its first consumer
 **Verified:** 2026-07-02T18:00:00Z
-**Status:** human_needed
-**Re-verification:** No — initial verification
+**Status:** passed
+**Re-verification:** Yes — human verification confirmed via 23-UAT.md (2026-07-06T15:15:00Z)
 
 ## Goal Achievement
 
@@ -176,13 +177,25 @@ No `export let`, `$:` reactive statements, or legacy store imports in `ArgumentD
 **Expected:** Only the ArgumentDetailsCard and standalone CTA block are visible. No duplicate Argument card, no "Edit argument metadata" link from the old card.
 **Why human:** CTA depends on `liveJob.status === 'completed'` (live-polled value) and `argStatus === 'draft'` (derived from argument DB state). Both conditions require a real completed run with a draft-state argument to trigger.
 
+### Human Verification Confirmed (2026-07-06)
+
+All 4 human-verification items above were exercised and confirmed via the Phase 23 UAT session (`23-UAT.md`, completed 2026-07-06T15:15:00Z, run after gap-closure plans 23-05/06/07 landed):
+
+| # | Item | UAT Test | Result |
+|---|------|----------|--------|
+| 1 | Docket pill save and pre-population | Tests 6, 7 | pass |
+| 2 | Clearing all docket pills persists NULL | Test 8 | pass |
+| 3 | Question number hint stays italic N/A after save | Test 9 | pass |
+| 4 | Ready-to-publish CTA renders standalone | Test 10 | pass (confirmed against draft-status branch only — published/unpublished transitions not yet implemented, so that branch remains untested; not a phase-23 gap) |
+
+UAT also caught one minor issue (source PDF link missing `target="_blank"`) which was fixed inline during the same session. No code changes have occurred in the phase's files since this UAT ran, so the confirmation remains current.
+
 ## Gaps Summary
 
-No gaps blocking goal achievement. All infrastructure (backend schemas, services, component, page wiring, gap-closure fixes) is fully implemented and wired. The 4 behavior-unverified items are present-and-wired truths whose correctness at runtime requires human confirmation through live UI testing — they are not code gaps.
-
-The phase goal is achieved at the code level. Human verification of the 4 runtime behavior truths is required before the phase can be marked fully passed.
+No gaps blocking goal achievement. All infrastructure (backend schemas, services, component, page wiring, gap-closure fixes) is fully implemented and wired. All 4 previously behavior-unverified truths have since been confirmed via human UAT (see above) — the phase goal is fully achieved.
 
 ---
 
 _Verified: 2026-07-02T18:00:00Z_
 _Verifier: Claude (gsd-verifier)_
+_Re-verified: 2026-07-07 — status updated to passed based on 23-UAT.md human confirmation_

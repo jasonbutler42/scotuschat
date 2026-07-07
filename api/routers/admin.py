@@ -118,19 +118,34 @@ def _normalize_dockets(
     If primary_docket is present but not already in source_dockets, it is inserted
     at index 0 — this keeps backward compatibility with callers that only send
     primary_docket (legacy single-docket form submissions).
+
+    Any docket value whose stripped form begins with '-' is rejected with a 422
+    (T-24-08: CLI-arg-injection via unsanitized docket argv) — this closes the
+    argv-injection vector at the API boundary, mirroring the _validate_pdf_url
+    precedent, so no flag-like token can ever reach _dockets_to_ingest_args or the
+    spawned ingest subprocess argv. Second layer of defense is the pipeline
+    __main__ startup guard (Phase 24 Plan 05, Task 2).
     """
     seen: set[str] = set()
     normalized: list[str] = []
+
+    def _add(raw: str) -> None:
+        stripped = raw.strip()
+        if not stripped or stripped in seen:
+            return
+        if stripped.startswith("-"):
+            # T-24-08: reject flag-like values before they can reach subprocess argv
+            raise HTTPException(
+                status_code=422,
+                detail=f"Docket value {stripped!r} cannot start with '-'.",
+            )
+        seen.add(stripped)
+        normalized.append(stripped)
+
     if primary_docket:
-        stripped = primary_docket.strip()
-        if stripped:
-            seen.add(stripped)
-            normalized.append(stripped)
+        _add(primary_docket)
     for d in source_dockets:
-        stripped = d.strip()
-        if stripped and stripped not in seen:
-            seen.add(stripped)
-            normalized.append(stripped)
+        _add(d)
     return normalized
 
 

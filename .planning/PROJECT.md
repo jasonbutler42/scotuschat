@@ -85,6 +85,7 @@ Anyone can open a SCOTUS oral argument and immediately follow the conversation �
 - ✓ Pipeline run delete from admin UI (confirmation; argument survives) — v1.4 (ADMIN-02)
 - ✓ Admin nav unified with public nav: AdminSubNav + TopNav variant=public in admin layout — v1.4 (NAV-02)
 - ✓ Pipeline list page: free-text question number, shared docket pill input, full runs table, incomplete toggle, compound status badges — v1.5 (PLIST-01–05)
+- ✓ Pipeline job detail page: run status card (not-ready/ready/already-created), restructured resolve card with locked columns and side-first gating, step-specific failed guidance, job-scoped mini create-person popover, no floating action buttons — v1.5 (PJOB-01–23)
 
 ### Active
 
@@ -170,6 +171,10 @@ Anyone can open a SCOTUS oral argument and immediately follow the conversation �
 | `delete_argument` returns `bool \| None`: True=deleted, False=published (409), None=not found (404) (Phase 21) | Tri-state distinguishes "refused because published" from "not found"; router maps cleanly without catching exceptions | ✓ Good — can_delete flag in load function prevents UI-level 409s for most cases |
 | FK cascade order: Utterance → PipelineRun → ArgumentParticipant → CaseArgument → NULL AdminJob.argument_id → Argument (Phase 21) | NULL AdminJob before deletion avoids FK violation on admin_jobs.argument_id; order mirrors logical dependency chain | ✓ Good — Pitfall 1/2 mitigated; all cascade paths tested in test_admin_arguments_service.py |
 | `AdminSubNav` component + `TopNav variant=public` in admin layout (Phase 21) | Two-row admin nav: shared public TopNav + admin-only tab row; no markup duplication; dead `variant=admin` branch removed | ✓ Good — NAV-02 gap closed via Plan 21-04; root layout guard kept to prevent double-render |
+| `update_resolve_row_for_job` is a new job-scoped mutation, not a reuse of `admin_arguments.update_participant_side` (Phase 25) | The existing endpoint rejects `BENCH` by design; reusing it would weaken an existing security guard | ✓ Good — clean separation; `title` forced null server-side whenever `side == BENCH` |
+| Resolve card's paused-only interactive surface gated behind a single `isPaused` flag (Phase 25) | Person re-matching/create and Continue Resolve only make sense while the pipeline resolve step has left a job `PAUSED`; reuses the existing `?/resolve` batch action unchanged | ✓ Good — confirmed via UAT retest against a genuinely paused job; the two initial "missing trigger" UAT reports traced to testing against a non-paused (already-completed) job, not a code defect |
+| `readonlyMode` computed once in `+page.server.ts` `load()` from `argument.status !== 'pipeline'` (Phase 25) | Single source of truth so `RunStatusCard`/`ResolveCard`/`ArgumentDetailsCard` all read the same boolean rather than re-deriving it independently | ✓ Good — no drift observed across the three components |
+| `_bench_role_and_missing_tenure` has no fallback to the most-recent tenure, unlike `speakers._tenure_role_name`'s D-14 fallback (Phase 25) | Operator-facing Resolve card needs an explicit "Missing tenure" state + edit-person link rather than silently guessing a bench role | ✓ Good — kept intentionally distinct from the public speaker popover's fallback behavior |
 
 ## Evolution
 
@@ -189,4 +194,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-07 — Phase 24 complete (pipeline-list-page): free-text question number, shared DocketPillInput, uncapped runs table, compound status badges; gap-closure plan 24-05 closed CR-01 (docket argv-injection into spawned pipeline subprocess)*
+*Last updated: 2026-07-07 — Phase 25 complete (pipeline-job-detail-page): run status card, restructured resolve card (locked columns, side-first gating, mini create-person popover), step-specific failed guidance, no floating action buttons; UAT confirmed the CR-01/WR-04 code-review fixes work correctly against a genuinely paused job — initial UAT reports traced to a missing-paused-job test precondition, not a code defect*

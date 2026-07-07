@@ -4,17 +4,17 @@ milestone: v1.5
 milestone_name: Admin Screens Cleanup
 current_phase: 25
 current_phase_name: pipeline-job-detail-page
-status: executing
-stopped_at: Completed 25-01-PLAN.md
-last_updated: "2026-07-07T18:26:22.815Z"
+status: verifying
+stopped_at: Completed 25-04-PLAN.md
+last_updated: "2026-07-07T18:50:31.628Z"
 last_activity: 2026-07-07
 last_activity_desc: Phase 25 execution started
 progress:
   total_phases: 7
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 19
-  completed_plans: 18
-  percent: 43
+  completed_plans: 19
+  percent: 57
 ---
 
 # Project State
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-07-02 after v1.5 milestone start)
 
 Phase: 25 (pipeline-job-detail-page) — EXECUTING
 Plan: 4 of 4
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-07-07 — Phase 25 execution started
 
 Progress: [██████████] 100%
@@ -78,6 +78,9 @@ Full log in PROJECT.md Key Decisions table. Key decisions entering v1.5:
 - [Phase 25]: 25-03: Missing router endpoints for get_job_readiness/get_failed_step_recovery were added under Rule 3 auto-fix (GET /jobs/{job_id}/readiness, GET /jobs/{job_id}/failed-recovery), mapping ValueError to 422 to match sibling resolve-rows endpoints
 - [Phase 25]: 25-03: readonlyMode computed once in +page.server.ts load() (argument.status !== 'pipeline') so RunStatusCard/ResolveCard/ArgumentDetailsCard read the same boolean in Plan 25-04
 - [Phase 25]: 25-03: saveResolveRow action never accepts a client-supplied argument_id; job_id route param is the only trust boundary, argument ownership re-derived server-side in the FastAPI PATCH handler (T-25-16)
+- [Phase 25]: 25-04: Argument Role is read-only in ResolveCard, derived entirely from the Bench/Advocate side value — backend ResolveRowUpdate only writes side/title, so there is no separate role field to edit
+- [Phase 25]: 25-04: Person re-matching (Confirm/Select/Create person) only appears while job.status is paused via the unchanged ?/resolve batch action; Resolved-as becomes read-only display afterward while side/title remain editable via saveResolveRow
+- [Phase 25]: 25-04: Preserved Danger Zone markup/confirmation text verbatim per D-09/D-22, superseding the UI-SPEC's Destructive confirmation copy row for this phase
 
 ### Pending Todos
 
@@ -115,9 +118,10 @@ Deployment blockers (v1.4, unresolved — not in v1.5 scope):
 | Phase 25 P01 | 45min | 3 tasks | 5 files |
 | Phase 25 P02 | 35min | 3 tasks | 4 files |
 | Phase 25 P03 | 40min | 2 tasks | 2 files |
+| Phase 25 P04 | 55min | 3 tasks | 5 files |
 
 ## Session Continuity
 
-Last session: 2026-07-07T18:25:30.558Z
-Stopped at: Completed 25-01-PLAN.md
+Last session: 2026-07-07T18:50:31.618Z
+Stopped at: Completed 25-04-PLAN.md
 Resume file: None

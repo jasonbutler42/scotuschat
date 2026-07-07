@@ -46,7 +46,7 @@
 - [x] **PJOB-20** "Create Argument" action lives in run status card CTA — no standalone floating button
 - [x] **PJOB-21** "Continue Resolve" action lives at bottom of resolve card when all rows are dispositioned — no standalone floating button
 - [x] **PJOB-22** "Re-run" action lives inside the failed step card as a contextual action — no standalone floating button
-- [ ] **PJOB-23** Danger Zone: delete run — unchanged
+- [x] **PJOB-23** Danger Zone: delete run — unchanged
 
 ### Arguments List (`/admin/arguments/`)
 
@@ -142,7 +142,7 @@
 | PJOB-20 | Phase 25 | Complete |
 | PJOB-21 | Phase 25 | Complete |
 | PJOB-22 | Phase 25 | Complete |
-| PJOB-23 | Phase 25 | Pending |
+| PJOB-23 | Phase 25 | Complete |
 | ALIST-01 | Phase 22 | Complete |
 | ALIST-02 | Phase 26 | Pending |
 | ALIST-03 | Phase 26 | Pending |

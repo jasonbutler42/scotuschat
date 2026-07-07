@@ -97,3 +97,11 @@ Unscheduled items for future phases.
 **Area:** Developer experience
 **Added:** 2026-07-01 (from 999.8)
 **Context:** No README documents how to start the full local stack (SvelteKit dev server, FastAPI backend, Postgres). Add one so setup steps don't have to be rediscovered each session.
+
+---
+
+## B-013 — Bulk-import historical justices from CSV
+
+**Area:** Admin — People directory (`/admin/people`) — feeds Phase 27
+**Added:** 2026-07-07
+**Context:** Operator currently has to manually enter every historical Supreme Court justice one at a time in the People admin screen. Jason already has a CSV covering all historical justices. Add an import path (upload + parse + create/update `Person` rows with `is_justice=true`, tenure/appointment data) so the full bench roster can be seeded in one operation instead of by hand. Needs a decision on dedup behavior against existing entries and which CSV columns map to which fields.

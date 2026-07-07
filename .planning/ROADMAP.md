@@ -171,7 +171,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
   4. "Show incomplete only" toggle is present and functional
   5. Status badges display compound labels (e.g., "Parse · Running", "Resolve · Needs Review", "Completed") that accurately reflect current stage and status
 
-**Plans**: 5 plans (4 complete + 1 gap closure)
+**Plans**: 5/5 plans complete
 
 **Wave 1** *(parallel — disjoint files)*
 
@@ -185,7 +185,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 
 **Gap closure** *(from 24-VERIFICATION.md CR-01 — independent, no deps)*
 
-- [ ] 24-05-PLAN.md — Reject `-`-prefixed docket values at API boundary (422) + startup guard writes best-effort FAILED on pre-run_ingest exit, closing the silent-stuck-job argv-injection gap (PLIST-02)
+- [x] 24-05-PLAN.md — Reject `-`-prefixed docket values at API boundary (422) + startup guard writes best-effort FAILED on pre-run_ingest exit, closing the silent-stuck-job argv-injection gap (PLIST-02)
 
 **UI hint**: yes
 
@@ -280,7 +280,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 | 21. Admin UI Surface | v1.4 | 4/4 | Complete | 2026-07-01 |
 | 22. Schema Foundations | v1.5 | 3/3 | Complete    | 2026-07-02 |
 | 23. Shared Argument Details Component | v1.5 | 7/7 | Complete   | 2026-07-06 |
-| 24. Pipeline List Page | v1.5 | 4/4 | Complete   | 2026-07-07 |
+| 24. Pipeline List Page | v1.5 | 5/5 | Complete   | 2026-07-07 |
 | 25. Pipeline Job Detail Page | v1.5 | 0/TBD | Not started | - |
 | 26. Arguments Admin | v1.5 | 0/TBD | Not started | - |
 | 27. People Admin | v1.5 | 0/TBD | Not started | - |

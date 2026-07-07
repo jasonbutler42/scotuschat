@@ -5,15 +5,15 @@ milestone_name: Admin Screens Cleanup
 current_phase: 24
 current_phase_name: pipeline-list-page
 status: executing
-stopped_at: Completed 24-04-PLAN.md
-last_updated: "2026-07-07T14:15:18.630Z"
+stopped_at: Completed 24-05-PLAN.md (gap closure — CR-01 docket argv safety)
+last_updated: "2026-07-07T14:58:10.303Z"
 last_activity: 2026-07-07
-last_activity_desc: Phase 24 execution started
+last_activity_desc: Phase 24 Plan 05 executed
 progress:
   total_phases: 7
   completed_phases: 3
-  total_plans: 14
-  completed_plans: 14
+  total_plans: 15
+  completed_plans: 15
   percent: 43
 ---
 
@@ -29,11 +29,11 @@ See: .planning/PROJECT.md (updated 2026-07-02 after v1.5 milestone start)
 ## Current Position
 
 Phase: 24 (pipeline-list-page) — EXECUTING
-Plan: 4 of 4
-Status: Ready to execute
-Last activity: 2026-07-07 — Phase 24 execution started
+Plan: 5 of 5
+Status: Completed 24-05-PLAN.md (gap closure — CR-01 docket argv safety)
+Last activity: 2026-07-07 — Phase 24 Plan 05 executed
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -67,6 +67,8 @@ Full log in PROJECT.md Key Decisions table. Key decisions entering v1.5:
 - [Phase 24-03]: effectiveDockets state replaces the old direct pills state as the parent-owned docket source of truth, keyed via effectiveDockets.join to force DocketPillInput to re-seed from initialValues on failed-save restoration — D-04 requires ArgumentDetailsCard to consume the shared DocketPillInput component while preserving Phase 23 failed-save state restoration
 - [Phase ?]: 24-04: D-07 supersession — full docket list carried via admin_jobs.source_dockets (run-start metadata) instead of an immediate metadata PATCH, since argument_id is null until ingest completes
 - [Phase ?]: 24-04: rerun_job copies original.source_dockets onto the new job so reruns preserve the originally submitted docket list
+- [Phase ?]: 24-05: Rejection guard lives inside a single nested _add(raw) helper in _normalize_dockets (T-24-08) — both primary_docket and source_dockets share identical strip/dedupe/reject logic
+- [Phase ?]: 24-05: pipeline/__main__.py startup guard wraps parser.parse_args() in try/except SystemExit, scrapes --job-id from argv, and writes a bounded (message[:500]) best-effort FAILED status before re-raising — runs entirely inside the child process, pipeline_spawn.py and fire-and-forget invariant D-01 unchanged
 
 ### Pending Todos
 
@@ -100,9 +102,10 @@ Deployment blockers (v1.4, unresolved — not in v1.5 scope):
 | Phase 24 P02 | 2min | 1 tasks | 1 files |
 | Phase 24 P03 | 10min | 1 tasks | 1 files |
 | Phase 24 P04 | 35m | 2 tasks | 9 files |
+| Phase 24 P05 | 20m | 2 tasks | 4 files |
 
 ## Session Continuity
 
-Last session: 2026-07-07T14:15:18.621Z
-Stopped at: Completed 24-04-PLAN.md
+Last session: 2026-07-07T14:58:10.293Z
+Stopped at: Completed 24-05-PLAN.md (gap closure — CR-01 docket argv safety)
 Resume file: None

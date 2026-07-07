@@ -171,7 +171,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
   4. "Show incomplete only" toggle is present and functional
   5. Status badges display compound labels (e.g., "Parse · Running", "Resolve · Needs Review", "Completed") that accurately reflect current stage and status
 
-**Plans**: 2/4 plans executed
+**Plans**: 3/4 plans executed
 
 **Wave 1** *(parallel — disjoint files)*
 
@@ -180,7 +180,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 
 **Wave 2** *(blocked on 24-02 — both consume DocketPillInput; disjoint files from each other)*
 
-- [ ] 24-03-PLAN.md — Refactor ArgumentDetailsCard.svelte to consume DocketPillInput, behavior-identical (PLIST-02)
+- [x] 24-03-PLAN.md — Refactor ArgumentDetailsCard.svelte to consume DocketPillInput, behavior-identical (PLIST-02)
 - [ ] 24-04-PLAN.md — Pipeline list page: free-text question, DocketPillInput + per-pill preflight, full multi-docket run-start persistence, compound badge, Step column removed, All Runs heading (PLIST-01, PLIST-02, PLIST-04, PLIST-05)
 
 **UI hint**: yes
@@ -276,7 +276,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 | 21. Admin UI Surface | v1.4 | 4/4 | Complete | 2026-07-01 |
 | 22. Schema Foundations | v1.5 | 3/3 | Complete    | 2026-07-02 |
 | 23. Shared Argument Details Component | v1.5 | 7/7 | Complete   | 2026-07-06 |
-| 24. Pipeline List Page | v1.5 | 2/4 | In Progress|  |
+| 24. Pipeline List Page | v1.5 | 3/4 | In Progress|  |
 | 25. Pipeline Job Detail Page | v1.5 | 0/TBD | Not started | - |
 | 26. Arguments Admin | v1.5 | 0/TBD | Not started | - |
 | 27. People Admin | v1.5 | 0/TBD | Not started | - |

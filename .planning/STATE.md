@@ -6,14 +6,14 @@ current_phase: 24
 current_phase_name: pipeline-list-page
 status: executing
 stopped_at: Completed 24-02-PLAN.md
-last_updated: "2026-07-07T13:58:25.300Z"
+last_updated: "2026-07-07T14:06:13.600Z"
 last_activity: 2026-07-07
 last_activity_desc: Phase 24 execution started
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 14
-  completed_plans: 12
+  completed_plans: 13
   percent: 29
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-07-02 after v1.5 milestone start)
 ## Current Position
 
 Phase: 24 (pipeline-list-page) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-07-07 — Phase 24 execution started
 
@@ -64,6 +64,7 @@ Full log in PROJECT.md Key Decisions table. Key decisions entering v1.5:
 - [Phase ?]: 23-05: Docket pill max-count guard — client UX convenience; CR-02 server guard is authoritative
 - [Phase 24]: Removed the list_jobs limit parameter entirely instead of making it optional, matching PLIST-03 and D-10. — PLIST-03 requires all pipeline runs, and D-10/D-12 explicitly remove the cap with no pagination UI for this phase.
 - [Phase ?]: 24-02: DocketPillInput id prop defaults to 'docket-input' to preserve ArgumentDetailsCard's existing label/for wiring; list page can override to avoid duplicate-id conflicts
+- [Phase 24-03]: effectiveDockets state replaces the old direct pills state as the parent-owned docket source of truth, keyed via effectiveDockets.join to force DocketPillInput to re-seed from initialValues on failed-save restoration — D-04 requires ArgumentDetailsCard to consume the shared DocketPillInput component while preserving Phase 23 failed-save state restoration
 
 ### Pending Todos
 
@@ -95,9 +96,10 @@ Deployment blockers (v1.4, unresolved — not in v1.5 scope):
 | Phase 23 P07 | 12 | 3 tasks | 6 files |
 | Phase 24 P01 | 35m | 1 tasks | 3 files |
 | Phase 24 P02 | 2min | 1 tasks | 1 files |
+| Phase 24 P03 | 10min | 1 tasks | 1 files |
 
 ## Session Continuity
 
-Last session: 2026-07-07T13:58:25.291Z
+Last session: 2026-07-07T14:05:45.172Z
 Stopped at: Completed 24-02-PLAN.md
 Resume file: None

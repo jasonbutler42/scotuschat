@@ -304,7 +304,8 @@ async def create_job(
             uploads_dir.mkdir(parents=True, exist_ok=True)
             local_path = uploads_dir / f"{job.id}.pdf"
             local_path.write_bytes(file_bytes)
-            await db.commit()
+            # WR-06: no update()/db.add() happens between create_job()'s commit
+            # and here, so a second db.commit() would be a no-op — just refresh.
             await db.refresh(job)
             # CR-01: pass --primary-docket/--dockets and --question through local-file path too
             local_ingest_args = ["--local-file", str(local_path.resolve()), "--question", str(question_number)]

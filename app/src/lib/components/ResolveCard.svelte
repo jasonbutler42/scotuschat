@@ -372,11 +372,11 @@
 		<table style="width: 100%; border-collapse: collapse; min-width: 720px;">
 			<thead>
 				<tr>
-					<th scope="col" style="font-size: 14px; font-weight: 400; color: #94a3b8; border-bottom: 1px solid #334155; padding: 8px 0; text-align: left;">Raw label</th>
-					<th scope="col" style="font-size: 14px; font-weight: 400; color: #94a3b8; border-bottom: 1px solid #334155; padding: 8px 0; text-align: left;">Resolved as</th>
-					<th scope="col" style="font-size: 14px; font-weight: 400; color: #94a3b8; border-bottom: 1px solid #334155; padding: 8px 0; text-align: left;">Bench/Advocate</th>
-					<th scope="col" style="font-size: 14px; font-weight: 400; color: #94a3b8; border-bottom: 1px solid #334155; padding: 8px 0; text-align: left;">Argument Role</th>
-					<th scope="col" style="font-size: 14px; font-weight: 400; color: #94a3b8; border-bottom: 1px solid #334155; padding: 8px 0; text-align: left;">Title</th>
+					<th scope="col" style="font-size: 14px; font-weight: 400; color: #94a3b8; border-bottom: 1px solid #334155; padding: 8px 0; padding-right: 12px; text-align: left;">Raw label</th>
+					<th scope="col" style="font-size: 14px; font-weight: 400; color: #94a3b8; border-bottom: 1px solid #334155; padding: 8px 0; padding-right: 12px; text-align: left;">Resolved as</th>
+					<th scope="col" style="font-size: 14px; font-weight: 400; color: #94a3b8; border-bottom: 1px solid #334155; padding: 8px 0; padding-right: 12px; text-align: left;">Bench/Advocate</th>
+					<th scope="col" style="font-size: 14px; font-weight: 400; color: #94a3b8; border-bottom: 1px solid #334155; padding: 8px 0; padding-right: 12px; text-align: left;">Argument Role</th>
+					<th scope="col" style="font-size: 14px; font-weight: 400; color: #94a3b8; border-bottom: 1px solid #334155; padding: 8px 0; padding-right: 12px; text-align: left;">Title</th>
 					<th scope="col" style="font-size: 14px; font-weight: 400; color: #94a3b8; border-bottom: 1px solid #334155; padding: 8px 0; text-align: left;">Action</th>
 				</tr>
 			</thead>

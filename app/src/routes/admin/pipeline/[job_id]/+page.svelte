@@ -234,7 +234,7 @@
 		<!-- Step cards container — aria-live polite so screen readers announce step changes -->
 		<div
 			aria-live="polite"
-			style="display: flex; flex-direction: column; gap: 16px;"
+			style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 24px;"
 		>
 			{#each STEP_ORDER as step}
 				{@const effectiveJob = (liveJob.status === 'running' && liveJob.current_step === null)

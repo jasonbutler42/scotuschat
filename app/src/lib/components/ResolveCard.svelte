@@ -242,13 +242,15 @@
 		s.correcting = true;
 	}
 
-	function handlePersonCreated(label: string, person: Candidate) {
+	function handlePersonCreated(label: string, participantId: number, person: Candidate, side: string) {
 		const s = rowMatchStates[label];
 		if (!s) return;
 		s.extraCandidates = [...s.extraCandidates, person];
 		s.personId = person.id;
 		s.disposition = 'corrected';
 		s.correcting = true;
+		pendingSideOverrides[participantId] = side;
+		submitRow(participantId);
 	}
 
 	// Svelte action — close the combobox dropdown on outside click.
@@ -520,7 +522,8 @@
 										<CreatePersonPopover
 											rawSpeakerLabel={label}
 											defaultAdvocateSide={side !== 'BENCH' ? side : 'UNKNOWN'}
-											onCreated={(person) => handlePersonCreated(label, person)}
+											onCreated={(person, createdSide) =>
+												handlePersonCreated(label, row.participant_id, person, createdSide)}
 										/>
 									</div>
 								{:else if row.discrepancy.auto_match_name}

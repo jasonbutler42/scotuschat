@@ -65,7 +65,7 @@
 			border-radius: 4px;
 			padding: 6px 12px;
 			cursor: {disabled ? 'not-allowed' : 'pointer'};
-			min-height: 32px;
+			min-height: 36px;
 			opacity: {disabled ? 0.6 : 1};
 		"
 	>

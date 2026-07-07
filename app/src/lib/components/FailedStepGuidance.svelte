@@ -27,6 +27,7 @@
 </script>
 
 <div style="margin-top: 12px;">
+	<h3 style="font-size: 16px; font-weight: 600; color: #e2e8f0; margin: 0 0 8px 0;">This run failed</h3>
 	<!-- role="alert" scoped to the immediate failure summary only, not the raw details block -->
 	<p role="alert" style="font-size: 16px; font-weight: 400; color: #e2e8f0; margin: 0 0 12px 0;">
 		{guidanceText}

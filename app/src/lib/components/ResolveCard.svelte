@@ -540,14 +540,14 @@
 									<button
 										type="button"
 										onclick={() => confirmSide(row, 'BENCH')}
-										style="font-size: 14px; font-weight: 400; color: #e2e8f0; background: transparent; border: 1px solid #334155; border-radius: 4px; padding: 6px 12px; cursor: pointer; min-height: 32px;"
+										style="font-size: 14px; font-weight: 400; color: #e2e8f0; background: transparent; border: 1px solid #334155; border-radius: 4px; padding: 6px 12px; cursor: pointer; min-height: 36px;"
 									>
 										Bench
 									</button>
 									<button
 										type="button"
 										onclick={() => confirmSide(row, 'ADVOCATE')}
-										style="font-size: 14px; font-weight: 400; color: #e2e8f0; background: transparent; border: 1px solid #334155; border-radius: 4px; padding: 6px 12px; cursor: pointer; min-height: 32px;"
+										style="font-size: 14px; font-weight: 400; color: #e2e8f0; background: transparent; border: 1px solid #334155; border-radius: 4px; padding: 6px 12px; cursor: pointer; min-height: 36px;"
 									>
 										Advocate
 									</button>
@@ -626,6 +626,7 @@
 											font-size: 16px;
 											color: #e2e8f0;
 											box-sizing: border-box;
+											min-height: 36px;
 										"
 									/>
 									<p style="margin: 4px 0 0 0; font-size: 13px; color: #94a3b8; {!row.title_hint ? 'font-style: italic;' : ''}">
@@ -645,7 +646,7 @@
 								<button
 									type="button"
 									onclick={() => handleCorrect(label)}
-									style="font-size: 14px; font-weight: 400; color: #e2e8f0; background: transparent; border: 1px solid #334155; border-radius: 4px; padding: 6px 12px; cursor: pointer; min-height: 32px;"
+									style="font-size: 14px; font-weight: 400; color: #e2e8f0; background: transparent; border: 1px solid #334155; border-radius: 4px; padding: 6px 12px; cursor: pointer; min-height: 36px;"
 								>
 									Change
 								</button>
@@ -655,7 +656,7 @@
 										<button
 											type="button"
 											onclick={() => handleConfirm(label, row.discrepancy!)}
-											style="font-size: 14px; font-weight: 400; color: #e2e8f0; background: transparent; border: 1px solid #334155; border-radius: 4px; padding: 6px 12px; cursor: pointer; min-height: 32px;"
+											style="font-size: 14px; font-weight: 400; color: #e2e8f0; background: transparent; border: 1px solid #334155; border-radius: 4px; padding: 6px 12px; cursor: pointer; min-height: 36px;"
 										>
 											Confirm
 										</button>
@@ -663,7 +664,7 @@
 									<button
 										type="button"
 										onclick={() => handleCorrect(label)}
-										style="font-size: 14px; font-weight: 400; color: #e2e8f0; background: transparent; border: 1px solid #334155; border-radius: 4px; padding: 6px 12px; cursor: pointer; min-height: 32px;"
+										style="font-size: 14px; font-weight: 400; color: #e2e8f0; background: transparent; border: 1px solid #334155; border-radius: 4px; padding: 6px 12px; cursor: pointer; min-height: 36px;"
 									>
 										Select
 									</button>

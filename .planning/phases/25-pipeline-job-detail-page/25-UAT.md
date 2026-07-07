@@ -75,11 +75,16 @@ blocked: 0
   debug_session: ".planning/debug/continue-resolve-not-visible-for-zero-discrepancies.md"
 
 - truth: "Resolve card status card and resolve table card render as visually distinct, properly spaced cards."
-  status: failed
+  status: resolved
+  resolution: "Fixed 2026-07-07 (commit c126ef5b): step-cards flex container was missing margin-bottom (only had gap between its own children), and table <th> headers lacked the padding-right: 12px that every <td> already had, causing 'Title'/'Action' headers to visually collide. Both fixed. Separately, user flagged via screenshot that having two sibling 'Resolve' cards at all (pipeline step-status card + resolve-workflow card) is questionable UX, even though it was an intentional Phase 25 decision (D-05/D-20, UI-SPEC Layout Contract). That larger question is deferred to SEED-001 rather than reworked here."
   reason: "User reported: the resolve card html feels malformed: there is a card that says 'resolve' and has the current status. Then, immediately below it with no spacing between them, is another card with the resolve table."
   severity: cosmetic
   test: 3
-  artifacts: []
+  artifacts:
+    - path: "app/src/routes/admin/pipeline/[job_id]/+page.svelte"
+      issue: "Step-cards flex container (line ~235) had gap:16px for its own children but no margin-bottom, so nothing separated it from the sibling ResolveCard below it."
+    - path: "app/src/lib/components/ResolveCard.svelte"
+      issue: "Table <th> headers (lines 375-380) lacked padding-right: 12px that every <td> body cell already had, so narrow/empty columns (Title, when all visible rows are BENCH) let 'Title' and 'Action' header text visually touch."
   missing: []
 
 <!-- Out-of-scope feedback (not a failed-test Gap, needs user decision on where to route):

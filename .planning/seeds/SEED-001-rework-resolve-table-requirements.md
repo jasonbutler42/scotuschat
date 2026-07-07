@@ -26,7 +26,13 @@ This seed will surface during `/gsd-new-milestone` when the milestone scope matc
 ## Breadcrumbs
 
 - `app/src/lib/components/ResolveCard.svelte` — the current Resolve card implementation from Phase 25.
-- `.planning/phases/25-pipeline-job-detail-page/25-UAT.md` — UAT session where this was raised, including two related confirmed issues (missing create/switch-person trigger, WR-04 Continue Resolve visibility) and a cosmetic gap (no spacing between the Resolve status card and the resolve table card).
+- `app/src/routes/admin/pipeline/[job_id]/+page.svelte` — step-cards loop (line ~235) and where `ResolveCard` is composed as a sibling after it (line ~404).
+- `.planning/phases/25-pipeline-job-detail-page/25-UAT.md` — UAT session where this was raised, including two related confirmed issues (missing create/switch-person trigger, WR-04 Continue Resolve visibility, both resolved as a test-precondition gap) and a cosmetic spacing/header gap (fixed 2026-07-07, commit c126ef5b).
+- `.planning/phases/25-pipeline-job-detail-page/25-UI-SPEC.md` (Layout Contract) and `25-04-SUMMARY.md` key-decisions — the locked Phase 25 decision that the pipeline "Resolve" step-status card and `ResolveCard`'s "Resolve" workflow card are intentional separate siblings (D-05/D-20), not a naming collision.
+
+## Open Design Question (added 2026-07-07)
+
+User reviewed a live screenshot and pushed back on the Phase 25 sibling-card decision above: two cards both titled "Resolve" stacked directly on top of each other reads as one broken/malformed card, not two purposeful ones, regardless of the underlying "step status vs. workflow" conceptual split. When this seed is worked, consider whether the pipeline step-status treatment (badge, "Needs review" pill, etc.) for the Resolve step specifically should be folded into the top of `ResolveCard` itself, superseding D-05/D-20 — while leaving Ingest/Parse as plain step-status cards (they have no equivalent "workflow" card of their own).
 
 ## Notes
 

@@ -55,8 +55,8 @@
 		return 'Pipeline';
 	}
 
-	// Advocate Roles section — per-participant save state keyed by participant_id.
-	let savingRoleId = $state<number | null>(null);
+	// Speakers section — per-participant save state keyed by participant_id.
+	let savingSpeakerId = $state<number | null>(null);
 
 	// Convert ISO timestamp or date string to value compatible with <input type="date"> (YYYY-MM-DD).
 	function toDateInputValue(iso: string | null): string {
@@ -389,83 +389,155 @@
 			{/if}
 		</div>
 
-		<!-- Card 3: Advocate Roles — per-advocate dropdown + Save button (D-12, ROLE-03) -->
-		{#if data.argument.participants && data.argument.participants.length > 0}
-			<div
-				style="
-					background-color: #1e293b;
-					border: 1px solid #334155;
-					border-radius: 8px;
-					padding: 24px;
-					margin-bottom: 16px;
-				"
-			>
-				<h2 style="font-size: 20px; font-weight: 600; color: #e2e8f0; margin: 0 0 8px 0;">
-					Advocate Roles
-				</h2>
-				<p style="font-size: 14px; font-weight: 400; color: #94a3b8; margin: 0 0 24px 0;">
-					Set the role each advocate held in this specific argument. Changing a role here does not affect other arguments.
-				</p>
+		<!-- Card 3: Speakers — unified bench+advocate rows (D-05, D-07, AEDIT-05/06/07) -->
+		<div
+			style="
+				background-color: #1e293b;
+				border: 1px solid #334155;
+				border-radius: 8px;
+				padding: 24px;
+				margin-bottom: 16px;
+			"
+		>
+			<h2 style="font-size: 20px; font-weight: 600; color: #e2e8f0; margin: 0 0 8px 0;">
+				Speakers
+			</h2>
+			<p style="font-size: 14px; font-weight: 400; color: #94a3b8; margin: 0 0 24px 0;">
+				All participants in this argument. Advocates: set the role and title they held here. Changing a role or title here does not affect other arguments.
+			</p>
 
-				{#each data.argument.participants as participant}
-					<div style="margin-bottom: 16px;">
-						<p style="font-size: 14px; font-weight: 400; color: #94a3b8; margin: 0 0 8px 0;">
-							{participant.full_name}
-						</p>
-						<form
-							method="POST"
-							action="?/updateParticipantSide"
-							use:enhance={() => {
-								savingRoleId = participant.participant_id;
-								return async ({ update }) => {
-									savingRoleId = null;
-									await update();
-								};
-							}}
-							style="display: flex; gap: 8px; align-items: center;"
-						>
-							<input type="hidden" name="participant_id" value={participant.participant_id} />
-							<select
-								name="side"
-									style="
-									flex: 1;
-									background-color: #0f1117;
-									border: 1px solid #334155;
-									border-radius: 6px;
-									padding: 8px 12px;
-									font-size: 16px;
-									font-weight: 400;
-									color: #e2e8f0;
-									min-height: 36px;
-								"
-							>
-								<option value="PETITIONER" selected={participant.side === 'PETITIONER'}>Petitioner's Counsel</option>
-								<option value="RESPONDENT" selected={participant.side === 'RESPONDENT'}>Respondent's Counsel</option>
-								<option value="AMICUS" selected={participant.side === 'AMICUS'}>Amicus Curiae</option>
-								<option value="UNKNOWN" selected={participant.side === 'UNKNOWN'}>Counsel</option>
-							</select>
-							<button
-								type="submit"
-								disabled={savingRoleId === participant.participant_id}
-								style="
-									min-height: 36px;
-									padding: 8px 16px;
-									background-color: #1e293b;
-									border: 1px solid #93c5fd;
-									border-radius: 6px;
-									font-size: 14px;
-									font-weight: 400;
-									color: #e2e8f0;
-									cursor: {savingRoleId === participant.participant_id ? 'not-allowed' : 'pointer'};
-									opacity: {savingRoleId === participant.participant_id ? 0.7 : 1};
-									white-space: nowrap;
-								"
-							>
-								{savingRoleId === participant.participant_id ? 'Saving…' : 'Save'}
-							</button>
-						</form>
-					</div>
-				{/each}
+			{#if data.argument.speakers && data.argument.speakers.length > 0}
+				<table style="width: 100%; border-collapse: collapse;">
+					<thead>
+						<tr style="border-bottom: 1px solid #334155;">
+							<th style="text-align: left; font-size: 14px; font-weight: 400; color: #94a3b8; padding: 8px; white-space: nowrap;">Name</th>
+							<th style="text-align: left; font-size: 14px; font-weight: 400; color: #94a3b8; padding: 8px;">Role</th>
+							<th style="text-align: left; font-size: 14px; font-weight: 400; color: #94a3b8; padding: 8px;">Title</th>
+							<th style="text-align: left; font-size: 14px; font-weight: 400; color: #94a3b8; padding: 8px; white-space: nowrap;">Utterances</th>
+							<th style="text-align: left; font-size: 14px; font-weight: 400; color: #94a3b8; padding: 8px;">Action</th>
+						</tr>
+					</thead>
+					<tbody>
+						{#each data.argument.speakers as speaker}
+							<tr style="border-bottom: 1px solid #334155;">
+								<td style="padding: 8px; font-size: 14px; color: #e2e8f0; vertical-align: top;">
+									{speaker.full_name ?? '—'}
+								</td>
+								{#if !speaker.is_bench}
+									<!-- Advocate row: single form spans Role + Title + Save (D-04) -->
+									<td colspan="3" style="padding: 8px; vertical-align: top;">
+										<form
+											method="POST"
+											action="?/updateParticipantSide"
+											use:enhance={() => {
+												savingSpeakerId = speaker.participant_id;
+												return async ({ update }) => {
+													savingSpeakerId = null;
+													await update();
+												};
+											}}
+											style="display: flex; gap: 8px; align-items: flex-start; flex-wrap: wrap;"
+										>
+											<input type="hidden" name="participant_id" value={speaker.participant_id} />
+											<div style="flex: 1; min-width: 160px;">
+												<select
+													name="side"
+													style="
+														width: 100%;
+														background-color: #0f1117;
+														border: 1px solid #334155;
+														border-radius: 6px;
+														padding: 8px 12px;
+														font-size: 16px;
+														font-weight: 400;
+														color: #e2e8f0;
+														min-height: 36px;
+													"
+												>
+													<option value="PETITIONER" selected={speaker.side === 'PETITIONER'}>Petitioner's Counsel</option>
+													<option value="RESPONDENT" selected={speaker.side === 'RESPONDENT'}>Respondent's Counsel</option>
+													<option value="AMICUS" selected={speaker.side === 'AMICUS'}>Amicus Curiae</option>
+												</select>
+											</div>
+											<div style="flex: 1; min-width: 160px;">
+												<input
+													type="text"
+													name="title"
+													value={speaker.title ?? ''}
+													style="
+														display: block;
+														width: 100%;
+														background-color: #0f1117;
+														border: 1px solid #334155;
+														border-radius: 6px;
+														padding: 8px 12px;
+														font-size: 16px;
+														color: #e2e8f0;
+														box-sizing: border-box;
+														min-height: 36px;
+													"
+												/>
+												<p
+													style="
+														font-size: 14px;
+														font-weight: 400;
+														color: #94a3b8;
+														margin: 4px 0 0 0;
+														{!speaker.title_hint ? 'font-style: italic;' : ''}
+													"
+												>
+													Extracted: {speaker.title_hint ?? 'N/A'}
+												</p>
+											</div>
+											<div style="white-space: nowrap; padding-top: 6px; font-size: 14px; color: #94a3b8;">
+												{speaker.utterance_count}
+											</div>
+											<button
+												type="submit"
+												disabled={savingSpeakerId === speaker.participant_id}
+												style="
+													min-height: 36px;
+													padding: 8px 16px;
+													background-color: #1e293b;
+													border: 1px solid #93c5fd;
+													border-radius: 6px;
+													font-size: 14px;
+													font-weight: 400;
+													color: #e2e8f0;
+													cursor: {savingSpeakerId === speaker.participant_id ? 'not-allowed' : 'pointer'};
+													opacity: {savingSpeakerId === speaker.participant_id ? 0.7 : 1};
+													white-space: nowrap;
+												"
+											>
+												{savingSpeakerId === speaker.participant_id ? 'Saving…' : 'Save'}
+											</button>
+										</form>
+									</td>
+								{:else}
+									<!-- Bench row: read-only tenure-derived role or missing-tenure warning -->
+									<td style="padding: 8px; font-size: 14px; vertical-align: top;">
+										{#if speaker.missing_tenure}
+											<span style="color: #fbbf24;">Missing tenure</span>
+											{#if speaker.person_edit_href}
+												<a
+													href={speaker.person_edit_href}
+													style="color: #93c5fd; text-decoration: underline; margin-left: 4px;"
+												>Edit person</a>
+											{/if}
+										{:else}
+											<span style="color: #e2e8f0;">{speaker.bench_role ?? '—'}</span>
+										{/if}
+									</td>
+									<td style="padding: 8px; font-size: 14px; color: #94a3b8; vertical-align: top;">—</td>
+									<td style="padding: 8px; font-size: 14px; color: #94a3b8; vertical-align: top; white-space: nowrap;">
+										{speaker.utterance_count}
+									</td>
+									<td style="padding: 8px; font-size: 14px; color: #94a3b8; vertical-align: top;">—</td>
+								{/if}
+							</tr>
+						{/each}
+					</tbody>
+				</table>
 
 				<!-- Role error message (shown on form.roleError) -->
 				{#if form?.roleError}
@@ -479,34 +551,12 @@
 						"
 					>{form.roleError}</p>
 				{/if}
-			</div>
-		{/if}
-
-		<!-- TenureGapWarning banners — one per affected bench speaker (D-15) -->
-		{#each data.argument.tenure_gap_warnings ?? [] as warning}
-			<div
-				role="status"
-				style="
-					background-color: #0f1117;
-					border: 1px solid #fbbf24;
-					border-radius: 6px;
-					padding: 12px 16px;
-					margin-bottom: 16px;
-				"
-			>
-				<p style="font-size: 14px; font-weight: 400; color: #fbbf24; margin: 0 0 4px 0;">
-					{warning.full_name}'s role could not be resolved from tenure data
+			{:else}
+				<p style="font-size: 14px; color: #94a3b8; margin: 0;">
+					No speakers recorded for this argument.
 				</p>
-				<p style="font-size: 14px; font-weight: 400; color: #94a3b8; margin: 0;">
-					argued_date {warning.argued_date} falls outside all recorded tenures.
-					Showing most recent tenure as fallback.
-					<a
-						href="/admin/people/{warning.person_id}"
-						style="color: #93c5fd; text-decoration: underline;"
-					>Edit person</a>
-				</p>
-			</div>
-		{/each}
+			{/if}
+		</div>
 
 		<!-- Danger Zone — argument delete section (ADMIN-01, D-03) -->
 		<!-- Last card on the page per UI-SPEC Layout Contract (delete section position). -->

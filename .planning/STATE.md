@@ -4,17 +4,17 @@ milestone: v1.5
 milestone_name: Admin Screens Cleanup
 current_phase: 26
 current_phase_name: arguments-admin
-status: executing
+status: verifying
 stopped_at: Completed 26-02-PLAN.md
-last_updated: "2026-07-08T00:58:25.639Z"
+last_updated: "2026-07-08T01:09:28.053Z"
 last_activity: 2026-07-08
 last_activity_desc: Phase 26 execution started
 progress:
   total_phases: 7
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 23
-  completed_plans: 22
-  percent: 57
+  completed_plans: 23
+  percent: 71
 ---
 
 # Project State
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-07-07 after Phase 25 completion)
 
 Phase: 26 (arguments-admin) — EXECUTING
 Plan: 4 of 4
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-07-08 — Phase 26 execution started
 
 Progress: [██████████] 100%
@@ -88,6 +88,9 @@ Full log in PROJECT.md Key Decisions table. Key decisions entering v1.5:
 - [Phase 26-03]: Row actions key on arg.status (draft/unpublished -> Publish, published -> Unpublish) instead of the old published_at-based check, matching Plan 26-01's backend status model
 - [Phase 26-03]: RunStatusCard's Archived override lives only in the badgeColor/badgeLabel derivations — BADGE_COLOR/BADGE_LABEL maps stay keyed purely on jobStatus
 - [Phase ?]: 26-02: list_argument_speakers is a new argument-scoped helper (not a reuse of job-scoped list_resolve_rows_for_job); unresolved bench rows report missing_tenure=False (no person to flag); title_hint sources the same ArgumentParticipant.title column as title (D-06); update_participant_side writes title only when provided so omitting it never clobbers a saved title
+- [Phase ?]: 26-04: can_delete changed from status !== 'published' to status === 'draft', matching Plan 26-01's backend gate exactly (Published AND Unpublished both blocked)
+- [Phase ?]: 26-04: Publish/Unpublish moved into the Status card body (status-driven three-way branch) instead of a standalone floating block between Advocate Roles and Danger Zone
+- [Phase ?]: 26-04: Status history rendered as its own card directly below Status, not a nested sub-section, per UI-SPEC planner-discretion note
 
 ### Pending Todos
 
@@ -129,9 +132,10 @@ Deployment blockers (v1.4, unresolved — not in v1.5 scope):
 | Phase 26 P01 | 20min | 2 tasks | 6 files |
 | Phase 26 P03 | 15min | 2 tasks | 2 files |
 | Phase 26 P02 | 20min | 2 tasks | 5 files |
+| Phase 26 P04 | 12min | - tasks | - files |
 
 ## Session Continuity
 
-Last session: 2026-07-08T00:58:25.628Z
+Last session: 2026-07-08T01:09:28.043Z
 Stopped at: Completed 26-02-PLAN.md
 Resume file: None

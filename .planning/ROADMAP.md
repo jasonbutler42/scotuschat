@@ -90,7 +90,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 - [x] **Phase 23: Shared Argument Details Component** - Reusable docket/question/date card used on both pipeline job detail and argument edit pages (completed 2026-07-02)
 - [x] **Phase 24: Pipeline List Page** - Redesigned run-start form and run table at `/admin/pipeline/` (completed 2026-07-07)
 - [x] **Phase 25: Pipeline Job Detail Page** - Restructured job detail layout with run status card, resolve redesign, and no floating buttons at `/admin/pipeline/[id]` (completed 2026-07-07)
-- [ ] **Phase 26: Arguments Admin** - New `unpublished` status lifecycle + refined list and edit screens at `/admin/arguments/` and `/admin/arguments/[id]`
+- [x] **Phase 26: Arguments Admin** - New `unpublished` status lifecycle + refined list and edit screens at `/admin/arguments/` and `/admin/arguments/[id]` (completed 2026-07-08)
 - [ ] **Phase 27: People Admin** - Benchmarks/advocate tabs, tenure-per-row appointment data, and create-person flow at `/admin/people/` and `/admin/people/[id]`
 - [ ] **Phase 28: Dashboard** - Intentional stat cards, "needs attention" section, and actionable CTAs at `/admin/`
 
@@ -218,7 +218,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
   4. Speakers section lists all argument participants with utterance counts; advocate rows have a role dropdown (PETITIONER / RESPONDENT / AMICUS), a title field, and inline save without full-page refresh; bench rows show tenure-derived role or "Missing tenure" with edit link
   5. Publish / Unpublish / re-Publish transitions are all functional: Draft → Published, Published → Unpublished, Unpublished → Published
 
-**Plans**: 3/4 plans executed
+**Plans**: 4/4 plans complete
 
 **Wave 1** *(parallel — disjoint files)*
 
@@ -231,7 +231,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 
 **Wave 3** *(blocked on 26-02)*
 
-- [ ] 26-04-PLAN.md — Frontend edit page: Status card + Status history, publish placement, unified Speakers section, Draft-only delete gate (AEDIT-01, AEDIT-02, AEDIT-05, AEDIT-06, AEDIT-07, AEDIT-08, AEDIT-09)
+- [x] 26-04-PLAN.md — Frontend edit page: Status card + Status history, publish placement, unified Speakers section, Draft-only delete gate (AEDIT-01, AEDIT-02, AEDIT-05, AEDIT-06, AEDIT-07, AEDIT-08, AEDIT-09)
 
 **UI hint**: yes
 
@@ -296,7 +296,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 | 23. Shared Argument Details Component | v1.5 | 7/7 | Complete   | 2026-07-06 |
 | 24. Pipeline List Page | v1.5 | 5/5 | Complete    | 2026-07-07 |
 | 25. Pipeline Job Detail Page | v1.5 | 4/4 | Complete    | 2026-07-07 |
-| 26. Arguments Admin | v1.5 | 3/4 | In Progress|  |
+| 26. Arguments Admin | v1.5 | 4/4 | Complete   | 2026-07-08 |
 | 27. People Admin | v1.5 | 0/TBD | Not started | - |
 | 28. Dashboard | v1.5 | 0/TBD | Not started | - |
 

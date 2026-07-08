@@ -236,3 +236,80 @@ async def test_delete_argument_returns_409_for_unpublished(client: AsyncClient) 
             if arg is not None:
                 await db.delete(arg)
                 await db.commit()
+
+
+# ---------------------------------------------------------------------------
+# PATCH /arguments/{id}/participants/{id} — title persistence (Phase 26 Plan 02,
+# D-06, T-26-04)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_update_participant_route_persists_title_for_advocate(
+    client: AsyncClient,
+) -> None:
+    """PATCH /arguments/{id}/participants/{id} with {side, title} persists title
+    for an advocate participant and returns it in the response body (D-06).
+    """
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import (
+        Argument,
+        ArgumentParticipant,
+        ArgumentStatusEnum,
+        Person,
+        SideEnum,
+    )
+
+    async with AsyncSessionLocal() as db:
+        arg = Argument(status=ArgumentStatusEnum.DRAFT)
+        db.add(arg)
+        await db.flush()
+
+        advocate = Person(full_name="Route Title Advocate")
+        db.add(advocate)
+        await db.flush()
+
+        participant = ArgumentParticipant(
+            argument_id=arg.id,
+            person_id=advocate.id,
+            raw_speaker_label="MS. ROUTE ADVOCATE",
+            side=SideEnum.UNKNOWN,
+        )
+        db.add(participant)
+        await db.commit()
+
+        arg_id = arg.id
+        advocate_id = advocate.id
+        participant_id = participant.id
+
+    try:
+        response = await client.patch(
+            f"/api/admin/arguments/{arg_id}/participants/{participant_id}",
+            json={"side": "PETITIONER", "title": "Counsel of Record"},
+            headers=_admin_headers(),
+        )
+        assert response.status_code == 200
+        body = response.json()
+        assert body["side"] == "PETITIONER"
+        assert body["title"] == "Counsel of Record"
+
+        # BENCH is still rejected via the route (422).
+        response = await client.patch(
+            f"/api/admin/arguments/{arg_id}/participants/{participant_id}",
+            json={"side": "BENCH"},
+            headers=_admin_headers(),
+        )
+        assert response.status_code == 422
+    finally:
+        async with AsyncSessionLocal() as db:
+            p = await db.get(ArgumentParticipant, participant_id)
+            if p is not None:
+                await db.delete(p)
+            person = await db.get(Person, advocate_id)
+            if person is not None:
+                await db.delete(person)
+            arg = await db.get(Argument, arg_id)
+            if arg is not None:
+                await db.delete(arg)
+            await db.commit()

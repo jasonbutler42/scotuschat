@@ -790,3 +790,160 @@ async def test_list_argument_speakers_bench_advocate_and_utterance_counts() -> N
         argument = await db.get(Argument, arg_id)
         await db.delete(argument)
         await db.commit()
+
+
+# ---------------------------------------------------------------------------
+# get_argument_detail status_log / speakers wiring (Phase 26 Plan 02, T-26-03,
+# D-05) and update_participant_side title persistence (D-06, T-26-04)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_get_argument_detail_includes_status_log_and_speakers() -> None:
+    """get_argument_detail returns a non-empty status_log (oldest first) after a
+    publish, and a speakers list covering every participant (T-26-03, D-05).
+    """
+    import datetime
+
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import (
+        Argument,
+        ArgumentParticipant,
+        ArgumentStatusEnum,
+        ArgumentStatusLog,
+        Person,
+        SideEnum,
+    )
+    from api.services.admin_arguments import get_argument_detail, publish_argument
+
+    async with AsyncSessionLocal() as db:
+        arg = Argument(
+            status=ArgumentStatusEnum.DRAFT,
+            resolved_at=datetime.datetime.now(datetime.timezone.utc),
+        )
+        db.add(arg)
+        await db.flush()
+
+        advocate = Person(full_name="Status Log Advocate")
+        db.add(advocate)
+        await db.flush()
+
+        participant = ArgumentParticipant(
+            argument_id=arg.id,
+            person_id=advocate.id,
+            raw_speaker_label="MS. ADVOCATE",
+            side=SideEnum.PETITIONER,
+        )
+        db.add(participant)
+        await db.commit()
+
+        arg_id = arg.id
+        advocate_id = advocate.id
+        participant_id = participant.id
+
+    async with AsyncSessionLocal() as db:
+        await publish_argument(db, arg_id)
+
+    async with AsyncSessionLocal() as db:
+        result = await get_argument_detail(db, arg_id)
+
+    assert result is not None
+    assert len(result["status_log"]) == 1
+    assert result["status_log"][0]["status"] == ArgumentStatusEnum.PUBLISHED
+
+    speaker_ids = {row["participant_id"] for row in result["speakers"]}
+    assert participant_id in speaker_ids
+
+    # Cleanup
+    async with AsyncSessionLocal() as db:
+        log_result = await db.execute(
+            select(ArgumentStatusLog).where(ArgumentStatusLog.argument_id == arg_id)
+        )
+        for row in log_result.scalars().all():
+            await db.delete(row)
+        p = await db.get(ArgumentParticipant, participant_id)
+        await db.delete(p)
+        person = await db.get(Person, advocate_id)
+        await db.delete(person)
+        arg = await db.get(Argument, arg_id)
+        await db.delete(arg)
+        await db.commit()
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_update_participant_side_persists_title_for_advocate() -> None:
+    """update_participant_side writes title when provided, leaves it unchanged
+    when omitted, and still raises on side==BENCH (D-06, T-26-04).
+    """
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import (
+        Argument,
+        ArgumentParticipant,
+        ArgumentStatusEnum,
+        Person,
+        SideEnum,
+    )
+    from api.services.admin_arguments import update_participant_side
+
+    async with AsyncSessionLocal() as db:
+        arg = Argument(status=ArgumentStatusEnum.DRAFT)
+        db.add(arg)
+        await db.flush()
+
+        advocate = Person(full_name="Title Advocate")
+        db.add(advocate)
+        await db.flush()
+
+        participant = ArgumentParticipant(
+            argument_id=arg.id,
+            person_id=advocate.id,
+            raw_speaker_label="MR. TITLE ADVOCATE",
+            side=SideEnum.UNKNOWN,
+        )
+        db.add(participant)
+        await db.commit()
+
+        arg_id = arg.id
+        advocate_id = advocate.id
+        participant_id = participant.id
+
+    # Provide a title alongside a side change — must persist.
+    async with AsyncSessionLocal() as db:
+        result = await update_participant_side(
+            db, arg_id, participant_id, SideEnum.PETITIONER, "Counsel of Record"
+        )
+    assert result is not None
+    assert result["side"] == SideEnum.PETITIONER.value
+    assert result["title"] == "Counsel of Record"
+
+    # Omitting title must leave the previously-persisted title unchanged.
+    async with AsyncSessionLocal() as db:
+        result = await update_participant_side(
+            db, arg_id, participant_id, SideEnum.RESPONDENT
+        )
+    assert result is not None
+    assert result["side"] == SideEnum.RESPONDENT.value
+    assert result["title"] == "Counsel of Record"
+
+    async with AsyncSessionLocal() as db:
+        p = await db.get(ArgumentParticipant, participant_id)
+        assert p.title == "Counsel of Record"
+
+    # BENCH is still rejected regardless of title.
+    async with AsyncSessionLocal() as db:
+        with pytest.raises(ValueError):
+            await update_participant_side(
+                db, arg_id, participant_id, SideEnum.BENCH, "Should not persist"
+            )
+
+    # Cleanup
+    async with AsyncSessionLocal() as db:
+        p = await db.get(ArgumentParticipant, participant_id)
+        await db.delete(p)
+        person = await db.get(Person, advocate_id)
+        await db.delete(person)
+        arg = await db.get(Argument, arg_id)
+        await db.delete(arg)
+        await db.commit()

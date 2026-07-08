@@ -12,12 +12,20 @@ Phase 15 additions:
   - ArgumentListItem.status  — explicit lifecycle status
   - ArgumentDetail.tenure_gap_warnings — list of TenureGapWarning per affected bench speaker
 
+Phase 26 additions:
+  - StatusLogEntry — one ArgumentStatusLog row (status, created_at); ArgumentDetail.status_log
+    is the edit page's Status history list, oldest first (T-26-03)
+  - SpeakerRow — unified bench+advocate row (utterance_count, title, bench_role, missing_tenure,
+    person_edit_href); ArgumentDetail.speakers replaces the participants + tenure_gap_warnings
+    split for the rebuilt edit page (D-05, AEDIT-05/06/07)
+  - ParticipantSideUpdate.title — advocate title, writable alongside side (D-06, AEDIT-06)
+
 Security notes:
   - ArgumentUpdate allow-list is exactly {case_name, docket_number, argued_date} (T-11-MASS).
     published_at is NOT in this schema — it is controlled only by /publish and /unpublish.
     slug and id are also excluded — slug is derived server-side; id is path parameter.
-  - ParticipantSideUpdate exposes only ``side`` — no other ArgumentParticipant field is
-    writable via this schema (T-15-02-MASS).
+  - ParticipantSideUpdate exposes only ``side`` and ``title`` — no other ArgumentParticipant
+    field is writable via this schema (T-15-02-MASS, T-26-04).
 """
 
 import datetime
@@ -29,14 +37,17 @@ from api.models.models import ArgumentStatusEnum, SideEnum
 
 
 class ParticipantSideUpdate(BaseModel):
-    """PATCH body for argument_participants.side (ROLE-03).
+    """PATCH body for argument_participants.side and title (ROLE-03, Phase 26 D-06).
 
-    Mass-assignment guard (T-15-02-MASS): ONLY ``side`` is writable via this
-    schema.  No other ArgumentParticipant column can be set.  Service validates
-    that BENCH cannot be set (T-15-02-BENCH) — operators set advocate roles only.
+    Mass-assignment guard (T-26-04): ONLY ``side`` and ``title`` are writable via
+    this schema.  No other ArgumentParticipant column can be set.  Service
+    validates that BENCH cannot be set (T-15-02-BENCH) — operators set advocate
+    roles only.  ``title`` is optional — omitting it (None) leaves the existing
+    title unchanged; it is written only for non-BENCH participants.
     """
 
     side: SideEnum
+    title: Optional[str] = None
 
 
 class StatusLogEntry(BaseModel):
@@ -159,9 +170,15 @@ class ArgumentDetail(BaseModel):
     tenure_gap_warnings (Phase 15, D-15): list of bench speakers whose
     argued_date falls outside all their CourtTenure rows.
     participants (Phase 15, D-12): list of resolved advocate participants for
-    the per-argument role editor — excludes BENCH participants.
+    the per-argument role editor — excludes BENCH participants. Retained for
+    backward compatibility alongside the Phase 26 ``speakers`` field below.
     source_docket (Phase 19, D-01): new column; exposed for job detail metadata card.
     cover_metadata (Phase 19, D-07): raw cover extractor output; exposed for hint text.
+    status_log (Phase 26, D-05, T-26-03): every ArgumentStatusLog row for this
+    argument, oldest first — the edit page's Status history list.
+    speakers (Phase 26, D-05, AEDIT-05/06/07): unified bench+advocate row set
+    from list_argument_speakers, replacing the old advocate-only participants +
+    tenure_gap_warnings split for the rebuilt edit page (Plan 26-04).
     """
 
     id: int
@@ -179,6 +196,8 @@ class ArgumentDetail(BaseModel):
     source_dockets: list[str] = []                        # Phase 23 D-MULTI-DOCKET
     cover_metadata: Optional[dict] = None                 # Phase 19 D-07
     question_number: Optional[int] = None                 # Phase 23 PJOB-07
+    status_log: list[StatusLogEntry] = []                 # Phase 26 D-05
+    speakers: list[SpeakerRow] = []                        # Phase 26 D-05
 
     model_config = {"from_attributes": True}
 

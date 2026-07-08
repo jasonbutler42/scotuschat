@@ -325,6 +325,22 @@ async def get_argument_detail(db: AsyncSession, argument_id: int) -> dict | None
         for row in advocate_rows
     ]
 
+    # Load the full status log, oldest first (T-26-03 — Status history list).
+    status_log_result = await db.execute(
+        select(ArgumentStatusLog)
+        .where(ArgumentStatusLog.argument_id == argument_id)
+        .order_by(ArgumentStatusLog.created_at.asc(), ArgumentStatusLog.id.asc())
+    )
+    status_log = [
+        {"status": row.status, "created_at": row.created_at}
+        for row in status_log_result.scalars().all()
+    ]
+
+    # Unified bench+advocate speakers list (D-05, replaces participants +
+    # tenure_gap_warnings for the rebuilt edit page — both retained above for
+    # backward compatibility).
+    speakers = await list_argument_speakers(db, argument_id)
+
     return {
         "id": argument.id,
         "argued_date": argument.argued_date,
@@ -343,6 +359,8 @@ async def get_argument_detail(db: AsyncSession, argument_id: int) -> dict | None
         "source_dockets": argument.source_dockets or [],  # Phase 23 D-MULTI-DOCKET
         "cover_metadata": argument.cover_metadata,        # Phase 19 D-07
         "question_number": argument.question_number,  # Phase 23 PJOB-07
+        "status_log": status_log,                          # Phase 26 D-05
+        "speakers": speakers,                              # Phase 26 D-05
     }
 
 
@@ -490,20 +508,28 @@ async def update_participant_side(
     argument_id: int,
     participant_id: int,
     side: SideEnum,
+    title: str | None = None,
 ) -> dict | None:
-    """Update argument_participants.side for a specific participant in a specific argument.
+    """Update argument_participants.side (and optionally title) for a specific
+    participant in a specific argument (ROLE-03, Phase 26 D-06).
 
     IDOR guard (T-15-02-IDOR): the SELECT and UPDATE are both scoped by BOTH
     argument_id AND participant_id — a participant that belongs to a different
     argument will return None → router returns 404.
 
-    Mass-assignment guard (T-15-02-MASS): only ``side`` is writable via this function.
+    Mass-assignment guard (T-26-04): only ``side`` and ``title`` are writable via
+    this function.
 
     BENCH guard (T-15-02-BENCH): raises ValueError when side == BENCH — operators
     cannot demote or re-classify bench participants.
 
+    title is written ONLY when the caller passes a non-None value — omitting
+    title leaves the existing ArgumentParticipant.title unchanged (does not
+    clobber it), mirroring the "only write provided fields" pattern used by
+    update_argument_metadata.
+
     Returns:
-        dict with ``id`` and ``side`` on success.
+        dict with ``id``, ``side``, and ``title`` on success.
         None if the participant does not exist under this argument_id (→ 404).
     """
     if side == SideEnum.BENCH:
@@ -519,17 +545,23 @@ async def update_participant_side(
     if participant is None:
         return None  # router → 404
 
+    values_to_set: dict = {"side": side}
+    if title is not None:
+        values_to_set["title"] = title
+
     await db.execute(
         update(ArgumentParticipant)
         .where(
             ArgumentParticipant.id == participant_id,
             ArgumentParticipant.argument_id == argument_id,
         )
-        .values(side=side)
+        .values(**values_to_set)
         .execution_options(synchronize_session=False)
     )
     await db.commit()
-    return {"id": participant_id, "side": side.value}
+
+    persisted_title = title if title is not None else participant.title
+    return {"id": participant_id, "side": side.value, "title": persisted_title}
 
 
 async def unpublish_argument(db: AsyncSession, argument_id: int) -> dict | None:

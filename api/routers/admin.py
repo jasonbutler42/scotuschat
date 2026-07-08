@@ -1114,13 +1114,15 @@ async def update_participant_side(
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     """
-    Update argument_participants.side for a specific participant (ROLE-03).
+    Update argument_participants.side and title for a specific participant
+    (ROLE-03, Phase 26 D-06).
 
     IDOR guard (T-15-02-IDOR): the participant must belong to the specified
     argument — a cross-argument update attempt returns 404.
 
-    Mass-assignment guard (T-15-02-MASS): only ``side`` is writable via this
-    endpoint (ParticipantSideUpdate exposes only that field).
+    Mass-assignment guard (T-26-04): only ``side`` and ``title`` are writable
+    via this endpoint (ParticipantSideUpdate exposes only those fields). title
+    is optional — omitting it leaves the existing title unchanged.
 
     BENCH guard (T-15-02-BENCH): returns 422 if side == BENCH — operators
     cannot set advocate participants to BENCH via this endpoint.
@@ -1131,7 +1133,7 @@ async def update_participant_side(
     """
     try:
         result = await arguments_service.update_participant_side(
-            db, argument_id, participant_id, body.side
+            db, argument_id, participant_id, body.side, body.title
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

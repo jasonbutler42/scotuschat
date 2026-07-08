@@ -1,15 +1,21 @@
 ---
-status: resolved
+status: testing
 phase: 26-arguments-admin
 source: [26-01-SUMMARY.md, 26-02-SUMMARY.md, 26-03-SUMMARY.md, 26-04-SUMMARY.md, 26-05-SUMMARY.md, 26-06-SUMMARY.md]
 started: 2026-07-08T17:21:23Z
-updated: 2026-07-08T18:37:38Z
+updated: 2026-07-08T19:20:00Z
 ---
 
 ## Current Test
 <!-- OVERWRITE each test - shows where we are -->
 
-[testing complete]
+number: 27
+name: Pipeline list page — Archived badge (retest of Test 18 gap fix)
+expected: |
+  On /admin/pipeline (list page), open a job whose linked argument has already been created
+  (left PIPELINE status) and confirm the row's status badge reads the grey "Archived" badge
+  (#cbd5e1), visually matching the same run's detail-page RunStatusCard exactly.
+awaiting: user response
 
 ## Tests
 
@@ -172,12 +178,19 @@ expected: On the argument edit page, an advocate row whose side is UNKNOWN/unres
 result: skipped
 reason: "Resolve/Speakers table is scheduled for rework per project/.planning/seeds/SEED-001-rework-resolve-table-requirements.md — not worth testing ahead of that rework"
 
+### 27. Pipeline list page — Archived badge (retest of Test 18 gap fix)
+expected: |
+  On /admin/pipeline (list page), open a job whose linked argument has already been created
+  (left PIPELINE status) and confirm the row's status badge reads the grey "Archived" badge
+  (#cbd5e1), visually matching the same run's detail-page RunStatusCard exactly.
+result: pending
+
 ## Summary
 
-total: 26
+total: 27
 passed: 24
-issues: 1
-pending: 0
+issues: 0
+pending: 1
 skipped: 1
 blocked: 0
 
@@ -201,3 +214,4 @@ blocked: 0
     - "Outerjoin Argument in list_jobs() and populate the new field (already-created when Argument.status != PIPELINE), mirroring the existing parse_stats injection pattern"
     - "Extend the list page's badge logic to render the grey Archived badge when the new field indicates the argument is already created, mirroring RunStatusCard.svelte's readiness.state === 'already_created' override (lines 44-50)"
   debug_session: ""
+  resolution: "Closed by gap-closure plan 26-06 — is_archived added to AdminJobResponse, populated via outerjoin in list_jobs(), consumed by the list page's badge logic. Code-level fix independently confirmed by 26-REVIEW.md and 26-VERIFICATION.md re-derivation. Visual parity retest tracked as Test 27, pending."

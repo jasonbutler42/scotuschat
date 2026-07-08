@@ -105,7 +105,12 @@
 	}
 
 	// StatusBadge helper: returns inline style string for a given job status.
-	function badgeStyle(status: string): string {
+	// Phase 26 gap closure (PLIST-05): isArchived takes precedence, mirroring
+	// RunStatusCard.svelte's already_created override (grey #cbd5e1).
+	function badgeStyle(status: string, isArchived: boolean = false): string {
+		if (isArchived) {
+			return `border: 1px solid #cbd5e1; border-radius: 4px; padding: 2px 8px; font-size: 14px; font-weight: 400; background-color: #1e293b; color: #cbd5e1; display: inline-block;`;
+		}
 		const colors: Record<string, string> = {
 			pending: '#94a3b8',
 			running: '#93c5fd',
@@ -119,7 +124,16 @@
 
 	// Compound badge (D-13/D-15/D-16): combines current_step and status, e.g. "Parse · Running".
 	// "paused" maps to operator-friendly label "Needs Review".
-	function badgeLabel(status: string, currentStep: string | null | undefined): string {
+	// Phase 26 gap closure (PLIST-05): isArchived takes precedence over the
+	// compound step/status label, mirroring RunStatusCard.svelte's Archived override.
+	function badgeLabel(
+		status: string,
+		currentStep: string | null | undefined,
+		isArchived: boolean = false,
+	): string {
+		if (isArchived) {
+			return 'Archived';
+		}
 		const statusLabels: Record<string, string> = {
 			pending: 'Pending',
 			running: 'Running',
@@ -621,8 +635,8 @@
 											border-bottom: 1px solid #334155;
 										"
 									>
-										<span style={badgeStyle(job.status)}>
-											{badgeLabel(job.status, job.current_step)}
+										<span style={badgeStyle(job.status, job.is_archived)}>
+											{badgeLabel(job.status, job.current_step, job.is_archived)}
 										</span>
 									</td>
 									<td

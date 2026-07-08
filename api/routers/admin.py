@@ -948,7 +948,7 @@ async def delete_argument(
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     """
-    Delete an argument only if it is not published (ADMIN-01).
+    Delete an argument only if it is a DRAFT (ADMIN-01, D-03/AEDIT-09).
 
     Cascades deletion of all dependent rows in FK order:
     utterances → pipeline_runs → argument_participants → case_arguments → argument.
@@ -956,8 +956,8 @@ async def delete_argument(
 
     Returns 200 + {"deleted": True} on success.
     Returns 404 if the argument does not exist (T-21-01-IDOR).
-    Returns 409 if argument.status == 'published' (T-21-01-PUB — server-side guard;
-    client disabled state is defense-in-depth only).
+    Returns 409 if argument.status is 'published' or 'unpublished' (T-21-01-PUB,
+    T-26-02 — server-side guard; client disabled state is defense-in-depth only).
 
     Auth inherited from router-level verify_admin_token dependency (T-21-01-AUTH).
     argument_id is typed int — FastAPI validates path param (T-21-01-IDOR, V5).
@@ -973,7 +973,7 @@ async def delete_argument(
     if result is False:
         raise HTTPException(
             status_code=409,
-            detail="Published arguments cannot be deleted. Unpublish first.",
+            detail="Published and unpublished arguments cannot be deleted. Only drafts can be removed.",
         )
     return {"deleted": True}
 

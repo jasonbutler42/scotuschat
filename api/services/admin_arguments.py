@@ -66,8 +66,18 @@ async def list_arguments(db: AsyncSession) -> list[dict]:
         .join(CaseArgument, CaseArgument.argument_id == Argument.id)
         .join(Case, CaseArgument.case_id == Case.id)
         .where(CaseArgument.is_lead == True)  # noqa: E712
-        # D-02: exclude pipeline-state arguments from admin list (Pitfall 7)
-        .where(Argument.status.in_([ArgumentStatusEnum.DRAFT, ArgumentStatusEnum.PUBLISHED]))
+        # D-02: exclude pipeline-state arguments from admin list (Pitfall 7);
+        # ALIST-02: DRAFT, PUBLISHED, and UNPUBLISHED are all surfaced — only
+        # PIPELINE-status arguments are hidden.
+        .where(
+            Argument.status.in_(
+                [
+                    ArgumentStatusEnum.DRAFT,
+                    ArgumentStatusEnum.PUBLISHED,
+                    ArgumentStatusEnum.UNPUBLISHED,
+                ]
+            )
+        )
         .order_by(Argument.argued_date.desc())
     )
     result = await db.execute(q)
@@ -221,13 +231,15 @@ async def update_argument(
 
     Returns None if the argument does not exist (router → 404 IDOR guard T-11-IDOR).
 
-    Slug logic (D-11):
-      - When body.case_name is provided AND argument.published_at IS NULL:
+    Slug logic (D-11, ALIST-01):
+      - When body.case_name is provided AND argument.status == DRAFT:
         re-derive slug from new case_name and write to lead_case.slug.
         Pre-write collision check: if another Case has the same slug, raise
         ValueError("slug_collision") → router returns 422 (T-11-SLUG).
-      - When argument.published_at IS NOT NULL: slug is frozen — only
-        lead_case.case_name is updated; lead_case.slug is NOT touched (Pitfall 3).
+      - When argument.status is PUBLISHED or UNPUBLISHED: slug is frozen —
+        only lead_case.case_name is updated; lead_case.slug is NOT touched
+        (Pitfall 3). Slug freeze keys on status, not published_at, so it
+        applies to both PUBLISHED and UNPUBLISHED arguments.
 
     Docket collision (T-11-DOCKET):
       - If body.docket_number differs from current and another Case already has
@@ -292,8 +304,8 @@ async def update_argument(
     # 5. Apply case_name with slug logic (D-11, Pitfall 2, Pitfall 3)
     if body.case_name is not None:
         lead_case.case_name = body.case_name.strip()
-        if argument.published_at is None:
-            # Unpublished: re-derive slug from new case_name
+        if argument.status == ArgumentStatusEnum.DRAFT:
+            # DRAFT: re-derive slug from new case_name
             new_slug = _derive_slug(lead_case.case_name)
             # Pre-write collision check (T-11-SLUG)
             slug_collision = await db.execute(
@@ -305,7 +317,8 @@ async def update_argument(
             if slug_collision.scalar_one_or_none() is not None:
                 raise ValueError("slug_collision")
             lead_case.slug = new_slug
-        # else: published — slug is frozen; only case_name display updates (Pitfall 3)
+        # else: PUBLISHED or UNPUBLISHED — slug is frozen; only case_name
+        # display updates (Pitfall 3, ALIST-01)
 
     await db.commit()
     return await get_argument_detail(db, argument_id)
@@ -455,8 +468,8 @@ async def check_duplicate_argument(db: AsyncSession, docket: str, question: int)
 async def delete_argument(db: AsyncSession, argument_id: int) -> bool | None:
     """Delete an argument and all dependent data (ADMIN-01).
 
-    Returns True on success, False if argument is published (→ router 409),
-    None if argument not found (→ router 404).
+    Returns True on success, False if argument is PUBLISHED or UNPUBLISHED
+    (→ router 409, D-03/AEDIT-09), None if argument not found (→ router 404).
 
     FK-ordered cascade (no ORM relationship cascades exist — manual only):
       1. Utterances (references both pipeline_runs.id AND arguments.id — must go first)
@@ -473,14 +486,15 @@ async def delete_argument(db: AsyncSession, argument_id: int) -> bool | None:
     pipeline_runs.id — deleting pipeline_runs before utterances raises ForeignKeyViolation.
     Utterances MUST be deleted before pipeline_runs.
 
-    Published arguments are blocked server-side (T-21-01-PUB) — client disabled state
-    is defense-in-depth only.
+    Published and unpublished arguments are blocked server-side (T-21-01-PUB, T-26-02) —
+    client disabled state is defense-in-depth only.
     """
     result = await db.execute(select(Argument).where(Argument.id == argument_id))
     argument = result.scalar_one_or_none()
     if argument is None:
         return None
-    if argument.published_at is not None:
+    # D-03 / AEDIT-09: delete gate keys on status, not published_at.
+    if argument.status in (ArgumentStatusEnum.PUBLISHED, ArgumentStatusEnum.UNPUBLISHED):
         return False
 
     # Step 1: Delete utterances referencing this argument (must be before pipeline_runs)

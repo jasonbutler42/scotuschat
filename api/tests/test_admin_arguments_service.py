@@ -264,6 +264,30 @@ async def test_delete_argument_returns_none_for_missing() -> None:
     assert result is None
 
 
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_delete_argument_returns_false_for_unpublished() -> None:
+    """delete_argument() must return False for an UNPUBLISHED argument (D-03/AEDIT-09)."""
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import Argument, ArgumentStatusEnum
+    from api.services.admin_arguments import delete_argument
+
+    async with AsyncSessionLocal() as db:
+        arg = Argument(status=ArgumentStatusEnum.UNPUBLISHED, resolved_at=None)
+        db.add(arg)
+        await db.commit()
+        arg_id = arg.id
+
+    async with AsyncSessionLocal() as db:
+        result = await delete_argument(db, arg_id)
+    assert result is False
+
+    async with AsyncSessionLocal() as db:
+        arg = await db.get(Argument, arg_id)
+        await db.delete(arg)
+        await db.commit()
+
+
 # ---------------------------------------------------------------------------
 # DB-guarded tests — skipped when DATABASE_URL is not configured
 # ---------------------------------------------------------------------------
@@ -464,6 +488,113 @@ async def test_publish_argument_already_published_raises() -> None:
             await publish_argument(db, arg_id)
 
     async with AsyncSessionLocal() as db:
+        arg = await db.get(Argument, arg_id)
+        await db.delete(arg)
+        await db.commit()
+
+
+# ---------------------------------------------------------------------------
+# list_arguments / update_argument slug-freeze — three-state status keying
+# (Phase 26 Plan 01, ALIST-01, ALIST-02)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_list_arguments_includes_unpublished_row() -> None:
+    """list_arguments() must include a row whose Argument.status is UNPUBLISHED
+    (ALIST-02) — only PIPELINE-status arguments are excluded.
+    """
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import Argument, ArgumentStatusEnum, Case, CaseArgument
+    from api.services.admin_arguments import list_arguments
+
+    async with AsyncSessionLocal() as db:
+        arg = Argument(status=ArgumentStatusEnum.UNPUBLISHED, resolved_at=None)
+        db.add(arg)
+        await db.flush()
+
+        case = Case(
+            docket_number="26-01-TEST-UNPUB",
+            docket_number_norm="26-01-test-unpub",
+            case_name="Synthetic Test Case v. UNPUBLISHED",
+            term_year=2026,
+            slug="synthetic-test-case-v-unpublished-26-01",
+        )
+        db.add(case)
+        await db.flush()
+
+        db.add(CaseArgument(case_id=case.id, argument_id=arg.id, is_lead=True))
+        await db.commit()
+
+        arg_id = arg.id
+        case_id = case.id
+
+    async with AsyncSessionLocal() as db:
+        rows = await list_arguments(db)
+
+    matching = [r for r in rows if r["id"] == arg_id]
+    assert len(matching) == 1
+    assert matching[0]["status"] == ArgumentStatusEnum.UNPUBLISHED
+
+    async with AsyncSessionLocal() as db:
+        ca = await db.get(CaseArgument, {"case_id": case_id, "argument_id": arg_id})
+        await db.delete(ca)
+        case = await db.get(Case, case_id)
+        await db.delete(case)
+        arg = await db.get(Argument, arg_id)
+        await db.delete(arg)
+        await db.commit()
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_update_argument_slug_frozen_for_unpublished() -> None:
+    """update_argument() must NOT re-derive the slug when the argument's
+    status is UNPUBLISHED — only case_name updates; slug stays unchanged
+    (ALIST-01, slug-freeze keys on status not published_at).
+    """
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import Argument, ArgumentStatusEnum, Case, CaseArgument
+    from api.schemas.admin_arguments import ArgumentUpdate
+    from api.services.admin_arguments import update_argument
+
+    async with AsyncSessionLocal() as db:
+        arg = Argument(status=ArgumentStatusEnum.UNPUBLISHED, resolved_at=None)
+        db.add(arg)
+        await db.flush()
+
+        case = Case(
+            docket_number="26-01-TEST-SLUG",
+            docket_number_norm="26-01-test-slug",
+            case_name="Original Case Name",
+            term_year=2026,
+            slug="original-case-name-slug-frozen",
+        )
+        db.add(case)
+        await db.flush()
+
+        db.add(CaseArgument(case_id=case.id, argument_id=arg.id, is_lead=True))
+        await db.commit()
+
+        arg_id = arg.id
+        case_id = case.id
+        original_slug = case.slug
+
+    async with AsyncSessionLocal() as db:
+        result = await update_argument(
+            db, arg_id, ArgumentUpdate(case_name="Renamed Case Name")
+        )
+
+    assert result is not None
+    assert result["case_name"] == "Renamed Case Name"
+    assert result["slug"] == original_slug
+
+    async with AsyncSessionLocal() as db:
+        ca = await db.get(CaseArgument, {"case_id": case_id, "argument_id": arg_id})
+        await db.delete(ca)
+        case = await db.get(Case, case_id)
+        await db.delete(case)
         arg = await db.get(Argument, arg_id)
         await db.delete(arg)
         await db.commit()

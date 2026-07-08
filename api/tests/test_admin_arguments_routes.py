@@ -201,3 +201,38 @@ async def test_list_arguments_returns_list(client: AsyncClient) -> None:
         assert "argued_date" in item
         assert "case_name" in item
         assert "docket_number" in item
+
+
+# ---------------------------------------------------------------------------
+# DELETE /arguments/{id} — 409 for UNPUBLISHED (Phase 26 Plan 01, D-03/AEDIT-09)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_delete_argument_returns_409_for_unpublished(client: AsyncClient) -> None:
+    """DELETE /api/admin/arguments/{id} on an UNPUBLISHED argument must return 409
+    with the updated copy ("Only drafts can be removed.").
+    """
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import Argument, ArgumentStatusEnum
+
+    async with AsyncSessionLocal() as db:
+        arg = Argument(status=ArgumentStatusEnum.UNPUBLISHED, resolved_at=None)
+        db.add(arg)
+        await db.commit()
+        arg_id = arg.id
+
+    try:
+        response = await client.delete(
+            f"/api/admin/arguments/{arg_id}", headers=_admin_headers()
+        )
+        assert response.status_code == 409
+        body = response.json()
+        assert "Only drafts can be removed." in body["detail"]
+    finally:
+        async with AsyncSessionLocal() as db:
+            arg = await db.get(Argument, arg_id)
+            if arg is not None:
+                await db.delete(arg)
+                await db.commit()

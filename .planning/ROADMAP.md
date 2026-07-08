@@ -233,6 +233,10 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 
 - [x] 26-04-PLAN.md — Frontend edit page: Status card + Status history, publish placement, unified Speakers section, Draft-only delete gate (AEDIT-01, AEDIT-02, AEDIT-05, AEDIT-06, AEDIT-07, AEDIT-08, AEDIT-09)
 
+**Gap closure** *(from 26-VERIFICATION.md — 2 confirmed gaps)*
+
+- [ ] 26-05-PLAN.md — DRAFT-only backend delete gate (PIPELINE now blocked) + regression tests; authoritative UNKNOWN/ADVOCATE advocate-side rejection + explicit "Unresolved" placeholder and Save-disable on the edit page (AEDIT-06, AEDIT-09)
+
 **UI hint**: yes
 
 ### Phase 27: People Admin

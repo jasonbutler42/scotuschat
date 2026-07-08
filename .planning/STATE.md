@@ -100,7 +100,7 @@ Full log in PROJECT.md Key Decisions table. Key decisions entering v1.5:
 
 ### Pending Todos
 
-None currently tracked.
+- `2026-07-08-edit-affordance-on-utterances-and-speaker-popover.md` (ui) — authenticated "Edit" affordance on every utterance + on the speaker popover card; no phase assigned yet
 
 ### Blockers/Concerns
 

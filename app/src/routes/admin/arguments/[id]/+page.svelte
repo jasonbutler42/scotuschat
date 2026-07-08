@@ -58,6 +58,21 @@
 	// Speakers section — per-participant save state keyed by participant_id.
 	let savingSpeakerId = $state<number | null>(null);
 
+	// Per-row advocate side state, keyed by participant_id (T-26-14, AEDIT-06).
+	// Non-standard sides (UNKNOWN, legacy ADVOCATE) collapse to the 'UNKNOWN'
+	// sentinel so an unresolved advocate shows the explicit placeholder rather
+	// than the browser silently defaulting to the first role option. Because
+	// the page reloads via redirect(303) after a successful save, this seed is
+	// refreshed on each successful load.
+	const VALID_SIDES = new Set(['PETITIONER', 'RESPONDENT', 'AMICUS']);
+	let speakerSideById = $state<Record<number, string>>(
+		Object.fromEntries(
+			(data.argument.speakers ?? [])
+				.filter((s) => !s.is_bench)
+				.map((s) => [s.participant_id, VALID_SIDES.has(s.side) ? s.side : 'UNKNOWN'])
+		)
+	);
+
 	// Convert ISO timestamp or date string to value compatible with <input type="date"> (YYYY-MM-DD).
 	function toDateInputValue(iso: string | null): string {
 		if (!iso) return '';
@@ -442,6 +457,7 @@
 											<div style="flex: 1; min-width: 160px;">
 												<select
 													name="side"
+													bind:value={speakerSideById[speaker.participant_id]}
 													style="
 														width: 100%;
 														background-color: #0f1117;
@@ -454,9 +470,10 @@
 														min-height: 36px;
 													"
 												>
-													<option value="PETITIONER" selected={speaker.side === 'PETITIONER'}>Petitioner's Counsel</option>
-													<option value="RESPONDENT" selected={speaker.side === 'RESPONDENT'}>Respondent's Counsel</option>
-													<option value="AMICUS" selected={speaker.side === 'AMICUS'}>Amicus Curiae</option>
+													<option value="UNKNOWN">Unresolved — choose a role</option>
+													<option value="PETITIONER">Petitioner's Counsel</option>
+													<option value="RESPONDENT">Respondent's Counsel</option>
+													<option value="AMICUS">Amicus Curiae</option>
 												</select>
 											</div>
 											<div style="flex: 1; min-width: 160px;">
@@ -494,7 +511,7 @@
 											</div>
 											<button
 												type="submit"
-												disabled={savingSpeakerId === speaker.participant_id}
+												disabled={savingSpeakerId === speaker.participant_id || speakerSideById[speaker.participant_id] === 'UNKNOWN'}
 												style="
 													min-height: 36px;
 													padding: 8px 16px;
@@ -504,8 +521,8 @@
 													font-size: 14px;
 													font-weight: 400;
 													color: #e2e8f0;
-													cursor: {savingSpeakerId === speaker.participant_id ? 'not-allowed' : 'pointer'};
-													opacity: {savingSpeakerId === speaker.participant_id ? 0.7 : 1};
+													cursor: {savingSpeakerId === speaker.participant_id || speakerSideById[speaker.participant_id] === 'UNKNOWN' ? 'not-allowed' : 'pointer'};
+													opacity: {savingSpeakerId === speaker.participant_id || speakerSideById[speaker.participant_id] === 'UNKNOWN' ? 0.7 : 1};
 													white-space: nowrap;
 												"
 											>

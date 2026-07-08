@@ -218,7 +218,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
   4. Speakers section lists all argument participants with utterance counts; advocate rows have a role dropdown (PETITIONER / RESPONDENT / AMICUS), a title field, and inline save without full-page refresh; bench rows show tenure-derived role or "Missing tenure" with edit link
   5. Publish / Unpublish / re-Publish transitions are all functional: Draft → Published, Published → Unpublished, Unpublished → Published
 
-**Plans**: 5/5 plans complete
+**Plans**: 6 plans (5 complete, 1 gap-closure pending)
 
 **Wave 1** *(parallel — disjoint files)*
 
@@ -236,6 +236,10 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 **Gap closure** *(from 26-VERIFICATION.md — 2 confirmed gaps)*
 
 - [x] 26-05-PLAN.md — DRAFT-only backend delete gate (PIPELINE now blocked) + regression tests; authoritative UNKNOWN/ADVOCATE advocate-side rejection + explicit "Unresolved" placeholder and Save-disable on the edit page (AEDIT-06, AEDIT-09)
+
+**Gap closure** *(from 26-UAT.md — Test 18: Archived badge missing on pipeline list)*
+
+- [ ] 26-06-PLAN.md — Add is_archived to AdminJobResponse + outerjoin Argument in list_jobs; render grey Archived badge on the pipeline list page to match RunStatusCard (PLIST-05)
 
 **UI hint**: yes
 

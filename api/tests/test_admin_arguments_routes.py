@@ -238,6 +238,37 @@ async def test_delete_argument_returns_409_for_unpublished(client: AsyncClient) 
                 await db.commit()
 
 
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_delete_argument_returns_409_for_pipeline(client: AsyncClient) -> None:
+    """DELETE /api/admin/arguments/{id} on a PIPELINE-status argument must
+    return 409 (T-26-13) — the server-side gate blocks a direct API call from
+    stranding an active AdminJob mid-pipeline.
+    """
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import Argument, ArgumentStatusEnum
+
+    async with AsyncSessionLocal() as db:
+        arg = Argument(status=ArgumentStatusEnum.PIPELINE, resolved_at=None)
+        db.add(arg)
+        await db.commit()
+        arg_id = arg.id
+
+    try:
+        response = await client.delete(
+            f"/api/admin/arguments/{arg_id}", headers=_admin_headers()
+        )
+        assert response.status_code == 409
+        body = response.json()
+        assert "Only drafts can be removed." in body["detail"]
+    finally:
+        async with AsyncSessionLocal() as db:
+            arg = await db.get(Argument, arg_id)
+            if arg is not None:
+                await db.delete(arg)
+                await db.commit()
+
+
 # ---------------------------------------------------------------------------
 # PATCH /arguments/{id}/participants/{id} — title persistence (Phase 26 Plan 02,
 # D-06, T-26-04)

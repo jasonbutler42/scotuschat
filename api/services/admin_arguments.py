@@ -622,8 +622,9 @@ async def check_duplicate_argument(db: AsyncSession, docket: str, question: int)
 async def delete_argument(db: AsyncSession, argument_id: int) -> bool | None:
     """Delete an argument and all dependent data (ADMIN-01).
 
-    Returns True on success, False if argument is PUBLISHED or UNPUBLISHED
-    (→ router 409, D-03/AEDIT-09), None if argument not found (→ router 404).
+    Returns True on success, False if argument is not DRAFT — i.e. PIPELINE,
+    PUBLISHED, or UNPUBLISHED (→ router 409, D-03/AEDIT-09), None if argument
+    not found (→ router 404).
 
     FK-ordered cascade (no ORM relationship cascades exist — manual only):
       1. Utterances (references both pipeline_runs.id AND arguments.id — must go first)
@@ -640,15 +641,21 @@ async def delete_argument(db: AsyncSession, argument_id: int) -> bool | None:
     pipeline_runs.id — deleting pipeline_runs before utterances raises ForeignKeyViolation.
     Utterances MUST be deleted before pipeline_runs.
 
-    Published and unpublished arguments are blocked server-side (T-21-01-PUB, T-26-02) —
-    client disabled state is defense-in-depth only.
+    Only DRAFT arguments are deletable (T-21-01-PUB, T-26-02, T-26-13). PIPELINE
+    is blocked because an active AdminJob may still reference it — deleting it
+    out from under a running job would permanently strand that job. PUBLISHED
+    and UNPUBLISHED are blocked because they represent live/previously-live
+    content. Client disabled state is defense-in-depth only; this server-side
+    gate is authoritative.
     """
     result = await db.execute(select(Argument).where(Argument.id == argument_id))
     argument = result.scalar_one_or_none()
     if argument is None:
         return None
-    # D-03 / AEDIT-09: delete gate keys on status, not published_at.
-    if argument.status in (ArgumentStatusEnum.PUBLISHED, ArgumentStatusEnum.UNPUBLISHED):
+    # D-03 / AEDIT-09 / T-26-13: delete gate is a single positive condition
+    # keyed on status == DRAFT — any non-DRAFT status (PIPELINE, PUBLISHED,
+    # UNPUBLISHED) is rejected.
+    if argument.status != ArgumentStatusEnum.DRAFT:
         return False
 
     # Step 1: Delete utterances referencing this argument (must be before pipeline_runs)

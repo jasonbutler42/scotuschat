@@ -247,6 +247,41 @@ def test_delete_argument_all_deletes_have_synchronize_session_false() -> None:
     )
 
 
+def test_delete_argument_gate_keys_on_draft() -> None:
+    """delete_argument's status gate must be a single positive condition keyed
+    on ArgumentStatusEnum.DRAFT — any non-DRAFT status (PIPELINE included)
+    returns False (T-26-13, D-03/AEDIT-09).
+    """
+    import inspect
+
+    from api.services import admin_arguments
+
+    source = inspect.getsource(admin_arguments)
+    func_start = source.find("def delete_argument(")
+    assert func_start != -1, "delete_argument not found in source"
+    next_func = source.find("\nasync def ", func_start + 1)
+    if next_func == -1:
+        next_func = source.find("\ndef ", func_start + 1)
+    func_body = source[func_start:next_func] if next_func != -1 else source[func_start:]
+
+    # The gate must key positively on DRAFT (not enumerate PUBLISHED/UNPUBLISHED).
+    assert "ArgumentStatusEnum.DRAFT" in func_body, (
+        "delete_argument's gate must reference ArgumentStatusEnum.DRAFT"
+    )
+    gate_start = func_body.find("if argument.status")
+    assert gate_start != -1, "delete_argument must have a status gate"
+    gate_line_end = func_body.find("\n", gate_start)
+    gate_line = func_body[gate_start:gate_line_end]
+    assert "ArgumentStatusEnum.DRAFT" in gate_line, (
+        f"Expected the status gate condition to key on DRAFT, found: {gate_line!r}"
+    )
+    # Must NOT be the old enumerated PUBLISHED/UNPUBLISHED-only tuple check.
+    assert "PUBLISHED, ArgumentStatusEnum.UNPUBLISHED" not in gate_line, (
+        "delete_argument's gate must not enumerate PUBLISHED/UNPUBLISHED only "
+        "— it must reject any non-DRAFT status, including PIPELINE"
+    )
+
+
 # ---------------------------------------------------------------------------
 # DB-guarded delete_argument behavioral tests (Phase 21 Plan 01)
 # ---------------------------------------------------------------------------
@@ -274,6 +309,33 @@ async def test_delete_argument_returns_false_for_unpublished() -> None:
 
     async with AsyncSessionLocal() as db:
         arg = Argument(status=ArgumentStatusEnum.UNPUBLISHED, resolved_at=None)
+        db.add(arg)
+        await db.commit()
+        arg_id = arg.id
+
+    async with AsyncSessionLocal() as db:
+        result = await delete_argument(db, arg_id)
+    assert result is False
+
+    async with AsyncSessionLocal() as db:
+        arg = await db.get(Argument, arg_id)
+        await db.delete(arg)
+        await db.commit()
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_delete_argument_returns_false_for_pipeline() -> None:
+    """delete_argument() must return False for a PIPELINE-status argument
+    (T-26-13) — a mid-pipeline argument an active AdminJob may still
+    reference cannot be stranded via a direct API call.
+    """
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import Argument, ArgumentStatusEnum
+    from api.services.admin_arguments import delete_argument
+
+    async with AsyncSessionLocal() as db:
+        arg = Argument(status=ArgumentStatusEnum.PIPELINE, resolved_at=None)
         db.add(arg)
         await db.commit()
         arg_id = arg.id

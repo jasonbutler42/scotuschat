@@ -71,3 +71,25 @@ not fixed here, tracked for later triage).
   own new tests, all pass (25 passed, 25 skipped, 0 failed) when the same 3
   files are run scoped instead of collected with `pipeline/tests/`. No net
   regression.
+
+## Gap-closure post-merge gate (26-05)
+
+- Same pattern again, confirmed via a sibling-test comparison instead of a
+  disposable-worktree diff (a worktree checkout lacks `.env`, and Settings()
+  fail-fasts without `DATABASE_URL`/`ADMIN_TOKEN` — recreating those in a
+  scratch worktree wasn't pursued; comparing against an untouched sibling
+  test in the *same* full-suite run is equally conclusive). Full-suite run
+  after 26-05 shows 63 failed / 208 passed / 34 errors. Of 26-05's 4 new
+  tests: the 2 DB-less always-run tests (`test_delete_argument_gate_keys_on_draft`,
+  `test_update_participant_side_rejects_unresolved_side`) pass cleanly even in
+  the full combined run. The 2 DB-guarded tests (`test_delete_argument_returns_false_for_pipeline`,
+  `test_delete_argument_returns_409_for_pipeline`) show as failed — but so
+  does their untouched 26-01 sibling in the same run
+  (`test_delete_argument_returns_false_for_unpublished`,
+  `test_delete_argument_returns_409_for_unpublished`), which 26-05 did not
+  modify. Identical failure signature on an untouched test proves the
+  mechanism is the same pre-existing collection-order corruption, not a
+  26-05 regression. The plan's own scoped verification
+  (`test_admin_arguments_service.py` + `test_admin_arguments_routes.py`, no
+  `pipeline/tests/` in the same process) passed cleanly: 24 passed, 24
+  skipped, 0 failed. No net-new regression.

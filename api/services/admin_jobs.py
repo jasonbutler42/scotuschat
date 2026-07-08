@@ -28,6 +28,7 @@ from api.models.models import (
     Argument,
     ArgumentParticipant,
     ArgumentStatusEnum,
+    ArgumentStatusLog,
     Person,
     PipelineRun,
     Role,
@@ -475,6 +476,9 @@ async def approve_job(db: AsyncSession, job_id: int) -> AdminJob:
       - Argument not found for the job
       - Argument is not in PIPELINE state (double-approve guard, Pitfall 6)
 
+    Writes one ArgumentStatusLog row (status=DRAFT) — the "Created" transition
+    record (D-08) — in the same transaction as the Argument update.
+
     Uses .execution_options(synchronize_session=False) on every update()
     (critical project-wide guard).
     """
@@ -504,6 +508,7 @@ async def approve_job(db: AsyncSession, job_id: int) -> AdminJob:
         )
         .execution_options(synchronize_session=False)
     )
+    db.add(ArgumentStatusLog(argument_id=job.argument_id, status=ArgumentStatusEnum.DRAFT))
     await db.execute(
         update(AdminJob)
         .where(AdminJob.id == job_id)

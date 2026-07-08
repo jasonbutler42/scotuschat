@@ -320,3 +320,150 @@ async def test_unpublish_argument_returns_none_for_missing() -> None:
     async with AsyncSessionLocal() as db:
         result = await unpublish_argument(db, 999999)
     assert result is None
+
+
+# ---------------------------------------------------------------------------
+# Three-state lifecycle + ArgumentStatusLog audit trail (Phase 26 Plan 01)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_publish_argument_from_draft_writes_one_published_log_row() -> None:
+    """publish_argument on a DRAFT (resolved) argument sets status=PUBLISHED,
+    stamps published_at, and writes exactly one PUBLISHED log row (T-26-03).
+    """
+    import datetime
+
+    from sqlalchemy import select
+
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import Argument, ArgumentStatusEnum, ArgumentStatusLog
+    from api.services.admin_arguments import publish_argument
+
+    async with AsyncSessionLocal() as db:
+        arg = Argument(
+            status=ArgumentStatusEnum.DRAFT,
+            resolved_at=datetime.datetime.now(datetime.timezone.utc),
+        )
+        db.add(arg)
+        await db.commit()
+        arg_id = arg.id
+
+    async with AsyncSessionLocal() as db:
+        result = await publish_argument(db, arg_id)
+
+    assert result is not None
+    assert result["status"] == ArgumentStatusEnum.PUBLISHED
+    assert result["published_at"] is not None
+
+    async with AsyncSessionLocal() as db:
+        log_result = await db.execute(
+            select(ArgumentStatusLog).where(ArgumentStatusLog.argument_id == arg_id)
+        )
+        log_rows = log_result.scalars().all()
+        assert len(log_rows) == 1
+        assert log_rows[0].status == ArgumentStatusEnum.PUBLISHED
+
+        # cleanup
+        arg = await db.get(Argument, arg_id)
+        await db.delete(log_rows[0])
+        await db.delete(arg)
+        await db.commit()
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_unpublish_then_republish_succeeds_and_preserves_published_at() -> None:
+    """unpublish_argument sets status=UNPUBLISHED and leaves published_at intact;
+    a subsequent publish_argument call succeeds (re-publish, D-02/AEDIT-08) and
+    re-stamps published_at. Each transition writes exactly one matching log row.
+    """
+    import datetime
+
+    from sqlalchemy import select
+
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import Argument, ArgumentStatusEnum, ArgumentStatusLog
+    from api.services.admin_arguments import publish_argument, unpublish_argument
+
+    async with AsyncSessionLocal() as db:
+        arg = Argument(
+            status=ArgumentStatusEnum.PUBLISHED,
+            resolved_at=datetime.datetime.now(datetime.timezone.utc),
+            published_at=datetime.datetime.now(datetime.timezone.utc),
+        )
+        db.add(arg)
+        await db.commit()
+        arg_id = arg.id
+        original_published_at = arg.published_at
+
+    # --- unpublish ---
+    async with AsyncSessionLocal() as db:
+        result = await unpublish_argument(db, arg_id)
+
+    assert result is not None
+    assert result["status"] == ArgumentStatusEnum.UNPUBLISHED
+    assert result["published_at"] is not None
+    assert result["published_at"] == original_published_at
+
+    # unpublishing a DRAFT/UNPUBLISHED argument raises (guard keys on status)
+    async with AsyncSessionLocal() as db:
+        with pytest.raises(ValueError):
+            await unpublish_argument(db, arg_id)
+
+    # --- re-publish from UNPUBLISHED must succeed (not "Already published") ---
+    async with AsyncSessionLocal() as db:
+        result = await publish_argument(db, arg_id)
+
+    assert result is not None
+    assert result["status"] == ArgumentStatusEnum.PUBLISHED
+    assert result["published_at"] is not None
+
+    async with AsyncSessionLocal() as db:
+        log_result = await db.execute(
+            select(ArgumentStatusLog)
+            .where(ArgumentStatusLog.argument_id == arg_id)
+            .order_by(ArgumentStatusLog.id)
+        )
+        log_rows = log_result.scalars().all()
+        assert len(log_rows) == 2
+        assert log_rows[0].status == ArgumentStatusEnum.UNPUBLISHED
+        assert log_rows[1].status == ArgumentStatusEnum.PUBLISHED
+
+        # cleanup
+        arg = await db.get(Argument, arg_id)
+        for row in log_rows:
+            await db.delete(row)
+        await db.delete(arg)
+        await db.commit()
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_publish_argument_already_published_raises() -> None:
+    """publish_argument on a PUBLISHED argument must raise ValueError."""
+    import datetime
+
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import Argument, ArgumentStatusEnum
+    from api.services.admin_arguments import publish_argument
+
+    async with AsyncSessionLocal() as db:
+        arg = Argument(
+            status=ArgumentStatusEnum.PUBLISHED,
+            resolved_at=datetime.datetime.now(datetime.timezone.utc),
+            published_at=datetime.datetime.now(datetime.timezone.utc),
+        )
+        db.add(arg)
+        await db.commit()
+        arg_id = arg.id
+
+    async with AsyncSessionLocal() as db:
+        with pytest.raises(ValueError):
+            await publish_argument(db, arg_id)
+
+    async with AsyncSessionLocal() as db:
+        arg = await db.get(Argument, arg_id)
+        await db.delete(arg)
+        await db.commit()

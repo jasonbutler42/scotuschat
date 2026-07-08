@@ -221,3 +221,70 @@ async def test_delete_job_removes_only_admin_job_row() -> None:
         await db.delete(surviving_run)
         await db.delete(surviving_arg)
         await db.commit()
+
+
+# ---------------------------------------------------------------------------
+# approve_job — ArgumentStatusLog "Created" audit row (Phase 26 Plan 01, D-08)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_approve_job_writes_one_draft_log_row() -> None:
+    """approve_job on a PIPELINE argument sets status=DRAFT, resolved_at=now(),
+    completes the job, and writes exactly one ArgumentStatusLog row with
+    status=DRAFT for that argument_id (the "Created" transition, D-08).
+    """
+    from sqlalchemy import select
+
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import (
+        AdminJob,
+        AdminJobStatus,
+        AdminJobStep,
+        Argument,
+        ArgumentStatusEnum,
+        ArgumentStatusLog,
+    )
+    from api.services.admin_jobs import approve_job
+
+    async with AsyncSessionLocal() as db:
+        arg = Argument(status=ArgumentStatusEnum.PIPELINE, resolved_at=None)
+        db.add(arg)
+        await db.flush()
+
+        job = AdminJob(
+            status=AdminJobStatus.PAUSED,
+            current_step=AdminJobStep.RESOLVE,
+            argument_id=arg.id,
+        )
+        db.add(job)
+        await db.commit()
+
+        arg_id = arg.id
+        job_id = job.id
+
+    async with AsyncSessionLocal() as db:
+        updated_job = await approve_job(db, job_id)
+
+    assert updated_job.status == AdminJobStatus.COMPLETED
+
+    async with AsyncSessionLocal() as db:
+        arg = await db.get(Argument, arg_id)
+        assert arg.status == ArgumentStatusEnum.DRAFT
+        assert arg.resolved_at is not None
+
+        log_result = await db.execute(
+            select(ArgumentStatusLog).where(ArgumentStatusLog.argument_id == arg_id)
+        )
+        log_rows = log_result.scalars().all()
+        assert len(log_rows) == 1
+        assert log_rows[0].status == ArgumentStatusEnum.DRAFT
+
+        # --- cleanup ---
+        job = await db.get(AdminJob, job_id)
+        for row in log_rows:
+            await db.delete(row)
+        await db.delete(job)
+        await db.delete(arg)
+        await db.commit()

@@ -26,6 +26,7 @@ from api.models.models import (
     Argument,
     ArgumentParticipant,
     ArgumentStatusEnum,
+    ArgumentStatusLog,
     Case,
     CaseArgument,
     CourtTenure,
@@ -311,11 +312,15 @@ async def update_argument(
 
 
 async def publish_argument(db: AsyncSession, argument_id: int) -> dict | None:
-    """Stamp published_at = now() on an argument, making it publicly visible.
+    """Stamp published_at = now() and status = PUBLISHED, making the argument
+    publicly visible. Re-publish from UNPUBLISHED is allowed (D-02 / AEDIT-08).
 
     Returns None if the argument does not exist (router → 404 T-11-IDOR).
     Raises ValueError if resolved_at IS NULL (publish gate — T-11-PUBGATE, Pitfall 1).
     Raises ValueError if already published.
+
+    Writes one ArgumentStatusLog row (status=PUBLISHED) in the same transaction
+    as the Argument update (T-26-03 — audit trail, D-09).
 
     Uses .execution_options(synchronize_session=False) (Pitfall 5).
     """
@@ -329,15 +334,18 @@ async def publish_argument(db: AsyncSession, argument_id: int) -> dict | None:
     # D-07 / T-11-PUBGATE: backend must enforce this independently of the UI
     if argument.resolved_at is None:
         raise ValueError("Cannot publish: resolve step not yet complete")
-    if argument.published_at is not None:
+    # D-02: guard keys on status (not published_at) so re-publish from
+    # UNPUBLISHED succeeds; only an already-PUBLISHED argument is rejected.
+    if argument.status == ArgumentStatusEnum.PUBLISHED:
         raise ValueError("Already published")
 
     await db.execute(
         update(Argument)
         .where(Argument.id == argument_id)
-        .values(published_at=sqlfunc.now())
+        .values(status=ArgumentStatusEnum.PUBLISHED, published_at=sqlfunc.now())
         .execution_options(synchronize_session=False)
     )
+    db.add(ArgumentStatusLog(argument_id=argument_id, status=ArgumentStatusEnum.PUBLISHED))
     await db.commit()
     return await get_argument_detail(db, argument_id)
 
@@ -390,10 +398,17 @@ async def update_participant_side(
 
 
 async def unpublish_argument(db: AsyncSession, argument_id: int) -> dict | None:
-    """Clear published_at on an argument, hiding it from the public site.
+    """Set status = UNPUBLISHED on an argument, hiding it from the public site.
+
+    published_at is intentionally LEFT UNCHANGED (D-02) so the Status card can
+    still show the argument's most recent publish date.
 
     Returns None if the argument does not exist (router → 404 T-11-IDOR).
-    Raises ValueError if the argument is not currently published.
+    Raises ValueError if the argument is not currently published (guard keys
+    on status, not published_at).
+
+    Writes one ArgumentStatusLog row (status=UNPUBLISHED) in the same
+    transaction as the Argument update (T-26-03 — audit trail, D-09).
 
     Uses .execution_options(synchronize_session=False) (Pitfall 5).
     """
@@ -404,15 +419,16 @@ async def unpublish_argument(db: AsyncSession, argument_id: int) -> dict | None:
     if argument is None:
         return None
 
-    if argument.published_at is None:
+    if argument.status != ArgumentStatusEnum.PUBLISHED:
         raise ValueError("Not currently published")
 
     await db.execute(
         update(Argument)
         .where(Argument.id == argument_id)
-        .values(published_at=None)
+        .values(status=ArgumentStatusEnum.UNPUBLISHED)
         .execution_options(synchronize_session=False)
     )
+    db.add(ArgumentStatusLog(argument_id=argument_id, status=ArgumentStatusEnum.UNPUBLISHED))
     await db.commit()
     return await get_argument_detail(db, argument_id)
 

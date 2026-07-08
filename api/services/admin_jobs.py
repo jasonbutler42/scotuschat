@@ -135,6 +135,13 @@ async def get_job(db: AsyncSession, job_id: int) -> AdminJob | None:
     if job is None:
         return None
 
+    # Phase 26 gap closure (PLIST-05): default is_archived to False on the
+    # detail path. The detail page derives its archived signal from the
+    # readiness endpoint (RunReadiness.state == 'already_created'), not from
+    # this field, so a default of False here is correct and intentional —
+    # this only guards AdminJobResponse serialization from AttributeError.
+    job.__dict__.setdefault("is_archived", False)
+
     # Attach parse_stats as a dynamic attribute — AdminJobResponse reads it via
     # the parse_stats field when model_validate(job, from_attributes=True) is called.
     parse_run_id = await get_run_id_for_step(db, job_id, "parse")
@@ -218,20 +225,33 @@ async def list_jobs(
         db: Async database session.
         incomplete: When True, filter to only PAUSED and FAILED jobs (D-10 / PIPE-20).
                     When False (default), return all jobs regardless of status.
+
+    Phase 26 gap closure (PLIST-05): LEFT OUTER JOINs Argument so each row's
+    linked argument status (if any) is available to derive is_archived —
+    true only when a linked argument exists and its status is no longer
+    PIPELINE, mirroring RunReadiness's already_created state used by the
+    detail page's RunStatusCard.
     """
-    query = select(AdminJob)
+    query = select(AdminJob, Argument.status).outerjoin(
+        Argument, AdminJob.argument_id == Argument.id
+    )
     if incomplete:
         query = query.where(
             AdminJob.status.in_([AdminJobStatus.PAUSED, AdminJobStatus.FAILED])
         )
     query = query.order_by(AdminJob.created_at.desc())
     result = await db.execute(query)
-    jobs = list(result.scalars().all())
-    # Inject parse_stats=None so Pydantic's from_attributes mode can serialize the
-    # field without raising AttributeError (WR-03). get_job injects the real value;
-    # list_jobs only needs a safe default since the list view does not display parse_stats.
-    for job in jobs:
+    rows = result.all()
+    jobs: list[AdminJob] = []
+    for job, arg_status in rows:
+        job.__dict__["is_archived"] = (
+            arg_status is not None and arg_status != ArgumentStatusEnum.PIPELINE
+        )
+        # Inject parse_stats=None so Pydantic's from_attributes mode can serialize the
+        # field without raising AttributeError (WR-03). get_job injects the real value;
+        # list_jobs only needs a safe default since the list view does not display parse_stats.
         job.__dict__.setdefault("parse_stats", None)
+        jobs.append(job)
     return jobs
 
 

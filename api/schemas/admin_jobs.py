@@ -56,6 +56,13 @@ class AdminJobResponse(BaseModel):
     error_message: Optional[str] = None
     created_at: datetime.datetime
     updated_at: datetime.datetime
+    # Phase 26 gap closure (PLIST-05): true when the job's linked argument has
+    # already been created (its status is no longer PIPELINE), mirroring the
+    # already_created state RunReadiness reports for the detail page. Defaults
+    # to False for get_job (single-job path derives its archived signal from
+    # the readiness endpoint instead) and is populated for real by list_jobs
+    # via an Argument outerjoin.
+    is_archived: bool = False
 
     model_config = {"from_attributes": True}
 

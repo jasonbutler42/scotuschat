@@ -280,3 +280,83 @@ async def test_list_jobs_endpoint_default_no_param(client: AsyncClient) -> None:
     response = await client.get("/api/admin/jobs", headers=_admin_headers())
     assert response.status_code == 200
     assert isinstance(response.json(), list)
+
+
+# ---------------------------------------------------------------------------
+# is_archived tests (Phase 26 gap closure, PLIST-05)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_list_jobs_is_archived_false_for_pipeline_argument(db_session: AsyncSession) -> None:
+    """A job linked to a PIPELINE-status argument must report is_archived=False."""
+    from api.models.models import Argument, ArgumentStatusEnum, AdminJob, AdminJobStatus, AdminJobStep
+    from api.services.admin_jobs import list_jobs
+
+    argument = Argument(status=ArgumentStatusEnum.PIPELINE, resolved_at=None)
+    db_session.add(argument)
+    await db_session.flush()
+
+    job = AdminJob(
+        status=AdminJobStatus.RUNNING,
+        current_step=AdminJobStep.PARSE,
+        argument_id=argument.id,
+    )
+    db_session.add(job)
+    await db_session.flush()
+
+    jobs = await list_jobs(db_session, incomplete=False)
+    matched = next(j for j in jobs if j.id == job.id)
+    assert matched.is_archived is False
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_list_jobs_is_archived_true_for_non_pipeline_argument(db_session: AsyncSession) -> None:
+    """A job linked to a DRAFT/PUBLISHED/UNPUBLISHED argument must report is_archived=True."""
+    from api.models.models import Argument, ArgumentStatusEnum, AdminJob, AdminJobStatus, AdminJobStep
+    from api.services.admin_jobs import list_jobs
+
+    for status in [
+        ArgumentStatusEnum.DRAFT,
+        ArgumentStatusEnum.PUBLISHED,
+        ArgumentStatusEnum.UNPUBLISHED,
+    ]:
+        argument = Argument(status=status, resolved_at=None)
+        db_session.add(argument)
+        await db_session.flush()
+
+        job = AdminJob(
+            status=AdminJobStatus.COMPLETED,
+            current_step=AdminJobStep.RESOLVE,
+            argument_id=argument.id,
+        )
+        db_session.add(job)
+        await db_session.flush()
+
+        jobs = await list_jobs(db_session, incomplete=False)
+        matched = next(j for j in jobs if j.id == job.id)
+        assert matched.is_archived is True, (
+            f"Expected is_archived True for linked argument status {status!r}"
+        )
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_list_jobs_is_archived_false_when_no_linked_argument(db_session: AsyncSession) -> None:
+    """A job with no linked argument (argument_id=None) must report is_archived=False."""
+    from api.models.models import AdminJob, AdminJobStatus, AdminJobStep
+    from api.services.admin_jobs import list_jobs
+
+    job = AdminJob(
+        status=AdminJobStatus.PENDING,
+        current_step=AdminJobStep.INGEST,
+        argument_id=None,
+    )
+    db_session.add(job)
+    await db_session.flush()
+
+    jobs = await list_jobs(db_session, incomplete=False)
+    matched = next(j for j in jobs if j.id == job.id)
+    assert matched.is_archived is False

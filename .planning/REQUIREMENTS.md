@@ -57,13 +57,13 @@
 
 ### Argument Edit (`/admin/arguments/[id]`)
 
-- [ ] **AEDIT-01** Argument Status card: current status badge, created date, published date
+- [x] **AEDIT-01** Argument Status card: current status badge, created date, published date
 - [x] **AEDIT-02** Full status log with timestamps for every transition (Created, Published, Unpublished, re-Published, etc.) — requires new `argument_status_log` table + migration; log written from both the argument edit page (publish/unpublish) AND the pipeline job detail (argument creation event)
 - [x] **AEDIT-03** Argument Details card mirrors the pipeline job detail version: docket pill/tag, question number free text, argued date, extracted hints always visible from `cover_metadata`; "N/A" if nothing extracted
 - [x] **AEDIT-04** Argument Details card is a shared component — same UI on pipeline/[id] and arguments/[id], different save targets (run metadata vs. argument record)
-- [ ] **AEDIT-05** Speakers section replaces Advocate Roles card and tenure gap warnings: all argument participants listed with utterance count each
-- [ ] **AEDIT-06** Advocates in speakers section: role dropdown (PETITIONER / RESPONDENT / AMICUS) + title field (per argument) + inline save without full page refresh
-- [ ] **AEDIT-07** Bench in speakers section: all bench participants listed with role derived from tenure at argued date; "Missing tenure" warning + edit person link when gap exists
+- [x] **AEDIT-05** Speakers section replaces Advocate Roles card and tenure gap warnings: all argument participants listed with utterance count each
+- [x] **AEDIT-06** Advocates in speakers section: role dropdown (PETITIONER / RESPONDENT / AMICUS) + title field (per argument) + inline save without full page refresh
+- [x] **AEDIT-07** Bench in speakers section: all bench participants listed with role derived from tenure at argued date; "Missing tenure" warning + edit person link when gap exists
 - [x] **AEDIT-08** Publish/Unpublish transitions: Draft → Published / Published → Unpublished / Unpublished → Published (re-publish)
 - [x] **AEDIT-09** Danger Zone: delete — unchanged
 
@@ -147,13 +147,13 @@
 | ALIST-02 | Phase 26 | Complete |
 | ALIST-03 | Phase 26 | Complete |
 | ALIST-04 | Phase 26 | Complete |
-| AEDIT-01 | Phase 26 | Pending |
+| AEDIT-01 | Phase 26 | Complete |
 | AEDIT-02 | Phase 22 | Complete |
 | AEDIT-03 | Phase 23 | Complete |
 | AEDIT-04 | Phase 23 | Complete |
-| AEDIT-05 | Phase 26 | Pending |
-| AEDIT-06 | Phase 26 | Pending |
-| AEDIT-07 | Phase 26 | Pending |
+| AEDIT-05 | Phase 26 | Complete |
+| AEDIT-06 | Phase 26 | Complete |
+| AEDIT-07 | Phase 26 | Complete |
 | AEDIT-08 | Phase 26 | Complete |
 | AEDIT-09 | Phase 26 | Complete |
 | PDIR-01 | Phase 27 | Pending |

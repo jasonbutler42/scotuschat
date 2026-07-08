@@ -4,16 +4,16 @@ milestone: v1.5
 milestone_name: Admin Screens Cleanup
 current_phase: 26
 current_phase_name: arguments-admin
-status: executing
+status: verifying
 stopped_at: Completed 26-05-PLAN.md (gap closure)
-last_updated: "2026-07-08T12:06:40.993Z"
+last_updated: "2026-07-08T18:29:20.954Z"
 last_activity: 2026-07-08
 last_activity_desc: Phase 26 execution started
 progress:
   total_phases: 7
   completed_phases: 5
-  total_plans: 24
-  completed_plans: 24
+  total_plans: 25
+  completed_plans: 25
   percent: 71
 ---
 
@@ -29,8 +29,8 @@ See: .planning/PROJECT.md (updated 2026-07-07 after Phase 25 completion)
 ## Current Position
 
 Phase: 26 (arguments-admin) — EXECUTING
-Plan: 2 of 5
-Status: Ready to execute
+Plan: 6 of 6
+Status: Phase complete — ready for verification
 Last activity: 2026-07-08 — Phase 26 execution started
 
 Progress: [██████████] 100%
@@ -93,6 +93,8 @@ Full log in PROJECT.md Key Decisions table. Key decisions entering v1.5:
 - [Phase ?]: 26-04: Status history rendered as its own card directly below Status, not a nested sub-section, per UI-SPEC planner-discretion note
 - [Phase ?]: delete_argument gate rewritten to a single positive status == DRAFT condition so PIPELINE is now blocked too (T-26-13)
 - [Phase ?]: update_participant_side gained a pre-SELECT guard rejecting UNKNOWN/legacy ADVOCATE alongside the existing BENCH guard (T-26-14, AEDIT-06)
+- [Phase ?]: 26-06: is_archived defaults to False on get_job (detail) path since RunStatusCard derives its archived signal from RunReadiness.state == 'already_created', not this field
+- [Phase ?]: 26-06: list_jobs() selects Argument.status as a scalar column via outerjoin rather than eager-loading the Argument relationship, avoiding N+1 while deriving is_archived per row
 
 ### Pending Todos
 
@@ -136,9 +138,10 @@ Deployment blockers (v1.4, unresolved — not in v1.5 scope):
 | Phase 26 P02 | 20min | 2 tasks | 5 files |
 | Phase 26 P04 | 12min | - tasks | - files |
 | Phase 26 P05 | 15min | 3 tasks | 4 files |
+| Phase 26 P06 | 20min | 2 tasks | 4 files |
 
 ## Session Continuity
 
-Last session: 2026-07-08T12:06:40.983Z
+Last session: 2026-07-08T18:28:15.832Z
 Stopped at: Completed 26-05-PLAN.md (gap closure)
 Resume file: None

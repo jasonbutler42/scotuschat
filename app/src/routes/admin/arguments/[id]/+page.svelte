@@ -18,13 +18,30 @@
 		}
 	}
 
-	// StatusBadge helpers — reads argument.status enum (Phase 15: pipeline/draft/published).
+	// Format ISO timestamp string with date + time — used by Status history rows only.
+	function formatDateTime(iso: string): string {
+		try {
+			return new Date(iso).toLocaleString('en-US', {
+				year: 'numeric',
+				month: 'short',
+				day: 'numeric',
+				hour: 'numeric',
+				minute: '2-digit',
+			});
+		} catch {
+			return iso;
+		}
+	}
+
+	// StatusBadge helpers — reads argument.status enum (Phase 26: pipeline/draft/published/unpublished).
 	function badgeStyle(status: string): string {
 		let color: string;
 		if (status === 'published') {
 			color = '#4ade80';
 		} else if (status === 'draft') {
 			color = '#a78bfa';
+		} else if (status === 'unpublished') {
+			color = '#fb923c';
 		} else {
 			color = '#94a3b8';
 		}
@@ -34,6 +51,7 @@
 	function badgeLabel(status: string): string {
 		if (status === 'published') return 'Published';
 		if (status === 'draft') return 'Draft';
+		if (status === 'unpublished') return 'Unpublished';
 		return 'Pipeline';
 	}
 
@@ -257,7 +275,7 @@
 
 			{#if data.argument.resolved_at}
 				<p style="font-size: 14px; color: #94a3b8; margin: 0 0 8px 0;">
-					Resolved {formatDate(data.argument.resolved_at)}
+					Created {formatDate(data.argument.resolved_at)}
 				</p>
 			{/if}
 
@@ -267,9 +285,108 @@
 				</p>
 			{/if}
 
-			<p style="font-size: 14px; color: #94a3b8; margin: 0;">
+			<p style="font-size: 14px; color: #94a3b8; margin: 0 0 16px 0;">
 				Slug: {data.argument.slug}
 			</p>
+
+			<!-- Publish/Unpublish control lives with the Status card (D-07 layout simplification) -->
+			{#if data.argument.status === 'draft' || data.argument.status === 'unpublished'}
+				<form
+					method="POST"
+					action="?/publish"
+					use:enhance={() => {
+						publishingState = true;
+						return async ({ update }) => {
+							publishingState = false;
+							await update();
+						};
+					}}
+				>
+					<button
+						type="submit"
+						disabled={publishingState}
+						style="
+							display: block;
+							width: 100%;
+							min-height: 44px;
+							background-color: #1e293b;
+							border: 1px solid #93c5fd;
+							border-radius: 6px;
+							font-size: 16px;
+							font-weight: 600;
+							color: #e2e8f0;
+							cursor: {publishingState ? 'not-allowed' : 'pointer'};
+							opacity: {publishingState ? 0.7 : 1};
+						"
+					>
+						{publishingState ? 'Publishing…' : 'Publish'}
+					</button>
+				</form>
+			{:else if data.argument.status === 'published'}
+				<form
+					method="POST"
+					action="?/unpublish"
+					use:enhance={() => {
+						unpublishingState = true;
+						return async ({ update }) => {
+							unpublishingState = false;
+							await update();
+						};
+					}}
+				>
+					<button
+						type="submit"
+						disabled={unpublishingState}
+						style="
+							display: block;
+							width: 100%;
+							min-height: 44px;
+							background-color: #1e293b;
+							border: 1px solid #334155;
+							border-radius: 6px;
+							font-size: 16px;
+							font-weight: 600;
+							color: #e2e8f0;
+							cursor: {unpublishingState ? 'not-allowed' : 'pointer'};
+							opacity: {unpublishingState ? 0.7 : 1};
+						"
+					>
+						{unpublishingState ? 'Unpublishing…' : 'Unpublish'}
+					</button>
+				</form>
+			{/if}
+		</div>
+
+		<!-- Card 2b: Status history — full timestamped log, oldest first (AEDIT-02) -->
+		<div
+			style="
+				background-color: #1e293b;
+				border: 1px solid #334155;
+				border-radius: 8px;
+				padding: 24px;
+				margin-bottom: 16px;
+			"
+		>
+			<h2 style="font-size: 20px; font-weight: 600; color: #e2e8f0; margin: 0 0 16px 0;">
+				Status history
+			</h2>
+
+			{#if data.argument.status_log && data.argument.status_log.length > 0}
+				{#each data.argument.status_log as entry, index}
+					<div style="padding: 8px 0; display: flex; align-items: center; gap: 8px;">
+						<span style={badgeStyle(entry.status)}>
+							{index === 0 && entry.status === 'draft' ? 'Created' : badgeLabel(entry.status)}
+						</span>
+						<span style="font-size: 14px; color: #94a3b8;">
+							— {formatDateTime(entry.created_at)}
+						</span>
+					</div>
+				{/each}
+			{:else}
+				<p style="font-size: 14px; color: #94a3b8; font-style: italic; margin: 0;">
+					Status history is unavailable.
+				</p>
+			{/if}
 		</div>
 
 		<!-- Card 3: Advocate Roles — per-advocate dropdown + Save button (D-12, ROLE-03) -->
@@ -391,77 +508,6 @@
 			</div>
 		{/each}
 
-		<!-- Publish button — only when resolved and not yet published (D-07) -->
-		{#if data.argument.resolved_at && !data.argument.published_at}
-			<form
-				method="POST"
-				action="?/publish"
-				use:enhance={() => {
-					publishingState = true;
-					return async ({ update }) => {
-						publishingState = false;
-						await update();
-					};
-				}}
-				style="margin-bottom: 12px;"
-			>
-				<button
-					type="submit"
-					disabled={publishingState}
-					style="
-						display: block;
-						width: 100%;
-						min-height: 44px;
-						background-color: #1e293b;
-						border: 1px solid #93c5fd;
-						border-radius: 6px;
-						font-size: 16px;
-						font-weight: 600;
-						color: #e2e8f0;
-						cursor: {publishingState ? 'not-allowed' : 'pointer'};
-						opacity: {publishingState ? 0.7 : 1};
-					"
-				>
-					{publishingState ? 'Publishing…' : 'Publish'}
-				</button>
-			</form>
-		{/if}
-
-		<!-- Unpublish button — only when already published (D-07) -->
-		{#if data.argument.published_at}
-			<form
-				method="POST"
-				action="?/unpublish"
-				use:enhance={() => {
-					unpublishingState = true;
-					return async ({ update }) => {
-						unpublishingState = false;
-						await update();
-					};
-				}}
-			>
-				<button
-					type="submit"
-					disabled={unpublishingState}
-					style="
-						display: block;
-						width: 100%;
-						min-height: 44px;
-						background-color: #1e293b;
-						border: 1px solid #334155;
-						border-radius: 6px;
-						font-size: 16px;
-						font-weight: 600;
-						color: #e2e8f0;
-						cursor: {unpublishingState ? 'not-allowed' : 'pointer'};
-						opacity: {unpublishingState ? 0.7 : 1};
-					"
-				>
-					{unpublishingState ? 'Unpublishing…' : 'Unpublish'}
-				</button>
-			</form>
-		{/if}
-
 		<!-- Danger Zone — argument delete section (ADMIN-01, D-03) -->
 		<!-- Last card on the page per UI-SPEC Layout Contract (delete section position). -->
 		<div style="background-color: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 24px; margin-bottom: 24px; margin-top: 16px;">
@@ -533,7 +579,7 @@
 					id="delete-tip"
 					style="font-size: 14px; color: #94a3b8; margin-top: 8px; text-align: center;"
 				>
-					Published arguments cannot be deleted. Unpublish first.
+					Published and unpublished arguments cannot be deleted. Only drafts can be removed.
 				</p>
 			{/if}
 		</div>

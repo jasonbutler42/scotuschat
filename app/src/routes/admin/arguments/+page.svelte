@@ -21,6 +21,8 @@
 			color = '#4ade80'; // Published — green
 		} else if (status === 'draft') {
 			color = '#a78bfa'; // Draft — violet
+		} else if (status === 'unpublished') {
+			color = '#fb923c'; // Unpublished — orange
 		} else {
 			color = '#94a3b8'; // Pipeline — muted (fallback, should not appear in this list)
 		}
@@ -30,6 +32,7 @@
 	function badgeLabel(status: string): string {
 		if (status === 'published') return 'Published';
 		if (status === 'draft') return 'Draft';
+		if (status === 'unpublished') return 'Unpublished';
 		return 'Pipeline';
 	}
 </script>
@@ -113,6 +116,17 @@
 						<th
 							scope="col"
 							style="
+								text-align: left;
+								font-size: 14px;
+								font-weight: 400;
+								color: #94a3b8;
+								border-bottom: 1px solid #334155;
+								padding: 8px 8px;
+							"
+						>Created</th>
+						<th
+							scope="col"
+							style="
 								text-align: right;
 								font-size: 14px;
 								font-weight: 400;
@@ -165,14 +179,23 @@
 							>{arg.argued_date ? formatDate(arg.argued_date) : '—'}</td>
 							<td
 								style="
+									font-size: 14px;
+									color: #94a3b8;
+									padding: 12px 8px;
+									border-bottom: 1px solid #334155;
+									white-space: nowrap;
+								"
+							>{arg.resolved_at ? formatDate(arg.resolved_at) : '—'}</td>
+							<td
+								style="
 									padding: 12px 0;
 									border-bottom: 1px solid #334155;
 									text-align: right;
 								"
 							>
 								<div style="display: flex; gap: 8px; justify-content: flex-end; align-items: center;">
-									{#if arg.resolved_at && !arg.published_at}
-										<!-- Publish toggle — only when resolved and not yet published -->
+									{#if arg.status === 'draft' || arg.status === 'unpublished'}
+										<!-- Publish toggle — Draft or Unpublished both go to Published -->
 										<form method="POST" action="?/publish" use:enhance>
 											<input type="hidden" name="argument_id" value={arg.id} />
 											<button
@@ -190,7 +213,7 @@
 												"
 											>Publish</button>
 										</form>
-									{:else if arg.published_at}
+									{:else if arg.status === 'published'}
 										<!-- Unpublish toggle — only when already published -->
 										<form method="POST" action="?/unpublish" use:enhance>
 											<input type="hidden" name="argument_id" value={arg.id} />

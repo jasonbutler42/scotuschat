@@ -218,11 +218,11 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
   4. Speakers section lists all argument participants with utterance counts; advocate rows have a role dropdown (PETITIONER / RESPONDENT / AMICUS), a title field, and inline save without full-page refresh; bench rows show tenure-derived role or "Missing tenure" with edit link
   5. Publish / Unpublish / re-Publish transitions are all functional: Draft → Published, Published → Unpublished, Unpublished → Published
 
-**Plans**: 4 plans
+**Plans**: 1/4 plans executed
 
 **Wave 1** *(parallel — disjoint files)*
 
-- [ ] 26-01-PLAN.md — Backend argument lifecycle: three-state publish/unpublish, status-log writes, list filter, slug-freeze + delete gates (ALIST-02, AEDIT-02, AEDIT-08, AEDIT-09)
+- [x] 26-01-PLAN.md — Backend argument lifecycle: three-state publish/unpublish, status-log writes, list filter, slug-freeze + delete gates (ALIST-02, AEDIT-02, AEDIT-08, AEDIT-09)
 - [ ] 26-03-PLAN.md — Frontend list page three-state badges + Created column + status-driven row actions, and RunStatusCard Archived badge (ALIST-02, ALIST-03, ALIST-04)
 
 **Wave 2** *(blocked on 26-01)*
@@ -296,7 +296,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 | 23. Shared Argument Details Component | v1.5 | 7/7 | Complete   | 2026-07-06 |
 | 24. Pipeline List Page | v1.5 | 5/5 | Complete    | 2026-07-07 |
 | 25. Pipeline Job Detail Page | v1.5 | 4/4 | Complete    | 2026-07-07 |
-| 26. Arguments Admin | v1.5 | 0/4 | Planned | - |
+| 26. Arguments Admin | v1.5 | 1/4 | In Progress|  |
 | 27. People Admin | v1.5 | 0/TBD | Not started | - |
 | 28. Dashboard | v1.5 | 0/TBD | Not started | - |
 

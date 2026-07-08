@@ -3,17 +3,17 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: Admin Screens Cleanup
 current_phase: 26
-current_phase_name: Arguments Admin
+current_phase_name: arguments-admin
 status: executing
 stopped_at: Phase 26 UI-SPEC approved
-last_updated: "2026-07-08T00:16:23.175Z"
-last_activity: 2026-07-07
-last_activity_desc: Phase 25 complete, transitioned to Phase 26
+last_updated: "2026-07-08T00:33:09.357Z"
+last_activity: 2026-07-08
+last_activity_desc: Phase 26 execution started
 progress:
   total_phases: 7
   completed_phases: 4
-  total_plans: 19
-  completed_plans: 19
+  total_plans: 23
+  completed_plans: 20
   percent: 57
 ---
 
@@ -24,14 +24,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-07 after Phase 25 completion)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** Phase 26 — Arguments Admin
+**Current focus:** Phase 26 — arguments-admin
 
 ## Current Position
 
-Phase: 26 — Arguments Admin
-Plan: Not started
+Phase: 26 (arguments-admin) — EXECUTING
+Plan: 2 of 4
 Status: Ready to execute
-Last activity: 2026-07-07 — Phase 25 complete, transitioned to Phase 26
+Last activity: 2026-07-08 — Phase 26 execution started
 
 Progress: [██████████] 100%
 
@@ -81,6 +81,10 @@ Full log in PROJECT.md Key Decisions table. Key decisions entering v1.5:
 - [Phase 25]: 25-04: Argument Role is read-only in ResolveCard, derived entirely from the Bench/Advocate side value — backend ResolveRowUpdate only writes side/title, so there is no separate role field to edit
 - [Phase 25]: 25-04: Person re-matching (Confirm/Select/Create person) only appears while job.status is paused via the unchanged ?/resolve batch action; Resolved-as becomes read-only display afterward while side/title remain editable via saveResolveRow
 - [Phase 25]: 25-04: Preserved Danger Zone markup/confirmation text verbatim per D-09/D-22, superseding the UI-SPEC's Destructive confirmation copy row for this phase
+- [Phase ?]: 26-01: publish/unpublish guards key on Argument.status not published_at; re-publish from UNPUBLISHED allowed (D-02/AEDIT-08)
+- [Phase ?]: 26-01: unpublish_argument preserves published_at (no longer nulled) so Status card can show last-published date
+- [Phase ?]: 26-01: ArgumentStatusLog writes inlined at 3 call sites (no shared helper) to avoid admin_jobs -> admin_arguments import cycle (D-10)
+- [Phase ?]: 26-01: delete_argument gate and update_argument slug-freeze both switched from published_at to status-keyed checks (ALIST-01, D-03/AEDIT-09)
 
 ### Pending Todos
 
@@ -119,9 +123,10 @@ Deployment blockers (v1.4, unresolved — not in v1.5 scope):
 | Phase 25 P02 | 35min | 3 tasks | 4 files |
 | Phase 25 P03 | 40min | 2 tasks | 2 files |
 | Phase 25 P04 | 55min | 3 tasks | 5 files |
+| Phase 26 P01 | 20min | 2 tasks | 6 files |
 
 ## Session Continuity
 
-Last session: 2026-07-07T23:48:59.896Z
+Last session: 2026-07-08T00:32:19.842Z
 Stopped at: Phase 26 UI-SPEC approved
 Resume file: .planning/phases/26-arguments-admin/26-UI-SPEC.md

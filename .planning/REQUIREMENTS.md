@@ -51,7 +51,7 @@
 ### Arguments List (`/admin/arguments/`)
 
 - [x] **ALIST-01** New `unpublished` argument status — distinct from Draft: Draft (never published, slug editable) / Published (slug locked, visible on public site) / Unpublished (was public, now hidden, slug locked) — new enum value + Alembic migration; unpublish action transitions to `unpublished`, not back to `draft`
-- [ ] **ALIST-02** Arguments list shows only Draft / Published / Unpublished rows — pipeline-status arguments excluded (they live on pipeline job detail)
+- [x] **ALIST-02** Arguments list shows only Draft / Published / Unpublished rows — pipeline-status arguments excluded (they live on pipeline job detail)
 - [ ] **ALIST-03** Status column accurately reflects all three statuses with distinct badges
 - [ ] **ALIST-04** "Created" column added showing date/time argument was first created
 
@@ -64,8 +64,8 @@
 - [ ] **AEDIT-05** Speakers section replaces Advocate Roles card and tenure gap warnings: all argument participants listed with utterance count each
 - [ ] **AEDIT-06** Advocates in speakers section: role dropdown (PETITIONER / RESPONDENT / AMICUS) + title field (per argument) + inline save without full page refresh
 - [ ] **AEDIT-07** Bench in speakers section: all bench participants listed with role derived from tenure at argued date; "Missing tenure" warning + edit person link when gap exists
-- [ ] **AEDIT-08** Publish/Unpublish transitions: Draft → Published / Published → Unpublished / Unpublished → Published (re-publish)
-- [ ] **AEDIT-09** Danger Zone: delete — unchanged
+- [x] **AEDIT-08** Publish/Unpublish transitions: Draft → Published / Published → Unpublished / Unpublished → Published (re-publish)
+- [x] **AEDIT-09** Danger Zone: delete — unchanged
 
 ### People List (`/admin/people/`)
 
@@ -144,7 +144,7 @@
 | PJOB-22 | Phase 25 | Complete |
 | PJOB-23 | Phase 25 | Complete |
 | ALIST-01 | Phase 22 | Complete |
-| ALIST-02 | Phase 26 | Pending |
+| ALIST-02 | Phase 26 | Complete |
 | ALIST-03 | Phase 26 | Pending |
 | ALIST-04 | Phase 26 | Pending |
 | AEDIT-01 | Phase 26 | Pending |
@@ -154,8 +154,8 @@
 | AEDIT-05 | Phase 26 | Pending |
 | AEDIT-06 | Phase 26 | Pending |
 | AEDIT-07 | Phase 26 | Pending |
-| AEDIT-08 | Phase 26 | Pending |
-| AEDIT-09 | Phase 26 | Pending |
+| AEDIT-08 | Phase 26 | Complete |
+| AEDIT-09 | Phase 26 | Complete |
 | PDIR-01 | Phase 27 | Pending |
 | PDIR-02 | Phase 27 | Pending |
 | PDIR-03 | Phase 27 | Pending |

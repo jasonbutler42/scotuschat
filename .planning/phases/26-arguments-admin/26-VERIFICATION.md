@@ -1,152 +1,176 @@
 ---
 phase: 26-arguments-admin
-verified: 2026-07-08T12:00:00Z
-status: gaps_found
-score: 15/17 must-haves verified
+verified: 2026-07-08T18:00:00Z
+status: human_needed
+score: 17/17 must-haves verified
 behavior_unverified: 0
 overrides_applied: 0
-gaps:
-  - truth: "Delete is blocked (returns False) whenever status is PUBLISHED or UNPUBLISHED; allowed only for DRAFT"
-    status: failed
-    reason: "delete_argument's gate only checks `argument.status in (PUBLISHED, UNPUBLISHED)`. It does NOT block PIPELINE-status arguments, so a direct DELETE call against an argument that is still mid-pipeline (with a job possibly PAUSED at RESOLVE, referencing it via AdminJob.argument_id) succeeds — the argument, its participants, utterances, and pipeline runs are deleted and AdminJob.argument_id is NULLed, permanently stranding the job. This is a regression against this phase's own stated must-have text ('allowed only for DRAFT') and against the 26-04 plan's explicit objective ('a delete gate that keys on Draft only'). Confirmed independently by reading api/services/admin_arguments.py:650-652; not merely a code-review claim taken on faith. No test exists for the PIPELINE case (test_delete_argument_returns_false_for_unpublished exists; no equivalent test_delete_argument_returns_false_for_pipeline)."
-    artifacts:
-      - path: "api/services/admin_arguments.py"
-        issue: "delete_argument gate (line 651): `if argument.status in (ArgumentStatusEnum.PUBLISHED, ArgumentStatusEnum.UNPUBLISHED): return False` — PIPELINE is not in the blocked tuple, so it falls through to the delete cascade returning True."
-    missing:
-      - "Change the gate to `if argument.status != ArgumentStatusEnum.DRAFT: return False` (or explicitly add PIPELINE to the blocked tuple) so only DRAFT arguments can be deleted, matching the plan's own must-have text and objective."
-      - "Add a regression test asserting delete_argument returns False for a PIPELINE-status argument, and that DELETE /api/admin/arguments/{id} returns 409 for a PIPELINE-status argument."
-  - truth: "Unified Speakers section: advocate rows get a role dropdown, title input, utterance count, and inline Save that persists accurate state"
-    status: failed
-    reason: "The advocate role <select> in app/src/routes/admin/arguments/[id]/+page.svelte only renders PETITIONER/RESPONDENT/AMICUS <option>s (confirmed at lines 457-459). SideEnum includes UNKNOWN (the default side value written at parse time for every unresolved advocate participant, per api/models/models.py:39/313) and legacy ADVOCATE. When speaker.side is UNKNOWN, none of the three `selected={...}` expressions evaluates true, so per standard HTML <select> behavior the browser silently defaults the control to the first listed option (PETITIONER). If an operator opens the Speakers card to fill in only a Title for an unresolved advocate and clicks Save, the form submits side=PETITIONER, and update_participant_side (api/services/admin_arguments.py:535, guard only rejects side==BENCH — UNKNOWN passes through) writes it, silently reclassifying an unresolved advocate as 'Petitioner's Counsel' with no confirmation or warning. This is a real, confirmed data-accuracy defect in the 'inline Save' behavior this section is required to provide, and it runs against CLAUDE.md's hard constraint that every speaker gets identical, non-inferred treatment. Note: this was a deliberate instruction in 26-04-PLAN.md Task 3 ('drop the UNKNOWN/\"Counsel\" option per AEDIT-06') — the executor followed the plan faithfully; the defect originates in the plan's own design decision, not an execution deviation. It also technically satisfies the plan's literal must-have wording ('a role dropdown (PETITIONER/RESPONDENT/AMICUS)'), but fails the functional intent of a safe, non-destructive inline-save experience."
-    artifacts:
-      - path: "app/src/routes/admin/arguments/[id]/+page.svelte"
-        issue: "Lines 443-460: <select name=\"side\"> has no option/handling for SideEnum.UNKNOWN (or legacy ADVOCATE); browser default-selects PETITIONER when no option matches, and the form has no guard preventing that default from being submitted."
-    missing:
-      - "Add an explicit disabled placeholder option (e.g. `<option value=\"UNKNOWN\" selected={speaker.side === 'UNKNOWN'} disabled>Unresolved — choose a role</option>`) so the control visually reflects true unresolved state."
-      - "Either disable the Save button while side remains UNKNOWN, or have the backend reject/ignore an UNKNOWN submission so an accidental Save cannot silently reassign an unresolved advocate's side."
-deferred: []
+re_verification:
+  previous_status: gaps_found
+  previous_score: 15/17
+  gaps_closed:
+    - "Delete is blocked (returns False) whenever status is PUBLISHED or UNPUBLISHED; allowed only for DRAFT"
+    - "Unified Speakers section: advocate rows get a role dropdown, title input, utterance count, and inline Save that persists accurate state"
+  gaps_remaining: []
+  regressions: []
 human_verification:
   - test: "Visually confirm the three arguments-list badge colors (Draft violet #a78bfa, Published green #4ade80, Unpublished orange #fb923c) render with sufficient contrast and are visually distinct side by side"
     expected: "Three clearly distinguishable badge colors, each with a text label"
-    why_human: "Color rendering and contrast are visual concerns; svelte-check and grep confirm the hex values are present in code but not how they look together in the browser (per 26-03-SUMMARY.md D1/D2/D3 human_judgment notes)"
+    why_human: "Color rendering and contrast are visual concerns; grep confirms the hex values are present in code but not how they look together in the browser (carried forward from prior verification — unaffected by 26-05)"
   - test: "Open a pipeline job detail page for a run whose argument has already been created and confirm the RunStatusCard shows the grey 'Archived' badge instead of the job-status badge"
     expected: "Archived badge (#cbd5e1) overrides the jobStatus-driven badge for an already_created run"
-    why_human: "Requires a live backend + a run in the already_created readiness state to observe (per 26-03-SUMMARY.md D4)"
-  - test: "Load the argument edit page for a live argument in each of the three lifecycle states (Draft, Published, Unpublished) and visually confirm: Status card + Status history layout, Publish/Unpublish button placement inside the Status card, and Speakers table column alignment for mixed bench/advocate rows"
-    expected: "Layout renders as specified in the UI-SPEC; no visual misalignment"
-    why_human: "svelte-check and grep verify markup/logic correctness but not actual browser layout/rendering (per 26-04-SUMMARY.md D6); also surfaces WR-01 from the code review — the advocate row's <td colspan=\"3\"> spans only 3 of the 4 remaining logical columns (Title/Utterances/Action all collapsed together), which will visibly misalign column borders against 5-column bench rows when both appear in the same table."
+    why_human: "Requires a live backend + a run in the already_created readiness state to observe (carried forward from prior verification — unaffected by 26-05)"
+  - test: "Load the argument edit page for a live argument in each of the three lifecycle states (Draft, Published, Unpublished), and additionally for an argument with at least one unresolved (UNKNOWN-side) advocate. Visually confirm: Status card + Status history layout, Publish/Unpublish button placement inside the Status card, Speakers table column alignment for mixed bench/advocate rows, the advocate row's new 'Unresolved — choose a role' placeholder renders selected for an unresolved advocate, and the Save button is visibly disabled (dimmed, not-allowed cursor) for that row until a real role is chosen"
+    expected: "Layout renders as specified in the UI-SPEC; no visual misalignment; the Unresolved state and disabled Save are visually unambiguous to an operator"
+    why_human: "svelte-check and grep verify markup/logic correctness but not actual browser layout/rendering or the disabled-button visual treatment. Also surfaces WR-01 from the code review (still unresolved, confirmed present at +page.svelte:443) — the advocate row's <td colspan=\"3\"> spans only 3 of the 4 remaining logical columns, which will visibly misalign column borders against 5-column bench rows when both appear in the same table."
 ---
 
 # Phase 26: Arguments Admin Verification Report
 
 **Phase Goal:** The arguments admin screens accurately represent the three-state argument lifecycle (Draft / Published / Unpublished), the arguments list excludes pipeline-only rows, and the argument edit page has a status log, a unified Argument Details card, and a speakers section replacing the old advocate roles card
-**Verified:** 2026-07-08T12:00:00Z
-**Status:** gaps_found
-**Re-verification:** No — initial verification
+**Verified:** 2026-07-08T18:00:00Z
+**Status:** human_needed
+**Re-verification:** Yes — after gap-closure plan 26-05
 
 ## Goal Achievement
 
-### Observable Truths
+This is a fresh, independent re-verification against the CURRENT codebase (not a re-statement of 26-05-SUMMARY.md's or 26-REVIEW.md's claims). Both files were consulted for context only; every finding below was re-derived by reading the actual source and by executing the actual regression tests and type-checker in this session.
+
+### Gap 1 re-verification: delete_argument DRAFT-only gate (was FAILED, previously allowed deleting PIPELINE-status arguments)
+
+**Direct code read** — `api/services/admin_arguments.py:669-670`:
+```python
+if argument.status != ArgumentStatusEnum.DRAFT:
+    return False
+```
+This is a single positive condition keyed on `DRAFT`. It rejects PIPELINE, PUBLISHED, and UNPUBLISHED alike — the previously-confirmed hole (PIPELINE falling through to the delete cascade) is closed. The docstring above the gate (lines 636-660) was also updated to explicitly document that PIPELINE is blocked because an active `AdminJob` may still reference it.
+
+**Regression tests** — read and executed fresh in this session (not taken on faith from the SUMMARY):
+- `test_delete_argument_gate_keys_on_draft` (structural, always-runs, no DB) — ran it directly: **PASSED**. It asserts the gate references `ArgumentStatusEnum.DRAFT` and explicitly asserts the OLD `"PUBLISHED, ArgumentStatusEnum.UNPUBLISHED"` enumerated-tuple pattern is NOT present, which would catch a regression to the old (broken) gate.
+- `test_delete_argument_returns_false_for_pipeline` (service, DB-guarded) and `test_delete_argument_returns_409_for_pipeline` (route, DB-guarded) exist and read correctly (create a PIPELINE-status argument, assert `False`/409). This environment has no live Postgres reachable (confirmed: even with `DATABASE_URL` exported, `api.core.database.AsyncSessionLocal` is `None` because the engine is only created inside the FastAPI `lifespan`, not at import — the exact same limitation that already applied to the pre-existing sibling test `test_delete_argument_returns_false_for_unpublished` before this phase). These tests report `skipped` here, matching the project's own documented pre-existing test pattern; this is not a new environment gap introduced by 26-05.
+- Router (`api/routers/admin.py:970-978`) unchanged — still maps `False` → 409 with the (deliberately unchanged, per plan) "Only drafts can be removed" detail string, which remains accurate for PIPELINE.
+
+**Verdict: ✓ VERIFIED.** Gap 1 is closed.
+
+### Gap 2 re-verification: unresolved-advocate silent misclassification (was FAILED)
+
+**Backend guard** — direct code read, `api/services/admin_arguments.py:542-547`:
+```python
+if side == SideEnum.BENCH:
+    raise ValueError("BENCH cannot be set via participant side update")
+if side in (SideEnum.UNKNOWN, SideEnum.ADVOCATE):
+    raise ValueError(
+        "An advocate's side must be resolved to Petitioner, Respondent, or Amicus"
+    )
+```
+Placed before the DB `SELECT`, mirroring the existing BENCH guard. `test_update_participant_side_rejects_unresolved_side` (always-runs, no DB) — ran it directly in this session: **PASSED**. It calls `update_participant_side` with `SideEnum.UNKNOWN` and `SideEnum.ADVOCATE` and asserts `ValueError` in both cases.
+
+**Frontend** — direct code read, `app/src/routes/admin/arguments/[id]/+page.svelte`:
+- `VALID_SIDES = new Set(['PETITIONER', 'RESPONDENT', 'AMICUS'])` (line 67) and `speakerSideById` `$state<Record<number,string>>` (lines 68-73) seeded from `data.argument.speakers`, collapsing any side not in `VALID_SIDES` (i.e. `UNKNOWN` or legacy `ADVOCATE`) to the sentinel `'UNKNOWN'`.
+- The `<select name="side">` (lines 458-477) now has a leading `<option value="UNKNOWN">Unresolved — choose a role</option>` and is driven by `bind:value={speakerSideById[speaker.participant_id]}` — no more reliance on per-option `selected={...}` (which was the root cause of the original silent-default-to-PETITIONER bug).
+- The Save `<button>` (line 514) is `disabled={savingSpeakerId === speaker.participant_id || speakerSideById[speaker.participant_id] === 'UNKNOWN'}`, with matching `cursor`/`opacity` styling (lines 524-525) so the disabled state is visually distinguishable.
+- `cd app && npm run check` — ran fresh in this session: **0 ERRORS** (793 files, 18 warnings — all pre-existing/unrelated to phase 26 files, e.g. `state_referenced_locally` hints in other components).
+
+**Verdict: ✓ VERIFIED.** Gap 2 is closed. An unresolved advocate's side can no longer be silently written by an accidental Save — the UI makes the state explicit and blocks Save, and the backend independently rejects the value even if a submission were forced through.
+
+**One non-blocking follow-on observed (not a gap against this phase's must-haves):** `speakerSideById` is seeded once at component setup and is not reset via an `$effect` keyed on `data.argument.id` the way the file's own `deleteConfirming`/`deleteSubmitting` state is (WR-07 in 26-REVIEW.md). If the SvelteKit `[id]` component instance were reused across a client-side navigation between two different argument edit pages, a stale seed could theoretically let the disabled-check miss a genuinely-unresolved row for the *new* page's data. This does **not** reopen the safety gap: the backend guard above rejects an `UNKNOWN`/`ADVOCATE` submission unconditionally regardless of what the client's `disabled` state computed, so no silent misclassification is possible even in that edge case — the worst outcome is a confusing "Save failed" 422 instead of a disabled button. This is recorded as a warning-level finding, not a truth failure.
+
+### Observable Truths (full re-check, all 17 from the original must-haves list)
 
 | # | Truth | Status | Evidence |
 |---|-------|--------|----------|
-| 1 | Publish/unpublish/re-publish set the correct `Argument.status` and each writes exactly one matching `ArgumentStatusLog` row | ✓ VERIFIED | `api/services/admin_arguments.py:467-600` — `publish_argument` guard checks `status == PUBLISHED` (allows re-publish from UNPUBLISHED); `unpublish_argument` guard checks `status != PUBLISHED`; both call `db.add(ArgumentStatusLog(...))` before commit. Read directly, not from SUMMARY claim. |
-| 2 | `approve_job` writes one DRAFT ("Created") `ArgumentStatusLog` row alongside its existing status update | ✓ VERIFIED | `api/services/admin_jobs.py:502-511` — `db.add(ArgumentStatusLog(argument_id=job.argument_id, status=DRAFT))` present in the same transaction as the status=DRAFT update, before commit. |
-| 3 | The arguments list query returns DRAFT, PUBLISHED, and UNPUBLISHED rows; excludes only PIPELINE | ✓ VERIFIED | `api/services/admin_arguments.py:75-81` — `.where(Argument.status.in_([DRAFT, PUBLISHED, UNPUBLISHED]))`. |
-| 4 | Delete is blocked (returns False) whenever status is PUBLISHED or UNPUBLISHED; **allowed only for DRAFT** | ✗ FAILED | `api/services/admin_arguments.py:650-652` — gate is `if argument.status in (PUBLISHED, UNPUBLISHED): return False`. PIPELINE is not blocked — a PIPELINE-status argument can still be deleted, contradicting "allowed only for DRAFT." See Gaps below. |
-| 5 | Slug is frozen (not re-derived) whenever `status != DRAFT` | ✓ VERIFIED | `api/services/admin_arguments.py:447` — `if argument.status == ArgumentStatusEnum.DRAFT:` gates slug re-derivation; else-branch leaves slug untouched. |
-| 6 | Arguments list renders a distinct badge for each of Draft (violet), Published (green), and Unpublished (orange) | ✓ VERIFIED | `app/src/routes/admin/arguments/+page.svelte:18-35` — `badgeStyle`/`badgeLabel` have three branches with the exact hex values (`#a78bfa`, `#4ade80`, `#fb923c`). |
-| 7 | Arguments list has a "Created" column between "Argued" and the row-actions column | ✓ VERIFIED | `app/src/routes/admin/arguments/+page.svelte:126,188` — header "Created" cell renders `formatDate(arg.resolved_at)` guarded by `arg.resolved_at`. |
-| 8 | Each list row's action is status-driven: Draft and Unpublished show Publish; Published shows Unpublish | ✓ VERIFIED | `app/src/routes/admin/arguments/+page.svelte:197,216` — `{#if arg.status === 'draft' || arg.status === 'unpublished'}` (Publish) / `{:else if arg.status === 'published'}` (Unpublish). |
-| 9 | The pipeline run status card shows an "Archived" badge (neutral grey) when the run's argument has already been created | ✓ VERIFIED | `app/src/lib/components/RunStatusCard.svelte:44-50` — `badgeColor`/`badgeLabel` `$derived` check `readiness?.state === 'already_created'` first, resolving to `#cbd5e1` / `'Archived'`. |
-| 10 | `GET /api/admin/arguments/{id}` returns a `status_log` array, one `{status, created_at}` entry per transition, oldest first | ✓ VERIFIED | `api/services/admin_arguments.py:329-336,362` — `select(ArgumentStatusLog)...order_by(created_at.asc(), id.asc())`, returned as `"status_log"`. `api/schemas/admin_arguments.py:53,199` defines `StatusLogEntry` and `ArgumentDetail.status_log`. |
-| 11 | `GET /api/admin/arguments/{id}` returns a `speakers` array covering ALL participants (bench + advocate) with a per-participant utterance count | ✓ VERIFIED | `api/services/admin_arguments.py:101-218` — `list_argument_speakers` builds one row per `ArgumentParticipant`, bench and advocate branches, utterance counts via one grouped query (`group_by(Utterance.person_id)`, no N+1); wired into `get_argument_detail` at line 342/363. |
-| 12 | `PATCH /participants/{id}` accepts and persists an optional `title` alongside `side` for advocate rows | ✓ VERIFIED | `api/services/admin_arguments.py:506-551` — `update_participant_side(..., title=...)` writes `title` only when non-None; `api/routers/admin.py:1135-1136` passes `body.title` through. |
-| 13 | Edit page Status card shows the current three-state badge, a "Created {date}" line, and a "Published {date}" line when set | ✓ VERIFIED | `app/src/routes/admin/arguments/[id]/+page.svelte:266-286` — badge span, `Created {formatDate(resolved_at)}` (guarded), `Published {formatDate(published_at)}` (guarded). |
-| 14 | A "Status history" section lists every `status_log` entry as `{badge} — {date, time}`, oldest first, first DRAFT entry labelled "Created" | ✓ VERIFIED | `app/src/routes/admin/arguments/[id]/+page.svelte:360-389` — iterates `data.argument.status_log`, special-cases `index === 0 && entry.status === 'draft'` → "Created"; degraded fallback text present. |
-| 15 | Publish shows for Draft and Unpublished; Unpublish shows for Published; button lives with the Status card, not floating | ✓ VERIFIED | `app/src/routes/admin/arguments/[id]/+page.svelte:292-357` — Publish/Unpublish forms rendered directly inside the same card div as the Status badge/dates (lines 258-358 form one continuous card), status-driven branches confirmed. |
-| 16 | Unified Speakers section: advocate rows get a role dropdown, title input with "Extracted:" hint, utterance count, and an inline Save that **persists accurate, non-destructive state**; bench rows show tenure-derived role or "Missing tenure" + Edit person, with utterance count | ✗ FAILED | Structural rendering is correct (bench branch at lines 516-530 correctly shows `missing_tenure`/`bench_role`/Edit-person-link/utterance count). But the advocate `<select>` (lines 443-460) omits `SideEnum.UNKNOWN`, so saving an unresolved advocate's row silently reassigns `side=PETITIONER`. See Gaps below. |
-| 17 | Delete is enabled only for Draft arguments (client); Published and Unpublished show the disabled button with the updated tooltip | ✓ VERIFIED (client-side only) | `app/src/routes/admin/arguments/[id]/+page.server.ts:77` — `can_delete = argument.status === 'draft'`; tooltip copy confirmed at `+page.svelte:632`. Client-side gate is correct; the corresponding **backend** gate gap is captured in Truth #4 — client disabled-state alone is defense-in-depth, not the authoritative guard (project's own stated convention). |
+| 1 | Publish/unpublish/re-publish set the correct `Argument.status` and each writes exactly one matching `ArgumentStatusLog` row | ✓ VERIFIED | `api/services/admin_arguments.py:490-503` (publish), `:592-611` (unpublish) — re-read fresh, unchanged from prior verification, not touched by 26-05 |
+| 2 | `approve_job` writes one DRAFT ("Created") `ArgumentStatusLog` row alongside its existing status update | ✓ VERIFIED | `api/services/admin_jobs.py:511` — confirmed present, unchanged |
+| 3 | The arguments list query returns DRAFT, PUBLISHED, and UNPUBLISHED rows; excludes only PIPELINE | ✓ VERIFIED | `api/services/admin_arguments.py:70-82` — confirmed present, unchanged |
+| 4 | Delete is blocked (returns False) whenever status is PUBLISHED, UNPUBLISHED, **or PIPELINE**; allowed only for DRAFT | ✓ VERIFIED (was FAILED) | `api/services/admin_arguments.py:669-670` — `if argument.status != ArgumentStatusEnum.DRAFT: return False`. Structural regression test executed and passed this session |
+| 5 | Slug is frozen (not re-derived) whenever `status != DRAFT` | ✓ VERIFIED | `api/services/admin_arguments.py:447` region — unchanged, not touched by 26-05 |
+| 6 | Arguments list renders a distinct badge for each of Draft (violet), Published (green), and Unpublished (orange) | ✓ VERIFIED | `app/src/routes/admin/arguments/+page.svelte:18-25` — hex values confirmed present |
+| 7 | Arguments list has a "Created" column between "Argued" and the row-actions column | ✓ VERIFIED | Confirmed unchanged (not touched by 26-05) |
+| 8 | Each list row's action is status-driven: Draft and Unpublished show Publish; Published shows Unpublish | ✓ VERIFIED | Confirmed unchanged |
+| 9 | The pipeline run status card shows an "Archived" badge (neutral grey) when the run's argument has already been created | ✓ VERIFIED | `app/src/lib/components/RunStatusCard.svelte:47,50` — confirmed unchanged |
+| 10 | `GET /api/admin/arguments/{id}` returns a `status_log` array, one `{status, created_at}` entry per transition, oldest first | ✓ VERIFIED | Confirmed unchanged (not touched by 26-05) |
+| 11 | `GET /api/admin/arguments/{id}` returns a `speakers` array covering ALL participants (bench + advocate) with a per-participant utterance count | ✓ VERIFIED | Confirmed unchanged |
+| 12 | `PATCH /participants/{id}` accepts and persists an optional `title` alongside `side` for advocate rows | ✓ VERIFIED | Confirmed unchanged; title-write logic (lines 559-575) untouched by the new guard, which sits above it |
+| 13 | Edit page Status card shows the current three-state badge, a "Created {date}" line, and a "Published {date}" line when set | ✓ VERIFIED | Confirmed unchanged |
+| 14 | A "Status history" section lists every `status_log` entry as `{badge} — {date, time}`, oldest first, first DRAFT entry labelled "Created" | ✓ VERIFIED | Confirmed unchanged |
+| 15 | Publish shows for Draft and Unpublished; Unpublish shows for Published; button lives with the Status card, not floating | ✓ VERIFIED | Confirmed unchanged |
+| 16 | Unified Speakers section: advocate rows get a role dropdown, title input, utterance count, and inline Save that **persists accurate, non-destructive state**; bench rows show tenure-derived role or "Missing tenure" + Edit person, with utterance count | ✓ VERIFIED (was FAILED) | `+page.svelte:458-530` — explicit "Unresolved" placeholder, `bind:value`, Save disabled while unresolved, backend guard rejects UNKNOWN/ADVOCATE. Bench branch (lines 533+) confirmed unchanged |
+| 17 | Delete is enabled only for Draft arguments (client); Published and Unpublished show the disabled button with the updated tooltip | ✓ VERIFIED | `app/src/routes/admin/arguments/[id]/+page.server.ts:77` — `can_delete = argument.status === 'draft'`, unchanged; now correctly backed end-to-end by the fixed server-side gate |
 
-**Score:** 15/17 truths verified (2 failed — both are backend/functional-safety defects, not missing UI surface)
+**Score:** 17/17 truths verified (both previously-failed truths now closed; no regressions found in the 15 previously-passing truths)
 
 ### Required Artifacts
 
 | Artifact | Expected | Status | Details |
 |----------|----------|--------|---------|
-| `api/services/admin_arguments.py` | Status-keyed publish/unpublish/delete/slug guards; `list_argument_speakers` helper | ✓ VERIFIED (with the delete-gate defect noted above) | All guards present and correctly keyed on `Argument.status` except the delete gate's PIPELINE omission |
-| `api/services/admin_jobs.py` | `approve_job` writes DRAFT log row | ✓ VERIFIED | Confirmed inline |
-| `api/routers/admin.py` | 409 copy update; `title` passthrough on participant PATCH | ✓ VERIFIED | Both confirmed |
-| `api/schemas/admin_arguments.py` | `StatusLogEntry`, `SpeakerRow`, `ArgumentDetail.status_log`/`speakers`, `ParticipantSideUpdate.title` | ✓ VERIFIED | All fields present |
-| `app/src/routes/admin/arguments/+page.svelte` | Three-state badge, Created column, status-driven actions | ✓ VERIFIED | Confirmed |
-| `app/src/lib/components/RunStatusCard.svelte` | Archived badge override | ✓ VERIFIED | Confirmed |
-| `app/src/routes/admin/arguments/[id]/+page.server.ts` | `SpeakerRow`/`status_log` types, `can_delete === 'draft'`, title-aware save, delete copy | ✓ VERIFIED | Confirmed |
-| `app/src/routes/admin/arguments/[id]/+page.svelte` | Status card + history, Speakers section, Danger Zone copy | ⚠️ VERIFIED WITH DEFECT | Structurally present and wired; advocate role select has the UNKNOWN-handling gap (Truth #16) and a `colspan` structural warning (WR-01, non-blocking) |
+| `api/services/admin_arguments.py` | DRAFT-only delete gate; UNKNOWN/ADVOCATE-rejecting `update_participant_side` guard | ✓ VERIFIED | Both re-read directly this session at their current line numbers |
+| `api/tests/test_admin_arguments_service.py` | `test_delete_argument_gate_keys_on_draft`, `test_delete_argument_returns_false_for_pipeline`, `test_update_participant_side_rejects_unresolved_side` | ✓ VERIFIED | All three present; the two always-run tests executed and passed fresh this session |
+| `api/tests/test_admin_arguments_routes.py` | `test_delete_argument_returns_409_for_pipeline` | ✓ VERIFIED (exists; DB-guarded, cannot execute against a live DB in this environment) | Present at line 243, correctly structured, mirrors the passing UNPUBLISHED sibling |
+| `app/src/routes/admin/arguments/[id]/+page.svelte` | `speakerSideById` state, "Unresolved" placeholder option, Save-disable | ✓ VERIFIED | Confirmed at lines 67-73, 460, 473, 514, 524-525 |
 
 ### Key Link Verification
 
 | From | To | Via | Status | Details |
 |------|-----|-----|--------|---------|
-| `publish_argument`/`unpublish_argument` | `Argument.status` + `ArgumentStatusLog` | inline `db.add()` in same transaction | ✓ WIRED | Confirmed at both call sites |
-| `approve_job` | `ArgumentStatusLog` DRAFT row | inline `db.add()` before commit | ✓ WIRED | Confirmed |
-| `delete_argument` / `update_argument` slug-freeze | `Argument.status` | status-keyed conditionals | ⚠️ PARTIAL | Slug-freeze correctly keys on status; delete gate keys on status but the condition is incomplete (misses PIPELINE) |
-| `get_argument_detail` | `list_argument_speakers` + `ArgumentStatusLog` query | function call + query, merged into return dict | ✓ WIRED | Confirmed at `admin_arguments.py:329-363` |
-| `list_argument_speakers` | Utterance counts | single grouped query (`group_by(Utterance.person_id)`) | ✓ WIRED | No N+1 confirmed |
-| Edit page `+page.svelte` | `status_log`/`speakers` from `load()` | direct template binding (`data.argument.status_log`, `data.argument.speakers`) | ✓ WIRED | Confirmed |
-| Advocate Speakers row form | `?/updateParticipantSide` action → PATCH `/participants/{id}` | `use:enhance` form → fetch → backend | ⚠️ WIRED BUT UNSAFE | The wiring itself works; the data it submits can be wrong for UNKNOWN-side rows (Truth #16) |
+| `delete_argument` | `Argument.status` | single positive `== DRAFT` gate | ✓ WIRED | Fixed; regression test executed and passed |
+| `update_participant_side` | `SideEnum.UNKNOWN`/`ADVOCATE` rejection | pre-SELECT `ValueError` guard → router 422 | ✓ WIRED | Confirmed; regression test executed and passed |
+| Advocate `<select>`/Save button | `speakerSideById` client state | `bind:value` + `disabled` expression | ✓ WIRED | Confirmed; `npm run check` 0 errors |
+| (all other Phase 26 links from the original verification) | — | — | ✓ WIRED | Unaffected by 26-05; spot-checked for regressions (list filter, badges, RunStatusCard, status_log/speakers query, Status card/history rendering) — all confirmed present and unchanged |
 
 ### Requirements Coverage
 
 | Requirement | Source Plan | Description | Status | Evidence |
 |---|---|---|---|---|
-| ALIST-02 | 26-01, 26-03 | List shows only Draft/Published/Unpublished; pipeline excluded | ✓ SATISFIED | `list_arguments` filter + status-driven row actions confirmed |
-| ALIST-03 | 26-03 | Distinct badges for all three statuses | ✓ SATISFIED | Three hex-coded badges confirmed |
-| ALIST-04 | 26-03 | "Created" column added | ✓ SATISFIED | Column confirmed |
-| AEDIT-01 | 26-02, 26-04 | Status card: badge, created date, published date | ✓ SATISFIED | Confirmed in edit page Status card |
-| AEDIT-02 | 26-01, 26-02, 26-04 | Full status log with timestamps for every transition | ✓ SATISFIED | `status_log` + Status history section confirmed end-to-end |
-| AEDIT-05 | 26-02, 26-04 | Speakers section replaces Advocate Roles card + tenure gap warnings | ✓ SATISFIED | Old card/banner text confirmed absent (`grep` for "Advocate Roles" / "falls outside all recorded tenures" returns nothing); unified Speakers table present |
-| AEDIT-06 | 26-02, 26-04 | Advocate role dropdown + title field + inline save | ⚠️ SATISFIED WITH DEFECT | Dropdown/title/inline-save all present and wired, but see Truth #16 — the dropdown's incomplete option set makes the "inline save" unsafe for unresolved advocates |
-| AEDIT-07 | 26-02, 26-04 | Bench speakers: tenure-derived role; Missing tenure + edit link | ✓ SATISFIED | Confirmed |
-| AEDIT-08 | 26-01, 26-04 | Publish/Unpublish/re-Publish transitions | ✓ SATISFIED | Confirmed at both backend and UI layers |
-| AEDIT-09 | 26-01, 26-04 | Danger Zone delete gate | ✗ NOT FULLY SATISFIED | Client-side gate correct; backend gate does not block PIPELINE-status deletion (Truth #4) |
+| ALIST-02 | 26-01, 26-03 | List shows only Draft/Published/Unpublished; pipeline excluded | ✓ SATISFIED | Confirmed unchanged |
+| ALIST-03 | 26-03 | Distinct badges for all three statuses | ✓ SATISFIED | Confirmed unchanged |
+| ALIST-04 | 26-03 | "Created" column added | ✓ SATISFIED | Confirmed unchanged |
+| AEDIT-01 | 26-02, 26-04 | Status card: badge, created date, published date | ✓ SATISFIED | Confirmed unchanged |
+| AEDIT-02 (UI surface) | 26-01, 26-02, 26-04 | Full status log with timestamps for every transition | ✓ SATISFIED | Confirmed unchanged |
+| AEDIT-05 | 26-02, 26-04 | Speakers section replaces Advocate Roles card + tenure gap warnings | ✓ SATISFIED | Confirmed unchanged |
+| AEDIT-06 | 26-02, 26-04, 26-05 | Advocate role dropdown + title field + inline save | ✓ SATISFIED (was PARTIAL) | Dropdown/title/inline-save present and now safe: explicit Unresolved state, disabled Save, authoritative backend rejection |
+| AEDIT-07 | 26-02, 26-04 | Bench speakers: tenure-derived role; Missing tenure + edit link | ✓ SATISFIED | Confirmed unchanged |
+| AEDIT-08 | 26-01, 26-04 | Publish/Unpublish/re-Publish transitions | ✓ SATISFIED | Confirmed unchanged |
+| AEDIT-09 | 26-01, 26-04, 26-05 | Danger Zone delete gate | ✓ SATISFIED (was NOT FULLY SATISFIED) | Backend gate now blocks PIPELINE in addition to PUBLISHED/UNPUBLISHED |
 
-No orphaned requirements found — all IDs declared across the four plans (ALIST-02/03/04, AEDIT-01/02/05/06/07/08/09) match the task's requirement list and REQUIREMENTS.md's Phase 26 assignments. AEDIT-03/AEDIT-04 ("Argument Details card") are correctly attributed to Phase 23 in REQUIREMENTS.md and are not claimed by any Phase 26 plan; the pre-existing "Argument Details" card (Card 1) in `arguments/[id]/+page.svelte` was not touched by Phase 26 and remains present, satisfying that clause of the stated phase goal by inheritance rather than by this phase's own work.
+No orphaned requirements. All 10 IDs from the phase's declared requirement list (ALIST-02/03/04, AEDIT-01/02/05/06/07/08/09) are declared across the five plans (26-01 through 26-05) and match REQUIREMENTS.md's Phase 26 assignments. AEDIT-03/AEDIT-04 remain correctly attributed to Phase 23 and out of this phase's scope.
 
 ### Anti-Patterns Found
 
 | File | Line | Pattern | Severity | Impact |
 |------|------|---------|----------|--------|
-| `api/services/admin_arguments.py` | 651 | Incomplete status-gate condition | 🛑 Blocker | Allows deleting PIPELINE-status arguments, contradicting the phase's own "Draft-only delete gate" objective |
-| `app/src/routes/admin/arguments/[id]/+page.svelte` | 443-460 | Missing enum-value handling in `<select>` causing silent default-selection | 🛑 Blocker | Data-accuracy defect — can silently misclassify an unresolved advocate on save |
-| `app/src/routes/admin/arguments/[id]/+page.svelte` | 428 | `colspan="3"` on a cell holding content for 4 logical columns | ⚠️ Warning | Visual column misalignment between advocate and bench rows (non-blocking; cosmetic) |
+| `app/src/routes/admin/arguments/[id]/+page.svelte` | 443 | `colspan="3"` on a cell holding content for 4 logical columns (WR-01, carried forward, unresolved) | ⚠️ Warning | Visual column misalignment between advocate and bench rows when both appear in the same table; non-blocking, cosmetic; not touched by 26-05 |
+| `app/src/routes/admin/arguments/[id]/+page.svelte` | 67-73 | `speakerSideById` seeded once, not reset on route-param reuse (WR-07, new in 26-REVIEW.md) | ⚠️ Warning | Theoretical stale-seed edge case on back/forward navigation between two argument edit pages within the same component instance; does not reopen the data-safety gap because the backend guard is unconditional — worst case is a confusing failed-Save instead of silent misclassification |
 
-No `TBD`/`FIXME`/`XXX`/`TODO`/`HACK`/`PLACEHOLDER` markers found in any file modified by this phase.
+No `TBD`/`FIXME`/`XXX`/`TODO`/`HACK`/`PLACEHOLDER` markers found in any file modified by 26-05.
+
+Out of scope for this phase's must-haves (noted for completeness, not treated as gaps here): 26-REVIEW.md's CR-01 (rerun_job local-disk ingest gap) and CR-02 (blank case_name/docket_number persistence) are real findings but map to pipeline-run/argument-metadata-edit behavior that is not part of this phase's stated goal, success criteria, or requirement IDs (ALIST-02/03/04, AEDIT-01/02/05/06/07/08/09). They are pre-existing/unrelated to the lifecycle-badges/status-log/speakers-section goal this phase targets and should be tracked separately (e.g., backlog or a future phase), not folded into Phase 26's gap set.
 
 ### Behavioral Spot-Checks
 
 | Behavior | Command | Result | Status |
 |----------|---------|--------|--------|
-| Scoped backend test suite for phase 26 files | `.venv/Scripts/python.exe -m pytest api/tests/test_admin_arguments_service.py api/tests/test_admin_arguments_routes.py api/tests/test_admin_jobs_service.py -q` | `25 passed, 25 skipped` (DB-guarded tests skip; `DATABASE_URL` not configured in this environment — matches project's documented, pre-existing test pattern, confirmed via `deferred-items.md`) | ✓ PASS |
-| Frontend type/markup check | `cd app && npm run check` | `793 FILES 0 ERRORS 17 WARNINGS` (warnings are pre-existing, unrelated to phase 26 files) | ✓ PASS |
-| Delete gate correctly rejects PIPELINE-status argument | No existing test | Not covered — confirmed by direct code read, not by a passing/failing test | ✗ FAIL (no test exists to catch the confirmed defect) |
+| `test_delete_argument_gate_keys_on_draft` (always-run, DRAFT-only gate) | `.venv/Scripts/python.exe -m pytest api/tests/test_admin_arguments_service.py::test_delete_argument_gate_keys_on_draft -v` | `PASSED` | ✓ PASS |
+| `test_update_participant_side_rejects_unresolved_side` (always-run, UNKNOWN/ADVOCATE guard) | `.venv/Scripts/python.exe -m pytest api/tests/test_admin_arguments_service.py::test_update_participant_side_rejects_unresolved_side -v` | `PASSED` | ✓ PASS |
+| Full scoped backend test suite (regression check) | `.venv/Scripts/python.exe -m pytest api/tests/test_admin_arguments_service.py api/tests/test_admin_arguments_routes.py api/tests/test_admin_jobs_service.py -q` | `27 passed, 27 skipped` (DB-guarded tests skip; no live Postgres reachable in this environment — pre-existing, documented limitation) | ✓ PASS |
+| Frontend type/markup check | `cd app && npm run check` | `793 FILES 0 ERRORS 18 WARNINGS` (warnings pre-existing/unrelated) | ✓ PASS |
+| DB-guarded PIPELINE delete tests (attempted live run) | Exported `DATABASE_URL` and re-ran; confirmed `api.core.database.AsyncSessionLocal` is `None` outside the FastAPI lifespan (engine created only at app startup, not import) | Same limitation affects the pre-existing sibling UNPUBLISHED test — not a new gap | ? SKIP (environment) |
 
 ### Human Verification Required
 
-See frontmatter `human_verification` — three items covering badge-color visual contrast, the RunStatusCard Archived-badge live check, and full-page layout/column-alignment confirmation across all three lifecycle states (this also surfaces the WR-01 `colspan` warning visually).
+See frontmatter `human_verification` — three items: badge-color visual contrast, the RunStatusCard Archived-badge live check (both carried forward, unaffected by 26-05), and full-page layout/column-alignment confirmation across all three lifecycle states — this third item is expanded from the prior verification to also require visually confirming the new "Unresolved — choose a role" placeholder and disabled-Save treatment on an argument with an unresolved advocate.
 
 ### Gaps Summary
 
-Two confirmed, independently-verified defects block a clean pass, both matching this phase's own explicitly declared must-haves rather than being out-of-scope nice-to-haves:
+Both previously-confirmed gaps are closed, independently re-verified in this session by direct code reading and by executing (not merely citing) the relevant regression tests and the frontend type-checker:
 
-1. **Backend delete gate does not enforce "Draft-only."** `delete_argument` blocks PUBLISHED and UNPUBLISHED but not PIPELINE, so a still-in-progress argument (one an `AdminJob` may still be actively referencing, possibly paused at RESOLVE awaiting an operator) can be deleted via a direct API call, permanently stranding that job. This directly contradicts 26-01-PLAN.md's must-have text ("allowed only for DRAFT") and 26-04-PLAN.md's explicit objective ("a delete gate that keys on Draft only"). The client-side `can_delete` gate is correct, but per this project's own stated convention elsewhere in the same files, the backend must independently enforce the invariant — it does not.
+1. **Backend delete gate.** `delete_argument` now rejects any non-DRAFT status (`if argument.status != ArgumentStatusEnum.DRAFT: return False`), closing the PIPELINE hole. Confirmed at `api/services/admin_arguments.py:669-670`; `test_delete_argument_gate_keys_on_draft` executed and passed.
+2. **Advocate role dropdown.** The `<select>` now has an explicit "Unresolved — choose a role" option bound via `speakerSideById`, Save is disabled while unresolved, and the backend `update_participant_side` guard unconditionally rejects `UNKNOWN`/`ADVOCATE` sides regardless of what the client sends. Confirmed at `+page.svelte:67-73,458-530` and `admin_arguments.py:542-547`; `test_update_participant_side_rejects_unresolved_side` executed and passed.
 
-2. **Advocate role dropdown omits `SideEnum.UNKNOWN`, causing silent data corruption on save.** Every freshly-parsed, not-yet-resolved advocate participant defaults to `side=UNKNOWN`. Because the `<select>` only offers PETITIONER/RESPONDENT/AMICUS, the browser silently defaults to PETITIONER when none of the three matches, and clicking Save (e.g., to save only a Title) writes that default — reclassifying an unresolved advocate as "Petitioner's Counsel" with no warning. This was a deliberate instruction in the plan itself (to drop the UNKNOWN option), so it is a planning-level defect the executor implemented faithfully — but it is a real, confirmed functional bug that undermines the safety of the "inline Save" feature and runs against the project's CLAUDE.md constraint that every speaker receive identical, non-inferred treatment.
+No regressions were found in any of the 15 previously-passing truths — none of the files those truths depend on were touched by 26-05 outside the two targeted fixes, and spot-checks confirm they remain intact.
 
-Both were independently confirmed by direct code inspection (not accepted from the code-review report at face value): `api/services/admin_arguments.py:650-652` for gap 1, and `app/src/routes/admin/arguments/[id]/+page.svelte:443-460` plus `api/models/models.py:36-42/313` (SideEnum default) for gap 2.
-
-All other must-haves across the four plans — the publish/unpublish/re-publish lifecycle and its audit log, the three-state list badges and Created column, the status-driven row/edit-page actions, the Archived run-status badge, the status_log/speakers API contract, and the Status card/history/Speakers-section UI — were independently verified present, substantive, and correctly wired.
+The phase does not reach a clean `passed` status only because three human-verification items (visual badge contrast, live Archived-badge check, and full-page layout/placeholder-rendering confirmation) remain open — these are pre-existing items from the original verification that no automated check can resolve, expanded to also cover the new Unresolved-advocate UI treatment introduced by this gap-closure. There are no outstanding code-level gaps against this phase's must-haves.
 
 ---
 
-_Verified: 2026-07-08T12:00:00Z_
+_Verified: 2026-07-08T18:00:00Z_
 _Verifier: Claude (gsd-verifier)_

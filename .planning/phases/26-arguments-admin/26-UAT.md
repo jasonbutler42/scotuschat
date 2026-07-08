@@ -1,9 +1,9 @@
 ---
-status: complete
+status: resolved
 phase: 26-arguments-admin
-source: [26-01-SUMMARY.md, 26-02-SUMMARY.md, 26-03-SUMMARY.md, 26-04-SUMMARY.md, 26-05-SUMMARY.md]
+source: [26-01-SUMMARY.md, 26-02-SUMMARY.md, 26-03-SUMMARY.md, 26-04-SUMMARY.md, 26-05-SUMMARY.md, 26-06-SUMMARY.md]
 started: 2026-07-08T17:21:23Z
-updated: 2026-07-08T17:40:00Z
+updated: 2026-07-08T18:37:38Z
 ---
 
 ## Current Test
@@ -184,9 +184,20 @@ blocked: 0
 ## Gaps
 
 - truth: "RunStatusCard shows a neutral-grey Archived badge when the run's argument has already been created"
-  status: failed
+  status: resolved
   reason: "User reported: pass for the details page but I was expecting the same badge to be present on the pipeline list and it's not there"
   severity: major
   test: 18
-  artifacts: []
-  missing: []
+  root_cause: "The pipeline list page (app/src/routes/admin/pipeline/+page.svelte) has no Archived-badge branch, and more fundamentally its backing list endpoint never computes or returns the signal needed: list_jobs() in api/services/admin_jobs.py runs a plain select(AdminJob) with no join to Argument, and AdminJobResponse (api/schemas/admin_jobs.py) has no field indicating the linked argument's status. The detail page instead calls a separate per-job GET /api/admin/jobs/{job_id}/readiness endpoint (get_job_readiness() in admin_jobs.py, api/routers/admin.py ~line 393) which has no list/batch equivalent. This is a missing data field, not a missing render branch."
+  artifacts:
+    - path: "api/schemas/admin_jobs.py"
+      issue: "AdminJobResponse has no field indicating whether the linked argument has already been created (left PIPELINE status)"
+    - path: "api/services/admin_jobs.py"
+      issue: "list_jobs() (~lines 212-235) does a plain select(AdminJob) with no outerjoin to Argument and no readiness/archived computation"
+    - path: "app/src/routes/admin/pipeline/+page.svelte"
+      issue: "badgeStyle()/badgeLabel() (~lines 108-141) only branch on job.status/job.current_step; no Archived override like RunStatusCard.svelte has"
+  missing:
+    - "Add argument_status (or is_archived) field to AdminJobResponse"
+    - "Outerjoin Argument in list_jobs() and populate the new field (already-created when Argument.status != PIPELINE), mirroring the existing parse_stats injection pattern"
+    - "Extend the list page's badge logic to render the grey Archived badge when the new field indicates the argument is already created, mirroring RunStatusCard.svelte's readiness.state === 'already_created' override (lines 44-50)"
+  debug_session: ""

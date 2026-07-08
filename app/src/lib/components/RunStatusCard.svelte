@@ -41,8 +41,14 @@
 		failed: 'Failed',
 	};
 
-	let badgeColor = $derived(BADGE_COLOR[jobStatus] ?? '#94a3b8');
-	let badgeLabel = $derived(BADGE_LABEL[jobStatus] ?? jobStatus);
+	// Archived override: an already-created run is settled/read-only and reads
+	// differently from a still-processing "Completed" badge (folded Phase-25-UAT todo).
+	let badgeColor = $derived(
+		readiness?.state === 'already_created' ? '#cbd5e1' : BADGE_COLOR[jobStatus] ?? '#94a3b8',
+	);
+	let badgeLabel = $derived(
+		readiness?.state === 'already_created' ? 'Archived' : BADGE_LABEL[jobStatus] ?? jobStatus,
+	);
 
 	let approveSubmitting = $state(false);
 </script>

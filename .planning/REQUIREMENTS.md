@@ -52,8 +52,8 @@
 
 - [x] **ALIST-01** New `unpublished` argument status — distinct from Draft: Draft (never published, slug editable) / Published (slug locked, visible on public site) / Unpublished (was public, now hidden, slug locked) — new enum value + Alembic migration; unpublish action transitions to `unpublished`, not back to `draft`
 - [x] **ALIST-02** Arguments list shows only Draft / Published / Unpublished rows — pipeline-status arguments excluded (they live on pipeline job detail)
-- [ ] **ALIST-03** Status column accurately reflects all three statuses with distinct badges
-- [ ] **ALIST-04** "Created" column added showing date/time argument was first created
+- [x] **ALIST-03** Status column accurately reflects all three statuses with distinct badges
+- [x] **ALIST-04** "Created" column added showing date/time argument was first created
 
 ### Argument Edit (`/admin/arguments/[id]`)
 
@@ -145,8 +145,8 @@
 | PJOB-23 | Phase 25 | Complete |
 | ALIST-01 | Phase 22 | Complete |
 | ALIST-02 | Phase 26 | Complete |
-| ALIST-03 | Phase 26 | Pending |
-| ALIST-04 | Phase 26 | Pending |
+| ALIST-03 | Phase 26 | Complete |
+| ALIST-04 | Phase 26 | Complete |
 | AEDIT-01 | Phase 26 | Pending |
 | AEDIT-02 | Phase 22 | Complete |
 | AEDIT-03 | Phase 23 | Complete |

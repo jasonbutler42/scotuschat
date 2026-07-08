@@ -5,15 +5,15 @@ milestone_name: Admin Screens Cleanup
 current_phase: 26
 current_phase_name: arguments-admin
 status: executing
-stopped_at: Phase 26 UI-SPEC approved
-last_updated: "2026-07-08T00:33:09.357Z"
+stopped_at: Completed 26-03-PLAN.md
+last_updated: "2026-07-08T00:38:15.580Z"
 last_activity: 2026-07-08
 last_activity_desc: Phase 26 execution started
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 23
-  completed_plans: 20
+  completed_plans: 21
   percent: 57
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-07-07 after Phase 25 completion)
 ## Current Position
 
 Phase: 26 (arguments-admin) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-07-08 — Phase 26 execution started
 
@@ -85,6 +85,8 @@ Full log in PROJECT.md Key Decisions table. Key decisions entering v1.5:
 - [Phase ?]: 26-01: unpublish_argument preserves published_at (no longer nulled) so Status card can show last-published date
 - [Phase ?]: 26-01: ArgumentStatusLog writes inlined at 3 call sites (no shared helper) to avoid admin_jobs -> admin_arguments import cycle (D-10)
 - [Phase ?]: 26-01: delete_argument gate and update_argument slug-freeze both switched from published_at to status-keyed checks (ALIST-01, D-03/AEDIT-09)
+- [Phase 26-03]: Row actions key on arg.status (draft/unpublished -> Publish, published -> Unpublish) instead of the old published_at-based check, matching Plan 26-01's backend status model
+- [Phase 26-03]: RunStatusCard's Archived override lives only in the badgeColor/badgeLabel derivations — BADGE_COLOR/BADGE_LABEL maps stay keyed purely on jobStatus
 
 ### Pending Todos
 
@@ -124,9 +126,10 @@ Deployment blockers (v1.4, unresolved — not in v1.5 scope):
 | Phase 25 P03 | 40min | 2 tasks | 2 files |
 | Phase 25 P04 | 55min | 3 tasks | 5 files |
 | Phase 26 P01 | 20min | 2 tasks | 6 files |
+| Phase 26 P03 | 15min | 2 tasks | 2 files |
 
 ## Session Continuity
 
-Last session: 2026-07-08T00:32:19.842Z
-Stopped at: Phase 26 UI-SPEC approved
-Resume file: .planning/phases/26-arguments-admin/26-UI-SPEC.md
+Last session: 2026-07-08T00:38:15.571Z
+Stopped at: Completed 26-03-PLAN.md
+Resume file: None

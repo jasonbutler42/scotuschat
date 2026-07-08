@@ -58,3 +58,16 @@ not fixed here, tracked for later triage).
   fixture proper per-test lifespan/session teardown (or run `tests`,
   `pipeline/tests`, and `api/tests` as separate pytest invocations in CI)
   so `workflow.test_command` stops reporting false positives.
+
+## Wave 2 post-merge gate (26-02)
+
+- Same pattern as wave 1, confirmed the same way: full-suite run after 26-02
+  adds exactly 5 new failures (`test_admin_arguments_routes.py::
+  test_update_participant_route_persists_title_for_advocate`,
+  `test_admin_arguments_service.py::{test_get_argument_detail_includes_status_log_and_speakers,
+  test_list_argument_speakers_bench_advocate_and_utterance_counts,
+  test_list_argument_speakers_returns_empty_for_missing_argument,
+  test_update_participant_side_persists_title_for_advocate}`) — all 26-02's
+  own new tests, all pass (25 passed, 25 skipped, 0 failed) when the same 3
+  files are run scoped instead of collected with `pipeline/tests/`. No net
+  regression.

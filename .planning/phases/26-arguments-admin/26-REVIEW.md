@@ -1,6 +1,6 @@
 ---
 phase: 26-arguments-admin
-reviewed: 2026-07-07T00:00:00Z
+reviewed: 2026-07-08T00:00:00Z
 depth: standard
 files_reviewed: 11
 files_reviewed_list:
@@ -16,96 +16,67 @@ files_reviewed_list:
   - app/src/routes/admin/arguments/[id]/+page.server.ts
   - app/src/routes/admin/arguments/[id]/+page.svelte
 findings:
-  critical: 3
-  warning: 6
-  info: 0
-  total: 9
+  critical: 2
+  warning: 7
+  info: 3
+  total: 12
 status: issues_found
 ---
 
 # Phase 26: Code Review Report
 
-**Reviewed:** 2026-07-07
+**Reviewed:** 2026-07-08
 **Depth:** standard
 **Files Reviewed:** 11
 **Status:** issues_found
 
 ## Summary
 
-Reviewed the Phase 26 arguments-admin API (router, schemas, services) and the SvelteKit
-argument list/detail pages plus the shared `RunStatusCard` component and the accompanying
-tests. The overall pattern discipline (mass-assignment allow-lists, IDOR scoping,
-`synchronize_session=False`, validate-before-mutate ordering) is consistently applied and
-matches the project's documented conventions. However, three defects break stated
-invariants in ways that can destroy or strand data, and several quality issues weaken the
-guarantees the code claims to provide.
+This is a fresh, full-scope review of all 11 files currently in the Phase 26 arguments-admin
+surface, performed after gap-closure plan 26-05 (commits `d957f810`, `44a09c48`, `d322d297`).
 
-Most impactful: `delete_argument` does not actually enforce its own "DRAFT only" contract
-(it only rejects PUBLISHED/UNPUBLISHED, silently permitting deletion of PIPELINE-state
-arguments that a running AdminJob still points at); the Speakers-card advocate `<select>`
-is missing an option for `SideEnum.UNKNOWN`, which is the side value on every
-freshly-parsed, not-yet-resolved advocate participant, so simply opening and saving the
-form can silently reclassify an unresolved advocate as "Petitioner's Counsel"; and
-`rerun_job` never spawns an ingest subprocess for jobs that were uploaded to local disk
-(no DO Spaces configured), leaving the new job stuck in `PENDING/INGEST` forever with no
-operator-visible error.
+**Gap-closure verification — both targeted fixes landed correctly and are confirmed working:**
+
+1. **`delete_argument`'s status gate** (`api/services/admin_arguments.py:666-670`) is now a
+   single positive `if argument.status != ArgumentStatusEnum.DRAFT: return False` condition,
+   correctly rejecting `PIPELINE` in addition to `PUBLISHED`/`UNPUBLISHED`. Confirmed against
+   `SideEnum`/`ArgumentStatusEnum` definitions in `api/models/models.py`, and covered by new
+   tests `test_delete_argument_gate_keys_on_draft`, `test_delete_argument_returns_false_for_pipeline`
+   (both route- and service-level).
+2. **`update_participant_side`** (`api/services/admin_arguments.py:542-547`) now raises
+   `ValueError` for `SideEnum.UNKNOWN` and legacy `SideEnum.ADVOCATE` in addition to `BENCH`,
+   before touching the database. The matching UI change
+   (`app/src/routes/admin/arguments/[id]/+page.svelte`) adds an explicit "Unresolved — choose
+   a role" placeholder option, seeds a per-row `speakerSideById` state that collapses
+   `UNKNOWN`/legacy `ADVOCATE` to a `'UNKNOWN'` sentinel, and disables the Save button while
+   that sentinel is selected. Verified this is a functionally complete fix (disabling Save
+   makes the previously-suggested `disabled` attribute on the `<option>` unnecessary), and
+   backed by an always-run unit test (`test_update_participant_side_rejects_unresolved_side`)
+   plus a route-level regression test.
+
+**New/carried-forward issues found in this pass:** two of the three Critical issues from the
+prior review round (rerun_job never spawning ingest for locally-uploaded jobs) were **not**
+addressed by 26-05 and remain exploitable exactly as previously documented; five Warnings from
+the prior round (colspan mismatch, duplicate docket normalization, unnormalized
+`docket_number_norm`, overly-broad photo-validation `except`, and photo-URL SSRF gap) are also
+unchanged. In addition, this pass identified a new Critical: `PATCH /arguments/{id}` (and the
+sibling `MetadataUpdate`/`update_argument_metadata` path) accept and persist empty-string
+`case_name`/`docket_number` with no non-empty validation anywhere in the stack, and the edit
+form has no HTML `required` attribute on either field — an operator who accidentally clears
+either field and clicks Save silently corrupts the case's identity data (and, for `case_name`
+on a `DRAFT` argument, its public URL slug).
 
 ## Critical Issues
 
-### CR-01: `delete_argument` permits deleting PIPELINE-state arguments, contradicting its own "DRAFT only" contract
-
-**File:** `api/services/admin_arguments.py:622-652`
-**Issue:**
-The docstring states "Delete an argument only if it is a DRAFT (ADMIN-01, D-03/AEDIT-09)"
-and the router docstring (`api/routers/admin.py:951`) repeats the same claim, but the
-actual guard only blocks `PUBLISHED` and `UNPUBLISHED`:
-
-```python
-# D-03 / AEDIT-09: delete gate keys on status, not published_at.
-if argument.status in (ArgumentStatusEnum.PUBLISHED, ArgumentStatusEnum.UNPUBLISHED):
-    return False
-```
-
-`ArgumentStatusEnum` has four members: `PIPELINE`, `DRAFT`, `PUBLISHED`, `UNPUBLISHED`
-(`api/models/models.py:67-71`). Because `PIPELINE` is not in the blocked tuple, a direct
-`DELETE /api/admin/arguments/{argument_id}` call against a still-in-progress argument
-succeeds: it deletes the argument's utterances, pipeline runs, participants, and
-case-arguments, and NULLs `AdminJob.argument_id` on any job still referencing it. A
-job that is currently `PAUSED` at the `RESOLVE` step (waiting on an operator) becomes
-permanently stuck — `resolve_job`/`update_resolve_row_for_job` will subsequently fail
-with `ValueError` because `job.argument_id` is now `None`, with no path back to a
-working state short of manual DB surgery.
-
-The SvelteKit edit page's `can_delete = argument.status === 'draft'`
-(`app/src/routes/admin/arguments/[id]/+page.server.ts:77`) prevents this from being
-reachable through the normal UI (the button is disabled for any non-draft status,
-including `pipeline`), but the project's own convention — stated repeatedly elsewhere in
-this same file ("server-side COUNT is authoritative; client disabled-state is
-defense-in-depth only") — requires the backend to independently enforce this. It
-currently does not for the `pipeline` state.
-
-There is also no test coverage for this case: `test_delete_argument_returns_false_for_unpublished`
-exists, but no `test_delete_argument_returns_false_for_pipeline` test exists to catch
-the gap.
-
-**Fix:**
-```python
-# D-03 / AEDIT-09: only DRAFT arguments may be deleted.
-if argument.status != ArgumentStatusEnum.DRAFT:
-    return False
-```
-
-### CR-02: `rerun_job` never spawns ingest for jobs uploaded to local disk (no DO Spaces configured)
+### CR-01: `rerun_job` still never spawns ingest for jobs uploaded to local disk (no DO Spaces configured) — unresolved from prior review
 
 **File:** `api/routers/admin.py:1042-1076`, `api/services/admin_jobs.py:524-548`
 **Issue:**
-`create_job`'s upload path stores the PDF on local disk when `settings.do_spaces_bucket`
-is falsy (`api/routers/admin.py:301-313`) and never sets `spaces_key`; nothing on
-`AdminJob` records the local file path (it's derived deterministically from `job.id` at
-creation time: `data/uploads/{job.id}.pdf`). `rerun_job` (service) copies
-`pdf_url`/`spaces_key`/`original_filename`/`source_dockets` onto the new job, but for a
-locally-uploaded original job, both `pdf_url` and `spaces_key` are `None`. The router's
-rerun endpoint only handles two cases:
+`create_job`'s upload path (`api/routers/admin.py:301-313`) stores the PDF at
+`data/uploads/{job.id}.pdf` and sets neither `spaces_key` nor `pdf_url` when
+`settings.do_spaces_bucket` is falsy. `rerun_job` (service, lines 524-548) copies
+`pdf_url`/`spaces_key`/`original_filename`/`source_dockets` onto the new job, but the router's
+rerun endpoint only handles two source types:
 
 ```python
 if new_job.spaces_key:
@@ -114,155 +85,150 @@ elif new_job.pdf_url:
     spawn_pipeline_step("ingest", new_job.id, ["--url", new_job.pdf_url] + docket_args)
 ```
 
-There is no `else` branch. For a dev-mode, disk-backed original job, neither condition is
-true, so **no ingest subprocess is spawned** for the new job. The endpoint still returns
-`202` + a new `AdminJobResponse` with `status=PENDING`, giving the operator every
-indication the rerun started successfully — but the job will sit at `PENDING/INGEST`
-forever with no error surfaced anywhere (polling `GET /jobs/{id}` just keeps returning
-`PENDING`, since `try_advance_ingest_to_parse` never fires — status never reaches
-`COMPLETED`).
+There is still no `else` branch and no local-file path is ever persisted on `AdminJob`, so for
+a dev-mode disk-backed original job, **no ingest subprocess is spawned** for the rerun. The
+endpoint still returns `202` with a fresh `PENDING`-status `AdminJobResponse`, giving the
+operator every indication the rerun started — but the job sits at `PENDING/INGEST` forever with
+no error surfaced anywhere (the poll endpoint's `try_advance_ingest_to_parse` never fires since
+`status` never reaches `COMPLETED`).
 
-**Fix:** Preserve the original job's local file (or its path) so rerun can reuse it, e.g.
-store the resolved local path on `AdminJob` at creation time and add a third branch:
+This is the same defect flagged as CR-02 in the pre-gap-closure review; the 26-05 commits
+(`d957f810`, `44a09c48`, `d322d297`) touched only `delete_argument`,
+`update_participant_side`, and the Speakers `<select>` — none of the diffs touch
+`rerun_job` or the local-upload path. Confirmed unresolved by direct inspection of current
+`git show d957f810 44a09c48 d322d297 --stat` output (no `admin_jobs.py` rerun changes, no
+router rerun-branch changes).
+
+**Fix:** Persist the resolved local file path (or a stable, re-derivable location) on
+`AdminJob` at creation time, and add a third branch:
 ```python
 elif new_job.original_filename and not new_job.spaces_key and not new_job.pdf_url:
-    # Local-disk-backed original — copy (or symlink) data/uploads/{original_id}.pdf
-    # to data/uploads/{new_job.id}.pdf, then:
+    # Local-disk-backed original — copy data/uploads/{original_id}.pdf to
+    # data/uploads/{new_job.id}.pdf, then:
     spawn_pipeline_step("ingest", new_job.id, ["--local-file", str(copied_path)] + docket_args)
 ```
-At minimum, if this path truly cannot be supported, `rerun_job` should raise a
-`ValueError` (mapped to 422) rather than silently creating a job that can never progress.
+At minimum, if this path truly cannot be supported yet, `rerun_job` should raise a
+`ValueError` (mapped to 422) instead of silently creating a job that can never progress.
 
-### CR-03: Advocate role `<select>` has no option for `SideEnum.UNKNOWN`, so saving an unresolved advocate row silently reassigns its side
+### CR-02: `PATCH /arguments/{id}` allows blank `case_name`/`docket_number` to be persisted, corrupting slug and dedup-key data
 
-**File:** `app/src/routes/admin/arguments/[id]/+page.svelte:456-460`
+**File:** `api/schemas/admin_arguments.py:205-224` (`ArgumentUpdate`),
+`api/services/admin_arguments.py:424-461` (`update_argument`),
+`app/src/routes/admin/arguments/[id]/+page.svelte:148-190` (form inputs)
 **Issue:**
-`list_argument_speakers` (`api/services/admin_arguments.py:101-218`) includes every
-non-BENCH `ArgumentParticipant` in the "advocate" branch, regardless of `side` — and
-`SideEnum` includes `UNKNOWN` (the default side for a freshly-resolved advocate that has
-not yet been assigned a role) and legacy `ADVOCATE` (`api/models/models.py:36-42`). The
-role `<select>` in the Speakers card only renders three options:
+`ArgumentUpdate.case_name` and `.docket_number` are `Optional[str] = None` with no
+`min_length`/non-empty constraint. `update_argument` treats "provided" as "not `None`," not
+"non-empty":
 
-```svelte
-<option value="PETITIONER" selected={speaker.side === 'PETITIONER'}>Petitioner's Counsel</option>
-<option value="RESPONDENT" selected={speaker.side === 'RESPONDENT'}>Respondent's Counsel</option>
-<option value="AMICUS" selected={speaker.side === 'AMICUS'}>Amicus Curiae</option>
+```python
+if body.case_name is not None:
+    lead_case.case_name = body.case_name.strip()
+    if argument.status == ArgumentStatusEnum.DRAFT:
+        new_slug = _derive_slug(lead_case.case_name)   # _derive_slug("") == ""
+        ...
+        lead_case.slug = new_slug
+```
+```python
+if body.docket_number is not None:
+    new_docket = body.docket_number.strip()
+    if new_docket != lead_case.docket_number:
+        ...
+        lead_case.docket_number = new_docket
+        lead_case.docket_number_norm = new_docket
 ```
 
-When `speaker.side` is `'UNKNOWN'` (or legacy `'ADVOCATE'`), none of the three `selected`
-expressions is true, so no `<option>` is marked selected. Per standard HTML `<select>`
-behavior, the browser then treats the **first** listed option (`PETITIONER`) as the
-current value. If an operator opens the Speakers card and clicks "Save" for that row
-(e.g., only intending to fill in a Title), the form submits `side=PETITIONER` and the
-participant — whose side genuinely has not been determined yet — is silently written as
-"Petitioner's Counsel" with no confirmation or warning. This is a data-accuracy bug that
-runs against the project's apolitical/no-silent-inference constraint on speaker
-attribution (CLAUDE.md: "Every speaker ... gets identical schema, depth, and treatment.
-No derived insight").
-
-**Fix:** Add an explicit "Unresolved" placeholder option so the select reflects true
-state and an accidental Save does not change `side`:
-```svelte
-<option value="UNKNOWN" selected={speaker.side === 'UNKNOWN'} disabled>Unresolved — choose a role</option>
-<option value="PETITIONER" selected={speaker.side === 'PETITIONER'}>Petitioner's Counsel</option>
-<option value="RESPONDENT" selected={speaker.side === 'RESPONDENT'}>Respondent's Counsel</option>
-<option value="AMICUS" selected={speaker.side === 'AMICUS'}>Amicus Curiae</option>
+The `?/save` form action (`app/src/routes/admin/arguments/[id]/+page.server.ts:126-127`)
+always sends a (possibly empty) trimmed string for both fields — never `undefined`/omitted:
+```ts
+const case_name = ((formData.get('case_name') as string) ?? '').trim();
+const docket_number = ((formData.get('docket_number') as string) ?? '').trim();
 ```
-(The server-side `ParticipantSideUpdate.side: SideEnum` already rejects `BENCH`; it would
-need to also keep rejecting/ignoring `UNKNOWN` submissions if the placeholder is left
-selected, or the Save button should be disabled while `side === 'UNKNOWN'`.)
+and the corresponding `<input>` elements have no `required` attribute
+(`+page.svelte:148-164` for `case_name`, `172-190` for `docket_number`). If an operator clears
+either field (accidentally or otherwise) and clicks "Save changes," the request body carries
+`case_name: ""` / `docket_number: ""`, which is not `None`, so the write proceeds: for a
+`DRAFT` argument, `_derive_slug("")` returns `""` (confirmed in
+`pipeline/commands/ingest.py:85-101` — no length check), and — absent a same-empty-slug
+collision — the lead `Case` row ends up with `case_name=""`, `slug=""`. For any status
+(including `PUBLISHED`), `docket_number`/`docket_number_norm` can similarly be wiped to `""`.
+This breaks the case's public URL, its display title on any published page, and the
+uniqueness/dedup semantics of `docket_number`. There is no confirmation step and no way to
+recover except direct DB correction.
+
+The same "not-`None` treated as provided, no non-empty check" pattern exists in the sibling
+`update_argument_metadata` (`api/services/admin_arguments.py:781-795` for `case_name`,
+`763-764` for `source_docket`), reachable via `MetadataUpdate`.
+
+**Fix:** Add non-empty validation at the schema layer (Pydantic v2 `Field(min_length=1)` with
+a validator that treats whitespace-only as empty, or a `field_validator` that rejects blank
+after `.strip()`), and add `required` to both `<input>` elements as defense-in-depth:
+```python
+from pydantic import field_validator
+
+class ArgumentUpdate(BaseModel):
+    case_name: Optional[str] = None
+    docket_number: Optional[str] = None
+    argued_date: Optional[str] = None
+
+    @field_validator("case_name", "docket_number")
+    @classmethod
+    def _reject_blank(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and not v.strip():
+            raise ValueError("must not be blank")
+        return v
+```
+```svelte
+<input type="text" id="case_name" name="case_name" required value={data.argument.case_name} ... />
+<input type="text" id="docket_number" name="docket_number" required value={data.argument.docket_number} ... />
+```
 
 ## Warnings
 
-### WR-01: Advocate row `colspan` does not cover all remaining table columns
+### WR-01: Advocate row `colspan` still does not cover all remaining table columns — unresolved from prior review
 
-**File:** `app/src/routes/admin/arguments/[id]/+page.svelte:413-417,428`
-**Issue:**
-The Speakers table header defines 5 columns: Name, Role, Title, Utterances, Action. Bench
-rows correctly render 5 `<td>`s (Name + 4). The advocate branch renders `<td>` (Name) plus
-a single `<td colspan="3">` that visually contains the Role select, Title input, the
-utterance count, *and* the Save button — i.e., content for 4 logical columns squeezed into
-a cell declared to span only 3:
-```svelte
-<td colspan="3" style="padding: 8px; vertical-align: top;">
-```
-Advocate rows therefore total 4 spanned column-units (`1 + 3`) against the table's 5
-declared columns, while bench rows total 5. This is a malformed/inconsistent table
-structure that will misalign column boundaries between adjacent advocate and bench rows
-(borders, widths) — most visible when a Speakers list mixes bench and advocate rows.
+**File:** `app/src/routes/admin/arguments/[id]/+page.svelte:428-432` (header), `:443`
+**Issue:** The Speakers table header still declares 5 columns (Name, Role, Title, Utterances,
+Action). Bench rows render 5 `<td>`s total. The advocate branch still renders one `<td>`
+(Name) plus a single `<td colspan="3">` (line 443) holding the Role select, Title input,
+utterance count, and Save button — 4 pieces of content packed into a cell that only declares
+3 spanned columns, so advocate rows total 4 column-units against the table's 5. This
+misaligns column boundaries whenever a Speakers list mixes bench and advocate rows. Not
+touched by the 26-05 commits.
+**Fix:** `<td colspan="4" style="padding: 8px; vertical-align: top;">`.
 
-**Fix:** Use `colspan="4"` to cover Role, Title, Utterances, and Action:
-```svelte
-<td colspan="4" style="padding: 8px; vertical-align: top;">
-```
+### WR-02: Duplicate, diverging docket-normalization logic between the router and the metadata-update service — unresolved from prior review
 
-### WR-02: Duplicate, diverging docket-normalization logic between the router and the metadata-update service
+**File:** `api/services/admin_arguments.py:751-762` vs `api/routers/admin.py:115-153`
+**Issue:** `_normalize_dockets` in the router is the canonical strip/dedupe/order-preserving
+normalizer and additionally rejects any docket value starting with `-` (T-24-08 CLI-arg
+injection defense). `update_argument_metadata` still reimplements the same strip/dedupe logic
+inline without the `-`-prefix rejection. No active injection path today (this call site writes
+`Argument.source_dockets`, not the field `_dockets_to_ingest_args` consumes), but it's a
+maintenance hazard if that ever changes.
+**Fix:** Extract the shared normalization (including the leading-`-` rejection) into one helper
+used by both call sites.
 
-**File:** `api/services/admin_arguments.py:732-744` vs `api/routers/admin.py:115-153`
-**Issue:**
-`api/routers/admin.py::_normalize_dockets` is the canonical strip/dedupe/order-preserving
-normalizer, and it additionally rejects any docket value starting with `-`
-(T-24-08, CLI-arg-injection defense before the value can reach subprocess argv). Phase 19's
-`update_argument_metadata` in `admin_arguments.py` reimplements the same strip/dedupe logic
-inline, but without the `-`-prefix rejection:
-```python
-seen: set[str] = set()
-normalized: list[str] = []
-for d in body.source_dockets:
-    stripped = d.strip()
-    if stripped and stripped not in seen:
-        seen.add(stripped)
-        normalized.append(stripped)
-```
-Today this specific call site never reaches subprocess argv (it writes to
-`Argument.source_dockets`, a different column than `AdminJob.source_dockets`, which is the
-only field `_dockets_to_ingest_args` consumes), so there is no active injection path — but
-the duplicated logic is a maintenance hazard: a future change that wires
-`Argument.source_dockets` into any CLI-argument builder would silently reintroduce the
-T-24-08 vulnerability class this project has otherwise been careful to close in one place.
-
-**Fix:** Extract the normalization (including the leading-`-` rejection) into a single
-shared helper (e.g., a small `api/services/dockets.py`) and have both `_normalize_dockets`
-and `update_argument_metadata` call it.
-
-### WR-03: `docket_number_norm` is not actually normalized on admin edits, unlike ingest's dedup key
+### WR-03: `docket_number_norm` is still not actually normalized on admin edits, unlike ingest's dedup key — unresolved from prior review
 
 **File:** `api/services/admin_arguments.py:435-442`
-**Issue:**
-`update_argument`'s own comment acknowledges the gap:
-```python
-# docket_number_norm: same normalization as ingest (strip leading zeros, etc.)
-# ...
-# ingest.py does not export a normalizer for docket_number_norm, so we
-# set it to the same stripped value ...
-lead_case.docket_number_norm = new_docket
-```
-If ingest's duplicate-detection normalization (used at ingest time) differs from a plain
-`.strip()` (e.g., it strips leading zeros or punctuation), an admin-edited docket number
-can end up with a `docket_number_norm` that is out of sync with what a subsequent ingest
-run would compute for an equivalent docket string — risking either a missed duplicate
-detection or a false duplicate flag on the next ingest.
+**Issue:** `update_argument`'s own comment acknowledges the gap and sets
+`lead_case.docket_number_norm = new_docket` — the raw, hyphen-containing value — while
+`pipeline/commands/ingest.py:385` computes `docket_number_norm=docket.replace("-", "")` for
+newly-ingested cases. An admin-edited docket therefore gets a `docket_number_norm` computed by
+a different rule than ingest uses, risking a future normalization-consumer (duplicate
+detection, lookups) treating equivalent dockets as different.
+**Fix:** Export ingest's normalization as a small reusable function (mirroring the existing
+`_derive_slug` re-export pattern) and call it here instead of a bare `.strip()`.
 
-**Fix:** Export the normalizer used by ingest (mirroring the existing `_derive_slug`
-re-export pattern already used in this file) and call it here instead of a bare `.strip()`.
+### WR-04: Overly broad `except (UnidentifiedImageError, Exception)` still masks all photo-processing errors — unresolved from prior review
 
-### WR-04: Overly broad `except (UnidentifiedImageError, Exception)` masks all photo-processing errors
-
-**File:** `api/routers/admin.py:691-699` and `api/routers/admin.py:717-722`
-**Issue:**
-`Exception` is a superclass of `UnidentifiedImageError`, so listing both is equivalent to
-a bare `except Exception:` — every error while opening/verifying an uploaded or fetched
-image (including out-of-memory conditions, decompression-bomb guards tripping, or a bug in
-this code) is swallowed and converted into a generic "Uploaded file is not a valid image."
-422, with no logging. This matches the "bare except" anti-pattern called out in the review
-scope and will make genuine bugs in this code path invisible in production.
-
+**File:** `api/routers/admin.py:695`, `api/routers/admin.py:721`
+**Issue:** `Exception` is a superclass of `UnidentifiedImageError`; listing both is equivalent
+to a bare `except Exception:`. Both photo-processing code paths (file upload and URL fetch)
+still swallow every error (OOM, decompression-bomb-guard trips, bugs in this code) into a
+generic 422 with no logging.
 **Fix:**
 ```python
-try:
-    with Image.open(BytesIO(file_bytes)) as img:
-        img_format = img.format
-        img.verify()
 except UnidentifiedImageError:
     raise HTTPException(status_code=422, detail="Uploaded file is not a valid image.")
 except Exception:
@@ -270,57 +236,112 @@ except Exception:
     raise HTTPException(status_code=422, detail="Uploaded file is not a valid image.")
 ```
 
-### WR-05: Photo-by-URL fetch has no domain allowlist (partial SSRF mitigation only)
+### WR-05: Photo-by-URL fetch still has no domain allowlist / private-range check — unresolved from prior review
 
 **File:** `api/routers/admin.py:704-715`
-**Issue:**
-Unlike `_validate_pdf_url`, which restricts PDF ingestion to `*.supremecourt.gov` HTTPS
-URLs, the photo-by-URL handler only checks `scheme == 'https'` before the server fetches
-the URL:
-```python
-_parsed_url = _urlparse(photo_url)
-if _parsed_url.scheme != 'https':
-    raise HTTPException(status_code=422, detail="Photo URL must use HTTPS.")
-...
-async with httpx.AsyncClient(timeout=10.0) as client:
-    r = await client.get(photo_url, follow_redirects=False)
-```
-`follow_redirects=False` mitigates one SSRF vector (redirect-based bypass of an allowlist),
-but there is no allowlist here to bypass — any HTTPS host reachable from the API host
-(including internal/private network endpoints that happen to terminate TLS) can be
-targeted by an operator-supplied URL. This endpoint is admin-token gated, which lowers
-severity relative to an unauthenticated SSRF, but it's still a meaningful gap relative to
-the PDF-ingest precedent this codebase otherwise follows.
+**Issue:** Unlike `_validate_pdf_url` (restricted to `*.supremecourt.gov` HTTPS), the
+photo-by-URL handler only checks `scheme == 'https'` before fetching. `follow_redirects=False`
+blocks one bypass vector but there's still no allowlist to bypass — any HTTPS host reachable
+from the API host (including internal/private endpoints terminating TLS) can be targeted via
+an operator-supplied URL. Admin-token-gated, which lowers severity, but still a gap relative to
+this codebase's own PDF-ingest precedent.
+**Fix:** Resolve the hostname and reject loopback/link-local/private ranges before fetching, or
+restrict to a configured allowlist of trusted photo hosts.
 
-**Fix:** At minimum, resolve the hostname and reject loopback/link-local/private ranges
-before fetching (defense-in-depth even for a trusted-operator surface), or restrict to a
-configured allowlist of trusted photo hosts.
-
-### WR-06: Structural "guard" tests scan raw source text (including comments/docstrings) with a naive regex
+### WR-06: Structural "guard" test still scans raw source text (including comments/docstrings) with a naive regex — unresolved from prior review
 
 **File:** `api/tests/test_admin_arguments_service.py:137-154`
-**Issue:**
-`test_service_file_has_synchronize_session_false` counts `update(`/`delete(` occurrences
-across the *entire module source* (via `inspect.getsource` + regex `\b(update|delete)\(`)
-and compares that count against occurrences of the literal string
-`"synchronize_session=False"`. This module's own docstrings use the phrase `update()`
-(with the literal parenthesis) in prose (e.g., line 13: "EVERY update() statement includes
-.execution_options(synchronize_session=False)"), which the regex will also match as a
-"statement." Because the test only compares aggregate counts over the whole file rather
-than pairing each real `update(...)`/`delete(...)` call with its own guard, it can pass
-even if a *specific* new call is missing the guard (as long as the aggregate counts still
-happen to balance), and it can also fail for unrelated prose changes that add the word
-"update(" to a comment. This does not affect production correctness, but it means the test
-provides weaker assurance of the underlying invariant than its name/intent claims.
+**Issue:** `test_service_file_has_synchronize_session_false` compares aggregate counts of
+`\b(update|delete)\(` matches against occurrences of the literal string
+`"synchronize_session=False"` across the *whole module source*, including docstrings/comments
+that use the phrase `update()` in prose. This can pass even when a specific new call is
+missing its guard (as long as aggregate counts balance), and can fail for unrelated prose
+edits. Same pattern also appears in `test_delete_argument_all_deletes_have_synchronize_session_false`
+(lines 220-247), scoped to the `delete_argument` function body only, which reduces but does not
+eliminate the same class of false-confidence.
+**Fix:** Parse with `ast` and assert, per `ast.Call` resolving to `sqlalchemy.update`/`delete`,
+that the enclosing statement chains `.execution_options(synchronize_session=False)` — or at
+minimum strip docstrings/comments before running the regex.
 
-**Fix:** Parse the module with `ast` and assert, for every `ast.Call` whose func resolves
-to `sqlalchemy.update`/`sqlalchemy.delete`, that the enclosing statement's chained call
-includes `.execution_options(synchronize_session=False)` — or at minimum restrict the
-regex scan to code lines only (strip triple-quoted docstrings and `#` comments) so prose
-mentions of `update()`/`delete()` cannot inflate the count.
+### WR-07: `speakerSideById` seed is not re-derived if the Speakers component is reused across a route-param change
+
+**File:** `app/src/routes/admin/arguments/[id]/+page.svelte:67-74`
+**Issue:** `speakerSideById` is a `$state` object initialized once from `data.argument.speakers`
+at component setup:
+```ts
+let speakerSideById = $state<Record<number, string>>(
+    Object.fromEntries(
+        (data.argument.speakers ?? [])
+            .filter((s) => !s.is_bench)
+            .map((s) => [s.participant_id, VALID_SIDES.has(s.side) ? s.side : 'UNKNOWN'])
+    )
+);
+```
+Unlike `deleteConfirming`/`deleteSubmitting`, which are explicitly reset via an `$effect` keyed
+on `data.argument.id` (lines 89-94) specifically because SvelteKit can reuse the same `[id]`
+page component instance across a route-param-only navigation, `speakerSideById` has no such
+reset. If the component instance is ever reused for a different argument id (e.g., browser
+back/forward across two previously-visited argument edit pages), a participant id not present
+in the stale map reads as `undefined` from `speakerSideById[...]`. Because
+`undefined !== 'UNKNOWN'`, the Save-button's disabled condition
+(`speakerSideById[speaker.participant_id] === 'UNKNOWN'`) evaluates `false` even though the
+`<select>` visually defaults to its first `<option value="UNKNOWN">` — the guard the 26-05 fix
+just added can silently become non-authoritative for that row's Save button (the backend
+`update_participant_side` guard still rejects the resulting `UNKNOWN` submission with 422, so
+this is a UX/robustness gap rather than a data-corruption path).
+**Fix:** Mirror the existing delete-state pattern:
+```ts
+$effect(() => {
+    data.argument.id;
+    speakerSideById = Object.fromEntries(
+        (data.argument.speakers ?? [])
+            .filter((s) => !s.is_bench)
+            .map((s) => [s.participant_id, VALID_SIDES.has(s.side) ? s.side : 'UNKNOWN'])
+    );
+});
+```
+
+## Info
+
+### IN-01: `update_participant_side` route docstring is stale re: the 26-05 UNKNOWN/ADVOCATE guard
+
+**File:** `api/routers/admin.py:1127-1130`
+**Issue:** The docstring still only documents `"BENCH guard ... Returns 422 on side == BENCH."`
+The function (and the service it calls) now also 422s for `side == UNKNOWN` and legacy
+`side == ADVOCATE` (T-26-14) — this is undocumented at the route layer, unlike the service
+docstring (`api/services/admin_arguments.py:526-531`), which was updated correctly.
+**Fix:** Add a line noting the UNKNOWN/legacy-ADVOCATE rejection, matching the service
+docstring.
+
+### IN-02: Server actions collapse all non-2xx upstream responses (including 5xx) into a fixed 422 `fail()`
+
+**File:** `app/src/routes/admin/arguments/[id]/+page.server.ts:111-113` (`updateParticipantSide`),
+`:167` (`save`), `:189` (`publish`), `:210` (`unpublish`)
+**Issue:** Each action's `if (!res.ok)` branch returns `fail(422, {...})` regardless of the
+actual upstream status code (a 500 from FastAPI is reported to the operator identically to a
+genuine 422 validation error). This is a pre-existing, codebase-wide pattern in this file (not
+introduced by Phase 26), but it makes distinguishing "your input was invalid" from "the server
+is broken" impossible from the admin UI, which can slow down debugging real backend failures.
+**Fix:** Forward `res.status` (clamped to a safe range) instead of hardcoding `422`, or branch
+explicitly on `res.status >= 500` vs `422`.
+
+### IN-03: Minor dead code / weak typing
+
+**File:** `app/src/routes/admin/arguments/+page.svelte:150-151`,
+`app/src/routes/admin/arguments/[id]/+page.svelte:286-288`,
+`api/routers/admin.py:1106-1109`
+**Issue:** (a) `arg.status ?? 'pipeline'` / `data.argument.status ?? 'pipeline'` fallbacks are
+unreachable given `ArgumentListItem.status`/`ArgumentDetail.status` are non-optional required
+fields in the Pydantic schema — harmless but suggests the schema contract isn't fully trusted
+at the call site. (b) `update_participant_side`'s route is declared
+`response_model=dict`, unlike its sibling routes which use dedicated Pydantic response models
+— a small consistency/typing gap.
+**Fix:** Either remove the defensive `?? 'pipeline'` fallbacks (schema already guarantees a
+value) or add a comment explaining why they're kept; consider a small
+`ParticipantSideUpdateResponse` schema for the route's `response_model`.
 
 ---
 
-_Reviewed: 2026-07-07_
+_Reviewed: 2026-07-08_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_

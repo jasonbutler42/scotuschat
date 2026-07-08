@@ -1,6 +1,6 @@
 # Technology Stack
 
-**Analysis Date:** 2026-07-02
+**Analysis Date:** 2026-07-08
 
 ## Languages
 
@@ -21,7 +21,7 @@
 **Package Manager:**
 - npm (frontend) - `app/package.json`
 - pip (backend) - `requirements.txt` and `requirements-dev.txt`
-- Lockfile: npm (`app/package-lock.json` if present); pip (not explicitly locked, but pinned versions in requirements)
+- Lockfile: npm (`app/package-lock.json`); pip (not explicitly locked, but pinned versions in requirements)
 
 ## Frameworks
 
@@ -56,7 +56,7 @@
 
 **Critical:**
 - anthropic 0.40+ - Anthropic API SDK for claude-haiku-4-5-20251001 LLM calls in parse step
-- instructor 2.x (with[anthropic]) - Structured output via Pydantic for LLM validation
+- instructor[anthropic] 2.x - Structured output via Pydantic for LLM validation
 - tenacity 8.0+ - Exponential backoff retry strategy (outer layer for transient API errors)
 - pdfplumber 0.11+ - PDF text extraction and parsing for oral argument transcripts
 
@@ -64,7 +64,7 @@
 - psycopg2-binary 2.9+ - PostgreSQL C driver (fallback/compatibility)
 - python-dotenv 1.0+ - .env file loading for local development
 - pydantic-settings 2.0+ - Environment variable validation and type-checking
-- httpx 0.27+ - Async HTTP client for SCOTUS website downloads and credential validation
+- httpx 0.27+ - Async HTTP client for SCOTUS website downloads
 - boto3 1.34+ - AWS SDK for Digital Ocean Spaces S3-compatible file storage
 
 **Frontend Components:**
@@ -79,7 +79,8 @@
 
 **Build:**
 - `svelte.config.js` - SvelteKit config with @sveltejs/adapter-node
-- `tsconfig.json` - TypeScript compilation settings (SvelteKit-generated and app-specific)
+- `app/tsconfig.json` - TypeScript compilation settings (SvelteKit-extended)
+- `app/vite.config.ts` - Vite configuration for SvelteKit
 - `alembic.ini` - Alembic migration configuration; script_location = `alembic/`
 
 **Critical Settings:**
@@ -93,16 +94,16 @@
 - Python 3.12 runtime
 - PostgreSQL 16 (local or remote)
 - Node.js and npm
-- .env file with DATABASE_URL, ANTHROPIC_API_KEY, ADMIN_TOKEN
+- .env file with DATABASE_URL, ANTHROPIC_API_KEY, ADMIN_TOKEN, SESSION_SECRET, ADMIN_USERNAME, ADMIN_PASSWORD
 
 **Production:**
-- Digital Ocean App Platform (documented in Phase 6 deployment)
+- Digital Ocean App Platform
 - PostgreSQL 16 (managed database or internal)
 - FastAPI service for `api.main:app` (uvicorn)
 - SvelteKit service (`@sveltejs/adapter-node`) compiled to `app/build/`
 - DO Spaces S3-compatible bucket (for optional file uploads)
-- Alembic migrations run before API startup (out of scope for FastAPI; handled by operator or CI/CD)
+- Alembic migrations run before API startup (operator or CI/CD responsibility)
 
 ---
 
-*Stack analysis: 2026-07-02*
+*Stack analysis: 2026-07-08*

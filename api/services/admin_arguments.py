@@ -523,6 +523,13 @@ async def update_participant_side(
     BENCH guard (T-15-02-BENCH): raises ValueError when side == BENCH — operators
     cannot demote or re-classify bench participants.
 
+    Unresolved-side guard (T-26-14, CLAUDE.md no-silent-inference constraint):
+    raises ValueError when side == UNKNOWN or the legacy side == ADVOCATE —
+    an advocate's side must be authoritatively resolved to PETITIONER,
+    RESPONDENT, or AMICUS before it can be persisted. This is the backend's
+    authoritative rejection; the edit-page UI additionally disables Save while
+    the row is unresolved as defense-in-depth.
+
     title is written ONLY when the caller passes a non-None value — omitting
     title leaves the existing ArgumentParticipant.title unchanged (does not
     clobber it), mirroring the "only write provided fields" pattern used by
@@ -534,6 +541,10 @@ async def update_participant_side(
     """
     if side == SideEnum.BENCH:
         raise ValueError("BENCH cannot be set via participant side update")
+    if side in (SideEnum.UNKNOWN, SideEnum.ADVOCATE):
+        raise ValueError(
+            "An advocate's side must be resolved to Petitioner, Respondent, or Amicus"
+        )
 
     result = await db.execute(
         select(ArgumentParticipant).where(

@@ -1009,3 +1009,25 @@ async def test_update_participant_side_persists_title_for_advocate() -> None:
         arg = await db.get(Argument, arg_id)
         await db.delete(arg)
         await db.commit()
+
+
+@pytest.mark.asyncio
+async def test_update_participant_side_rejects_unresolved_side() -> None:
+    """update_participant_side must raise ValueError for both UNKNOWN and the
+    legacy ADVOCATE side, before touching the database (T-26-14, CLAUDE.md
+    no-silent-inference constraint) — an advocate's side must be authoritatively
+    resolved to PETITIONER, RESPONDENT, or AMICUS.
+    """
+    from typing import Any
+
+    from api.models.models import SideEnum
+    from api.services.admin_arguments import update_participant_side
+
+    # The guard raises before any session use, so a sentinel None session is safe.
+    sentinel_session: Any = None
+
+    with pytest.raises(ValueError):
+        await update_participant_side(sentinel_session, 1, 1, SideEnum.UNKNOWN)
+
+    with pytest.raises(ValueError):
+        await update_participant_side(sentinel_session, 1, 1, SideEnum.ADVOCATE)

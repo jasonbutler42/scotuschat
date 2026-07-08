@@ -5,15 +5,15 @@ milestone_name: Admin Screens Cleanup
 current_phase: 26
 current_phase_name: arguments-admin
 status: executing
-stopped_at: Completed 26-02-PLAN.md
-last_updated: "2026-07-08T02:03:12.922Z"
+stopped_at: Completed 26-05-PLAN.md (gap closure)
+last_updated: "2026-07-08T12:06:40.993Z"
 last_activity: 2026-07-08
 last_activity_desc: Phase 26 execution started
 progress:
   total_phases: 7
   completed_phases: 5
-  total_plans: 23
-  completed_plans: 23
+  total_plans: 24
+  completed_plans: 24
   percent: 71
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-07-07 after Phase 25 completion)
 ## Current Position
 
 Phase: 26 (arguments-admin) — EXECUTING
-Plan: 4 of 4
+Plan: 2 of 5
 Status: Ready to execute
 Last activity: 2026-07-08 — Phase 26 execution started
 
@@ -91,6 +91,8 @@ Full log in PROJECT.md Key Decisions table. Key decisions entering v1.5:
 - [Phase ?]: 26-04: can_delete changed from status !== 'published' to status === 'draft', matching Plan 26-01's backend gate exactly (Published AND Unpublished both blocked)
 - [Phase ?]: 26-04: Publish/Unpublish moved into the Status card body (status-driven three-way branch) instead of a standalone floating block between Advocate Roles and Danger Zone
 - [Phase ?]: 26-04: Status history rendered as its own card directly below Status, not a nested sub-section, per UI-SPEC planner-discretion note
+- [Phase ?]: delete_argument gate rewritten to a single positive status == DRAFT condition so PIPELINE is now blocked too (T-26-13)
+- [Phase ?]: update_participant_side gained a pre-SELECT guard rejecting UNKNOWN/legacy ADVOCATE alongside the existing BENCH guard (T-26-14, AEDIT-06)
 
 ### Pending Todos
 
@@ -133,9 +135,10 @@ Deployment blockers (v1.4, unresolved — not in v1.5 scope):
 | Phase 26 P03 | 15min | 2 tasks | 2 files |
 | Phase 26 P02 | 20min | 2 tasks | 5 files |
 | Phase 26 P04 | 12min | - tasks | - files |
+| Phase 26 P05 | 15min | 3 tasks | 4 files |
 
 ## Session Continuity
 
-Last session: 2026-07-08T01:09:28.043Z
-Stopped at: Completed 26-02-PLAN.md
+Last session: 2026-07-08T12:06:40.983Z
+Stopped at: Completed 26-05-PLAN.md (gap closure)
 Resume file: None

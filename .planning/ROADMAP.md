@@ -247,7 +247,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 
 **Goal**: The people list is split into Bench and Advocate tabs with columns appropriate to each, a "Create person" button works before any argument exists, and the person editor consolidates all Justice-specific fields into a collapsible Justice Details card with appointment data now stored per tenure row
 **Depends on**: Phase 22
-**Requirements**: PDIR-01, PDIR-02, PDIR-03, PDIR-04, PDIR-05, PDIR-06, PDIR-07, PEDIT-01, PEDIT-02, PEDIT-03, PEDIT-04, PEDIT-05, PEDIT-06, PEDIT-07, PEDIT-08, PEDIT-09, PEDIT-10 (UI surface), PEDIT-11, PEDIT-12
+**Requirements**: PDIR-01, PDIR-02, PDIR-03, PDIR-04, PDIR-05, PDIR-06, PDIR-07, PEDIT-01, PEDIT-02, PEDIT-03, PEDIT-05, PEDIT-06, PEDIT-07, PEDIT-09, PEDIT-10 (UI surface), PEDIT-11, PEDIT-12 (PEDIT-04, PEDIT-08 superseded — see 27-CONTEXT.md D-10)
 **Success Criteria** (what must be TRUE):
 
   1. People list page is titled "People" and has Bench and Advocate tabs; Bench tab columns include tenure coverage and tenure gap indicator; Advocate tab columns include argument count

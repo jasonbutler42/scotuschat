@@ -4,7 +4,7 @@ milestone: v1.5
 milestone_name: Admin Screens Cleanup
 current_phase: 27
 current_phase_name: People Admin
-status: verifying
+status: context_gathered
 stopped_at: Phase 27 context complete — mockups reviewed, all decisions locked, ready for planning
 last_updated: "2026-07-08T21:51:01.505Z"
 last_activity: 2026-07-08
@@ -29,11 +29,12 @@ See: .planning/PROJECT.md (updated 2026-07-07 after Phase 25 completion)
 ## Current Position
 
 Phase: 27 — People Admin
+Stage: discuss ✓ → **plan** (next) → execute → verify
 Plan: Not started
-Status: Phase complete — ready for verification
-Last activity: 2026-07-08 — Phase 26 complete, transitioned to Phase 27
+Status: Context gathered (27-CONTEXT.md complete, mockups reviewed) — ready to run /gsd-plan-phase 27
+Last activity: 2026-07-08 — Phase 27 context discussion completed after mockup review
 
-Progress: [██████████] 100%
+Progress: [░░░░░░░░░░] 0% of Phase 27 (discuss stage done; plan/execute/verify not started)
 
 ## Performance Metrics
 

@@ -1,21 +1,14 @@
 ---
-status: testing
+status: complete
 phase: 26-arguments-admin
 source: [26-01-SUMMARY.md, 26-02-SUMMARY.md, 26-03-SUMMARY.md, 26-04-SUMMARY.md, 26-05-SUMMARY.md, 26-06-SUMMARY.md]
 started: 2026-07-08T17:21:23Z
-updated: 2026-07-08T19:20:00Z
+updated: 2026-07-08T19:35:00Z
 ---
 
 ## Current Test
-<!-- OVERWRITE each test - shows where we are -->
 
-number: 27
-name: Pipeline list page — Archived badge (retest of Test 18 gap fix)
-expected: |
-  On /admin/pipeline (list page), open a job whose linked argument has already been created
-  (left PIPELINE status) and confirm the row's status badge reads the grey "Archived" badge
-  (#cbd5e1), visually matching the same run's detail-page RunStatusCard exactly.
-awaiting: user response
+[testing complete]
 
 ## Tests
 
@@ -183,14 +176,14 @@ expected: |
   On /admin/pipeline (list page), open a job whose linked argument has already been created
   (left PIPELINE status) and confirm the row's status badge reads the grey "Archived" badge
   (#cbd5e1), visually matching the same run's detail-page RunStatusCard exactly.
-result: pending
+result: pass
 
 ## Summary
 
 total: 27
-passed: 24
+passed: 25
 issues: 0
-pending: 1
+pending: 0
 skipped: 1
 blocked: 0
 

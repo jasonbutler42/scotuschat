@@ -1,16 +1,18 @@
 # Phase 27: People Admin - Context
 
-**Gathered:** 2026-07-08
-**Status:** BLOCKED — awaiting operator mockup of the People pages. Do not run `/gsd-plan-phase 27` until the user has provided that mockup. Two gray areas (rest of Justice Details card layout, Tenure appointment field input types) are intentionally left open pending it.
+**Gathered:** 2026-07-08 (discussion paused, then resumed same day after operator mockups were reviewed)
+**Status:** Ready for planning.
 
 <domain>
 ## Phase Boundary
 
-Split the people list at `/admin/people/` into Bench and Advocate tabs with tab-appropriate columns and filtering, add a "Create person" flow that works before any argument exists, and consolidate Justice-specific fields into a collapsible Justice Details card at `/admin/people/[id]` — with appointment data read from the migrated per-tenure-row `court_tenures` columns (Phase 22).
+Split the people list at `/admin/people/` into Bench and Advocate tabs with tab-appropriate columns and filtering, add a "Create person" flow that works before any argument exists, and consolidate Justice-specific fields into a collapsible card (referred to in this doc as the **Bench Details card** — it has no visible on-screen title) at `/admin/people/[id]` — with appointment data read from the migrated per-tenure-row `court_tenures` columns (Phase 22). The create and edit flows share one page/template (D-07).
 
 This phase does not touch the Dashboard (Phase 28) or any public-facing pages.
 
-**Scope amendment from discussion (see Decisions):** The Role field (PEDIT-04/PEDIT-08) is dropped from this phase's Justice Details card — REQUIREMENTS.md should be updated to reflect this before/during planning. A new "reason tenure ended" field was proposed and deferred to the backlog; this phase reserves layout space for it but does not implement it or its schema.
+**Scope amendment from discussion (see Decisions):** The Role field (PEDIT-04/PEDIT-08) is dropped from this phase's Bench Details card — REQUIREMENTS.md should be updated to reflect this before/during planning. Two new fields (Death Date, and per-tenure "Reason Left") appear in the operator's mockups but are deferred — they get visual space in the layout, but stay disabled/non-functional until a future phase adds their schema.
+
+**Mockups reviewed:** Three mockups were provided and copied into `.planning/phases/27-people-admin/mockups/` (see Canonical References). Per the operator: use them for **patterns and flow only** — layout structure, field grouping, what appears when — not for exact colors/spacing/fonts, which should continue to follow `.planning/codebase/DESIGN-SYSTEM.md`.
 
 </domain>
 
@@ -33,21 +35,24 @@ This phase does not touch the Dashboard (Phase 28) or any public-facing pages.
 - **D-08:** Minimum required to save a new person: full name **and** a Bench/Advocate choice (sets `is_justice`) upfront. Everything else (tenure, bio, photo, birthdate) is optional and filled in later on the same page.
 - **D-09:** On save, the new-person form POSTs to a new (not-yet-existing) general create-person endpoint, then redirects to `/admin/people/{id}` — identical redirect behavior to every other save action on this page. This is a **new backend endpoint**; it is not a reuse of Phase 25's job-scoped `create_person_for_job` (that one validates the participant belongs to a specific job — not applicable here).
 
-### Justice Details Card
-- **D-10 (Role field removed — REQUIREMENTS AMENDMENT):** The Role field (Chief Justice / Associate Justice) is dropped from the Justice Details card entirely, overriding PEDIT-04 and PEDIT-08 as written in REQUIREMENTS.md. Rationale from discussion: role is argument-dependent (already covered per-argument via Phase 15/26's title/side work on `argument_participants`), so a person-level Role field is dead weight. **REQUIREMENTS.md needs to be updated to reflect this before/during planning** — PEDIT-04 and PEDIT-08 as currently written are no longer accurate for this phase.
-- **D-11:** Expand/collapse animation for the Justice Details card uses a height/slide transition (e.g. Svelte's built-in `slide` transition) — the card container stays visible and its contents grow/shrink, not a fade-in-place.
-- **D-12 (deferred, but reserve layout space):** A "reason tenure ended" field (death / retirement / promotion / still serving) was proposed per-tenure-row. This requires a new `court_tenures` column and a new Alembic migration, which is out of scope for this phase (Phase 22, schema foundations, already shipped and is closed). **Decision: defer to backlog, but the tenure row layout in this phase should reserve visual space/placeholder for it** since it's expected to land in a near-future phase. Do not build the field, its input control, or any schema/migration work for it now.
-
-### Open — Blocked Pending Mockup
-- Full layout/field order for the rest of the Justice Details card (tenure row field order, spacing) beyond D-10/D-11/D-12 above.
-- Input type for the two existing per-tenure appointment fields — Appointed by (free text vs. some kind of lookup) and Appointing president's party (free text vs. a fixed Democratic/Republican/Other select).
-
-**The user is providing a mockup of the People pages before these two items and final planning can proceed. Do not run `/gsd-plan-phase 27` until it has been reviewed and folded into this document.**
+### Bench Details Card (formerly discussed as "Justice Details")
+- **D-10 (Role field removed — REQUIREMENTS AMENDMENT):** The Role field (Chief Justice / Associate Justice) is dropped from this card entirely, overriding PEDIT-04 and PEDIT-08 as written in REQUIREMENTS.md. Rationale from discussion: role is argument-dependent (already covered per-argument via Phase 15/26's title/side work on `argument_participants`), so a person-level Role field is dead weight. **REQUIREMENTS.md needs to be updated to reflect this before/during planning** — PEDIT-04 and PEDIT-08 as currently written are no longer accurate for this phase.
+- **D-11:** Expand/collapse animation uses a height/slide transition (e.g. Svelte's built-in `slide` transition) when Bench is selected — the card container stays visible and its content grows/shrinks, not a fade-in-place.
+- **D-12 (deferred, but reserve layout space):** A "Reason Left" field per tenure row (e.g. died / retired / promoted / still in office, free text per the mockup) was proposed. This requires a new `court_tenures` column and a new Alembic migration, out of scope for this phase (Phase 22, schema foundations, already shipped and is closed). **Decision: defer the schema/functionality to a future phase, but render the field now, disabled/greyed out** (D-19), so the layout doesn't need to be reworked later.
+- **D-13 (card structure, from mockup):** Adopt the mockup's consolidated single-card model: one card (no visible title — internally "Bench Details") containing a Bench/Advocate segmented toggle (replaces the old "Is Justice" checkbox), which sets `is_justice`. When Bench is selected, Birth Date, Death Date, and the repeatable Tenure Periods list appear inline in the same card (animated per D-11). When Advocate is selected, none of those fields render. This replaces the previous two-part model (checkbox in Basic Info + separate always-conditional "Court Tenure" card below it).
+- **D-14 (new field, deferred like D-12):** The mockup also introduces a person-level **Death Date** field next to Birth Date, which isn't in REQUIREMENTS.md (PEDIT-02 only specifies Birthdate). Same treatment as Reason Left: render the field now (disabled/greyed out, per D-19), wire it up (new nullable column + migration) in a future phase.
+- **D-15:** Birth Date, Death Date, and Tenure Periods are Bench-only, per the mockup — they do not appear when Advocate is selected. (This narrows PEDIT-02's literal wording, which didn't scope Birthdate to Bench-only; the mockup is treated as authoritative here.)
+- **D-16 — Tenure appointment field input types (previously blocked, now settled by mockup):** Both **Appointed by** (e.g. "Richard Nixon") and **Appointing president's party** (e.g. "Republican") are plain free-text `<input>` fields, matching every other text field's styling — not dropdowns, not a curated president lookup.
+- **D-17 (Claude's discretion, resolved):** The mockup's Photo card button reads "Save photo," conflicting with the locked requirement PEDIT-05 ("Upload photo"). Per the operator's explicit delegation of this kind of wording conflict, resolved in favor of the existing locked requirement: **the button stays "Upload photo."**
+- **D-18:** Each Tenure Period row is its own bordered sub-card (Start Date, End Date, Appointing President, President's Party, Reason Left [disabled per D-19], a "Remove" button) inside the Bench Details card, with a "+ Add Tenure Period" action below the list — matches the mockup's nested-card treatment, not today's flatter inline-row layout.
+- **D-19:** Reserved-but-not-yet-functional fields (Death Date, Reason Left) render as **disabled/greyed-out inputs** — not fully interactive inputs whose values are silently dropped on save. This avoids an operator typing a value that appears to save but doesn't persist.
 
 ### Claude's Discretion
 - Exact visual treatment of the click-to-filter pill interaction (D-04) — how the active filter and its "clear" affordance are presented — is left to the planner/implementer, as long as clicking a pill filters and there's a way to clear it.
 - Advocate argument count (PDIR-04) computation (distinct arguments vs. total participations) is left to the planner — no explicit user preference surfaced.
-- Exact wording/styling of the reserved placeholder space for the deferred "reason tenure ended" field (D-12).
+- Exact wording/styling of the disabled Reason Left / Death Date fields (D-19) — e.g. whether a "Coming soon" tooltip or label accompanies the disabled state.
+- Whether the Merge and Delete sections (unchanged from today, PEDIT-11/PEDIT-12) render on `/admin/people/new` — they logically should be hidden there (nothing to merge/delete before a person is saved) and only appear once editing an existing person; the mockups only show the Create flow so this wasn't explicitly discussed, but it follows directly from D-07's shared-template model.
+- The mockup's breadcrumb-style page header ("People > Create Person") is a new pattern not used elsewhere in admin (existing pages use a plain "← People" back-link). Recommended: adopt it consistently on both create and edit pages, styled per `.planning/codebase/DESIGN-SYSTEM.md` tokens (not the mockup's exact colors) — left to the planner/ui-researcher to confirm.
 
 </decisions>
 
@@ -59,6 +64,12 @@ This phase does not touch the Dashboard (Phase 28) or any public-facing pages.
 ### Phase Scope and Requirements
 - `.planning/ROADMAP.md` — Phase 27 goal and success criteria (§ "Phase 27: People Admin").
 - `.planning/REQUIREMENTS.md` — PDIR-01 through PDIR-07, PEDIT-01 through PEDIT-12. **PEDIT-04 and PEDIT-08 are superseded by D-10 above (Role field dropped) — REQUIREMENTS.md text has not yet been edited to reflect this; treat D-10 as authoritative for this phase.**
+- `.planning/codebase/DESIGN-SYSTEM.md` — Colors/typography/spacing reference. The mockups below are for **layout/flow patterns only**; visual styling (colors, fonts, radii) should follow this doc, not the mockups' literal appearance (operator's explicit instruction).
+
+### Mockups (operator-provided, reviewed 2026-07-08)
+- `.planning/phases/27-people-admin/mockups/create-person-bench-filled.png` — Create Person page, Bench selected, filled with a realistic example (William Rehnquist) showing two Tenure Period rows including the deferred Reason Left field ("Promoted", "Died").
+- `.planning/phases/27-people-admin/mockups/create-person-bench-blank.png` — Same page, blank, Bench selected, one empty Tenure Period row with placeholder text.
+- `.planning/phases/27-people-admin/mockups/create-person-advocate.png` — Same page, blank, Advocate selected — no Birth/Death Date, no Tenure Periods section.
 
 ### Prior Decisions
 - `.planning/phases/22-schema-foundations/22-CONTEXT.md` — Defines the `court_tenures.appointed_by` / `appointing_president_party` migration (move-by-rename from `people`, no backfill) that this phase's tenure rows read from.
@@ -68,13 +79,13 @@ This phase does not touch the Dashboard (Phase 28) or any public-facing pages.
 ### Existing People Admin UI (this phase's main edit targets)
 - `app/src/routes/admin/people/+page.svelte` — List page; currently a single table with two independent toggle filters (`incomplete`, `tenure_gaps`) and a "Missing fields" pill column. D-01 through D-06 restructure this into tabs with click-to-filter pills.
 - `app/src/routes/admin/people/+page.server.ts` — List page load; currently reads `incomplete`/`tenure_gaps` query params only — needs a `tab` param per D-01.
-- `app/src/routes/admin/people/[id]/+page.svelte` — Edit page; currently has "Is Justice" checkbox + conditionally-shown Role select in the Basic Info card, and a separate always-shown-when-justice "Court Tenure" card below it with Seat/Start/End per row (no appointment fields yet, no animation). D-07 through D-12 restructure this into the new create+edit page with a consolidated, animated Justice Details card.
-- `app/src/routes/admin/people/[id]/+page.server.ts` — Edit page load/actions; `save` action currently sends `tenures: [{seat, start_date, end_date}]` with no appointment fields — needs `appointed_by`/`appointing_president_party` per row (D-inputs pending mockup), plus the new create-person action (D-09).
+- `app/src/routes/admin/people/[id]/+page.svelte` — Edit page; currently has "Is Justice" checkbox + conditionally-shown Role select in the Basic Info card, and a separate always-shown-when-justice "Court Tenure" card below it with Seat/Start/End per row (no appointment fields yet, no animation). D-07 through D-19 restructure this into the new create+edit page: Identity card (renamed from "Basic Info," drops the is_justice checkbox), Photo card, Biography card, and the consolidated Bench Details card (D-13) — reused unchanged at `/admin/people/new` (D-07).
+- `app/src/routes/admin/people/[id]/+page.server.ts` — Edit page load/actions; `save` action currently sends `tenures: [{seat, start_date, end_date}]` with no appointment fields — needs `appointed_by`/`appointing_president_party` per row (both free text per D-16), plus the new create-person action (D-09).
 
 ### Backend/API
-- `api/services/admin_people.py` — `list_people()` (tab/pill filtering targets, D-01–D-06), `_missing_fields()` (per-tab pill logic, D-05/D-06), `get_person_detail()` / `update_person()` / `_replace_tenures()` (tenure row read/write — needs appointment fields), no existing general create-person function (D-09's new work).
-- `api/schemas/admin_people.py` — `PersonUpdate`, `TenureRow` schemas — `TenureRow` needs `appointed_by`/`appointing_president_party` fields added.
-- `api/models/models.py` — `Person` (`is_justice`, no `birthdate` column yet — needs migration for PEDIT-02, not yet built), `CourtTenure` (`seat`, `start_date`, `end_date`, `appointed_by`, `appointing_president_party` — all present from Phase 22).
+- `api/services/admin_people.py` — `list_people()` (tab/pill filtering targets, D-01–D-06), `_missing_fields()` (per-tab pill logic, D-05/D-06), `get_person_detail()` / `update_person()` / `_replace_tenures()` (tenure row read/write — needs `appointed_by`/`appointing_president_party` per row), no existing general create-person function (D-09's new work).
+- `api/schemas/admin_people.py` — `PersonUpdate`, `TenureRow` schemas — `TenureRow` needs `appointed_by`/`appointing_president_party` fields added (both `str | None`, free text, D-16). Do NOT add `reason_ended` — that's deferred (D-12, D-19) and stays UI-only (disabled) with no schema/API changes this phase.
+- `api/models/models.py` — `Person` (`is_justice`, no `birthdate` column yet — needs migration for PEDIT-02; no `death_date` column — deferred per D-14, UI-only disabled field, no migration this phase), `CourtTenure` (`seat`, `start_date`, `end_date`, `appointed_by`, `appointing_president_party` — all present from Phase 22; no `reason_ended` column — deferred per D-12).
 - `api/routers/admin.py` — People routes: `/people`, `/people/{id}`, `/people/{id}/photo`, `/people/{id}/merge`, `/people/{id}/merge-preview` — needs a new `POST /people` (or similar) for D-09.
 
 </canonical_refs>
@@ -108,14 +119,17 @@ This phase does not touch the Dashboard (Phase 28) or any public-facing pages.
 
 - The operator explicitly prefers unifying "create" and "edit" into the same page/template rather than a separate lightweight creation surface — a stated general preference, not just a one-off for this phase ("I like the idea of the 'create' and 'edit' pages being the same more").
 - The operator initially favored a popover for creation (reasoning: "popups are transient by nature and well suited to things that only exist for a moment") but reversed this after weighing it against the create/edit-unification preference above — the reversal is the locked decision (D-07), not the popover.
-- Reserve visual space in the tenure row layout for the deferred "reason tenure ended" field so a future phase can slot it in without a full re-layout (D-12).
+- Reserve visual space in the layout for both deferred fields (Reason Left per tenure row, Death Date on the person) so a future phase can wire them up without a re-layout (D-12, D-14, D-19).
+- **Mockups are patterns/flow references only, not visual specs** — the operator was explicit: "don't freak out and try to match the styles exactly... use your existing design system and just use these mockups for patterns and flow." Card structure, field grouping, and conditional reveal behavior come from the mockups; colors/spacing/typography come from `.planning/codebase/DESIGN-SYSTEM.md`.
+- Minor copy/label conflicts between a mockup and existing locked requirements should be resolved silently in favor of the existing language, not re-asked (see D-17 and the general preference behind it).
 
 </specifics>
 
 <deferred>
 ## Deferred Ideas
 
-- **"Reason tenure ended" field** (death / retirement / promotion / still serving) per tenure row — needs a new `court_tenures` column + Alembic migration. Deferred to a future phase (see D-12); this phase reserves layout space only.
+- **Reason Left field** (e.g. died / retired / promoted / still in office, free text) per tenure row — needs a new `court_tenures` column + Alembic migration. Deferred to a future phase (D-12); this phase renders it disabled (D-19).
+- **Death Date field** on the person record — needs a new nullable column + Alembic migration. Deferred to a future phase (D-14); this phase renders it disabled (D-19).
 
 </deferred>
 
@@ -123,4 +137,4 @@ This phase does not touch the Dashboard (Phase 28) or any public-facing pages.
 
 *Phase: 27-People Admin*
 *Context gathered: 2026-07-08*
-*Discussion paused mid-flow at the user's request, pending a mockup of the People pages — see Status above.*
+*Discussion was paused mid-flow pending operator mockups, then resumed and completed the same day after mockups were reviewed. All previously-blocked items (Bench Details card layout, tenure appointment field input types) are now settled — see D-13 through D-19.*

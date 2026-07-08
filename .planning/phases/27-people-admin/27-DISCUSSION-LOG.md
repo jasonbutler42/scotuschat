@@ -5,11 +5,31 @@
 
 **Date:** 2026-07-08
 **Phase:** 27-People Admin
-**Areas discussed:** Tabs & per-tab filters, Create-person flow, Justice Details card (partial — paused pending mockup)
+**Areas discussed:** Tabs & per-tab filters, Create-person flow, Justice/Bench Details card, Tenure appointment fields (resolved via mockup review)
 
-**Note:** Discussion was explicitly paused by the user before the "Tenure appointment fields" area and before finishing "Justice Details card" — they are providing a mockup of the People pages before those items and final planning proceed.
+**Note:** Discussion was paused mid-session (see below) pending operator mockups, then resumed and completed the same day.
 
 ---
+
+## Session 2 — Mockup review (same day, after pause)
+
+The operator provided three mockups (`.planning/phases/27-people-admin/mockups/`): a filled Create Person example (Bench, William Rehnquist), a blank Bench version, and a blank Advocate version. Explicit instruction: use them for layout/flow patterns only, not exact visual styling — the existing design system (`.planning/codebase/DESIGN-SYSTEM.md`) governs colors/spacing/typography.
+
+**Unrelated capture during this session:** the operator asked to capture an idea — authenticated "Edit" affordance on every utterance plus an "Edit" link on the speaker popover card. Saved as `.planning/todos/pending/2026-07-08-edit-affordance-on-utterances-and-speaker-popover.md`, no phase assigned. Not part of Phase 27.
+
+| Question | Options offered | Selected |
+|---|---|---|
+| Reason Left field is fully built in the mockup — build now (new migration) or still defer? | Build now / Still defer | **Still defer** |
+| Death Date field (new, not in PEDIT-02) — include it? | Yes, add it / No, birthdate only | **Handle like Reason Left** — add to layout, wire up in a future phase |
+| Reserved fields (Death Date, Reason Left) — how should they behave when interacted with? | Disabled/greyed out / Fully editable but not persisted | **Disabled/greyed out** |
+| Photo button label: mockup says "Save photo," PEDIT-05 says "Upload photo" | Upload photo (per requirement) / Save photo (per mockup) | User declined to pick — delegated to Claude's discretion generally for this class of conflict (see feedback memory `feedback_copy_discretion.md`). **Resolved: "Upload photo"** (favor existing locked requirement). |
+| Card model: consolidate checkbox + separate Justice Details card into one "Person Type" card as shown? | Yes, adopt as shown / Keep separate cards | **Yes, adopt as shown** — but renamed: no visible card title, referred to as "Bench Details" internally, not "Person Type" |
+
+**Notes:** The user was mildly annoyed at being asked to resolve a pure wording conflict (Photo button label) — this produced a standing feedback preference (see memory) to resolve such conflicts without asking in the future.
+
+---
+
+## Session 1 — Initial discussion (before pause)
 
 ## Tabs & per-tab filters
 
@@ -133,13 +153,17 @@
 
 - Exact visual treatment of the click-to-filter pill interaction (active state, clear affordance).
 - Advocate argument count (PDIR-04) computation method (distinct arguments vs. total participations).
-- Exact wording/styling of the reserved placeholder space for the deferred "reason tenure ended" field.
+- Exact wording/styling of the disabled Reason Left / Death Date fields.
+- Whether Merge/Delete sections render on `/admin/people/new` (logically no — nothing to merge/delete pre-save).
+- Whether to adopt the mockup's breadcrumb-style header ("People > Create Person") consistently on both create and edit pages.
 
 ## Deferred Ideas
 
-- "Reason tenure ended" field (death/retirement/promotion/still serving) per tenure row — needs new `court_tenures` column + migration. Deferred to a future phase; this phase reserves layout space only.
+- **Reason Left** field (died/retired/promoted/still in office, free text) per tenure row — needs new `court_tenures` column + migration. Deferred to a future phase (D-12); renders disabled (D-19) in this phase.
+- **Death Date** field on the person record — needs a new nullable column + migration. Deferred to a future phase (D-14); renders disabled (D-19) in this phase.
 
-## Not Yet Discussed (blocked pending mockup)
+## Resolved After Mockup Review (see Session 2 above)
 
-- Tenure appointment field input types (Appointed by, Appointing president's party — free text vs. constrained select).
-- Remaining Justice Details card layout details beyond D-10/D-11/D-12.
+- Tenure appointment field input types: both Appointed by and Appointing president's party are plain free text (D-16).
+- Bench Details card layout: single consolidated card, no visible title, Bench/Advocate toggle replaces the is_justice checkbox, Birth/Death Date + Tenure Periods appear inline for Bench only (D-13, D-15).
+- Photo button label conflict resolved in favor of the locked requirement ("Upload photo," D-17).

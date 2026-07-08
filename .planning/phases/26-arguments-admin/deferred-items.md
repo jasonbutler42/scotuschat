@@ -93,3 +93,28 @@ not fixed here, tracked for later triage).
   (`test_admin_arguments_service.py` + `test_admin_arguments_routes.py`, no
   `pipeline/tests/` in the same process) passed cleanly: 24 passed, 24
   skipped, 0 failed. No net-new regression.
+
+## Gap-closure post-merge gate (26-06)
+
+- Same pattern again, confirmed via sibling-test comparison in the same
+  full-suite run (no disposable worktree — same rationale as 26-05:
+  Settings() fail-fasts without DATABASE_URL/ADMIN_TOKEN in a scratch
+  worktree lacking `.env`). Full-suite run after 26-06 shows **57 failed /
+  217 passed / 34 errors** — fewer total problems than the last recorded
+  baseline after 26-05 (63 failed / 208 passed / 34 errors): errors flat
+  (34 = 34), failures down 6, passes up 9. Of 26-06's 3 new DB-guarded tests
+  (`test_list_jobs_is_archived_false_for_pipeline_argument`,
+  `test_list_jobs_is_archived_true_for_non_pipeline_argument`,
+  `test_list_jobs_is_archived_false_when_no_linked_argument`), all 3 show as
+  ERROR in the full combined run — but so does every DB-guarded test in
+  `test_admin_jobs_phase25.py` (10 tests), `test_admin_jobs_stats.py` (4
+  tests), and `test_admin_people_phase25.py` (10 tests), none of which
+  26-06 touched. Re-running `test_admin_jobs_phase25.py` +
+  `test_admin_jobs_stats.py` scoped (no `pipeline/tests/` in the same
+  process) reproduces clean results (22 passed, 18 skipped, 0 errors),
+  confirming the ERROR state only appears under the same pre-existing
+  collection-order corruption, not from any 26-06 change. The plan's own
+  scoped verification (`api/tests/test_admin_jobs_list.py` alone) passed
+  cleanly: 2 passed, 9 skipped, 0 failed — identical to the executor's
+  reported result. `npx svelte-check` independently re-confirmed: 0 errors,
+  18 pre-existing warnings. No net-new regression.

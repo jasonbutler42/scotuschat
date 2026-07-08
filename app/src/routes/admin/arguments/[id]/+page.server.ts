@@ -19,6 +19,26 @@ type TenureGapWarning = {
 	argued_date: string;
 };
 
+type StatusLogEntry = {
+	status: string;
+	created_at: string;
+};
+
+type SpeakerRow = {
+	participant_id: number;
+	person_id: number | null;
+	full_name: string | null;
+	side: string;
+	is_bench: boolean;
+	argument_role: string | null;
+	title: string | null;
+	title_hint: string | null;
+	utterance_count: number;
+	bench_role: string | null;
+	missing_tenure: boolean;
+	person_edit_href: string | null;
+};
+
 type ArgumentDetail = {
 	id: number;
 	argued_date: string | null;
@@ -31,6 +51,8 @@ type ArgumentDetail = {
 	consolidated_dockets: ConsolidatedDocket[];
 	participants: AdvocateParticipant[];
 	tenure_gap_warnings: TenureGapWarning[];
+	status_log: StatusLogEntry[];
+	speakers: SpeakerRow[];
 };
 
 export const load: PageServerLoad = async ({ fetch, params }) => {
@@ -50,8 +72,9 @@ export const load: PageServerLoad = async ({ fetch, params }) => {
 
 	// can_delete: server-side gate — derived from already-loaded argument data (D-05).
 	// No extra API call needed; argument.status is in the ArgumentDetail response.
-	// Published arguments cannot be deleted (T-21-01-PUB, Pitfall 4).
-	const can_delete = argument.status !== 'published';
+	// Only Draft arguments can be deleted (D-03 / AEDIT-09) — Published and Unpublished
+	// are both blocked (T-21-01-PUB, T-26-11, Pitfall 4).
+	const can_delete = argument.status === 'draft';
 
 	return { argument, can_delete };
 };
@@ -66,6 +89,7 @@ export const actions: Actions = {
 		const formData = await request.formData();
 		const participant_id = ((formData.get('participant_id') as string) ?? '').trim();
 		const side = ((formData.get('side') as string) ?? '').trim();
+		const title = (formData.get('title') as string) ?? '';
 
 		let res: Response;
 		try {
@@ -77,7 +101,7 @@ export const actions: Actions = {
 						'X-Admin-Token': ADMIN_TOKEN,
 						'Content-Type': 'application/json',
 					},
-					body: JSON.stringify({ side }),
+					body: JSON.stringify({ side, title }),
 				},
 			);
 		} catch {
@@ -210,7 +234,8 @@ export const actions: Actions = {
 		if (!res.ok) {
 			if (res.status === 409) {
 				return fail(409, {
-					deleteError: 'Published arguments cannot be deleted. Unpublish first.',
+					deleteError:
+						'Published and unpublished arguments cannot be deleted. Only drafts can be removed.',
 				});
 			}
 			return fail(502, { deleteError: 'Could not delete argument. Try again.' });

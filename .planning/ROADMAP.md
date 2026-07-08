@@ -218,7 +218,21 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
   4. Speakers section lists all argument participants with utterance counts; advocate rows have a role dropdown (PETITIONER / RESPONDENT / AMICUS), a title field, and inline save without full-page refresh; bench rows show tenure-derived role or "Missing tenure" with edit link
   5. Publish / Unpublish / re-Publish transitions are all functional: Draft → Published, Published → Unpublished, Unpublished → Published
 
-**Plans**: TBD
+**Plans**: 4 plans
+
+**Wave 1** *(parallel — disjoint files)*
+
+- [ ] 26-01-PLAN.md — Backend argument lifecycle: three-state publish/unpublish, status-log writes, list filter, slug-freeze + delete gates (ALIST-02, AEDIT-02, AEDIT-08, AEDIT-09)
+- [ ] 26-03-PLAN.md — Frontend list page three-state badges + Created column + status-driven row actions, and RunStatusCard Archived badge (ALIST-02, ALIST-03, ALIST-04)
+
+**Wave 2** *(blocked on 26-01)*
+
+- [ ] 26-02-PLAN.md — Backend Speakers data query + status_log/speakers in ArgumentDetail + advocate title persistence (AEDIT-01, AEDIT-02, AEDIT-05, AEDIT-06, AEDIT-07)
+
+**Wave 3** *(blocked on 26-02)*
+
+- [ ] 26-04-PLAN.md — Frontend edit page: Status card + Status history, publish placement, unified Speakers section, Draft-only delete gate (AEDIT-01, AEDIT-02, AEDIT-05, AEDIT-06, AEDIT-07, AEDIT-08, AEDIT-09)
+
 **UI hint**: yes
 
 ### Phase 27: People Admin
@@ -281,8 +295,8 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 | 22. Schema Foundations | v1.5 | 3/3 | Complete    | 2026-07-02 |
 | 23. Shared Argument Details Component | v1.5 | 7/7 | Complete   | 2026-07-06 |
 | 24. Pipeline List Page | v1.5 | 5/5 | Complete    | 2026-07-07 |
-| 25. Pipeline Job Detail Page | v1.5 | 4/4 | Complete   | 2026-07-07 |
-| 26. Arguments Admin | v1.5 | 0/TBD | Not started | - |
+| 25. Pipeline Job Detail Page | v1.5 | 4/4 | Complete    | 2026-07-07 |
+| 26. Arguments Admin | v1.5 | 0/4 | Planned | - |
 | 27. People Admin | v1.5 | 0/TBD | Not started | - |
 | 28. Dashboard | v1.5 | 0/TBD | Not started | - |
 
@@ -294,7 +308,7 @@ See `.planning/BACKLOG.md` for unscheduled items (B-001 through B-012).
 
 **Goal:** Whenever a value has been extracted from a source PDF, use a consistent design pattern that lets the operator click the value to copy it to their clipboard. If a value was not extracted (showing N/A), clicking to copy is disabled. Includes an appropriate icon and tooltip. Expected to decompose into at least: (1) reusable tooltip component, (2) click-to-copy implementation for extracted hint values, and possibly others.
 **Requirements:** TBD
-**Plans:** 5/5 plans complete
+**Plans:** 4/4 plans complete
 
 Plans:
 

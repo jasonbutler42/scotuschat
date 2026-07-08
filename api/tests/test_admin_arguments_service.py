@@ -598,3 +598,195 @@ async def test_update_argument_slug_frozen_for_unpublished() -> None:
         arg = await db.get(Argument, arg_id)
         await db.delete(arg)
         await db.commit()
+
+
+# ---------------------------------------------------------------------------
+# list_argument_speakers — unified bench+advocate speakers list (Phase 26
+# Plan 02, D-05, AEDIT-05/06/07)
+# ---------------------------------------------------------------------------
+
+
+def test_list_argument_speakers_importable() -> None:
+    """list_argument_speakers must be importable from admin_arguments (no DB)."""
+    from api.services.admin_arguments import list_argument_speakers  # noqa: F401
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_list_argument_speakers_returns_empty_for_missing_argument() -> None:
+    """list_argument_speakers returns [] (not an exception) for a missing argument."""
+    from api.core.database import AsyncSessionLocal
+    from api.services.admin_arguments import list_argument_speakers
+
+    async with AsyncSessionLocal() as db:
+        rows = await list_argument_speakers(db, 999999)
+
+    assert rows == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_list_argument_speakers_bench_advocate_and_utterance_counts() -> None:
+    """One argument with a covered-tenure bench Justice, an uncovered-tenure
+    bench Justice, and an advocate — asserts bench_role/missing_tenure,
+    advocate title/title_hint, and a single-grouped-query utterance_count
+    per participant (T-26-07).
+    """
+    import datetime
+
+    from sqlalchemy import select
+
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import (
+        Argument,
+        ArgumentParticipant,
+        ArgumentStatusEnum,
+        CourtTenure,
+        Person,
+        PipelineRun,
+        PipelineRunStatus,
+        SideEnum,
+        Utterance,
+    )
+    from api.services.admin_arguments import list_argument_speakers
+
+    async with AsyncSessionLocal() as db:
+        arg = Argument(
+            status=ArgumentStatusEnum.DRAFT,
+            argued_date=datetime.date(2024, 1, 10),
+        )
+        db.add(arg)
+        await db.flush()
+
+        covered_justice = Person(full_name="Covered Justice", is_justice=True)
+        uncovered_justice = Person(full_name="Uncovered Justice", is_justice=True)
+        advocate = Person(full_name="Advocate Example")
+        db.add_all([covered_justice, uncovered_justice, advocate])
+        await db.flush()
+
+        db.add(
+            CourtTenure(
+                person_id=covered_justice.id,
+                seat="Associate Justice Seat 3",
+                start_date=datetime.date(2010, 1, 1),
+                end_date=None,
+            )
+        )
+        await db.flush()
+
+        bench_covered = ArgumentParticipant(
+            argument_id=arg.id,
+            person_id=covered_justice.id,
+            raw_speaker_label="COVERED JUSTICE",
+            side=SideEnum.BENCH,
+        )
+        bench_uncovered = ArgumentParticipant(
+            argument_id=arg.id,
+            person_id=uncovered_justice.id,
+            raw_speaker_label="UNCOVERED JUSTICE",
+            side=SideEnum.BENCH,
+        )
+        advocate_participant = ArgumentParticipant(
+            argument_id=arg.id,
+            person_id=advocate.id,
+            raw_speaker_label="MR. ADVOCATE",
+            side=SideEnum.PETITIONER,
+            title="Counsel of Record",
+        )
+        db.add_all([bench_covered, bench_uncovered, advocate_participant])
+        await db.flush()
+
+        parse_run = PipelineRun(
+            argument_id=arg.id, step="parse", status=PipelineRunStatus.COMPLETED
+        )
+        db.add(parse_run)
+        await db.flush()
+
+        # 3 utterances for the advocate, 1 for the covered justice, 0 for uncovered
+        for i in range(3):
+            db.add(
+                Utterance(
+                    argument_id=arg.id,
+                    pipeline_run_id=parse_run.id,
+                    sequence=i,
+                    raw_speaker_label="MR. ADVOCATE",
+                    text=f"Advocate utterance {i}.",
+                    person_id=advocate.id,
+                )
+            )
+        db.add(
+            Utterance(
+                argument_id=arg.id,
+                pipeline_run_id=parse_run.id,
+                sequence=3,
+                raw_speaker_label="COVERED JUSTICE",
+                text="Justice utterance.",
+                person_id=covered_justice.id,
+            )
+        )
+        await db.commit()
+
+        arg_id = arg.id
+        bench_covered_id = bench_covered.id
+        bench_uncovered_id = bench_uncovered.id
+        advocate_participant_id = advocate_participant.id
+        covered_justice_id = covered_justice.id
+        uncovered_justice_id = uncovered_justice.id
+        advocate_id = advocate.id
+        parse_run_id = parse_run.id
+
+    async with AsyncSessionLocal() as db:
+        rows = await list_argument_speakers(db, arg_id)
+
+    assert len(rows) == 3
+    by_id = {r["participant_id"]: r for r in rows}
+
+    covered_row = by_id[bench_covered_id]
+    assert covered_row["is_bench"] is True
+    assert covered_row["bench_role"] == "Associate Justice Seat 3"
+    assert covered_row["argument_role"] == "Associate Justice Seat 3"
+    assert covered_row["missing_tenure"] is False
+    assert covered_row["person_edit_href"] is None
+    assert covered_row["title"] is None
+    assert covered_row["title_hint"] is None
+    assert covered_row["utterance_count"] == 1
+
+    uncovered_row = by_id[bench_uncovered_id]
+    assert uncovered_row["is_bench"] is True
+    assert uncovered_row["bench_role"] is None
+    assert uncovered_row["missing_tenure"] is True
+    assert uncovered_row["person_edit_href"] == f"/admin/people/{uncovered_justice_id}"
+    assert uncovered_row["utterance_count"] == 0
+
+    advocate_row = by_id[advocate_participant_id]
+    assert advocate_row["is_bench"] is False
+    assert advocate_row["argument_role"] == "Petitioner's Counsel"
+    assert advocate_row["title"] == "Counsel of Record"
+    assert advocate_row["title_hint"] == "Counsel of Record"
+    assert advocate_row["bench_role"] is None
+    assert advocate_row["missing_tenure"] is False
+    assert advocate_row["utterance_count"] == 3
+
+    # Cleanup
+    async with AsyncSessionLocal() as db:
+        utt_result = await db.execute(
+            select(Utterance).where(Utterance.argument_id == arg_id)
+        )
+        for u in utt_result.scalars().all():
+            await db.delete(u)
+        run = await db.get(PipelineRun, parse_run_id)
+        await db.delete(run)
+        for pid in (bench_covered_id, bench_uncovered_id, advocate_participant_id):
+            p = await db.get(ArgumentParticipant, pid)
+            await db.delete(p)
+        tenure_result = await db.execute(
+            select(CourtTenure).where(CourtTenure.person_id == covered_justice_id)
+        )
+        for t in tenure_result.scalars().all():
+            await db.delete(t)
+        for person_id in (covered_justice_id, uncovered_justice_id, advocate_id):
+            person = await db.get(Person, person_id)
+            await db.delete(person)
+        argument = await db.get(Argument, arg_id)
+        await db.delete(argument)
+        await db.commit()

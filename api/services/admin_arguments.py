@@ -36,6 +36,8 @@ from api.models.models import (
     Utterance,
 )
 from api.schemas.admin_arguments import ArgumentUpdate, MetadataUpdate
+from api.services.admin_people import _bench_role_and_missing_tenure
+from api.services.speakers import ADVOCATE_LABEL_MAP
 from pipeline.commands.ingest import _derive_slug  # noqa: F401 — re-exported for tests
 
 
@@ -94,6 +96,126 @@ async def list_arguments(db: AsyncSession) -> list[dict]:
         }
         for row in rows
     ]
+
+
+async def list_argument_speakers(db: AsyncSession, argument_id: int) -> list[dict]:
+    """Return a unified bench+advocate speaker row per ArgumentParticipant (D-05).
+
+    Mirrors admin_people.list_resolve_rows_for_job's per-participant row-building
+    shape (advocate vs. bench branching, tenure prefetch avoiding N+1), but keyed
+    on argument_id directly rather than job_id — this helper backs the argument
+    edit page's Speakers section (Phase 26 Plan 04), not the pipeline-job Resolve
+    card.
+
+    Bench rows: bench_role/argument_role and missing_tenure come from
+    _bench_role_and_missing_tenure against a CourtTenure date-window lookup
+    (title/title_hint always None — Title is advocate-only, PJOB-15 precedent).
+    An unresolved bench row (person_id IS NULL) reports missing_tenure=False —
+    there is no person to flag as missing tenure data, mirroring
+    list_resolve_rows_for_job's identical unresolved-row handling.
+
+    Advocate rows: argument_role from ADVOCATE_LABEL_MAP; title and title_hint
+    both source ArgumentParticipant.title (D-06 — no separate stored "originally
+    extracted" snapshot exists for advocate title).
+
+    utterance_count is computed via ONE grouped query over Utterance rows scoped
+    to this argument (T-26-07 — avoids an N+1 per-participant count query).
+
+    Returns [] if the argument does not exist.
+    """
+    arg_result = await db.execute(select(Argument).where(Argument.id == argument_id))
+    argument = arg_result.scalar_one_or_none()
+    if argument is None:
+        return []
+
+    participants_result = await db.execute(
+        select(ArgumentParticipant, Person.full_name)
+        .outerjoin(Person, ArgumentParticipant.person_id == Person.id)
+        .where(ArgumentParticipant.argument_id == argument_id)
+        .order_by(ArgumentParticipant.id.asc())
+    )
+    participant_rows = participants_result.all()
+
+    # Pre-fetch tenures for every BENCH person_id in one query (avoids N+1).
+    bench_person_ids = [
+        p.person_id
+        for p, _full_name in participant_rows
+        if p.side == SideEnum.BENCH and p.person_id is not None
+    ]
+    tenures_by_person: dict[int, list[CourtTenure]] = {}
+    if bench_person_ids:
+        tenures_result = await db.execute(
+            select(CourtTenure).where(CourtTenure.person_id.in_(bench_person_ids))
+        )
+        for t in tenures_result.scalars().all():
+            tenures_by_person.setdefault(t.person_id, []).append(t)
+
+    # Compute utterance counts in ONE grouped query (T-26-07 — no per-row count).
+    counts_result = await db.execute(
+        select(Utterance.person_id, sqlfunc.count())
+        .where(
+            Utterance.argument_id == argument_id,
+            Utterance.person_id.isnot(None),
+        )
+        .group_by(Utterance.person_id)
+    )
+    utterance_counts: dict[int, int] = {row[0]: row[1] for row in counts_result.all()}
+
+    rows: list[dict] = []
+    for participant, full_name in participant_rows:
+        utterance_count = (
+            utterance_counts.get(participant.person_id, 0)
+            if participant.person_id is not None
+            else 0
+        )
+        if participant.side == SideEnum.BENCH:
+            bench_role, missing_tenure = (
+                _bench_role_and_missing_tenure(
+                    tenures_by_person.get(participant.person_id, []),
+                    argument.argued_date,
+                )
+                if participant.person_id is not None
+                else (None, False)
+            )
+            person_edit_href = (
+                f"/admin/people/{participant.person_id}"
+                if missing_tenure and participant.person_id is not None
+                else None
+            )
+            rows.append(
+                {
+                    "participant_id": participant.id,
+                    "person_id": participant.person_id,
+                    "full_name": full_name,
+                    "side": participant.side.value,
+                    "is_bench": True,
+                    "argument_role": bench_role,
+                    "title": None,
+                    "title_hint": None,
+                    "utterance_count": utterance_count,
+                    "bench_role": bench_role,
+                    "missing_tenure": missing_tenure,
+                    "person_edit_href": person_edit_href,
+                }
+            )
+        else:
+            rows.append(
+                {
+                    "participant_id": participant.id,
+                    "person_id": participant.person_id,
+                    "full_name": full_name,
+                    "side": participant.side.value,
+                    "is_bench": False,
+                    "argument_role": ADVOCATE_LABEL_MAP.get(participant.side),
+                    "title": participant.title,
+                    "title_hint": participant.title,
+                    "utterance_count": utterance_count,
+                    "bench_role": None,
+                    "missing_tenure": False,
+                    "person_edit_href": None,
+                }
+            )
+    return rows
 
 
 async def get_argument_detail(db: AsyncSession, argument_id: int) -> dict | None:

@@ -39,6 +39,58 @@ class ParticipantSideUpdate(BaseModel):
     side: SideEnum
 
 
+class StatusLogEntry(BaseModel):
+    """One ArgumentStatusLog row (Phase 26, T-26-03).
+
+    Surfaced on the argument edit page's Status history list, ordered
+    oldest-first by get_argument_detail's query (created_at asc, id asc tiebreak).
+    """
+
+    status: ArgumentStatusEnum
+    created_at: datetime.datetime
+
+    model_config = {"from_attributes": True}
+
+
+class SpeakerRow(BaseModel):
+    """One unified bench+advocate row for the argument edit page Speakers section (D-05).
+
+    Replaces the old advocate-only ``participants`` + ``tenure_gap_warnings`` split
+    (both retained below for backward compatibility) with a single row shape covering
+    every ArgumentParticipant on the argument.
+
+    Bench rows: is_bench=True; bench_role/argument_role come from a CourtTenure
+    date-window lookup (_bench_role_and_missing_tenure); missing_tenure=True when no
+    tenure covers argued_date; person_edit_href links to the person editor in that
+    case. title/title_hint are always None for bench rows — Title is advocate-only
+    (PJOB-15 precedent).
+
+    Advocate rows: is_bench=False; argument_role comes from ADVOCATE_LABEL_MAP;
+    title and title_hint both source the same ArgumentParticipant.title column
+    (D-06 — there is no separate stored "originally extracted" snapshot, unlike
+    cover_metadata for argued_date/docket). bench_role is always None and
+    missing_tenure is always False for these rows.
+
+    utterance_count is computed via one grouped query keyed on argument_id +
+    person_id — never a per-row query (T-26-07, DoS mitigation).
+    """
+
+    participant_id: int
+    person_id: Optional[int] = None
+    full_name: Optional[str] = None
+    side: str
+    is_bench: bool
+    argument_role: Optional[str] = None
+    title: Optional[str] = None
+    title_hint: Optional[str] = None
+    utterance_count: int
+    bench_role: Optional[str] = None
+    missing_tenure: bool
+    person_edit_href: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+
 class TenureGapWarning(BaseModel):
     """A bench speaker whose argued_date falls outside all their CourtTenure rows (D-15).
 

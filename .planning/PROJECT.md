@@ -86,6 +86,7 @@ Anyone can open a SCOTUS oral argument and immediately follow the conversation �
 - ✓ Admin nav unified with public nav: AdminSubNav + TopNav variant=public in admin layout — v1.4 (NAV-02)
 - ✓ Pipeline list page: free-text question number, shared docket pill input, full runs table, incomplete toggle, compound status badges — v1.5 (PLIST-01–05)
 - ✓ Pipeline job detail page: run status card (not-ready/ready/already-created), restructured resolve card with locked columns and side-first gating, step-specific failed guidance, job-scoped mini create-person popover, no floating action buttons — v1.5 (PJOB-01–23)
+- ✓ Arguments admin: three-state (Draft/Published/Unpublished) list badges + Created column, edit page Status card with full status log, unified Speakers section (advocates: role/title/inline save; bench: tenure-derived role or Missing-tenure guard), Draft-only delete gate — v1.5 (ALIST-02/03/04, AEDIT-01/02/05/06/07/08/09)
 
 ### Active
 
@@ -194,4 +195,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-07 — Phase 25 complete (pipeline-job-detail-page): run status card, restructured resolve card (locked columns, side-first gating, mini create-person popover), step-specific failed guidance, no floating action buttons; UAT confirmed the CR-01/WR-04 code-review fixes work correctly against a genuinely paused job — initial UAT reports traced to a missing-paused-job test precondition, not a code defect*
+*Last updated: 2026-07-08 — Phase 26 complete (arguments-admin): three-state argument lifecycle badges, status log, unified Speakers section, Draft-only delete gate. Force-advanced past two accepted UAT items (see 26-VERIFICATION.md Acknowledged Gaps): the pipeline-list Archived-badge gap was fixed in gap-closure plan 26-06 and confirmed via retest; the Unresolved-advocate visual check is deliberately deferred pending the SEED-001 Resolve/Speakers table rework. Three pre-existing Critical findings from 26-REVIEW.md (rerun/local-upload, blank metadata validation, unique-constraint collision) were scoped out as Phase 11/19 defects and logged as backlog items B-016/B-017/B-018*

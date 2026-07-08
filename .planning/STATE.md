@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: Admin Screens Cleanup
-current_phase: 26
-current_phase_name: arguments-admin
+current_phase: 27
+current_phase_name: People Admin
 status: verifying
 stopped_at: Completed 26-05-PLAN.md (gap closure)
-last_updated: "2026-07-08T18:29:20.954Z"
+last_updated: "2026-07-08T19:53:27.742Z"
 last_activity: 2026-07-08
-last_activity_desc: Phase 26 execution started
+last_activity_desc: Phase 26 complete, transitioned to Phase 27
 progress:
   total_phases: 7
   completed_phases: 5
@@ -24,14 +24,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-07 after Phase 25 completion)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** Phase 26 — arguments-admin
+**Current focus:** Phase 27 — People Admin
 
 ## Current Position
 
-Phase: 26 (arguments-admin) — EXECUTING
-Plan: 6 of 6
+Phase: 27 — People Admin
+Plan: Not started
 Status: Phase complete — ready for verification
-Last activity: 2026-07-08 — Phase 26 execution started
+Last activity: 2026-07-08 — Phase 26 complete, transitioned to Phase 27
 
 Progress: [██████████] 100%
 
@@ -95,10 +95,12 @@ Full log in PROJECT.md Key Decisions table. Key decisions entering v1.5:
 - [Phase ?]: update_participant_side gained a pre-SELECT guard rejecting UNKNOWN/legacy ADVOCATE alongside the existing BENCH guard (T-26-14, AEDIT-06)
 - [Phase ?]: 26-06: is_archived defaults to False on get_job (detail) path since RunStatusCard derives its archived signal from RunReadiness.state == 'already_created', not this field
 - [Phase ?]: 26-06: list_jobs() selects Argument.status as a scalar column via outerjoin rather than eager-loading the Argument relationship, avoiding N+1 while deriving is_archived per row
+- [Phase 26]: Phase 26 marked complete with two UAT items accepted as non-blocking rather than fixed: Test 18's own result line stays "issue" as historical record (its retest, Test 27, passed and is the authoritative outcome — see 26-VERIFICATION.md Acknowledged Gaps); Test 26 (Unresolved-advocate visual check) is a deliberate deferral pending the SEED-001 Resolve/Speakers table rework, not a defect
+- [Phase 26]: 26-REVIEW.md's 3 new Critical findings (CR-01 rerun/local-upload, CR-02 blank metadata validation, CR-03 unique-constraint collision) were all traced via git blame to Phase 11/19/pre-existing code, unrelated to Phase 26's changes — recommended as backlog items, not phase gaps
 
 ### Pending Todos
 
-- Add Archived pipeline run status (grey/neutral) for runs whose argument has been created and are now read-only — distinct from "completed" (`.planning/todos/pending/2026-07-07-add-archived-pipeline-run-status.md`, surfaced during Phase 25 UAT)
+None currently tracked.
 
 ### Blockers/Concerns
 
@@ -142,6 +144,6 @@ Deployment blockers (v1.4, unresolved — not in v1.5 scope):
 
 ## Session Continuity
 
-Last session: 2026-07-08T18:28:15.832Z
-Stopped at: Completed 26-05-PLAN.md (gap closure)
+Last session: 2026-07-08T19:53:00Z
+Stopped at: Phase 26 complete (force-advanced past 2 accepted UAT items — see 26-VERIFICATION.md Acknowledged Gaps), ready to plan Phase 27
 Resume file: None

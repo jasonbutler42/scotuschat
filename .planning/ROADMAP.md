@@ -90,7 +90,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 - [x] **Phase 23: Shared Argument Details Component** - Reusable docket/question/date card used on both pipeline job detail and argument edit pages (completed 2026-07-02)
 - [x] **Phase 24: Pipeline List Page** - Redesigned run-start form and run table at `/admin/pipeline/` (completed 2026-07-07)
 - [x] **Phase 25: Pipeline Job Detail Page** - Restructured job detail layout with run status card, resolve redesign, and no floating buttons at `/admin/pipeline/[id]` (completed 2026-07-07)
-- [ ] **Phase 26: Arguments Admin** - New `unpublished` status lifecycle + refined list and edit screens at `/admin/arguments/` and `/admin/arguments/[id]`
+- [x] **Phase 26: Arguments Admin** - New `unpublished` status lifecycle + refined list and edit screens at `/admin/arguments/` and `/admin/arguments/[id]` (completed 2026-07-08)
 - [ ] **Phase 27: People Admin** - Benchmarks/advocate tabs, tenure-per-row appointment data, and create-person flow at `/admin/people/` and `/admin/people/[id]`
 - [ ] **Phase 28: Dashboard** - Intentional stat cards, "needs attention" section, and actionable CTAs at `/admin/`
 
@@ -304,7 +304,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 | 23. Shared Argument Details Component | v1.5 | 7/7 | Complete   | 2026-07-06 |
 | 24. Pipeline List Page | v1.5 | 5/5 | Complete    | 2026-07-07 |
 | 25. Pipeline Job Detail Page | v1.5 | 4/4 | Complete    | 2026-07-07 |
-| 26. Arguments Admin | v1.5 | 6/6 | In Progress |  |
+| 26. Arguments Admin | v1.5 | 6/6 | Complete    | 2026-07-08 |
 | 27. People Admin | v1.5 | 0/TBD | Not started | - |
 | 28. Dashboard | v1.5 | 0/TBD | Not started | - |
 
@@ -316,7 +316,7 @@ See `.planning/BACKLOG.md` for unscheduled items (B-001 through B-012).
 
 **Goal:** Whenever a value has been extracted from a source PDF, use a consistent design pattern that lets the operator click the value to copy it to their clipboard. If a value was not extracted (showing N/A), clicking to copy is disabled. Includes an appropriate icon and tooltip. Expected to decompose into at least: (1) reusable tooltip component, (2) click-to-copy implementation for extracted hint values, and possibly others.
 **Requirements:** TBD
-**Plans:** 4/4 plans complete
+**Plans:** 6/6 plans complete
 
 Plans:
 

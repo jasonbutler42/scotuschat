@@ -1,7 +1,7 @@
 ---
 phase: 26-arguments-admin
 verified: 2026-07-08T19:15:00Z
-status: human_needed
+status: passed
 score: 17/17 must-haves verified
 behavior_unverified: 0
 overrides_applied: 0
@@ -9,12 +9,14 @@ re_verification:
   previous_status: human_needed
   previous_score: 17/17
   gaps_closed:
+
     - "Delete is blocked (returns False) whenever status is PIPELINE, PUBLISHED, or UNPUBLISHED; allowed only for DRAFT (carried forward from 26-05, re-confirmed)"
     - "Unified Speakers section: advocate rows get a role dropdown, title input, utterance count, and inline Save that persists accurate state, with an explicit Unresolved placeholder and disabled Save (carried forward from 26-05, re-confirmed)"
     - "UAT Test 18: pipeline list page (/admin/pipeline) now shows the neutral-grey Archived badge for runs whose linked argument has already left PIPELINE status, matching the detail page's RunStatusCard (closed by gap-closure plan 26-06)"
   gaps_remaining: []
   regressions: []
 human_verification:
+
   - test: "On /admin/pipeline (list page), open a job whose linked argument has already been created (left PIPELINE status) and confirm the row's status badge reads the grey 'Archived' badge (#cbd5e1), matching the same run's detail-page RunStatusCard exactly"
     expected: "Grey Archived badge on the list row, visually identical in color/label to the detail page's badge for the same run"
     why_human: "This is UAT Test 18's own retest — the original gap was reported by a human as a visual absence, and the closure (26-06) is a rendering/styling change that only a rendered browser view can confirm; wiring (is_archived field → outerjoin → badge override) is independently confirmed via code and passing tests, but visual parity across the two pages still requires a live look, per 26-06-SUMMARY.md's own D2 rationale (human_judgment: true)."
@@ -34,10 +36,12 @@ This is a fresh, independent re-derivation against the CURRENT codebase. 26-05-S
 ### Gap 1 re-confirmation: delete_argument DRAFT-only gate
 
 **Direct code read** — `api/services/admin_arguments.py:669-670`:
+
 ```python
 if argument.status != ArgumentStatusEnum.DRAFT:
     return False
 ```
+
 Single positive condition keyed on `DRAFT`; rejects PIPELINE, PUBLISHED, and UNPUBLISHED alike. Docstring (lines 636-660) explicitly documents PIPELINE is blocked because an active `AdminJob` may still reference it.
 
 **Verdict: ✓ VERIFIED.** Unchanged since 26-05; confirmed present at the current line numbers.
@@ -45,6 +49,7 @@ Single positive condition keyed on `DRAFT`; rejects PIPELINE, PUBLISHED, and UNP
 ### Gap 2 re-confirmation: unresolved-advocate side guard
 
 **Backend** — `api/services/admin_arguments.py:542-547`:
+
 ```python
 if side == SideEnum.BENCH:
     raise ValueError("BENCH cannot be set via participant side update")
@@ -53,6 +58,7 @@ if side in (SideEnum.UNKNOWN, SideEnum.ADVOCATE):
         "An advocate's side must be resolved to Petitioner, Respondent, or Amicus"
     )
 ```
+
 **Frontend** — `app/src/routes/admin/arguments/[id]/+page.svelte`: `VALID_SIDES` set (line 67), `speakerSideById` state seeded collapsing anything not in the set to `'UNKNOWN'` (lines 68-73), `<option value="UNKNOWN">Unresolved — choose a role</option>` (line 473) driven by `bind:value` (line 460), Save `disabled` expression includes `speakerSideById[...] === 'UNKNOWN'` (line 514) with matching cursor/opacity styling (524-525).
 
 **Verdict: ✓ VERIFIED.** Unchanged since 26-05; confirmed present at the current line numbers.
@@ -64,10 +70,12 @@ UAT Test 18 found: RunStatusCard on the pipeline job detail page correctly shows
 **Schema** — `api/schemas/admin_jobs.py:65`: `is_archived: bool = False` confirmed present on `AdminJobResponse`.
 
 **Service** — `api/services/admin_jobs.py`:
+
 - `list_jobs()` (lines ~218-255): query is `select(AdminJob, Argument.status).outerjoin(Argument, AdminJob.argument_id == Argument.id)`. Existing `incomplete` filter and `order_by(AdminJob.created_at.desc())` preserved. Per-row: `job.__dict__["is_archived"] = (arg_status is not None and arg_status != ArgumentStatusEnum.PIPELINE)`, with `job.__dict__.setdefault("parse_stats", None)` retained so serialization does not raise.
 - `get_job()` (line 143): `job.__dict__.setdefault("is_archived", False)` confirmed present, guarding the single-job detail path (which derives its own Archived signal from the separate `RunReadiness` endpoint, not this field) from an `AttributeError` on serialization.
 
 **Frontend** — `app/src/routes/admin/pipeline/+page.svelte`:
+
 - `badgeStyle(status, isArchived = false)` (line 110): when `isArchived`, returns the fixed grey style using `#cbd5e1` for both border and text — the exact same hex as `RunStatusCard.svelte:47` (`already_created` override).
 - `badgeLabel(status, currentStep, isArchived = false)` (line 129): returns `'Archived'` when `isArchived`, short-circuiting the compound step/status label.
 - Call sites (lines 638-639): `badgeStyle(job.status, job.is_archived)` / `badgeLabel(job.status, job.current_step, job.is_archived)` — `job.is_archived` flows directly from the load function's `data.jobs`, which is the `AdminJobResponse` list returned by the now-outerjoined `list_jobs()`.
@@ -191,6 +199,17 @@ The three new Critical findings in the refreshed 26-REVIEW.md (CR-01 rerun/local
 WR-08 (non-atomic status transitions, introduced in 26-01) is a genuine Phase-26-introduced defect, but it is a concurrency edge case that does not affect the phase's functional success criteria under normal single-operator usage (each transition, exercised singly, is confirmed correct by the always-run structural tests and by fresh code reading). It is recorded as a warning-level anti-pattern for follow-up, not a blocker.
 
 The phase does not reach a clean `passed` status only because one human-verification item remains open — the visual parity retest of UAT Test 18 on the pipeline list page (see correction note above: the three other visual items originally carried forward from the pre-UAT verification pass are already discharged by the completed `26-UAT.md` run, and the Unresolved-advocate visual check is a deliberate, separately-tracked deferral, not an open item). This is not a code-level gap; it is a visual/live-render confirmation that no automated check in this environment can resolve.
+
+---
+
+## Acknowledged Gaps
+
+Recorded 2026-07-08 when advancing Phase 26 past the automated `phase uat-passed` predicate, which flags raw per-test `result:` fields with no concept of a later retest or a documented skip reason. Both items below are resolved/accepted at the human-judgment level; the predicate's blocker list is a known false positive against this phase's actual state.
+
+- **26-UAT.md Test 18** (`result: issue`) — original gap: pipeline list page missing the Archived badge. Root-caused and fixed by gap-closure plan 26-06; fix independently confirmed by 26-REVIEW.md and this VERIFICATION.md's fresh re-derivation (see "New gap-closure (26-06) re-derivation" above). Visual parity retested as **Test 27, `result: pass`**. Test 18's own result line is left unchanged as the historical record of the original UAT finding; Test 27 is the authoritative outcome.
+- **26-UAT.md Test 26** (`result: skipped`) — deliberate deferral, not an open defect. Reason recorded on the test: "Resolve/Speakers table is scheduled for rework per `.planning/seeds/SEED-001-rework-resolve-table-requirements.md` — not worth testing ahead of that rework."
+
+Accepted by: jason.butler@offenpetro.com (via `/gsd-verify-work 26`, force-advance option).
 
 ---
 

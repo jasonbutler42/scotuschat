@@ -8,20 +8,23 @@ interface TenureRowClient {
 	seat: string;
 	start_date: string;
 	end_date: string;
+	appointed_by: string;
+	appointing_president_party: string;
 }
 
 interface PersonDetail {
 	id: number;
 	full_name: string;
-	role_id: number | null;
-	role_name: string | null;
 	bio_text: string | null;
 	photo_url: string | null;
 	photo_url_full: string | null;
+	birthdate: string | null;
 	tenures: Array<{
 		seat: string | null;
 		start_date: string | null;
 		end_date: string | null;
+		appointed_by: string | null;
+		appointing_president_party: string | null;
 	}>;
 	// Phase 9 additions
 	first_name: string | null;
@@ -38,13 +41,6 @@ interface PersonListItem {
 	full_name: string;
 	last_name: string | null;
 	first_name: string | null;
-	role_id: number | null;
-	role_name: string | null;
-}
-
-interface RoleItem {
-	id: number;
-	name: string;
 }
 
 interface MergePreviewCounts {
@@ -79,10 +75,8 @@ export const load: PageServerLoad = async ({ fetch, params }) => {
 		person.photo_url_full = person.photo_url ?? null;
 	}
 
-	// Fetch the people list for two purposes:
-	//   1. De-duplicate roles for the role dropdown
-	//   2. Build the merge target picker (all persons except the current one)
-	let roles: RoleItem[] = [];
+	// Fetch the people list to build the merge target picker (all persons except
+	// the current one). The Role dropdown this list previously fed was removed (D-10).
 	let people: PersonListItem[] = [];
 	try {
 		const peopleRes = await fetch(`${FASTAPI_BASE_URL}/api/admin/people`, {
@@ -90,23 +84,10 @@ export const load: PageServerLoad = async ({ fetch, params }) => {
 		});
 		if (peopleRes.ok) {
 			const all: PersonListItem[] = await peopleRes.json();
-
-			// Merge picker: exclude the current person
 			people = all.filter((p) => p.id !== parseInt(params.id, 10));
-
-			// Roles dedup: keep only items with non-null role_id
-			const seen = new Set<number>();
-			for (const p of all) {
-				if (p.role_id !== null && p.role_name !== null && !seen.has(p.role_id)) {
-					seen.add(p.role_id);
-					roles.push({ id: p.role_id, name: p.role_name! });
-				}
-			}
-			// Sort alphabetically by name for consistent dropdown ordering
-			roles.sort((a, b) => a.name.localeCompare(b.name));
 		}
 	} catch {
-		// Non-critical — degrade gracefully; role dropdown and merge picker will be empty
+		// Non-critical — degrade gracefully; merge picker will be empty
 	}
 
 	// Derive can_delete and delete_block_count from the merge-preview endpoint
@@ -130,16 +111,18 @@ export const load: PageServerLoad = async ({ fetch, params }) => {
 		// Degrade gracefully: can_delete stays false (safe default), delete_block_count stays 0
 	}
 
-	return { person, roles, people, can_delete, delete_block_count };
+	return { person, people, can_delete, delete_block_count };
 };
 
 export const actions: Actions = {
 	/**
-	 * save — PATCH the person with name/role/tenure/appointment fields and redirect on success.
+	 * save — PATCH the person with name/birthdate/tenure/appointment fields and redirect on success.
 	 *
 	 * The `tenures` form field carries a JSON-serialized array (Pitfall 3 —
 	 * hidden JSON field strategy). The _key client-side field is stripped before
-	 * sending to FastAPI. Empty role_id converts to null (Open Question 2).
+	 * sending to FastAPI. The person-level Role field and its inline-creation
+	 * machinery were removed entirely (D-10) — there is no `role_id` anywhere
+	 * in this action.
 	 *
 	 * NOTE: bio_text and photo_url are intentionally NOT sent in this action's PATCH body
 	 * (Pitfall 7 extended). Both are managed exclusively by the `photo` action. The Bio &
@@ -149,20 +132,16 @@ export const actions: Actions = {
 		const formData = await request.formData();
 
 		const full_name = ((formData.get('full_name') as string) ?? '').trim();
-		const role_id_raw = formData.get('role_id') as string | null;
-		const role_id = role_id_raw ? parseInt(role_id_raw, 10) : null;
-		if (role_id_raw && isNaN(role_id as number)) {
-			return fail(400, { error: 'Please select a valid role or complete the new-role form before saving.' });
-		}
 		// bio_text intentionally omitted — managed exclusively by the photo action (Pitfall 7 extended)
 		// photo_url intentionally omitted — managed exclusively by the photo action (Pitfall 7)
 		const first_name = ((formData.get('first_name') as string) ?? '').trim() || null;
 		const last_name = ((formData.get('last_name') as string) ?? '').trim() || null;
 		const middle_name = ((formData.get('middle_name') as string) ?? '').trim() || null;
 		const name_suffix = ((formData.get('name_suffix') as string) ?? '').trim() || null;
-		// Phase 22 — migration 0013: appointment fields removed from person form (PEDIT-10)
-		// Checkbox submits 'on' when checked; absent from FormData when unchecked (D-04)
-		const is_justice = formData.get('is_justice') === 'on';
+		const birthdate = ((formData.get('birthdate') as string) ?? '').trim() || null;
+		// The Bench/Advocate segmented toggle always submits a hidden 'true'/'false'
+		// value, unlike the old checkbox which was absent from FormData when unchecked.
+		const is_justice = formData.get('is_justice') === 'true';
 		const tenuresRaw = (formData.get('tenures') as string) ?? '[]';
 
 		if (!full_name) {
@@ -176,11 +155,15 @@ export const actions: Actions = {
 			return fail(422, { error: 'Invalid tenure data. Please try again.' });
 		}
 
-		// Strip the client-only _key field before sending to FastAPI
-		const tenures = tenuresParsed.map(({ seat, start_date, end_date }) => ({
+		// Strip the client-only _key field before sending to FastAPI. Reason Left
+		// is not part of TenureRowClient's state (D-19 — disabled input, no value
+		// submitted), so it is never part of this mapping.
+		const tenures = tenuresParsed.map(({ seat, start_date, end_date, appointed_by, appointing_president_party }) => ({
 			seat,
 			start_date,
 			end_date,
+			appointed_by,
+			appointing_president_party,
 		}));
 
 		let res: Response;
@@ -192,10 +175,9 @@ export const actions: Actions = {
 					'Content-Type': 'application/json',
 				},
 				body: JSON.stringify({
-					full_name, role_id, tenures,
+					full_name, tenures,
 					first_name, last_name, middle_name, name_suffix,
-					// Phase 22 — appointment fields removed (PEDIT-10)
-					is_justice,
+					is_justice, birthdate,
 					// bio_text omitted intentionally — managed by photo action (Pitfall 7 extended)
 					// photo_url omitted intentionally — managed by photo action (Pitfall 7)
 				}),
@@ -210,45 +192,6 @@ export const actions: Actions = {
 
 		// Redirect re-runs the load function, returning fresh data (no stale state)
 		throw redirect(303, '/admin/people/' + params.id);
-	},
-
-	/**
-	 * createRole — POST to /api/admin/roles and return the new role.
-	 *
-	 * On success, returns { roleCreated: true, role } so the use:enhance callback
-	 * can add the new role to the local dropdown without a page reload (Pattern 3).
-	 * On error, returns fail(400, { roleError }) — kept separate from save errors
-	 * to avoid polluting the main form's error state (Pitfall 4).
-	 */
-	createRole: async ({ request, fetch }) => {
-		const formData = await request.formData();
-		const name = ((formData.get('role_name') as string) ?? '').trim();
-
-		if (!name) {
-			return fail(400, { roleError: 'Role name is required.' });
-		}
-
-		let res: Response;
-		try {
-			res = await fetch(`${FASTAPI_BASE_URL}/api/admin/roles`, {
-				method: 'POST',
-				headers: {
-					'X-Admin-Token': ADMIN_TOKEN,
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify({ name }),
-			});
-		} catch {
-			return fail(400, { roleError: 'Could not create role. Try again.' });
-		}
-
-		if (!res.ok) {
-			return fail(400, { roleError: 'Could not create role. Try again.' });
-		}
-
-		const role = await res.json();
-		// Return roleCreated + role so the Svelte component can add it to the dropdown
-		return { roleCreated: true, role };
 	},
 
 	/**

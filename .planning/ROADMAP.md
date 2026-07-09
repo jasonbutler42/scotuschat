@@ -91,7 +91,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 - [x] **Phase 24: Pipeline List Page** - Redesigned run-start form and run table at `/admin/pipeline/` (completed 2026-07-07)
 - [x] **Phase 25: Pipeline Job Detail Page** - Restructured job detail layout with run status card, resolve redesign, and no floating buttons at `/admin/pipeline/[id]` (completed 2026-07-07)
 - [x] **Phase 26: Arguments Admin** - New `unpublished` status lifecycle + refined list and edit screens at `/admin/arguments/` and `/admin/arguments/[id]` (completed 2026-07-08)
-- [ ] **Phase 27: People Admin** - Benchmarks/advocate tabs, tenure-per-row appointment data, and create-person flow at `/admin/people/` and `/admin/people/[id]`
+- [ ] **Phase 27: People Admin** - Benchmarks/advocate tabs, tenure-per-row appointment data, and create-person flow at `/admin/people/` and `/admin/people/[id]` (all 10 plans executed 2026-07-09; awaiting 4th verification pass to confirm CR-01/CR-02 gap-closure — see known GSD Roadmap Premature-Completion pattern)
 - [ ] **Phase 28: Dashboard** - Intentional stat cards, "needs attention" section, and actionable CTAs at `/admin/`
 
 ## Phase Details
@@ -256,7 +256,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
   4. Justice Details card is collapsed by default; checking "Is Justice" opens it with animation; unchecking hides the fields without deleting tenure or appointment data
   5. Each tenure row in the editor contains Seat, Appointed by, Appointing president's party, Start date, and End date — data reads correctly from the migrated `court_tenures` columns
 
-**Plans**: 10 plans (9 complete, 1 pending gap closure)
+**Plans**: 10/10 plans complete
 **Wave 1**
 
 - [x] 27-01-PLAN.md — Schema foundation: birthdate migration + Pydantic schemas (BLOCKING migration)
@@ -272,7 +272,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 
 - [x] 27-03-PLAN.md — Detail/write service + create_person + POST /people endpoint
 - [x] 27-04-PLAN.md — List page UI: tabs, click-to-filter pills, per-tab tables
-- [ ] 27-10-PLAN.md — Gap closure (CR-01/CR-02, BLOCKER): preserve tenure/birthdate on Bench→Advocate toggle + reset tenureRows after merge redirect (PEDIT-07)
+- [x] 27-10-PLAN.md — Gap closure (CR-01/CR-02, BLOCKER): preserve tenure/birthdate on Bench→Advocate toggle + reset tenureRows after merge redirect (PEDIT-07)
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
@@ -330,7 +330,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 | 24. Pipeline List Page | v1.5 | 5/5 | Complete    | 2026-07-07 |
 | 25. Pipeline Job Detail Page | v1.5 | 4/4 | Complete    | 2026-07-07 |
 | 26. Arguments Admin | v1.5 | 6/6 | Complete    | 2026-07-08 |
-| 27. People Admin | v1.5 | 9/9 | In Progress |  |
+| 27. People Admin | v1.5 | 10/10 | Verify pending | - |
 | 28. Dashboard | v1.5 | 0/TBD | Not started | - |
 
 ## Backlog
@@ -344,6 +344,7 @@ Standard: all backlog items live here as 999.x entries (`.planning/phases/999.N-
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (promote with /gsd-review-backlog when ready)
 
 ### Phase 999.2: Share specific utterances via social media (BACKLOG)
@@ -353,6 +354,7 @@ Plans:
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (promote with /gsd-review-backlog when ready)
 
 ### Phase 999.3: Link participant names on job detail page to their edit entries (BACKLOG)
@@ -362,6 +364,7 @@ Plans:
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (promote with /gsd-review-backlog when ready)
 
 ### Phase 999.4: Frontend design system: shared component library (BACKLOG)
@@ -371,6 +374,7 @@ Plans:
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (promote with /gsd-review-backlog when ready)
 
 ### Phase 999.5: Move speaker avatars to gutters outside the argument body (BACKLOG)
@@ -380,6 +384,7 @@ Plans:
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (promote with /gsd-review-backlog when ready)
 
 ### Phase 999.6: Decide on listing style for cases/arguments (BACKLOG)
@@ -389,6 +394,7 @@ Plans:
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (promote with /gsd-review-backlog when ready)
 
 ### Phase 999.7: Improve in-argument section navigation (BACKLOG)
@@ -398,6 +404,7 @@ Plans:
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (promote with /gsd-review-backlog when ready)
 
 ### Phase 999.8: Figma design system (BACKLOG)
@@ -407,6 +414,7 @@ Plans:
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (promote with /gsd-review-backlog when ready)
 
 ### Phase 999.9: README: how to start the local stack (BACKLOG)
@@ -416,6 +424,7 @@ Plans:
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (promote with /gsd-review-backlog when ready)
 
 ### Phase 999.10: Bulk-import historical justices from CSV (BACKLOG)
@@ -425,6 +434,7 @@ Plans:
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (promote with /gsd-review-backlog when ready)
 
 ### Phase 999.11: Bench popover: additional context data for Justices (BACKLOG)
@@ -434,6 +444,7 @@ Plans:
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (promote with /gsd-review-backlog when ready)
 
 ### Phase 999.12: `rerun_job` never spawns ingest for locally-uploaded jobs (BACKLOG)
@@ -443,6 +454,7 @@ Plans:
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (promote with /gsd-review-backlog when ready)
 
 ### Phase 999.13: Blank case_name/docket_number can corrupt slug and dedup-key data (BACKLOG)
@@ -452,6 +464,7 @@ Plans:
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (promote with /gsd-review-backlog when ready)
 
 ### Phase 999.14: `update_argument_metadata` has no unique-constraint guard (BACKLOG)
@@ -461,6 +474,7 @@ Plans:
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (promote with /gsd-review-backlog when ready)
 
 ### Phase 999.15: Rethink Full Name vs. name-part fields in the people editor (BACKLOG)
@@ -470,6 +484,7 @@ Plans:
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (promote with /gsd-review-backlog when ready)
 
 ### Phase 999.16: Represent tenure Seat as a Chief/Associate toggle instead of free text (BACKLOG)
@@ -479,4 +494,5 @@ Plans:
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (promote with /gsd-review-backlog when ready)

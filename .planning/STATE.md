@@ -5,16 +5,16 @@ milestone_name: Admin Screens Cleanup
 current_phase: 27
 current_phase_name: people-admin
 status: executing
-stopped_at: Phase 999.2 (backlog) context gathered — apolitical-framing flag captured, implementation open
-last_updated: "2026-07-09T15:04:04.388Z"
+stopped_at: Phase 27 gap-closure plan 27-10 executed (CR-01/CR-02 fixed) — awaiting 4th verification pass
+last_updated: "2026-07-09T15:52:29.646Z"
 last_activity: 2026-07-09
-last_activity_desc: Planned 27-10-PLAN.md (gap closure for CR-01/CR-02)
+last_activity_desc: 27-10-PLAN.md executed (CR-01/CR-02 gap closure)
 progress:
   total_phases: 7
   completed_phases: 5
   total_plans: 35
-  completed_plans: 34
-  percent: 71
+  completed_plans: 35
+  percent: 86
 ---
 
 # Project State
@@ -28,13 +28,13 @@ See: .planning/PROJECT.md (updated 2026-07-07 after Phase 25 completion)
 
 ## Current Position
 
-Phase: 27 (people-admin) — PLANNED (gap closure round 2)
-Stage: discuss ✓ → plan ✓ → execute ✓ → verify ✓ (gaps_found) → **plan** ✓ → execute (pending) → verify (pending)
-Plan: 10 total — 9 executed (including gap-closure plans 27-07/08/09 for the 3 UAT gaps), 1 pending (27-10)
-Status: 3rd verification pass (2026-07-09T14:10:00Z) confirmed the 3 UAT gaps closed but found a NEW BLOCKER gap — CR-01/CR-02 (Justice→Advocate toggle + Save silently deletes tenure/birthdate; stale tenureRows after merge redirect can overwrite a different person's tenures), documented in 27-REVIEW.md and 27-VERIFICATION.md. Plan 27-10 (gap closure round 2) created and checker-verified to close both. Not yet executed.
-Last activity: 2026-07-09 — Planned 27-10-PLAN.md (gap closure for CR-01/CR-02)
+Phase: 27 (people-admin) — EXECUTING
+Stage: discuss ✓ → plan ✓ → execute ✓ → verify ✓ (gaps_found) → plan ✓ → execute ✓ → **verify (pending)**
+Plan: 10 of 10 (all plans executed)
+Status: Awaiting re-verification
+Last activity: 2026-07-09 — 27-10-PLAN.md executed (CR-01/CR-02 gap closure)
 
-Progress: [█████████░] 90% of Phase 27 plans executed (9/10); do NOT treat ROADMAP.md's plan list as phase-complete — 27-10 must execute and phase must re-verify (/gsd-execute-phase 27, then /gsd-verify-work 27) before Phase 27 can close
+Progress: [██████████] 100% of Phase 27 plans executed (10/10); do NOT treat ROADMAP.md's `[x]` line or STATE.md frontmatter `completed_phases` as authoritative on their own — `roadmap update-plan-progress` marks the plan-count row Complete automatically once all plans have SUMMARYs, but Phase 27 is NOT actually done until `/gsd-verify-work 27` (a 4th pass, closing CR-01/CR-02) confirms Truth 4 / PEDIT-07 now passes. This is the same premature-completion pattern already logged for Phase 26/27 in prior sessions (see memory: GSD Roadmap Premature-Completion Bug) — `completed_phases` in this file's frontmatter has been deliberately held at 5 (not bumped to 6) until that verification runs.
 
 ## Performance Metrics
 
@@ -118,6 +118,7 @@ Full log in PROJECT.md Key Decisions table. Key decisions entering v1.5:
 - [Phase ?]: 27-07: Fixed all four middle columns (Bench Tenure coverage/gap plus Advocate Argument count/Missing fields), not just the reported Advocate pair -- Bench tab had the identical latent zero-horizontal-padding defect.
 - [Phase ?]: 27-08: create_person now sets first_name/middle_name/last_name/name_suffix from PersonCreateRequest, normalizing blank strings to None (matches update_person's Pitfall 5 convention); fixed as a bug (parity with [id] editor), not a D-08 scope amendment
 - [Phase 27-09]: D-16 amendment (2026-07-09): appointing_president_party reversed from free-text to a curated select scoped to that field only; appointed_by remains free-text; Seat-as-toggle deferred to backlog Phase 999.16
+- [Phase 27-10]: Relocated hidden birthdate/tenures inputs outside {#if isJustice} (CR-01) and completed the person-id-change reset effect to re-derive tenureRows/nextKey (CR-02), closing PEDIT-07's data-preservation gap
 
 ### Pending Todos
 
@@ -171,9 +172,10 @@ Deployment blockers (v1.4, unresolved — not in v1.5 scope):
 | Phase 27 P07 | 8min | 1 tasks | 1 files |
 | Phase 27 P08 | 15min | 2 tasks | 4 files |
 | Phase 27 P09 | 7min | 2 tasks | 3 files |
+| Phase 27 P10 | 5min | 2 tasks | 1 files |
 
 ## Session Continuity
 
-Last session: 2026-07-09T15:04:04.376Z
+Last session: 2026-07-09T15:51:13.109Z
 Stopped at: Phase 999.2 (backlog) context gathered — apolitical-framing flag captured, implementation open
 Resume file: .planning/phases/999.2-share-utterances-via-social-media/999.2-CONTEXT.md

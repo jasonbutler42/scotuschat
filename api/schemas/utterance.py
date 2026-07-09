@@ -46,6 +46,7 @@ class ArgumentMetadataResponse(BaseModel):
     docket_number: str  # lead docket number (e.g. "14-556")
     argued_date: datetime.date
     question_number: int
+    oyez_transcript_id: str | None = None  # ConvoKit conversation_id; null for PDF-ingested arguments
 
 
 class ArgumentUtterancesResponse(BaseModel):

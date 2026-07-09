@@ -129,6 +129,7 @@ async def get_argument_with_utterances(
             "docket_number": lead_case.docket_number,
             "argued_date": argument.argued_date,
             "question_number": argument.question_number,
+            "oyez_transcript_id": argument.oyez_transcript_id,
         },
         "utterances": utterances,
     }

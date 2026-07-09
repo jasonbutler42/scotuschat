@@ -91,7 +91,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 - [x] **Phase 24: Pipeline List Page** - Redesigned run-start form and run table at `/admin/pipeline/` (completed 2026-07-07)
 - [x] **Phase 25: Pipeline Job Detail Page** - Restructured job detail layout with run status card, resolve redesign, and no floating buttons at `/admin/pipeline/[id]` (completed 2026-07-07)
 - [x] **Phase 26: Arguments Admin** - New `unpublished` status lifecycle + refined list and edit screens at `/admin/arguments/` and `/admin/arguments/[id]` (completed 2026-07-08)
-- [ ] **Phase 27: People Admin** - Benchmarks/advocate tabs, tenure-per-row appointment data, and create-person flow at `/admin/people/` and `/admin/people/[id]` (all 10 plans executed 2026-07-09; awaiting 4th verification pass to confirm CR-01/CR-02 gap-closure — see known GSD Roadmap Premature-Completion pattern)
+- [ ] **Phase 27: People Admin** - Benchmarks/advocate tabs, tenure-per-row appointment data, and create-person flow at `/admin/people/` and `/admin/people/[id]` (10 of 11 plans executed 2026-07-09; 4th UAT retest found a new blocker — `effect_update_depth_exceeded` infinite loop introduced by 27-10's CR-02 fix — 27-11-PLAN.md created to close it; see known GSD Roadmap Premature-Completion pattern)
 - [ ] **Phase 28: Dashboard** - Intentional stat cards, "needs attention" section, and actionable CTAs at `/admin/`
 
 ## Phase Details
@@ -256,7 +256,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
   4. Justice Details card is collapsed by default; checking "Is Justice" opens it with animation; unchecking hides the fields without deleting tenure or appointment data
   5. Each tenure row in the editor contains Seat, Appointed by, Appointing president's party, Start date, and End date — data reads correctly from the migrated `court_tenures` columns
 
-**Plans**: 10/10 plans complete
+**Plans**: 10/11 plans complete
 **Wave 1**
 
 - [x] 27-01-PLAN.md — Schema foundation: birthdate migration + Pydantic schemas (BLOCKING migration)
@@ -281,6 +281,10 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 **Wave 5** *(blocked on Wave 4 completion)*
 
 - [x] 27-06-PLAN.md — Create-person page (/admin/people/new) reusing the shared template
+
+**Wave 6** *(gap closure — from 27-UAT.md 4th retest, Test 1: blocker)*
+
+- [ ] 27-11-PLAN.md — Gap closure: fix Svelte `effect_update_depth_exceeded` infinite loop in the person-id-change reset effect, introduced by 27-10's CR-02 fix (PEDIT-07)
 
 **UI hint**: yes
 
@@ -330,7 +334,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 | 24. Pipeline List Page | v1.5 | 5/5 | Complete    | 2026-07-07 |
 | 25. Pipeline Job Detail Page | v1.5 | 4/4 | Complete    | 2026-07-07 |
 | 26. Arguments Admin | v1.5 | 6/6 | Complete    | 2026-07-08 |
-| 27. People Admin | v1.5 | 10/10 | Verify pending | - |
+| 27. People Admin | v1.5 | 10/11 | Verify pending | - |
 | 28. Dashboard | v1.5 | 0/TBD | Not started | - |
 
 ## Backlog

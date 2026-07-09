@@ -43,7 +43,8 @@ class PersonListItem(BaseModel):
     """A single row in the people directory listing.
 
     missing: list of field labels that are NULL on this person record.
-    Possible values: "role", "bio", "photo" (see D-04, D-06).
+    Possible values: "first name", "last name", "photo", "bio", "birthdate",
+    "no tenures" — the exact vocabulary _missing_fields produces (see D-04, D-06).
     Phase 18 addition: is_justice for directory badge (D-10 — migration 0010).
     Phase 27 (D-10): role_id/role_name removed — the list no longer shows a
     Role column (person-level Role is superseded; role now lives on

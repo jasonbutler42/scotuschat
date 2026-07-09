@@ -186,7 +186,6 @@ def test_person_update_with_all_fields() -> None:
 
     body = PersonUpdate(
         full_name="John Roberts",
-        role_id=1,
         bio_text="Chief Justice",
         photo_url="https://example.com/roberts.jpg",
         tenures=[TenureRow(seat="Chief Justice", start_date="2005-09-29", end_date=None)],
@@ -250,34 +249,34 @@ def test_role_response_fields() -> None:
 
 
 def test_person_list_item_shape() -> None:
-    """PersonListItem has id, full_name, role_id, role_name, missing."""
+    """PersonListItem has id, full_name, missing (no person-level role — D-10)."""
     from api.schemas.admin_people import PersonListItem
 
     item = PersonListItem(
         id=42,
         full_name="Elena Kagan",
-        role_id=2,
-        role_name="Associate Justice",
         missing=[],
     )
     assert item.id == 42
     assert item.missing == []
+    assert "role_id" not in PersonListItem.model_fields
+    assert "role_name" not in PersonListItem.model_fields
 
 
 def test_person_detail_shape() -> None:
-    """PersonDetail has tenures list."""
+    """PersonDetail has tenures list (no person-level role — D-10)."""
     from api.schemas.admin_people import PersonDetail, TenureRow
 
     detail = PersonDetail(
         id=1,
         full_name="John Roberts",
-        role_id=1,
-        role_name="Chief Justice",
         bio_text=None,
         photo_url=None,
         tenures=[TenureRow(seat="Chief Justice", start_date="2005-09-29")],
     )
     assert len(detail.tenures) == 1
+    assert "role_id" not in PersonDetail.model_fields
+    assert "role_name" not in PersonDetail.model_fields
 
 
 def test_participant_item_shape() -> None:

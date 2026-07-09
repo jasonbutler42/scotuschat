@@ -1,22 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { slide } from 'svelte/transition';
 
 	let { data, form } = $props();
-
-	// ──────────────────────────────────────────────────────────────────────────
-	// Types
-	// ──────────────────────────────────────────────────────────────────────────
-
-	interface TenureRow {
-		_key: number;
-		id?: number;
-		seat: string;
-		start_date: string;
-		end_date: string;
-		appointed_by: string;
-		appointing_president_party: string;
-	}
 
 	// ──────────────────────────────────────────────────────────────────────────
 	// Person Type — Bench/Advocate segmented toggle (D-13), adapted from the
@@ -28,52 +13,6 @@
 	// ──────────────────────────────────────────────────────────────────────────
 
 	let isJustice = $state<boolean | null>(data.person.is_justice);
-	let birthdate = $state<string>(data.person.birthdate ?? '');
-
-	// ──────────────────────────────────────────────────────────────────────────
-	// Tenure rows state (Pattern 1 — $state<TenureRow[]>, in-place mutation).
-	// Starts empty on create; matches the [id] template's mapping shape so the
-	// same tenure sub-card markup renders identically once Bench is selected.
-	// Per D-08, this array is NOT sent by the create action — an operator who
-	// adds rows here before the first save fills them in again on the editor
-	// after redirect (see "Decisions Made" in the plan 27-06 SUMMARY).
-	// ──────────────────────────────────────────────────────────────────────────
-
-	let nextKey = $state(1);
-
-	let tenureRows = $state<TenureRow[]>(
-		(data.person.tenures ?? []).map(
-			(t: {
-				seat: string | null;
-				start_date: string | null;
-				end_date: string | null;
-				appointed_by: string | null;
-				appointing_president_party: string | null;
-			}) => ({
-				_key: nextKey++,
-				seat: t.seat ?? '',
-				start_date: t.start_date ?? '',
-				end_date: t.end_date ?? '',
-				appointed_by: t.appointed_by ?? '',
-				appointing_president_party: t.appointing_president_party ?? '',
-			})
-		)
-	);
-
-	function addTenureRow() {
-		tenureRows.push({
-			_key: nextKey++,
-			seat: '',
-			start_date: '',
-			end_date: '',
-			appointed_by: '',
-			appointing_president_party: '',
-		});
-	}
-
-	function removeTenureRow(index: number) {
-		tenureRows.splice(index, 1);
-	}
 
 	// ──────────────────────────────────────────────────────────────────────────
 	// Create button submitting state
@@ -293,160 +232,13 @@
 				value={isJustice === null ? '' : isJustice ? 'true' : 'false'}
 			/>
 
-			{#if isJustice === true}
-			<div transition:slide>
-				<!-- Birth Date + disabled Death Date (D-15, D-19) -->
-				<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
-					<div>
-						<label
-							for="birthdate"
-							style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
-						>
-							Birth Date
-						</label>
-						<input
-							id="birthdate"
-							type="date"
-							name="birthdate"
-							form="create-form"
-							bind:value={birthdate}
-							style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
-						/>
-					</div>
-					<div style="opacity: 0.6;">
-						<label
-							for="death_date"
-							style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
-						>
-							Death Date
-						</label>
-						<input
-							id="death_date"
-							type="date"
-							disabled
-							placeholder="Coming soon"
-							title="Tracked in a future update"
-							style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #94a3b8; box-sizing: border-box;"
-						/>
-					</div>
-				</div>
-
-				<h3 style="font-size: 16px; font-weight: 400; color: #e2e8f0; margin: 0 0 16px 0; line-height: 1.2;">
-					Tenure Periods
-				</h3>
-
-				<!-- Tenure Period sub-cards (D-18): bordered, inset background -->
-				{#each tenureRows as row, i (row._key)}
-					<div
-						style="background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 24px; margin-bottom: 16px;"
-					>
-						<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
-							<div>
-								<label
-									for="tenure-start-{row._key}"
-									style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
-								>
-									Start Date
-								</label>
-								<input
-									id="tenure-start-{row._key}"
-									type="date"
-									bind:value={row.start_date}
-									style="display: block; width: 100%; background-color: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
-								/>
-							</div>
-							<div>
-								<label
-									for="tenure-end-{row._key}"
-									style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
-								>
-									End Date
-								</label>
-								<input
-									id="tenure-end-{row._key}"
-									type="date"
-									bind:value={row.end_date}
-									style="display: block; width: 100%; background-color: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
-								/>
-							</div>
-						</div>
-
-						<div style="margin-bottom: 16px;">
-							<label
-								for="tenure-appointed-{row._key}"
-								style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
-							>
-								Appointing President
-							</label>
-							<input
-								id="tenure-appointed-{row._key}"
-								type="text"
-								bind:value={row.appointed_by}
-								style="display: block; width: 100%; background-color: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
-							/>
-						</div>
-
-						<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
-							<div>
-								<label
-									for="tenure-party-{row._key}"
-									style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
-								>
-									President's Party
-								</label>
-								<input
-									id="tenure-party-{row._key}"
-									type="text"
-									bind:value={row.appointing_president_party}
-									style="display: block; width: 100%; background-color: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
-								/>
-							</div>
-							<div style="opacity: 0.6;">
-								<label
-									for="tenure-reason-{row._key}"
-									style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
-								>
-									Reason Left
-								</label>
-								<input
-									id="tenure-reason-{row._key}"
-									type="text"
-									disabled
-									placeholder="Coming soon"
-									title="Tracked in a future update"
-									style="display: block; width: 100%; background-color: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #94a3b8; box-sizing: border-box;"
-								/>
-							</div>
-						</div>
-
-						<div style="text-align: right;">
-							<button
-								type="button"
-								onclick={() => removeTenureRow(i)}
-								style="color: #ef4444; background: transparent; border: 1px solid #ef4444; border-radius: 6px; font-size: 14px; font-weight: 400; min-height: 36px; padding: 4px 16px; cursor: pointer;"
-							>
-								Remove
-							</button>
-						</div>
-					</div>
-				{/each}
-
-				<!-- Add tenure link (D-18) -->
-				<button
-					type="button"
-					onclick={addTenureRow}
-					style="display: inline-block; font-size: 14px; font-weight: 400; color: #93c5fd; background: transparent; border: none; padding: 0; cursor: pointer;"
-				>
-					+ Add Tenure Period
-				</button>
-
-				<!-- Hidden field carrying the serialized tenure array (Pattern 1 / Pitfall 3) —
-				     not read by the create action (D-08); kept for structural parity with the
-				     [id] template so switching this card between Bench/Advocate never loses
-				     in-progress rows before the operator saves. -->
-				<input type="hidden" name="tenures" form="create-form" value={JSON.stringify(tenureRows)} />
-			</div>
-			{/if}
+			<!-- ── Birth Date + Tenure Periods: intentionally omitted on the create
+			     route (WR-03 fix) — same reasoning as Photo/Biography above. The
+			     create action only sends full_name + is_justice (D-08); Birth Date
+			     and Tenure Period rows need a person id to attach to
+			     (_replace_tenures writes FK rows) and would otherwise render as
+			     live, interactive inputs whose values are silently discarded on
+			     submit with no warning. Filled in on the editor after redirect. ── -->
 		</div>
 
 		<!-- Form-level error (from create action) -->

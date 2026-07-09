@@ -249,6 +249,12 @@ async def list_people(
         .where(
             ArgumentParticipant.side == SideEnum.BENCH,
             ArgumentParticipant.person_id.isnot(None),
+            # WR-01: argued_date is nullable (job-driven ingest leaves NULL
+            # instead of a synthetic date). Any comparison against NULL is
+            # NULL in SQL, so covering_tenure can never match for a dateless
+            # argument and not_(covering_tenure) would always be true —
+            # falsely flagging a gap that can't actually be determined.
+            Argument.argued_date.isnot(None),
             not_(covering_tenure),
         )
         .distinct()
@@ -390,24 +396,42 @@ async def update_person(
     # Phase 27 (D-10): the person-level Role foreign key write has been
     # dropped entirely — role now lives on argument_participants, not on
     # Person.
-    # Normalize empty strings to None (Pitfall 5) — ensures IS NULL filter works
-    person.bio_text = body.bio_text if body.bio_text else None
-    person.photo_url = body.photo_url if body.photo_url else None
+    # CR-01 fix: only write a field when the request explicitly included it.
+    # These fields are split across two separate frontend forms (Identity+Person
+    # Type via `save`, Bio+Photo via `photo`); each submits only its own subset
+    # of PersonUpdate, leaving the rest at the Optional default of None. Writing
+    # unconditionally wiped whichever fields the other form owns on every
+    # alternating save. `model_fields_set` (not `is not None`) is required here —
+    # the frontend represents "operator cleared this input" as an explicit
+    # `null`/`""` in the JSON body, indistinguishable from "omitted" once it
+    # becomes a plain None attribute; only model_fields_set still knows the key
+    # was present. Mirrors the original guard for these exact fields (CR-02),
+    # which a later, unrelated commit accidentally reverted.
+    fields_set = body.model_fields_set
+    if "bio_text" in fields_set:
+        person.bio_text = body.bio_text or None
+    if "photo_url" in fields_set:
+        person.photo_url = body.photo_url or None
 
     # Phase 9: normalize empty strings to None (same pattern as bio_text/photo_url)
     # Pitfall 4 — empty string must become NULL to keep IS NULL semantics correct
-    person.first_name = body.first_name if body.first_name else None
-    person.last_name = body.last_name if body.last_name else None
-    person.middle_name = body.middle_name if body.middle_name else None
-    person.name_suffix = body.name_suffix if body.name_suffix else None
+    if "first_name" in fields_set:
+        person.first_name = body.first_name or None
+    if "last_name" in fields_set:
+        person.last_name = body.last_name or None
+    if "middle_name" in fields_set:
+        person.middle_name = body.middle_name or None
+    if "name_suffix" in fields_set:
+        person.name_suffix = body.name_suffix or None
     # Phase 22 — migration 0013: appointment writes removed from Person (PEDIT-10)
     # Phase 27 addition — migration 0016 (PEDIT-02): normalize empty string to
     # None (Pitfall 5) so the "birthdate" missing-field check stays accurate.
     # ValueError from a malformed date string propagates to the router → 422
     # (Pitfall 6), before any DB write completes.
-    person.birthdate = (
-        datetime.date.fromisoformat(body.birthdate) if body.birthdate else None
-    )
+    if "birthdate" in fields_set:
+        person.birthdate = (
+            datetime.date.fromisoformat(body.birthdate) if body.birthdate else None
+        )
 
     # Derivation: overwrite full_name only when BOTH first_name and last_name are non-empty (D-04/D-05)
     # Note: D-04 says "when first_name is non-empty" but requiring both first_name AND last_name

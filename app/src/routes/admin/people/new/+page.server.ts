@@ -17,8 +17,6 @@ interface BlankPerson {
 	bio_text: string | null;
 	photo_url: string | null;
 	photo_url_full: string | null;
-	birthdate: string | null;
-	tenures: never[];
 	first_name: string | null;
 	last_name: string | null;
 	middle_name: string | null;
@@ -33,8 +31,6 @@ export const load: PageServerLoad = async () => {
 		bio_text: null,
 		photo_url: null,
 		photo_url_full: null,
-		birthdate: null,
-		tenures: [],
 		first_name: null,
 		last_name: null,
 		middle_name: null,

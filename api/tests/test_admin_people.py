@@ -159,7 +159,8 @@ async def test_list_participants_wrong_token_returns_401(client_no_db: AsyncClie
 async def test_list_people_returns_person_list_item_shape(client: AsyncClient) -> None:
     """
     GET /api/admin/people with a valid token should return a list where each
-    item contains the PersonListItem keys: id, full_name, role_id, role_name, missing.
+    item contains the PersonListItem keys: id, full_name, missing, is_justice
+    (Phase 27 / D-10 dropped role_id/role_name — role no longer lives on Person).
     """
     response = await client.get("/api/admin/people", headers=_admin_headers())
     assert response.status_code == 200
@@ -172,9 +173,10 @@ async def test_list_people_returns_person_list_item_shape(client: AsyncClient) -
         item = body[0]
         assert "id" in item, "PersonListItem must have 'id'"
         assert "full_name" in item, "PersonListItem must have 'full_name'"
-        assert "role_id" in item, "PersonListItem must have 'role_id'"
-        assert "role_name" in item, "PersonListItem must have 'role_name'"
+        assert "is_justice" in item, "PersonListItem must have 'is_justice'"
         assert "missing" in item, "PersonListItem must have 'missing'"
+        assert "role_id" not in item, "role_id was removed from PersonListItem (D-10)"
+        assert "role_name" not in item, "role_name was removed from PersonListItem (D-10)"
         assert isinstance(item["id"], int), "id must be an integer"
         assert isinstance(item["full_name"], str), "full_name must be a string"
         assert isinstance(item["missing"], list), "missing must be a list"
@@ -182,24 +184,103 @@ async def test_list_people_returns_person_list_item_shape(client: AsyncClient) -
 
 @pytest.mark.asyncio
 @pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
-async def test_list_people_incomplete_filter(client: AsyncClient) -> None:
+async def test_list_people_missing_filter(client: AsyncClient) -> None:
     """
-    GET /api/admin/people?incomplete=true should return only people with
-    missing fields (role_id IS NULL OR bio_text IS NULL OR photo_url IS NULL).
+    GET /api/admin/people?missing=bio should return only people missing bio
+    (D-04 click-to-filter; supersedes the removed ?incomplete=true toggle).
     """
     response = await client.get(
-        "/api/admin/people?incomplete=true", headers=_admin_headers()
+        "/api/admin/people?missing=bio", headers=_admin_headers()
     )
     assert response.status_code == 200
 
     body = response.json()
     assert isinstance(body, list)
-    # Every returned item must have at least one missing field
+    # Every returned item must be missing the filtered-on field
     for item in body:
-        assert len(item["missing"]) > 0, (
-            f"Person {item['id']} ({item['full_name']}) in incomplete list "
-            "but has no missing fields"
+        assert "bio" in item["missing"], (
+            f"Person {item['id']} ({item['full_name']}) returned by "
+            "?missing=bio but 'bio' not in its own missing list"
         )
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_update_person_partial_patch_does_not_wipe_other_fields(
+    client: AsyncClient,
+) -> None:
+    """
+    CR-01 regression: PATCH /api/admin/people/{id} must only write fields the
+    request body explicitly includes. The real editor splits edits across two
+    separate forms — Identity+Person Type (full_name/first_name/last_name/
+    middle_name/name_suffix/is_justice/birthdate/tenures) and Bio+Photo
+    (bio_text) — each omitting the other's fields. update_person previously
+    wrote every field unconditionally, so submitting one form silently wiped
+    whatever the other form owns.
+    """
+    headers = _admin_headers()
+    create_res = await client.post(
+        "/api/admin/people",
+        headers=headers,
+        json={"full_name": "CR-01 Regression Test Person", "is_justice": False},
+    )
+    assert create_res.status_code == 201
+    person_id = create_res.json()["id"]
+
+    try:
+        # Simulate the Identity+Person Type form ("save" action): sends name
+        # fields and birthdate, omits bio_text/photo_url entirely.
+        identity_res = await client.patch(
+            f"/api/admin/people/{person_id}",
+            headers=headers,
+            json={
+                "full_name": "CR-01 Regression Test Person",
+                "first_name": "Regression",
+                "last_name": "Testperson",
+                "birthdate": "1950-01-01",
+            },
+        )
+        assert identity_res.status_code == 200
+
+        # Simulate the Bio+Photo form ("photo" action): sends only bio_text,
+        # omits full_name/first_name/last_name/birthdate/tenures entirely.
+        bio_res = await client.patch(
+            f"/api/admin/people/{person_id}",
+            headers=headers,
+            json={"bio_text": "A test biography."},
+        )
+        assert bio_res.status_code == 200
+
+        detail = bio_res.json()
+        assert detail["bio_text"] == "A test biography."
+        assert detail["first_name"] == "Regression", (
+            "first_name was wiped by a PATCH that never included it (CR-01)"
+        )
+        assert detail["last_name"] == "Testperson", (
+            "last_name was wiped by a PATCH that never included it (CR-01)"
+        )
+        assert detail["birthdate"] == "1950-01-01", (
+            "birthdate was wiped by a PATCH that never included it (CR-01)"
+        )
+
+        # And the reverse direction: a subsequent Identity-form-only PATCH
+        # (no bio_text key) must not wipe the bio_text just set above.
+        identity_res_2 = await client.patch(
+            f"/api/admin/people/{person_id}",
+            headers=headers,
+            json={
+                "full_name": "CR-01 Regression Test Person",
+                "first_name": "Regression",
+                "last_name": "Testperson",
+                "birthdate": "1950-01-01",
+            },
+        )
+        assert identity_res_2.status_code == 200
+        assert identity_res_2.json()["bio_text"] == "A test biography.", (
+            "bio_text was wiped by a PATCH that never included it (CR-01)"
+        )
+    finally:
+        await client.delete(f"/api/admin/people/{person_id}", headers=headers)
 
 
 @pytest.mark.asyncio

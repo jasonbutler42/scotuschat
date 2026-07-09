@@ -130,6 +130,23 @@
 		mergeLoading = false;
 		isJustice = data.person.is_justice ?? false;
 		birthdate = data.person.birthdate ?? '';
+		nextKey = 1;
+		tenureRows = (data.person.tenures ?? []).map(
+			(t: {
+				seat: string | null;
+				start_date: string | null;
+				end_date: string | null;
+				appointed_by: string | null;
+				appointing_president_party: string | null;
+			}) => ({
+				_key: nextKey++,
+				seat: t.seat ?? '',
+				start_date: t.start_date ?? '',
+				end_date: t.end_date ?? '',
+				appointed_by: t.appointed_by ?? '',
+				appointing_president_party: t.appointing_president_party ?? '',
+			})
+		);
 	});
 
 	async function fetchMergePreview(targetId: string) {

@@ -28,8 +28,13 @@ class TenureRow(BaseModel):
     All fields are Optional so the frontend can send partially-filled rows;
     the service filters out rows where both seat and start_date are falsy.
     Phase 27 additions: appointed_by and appointing_president_party are
-    free-text, per-row appointment fields (D-16) — each tenure row carries
-    its own appointing president/party rather than a single person-level value.
+    per-row appointment fields — each tenure row carries its own appointing
+    president/party rather than a single person-level value. appointed_by
+    remains a free-text field (D-16). appointing_president_party is now
+    surfaced in the person editor as a curated dropdown (D-16 reversed for
+    this field only, per Phase 27 UAT, 2026-07-09), but at the schema level
+    it remains this same Optional[str] free-text-compatible column — the
+    API accepts any string, no type/enum constraint is added here.
     """
 
     seat: Optional[str] = None

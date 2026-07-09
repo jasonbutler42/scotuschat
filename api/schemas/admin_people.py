@@ -27,11 +27,16 @@ class TenureRow(BaseModel):
     Dates are ISO 8601 strings ("YYYY-MM-DD") or None.
     All fields are Optional so the frontend can send partially-filled rows;
     the service filters out rows where both seat and start_date are falsy.
+    Phase 27 additions: appointed_by and appointing_president_party are
+    free-text, per-row appointment fields (D-16) — each tenure row carries
+    its own appointing president/party rather than a single person-level value.
     """
 
     seat: Optional[str] = None
     start_date: Optional[str] = None
     end_date: Optional[str] = None
+    appointed_by: Optional[str] = None
+    appointing_president_party: Optional[str] = None
 
 
 class PersonListItem(BaseModel):
@@ -40,15 +45,22 @@ class PersonListItem(BaseModel):
     missing: list of field labels that are NULL on this person record.
     Possible values: "role", "bio", "photo" (see D-04, D-06).
     Phase 18 addition: is_justice for directory badge (D-10 — migration 0010).
+    Phase 27 (D-10): role_id/role_name removed — the list no longer shows a
+    Role column (person-level Role is superseded; role now lives on
+    argument_participants). Phase 27 additions: argument_count (Advocate-tab
+    column, PDIR-04), tenure_coverage and has_tenure_gap (Bench-tab display
+    string and gap indicator, PDIR-03).
     """
 
     id: int
     full_name: str
-    role_id: Optional[int] = None
-    role_name: Optional[str] = None
     missing: list[str]
     # Phase 18 addition — migration 0010
     is_justice: bool = False
+    # Phase 27 additions
+    argument_count: Optional[int] = None
+    tenure_coverage: Optional[str] = None
+    has_tenure_gap: bool = False
 
     model_config = {"from_attributes": True}
 
@@ -59,12 +71,13 @@ class PersonDetail(BaseModel):
     Includes all tenure rows for display in the edit form (D-07, D-08).
     Phase 9 additions: six structured name and appointment fields (all optional).
     Phase 18 addition: is_justice boolean for the editor toggle (D-11 — migration 0010).
+    Phase 27 (D-10): role_id/role_name removed — the editor no longer surfaces
+    a person-level Role field. Phase 27 addition: birthdate (ISO date string,
+    PEDIT-02 — migration 0016).
     """
 
     id: int
     full_name: str
-    role_id: Optional[int] = None
-    role_name: Optional[str] = None
     bio_text: Optional[str] = None
     photo_url: Optional[str] = None
     tenures: list[TenureRow] = []
@@ -76,6 +89,8 @@ class PersonDetail(BaseModel):
     # Phase 22 — migration 0013: appointment columns moved to court_tenures (PEDIT-10)
     # Phase 18 addition — migration 0010
     is_justice: bool = False
+    # Phase 27 addition — migration 0016
+    birthdate: Optional[str] = None
 
     model_config = {"from_attributes": True}
 
@@ -90,10 +105,14 @@ class PersonUpdate(BaseModel):
     Phase 9 extends the allow-list with six structured name and appointment
     fields (T-09-01 — prevents writing arbitrary Person attributes).
     Phase 18 addition: is_justice Optional[bool] — None means leave unchanged (D-08, D-11).
+    Phase 27 (D-10): role_id removed from the allow-list entirely — person-level
+    Role is superseded (role now lives on argument_participants). Phase 27
+    addition: birthdate (ISO date string, PEDIT-02) — added to the mass-
+    assignment allow-list following the same T-09-01 explicit-field discipline;
+    None means leave unchanged.
     """
 
     full_name: Optional[str] = None
-    role_id: Optional[int] = None
     bio_text: Optional[str] = None
     photo_url: Optional[str] = None
     tenures: Optional[list[TenureRow]] = None
@@ -105,6 +124,25 @@ class PersonUpdate(BaseModel):
     # Phase 22 — migration 0013: appointment columns moved to court_tenures (PEDIT-10)
     # Phase 18 addition — migration 0010 (None = leave unchanged per D-08)
     is_justice: Optional[bool] = None
+    # Phase 27 addition — migration 0016 (T-09-01 allow-list discipline)
+    birthdate: Optional[str] = None
+
+
+class PersonCreateRequest(BaseModel):
+    """Request body for POST /api/admin/people (D-08, PEDIT-09).
+
+    The minimum required to create a person is a full name plus a Bench/
+    Advocate choice — both full_name and is_justice are REQUIRED (unlike
+    every field on PersonUpdate, which is Optional). Everything else (bio,
+    photo, tenures, birthdate, structured name parts) is filled in later via
+    the existing PATCH /api/admin/people/{id} update flow, not at creation
+    time. Does NOT carry the job-scoped fields (raw_speaker_label, side,
+    role_name) present on admin_jobs.PersonCreate — this is a standalone
+    person-directory create, not a job-linked inline create.
+    """
+
+    full_name: str
+    is_justice: bool
 
 
 class RoleCreate(BaseModel):

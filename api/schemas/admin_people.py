@@ -145,12 +145,18 @@ class PersonCreateRequest(BaseModel):
     is_justice: bool
 
 
+# TODO(D-10): orphaned by Phase 27 — person-level roles removed; safe to
+# delete once confirmed. Plan 27-05 deletes this schema's only caller (the
+# createRole form action); flagged here rather than deleted to avoid
+# breaking imports mid-phase.
 class RoleCreate(BaseModel):
     """Request body for POST /api/admin/roles (D-10 inline role creation)."""
 
     name: str
 
 
+# TODO(D-10): orphaned by Phase 27 — person-level roles removed; safe to
+# delete once confirmed. See RoleCreate above.
 class RoleResponse(BaseModel):
     """Response from POST /api/admin/roles and find-or-create role operation."""
 

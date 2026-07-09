@@ -465,6 +465,10 @@ async def create_person(db: AsyncSession, body: PersonCreateRequest) -> dict:
     return await get_person_detail(db, person.id)
 
 
+# TODO(D-10): orphaned by Phase 27 — person-level roles removed; safe to
+# delete once confirmed. Plan 27-05 deletes this function's only caller (the
+# createRole form action); flagged here rather than deleted to avoid
+# breaking imports mid-phase.
 async def create_role(db: AsyncSession, name: str) -> dict:
     """Find-or-create a Role by name (D-10).
 

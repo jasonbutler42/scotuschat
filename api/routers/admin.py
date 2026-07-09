@@ -74,6 +74,7 @@ from api.schemas.admin_people import (
     MergePreview,
     MergeRequest,
     ParticipantItem,
+    PersonCreateRequest,
     PersonDetail,
     PersonListItem,
     PersonUpdate,
@@ -569,24 +570,60 @@ async def list_resolve_rows(
 
 @router.get("/people", response_model=list[PersonListItem])
 async def list_people(
-    incomplete: bool = False,
+    is_justice: bool | None = None,
+    missing: str | None = None,
     tenure_gaps: bool = False,
     db: AsyncSession = Depends(get_db),
 ) -> list[PersonListItem]:
     """
-    Return all Person rows with role name and missing-fields list (PEOPLE-01, PEOPLE-02).
+    Return Person rows for the Bench/Advocate directory tabs (PDIR-01 through PDIR-06).
 
     Query params:
-    - incomplete=false (default): return all people
-    - incomplete=true: return only people where role_id OR bio_text OR photo_url is NULL
+    - is_justice: tab filter (D-01/D-02) — true = Bench, false = Advocate, omitted = no filter
+    - missing: single field-label click-to-filter (D-04) — one of the exact labels
+      _missing_fields produces ("first name"/"last name"/"photo"/"bio"/"birthdate"/
+      "no tenures"); any other value is ignored by the service, never interpolated into SQL
     - tenure_gaps=true: return only bench speakers with at least one argued_date outside
-      all their CourtTenure windows (D-15, Phase 15)
+      all their CourtTenure windows (D-15, Phase 15) — Bench-tab-only
 
-    PersonListItem is a superset of the old PersonResponse (adds role_id + missing),
-    so Phase 7 typeahead consumers (which read id/full_name/role_name) still work.
+    Phase 27 (D-10): the person-level Role join is gone — PersonListItem no
+    longer carries a Role display name; the returned shape now includes
+    argument_count/tenure_coverage/has_tenure_gap per row (PDIR-03/PDIR-04).
+
+    Rule-1 auto-fix (27-03): this route previously called
+    people_service.list_people(db, incomplete=..., tenure_gaps=...), a
+    signature Plan 27-02 already replaced with (is_justice, missing,
+    tenure_gaps) — updated here so the endpoint no longer raises a TypeError
+    at request time.
     """
-    people = await people_service.list_people(db, incomplete=incomplete, tenure_gaps=tenure_gaps)
+    people = await people_service.list_people(
+        db, is_justice=is_justice, missing=missing, tenure_gaps=tenure_gaps
+    )
     return [PersonListItem(**p) for p in people]
+
+
+@router.post("/people", status_code=201, response_model=PersonDetail)
+async def create_person(
+    body: PersonCreateRequest,
+    db: AsyncSession = Depends(get_db),
+) -> PersonDetail:
+    """
+    Create a standalone person from the People directory's "Create person" flow (D-09).
+
+    This is a general, unscoped create — unlike POST /jobs/{job_id}/people
+    below, it carries no pipeline-run guard and no participant-row linkage;
+    the sole guard on this route is the standard admin-auth dependency
+    already applied to every route on this router (T-27-05). Returns the
+    full PersonDetail so the create page's redirect lands on a fully
+    populated editor (D-09).
+
+    Returns 422 if full_name is blank (D-08).
+    """
+    try:
+        person = await people_service.create_person(db, body)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return PersonDetail(**person)
 
 
 @router.post("/jobs/{job_id}/people", status_code=201, response_model=PersonResponse)
@@ -978,6 +1015,10 @@ async def delete_argument(
     return {"deleted": True}
 
 
+# TODO(D-10): orphaned by Phase 27 — person-level roles removed; safe to
+# delete once confirmed. Plan 27-05 deletes this route's only caller (the
+# createRole form action on app/src/routes/admin/people/[id]/+page.server.ts);
+# flagged here rather than deleted to avoid breaking imports mid-phase.
 @router.post("/roles", status_code=201, response_model=RoleResponse)
 async def create_role(
     body: RoleCreate,

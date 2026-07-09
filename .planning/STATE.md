@@ -28,13 +28,13 @@ See: .planning/PROJECT.md (updated 2026-07-07 after Phase 25 completion)
 
 ## Current Position
 
-Phase: 27 (people-admin) — VERIFYING
-Stage: discuss ✓ → plan ✓ → execute ✓ → **verify** (in progress)
-Plan: 9 of 9 (all executed, including 3 gap-closure plans 27-07/08/09)
-Status: Gap-closure plans executed for all 3 UAT gaps; re-verification and UAT retest pending
-Last activity: 2026-07-09 — Gap-closure execution complete (27-07, 27-08, 27-09)
+Phase: 27 (people-admin) — PLANNED (gap closure round 2)
+Stage: discuss ✓ → plan ✓ → execute ✓ → verify ✓ (gaps_found) → **plan** ✓ → execute (pending) → verify (pending)
+Plan: 10 total — 9 executed (including gap-closure plans 27-07/08/09 for the 3 UAT gaps), 1 pending (27-10)
+Status: 3rd verification pass (2026-07-09T14:10:00Z) confirmed the 3 UAT gaps closed but found a NEW BLOCKER gap — CR-01/CR-02 (Justice→Advocate toggle + Save silently deletes tenure/birthdate; stale tenureRows after merge redirect can overwrite a different person's tenures), documented in 27-REVIEW.md and 27-VERIFICATION.md. Plan 27-10 (gap closure round 2) created and checker-verified to close both. Not yet executed.
+Last activity: 2026-07-09 — Planned 27-10-PLAN.md (gap closure for CR-01/CR-02)
 
-Progress: [██████████] 100% of Phase 27 execution (9/9 plans); re-verification pending — do not treat ROADMAP.md's "9/9" as phase-complete until /gsd-verify-work 27 retest confirms the 3 closed gaps
+Progress: [█████████░] 90% of Phase 27 plans executed (9/10); do NOT treat ROADMAP.md's plan list as phase-complete — 27-10 must execute and phase must re-verify (/gsd-execute-phase 27, then /gsd-verify-work 27) before Phase 27 can close
 
 ## Performance Metrics
 

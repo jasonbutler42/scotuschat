@@ -257,17 +257,30 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
   5. Each tenure row in the editor contains Seat, Appointed by, Appointing president's party, Start date, and End date — data reads correctly from the migrated `court_tenures` columns
 
 **Plans**: 10 plans (9 complete, 1 pending gap closure)
+**Wave 1**
 
 - [x] 27-01-PLAN.md — Schema foundation: birthdate migration + Pydantic schemas (BLOCKING migration)
-- [x] 27-02-PLAN.md — List directory service: tab/missing filters + per-tab columns
-- [x] 27-03-PLAN.md — Detail/write service + create_person + POST /people endpoint
-- [x] 27-04-PLAN.md — List page UI: tabs, click-to-filter pills, per-tab tables
-- [x] 27-05-PLAN.md — Person editor restructure: Person Type card, tenure sub-cards, role removal
-- [x] 27-06-PLAN.md — Create-person page (/admin/people/new) reusing the shared template
 - [x] 27-07-PLAN.md — Gap closure (UAT Gap 1): people-list middle-column padding gutter fix
 - [x] 27-08-PLAN.md — Gap closure (UAT Gap 3): create-person persists structured name parts (schema + service + action)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [x] 27-02-PLAN.md — List directory service: tab/missing filters + per-tab columns
 - [x] 27-09-PLAN.md — Gap closure (UAT Gap 2): President's Party dropdown (D-16 reversal for that field only)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [x] 27-03-PLAN.md — Detail/write service + create_person + POST /people endpoint
+- [x] 27-04-PLAN.md — List page UI: tabs, click-to-filter pills, per-tab tables
 - [ ] 27-10-PLAN.md — Gap closure (CR-01/CR-02, BLOCKER): preserve tenure/birthdate on Bench→Advocate toggle + reset tenureRows after merge redirect (PEDIT-07)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [x] 27-05-PLAN.md — Person editor restructure: Person Type card, tenure sub-cards, role removal
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
+- [x] 27-06-PLAN.md — Create-person page (/admin/people/new) reusing the shared template
 
 **UI hint**: yes
 

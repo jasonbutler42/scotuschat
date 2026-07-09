@@ -5,15 +5,15 @@ milestone_name: Admin Screens Cleanup
 current_phase: 27
 current_phase_name: people-admin
 status: executing
-stopped_at: Completed 27-01-PLAN.md
-last_updated: "2026-07-09T05:05:03.226Z"
+stopped_at: Completed 27-05-PLAN.md
+last_updated: "2026-07-09T05:17:14.359Z"
 last_activity: 2026-07-09
 last_activity_desc: Phase 27 execution started
 progress:
   total_phases: 7
   completed_phases: 5
   total_plans: 31
-  completed_plans: 29
+  completed_plans: 30
   percent: 71
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-07-07 after Phase 25 completion)
 
 Phase: 27 (people-admin) — EXECUTING
 Stage: discuss ✓ → plan ✓ → **execute** (next) → verify
-Plan: 5 of 6
+Plan: 6 of 6
 Status: Ready to execute
 Last activity: 2026-07-09 — Phase 27 execution started
 
@@ -107,6 +107,11 @@ Full log in PROJECT.md Key Decisions table. Key decisions entering v1.5:
 - [Phase 27]: 27-03: Rule-1 auto-fix -- GET /people's list_people call updated from the removed (incomplete, tenure_gaps) signature to the current (is_justice, missing, tenure_gaps) signature Plan 27-02 had already introduced
 - [Phase ?]: 27-04: Tab switch clears missing/tenure_gaps filters — both are tab-scoped concepts (missing-field vocab differs per tab; tenure_gaps is Bench-only)
 - [Phase ?]: 27-04: Bench/Advocate segmented toggle uses aria-pressed (not role=tab/tablist), matching the existing pill-button ARIA idiom rather than adding a keyboard-nav tablist contract
+- [Phase 27-05]: Split combined Bio & Photo card into separate Photo/Biography cards but kept one ?/photo form (bio_text still saves with photo, Pitfall 7 extended unchanged)
+- [Phase 27-05]: TenureRow.seat retained in state/payload with no UI input (D-18 field list omits it) to avoid wiping existing seat data on save
+- [Phase 27-05]: Breadcrumb + Cancel target derived from data.person.is_justice at load time (backTab), not the live Bench/Advocate toggle state
+- [Phase 27-05]: Save Person/Cancel action row moved to bottom of page (after Merge/Delete) per UI-SPEC card order item 8
+- [Phase 27-05]: Removed dead roles-building loop/RoleItem/role_id/role_name from +page.server.ts load() and types, completing D-10's full Role removal
 
 ### Pending Todos
 
@@ -155,9 +160,10 @@ Deployment blockers (v1.4, unresolved — not in v1.5 scope):
 | Phase 27 P02 | 12min | 2 tasks | 2 files |
 | Phase 27 P03 | 20min | 3 tasks | 3 files |
 | Phase 27-people-admin P04 | 15min | 2 tasks | 2 files |
+| Phase 27-people-admin P05 | 15min | 2 tasks | 2 files |
 
 ## Session Continuity
 
-Last session: 2026-07-09T05:04:11.188Z
-Stopped at: Completed 27-01-PLAN.md
-Resume file: .planning/phases/27-people-admin/27-02-PLAN.md
+Last session: 2026-07-09T05:17:14.348Z
+Stopped at: Completed 27-05-PLAN.md
+Resume file: .planning/phases/27-people-admin/27-06-PLAN.md

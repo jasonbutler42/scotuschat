@@ -79,18 +79,18 @@
 
 ### Person Editor (`/admin/people/[id]`)
 
-- [ ] **PEDIT-01** Full name fields: first / middle / last / suffix — same structure for bench and advocates
+- [x] **PEDIT-01** Full name fields: first / middle / last / suffix — same structure for bench and advocates
 - [x] **PEDIT-02** Optional birthdate field added to Basic Info card
-- [ ] **PEDIT-03** No prefix/rank field on person record — rank captured per-argument via `argument_participants.title` (PJOB-13)
+- [x] **PEDIT-03** No prefix/rank field on person record — rank captured per-argument via `argument_participants.title` (PJOB-13)
 - [~] **PEDIT-04** ~~Role field: Justice-only, lives inside Justice Details card; not shown for advocates~~ — **Superseded by Phase 27 D-10**: role is captured per-argument on `argument_participants` (Phase 26), so a person-level Role field was dropped from the Bench Details card
-- [ ] **PEDIT-05** Bio & Photo card: button label changed from "Save photo" to "Upload photo"
-- [ ] **PEDIT-06** Justice Details card: collapsed by default, consolidates is_justice checkbox, role, tenures, and appointment data into one card
-- [ ] **PEDIT-07** "Is Justice" checkbox opens Justice Details card with animation; unchecking hides fields but does not delete tenure or appointment data
+- [x] **PEDIT-05** Bio & Photo card: button label changed from "Save photo" to "Upload photo"
+- [x] **PEDIT-06** Justice Details card: collapsed by default, consolidates is_justice checkbox, role, tenures, and appointment data into one card
+- [x] **PEDIT-07** "Is Justice" checkbox opens Justice Details card with animation; unchecking hides fields but does not delete tenure or appointment data
 - [~] **PEDIT-08** ~~Role field (Chief Justice / Associate Justice) lives inside Justice Details card~~ — **Superseded by Phase 27 D-10**: same rationale as PEDIT-04
 - [x] **PEDIT-09** Tenure rows each contain: Seat (Chief / Associate), Appointed by, Appointing president's party, Start date, End date — add / remove rows as before
 - [x] **PEDIT-10** Schema change: move `appointed_by` and `appointing_president_party` from `people` table to `court_tenures` table — Alembic migration with data backfill
-- [ ] **PEDIT-11** Merge card — unchanged
-- [ ] **PEDIT-12** Delete card — unchanged
+- [x] **PEDIT-11** Merge card — unchanged
+- [x] **PEDIT-12** Delete card — unchanged
 
 ## Future Requirements
 
@@ -163,18 +163,18 @@
 | PDIR-05 | Phase 27 | Reworked (D-04) |
 | PDIR-06 | Phase 27 | Complete |
 | PDIR-07 | Phase 27 | Complete |
-| PEDIT-01 | Phase 27 | Pending |
+| PEDIT-01 | Phase 27 | Complete |
 | PEDIT-02 | Phase 27 | Complete |
-| PEDIT-03 | Phase 27 | Pending |
+| PEDIT-03 | Phase 27 | Complete |
 | PEDIT-04 | Phase 27 | Superseded (D-10) |
-| PEDIT-05 | Phase 27 | Pending |
-| PEDIT-06 | Phase 27 | Pending |
-| PEDIT-07 | Phase 27 | Pending |
+| PEDIT-05 | Phase 27 | Complete |
+| PEDIT-06 | Phase 27 | Complete |
+| PEDIT-07 | Phase 27 | Complete |
 | PEDIT-08 | Phase 27 | Superseded (D-10) |
 | PEDIT-09 | Phase 27 | Complete |
 | PEDIT-10 | Phase 22 | Complete |
-| PEDIT-11 | Phase 27 | Pending |
-| PEDIT-12 | Phase 27 | Pending |
+| PEDIT-11 | Phase 27 | Complete |
+| PEDIT-12 | Phase 27 | Complete |
 
 **Coverage:**
 

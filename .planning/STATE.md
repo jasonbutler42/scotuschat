@@ -6,14 +6,14 @@ current_phase: 29
 current_phase_name: historical-corpus-import
 status: executing
 stopped_at: Phase 29 UI-SPEC approved
-last_updated: "2026-07-09T23:06:15.798Z"
+last_updated: "2026-07-09T23:24:07.303Z"
 last_activity: 2026-07-09
 last_activity_desc: Phase 29 execution started
 progress:
   total_phases: 8
   completed_phases: 6
   total_plans: 42
-  completed_plans: 38
+  completed_plans: 39
   percent: 75
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-07-09 after Phase 27 completion)
 
 Phase: 29 (historical-corpus-import) — EXECUTING
 Stage: Ready to plan
-Plan: 3 of 6
+Plan: 4 of 6
 Status: Ready to execute
 Last activity: 2026-07-09 — Phase 29 execution started
 
@@ -125,6 +125,9 @@ Full log in PROJECT.md Key Decisions table. Key decisions entering v1.5:
 - [Phase ?]: 29-01: python-dateutil package legitimacy checkpoint approved by human (PyPI source repo, version, exact package name all confirmed) before install
 - [Phase 29-02]: detect_stage_direction requires the ENTIRE utterance text be a single bracket/paren token before any vocabulary match, ruling out embedded parenthetical citations mid-sentence without extra heuristics
 - [Phase 29-02]: apolitical.py field lists sourced from 29-CONTEXT.md's verified real cases.jsonl/conversations.json field names (title/petitioner/respondent/...) rather than the plan's illustrative title/case_name shorthand
+- [Phase ?]: 29-03: reconstruct_full_name is a plain concatenation (no punctuation synthesis needed) since the CSV's Middle Name or Initial column already embeds the trailing period for single-initial values; no MANUAL_NAME_OVERRIDES entries were needed for the 13 seeded justices
+- [Phase ?]: 29-03: court_tenures.seat for CSV-imported justices uses the CSV section header text itself (Chief Justice / Associate Justice), per RESEARCH.md Open Question 2
+- [Phase ?]: 29-03: Task 2 integration tests use a dedicated per-test engine/session fixture (isolated_session) instead of conftest.py's shared session-scoped engine fixture, avoiding a pre-existing Windows asyncpg/pytest-asyncio stale-event-loop failure without touching conftest.py
 
 ### Roadmap Evolution
 
@@ -186,9 +189,10 @@ Deployment blockers (v1.4, unresolved — not in v1.5 scope):
 | Phase 27 P11 | 8min | 1 tasks | 1 files |
 | Phase 29 P01 | 15min | 3 tasks | 6 files |
 | Phase 29 P02 | 12min | 3 tasks | 7 files |
+| Phase 29-historical-corpus-import P03 | 25min | 3 tasks | 3 files |
 
 ## Session Continuity
 
-Last session: 2026-07-09T23:06:07.939Z
+Last session: 2026-07-09T23:23:07.315Z
 Stopped at: Phase 29 UI-SPEC approved
 Resume file: .planning/phases/29-historical-corpus-import/29-UI-SPEC.md

@@ -96,7 +96,7 @@
 
 Requirements for the one-time bulk-import of terms 1955–2019 from the Cornell ConvoKit `supreme-corpus` dataset. Sits outside the v1.5 milestone requirement set; added 2026-07-09 during `/gsd-plan-phase 29` from RESEARCH.md's proposed codes and CONTEXT.md decisions D-01…D-26.
 
-- [ ] **CORPUS-01** Bulk-import all historical justices from the tenure CSV; dedup by exact `Person.full_name` match against the 13 existing `seed_aliases.py` Person rows; upgrade those 13 rows in place (`is_justice=true`, `court_tenures` backfill); auto-create both tenure rows for elevated justices (Rehnquist, Rutledge) (D-01–D-05)
+- [x] **CORPUS-01** Bulk-import all historical justices from the tenure CSV; dedup by exact `Person.full_name` match against the 13 existing `seed_aliases.py` Person rows; upgrade those 13 rows in place (`is_justice=true`, `court_tenures` backfill); auto-create both tenure rows for elevated justices (Rehnquist, Rutledge) (D-01–D-05)
 - [x] **CORPUS-02** Alembic migration adding nullable `Case.oyez_case_id`, `Argument.oyez_transcript_id`, `Person.oyez_speaker_id` columns (D-10)
 - [ ] **CORPUS-03** New `import-convokit` pipeline CLI subcommand: parses corpus files directly (no `convokit` package), staged/batched by October Term via `--term`/`--term-range`, resumable/idempotent (check-before-insert per argument), writes real `pipeline_runs` rows (`strategy="convokit_import"`), lands arguments at `status=draft`, lead-docket-only for consolidated cases (D-06–D-09, D-15, D-19)
 - [x] **CORPUS-04** Source-file handling: copy the 5 needed files into a new gitignored `data/corpus/` directory (mirroring `data/pdfs/`); explicitly exclude the 3 NLP-annotation files; add `python-dateutil` dependency (D-20, D-21)
@@ -106,7 +106,7 @@ Requirements for the one-time bulk-import of terms 1955–2019 from the Cornell 
 - [ ] **CORPUS-08** Per-batch summary report printed at the end of each term/batch run (counts created/skipped/flagged) (D-14)
 - [ ] **CORPUS-09** Attributions/License static page (`/attributions`) crediting Oyez.org, Cornell ConvoKit, and SCDB; states the Oyez CC BY-NC 4.0 license fact (D-22–D-26)
 - [ ] **CORPUS-10** Per-argument attribution note visible only on corpus-sourced arguments, linking to the Attributions page (D-22)
-- [ ] **CORPUS-11** Roadmap bookkeeping: mark backlog Phase 999.10 superseded/absorbed by Phase 29 (D-01)
+- [x] **CORPUS-11** Roadmap bookkeeping: mark backlog Phase 999.10 superseded/absorbed by Phase 29 (D-01)
 
 ## Future Requirements
 
@@ -191,7 +191,7 @@ Requirements for the one-time bulk-import of terms 1955–2019 from the Cornell 
 | PEDIT-10 | Phase 22 | Complete |
 | PEDIT-11 | Phase 27 | Complete |
 | PEDIT-12 | Phase 27 | Complete |
-| CORPUS-01 | Phase 29 | Pending |
+| CORPUS-01 | Phase 29 | Complete |
 | CORPUS-02 | Phase 29 | Complete |
 | CORPUS-03 | Phase 29 | Pending |
 | CORPUS-04 | Phase 29 | Complete |
@@ -201,7 +201,7 @@ Requirements for the one-time bulk-import of terms 1955–2019 from the Cornell 
 | CORPUS-08 | Phase 29 | Pending |
 | CORPUS-09 | Phase 29 | Pending |
 | CORPUS-10 | Phase 29 | Pending |
-| CORPUS-11 | Phase 29 | Pending |
+| CORPUS-11 | Phase 29 | Complete |
 
 **Coverage:**
 

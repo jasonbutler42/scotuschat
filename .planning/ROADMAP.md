@@ -528,7 +528,7 @@ Plans:
 **Goal:** Bulk-import historical oral arguments (terms 1955-2019, ~7,800 arguments) from the Cornell ConvoKit supreme-corpus dataset directly into cases/arguments/utterances/people/court_tenures, bypassing PDF download and LLM parsing for this batch. Source files: supreme-corpus/{utterances.jsonl,conversations.json,speakers.json}, a separately-located cases.jsonl (title/docket/dates/citation), and a justices tenure CSV (appointment/tenure backfill). Open questions: dedup against existing Person/CourtTenure rows, stage-direction inline-vs-row policy, apolitical-field stripping (win_side/votes_side/scdb_docket_id must never be persisted), lead-docket-only limitation for consolidated cases, advocate identity QA. Existing PDF ingest/parse/resolve pipeline stays for terms 2020+ and all future terms -- this is a new, separate one-time bulk-import CLI command, not a replacement.
 **Requirements**: CORPUS-01, CORPUS-02, CORPUS-03, CORPUS-04, CORPUS-05, CORPUS-06, CORPUS-07, CORPUS-08, CORPUS-09, CORPUS-10, CORPUS-11
 **Depends on:** Phase 28
-**Plans:** 2/6 plans executed
+**Plans:** 3/6 plans executed
 
 **Wave 1** *(parallel — disjoint files)*
 
@@ -537,7 +537,7 @@ Plans:
 
 **Wave 2** *(parallel — disjoint files; blocked on 29-01)*
 
-- [ ] 29-03-PLAN.md — Justice CSV importer (Step Zero, absorbs 999.10): upgrade 13 seeded rows in place + create roster + import-justices subcommand (CORPUS-01, CORPUS-11)
+- [x] 29-03-PLAN.md — Justice CSV importer (Step Zero, absorbs 999.10): upgrade 13 seeded rows in place + create roster + import-justices subcommand (CORPUS-01, CORPUS-11)
 - [ ] 29-06-PLAN.md — Frontend: Attributions/License page + per-argument note (server-gated) + TopNav link + README credit + oyez_transcript_id payload field (CORPUS-09, CORPUS-10)
 
 **Wave 3** *(blocked on 29-01, 29-02, 29-03)*

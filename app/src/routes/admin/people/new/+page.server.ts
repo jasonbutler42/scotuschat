@@ -49,6 +49,11 @@ export const actions: Actions = {
 	 * freshly-created person's editor (identical redirect-after-create idiom
 	 * to the [id] editor's `merge` action — `redirect(303, '/admin/people/' + id)`).
 	 *
+	 * first_name/middle_name/last_name/name_suffix are now read and forwarded
+	 * (Phase 27 UAT gap closure, Gap 3, 2026-07-09) to match the [id] editor's
+	 * `save` action — matching D-08's contract, which only defers bio/photo/
+	 * tenures/birthdate, never named structured name parts as deferred.
+	 *
 	 * tenures/bio_text/photo_url/birthdate are intentionally NOT sent here
 	 * (D-08) — they are filled in on the editor after redirect via the
 	 * existing `save`/`photo` actions on `/admin/people/[id]`.
@@ -58,6 +63,10 @@ export const actions: Actions = {
 
 		const full_name = ((formData.get('full_name') as string) ?? '').trim();
 		const isJusticeRaw = formData.get('is_justice') as string | null;
+		const first_name = ((formData.get('first_name') as string) ?? '').trim() || null;
+		const middle_name = ((formData.get('middle_name') as string) ?? '').trim() || null;
+		const last_name = ((formData.get('last_name') as string) ?? '').trim() || null;
+		const name_suffix = ((formData.get('name_suffix') as string) ?? '').trim() || null;
 
 		if (!full_name) {
 			return fail(400, { error: 'Full name is required.' });
@@ -77,7 +86,10 @@ export const actions: Actions = {
 					'X-Admin-Token': ADMIN_TOKEN,
 					'Content-Type': 'application/json',
 				},
-				body: JSON.stringify({ full_name, is_justice }),
+				body: JSON.stringify({
+					full_name, is_justice,
+					first_name, middle_name, last_name, name_suffix,
+				}),
 			});
 		} catch {
 			return fail(502, { error: 'Could not create person. Check the form and try again.' });

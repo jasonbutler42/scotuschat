@@ -99,6 +99,26 @@ def _missing_fields(person: Person, tenure_count: int) -> list[str]:
     return missing
 
 
+def _tenure_coverage(tenures: list[CourtTenure]) -> str | None:
+    """Return a display string summarizing a person's tenure date range (PDIR-03).
+
+    Earliest tenure start year through latest tenure end year, e.g.
+    "1972–2005". An open-ended tenure (end_date IS NULL — currently
+    active) renders as "{start}–present". Zero tenures (or tenures with
+    no start_date at all) returns None so the frontend can render its own
+    "No tenure" copy.
+    """
+    starts = [t.start_date for t in tenures if t.start_date is not None]
+    if not starts:
+        return None
+    start_year = min(starts).year
+    if any(t.end_date is None for t in tenures):
+        return f"{start_year}–present"
+    end_dates = [t.end_date for t in tenures if t.end_date is not None]
+    end_year = max(end_dates).year if end_dates else start_year
+    return f"{start_year}–{end_year}"
+
+
 async def _replace_tenures(
     db: AsyncSession, person_id: int, tenures: list[TenureRow]
 ) -> None:
@@ -145,92 +165,153 @@ async def _replace_tenures(
 
 async def list_people(
     db: AsyncSession,
-    incomplete: bool = False,
+    is_justice: bool | None = None,
+    missing: str | None = None,
     tenure_gaps: bool = False,
 ) -> list[dict]:
-    """Return all Person rows joined with their Role name.
+    """Return Person rows for the Bench/Advocate directory tabs (D-01 through D-06).
 
     Sorted by COALESCE(last_name, full_name) ascending so that people whose
     last_name is not yet populated (legacy rows, pre-Phase-9 backfill) are
     ordered by full_name as a fallback rather than being pushed to the bottom
     of the directory (which NULLS LAST on last_name alone would cause).
 
-    When incomplete=True, only returns people where role_id OR bio_text OR
-    photo_url is NULL (D-04, PEOPLE-02).
+    is_justice filters by tab (D-01/D-02): True = Bench, False = Advocate,
+    None = no tab filter (defensive only — the frontend always passes a tab,
+    defaulting to Bench per D-03).
 
-    When tenure_gaps=True, only returns bench speakers who have at least one
+    missing is a single field-label filter driven by the click-to-filter
+    pills (D-04) — one of "first name"/"last name"/"photo"/"bio"/"birthdate"/
+    "no tenures" (the exact vocabulary _missing_fields produces, T-27-03).
+    Any other value (or None) applies no filter — never interpolated into SQL.
+
+    tenure_gaps=True restricts to bench speakers who have at least one
     argument appearance where argued_date falls outside all their CourtTenure
-    windows (D-15, Phase 15).
+    windows (D-15, Phase 15, PDIR-06) — Bench-tab-only; the frontend only
+    sends this on the Bench tab.
 
-    Returns a list of dicts with keys: id, full_name, role_id, role_name, missing.
-    The missing list is derived server-side so the API response carries it directly (D-06).
+    Person-level Role is no longer joined or returned (D-10) — role now
+    lives on argument_participants.
+
+    Returns a list of dicts with keys: id, full_name, missing, is_justice,
+    argument_count, tenure_coverage, has_tenure_gap.
+    - argument_count is a DISTINCT count of ArgumentParticipant.argument_id
+      (distinct arguments, not participant rows, PDIR-04); populated for
+      Advocate rows, None for Bench rows.
+    - tenure_coverage is a display string ("1972–2005"/"1972–present")
+      derived from the person's tenure rows, or None when they have zero
+      tenures (PDIR-03).
+    - has_tenure_gap mirrors the tenure_gaps filter logic per person (True
+      only for Justices with an argued_date not covered by any tenure).
+    All three are computed from a single tenure prefetch per call (no
+    per-person N+1 query, mirroring the tenures_by_person idiom in
+    list_resolve_rows_for_job, lines 647-660).
     """
-    q = (
-        select(Person, Role.name.label("role_name"))
-        .outerjoin(Role, Person.role_id == Role.id)
-        .order_by(sqlfunc.coalesce(Person.last_name, Person.full_name).asc())
+    q = select(Person).order_by(
+        sqlfunc.coalesce(Person.last_name, Person.full_name).asc()
     )
-    if incomplete:
-        q = q.where(
-            or_(
-                Person.role_id.is_(None),
-                Person.bio_text.is_(None),
-                Person.photo_url.is_(None),
+
+    if is_justice is not None:
+        q = q.where(Person.is_justice.is_(is_justice))
+
+    missing_filters = {
+        "first name": Person.first_name.is_(None),
+        "last name": Person.last_name.is_(None),
+        "photo": Person.photo_url.is_(None),
+        "bio": Person.bio_text.is_(None),
+        "birthdate": Person.birthdate.is_(None),
+        "no tenures": not_(exists().where(CourtTenure.person_id == Person.id)),
+    }
+    if missing in missing_filters:
+        q = q.where(missing_filters[missing])
+
+    # Gap-detection subquery (D-15, PDIR-06): people who have at least one
+    # BENCH appearance in an argument where no CourtTenure covers the
+    # argued_date (Pattern 7). Reused both as the tenure_gaps filter below
+    # and to compute has_tenure_gap on every row further down.
+    covering_tenure = exists(
+        select(CourtTenure.id).where(
+            and_(
+                CourtTenure.person_id == ArgumentParticipant.person_id,
+                CourtTenure.start_date <= Argument.argued_date,
+                or_(
+                    CourtTenure.end_date.is_(None),
+                    CourtTenure.end_date >= Argument.argued_date,
+                ),
             )
         )
+    )
+    gap_person_ids_query = (
+        select(ArgumentParticipant.person_id)
+        .join(Argument, Argument.id == ArgumentParticipant.argument_id)
+        .where(
+            ArgumentParticipant.side == SideEnum.BENCH,
+            ArgumentParticipant.person_id.isnot(None),
+            not_(covering_tenure),
+        )
+        .distinct()
+    )
     if tenure_gaps:
-        # Subquery: people who have at least one BENCH appearance in an argument
-        # where no CourtTenure covers the argued_date (Pattern 7).
-        covering_tenure = exists(
-            select(CourtTenure.id).where(
-                and_(
-                    CourtTenure.person_id == ArgumentParticipant.person_id,
-                    CourtTenure.start_date <= Argument.argued_date,
-                    or_(
-                        CourtTenure.end_date.is_(None),
-                        CourtTenure.end_date >= Argument.argued_date,
-                    ),
-                )
-            )
-        )
-        gap_person_ids = (
-            select(ArgumentParticipant.person_id)
-            .join(Argument, Argument.id == ArgumentParticipant.argument_id)
-            .where(
-                ArgumentParticipant.side == SideEnum.BENCH,
-                ArgumentParticipant.person_id.isnot(None),
-                not_(covering_tenure),
-            )
-            .distinct()
-        )
-        q = q.where(Person.id.in_(gap_person_ids))
+        q = q.where(Person.id.in_(gap_person_ids_query))
+
     result = await db.execute(q)
-    rows = result.all()
+    people = result.scalars().all()
+    person_ids = [person.id for person in people]
 
-    # Prefetch tenure counts for every person in the result set in one query,
-    # avoiding a per-person N+1 lookup inside _missing_fields (mirrors the
-    # tenures_by_person idiom in list_resolve_rows_for_job, lines 647-660).
-    person_ids = [person.id for person, _role_name in rows]
-    tenure_counts: dict[int, int] = {}
+    # Prefetch full tenure rows per person in one query (mirrors the
+    # tenures_by_person idiom in list_resolve_rows_for_job) — feeds
+    # _missing_fields' tenure_count, tenure_coverage, and has_tenure_gap
+    # without a per-person query.
+    tenures_by_person: dict[int, list[CourtTenure]] = {}
     if person_ids:
-        tenure_count_result = await db.execute(
-            select(CourtTenure.person_id, sqlfunc.count(CourtTenure.id))
-            .where(CourtTenure.person_id.in_(person_ids))
-            .group_by(CourtTenure.person_id)
+        tenure_result = await db.execute(
+            select(CourtTenure).where(CourtTenure.person_id.in_(person_ids))
         )
-        tenure_counts = dict(tenure_count_result.all())
+        for t in tenure_result.scalars().all():
+            tenures_by_person.setdefault(t.person_id, []).append(t)
 
-    return [
-        {
-            "id": person.id,
-            "full_name": person.full_name,
-            "role_id": person.role_id,
-            "role_name": role_name,
-            "missing": _missing_fields(person, tenure_counts.get(person.id, 0)),
-            "is_justice": person.is_justice,
-        }
-        for person, role_name in rows
-    ]
+    # Prefetch distinct-argument counts per person (PDIR-04 — distinct
+    # arguments, not participant rows).
+    argument_counts: dict[int, int] = {}
+    if person_ids:
+        arg_count_result = await db.execute(
+            select(
+                ArgumentParticipant.person_id,
+                sqlfunc.count(sqlfunc.distinct(ArgumentParticipant.argument_id)),
+            )
+            .where(ArgumentParticipant.person_id.in_(person_ids))
+            .group_by(ArgumentParticipant.person_id)
+        )
+        argument_counts = dict(arg_count_result.all())
+
+    # Restrict the gap-detection query to the current result set so
+    # has_tenure_gap is annotated for exactly the rows being returned.
+    gap_person_ids: set[int] = set()
+    if person_ids:
+        gap_result = await db.execute(
+            gap_person_ids_query.where(
+                ArgumentParticipant.person_id.in_(person_ids)
+            )
+        )
+        gap_person_ids = {row[0] for row in gap_result.all()}
+
+    rows: list[dict] = []
+    for person in people:
+        person_tenures = tenures_by_person.get(person.id, [])
+        rows.append(
+            {
+                "id": person.id,
+                "full_name": person.full_name,
+                "missing": _missing_fields(person, len(person_tenures)),
+                "is_justice": person.is_justice,
+                "argument_count": (
+                    argument_counts.get(person.id) if not person.is_justice else None
+                ),
+                "tenure_coverage": _tenure_coverage(person_tenures),
+                "has_tenure_gap": person.id in gap_person_ids,
+            }
+        )
+    return rows
 
 
 async def get_person_detail(db: AsyncSession, person_id: int) -> dict | None:

@@ -1,9 +1,9 @@
 ---
-status: partial
+status: diagnosed
 phase: 27-people-admin
 source: [27-VERIFICATION.md]
 started: 2026-07-09T15:10:00Z
-updated: 2026-07-09T15:30:00Z
+updated: 2026-07-09T15:40:00Z
 ---
 
 ## Current Test
@@ -64,7 +64,10 @@ blocked: 5
   reason: "User reported: site running crazy slow just navigating (3-5 seconds between click and navigation), plus console errors — repeated 'updated at' effect reruns at +page.svelte:132:42, :133:14, :134:44/142:9 (Array.map at $effect), culminating in 'Uncaught (in promise) Svelte error: effect_update_depth_exceeded — Maximum update depth exceeded. This typically indicates that an effect reads and writes the same piece of state.'"
   severity: blocker
   test: 1
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "app/src/routes/admin/people/[id]/+page.svelte lines 125-150: the CR-02 fix (commit b02a2681) added an $effect that both reads and writes the $state variable nextKey inside a tenureRows.map() callback (_key: nextKey++). Svelte 5 tracks the read as a dependency, so the effect's own write to nextKey invalidates itself and reschedules infinitely, tripping effect_update_depth_exceeded and pegging the main thread (source of the reported navigation lag)."
+  artifacts:
+    - path: "app/src/routes/admin/people/[id]/+page.svelte"
+      issue: "$effect (lines 125-150) reads and writes $state nextKey in the same run via nextKey++ inside .map()"
+  missing:
+    - "Replace nextKey++ inside the map callback with a plain local counter (not $state), then assign nextKey once after the loop completes — matches the safe write-only pattern used at the top-of-script initializer (lines 54-73) and elsewhere in the codebase (e.g. admin/pipeline/[job_id]/+page.svelte:78)."
+  debug_session: ".planning/debug/person-detail-effect-loop.md"

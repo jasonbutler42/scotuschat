@@ -5,6 +5,24 @@
 	let { data, form } = $props();
 
 	// ──────────────────────────────────────────────────────────────────────────
+	// Curated President's Party options (D-16 amendment, 2026-07-09 — UAT Gap 2
+	// closure). appointing_president_party is now a dropdown; appointed_by
+	// stays free-text per the original D-16 decision. Every U.S. president who
+	// has appointed a Justice belonged to one of these six parties, so no
+	// free-text "Other" escape hatch is offered — a legacy-value guard below
+	// covers any pre-existing out-of-list stored value instead.
+	// ──────────────────────────────────────────────────────────────────────────
+
+	const PARTY_OPTIONS = [
+		'Federalist',
+		'Democratic-Republican',
+		'Democratic',
+		'Whig',
+		'Republican',
+		'Independent',
+	];
+
+	// ──────────────────────────────────────────────────────────────────────────
 	// Types
 	// ──────────────────────────────────────────────────────────────────────────
 
@@ -576,12 +594,21 @@
 								>
 									President's Party
 								</label>
-								<input
+								<select
 									id="tenure-party-{row._key}"
-									type="text"
 									bind:value={row.appointing_president_party}
 									style="display: block; width: 100%; background-color: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
-								/>
+								>
+									<option value="">— None —</option>
+									{#each PARTY_OPTIONS as party (party)}
+										<option value={party}>{party}</option>
+									{/each}
+									{#if row.appointing_president_party && !PARTY_OPTIONS.includes(row.appointing_president_party)}
+										<option value={row.appointing_president_party}
+											>{row.appointing_president_party}</option
+										>
+									{/if}
+								</select>
 							</div>
 							<div style="opacity: 0.6;">
 								<label

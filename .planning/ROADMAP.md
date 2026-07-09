@@ -351,3 +351,12 @@ Plans:
 - [x] 25-04-PLAN.md
 
 - [ ] TBD (promote with /gsd-review-backlog when ready)
+
+### Phase 999.2: Share specific utterances via social media (BACKLOG)
+
+**Goal:** [Captured for future planning] Let visitors share a specific utterance (a single speaker turn) from an oral argument to social media, to increase site exposure and utilization. Needs discussion on: what gets shared (permalink to the utterance vs. a rendered card/image), which platforms, and how this interacts with the apolitical-framing hard constraint — an isolated utterance shared out of the argument's full context could read as editorializing even though the underlying transcript content is unchanged.
+**Requirements:** TBD
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (promote with /gsd-review-backlog when ready)

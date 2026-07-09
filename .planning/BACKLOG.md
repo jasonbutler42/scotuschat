@@ -170,3 +170,11 @@ The risk that needs to be explored, too, is around bias. I want to give visitors
 **Area:** Admin — People editor (`app/src/routes/admin/people/[id]/+page.svelte`, `/new`)
 **Added:** 2026-07-09 (from Phase 27 UAT)
 **Context:** Jason expected that filling in only the component name fields (first/last/middle/suffix) without Full Name would auto-backfill Full Name on save — instead, Full Name is currently required standalone. Proposed direction: stop making Full Name operator-editable at all, and derive it entirely from the component fields — "We'd have to adjust the way parsing works but that feels like the better way to go." Needs a design decision on exactly how derivation should work (ordering, suffix placement, punctuation) and what changes on the pipeline/parsing side before this can be scoped. Related to the real bug tracked as a Phase 27 UAT gap (create route silently discards name-part fields when Full Name is also filled) — that bug is being fixed now; this backlog item is the broader "should Full Name exist as a separate editable field at all" question, deferred.
+
+---
+
+## B-020 — Represent tenure Seat as a Chief/Associate toggle instead of free text
+
+**Area:** Admin — People editor, Tenure Period sub-card (`app/src/routes/admin/people/[id]/+page.svelte`)
+**Added:** 2026-07-09 (from Phase 27 UAT)
+**Context:** During Phase 27 UAT, Jason asked for the tenure-row Seat field (currently free-text, restored during Phase 27 verification per PEDIT-09) to become the same segmented-toggle component used for the Bench/Advocate choice, since for a Justice it's really just Chief or Associate. Deferred rather than fixed immediately (Jason offered this exit himself) because real historical `court_tenures.seat` data includes specific numbered seats (e.g. "Associate Justice Seat 3"), not just a binary Chief/Associate split — collapsing to a 2-option toggle is a genuine data-model simplification that needs a decision on whether the numbered-seat detail is dropped, kept as a secondary field, or reconciled some other way, plus a migration/backfill pass over existing rows. Companion to B-013 (bulk CSV import of historical justices), since both touch how much seat-numbering granularity the system needs to preserve.

@@ -318,7 +318,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 
 ## Backlog
 
-See `.planning/BACKLOG.md` for unscheduled items (B-001 through B-019).
+See `.planning/BACKLOG.md` for unscheduled items (B-001 through B-020).
 
 ### Phase 999.1: Click-to-copy extracted values design pattern (BACKLOG)
 

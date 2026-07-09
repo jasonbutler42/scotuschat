@@ -22,6 +22,35 @@ Usage:
     python -m pipeline import-justices --csv path/to/justices_tenure.csv
 """
 
+import csv
+from pathlib import Path
+
+from dateutil import parser as dateutil_parser
+from sqlalchemy import select
+
+from api.models.models import CourtTenure, Person
+from pipeline.db import get_session
+
+# ---------------------------------------------------------------------------
+# Defaults
+# ---------------------------------------------------------------------------
+
+# Matches the data/corpus/ scaffolding created in Plan 01 (D-20/D-21) — the
+# operator copies the source CSV here locally; it is gitignored, not tracked.
+DEFAULT_CSV_PATH = Path("data/corpus/supreme_court_justices_sections.csv")
+
+_CHIEF_SECTION_HEADER = "Supreme Court Chief Justices"
+_ASSOCIATE_SECTION_HEADER = "Supreme Court Associate Justices"
+
+# Section header text -> the court_tenures.seat value used for every row in
+# that section (RESEARCH.md Open Question 2: no numbered-seat data exists
+# for historical justices in this CSV, so the section header itself is the
+# natural seat value).
+_SECTION_SEAT_NAMES = {
+    _CHIEF_SECTION_HEADER: "Chief Justice",
+    _ASSOCIATE_SECTION_HEADER: "Associate Justice",
+}
+
 # ---------------------------------------------------------------------------
 # Manual overrides (Pitfall 1 guard)
 #
@@ -68,3 +97,140 @@ def reconstruct_full_name(first: str, middle: str, last: str, suffix: str) -> st
     if suffix:
         full_name = f"{full_name}, {suffix}"
     return full_name
+
+
+def _parse_optional_date(value: str):
+    """Parse a CSV date cell; blank/whitespace-only values return None."""
+    value = value.strip()
+    if not value:
+        return None
+    return dateutil_parser.parse(value).date()
+
+
+def _iter_csv_rows(csv_path: Path):
+    """
+    Yield (seat, row_dict) tuples for every justice data row in the CSV.
+
+    The CSV has two sections (Chief Justices, then Associate Justices), each
+    introduced by a single-cell section-header line followed by its own
+    column-header row. Blank lines between/around sections are skipped.
+    """
+    current_seat = None
+    header: list[str] | None = None
+
+    with csv_path.open("r", encoding="utf-8", newline="") as f:
+        reader = csv.reader(f)
+        for raw_row in reader:
+            if not raw_row or not any(cell.strip() for cell in raw_row):
+                continue  # blank line
+
+            first_cell = raw_row[0].strip()
+            if first_cell in _SECTION_SEAT_NAMES:
+                current_seat = _SECTION_SEAT_NAMES[first_cell]
+                header = None  # next non-blank row is this section's column header
+                continue
+
+            if header is None:
+                header = raw_row
+                continue
+
+            row_dict = dict(zip(header, raw_row))
+            yield current_seat, row_dict
+
+
+async def run_import_justices_csv(args) -> None:
+    """
+    Import the historical justices tenure CSV.
+
+    Upgrades the 13 existing seed_aliases.py Person rows in place
+    (is_justice=True + court_tenures backfill, D-03), creates the remaining
+    justices with tenure + appointment data, and auto-creates both
+    court_tenures rows for justices elevated from Associate to Chief (D-04).
+
+    Idempotent — dedups people by exact Person.full_name (D-02) and tenures
+    by (person_id, seat, start_date); safe to re-run any number of times.
+
+    Args:
+        args: argparse.Namespace with an optional `csv` attribute (path to
+            the justices tenure CSV; defaults to DEFAULT_CSV_PATH).
+    """
+    csv_path = Path(args.csv) if getattr(args, "csv", None) else DEFAULT_CSV_PATH
+    if not csv_path.exists():
+        raise FileNotFoundError(f"Justices CSV not found: {csv_path}")
+
+    people_created = 0
+    people_upgraded = 0
+    tenures_created = 0
+    rows_skipped = 0
+
+    async with get_session() as session:
+        for seat, row in _iter_csv_rows(csv_path):
+            first = row.get("First Name", "").strip()
+            middle = row.get("Middle Name or Initial", "").strip()
+            last = row.get("Last Name", "").strip()
+            suffix = row.get("Suffix", "").strip()
+
+            if not first or not last:
+                rows_skipped += 1
+                continue
+
+            full_name = reconstruct_full_name(first, middle, last, suffix)
+
+            result = await session.execute(
+                select(Person).where(Person.full_name == full_name)
+            )
+            person = result.scalar_one_or_none()
+
+            if person is not None:
+                # D-03: upgrade in place — is_justice + tenures only. Never
+                # touch role_id, aliases, or speaker_alias rows.
+                if not person.is_justice:
+                    person.is_justice = True
+                    people_upgraded += 1
+            else:
+                person = Person(
+                    full_name=full_name,
+                    first_name=first or None,
+                    middle_name=middle or None,
+                    last_name=last or None,
+                    name_suffix=suffix or None,
+                    is_justice=True,
+                    # oyez_speaker_id intentionally left NULL — the corpus
+                    # importer backfills it later (D-11).
+                )
+                session.add(person)
+                await session.flush()
+                people_created += 1
+
+            start_date = _parse_optional_date(row.get("Judicial Oath Taken", ""))
+            end_date = _parse_optional_date(row.get("Date Service Terminated", ""))
+            appointed_by = row.get("Appointed by", "").strip() or None
+            appointing_party = row.get("Party", "").strip() or None
+
+            tenure_result = await session.execute(
+                select(CourtTenure).where(
+                    CourtTenure.person_id == person.id,
+                    CourtTenure.seat == seat,
+                    CourtTenure.start_date == start_date,
+                )
+            )
+            existing_tenure = tenure_result.scalar_one_or_none()
+
+            if existing_tenure is None:
+                tenure = CourtTenure(
+                    person_id=person.id,
+                    seat=seat,
+                    start_date=start_date,
+                    end_date=end_date,
+                    appointed_by=appointed_by,
+                    appointing_president_party=appointing_party,
+                )
+                session.add(tenure)
+                await session.flush()
+                tenures_created += 1
+
+    print(
+        f"Done — {people_created} people created, {people_upgraded} people "
+        f"upgraded to is_justice=True, {tenures_created} court_tenures "
+        f"created ({rows_skipped} rows skipped)."
+    )

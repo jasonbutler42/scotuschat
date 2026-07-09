@@ -117,6 +117,8 @@ class Person(Base):
     is_justice = Column(Boolean, nullable=False, server_default=false())
     # Phase 27 — migration 0016
     birthdate = Column(Date, nullable=True)
+    # Phase 29 — migration 0017: Oyez/ConvoKit external speaker ID (historical corpus import)
+    oyez_speaker_id = Column(String(100), nullable=True)
 
 
 # ---------------------------------------------------------------------------
@@ -155,6 +157,8 @@ class Case(Base):
     case_name = Column(String(500), nullable=False)
     term_year = Column(Integer, nullable=False)
     slug = Column(String(200), nullable=False, unique=True)           # URL slug
+    # Phase 29 — migration 0017: Oyez external case ID (historical corpus import)
+    oyez_case_id = Column(String(50), nullable=True)
 
 
 # ---------------------------------------------------------------------------
@@ -196,6 +200,8 @@ class Argument(Base):
     # Phase 19 (D-07): raw cover extractor output written unconditionally by parse step.
     # Read by the job detail page to render "Extracted: [value]" hint text.
     cover_metadata = Column(JSONB, nullable=True)
+    # Phase 29 — migration 0017: Oyez/ConvoKit external transcript ID (historical corpus import)
+    oyez_transcript_id = Column(String(50), nullable=True)
     # cases linked via case_arguments M:M join table
 
     __table_args__ = (

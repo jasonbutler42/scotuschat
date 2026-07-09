@@ -154,6 +154,8 @@ async def _replace_tenures(
                 seat=t.seat or None,
                 start_date=start_date,
                 end_date=end_date,
+                appointed_by=t.appointed_by or None,
+                appointing_president_party=t.appointing_president_party or None,
             )
         )
 
@@ -320,15 +322,10 @@ async def get_person_detail(db: AsyncSession, person_id: int) -> dict | None:
     Returns None if the person does not exist.
     Tenure rows are ordered by start_date ascending (nulls first) (D-08).
     """
-    result = await db.execute(
-        select(Person, Role.name.label("role_name"))
-        .outerjoin(Role, Person.role_id == Role.id)
-        .where(Person.id == person_id)
-    )
-    row = result.one_or_none()
-    if row is None:
+    result = await db.execute(select(Person).where(Person.id == person_id))
+    person = result.scalar_one_or_none()
+    if person is None:
         return None
-    person, role_name = row
 
     tenure_result = await db.execute(
         select(CourtTenure)
@@ -340,8 +337,6 @@ async def get_person_detail(db: AsyncSession, person_id: int) -> dict | None:
     return {
         "id": person.id,
         "full_name": person.full_name,
-        "role_id": person.role_id,
-        "role_name": role_name,
         "bio_text": person.bio_text,
         "photo_url": person.photo_url,
         "tenures": [
@@ -349,6 +344,8 @@ async def get_person_detail(db: AsyncSession, person_id: int) -> dict | None:
                 "seat": t.seat,
                 "start_date": t.start_date.isoformat() if t.start_date else None,
                 "end_date": t.end_date.isoformat() if t.end_date else None,
+                "appointed_by": t.appointed_by,
+                "appointing_president_party": t.appointing_president_party,
             }
             for t in tenures
         ],
@@ -362,6 +359,10 @@ async def get_person_detail(db: AsyncSession, person_id: int) -> dict | None:
         # Phase 22 — migration 0013: appointment columns removed from Person (PEDIT-10)
         # Phase 18 addition — must be explicit to avoid silent default on reload (Pitfall 2)
         "is_justice": person.is_justice,
+        # Phase 27 addition — migration 0016 (PEDIT-02); the person-level Role
+        # foreign key and its display name have been dropped entirely (D-10) —
+        # role now lives on argument_participants, not on Person.
+        "birthdate": person.birthdate.isoformat() if person.birthdate else None,
     }
 
 
@@ -386,11 +387,9 @@ async def update_person(
 
     if body.full_name is not None:
         person.full_name = body.full_name
-    # role_id: None means "field absent/not submitted" (leave unchanged) — consistent
-    # with all other Optional fields on PersonUpdate. Phase 18 hides the role select
-    # inside {#if isJustice}, so absent = don't touch the existing role (D-06).
-    if body.role_id is not None:
-        person.role_id = body.role_id
+    # Phase 27 (D-10): the person-level Role foreign key write has been
+    # dropped entirely — role now lives on argument_participants, not on
+    # Person.
     # Normalize empty strings to None (Pitfall 5) — ensures IS NULL filter works
     person.bio_text = body.bio_text if body.bio_text else None
     person.photo_url = body.photo_url if body.photo_url else None
@@ -402,6 +401,13 @@ async def update_person(
     person.middle_name = body.middle_name if body.middle_name else None
     person.name_suffix = body.name_suffix if body.name_suffix else None
     # Phase 22 — migration 0013: appointment writes removed from Person (PEDIT-10)
+    # Phase 27 addition — migration 0016 (PEDIT-02): normalize empty string to
+    # None (Pitfall 5) so the "birthdate" missing-field check stays accurate.
+    # ValueError from a malformed date string propagates to the router → 422
+    # (Pitfall 6), before any DB write completes.
+    person.birthdate = (
+        datetime.date.fromisoformat(body.birthdate) if body.birthdate else None
+    )
 
     # Derivation: overwrite full_name only when BOTH first_name and last_name are non-empty (D-04/D-05)
     # Note: D-04 says "when first_name is non-empty" but requiring both first_name AND last_name
@@ -416,7 +422,7 @@ async def update_person(
 
     # Phase 18: write is_justice only when body supplies a non-None value (D-08)
     # None = "leave unchanged" — consistent with other Optional fields on PersonUpdate.
-    # Does NOT clear role_id or delete tenure rows when is_justice is False (D-06, D-07).
+    # Does NOT delete tenure rows when is_justice is False (D-06, D-07).
     if body.is_justice is not None:
         person.is_justice = body.is_justice
 

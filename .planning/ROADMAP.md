@@ -335,26 +335,146 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 
 ## Backlog
 
-See `.planning/BACKLOG.md` for unscheduled items (B-001 through B-020).
+Standard: all backlog items live here as 999.x entries (`.planning/phases/999.N-slug/`), captured via `/gsd-capture --backlog` and reviewed/promoted via `/gsd-review-backlog`. `.planning/BACKLOG.md` (the flat B-NNN file previously used, 2026-07-01 to 2026-07-09) has been retired and its 14 still-open items migrated below (2026-07-09); 5 items (B-001, B-003, B-004, B-005, B-006) were dropped as already shipped by Phase 24/27, and B-014 was merged into 999.1 as a duplicate capture of the same idea.
 
 ### Phase 999.1: Click-to-copy extracted values design pattern (BACKLOG)
 
-**Goal:** Whenever a value has been extracted from a source PDF, use a consistent design pattern that lets the operator click the value to copy it to their clipboard. If a value was not extracted (showing N/A), clicking to copy is disabled. Includes an appropriate icon and tooltip. Expected to decompose into at least: (1) reusable tooltip component, (2) click-to-copy implementation for extracted hint values, and possibly others.
+**Goal:** Whenever a value has been extracted from a source PDF, use a consistent design pattern that lets the operator click the value to copy it to their clipboard. If a value was not extracted (showing N/A), clicking to copy is disabled. Includes an appropriate icon and tooltip. The pattern must be identical everywhere it appears — pipeline run pages and argument editor pages alike — including extracted docket number(s). Expected to decompose into at least: (1) reusable tooltip component, (2) click-to-copy implementation for extracted hint values, and possibly others.
 **Requirements:** TBD
-**Plans:** 6/6 plans complete
+**Plans:** 0 plans
 
 Plans:
-
-- [x] 25-01-PLAN.md
-- [x] 25-02-PLAN.md
-- [x] 25-03-PLAN.md
-- [x] 25-04-PLAN.md
-
 - [ ] TBD (promote with /gsd-review-backlog when ready)
 
 ### Phase 999.2: Share specific utterances via social media (BACKLOG)
 
 **Goal:** [Captured for future planning] Let visitors share a specific utterance (a single speaker turn) from an oral argument to social media, to increase site exposure and utilization. Needs discussion on: what gets shared (permalink to the utterance vs. a rendered card/image), which platforms, and how this interacts with the apolitical-framing hard constraint — an isolated utterance shared out of the argument's full context could read as editorializing even though the underlying transcript content is unchanged.
+**Requirements:** TBD
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (promote with /gsd-review-backlog when ready)
+
+### Phase 999.3: Link participant names on job detail page to their edit entries (BACKLOG)
+
+**Goal:** [Captured for future planning] [Migrated from BACKLOG.md B-002, added 2026-06-18] On the pipeline job detail page (`/admin/pipeline/[job_id]`), the resolved participants section lists people by name as plain text. Each participant name should link directly to their people editor entry at `/admin/people/[id]` so the operator can navigate from a job result straight to the person's edit form. Confirmed still open (2026-07-09): the page currently only links to a filtered people list, not individual person records.
+**Requirements:** TBD
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (promote with /gsd-review-backlog when ready)
+
+### Phase 999.4: Frontend design system: shared component library (BACKLOG)
+
+**Goal:** [Captured for future planning] [Migrated from BACKLOG.md B-007, added 2026-07-01] Refactor the frontend to extract common UI patterns (buttons, badges, cards, form inputs) into a shared component library. Reduces duplication between admin and public pages and makes future changes consistent.
+**Requirements:** TBD
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (promote with /gsd-review-backlog when ready)
+
+### Phase 999.5: Move speaker avatars to gutters outside the argument body (BACKLOG)
+
+**Goal:** [Captured for future planning] [Migrated from BACKLOG.md B-008, added 2026-07-01] Speaker avatars currently appear inline within the chat bubbles on the public argument view. Moving them to fixed gutters (bench left, advocates right) would reinforce the two-sided layout and free up horizontal space for transcript text.
+**Requirements:** TBD
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (promote with /gsd-review-backlog when ready)
+
+### Phase 999.6: Decide on listing style for cases/arguments (BACKLOG)
+
+**Goal:** [Captured for future planning] [Migrated from BACKLOG.md B-009, added 2026-07-01] The current case list is a basic list of links. No decision has been made on whether it should be cards, a table, grouped by term, searchable, etc. Needs a design decision before implementation.
+**Requirements:** TBD
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (promote with /gsd-review-backlog when ready)
+
+### Phase 999.7: Improve in-argument section navigation (BACKLOG)
+
+**Goal:** [Captured for future planning] [Migrated from BACKLOG.md B-010, added 2026-07-01] In-argument navigation — jumping between sections (amicus, petitioner, respondent, etc.) within a single argument view. The current section rail exists but could be improved with better scroll-spy, jump links, or a collapsible outline.
+**Requirements:** TBD
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (promote with /gsd-review-backlog when ready)
+
+### Phase 999.8: Figma design system (BACKLOG)
+
+**Goal:** [Captured for future planning] [Migrated from BACKLOG.md B-011, added 2026-07-01] Implement the design system in Figma to document components, tokens, and layout patterns. Useful before any significant frontend refactor or handoff.
+**Requirements:** TBD
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (promote with /gsd-review-backlog when ready)
+
+### Phase 999.9: README: how to start the local stack (BACKLOG)
+
+**Goal:** [Captured for future planning] [Migrated from BACKLOG.md B-012, added 2026-07-01] No README documents how to start the full local stack (SvelteKit dev server, FastAPI backend, Postgres). Add one so setup steps don't have to be rediscovered each session.
+**Requirements:** TBD
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (promote with /gsd-review-backlog when ready)
+
+### Phase 999.10: Bulk-import historical justices from CSV (BACKLOG)
+
+**Goal:** [Captured for future planning] [Migrated from BACKLOG.md B-013, added 2026-07-07] Operator currently has to manually enter every historical Supreme Court justice one at a time in the People admin screen. Jason already has a CSV covering all historical justices. Add an import path (upload + parse + create/update Person rows with is_justice=true, tenure/appointment data) so the full bench roster can be seeded in one operation instead of by hand. Needs a decision on dedup behavior against existing entries and which CSV columns map to which fields. Operator does not need this as a standing feature, just at the beginning of the project — could be a one-off script rather than a UI feature. The database is already seeded with current justices; this would extend that same seeding approach to historical ones.
+**Requirements:** TBD
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (promote with /gsd-review-backlog when ready)
+
+### Phase 999.11: Bench popover: additional context data for Justices (BACKLOG)
+
+**Goal:** [Captured for future planning] [Migrated from BACKLOG.md B-015, added 2026-07-07] When a visitor clicks a Justice's avatar on the public argument view, the popover should show richer context about them and the case. Persistent data (doesn't change case to case): name, photo, birthdate, death date, and a list of tenures with start/end dates, appointing president, that president's party affiliation, and why they left that tenure (death, retirement, promotion). Case-specific data to explore further: their age at the time of the argument, how long they'd been in their position (possibly a case-heard count, possibly a visual indicator of where the argument falls on their tenure), and how to present all of this in the least biased way possible — this needs explicit exploration before implementation, per the apolitical-framing constraint. Confirmed still open (2026-07-09): SpeakerPopover.svelte currently shows photo, name, role, tenure dates, and appointing president, but no birthdate/death date/age/case-count despite Person.birthdate existing since Phase 27.
+**Requirements:** TBD
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (promote with /gsd-review-backlog when ready)
+
+### Phase 999.12: `rerun_job` never spawns ingest for locally-uploaded jobs (BACKLOG)
+
+**Goal:** [Captured for future planning] [Migrated from BACKLOG.md B-016, added 2026-07-08, from 26-REVIEW.md CR-01] `create_job`'s upload path stores the PDF at `data/uploads/{job.id}.pdf` and sets neither `spaces_key` nor `pdf_url` when `settings.do_spaces_bucket` is falsy (local/dev mode, no DO Spaces configured). `rerun_job` copies `pdf_url`/`spaces_key`/`original_filename`/`source_dockets` onto the new job, but the rerun endpoint (`api/routers/admin.py:1042-1076`) only branches on `spaces_key` or `pdf_url` — no branch exists for a local-disk-backed original, so no ingest subprocess is ever spawned for the rerun. The endpoint still returns 202 with a fresh PENDING job, giving the operator every indication the rerun started, but the job sits at PENDING/INGEST forever with no error surfaced. Confirmed unresolved across two review passes; not touched by Phase 26. Fix: persist the resolved local file path on AdminJob at creation time and add a third rerun branch that re-spawns ingest with `--local-file`, or at minimum raise a ValueError (422) instead of silently creating a job that can never progress.
+**Requirements:** TBD
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (promote with /gsd-review-backlog when ready)
+
+### Phase 999.13: Blank case_name/docket_number can corrupt slug and dedup-key data (BACKLOG)
+
+**Goal:** [Captured for future planning] [Migrated from BACKLOG.md B-017, added 2026-07-08, from 26-REVIEW.md CR-02] `ArgumentUpdate.case_name`/`.docket_number` are `Optional[str] = None` with no non-empty validation; `update_argument` treats "not None" as "provided," not "non-empty." The edit form's `?/save` action always sends a trimmed string (never undefined) and the `<input>` elements have no `required` attribute. If an operator clears either field and clicks Save: for a DRAFT argument, `_derive_slug("")` returns `""`, corrupting the case's public URL slug; for any status, `docket_number`/`docket_number_norm` can be wiped to `""`, breaking dedup semantics. The same gap exists in the sibling `update_argument_metadata` (case_name, source_docket). Fix: add a Pydantic field_validator rejecting blank/whitespace-only values on ArgumentUpdate and MetadataUpdate, plus `required` on both `<input>` elements as defense-in-depth.
+**Requirements:** TBD
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (promote with /gsd-review-backlog when ready)
+
+### Phase 999.14: `update_argument_metadata` has no unique-constraint guard (BACKLOG)
+
+**Goal:** [Captured for future planning] [Migrated from BACKLOG.md B-018, added 2026-07-08, from 26-REVIEW.md CR-03] `update_argument_metadata` writes `source_docket`/`question_number` without first checking whether another Argument row already holds that combination. Introduced in Phase 19, untouched by Phase 26. Saving a metadata edit that collides with an existing row raises an unhandled IntegrityError (500) instead of a clean, user-facing validation error. Fix: add a pre-write existence check (or catch IntegrityError and map it to a 409/422 with a clear message) before committing the update.
+**Requirements:** TBD
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (promote with /gsd-review-backlog when ready)
+
+### Phase 999.15: Rethink Full Name vs. name-part fields in the people editor (BACKLOG)
+
+**Goal:** [Captured for future planning] [Migrated from BACKLOG.md B-019, added 2026-07-09, from Phase 27 UAT] Jason expected that filling in only the component name fields (first/last/middle/suffix) without Full Name would auto-backfill Full Name on save — instead, Full Name is currently required standalone. Proposed direction: stop making Full Name operator-editable at all, and derive it entirely from the component fields ("We'd have to adjust the way parsing works but that feels like the better way to go"). Needs a design decision on exactly how derivation should work (ordering, suffix placement, punctuation) and what changes on the pipeline/parsing side before this can be scoped. Distinct from the real bug this surfaced alongside (create route silently discarding name-part fields when Full Name is also filled — fixed in Phase 27 gap-closure plan 27-08); this item is the broader "should Full Name exist as a separate editable field at all" question, still open.
+**Requirements:** TBD
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (promote with /gsd-review-backlog when ready)
+
+### Phase 999.16: Represent tenure Seat as a Chief/Associate toggle instead of free text (BACKLOG)
+
+**Goal:** [Captured for future planning] [Migrated from BACKLOG.md B-020, added 2026-07-09, from Phase 27 UAT] During Phase 27 UAT, Jason asked for the tenure-row Seat field (currently free-text, restored during Phase 27 verification per PEDIT-09) to become the same segmented-toggle component used for the Bench/Advocate choice, since for a Justice it's really just Chief or Associate. Deferred rather than fixed immediately (Jason offered this exit himself) because real historical court_tenures.seat data includes specific numbered seats (e.g. "Associate Justice Seat 3"), not just a binary Chief/Associate split — collapsing to a 2-option toggle is a genuine data-model simplification that needs a decision on whether the numbered-seat detail is dropped, kept as a secondary field, or reconciled some other way, plus a migration/backfill pass over existing rows. Companion to 999.10 (bulk CSV import of historical justices), since both touch how much seat-numbering granularity the system needs to preserve.
 **Requirements:** TBD
 **Plans:** 0 plans
 

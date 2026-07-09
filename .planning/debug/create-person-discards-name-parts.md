@@ -15,7 +15,7 @@ next_action: DIAGNOSED — root cause confirmed. Return structured result (goal:
 ## Symptoms
 
 expected: Creating a person with both Full Name and name-part fields filled in should persist all of them, matching the behavior of the [id] editor's save action.
-actual: User reported (verbatim): "What is a real bug is that if I enter something into full name AND into the component parts it only saves the full name and discards the components. That only happens on person creation; it saves properly on saving an existing person." (Note: name-part-only auto-backfill of Full Name is a separate, already-captured future enhancement — BACKLOG.md B-019 — NOT part of this bug.)
+actual: User reported (verbatim): "What is a real bug is that if I enter something into full name AND into the component parts it only saves the full name and discards the components. That only happens on person creation; it saves properly on saving an existing person." (Note: name-part-only auto-backfill of Full Name is a separate, already-captured future enhancement — backlog Phase 999.15 — NOT part of this bug.)
 errors: None reported — person is created successfully; name-part fields are simply missing afterward.
 reproduction: Test 3 in UAT (Phase 27, .planning/phases/27-people-admin/27-UAT.md) — on /admin/people/new, fill in Full Name plus First/Middle/Last/Suffix, submit, then check the created person's editor.
 started: Discovered during UAT for Phase 27 (People Admin), 2026-07-09.

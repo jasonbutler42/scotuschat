@@ -95,7 +95,7 @@ changing test 3's own pass result.
       issue: "D-16 needs an explicit amendment note recording that appointing_president_party (only) was reversed from free-text to a dropdown, post-ship, per operator request during UAT"
   missing:
     - "President's Party: convert to a dropdown/select populated with a sensible historical US political party list (derive from any existing appointing_president_party values already in the DB plus standard historical parties); keep appointed_by (president name) as free-text — D-16 is unchanged for that field"
-    - "Seat-as-toggle: DEFERRED to backlog per user's own offered exit (\"if too far out of scope, we can defer it\") — real data-reconciliation scope (existing numbered-seat values vs a 2-option toggle) makes this a poor fit for a same-day gap-closure fix. Captured as BACKLOG.md B-020."
+    - "Seat-as-toggle: DEFERRED to backlog per user's own offered exit (\"if too far out of scope, we can defer it\") — real data-reconciliation scope (existing numbered-seat values vs a 2-option toggle) makes this a poor fit for a same-day gap-closure fix. Captured as backlog Phase 999.16."
   debug_session: ".planning/debug/tenure-seat-party-dropdown-request.md"
 
 - truth: "Creating a person with both Full Name and first/last/middle/suffix name-part fields filled in persists all of them, matching the [id] editor's save behavior"

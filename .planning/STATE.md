@@ -117,7 +117,7 @@ Full log in PROJECT.md Key Decisions table. Key decisions entering v1.5:
 - [Phase ?]: 27-06: Merge/Delete markup, state, and fetchMergePreview removed entirely from the create page (not just guarded) since this route has no merge/delete actions for those forms to target
 - [Phase ?]: 27-07: Fixed all four middle columns (Bench Tenure coverage/gap plus Advocate Argument count/Missing fields), not just the reported Advocate pair -- Bench tab had the identical latent zero-horizontal-padding defect.
 - [Phase ?]: 27-08: create_person now sets first_name/middle_name/last_name/name_suffix from PersonCreateRequest, normalizing blank strings to None (matches update_person's Pitfall 5 convention); fixed as a bug (parity with [id] editor), not a D-08 scope amendment
-- [Phase 27-09]: D-16 amendment (2026-07-09): appointing_president_party reversed from free-text to a curated select scoped to that field only; appointed_by remains free-text; Seat-as-toggle deferred to BACKLOG.md B-020
+- [Phase 27-09]: D-16 amendment (2026-07-09): appointing_president_party reversed from free-text to a curated select scoped to that field only; appointed_by remains free-text; Seat-as-toggle deferred to backlog Phase 999.16
 
 ### Pending Todos
 

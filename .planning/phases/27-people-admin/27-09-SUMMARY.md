@@ -28,7 +28,7 @@ key-files:
     - ".planning/phases/27-people-admin/27-CONTEXT.md"
 
 key-decisions:
-  - "D-16 amendment (2026-07-09): appointing_president_party reversed from free-text to a curated <select>, scoped to that field only; appointed_by remains free-text; Seat-as-toggle deferred to BACKLOG.md B-020"
+  - "D-16 amendment (2026-07-09): appointing_president_party reversed from free-text to a curated <select>, scoped to that field only; appointed_by remains free-text; Seat-as-toggle deferred to backlog Phase 999.16"
 
 patterns-established:
   - "Curated dropdown + blank option + legacy-value fallback <option> pattern for narrowing a free-text-compatible column's UI without a schema/type change"
@@ -93,7 +93,7 @@ status: complete
 - Added a data-preservation guard: any stored `appointing_president_party` value not in the curated list renders as an extra selected `<option>` so legacy/non-standard values never silently reset to blank on load
 - Appointing President (`appointed_by`) input left completely untouched — still free-text per the original D-16 decision
 - Updated `TenureRow`'s docstring in `api/schemas/admin_people.py` to describe the split: `appointed_by` free-text (D-16 unchanged), `appointing_president_party` now a curated dropdown in the UI while staying `Optional[str]` free-text-compatible at the schema/API level (no type/enum constraint added)
-- Amended decision D-16 in `27-CONTEXT.md` with a dated note (2026-07-09) scoping the reversal to `appointing_president_party` only, confirming `appointed_by` is unaffected, and cross-referencing the Seat-as-toggle deferral to `BACKLOG.md` B-020
+- Amended decision D-16 in `27-CONTEXT.md` with a dated note (2026-07-09) scoping the reversal to `appointing_president_party` only, confirming `appointed_by` is unaffected, and cross-referencing the Seat-as-toggle deferral to backlog Phase 999.16
 
 ## Task Commits
 
@@ -110,7 +110,7 @@ Each task was committed atomically:
 - `.planning/phases/27-people-admin/27-CONTEXT.md` - D-16 amended with a dated note; original D-16 text preserved verbatim above the amendment
 
 ## Decisions Made
-- D-16 amendment (2026-07-09): `appointing_president_party` reversed from free-text to a curated `<select>`, scoped to that field only, per explicit operator request during Phase 27 UAT — `appointed_by` remains free-text as originally decided; the related Seat-as-toggle idea was deferred to `BACKLOG.md` B-020, not implemented here
+- D-16 amendment (2026-07-09): `appointing_president_party` reversed from free-text to a curated `<select>`, scoped to that field only, per explicit operator request during Phase 27 UAT — `appointed_by` remains free-text as originally decided; the related Seat-as-toggle idea was deferred to backlog Phase 999.16, not implemented here
 - No "Other" free-text escape hatch added to the party dropdown — every U.S. president who has appointed a Justice belonged to one of the six curated parties (or was unaffiliated → "Independent"), and the legacy-value fallback `<option>` already covers any pre-existing out-of-list data
 
 ## Deviations from Plan

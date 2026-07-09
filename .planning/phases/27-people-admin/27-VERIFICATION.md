@@ -203,7 +203,7 @@ The following items remain from the prior verification pass and are **not** newl
 
 No commit exists after the review was added that fixes either finding. This is not a stale/false-positive review finding — it was independently confirmed live in the current code during this verification pass, via direct trace of the toggle's `onclick` handler, the `{#if isJustice}` block boundaries, the `save` action's `formData.get()` calls, and `update_person`/`_replace_tenures`'s actual guard logic.
 
-**This looks unintentional**, not a deliberate scope decision — no CONTEXT.md decision, BACKLOG.md entry, or STATE.md note accepts or defers this behavior, and it squarely contradicts the locked wording of both the ROADMAP Success Criterion and REQUIREMENTS.md PEDIT-07. Recommend routing this to a gap-closure plan (in the same style as 27-07/08/09) before considering Phase 27 complete, rather than an override.
+**This looks unintentional**, not a deliberate scope decision — no CONTEXT.md decision, backlog entry, or STATE.md note accepts or defers this behavior, and it squarely contradicts the locked wording of both the ROADMAP Success Criterion and REQUIREMENTS.md PEDIT-07. Recommend routing this to a gap-closure plan (in the same style as 27-07/08/09) before considering Phase 27 complete, rather than an override.
 
 ---
 

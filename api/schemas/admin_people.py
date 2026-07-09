@@ -134,16 +134,26 @@ class PersonCreateRequest(BaseModel):
 
     The minimum required to create a person is a full name plus a Bench/
     Advocate choice — both full_name and is_justice are REQUIRED (unlike
-    every field on PersonUpdate, which is Optional). Everything else (bio,
-    photo, tenures, birthdate, structured name parts) is filled in later via
-    the existing PATCH /api/admin/people/{id} update flow, not at creation
-    time. Does NOT carry the job-scoped fields (raw_speaker_label, side,
-    role_name) present on admin_jobs.PersonCreate — this is a standalone
-    person-directory create, not a job-linked inline create.
+    every field on PersonUpdate, which is Optional). The four structured
+    name-part fields (first_name/middle_name/last_name/name_suffix) are now
+    also accepted (all Optional) at create time to match the [id] editor's
+    save behavior, per Phase 27 UAT gap closure (Gap 3, 2026-07-09) — omitting
+    them still succeeds and leaves those columns NULL. bio, photo, tenures,
+    and birthdate remain deferred to the existing PATCH /api/admin/people/{id}
+    update flow (D-08), not accepted at creation time. Does NOT carry the
+    job-scoped fields (raw_speaker_label, side, role_name) present on
+    admin_jobs.PersonCreate — this is a standalone person-directory create,
+    not a job-linked inline create.
     """
 
     full_name: str
     is_justice: bool
+    # Phase 27 Plan 08 additions (UAT Gap 3 closure) — mirrors PersonUpdate's
+    # allow-list discipline (T-09-01); optional, None/omitted leaves NULL.
+    first_name: Optional[str] = None
+    middle_name: Optional[str] = None
+    last_name: Optional[str] = None
+    name_suffix: Optional[str] = None
 
 
 # TODO(D-10): orphaned by Phase 27 — person-level roles removed; safe to

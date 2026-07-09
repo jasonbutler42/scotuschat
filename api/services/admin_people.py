@@ -469,11 +469,14 @@ async def create_person(db: AsyncSession, body: PersonCreateRequest) -> dict:
     empty. is_justice is a required bool on PersonCreateRequest, so no
     additional server-side guard is needed for it.
 
-    Only full_name and is_justice are set on the new row — first_name,
-    last_name, middle_name, name_suffix, bio_text, photo_url, and birthdate
-    are left at their column defaults (None), and no tenure rows are created.
-    Everything else is filled in later via the existing PATCH /people/{id}
-    update flow (D-08).
+    full_name and is_justice are always set on the new row. The four
+    structured name-part fields (first_name/middle_name/last_name/
+    name_suffix) are now also set from the request when supplied (Phase 27
+    Plan 08, UAT Gap 3 closure) — matching update_person's empty-string-to-
+    None normalization (Pitfall 5) so a blank-string submission stores NULL
+    rather than "". bio_text, photo_url, and birthdate remain unset at create
+    (column defaults / None), and no tenure rows are created — those are
+    filled in later via the existing PATCH /people/{id} update flow (D-08).
 
     Returns the full person detail dict via get_person_detail, matching the
     detail-refetch-after-mutation idiom every other mutation in this module
@@ -483,6 +486,10 @@ async def create_person(db: AsyncSession, body: PersonCreateRequest) -> dict:
         raise ValueError("Full name is required.")
 
     person = Person(full_name=body.full_name.strip(), is_justice=body.is_justice)
+    person.first_name = (body.first_name or "").strip() or None
+    person.middle_name = (body.middle_name or "").strip() or None
+    person.last_name = (body.last_name or "").strip() or None
+    person.name_suffix = (body.name_suffix or "").strip() or None
     db.add(person)
     await db.commit()
     await db.refresh(person)

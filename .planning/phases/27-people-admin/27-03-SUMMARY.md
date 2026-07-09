@@ -156,3 +156,14 @@ None - no external service configuration required.
 ---
 *Phase: 27-people-admin*
 *Completed: 2026-07-09*
+
+## Self-Check: PASSED
+
+- FOUND: api/services/admin_people.py
+- FOUND: api/routers/admin.py
+- FOUND: api/schemas/admin_people.py
+- FOUND: .planning/phases/27-people-admin/27-03-SUMMARY.md
+- FOUND commit: 0e70b8b5 (Task 1)
+- FOUND commit: 7cfa3100 (Task 2)
+- FOUND commit: eb3580e0 (Task 3)
+- FOUND commit: 9ef83637 (SUMMARY)

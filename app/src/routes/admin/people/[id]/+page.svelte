@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { slide } from 'svelte/transition';
 
 	let { data, form } = $props();
 
@@ -13,82 +14,59 @@
 		seat: string;
 		start_date: string;
 		end_date: string;
-	}
-
-	interface RoleItem {
-		id: number;
-		name: string;
+		appointed_by: string;
+		appointing_president_party: string;
 	}
 
 	// ──────────────────────────────────────────────────────────────────────────
-	// Role select state (Pattern 3 — inline role creation via use:enhance)
+	// Person Type — Bench/Advocate segmented toggle (D-13, replaces "Is Justice"
+	// checkbox) + Bench-only Birth Date. The Role field and its inline-creation
+	// machinery (select, "+ Add new role" sentinel, createRole action) are
+	// fully removed per D-10 — none of it is carried forward into this card.
 	// ──────────────────────────────────────────────────────────────────────────
 
-	// Sentinel value for the "add new role" option
-	const ADD_NEW_ROLE_SENTINEL = '__add_new_role__';
-
-	// Local roles list — seeded from server data; new roles appended on createRole success
-	let localRoles = $state<RoleItem[]>([...(data.roles ?? [])]);
-
-	// Currently selected role id (as string for the <select> value binding)
-	let selectedRoleId = $state<string>(
-		data.person.role_id !== null ? String(data.person.role_id) : ''
-	);
-
-	// Whether the inline add-role form is visible
-	let showAddRoleForm = $state(false);
-
-	// Is Justice toggle — seeded from server data; drives conditional bench sections (D-09)
 	let isJustice = $state<boolean>(data.person.is_justice ?? false);
-
-	// The role id that was selected before the sentinel was chosen; restored on cancel
-	let roleIdBeforeSentinel = $state<string>('');
-
-	// Error from the createRole action
-	let roleError = $state<string | null>(null);
-
-	// Whether the createRole form is submitting
-	let creatingRole = $state(false);
-
-	function handleRoleChange(e: Event) {
-		const val = (e.target as HTMLSelectElement).value;
-		if (val === ADD_NEW_ROLE_SENTINEL) {
-			// Record the previously-selected value so it can be restored on cancel
-			roleIdBeforeSentinel = selectedRoleId;
-			showAddRoleForm = true;
-		} else {
-			selectedRoleId = val;
-			showAddRoleForm = false;
-		}
-	}
-
-	function cancelAddRole() {
-		// Restore the previously-selected role and hide the inline form
-		selectedRoleId = roleIdBeforeSentinel;
-		showAddRoleForm = false;
-	}
+	let birthdate = $state<string>(data.person.birthdate ?? '');
 
 	// ──────────────────────────────────────────────────────────────────────────
 	// Tenure rows state (Pattern 1 — $state<TenureRow[]>, in-place mutation)
-	// Each row gets a stable _key for the keyed {#each} block (Pitfall 2)
+	// Each row gets a stable _key for the keyed {#each} block (Pitfall 2).
+	// `seat` is carried through unchanged from existing data but has no input
+	// field in the Tenure Period sub-card (D-18 lists Start/End/Appointing
+	// President/President's Party/Reason Left only) — it must not be dropped
+	// from the payload or a save would silently clear any existing seat value.
 	// ──────────────────────────────────────────────────────────────────────────
 
 	let nextKey = $state(1);
 
-	// Initialise from server data — map existing tenures to add _key
 	let tenureRows = $state<TenureRow[]>(
 		(data.person.tenures ?? []).map(
-			(t: { seat: string | null; start_date: string | null; end_date: string | null }) => ({
+			(t: {
+				seat: string | null;
+				start_date: string | null;
+				end_date: string | null;
+				appointed_by: string | null;
+				appointing_president_party: string | null;
+			}) => ({
 				_key: nextKey++,
 				seat: t.seat ?? '',
 				start_date: t.start_date ?? '',
 				end_date: t.end_date ?? '',
+				appointed_by: t.appointed_by ?? '',
+				appointing_president_party: t.appointing_president_party ?? '',
 			})
 		)
 	);
 
 	function addTenureRow() {
-		tenureRows.push({ _key: nextKey++, seat: '', start_date: '', end_date: '' });
+		tenureRows.push({
+			_key: nextKey++,
+			seat: '',
+			start_date: '',
+			end_date: '',
+			appointed_by: '',
+			appointing_president_party: '',
+		});
 	}
 
 	function removeTenureRow(index: number) {
@@ -100,6 +78,10 @@
 	// ──────────────────────────────────────────────────────────────────────────
 
 	let saveSubmitting = $state(false);
+
+	// Breadcrumb / Cancel target — preserves the tab the operator arrived from
+	// (the person's persisted type at load time, not the live in-progress toggle).
+	let backTab = $derived(data.person.is_justice ? 'bench' : 'advocate');
 
 	// ──────────────────────────────────────────────────────────────────────────
 	// Photo widget state (Phase 12 — PADM-01)
@@ -123,8 +105,9 @@
 	let mergeError = $state<string | null>(null);
 	let mergeSubmitting = $state(false);
 
-	// Reset merge state when navigating to a different person (SvelteKit soft navigation
-	// reuses the component — $state variables must be reset manually when person.id changes).
+	// Reset merge/type state when navigating to a different person (SvelteKit soft
+	// navigation reuses the component — $state variables must be reset manually
+	// when person.id changes).
 	$effect(() => {
 		data.person.id;
 		mergeTargetId = '';
@@ -132,6 +115,7 @@
 		mergeError = null;
 		mergeLoading = false;
 		isJustice = data.person.is_justice ?? false;
+		birthdate = data.person.birthdate ?? '';
 	});
 
 	async function fetchMergePreview(targetId: string) {
@@ -164,12 +148,11 @@
 
 <main style="background-color: #0f1117; min-height: 100vh;">
 	<header style="background-color: #1e293b; border-bottom: 1px solid #334155; padding: 16px 24px;">
-		<a
-			href="/admin/people"
-			style="font-size: 14px; color: #94a3b8; text-decoration: none;"
-		>
-			← People
-		</a>
+		<nav aria-label="Breadcrumb" style="font-size: 14px; font-weight: 400; line-height: 1.4;">
+			<a href={'/admin/people?tab=' + backTab} style="color: #93c5fd; text-decoration: none;">People</a>
+			<span style="color: #94a3b8;"> &gt; </span>
+			<span style="color: #94a3b8;">{data.person.full_name}</span>
+		</nav>
 		<h1 style="font-size: 20px; font-weight: 600; color: #e2e8f0; margin: 4px 0 0 0; line-height: 1.2;">
 			{data.person.full_name}
 		</h1>
@@ -178,9 +161,13 @@
 	<div style="max-width: 640px; margin: 0 auto; padding: 48px 24px;">
 
 		<!-- ══════════════════════════════════════════════════════════════════════
-		     Main save form — covers Basic Info, Court Tenure, Appointment.
-		     Bio & Photo are managed by a separate form below (Pitfall 7 extended).
-		     IMPORTANT: no enctype on this form (Pitfall 1).
+		     Main save form — covers Identity + Person Type (is_justice/birthdate/
+		     tenures). Bio & Photo are managed by a separate form below (Pitfall 7
+		     extended). IMPORTANT: no enctype on this form (Pitfall 1). The form
+		     closes right after the Identity card — the Person Type card's inputs
+		     live outside this element but associate via the `form="save-form"`
+		     attribute (same cross-form idiom already used for the standalone
+		     Save Person button, Gap E fix).
 		     ══════════════════════════════════════════════════════════════════════ -->
 		<form
 			id="save-form"
@@ -188,31 +175,21 @@
 			action="?/save"
 			use:enhance={() => {
 				saveSubmitting = true;
-				return async ({ result, update }) => {
+				return async ({ update }) => {
 					saveSubmitting = false;
-					if (result.type === 'redirect') {
-						await update();
-					} else {
-						await update();
-					}
+					await update();
 				};
 			}}
 		>
-			<!-- ── Section 1: Basic Info ── -->
+			<!-- ── Identity card (renamed from "Basic Info", D-13 — no Is Justice checkbox) ── -->
 			<div
 				style="background-color: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 24px; margin-bottom: 24px;"
 			>
 				<h2
 					style="font-size: 20px; font-weight: 600; color: #e2e8f0; margin: 0 0 16px 0; line-height: 1.2;"
 				>
-					Basic Info
+					Identity
 				</h2>
-
-				<!-- Is Justice checkbox (D-03, D-04, D-09) -->
-				<div style="margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
-					<input type="checkbox" name="is_justice" id="is_justice" bind:checked={isJustice} />
-					<label for="is_justice" style="font-size: 16px; font-weight: 400; color: #e2e8f0;">Is Justice</label>
-				</div>
 
 				<!-- Full name -->
 				<div style="margin-bottom: 16px;">
@@ -232,7 +209,7 @@
 				</div>
 
 				<!-- Name parts — 4-column on desktop, 2-column on mobile -->
-				<div style="margin-bottom: 16px;">
+				<div>
 					<div class="name-parts-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr 80px; gap: 16px;">
 						<div>
 							<label
@@ -296,241 +273,34 @@
 						</div>
 					</div>
 				</div>
-
-				<!-- Role select — only shown for Justices (D-05) -->
-				{#if isJustice}
-				<div style="margin-bottom: 0;">
-					<label
-						for="role_id"
-						style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
-					>
-						Role
-					</label>
-					<select
-						id="role_id"
-						name="role_id"
-						bind:value={selectedRoleId}
-						aria-expanded={showAddRoleForm}
-						onchange={handleRoleChange}
-						style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
-					>
-						<option value="">— No role —</option>
-						{#each localRoles as role (role.id)}
-							<option value={String(role.id)}>
-								{role.name}
-							</option>
-						{/each}
-						<option value={ADD_NEW_ROLE_SENTINEL}>＋ Add new role</option>
-					</select>
-
-					<!-- AddRoleInlineForm: shown when "＋ Add new role" is selected -->
-					{#if showAddRoleForm}
-						<div
-							style="margin-top: 8px; padding: 12px; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px;"
-						>
-							<form
-								method="POST"
-								action="?/createRole"
-								use:enhance={() => {
-									creatingRole = true;
-									roleError = null;
-									return async ({ result }) => {
-										creatingRole = false;
-										if (result.type === 'success') {
-											const data = result.data as {
-												roleCreated?: boolean;
-												role?: { id: number; name: string };
-											};
-											if (data?.roleCreated && data.role) {
-												// Add new role to local list, select it, collapse form
-												localRoles.push(data.role);
-												selectedRoleId = String(data.role.id);
-												showAddRoleForm = false;
-											}
-										} else if (result.type === 'failure') {
-											const errData = result.data as { roleError?: string };
-											roleError = errData?.roleError ?? 'Could not create role. Try again.';
-										}
-									};
-								}}
-							>
-								<div style="margin-bottom: 8px;">
-									<label
-										for="role_name"
-										style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
-									>
-										Role name
-									</label>
-									<input
-										id="role_name"
-										name="role_name"
-										type="text"
-										style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
-									/>
-								</div>
-
-								{#if roleError}
-									<p role="alert" style="color: #ef4444; font-size: 14px; margin: 0 0 8px 0;">
-										{roleError}
-									</p>
-								{/if}
-
-								<div style="display: flex; gap: 8px; margin-top: 8px;">
-									<button
-										type="submit"
-										disabled={creatingRole}
-										style="font-size: 14px; font-weight: 600; color: #e2e8f0; background: transparent; border: 1px solid #93c5fd; border-radius: 6px; padding: 8px 16px; min-height: 36px; cursor: pointer;"
-									>
-										{creatingRole ? 'Creating…' : 'Create role'}
-									</button>
-									<button
-										type="button"
-										onclick={cancelAddRole}
-										style="font-size: 14px; font-weight: 400; color: #94a3b8; background: transparent; border: 1px solid #334155; border-radius: 6px; padding: 8px 16px; min-height: 36px; cursor: pointer;"
-									>
-										Cancel
-									</button>
-								</div>
-							</form>
-						</div>
-					{/if}
-				</div>
-				{/if}
 			</div>
+		</form>
 
-			<!-- ── Section 3: Court Tenure — only shown for Justices (D-07) ── -->
-			{#if isJustice}
+		<!-- ── Photo card + Biography card: single form (bio_text + photo widget), SEPARATE
+		     form outside save-form (Pitfall 1). Bio saves together with photo on every
+		     photo action submit (Pitfall 7 extended) — unchanged behavior, just split
+		     into two visually distinct cards per the UI-SPEC card order. ── -->
+		<form
+			method="POST"
+			action="?/photo"
+			enctype="multipart/form-data"
+			use:enhance={() => {
+				photoSubmitting = true;
+				return async ({ update }) => {
+					photoSubmitting = false;
+					await update();
+				};
+			}}
+		>
+			<!-- ── Photo card ── -->
 			<div
 				style="background-color: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 24px; margin-bottom: 24px;"
 			>
 				<h2
 					style="font-size: 20px; font-weight: 600; color: #e2e8f0; margin: 0 0 16px 0; line-height: 1.2;"
 				>
-					Court Tenure
+					Photo
 				</h2>
-
-				<!-- TenureRowList (D-08): all rows shown; keyed by _key (Pitfall 2) -->
-				{#each tenureRows as row, i (row._key)}
-					<div
-						style="display: flex; gap: 16px; align-items: flex-start; margin-bottom: 16px;"
-					>
-						<!-- Seat -->
-						<div style="flex: 40%;">
-							<label
-								for="tenure-seat-{row._key}"
-								style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
-							>
-								Seat
-							</label>
-							<input
-								id="tenure-seat-{row._key}"
-								type="text"
-								bind:value={row.seat}
-								style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
-							/>
-						</div>
-
-						<!-- Start date -->
-						<div style="flex: 25%;">
-							<label
-								for="tenure-start-{row._key}"
-								style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
-							>
-								Start date
-							</label>
-							<input
-								id="tenure-start-{row._key}"
-								type="date"
-								bind:value={row.start_date}
-								style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
-							/>
-						</div>
-
-						<!-- End date -->
-						<div style="flex: 25%;">
-							<label
-								for="tenure-end-{row._key}"
-								style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
-							>
-								End date
-							</label>
-							<input
-								id="tenure-end-{row._key}"
-								type="date"
-								bind:value={row.end_date}
-								style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
-							/>
-						</div>
-
-						<!-- Trash button (D-09): removes row from $state; no server call -->
-						<div style="flex: 10%; align-self: flex-end; padding-bottom: 2px;">
-							<button
-								type="button"
-								aria-label="Remove tenure row"
-								onclick={() => removeTenureRow(i)}
-								style="color: #ef4444; background: transparent; border: none; cursor: pointer; font-size: 18px; min-height: 32px; padding: 4px 8px;"
-							>
-								✕
-							</button>
-						</div>
-					</div>
-				{/each}
-
-				<!-- Add tenure button (D-09) -->
-				<button
-					type="button"
-					onclick={addTenureRow}
-					style="display: block; width: 100%; margin-top: 8px; font-size: 14px; font-weight: 400; color: #94a3b8; background: transparent; border: 1px solid #334155; border-radius: 6px; padding: 8px 16px; min-height: 44px; cursor: pointer; text-align: center;"
-				>
-					Add tenure
-				</button>
-
-				<!-- Hidden field carrying the serialized tenure array (Pattern 1 / Pitfall 3) -->
-				<input type="hidden" name="tenures" value={JSON.stringify(tenureRows)} />
-			</div>
-			{/if}
-
-			<!-- ── Section 4: Appointment — removed in Phase 22 (PEDIT-10) ── -->
-			<!-- Appointment fields moved to court_tenures; Phase 27 UI will render them per-tenure row -->
-
-		</form>
-
-		<!-- ── Bio & Photo: single card — bio_text + photo widget (SEPARATE form, outside save form, Pitfall 1) ── -->
-		<div
-			style="background-color: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 24px; margin-bottom: 24px;"
-		>
-			<h2
-				style="font-size: 20px; font-weight: 600; color: #e2e8f0; margin: 0 0 16px 0; line-height: 1.2;"
-			>
-				Bio &amp; Photo
-			</h2>
-
-			<form
-				method="POST"
-				action="?/photo"
-				enctype="multipart/form-data"
-				use:enhance={() => {
-					photoSubmitting = true;
-					return async ({ update }) => {
-						photoSubmitting = false;
-						await update();
-					};
-				}}
-			>
-				<!-- bio_text submitted via this form; excluded from the save action (Pitfall 7 extended) -->
-				<div style="margin-bottom: 16px;">
-					<label
-						for="bio_text"
-						style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
-					>
-						Bio
-					</label>
-					<textarea
-						id="bio_text"
-						name="bio_text"
-						style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box; min-height: 120px; resize: vertical; font-family: inherit;"
-					>{data.person.bio_text ?? ''}</textarea>
-				</div>
 
 				<!-- Photo preview: 80×80 circle — image or initials fallback -->
 				<div style="margin-bottom: 16px;">
@@ -600,9 +370,247 @@
 					disabled={photoSubmitting}
 					style="display: block; width: 100%; min-height: 44px; background: transparent; border: 1px solid #93c5fd; border-radius: 6px; font-size: 16px; font-weight: 600; color: #e2e8f0; cursor: pointer; opacity: {photoSubmitting ? 0.7 : 1};"
 				>
-					{photoSubmitting ? 'Saving photo…' : 'Save photo'}
+					{photoSubmitting ? 'Uploading…' : 'Upload photo'}
 				</button>
-			</form>
+			</div>
+
+			<!-- ── Biography card ── -->
+			<div
+				style="background-color: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 24px; margin-bottom: 24px;"
+			>
+				<h2
+					style="font-size: 20px; font-weight: 600; color: #e2e8f0; margin: 0 0 16px 0; line-height: 1.2;"
+				>
+					Biography
+				</h2>
+
+				<!-- bio_text submitted via this form; excluded from the save action (Pitfall 7 extended) -->
+				<div>
+					<label
+						for="bio_text"
+						style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
+					>
+						Bio
+					</label>
+					<textarea
+						id="bio_text"
+						name="bio_text"
+						placeholder="Enter a short biography…"
+						style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box; min-height: 120px; resize: vertical; font-family: inherit;"
+					>{data.person.bio_text ?? ''}</textarea>
+				</div>
+			</div>
+		</form>
+
+		<!-- ── Person Type card (new, D-13) — Bench/Advocate segmented toggle replaces the
+		     old "Is Justice" checkbox; Bench-only fields slide-reveal (D-11). The Role
+		     field and its inline-creation machinery are fully removed (D-10) — not
+		     carried into this card at all. Inputs associate with save-form via the
+		     `form` attribute since this card sits outside that <form> element. ── -->
+		<div
+			style="background-color: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 24px; margin-bottom: 24px;"
+		>
+			<h2
+				style="font-size: 20px; font-weight: 600; color: #e2e8f0; margin: 0 0 16px 0; line-height: 1.2;"
+			>
+				Person Type
+			</h2>
+
+			<!-- Bench/Advocate segmented toggle (D-13) — same visual idiom as the list-page tab toggle -->
+			<div style="display: flex; gap: 0; margin-bottom: 16px;">
+				<button
+					type="button"
+					aria-pressed={isJustice}
+					aria-label="Bench"
+					onclick={() => (isJustice = true)}
+					style="
+						min-height: 44px;
+						padding: 8px 16px;
+						border: 1px solid {isJustice ? '#93c5fd' : '#334155'};
+						border-radius: 6px 0 0 6px;
+						background-color: {isJustice ? '#93c5fd' : '#1e293b'};
+						color: {isJustice ? '#0f1117' : '#e2e8f0'};
+						font-size: 16px;
+						font-weight: 600;
+						cursor: pointer;
+					"
+				>Bench</button>
+				<button
+					type="button"
+					aria-pressed={!isJustice}
+					aria-label="Advocate"
+					onclick={() => (isJustice = false)}
+					style="
+						min-height: 44px;
+						padding: 8px 16px;
+						border: 1px solid {!isJustice ? '#93c5fd' : '#334155'};
+						border-left: none;
+						border-radius: 0 6px 6px 0;
+						background-color: {!isJustice ? '#93c5fd' : '#1e293b'};
+						color: {!isJustice ? '#0f1117' : '#e2e8f0'};
+						font-size: 16px;
+						font-weight: 600;
+						cursor: pointer;
+					"
+				>Advocate</button>
+			</div>
+
+			<!-- Carries the toggle's boolean value into the save-form; always present
+			     regardless of which segment is selected (a segmented toggle always
+			     submits a value, unlike the old checkbox which was absent when unchecked). -->
+			<input type="hidden" name="is_justice" form="save-form" value={isJustice ? 'true' : 'false'} />
+
+			{#if isJustice}
+			<div transition:slide>
+				<!-- Birth Date + disabled Death Date (D-15, D-19) -->
+				<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+					<div>
+						<label
+							for="birthdate"
+							style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
+						>
+							Birth Date
+						</label>
+						<input
+							id="birthdate"
+							type="date"
+							name="birthdate"
+							form="save-form"
+							bind:value={birthdate}
+							style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
+						/>
+					</div>
+					<div style="opacity: 0.6;">
+						<label
+							for="death_date"
+							style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
+						>
+							Death Date
+						</label>
+						<input
+							id="death_date"
+							type="date"
+							disabled
+							placeholder="Coming soon"
+							title="Tracked in a future update"
+							style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #94a3b8; box-sizing: border-box;"
+						/>
+					</div>
+				</div>
+
+				<h3 style="font-size: 16px; font-weight: 400; color: #e2e8f0; margin: 0 0 16px 0; line-height: 1.2;">
+					Tenure Periods
+				</h3>
+
+				<!-- Tenure Period sub-cards (D-18): bordered, inset background -->
+				{#each tenureRows as row, i (row._key)}
+					<div
+						style="background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 24px; margin-bottom: 16px;"
+					>
+						<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+							<div>
+								<label
+									for="tenure-start-{row._key}"
+									style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
+								>
+									Start Date
+								</label>
+								<input
+									id="tenure-start-{row._key}"
+									type="date"
+									bind:value={row.start_date}
+									style="display: block; width: 100%; background-color: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
+								/>
+							</div>
+							<div>
+								<label
+									for="tenure-end-{row._key}"
+									style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
+								>
+									End Date
+								</label>
+								<input
+									id="tenure-end-{row._key}"
+									type="date"
+									bind:value={row.end_date}
+									style="display: block; width: 100%; background-color: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
+								/>
+							</div>
+						</div>
+
+						<div style="margin-bottom: 16px;">
+							<label
+								for="tenure-appointed-{row._key}"
+								style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
+							>
+								Appointing President
+							</label>
+							<input
+								id="tenure-appointed-{row._key}"
+								type="text"
+								bind:value={row.appointed_by}
+								style="display: block; width: 100%; background-color: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
+							/>
+						</div>
+
+						<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+							<div>
+								<label
+									for="tenure-party-{row._key}"
+									style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
+								>
+									President's Party
+								</label>
+								<input
+									id="tenure-party-{row._key}"
+									type="text"
+									bind:value={row.appointing_president_party}
+									style="display: block; width: 100%; background-color: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
+								/>
+							</div>
+							<div style="opacity: 0.6;">
+								<label
+									for="tenure-reason-{row._key}"
+									style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
+								>
+									Reason Left
+								</label>
+								<input
+									id="tenure-reason-{row._key}"
+									type="text"
+									disabled
+									placeholder="Coming soon"
+									title="Tracked in a future update"
+									style="display: block; width: 100%; background-color: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #94a3b8; box-sizing: border-box;"
+								/>
+							</div>
+						</div>
+
+						<div style="text-align: right;">
+							<button
+								type="button"
+								onclick={() => removeTenureRow(i)}
+								style="color: #ef4444; background: transparent; border: 1px solid #ef4444; border-radius: 6px; font-size: 14px; font-weight: 400; min-height: 36px; padding: 4px 16px; cursor: pointer;"
+							>
+								Remove
+							</button>
+						</div>
+					</div>
+				{/each}
+
+				<!-- Add tenure link (D-18) -->
+				<button
+					type="button"
+					onclick={addTenureRow}
+					style="display: inline-block; font-size: 14px; font-weight: 400; color: #93c5fd; background: transparent; border: none; padding: 0; cursor: pointer;"
+				>
+					+ Add Tenure Period
+				</button>
+
+				<!-- Hidden field carrying the serialized tenure array (Pattern 1 / Pitfall 3) -->
+				<input type="hidden" name="tenures" form="save-form" value={JSON.stringify(tenureRows)} />
+			</div>
+			{/if}
 		</div>
 
 		<!-- Form-level error (from save action) -->
@@ -612,17 +620,8 @@
 			</p>
 		{/if}
 
-		<!-- SaveChangesButton: associated with save-form via form attribute (Gap E fix) -->
-		<button
-			type="submit"
-			form="save-form"
-			disabled={saveSubmitting}
-			style="display: block; width: 100%; min-height: 44px; background: transparent; border: 1px solid #93c5fd; border-radius: 6px; font-size: 16px; font-weight: 600; color: #e2e8f0; cursor: pointer; margin-top: 8px; margin-bottom: 24px; opacity: {saveSubmitting ? 0.7 : 1};"
-		>
-			{saveSubmitting ? 'Saving…' : 'Save changes'}
-		</button>
-
-		<!-- ── Section 5: Merge (PADM-03/PADM-04) — outside the save form ── -->
+		<!-- ── Merge (PADM-03/PADM-04) — outside the save form; hidden on the create route (D-07 shared template) ── -->
+		{#if data.person.id}
 		<div
 			style="background-color: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 24px; margin-bottom: 24px;"
 		>
@@ -714,8 +713,10 @@
 				{/if}
 			</form>
 		</div>
+		{/if}
 
-		<!-- ── Section 6: Delete (PADM-02) — outside the save form ── -->
+		<!-- ── Delete (PADM-02) — outside the save form; hidden on the create route (D-07 shared template) ── -->
+		{#if data.person.id}
 		<div
 			style="background-color: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 24px; margin-bottom: 24px;"
 		>
@@ -761,6 +762,25 @@
 					</p>
 				{/if}
 			</form>
+		</div>
+		{/if}
+
+		<!-- ── Form-level action row: Save Person + Cancel ── -->
+		<div style="display: flex; gap: 8px;">
+			<button
+				type="submit"
+				form="save-form"
+				disabled={saveSubmitting}
+				style="flex: 1; min-height: 44px; background: transparent; border: 1px solid #93c5fd; border-radius: 6px; font-size: 16px; font-weight: 600; color: #e2e8f0; cursor: pointer; opacity: {saveSubmitting ? 0.7 : 1};"
+			>
+				{saveSubmitting ? 'Saving…' : 'Save Person'}
+			</button>
+			<a
+				href={'/admin/people?tab=' + backTab}
+				style="flex: 1; display: inline-flex; align-items: center; justify-content: center; min-height: 44px; background: transparent; border: 1px solid #334155; border-radius: 6px; font-size: 16px; font-weight: 400; color: #94a3b8; text-decoration: none; box-sizing: border-box;"
+			>
+				Cancel
+			</a>
 		</div>
 	</div>
 </main>

@@ -5,10 +5,10 @@ milestone_name: Admin Screens Cleanup
 current_phase: 27
 current_phase_name: people-admin
 status: verifying
-stopped_at: Completed 27-05-PLAN.md
-last_updated: "2026-07-09T05:28:56.681Z"
+stopped_at: Phase 27 verified (human_needed) — awaiting UAT
+last_updated: "2026-07-09T11:30:00.000Z"
 last_activity: 2026-07-09
-last_activity_desc: Phase 27 execution started
+last_activity_desc: Phase 27 execution + verification complete; 3 human-verification items pending
 progress:
   total_phases: 7
   completed_phases: 6
@@ -28,13 +28,13 @@ See: .planning/PROJECT.md (updated 2026-07-07 after Phase 25 completion)
 
 ## Current Position
 
-Phase: 27 (people-admin) — EXECUTING
-Stage: discuss ✓ → plan ✓ → **execute** (next) → verify
-Plan: 6 of 6
-Status: Phase complete — ready for verification
-Last activity: 2026-07-09 — Phase 27 execution started
+Phase: 27 (people-admin) — VERIFYING
+Stage: discuss ✓ → plan ✓ → execute ✓ → **verify** (in progress)
+Plan: 6 of 6 (all executed)
+Status: Verified twice — 1 gap found (missing Seat field, PEDIT-09) and closed; 5/5 success criteria now pass. Awaiting human UAT (3 items in 27-UAT.md) before phase can close.
+Last activity: 2026-07-09 — Phase 27 execution + verification complete
 
-Progress: [░░░░░░░░░░] 0% of Phase 27 (discuss + plan done; execute/verify not started)
+Progress: [██████████] 100% of Phase 27 execution; verification human_needed — run /gsd-verify-work 27
 
 ## Performance Metrics
 

@@ -34,6 +34,10 @@ from sqlalchemy import update
 
 from api.models.models import AdminJob, AdminJobStatus
 from pipeline.commands.ingest import run_ingest
+from pipeline.commands.import_justices_csv import (
+    DEFAULT_CSV_PATH,
+    run_import_justices_csv,
+)
 from pipeline.commands.parse import run_parse
 from pipeline.commands.resolve import run_resolve
 from pipeline.commands.seed_aliases import run_seed_aliases
@@ -237,6 +241,28 @@ def main() -> None:
         ),
     )
 
+    # -----------------------------------------------------------------------
+    # import-justices subcommand (Phase 29 Step Zero, D-01)
+    # -----------------------------------------------------------------------
+    import_justices_p = sub.add_parser(
+        "import-justices",
+        help="Bulk-import historical justices from the tenure CSV",
+        description=(
+            "Load the historical Supreme Court justices tenure CSV and seed "
+            "the full bench roster — upgrading the 13 existing "
+            "seed_aliases.py Person rows in place (is_justice=True + "
+            "court_tenures) and creating the rest, with both court_tenures "
+            "rows auto-created for justices elevated from Associate to "
+            "Chief (e.g. Rehnquist, Rutledge). Idempotent — safe to re-run."
+        ),
+    )
+    import_justices_p.add_argument(
+        "--csv",
+        required=False,
+        default=None,
+        help=f"Path to the justices tenure CSV (default: {DEFAULT_CSV_PATH})",
+    )
+
     try:
         args = parser.parse_args()
     except SystemExit as exc:
@@ -268,6 +294,8 @@ def main() -> None:
             print("Resolve interrupted.")
     elif args.command == "seed-aliases":
         asyncio.run(run_seed_aliases(args))
+    elif args.command == "import-justices":
+        asyncio.run(run_import_justices_csv(args))
 
 
 if __name__ == "__main__":

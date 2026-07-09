@@ -1,73 +1,56 @@
 ---
-status: diagnosed
+status: testing
 phase: 27-people-admin
 source: [27-VERIFICATION.md]
-started: 2026-07-09T15:10:00Z
-updated: 2026-07-09T15:40:00Z
+started: 2026-07-09T19:05:00Z
+updated: 2026-07-09T19:05:00Z
 ---
 
 ## Current Test
 
-[testing paused — 5 items outstanding]
+number: 1
+name: Person-detail page loads without the effect_update_depth_exceeded loop (smoke test, unblocks everything else below)
+expected: |
+  Opening /admin/people/{id} for a Justice with >=1 tenure row shows no repeated "updated at" console spam, no thrown "Uncaught (in promise) Svelte error: effect_update_depth_exceeded", and normal click-to-navigation responsiveness (not the previously-reported 3-5s lag).
+awaiting: user response
 
 ## Tests
 
-### 1. CR-01 data-preservation round-trip
+### 1. Smoke test — effect loop fixed
+expected: Opening /admin/people/{id} for a Justice with >=1 tenure row shows no repeated "updated at" console spam, no thrown "Uncaught (in promise) Svelte error: effect_update_depth_exceeded", and normal click-to-navigation responsiveness (not the previously-reported 3-5s lag).
+result: [pending]
+
+### 2. CR-01 data-preservation round-trip
 expected: Open an existing Justice with tenure rows and a birthdate, click "Advocate", click "Save Person", reload the page. Tenure rows and birthdate are unchanged after reload — not wiped.
-result: issue
-reported: "there's some issue that I can't figure out. The site is running crazy slow just navigating. Like, 3-5 seconds between click and navigation. I'm also getting console errors: repeated 'updated at' effect reruns at +page.svelte:132:42, :133:14, :134:44/142:9 (Array.map at $effect), culminating in 'Uncaught (in promise) Svelte error: effect_update_depth_exceeded — Maximum update depth exceeded. This typically indicates that an effect reads and writes the same piece of state.'"
-severity: blocker
+result: [pending]
 
-### 2. CR-02 data-preservation round-trip
+### 3. CR-02 data-preservation round-trip
 expected: Merge person A into person B (redirects to /admin/people/{B}). On that page, click "Save Person" without further edits. Reload. B's tenure rows after reload are B's own — not A's stale pre-merge tenureRows array.
-result: blocked
-blocked_by: other
-reason: "I can't do any testing with this blocking error (see Test 1 — effect_update_depth_exceeded loop makes the page unusable)"
+result: [pending]
 
-### 3. Bench/Advocate slide-reveal animation re-check
-expected: Toggle Bench↔Advocate on /admin/people/{id} and observe the transition. Slide transition still animates smoothly (not fade/snap); DESIGN-SYSTEM.md token compliance; in-progress tenure edits still preserved across a Bench→Advocate→Bench toggle. (DOM changed slightly by the CR-01/CR-02 fix — worth a fresh look.)
-result: blocked
-blocked_by: other
-reason: "I can't do any testing with this blocking error (see Test 1)"
+### 4. Bench/Advocate slide-reveal animation re-check
+expected: Toggle Bench↔Advocate on /admin/people/{id} and observe the transition. Slide transition still animates smoothly (not fade/snap); DESIGN-SYSTEM.md token compliance; in-progress tenure edits still preserved across a Bench→Advocate→Bench toggle.
+result: [pending]
 
-### 4. Column spacing visual re-check (27-07 fix, carried forward)
+### 5. Column spacing visual re-check (27-07 fix, carried forward)
 expected: On /admin/people, view both the Bench tab and Advocate tab middle columns. Clear horizontal gutter between the two middle columns on each tab.
-result: blocked
-blocked_by: other
-reason: "I can't do any testing with this blocking error (see Test 1)"
+result: [pending]
 
-### 5. President's Party dropdown round-trip (27-09 fix, carried forward)
+### 6. President's Party dropdown round-trip (27-09 fix, carried forward)
 expected: Select a party from the dropdown, save, reload; separately confirm a legacy out-of-list value still displays selected. Selection persists; legacy values preserved.
-result: blocked
-blocked_by: other
-reason: "I can't do any testing with this blocking error (see Test 1)"
+result: [pending]
 
-### 6. Create-person name-parts persistence, full click-through (27-08 fix, carried forward)
+### 7. Create-person name-parts persistence, full click-through (27-08 fix, carried forward)
 expected: On /admin/people/new, fill in Full Name and all four name-part fields, submit, reopen the created person. All four name-part fields display the submitted values.
-result: blocked
-blocked_by: other
-reason: "I can't do any testing with this blocking error (see Test 1)"
+result: [pending]
 
 ## Summary
 
-total: 6
+total: 7
 passed: 0
-issues: 1
-pending: 0
+issues: 0
+pending: 7
 skipped: 0
-blocked: 5
+blocked: 0
 
 ## Gaps
-
-- truth: "Open an existing Justice with tenure rows and a birthdate, click Advocate, click Save Person, reload the page — tenure rows and birthdate are unchanged after reload, not wiped."
-  status: failed
-  reason: "User reported: site running crazy slow just navigating (3-5 seconds between click and navigation), plus console errors — repeated 'updated at' effect reruns at +page.svelte:132:42, :133:14, :134:44/142:9 (Array.map at $effect), culminating in 'Uncaught (in promise) Svelte error: effect_update_depth_exceeded — Maximum update depth exceeded. This typically indicates that an effect reads and writes the same piece of state.'"
-  severity: blocker
-  test: 1
-  root_cause: "app/src/routes/admin/people/[id]/+page.svelte lines 125-150: the CR-02 fix (commit b02a2681) added an $effect that both reads and writes the $state variable nextKey inside a tenureRows.map() callback (_key: nextKey++). Svelte 5 tracks the read as a dependency, so the effect's own write to nextKey invalidates itself and reschedules infinitely, tripping effect_update_depth_exceeded and pegging the main thread (source of the reported navigation lag)."
-  artifacts:
-    - path: "app/src/routes/admin/people/[id]/+page.svelte"
-      issue: "$effect (lines 125-150) reads and writes $state nextKey in the same run via nextKey++ inside .map()"
-  missing:
-    - "Replace nextKey++ inside the map callback with a plain local counter (not $state), then assign nextKey once after the loop completes — matches the safe write-only pattern used at the top-of-script initializer (lines 54-73) and elsewhere in the codebase (e.g. admin/pipeline/[job_id]/+page.svelte:78)."
-  debug_session: ".planning/debug/person-detail-effect-loop.md"

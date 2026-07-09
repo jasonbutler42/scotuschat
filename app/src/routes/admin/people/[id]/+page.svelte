@@ -31,10 +31,6 @@
 	// ──────────────────────────────────────────────────────────────────────────
 	// Tenure rows state (Pattern 1 — $state<TenureRow[]>, in-place mutation)
 	// Each row gets a stable _key for the keyed {#each} block (Pitfall 2).
-	// `seat` is carried through unchanged from existing data but has no input
-	// field in the Tenure Period sub-card (D-18 lists Start/End/Appointing
-	// President/President's Party/Reason Left only) — it must not be dropped
-	// from the payload or a save would silently clear any existing seat value.
 	// ──────────────────────────────────────────────────────────────────────────
 
 	let nextKey = $state(1);
@@ -507,6 +503,25 @@
 					<div
 						style="background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 24px; margin-bottom: 16px;"
 					>
+						<!-- Seat (PEDIT-09) — carried through state since Plan 27-05 but never
+						     rendered; D-18's mockup-derived field list omitted it with no stated
+						     reason, silently narrowing the locked PEDIT-09 wording. Restored per
+						     phase 27 verification gap closure. -->
+						<div style="margin-bottom: 16px;">
+							<label
+								for="tenure-seat-{row._key}"
+								style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
+							>
+								Seat
+							</label>
+							<input
+								id="tenure-seat-{row._key}"
+								type="text"
+								bind:value={row.seat}
+								style="display: block; width: 100%; background-color: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
+							/>
+						</div>
+
 						<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
 							<div>
 								<label

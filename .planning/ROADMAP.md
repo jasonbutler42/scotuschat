@@ -496,3 +496,13 @@ Plans:
 Plans:
 
 - [ ] TBD (promote with /gsd-review-backlog when ready)
+
+### Phase 999.17: Fix FastAPI test lifespan/session-factory failure (BACKLOG)
+
+**Goal:** [Captured for future planning] [Added 2026-07-09, surfaced during Phase 27 execution] `RuntimeError: Database session factory is not initialised — lifespan may not have completed startup.` (`api/core/database.py:62`, `get_db()`) fires on ~57-58 tests + 34 collection errors when running the full pytest suite (`pytest`, `testpaths = tests pipeline/tests api/tests`). Confirmed pre-existing via a disposable git worktree at commit `ebb14eaa` (immediately before Phase 27) — identical failure baseline exists there too, so this is test-infrastructure debt, not a phase regression. Suspected root cause: the `client` fixture's plain `AsyncClient(transport=ASGITransport(app=app))` doesn't invoke the ASGI lifespan protocol, so `AsyncSessionLocal` is only initialized when some other test/module triggers it as a side effect — order-dependent across the `tests/`+`pipeline/tests/`+`api/tests/` testpaths. Also bundles 3 stale hardcoded assertions in `tests/test_models_import.py` (expects exactly 12 tables / 3 SideEnum values; actual is 13 tables / 6 enum values as of Phase 26+). Needs its own investigation into app lifespan/fixture wiring across `tests/conftest.py`, `api/tests/conftest.py` (if any), and `api/main.py`'s lifespan handler — out of scope for any single phase.
+**Requirements:** TBD
+**Plans:** 0 plans
+
+Plans:
+
+- [ ] TBD (promote with /gsd-review-backlog when ready)

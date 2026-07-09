@@ -63,20 +63,39 @@ def _derive_full_name(
     return " ".join(p for p in [first, middle or "", last, suffix or ""] if p)
 
 
-def _missing_fields(person: Person) -> list[str]:
-    """Return list of missing field labels per D-04.
+def _missing_fields(person: Person, tenure_count: int) -> list[str]:
+    """Return list of missing field labels, branched by is_justice (D-05, D-06).
 
-    A person is incomplete if role_id IS NULL OR bio_text IS NULL OR photo_url IS NULL.
-    Court tenure absence is NOT considered missing.
-    Order: role, bio, photo (D-06).
+    Person-level Role is no longer checked (D-10) — role now lives on
+    argument_participants, not on Person.
+
+    Advocate rows (is_justice is False, D-05): "first name"/"last name"/
+    "photo"/"bio" only.
+    Bench rows (is_justice is True, D-06): the same four, plus "birthdate"
+    when birthdate is None, plus "no tenures" when tenure_count == 0.
+
+    tenure_count is a pre-fetched count (built once by the caller across all
+    rows in a single query) — this function never issues its own tenure
+    query, keeping list_people N+1-free.
+
+    Label vocabulary (lowercased, space-separated) is shared with the
+    `missing` query-param filter in list_people so pill labels and filter
+    values agree on one vocabulary (T-27-03).
     """
     missing: list[str] = []
-    if person.role_id is None:
-        missing.append("role")
-    if person.bio_text is None:
-        missing.append("bio")
+    if person.first_name is None:
+        missing.append("first name")
+    if person.last_name is None:
+        missing.append("last name")
     if person.photo_url is None:
         missing.append("photo")
+    if person.bio_text is None:
+        missing.append("bio")
+    if person.is_justice:
+        if person.birthdate is None:
+            missing.append("birthdate")
+        if tenure_count == 0:
+            missing.append("no tenures")
     return missing
 
 
@@ -187,13 +206,27 @@ async def list_people(
         q = q.where(Person.id.in_(gap_person_ids))
     result = await db.execute(q)
     rows = result.all()
+
+    # Prefetch tenure counts for every person in the result set in one query,
+    # avoiding a per-person N+1 lookup inside _missing_fields (mirrors the
+    # tenures_by_person idiom in list_resolve_rows_for_job, lines 647-660).
+    person_ids = [person.id for person, _role_name in rows]
+    tenure_counts: dict[int, int] = {}
+    if person_ids:
+        tenure_count_result = await db.execute(
+            select(CourtTenure.person_id, sqlfunc.count(CourtTenure.id))
+            .where(CourtTenure.person_id.in_(person_ids))
+            .group_by(CourtTenure.person_id)
+        )
+        tenure_counts = dict(tenure_count_result.all())
+
     return [
         {
             "id": person.id,
             "full_name": person.full_name,
             "role_id": person.role_id,
             "role_name": role_name,
-            "missing": _missing_fields(person),
+            "missing": _missing_fields(person, tenure_counts.get(person.id, 0)),
             "is_justice": person.is_justice,
         }
         for person, role_name in rows

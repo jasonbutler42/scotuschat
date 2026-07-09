@@ -54,71 +54,114 @@ def test_service_import() -> None:
 
 
 class _FakePerson:
-    """Minimal stand-in for an ORM Person with role_id, bio_text, photo_url."""
+    """Minimal stand-in for an ORM Person with the fields _missing_fields checks."""
 
     def __init__(
         self,
-        role_id: int | None,
-        bio_text: str | None,
+        first_name: str | None,
+        last_name: str | None,
         photo_url: str | None,
+        bio_text: str | None,
+        is_justice: bool = False,
+        birthdate: str | None = None,
     ) -> None:
-        self.role_id = role_id
-        self.bio_text = bio_text
+        self.first_name = first_name
+        self.last_name = last_name
         self.photo_url = photo_url
+        self.bio_text = bio_text
+        self.is_justice = is_justice
+        self.birthdate = birthdate
 
 
-def test_missing_fields_all_none() -> None:
-    """All three fields None → ['role', 'bio', 'photo'] in that order (D-04, D-06)."""
+def test_missing_fields_advocate_all_missing() -> None:
+    """Advocate, all four core fields None → all four labels in order (D-05)."""
     from api.services.admin_people import _missing_fields
 
-    person = _FakePerson(role_id=None, bio_text=None, photo_url=None)
-    result = _missing_fields(person)
-    assert result == ["role", "bio", "photo"]
+    person = _FakePerson(
+        first_name=None, last_name=None, photo_url=None, bio_text=None, is_justice=False
+    )
+    result = _missing_fields(person, tenure_count=0)
+    assert result == ["first name", "last name", "photo", "bio"]
 
 
-def test_missing_fields_none_missing() -> None:
-    """All three fields set → empty list."""
+def test_missing_fields_advocate_none_missing() -> None:
+    """Advocate, all four core fields set → empty list."""
     from api.services.admin_people import _missing_fields
 
-    person = _FakePerson(role_id=1, bio_text="Some bio", photo_url="https://example.com/photo.jpg")
-    result = _missing_fields(person)
+    person = _FakePerson(
+        first_name="Sarah",
+        last_name="Advocate",
+        photo_url="https://example.com/photo.jpg",
+        bio_text="Some bio",
+        is_justice=False,
+    )
+    result = _missing_fields(person, tenure_count=0)
     assert result == []
 
 
-def test_missing_fields_bio_only() -> None:
-    """Only bio_text None → ['bio']."""
+def test_missing_fields_advocate_never_flags_birthdate_or_tenures() -> None:
+    """Advocate with no birthdate and zero tenures never surfaces those labels (D-05)."""
     from api.services.admin_people import _missing_fields
 
-    person = _FakePerson(role_id=1, bio_text=None, photo_url="https://example.com/photo.jpg")
-    result = _missing_fields(person)
-    assert result == ["bio"]
+    person = _FakePerson(
+        first_name="Sarah",
+        last_name="Advocate",
+        photo_url="https://example.com/photo.jpg",
+        bio_text="Some bio",
+        is_justice=False,
+        birthdate=None,
+    )
+    result = _missing_fields(person, tenure_count=0)
+    assert "birthdate" not in result
+    assert "no tenures" not in result
 
 
-def test_missing_fields_role_only() -> None:
-    """Only role_id None → ['role']."""
+def test_missing_fields_bench_all_missing() -> None:
+    """Bench, everything None + zero tenures → all six labels in order (D-06)."""
     from api.services.admin_people import _missing_fields
 
-    person = _FakePerson(role_id=None, bio_text="bio", photo_url="https://example.com/photo.jpg")
-    result = _missing_fields(person)
-    assert result == ["role"]
+    person = _FakePerson(
+        first_name=None,
+        last_name=None,
+        photo_url=None,
+        bio_text=None,
+        is_justice=True,
+        birthdate=None,
+    )
+    result = _missing_fields(person, tenure_count=0)
+    assert result == ["first name", "last name", "photo", "bio", "birthdate", "no tenures"]
 
 
-def test_missing_fields_photo_only() -> None:
-    """Only photo_url None → ['photo']."""
+def test_missing_fields_bench_with_tenures_and_birthdate() -> None:
+    """Bench with birthdate set and at least one tenure → no birthdate/no-tenures labels."""
     from api.services.admin_people import _missing_fields
 
-    person = _FakePerson(role_id=1, bio_text="bio", photo_url=None)
-    result = _missing_fields(person)
-    assert result == ["photo"]
+    person = _FakePerson(
+        first_name="John",
+        last_name="Roberts",
+        photo_url="https://example.com/roberts.jpg",
+        bio_text="Chief Justice",
+        is_justice=True,
+        birthdate="1955-01-27",
+    )
+    result = _missing_fields(person, tenure_count=1)
+    assert result == []
 
 
-def test_missing_fields_order_role_bio() -> None:
-    """role and bio missing → ['role', 'bio'] (role before bio per D-06)."""
+def test_missing_fields_bench_birthdate_only() -> None:
+    """Bench missing only birthdate (has tenures) → ['birthdate']."""
     from api.services.admin_people import _missing_fields
 
-    person = _FakePerson(role_id=None, bio_text=None, photo_url="https://example.com/photo.jpg")
-    result = _missing_fields(person)
-    assert result == ["role", "bio"]
+    person = _FakePerson(
+        first_name="John",
+        last_name="Roberts",
+        photo_url="https://example.com/roberts.jpg",
+        bio_text="Chief Justice",
+        is_justice=True,
+        birthdate=None,
+    )
+    result = _missing_fields(person, tenure_count=1)
+    assert result == ["birthdate"]
 
 
 # ---------------------------------------------------------------------------

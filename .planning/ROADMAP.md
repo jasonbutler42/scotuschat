@@ -431,7 +431,9 @@ Plans:
 
 - [ ] TBD (promote with /gsd-review-backlog when ready)
 
-### Phase 999.10: Bulk-import historical justices from CSV (BACKLOG)
+### Phase 999.10: Bulk-import historical justices from CSV (BACKLOG) — SUPERSEDED
+
+**Status:** SUPERSEDED / ABSORBED into Phase 29 (Historical Corpus Import) per CONTEXT.md D-01, 2026-07-09. The bulk justice CSV import is Step Zero of Phase 29 (Plan 29-03, `import-justices` command, requirement CORPUS-01) — it must land as a prerequisite of the corpus import, not as a separate standalone backlog phase. Do not promote this entry; it is closed.
 
 **Goal:** [Captured for future planning] [Migrated from BACKLOG.md B-013, added 2026-07-07] Operator currently has to manually enter every historical Supreme Court justice one at a time in the People admin screen. Jason already has a CSV covering all historical justices. Add an import path (upload + parse + create/update Person rows with is_justice=true, tenure/appointment data) so the full bench roster can be seeded in one operation instead of by hand. Needs a decision on dedup behavior against existing entries and which CSV columns map to which fields. Operator does not need this as a standing feature, just at the beginning of the project — could be a one-off script rather than a UI feature. The database is already seeded with current justices; this would extend that same seeding approach to historical ones.
 **Requirements:** TBD
@@ -520,3 +522,28 @@ Plans:
 Plans:
 
 - [ ] TBD (promote with /gsd-review-backlog when ready)
+
+### Phase 29: Historical Corpus Import
+
+**Goal:** Bulk-import historical oral arguments (terms 1955-2019, ~7,800 arguments) from the Cornell ConvoKit supreme-corpus dataset directly into cases/arguments/utterances/people/court_tenures, bypassing PDF download and LLM parsing for this batch. Source files: supreme-corpus/{utterances.jsonl,conversations.json,speakers.json}, a separately-located cases.jsonl (title/docket/dates/citation), and a justices tenure CSV (appointment/tenure backfill). Open questions: dedup against existing Person/CourtTenure rows, stage-direction inline-vs-row policy, apolitical-field stripping (win_side/votes_side/scdb_docket_id must never be persisted), lead-docket-only limitation for consolidated cases, advocate identity QA. Existing PDF ingest/parse/resolve pipeline stays for terms 2020+ and all future terms -- this is a new, separate one-time bulk-import CLI command, not a replacement.
+**Requirements**: CORPUS-01, CORPUS-02, CORPUS-03, CORPUS-04, CORPUS-05, CORPUS-06, CORPUS-07, CORPUS-08, CORPUS-09, CORPUS-10, CORPUS-11
+**Depends on:** Phase 28
+**Plans:** 6 plans
+
+**Wave 1** *(parallel — disjoint files)*
+
+- [ ] 29-01-PLAN.md — Migration 0017 (3 nullable oyez external-ID columns) + data/corpus/ source-file infra + python-dateutil (CORPUS-02, CORPUS-04)
+- [ ] 29-02-PLAN.md — Corpus parsing helpers: streaming loader, curated stage-direction detector, apolitical allowlist (test-first) (CORPUS-05, CORPUS-06)
+
+**Wave 2** *(parallel — disjoint files; blocked on 29-01)*
+
+- [ ] 29-03-PLAN.md — Justice CSV importer (Step Zero, absorbs 999.10): upgrade 13 seeded rows in place + create roster + import-justices subcommand (CORPUS-01, CORPUS-11)
+- [ ] 29-06-PLAN.md — Frontend: Attributions/License page + per-argument note (server-gated) + TopNav link + README credit + oyez_transcript_id payload field (CORPUS-09, CORPUS-10)
+
+**Wave 3** *(blocked on 29-01, 29-02, 29-03)*
+
+- [ ] 29-04-PLAN.md — Corpus importer core: import-convokit CLI, term batching, Case/Argument/CaseArgument/PipelineRun creation, speaker resolution (CORPUS-03, CORPUS-05)
+
+**Wave 4** *(blocked on 29-04)*
+
+- [ ] 29-05-PLAN.md — Utterance import (streaming, \n preserved, stage-direction row-splitting) + per-batch summary report (CORPUS-06, CORPUS-07, CORPUS-08)

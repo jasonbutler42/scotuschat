@@ -205,7 +205,7 @@
 									font-weight: 400;
 									color: #94a3b8;
 									border-bottom: 1px solid #334155;
-									padding: 8px 0;
+									padding: 8px 8px;
 								"
 							>Tenure coverage</th>
 							<th
@@ -217,7 +217,7 @@
 									font-weight: 400;
 									color: #94a3b8;
 									border-bottom: 1px solid #334155;
-									padding: 8px 0;
+									padding: 8px 8px;
 								"
 							>Tenure gap</th>
 						{:else}
@@ -230,7 +230,7 @@
 									font-weight: 400;
 									color: #94a3b8;
 									border-bottom: 1px solid #334155;
-									padding: 8px 0;
+									padding: 8px 8px;
 								"
 							>Argument count</th>
 						{/if}
@@ -243,7 +243,7 @@
 								font-weight: 400;
 								color: #94a3b8;
 								border-bottom: 1px solid #334155;
-								padding: 8px 0;
+								padding: 8px 8px;
 							"
 						>Missing fields</th>
 						<th
@@ -277,7 +277,7 @@
 										font-size: 16px;
 										color: {person.tenure_coverage ? '#e2e8f0' : '#94a3b8'};
 										border-bottom: 1px solid #334155;
-										padding: 12px 0;
+										padding: 12px 8px;
 									"
 								>{person.tenure_coverage ?? 'No tenure'}</td>
 								<td
@@ -285,7 +285,7 @@
 										font-size: 16px;
 										color: {person.has_tenure_gap ? '#fbbf24' : '#94a3b8'};
 										border-bottom: 1px solid #334155;
-										padding: 12px 0;
+										padding: 12px 8px;
 									"
 								>{person.has_tenure_gap ? '⚠ Gap' : '—'}</td>
 							{:else}
@@ -295,7 +295,7 @@
 										color: #94a3b8;
 										text-align: right;
 										border-bottom: 1px solid #334155;
-										padding: 12px 0;
+										padding: 12px 8px;
 									"
 								>{person.argument_count ?? 0}</td>
 							{/if}
@@ -303,7 +303,7 @@
 								style="
 									font-size: 16px;
 									border-bottom: 1px solid #334155;
-									padding: 12px 0;
+									padding: 12px 8px;
 								"
 							>
 								{#if person.missing.length > 0}

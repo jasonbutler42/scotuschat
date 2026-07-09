@@ -70,11 +70,11 @@
 ### People List (`/admin/people/`)
 
 - [ ] **PDIR-01** Page title: "People" (was "People Editor")
-- [ ] **PDIR-02** Bench / Advocate tab or toggle at top of page
-- [ ] **PDIR-03** Bench view columns: name, tenure coverage, tenure gaps indicator, photo/bio completeness
-- [ ] **PDIR-04** Advocate view columns: name, argument count, photo/bio completeness
+- [x] **PDIR-02** Bench / Advocate tab or toggle at top of page
+- [x] **PDIR-03** Bench view columns: name, tenure coverage, tenure gaps indicator, photo/bio completeness
+- [x] **PDIR-04** Advocate view columns: name, argument count, photo/bio completeness
 - [~] **PDIR-05** ~~"Incomplete only" filter retained, scoped per tab~~ — **Reworked by Phase 27 D-04**: the toggle is removed entirely; replaced by click-to-filter missing-field pills scoped per tab (same underlying capability, different interaction model)
-- [ ] **PDIR-06** "Justices with tenure gaps" filter retained (bench tab only)
+- [x] **PDIR-06** "Justices with tenure gaps" filter retained (bench tab only)
 - [ ] **PDIR-07** "Create person" button on list page — navigates to full person editor starting blank; enables creating Justices before any argument is uploaded
 
 ### Person Editor (`/admin/people/[id]`)
@@ -157,11 +157,11 @@
 | AEDIT-08 | Phase 26 | Complete |
 | AEDIT-09 | Phase 26 | Complete |
 | PDIR-01 | Phase 27 | Pending |
-| PDIR-02 | Phase 27 | Pending |
-| PDIR-03 | Phase 27 | Pending |
-| PDIR-04 | Phase 27 | Pending |
+| PDIR-02 | Phase 27 | Complete |
+| PDIR-03 | Phase 27 | Complete |
+| PDIR-04 | Phase 27 | Complete |
 | PDIR-05 | Phase 27 | Reworked (D-04) |
-| PDIR-06 | Phase 27 | Pending |
+| PDIR-06 | Phase 27 | Complete |
 | PDIR-07 | Phase 27 | Pending |
 | PEDIT-01 | Phase 27 | Pending |
 | PEDIT-02 | Phase 27 | Complete |

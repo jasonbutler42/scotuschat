@@ -6,14 +6,14 @@ current_phase: 27
 current_phase_name: people-admin
 status: executing
 stopped_at: Completed 27-01-PLAN.md
-last_updated: "2026-07-09T04:43:07.008Z"
+last_updated: "2026-07-09T04:57:07.098Z"
 last_activity: 2026-07-09
 last_activity_desc: Phase 27 execution started
 progress:
   total_phases: 7
   completed_phases: 5
   total_plans: 31
-  completed_plans: 27
+  completed_plans: 28
   percent: 71
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-07-07 after Phase 25 completion)
 
 Phase: 27 (people-admin) — EXECUTING
 Stage: discuss ✓ → plan ✓ → **execute** (next) → verify
-Plan: 3 of 6
+Plan: 4 of 6
 Status: Ready to execute
 Last activity: 2026-07-09 — Phase 27 execution started
 
@@ -102,6 +102,9 @@ Full log in PROJECT.md Key Decisions table. Key decisions entering v1.5:
 - [Phase 27]: 27-01: role_id/role_name removed from PersonUpdate/PersonDetail/PersonListItem (D-10); new PersonCreateRequest requires only full_name + is_justice (D-08); TenureRow gains per-row appointed_by/appointing_president_party (D-16)
 - [Phase 27]: 27-02: _missing_fields branches on Person.is_justice with no role_id check; list_people signature changed to (db, is_justice=None, missing=None, tenure_gaps=False), dropping the Role outerjoin entirely (D-10)
 - [Phase 27]: 27-02: has_tenure_gap reuses the tenure_gaps filter's BENCH-side gap-detection subquery verbatim, keyed on ArgumentParticipant.side not on the row's current is_justice flag
+- [Phase 27]: 27-03: get_person_detail/update_person drop the person-level Role join/write entirely (D-10); update_person writes birthdate via the same empty-string-to-None normalization used for bio_text/photo_url
+- [Phase 27]: 27-03: create_person is a general, unscoped create (no pipeline-run lookup, no participant-row linkage) modeled on admin_jobs.create_person_for_job with all job-scoping stripped; POST /people inherits the router-level admin-auth dependency with no additional guard (D-09)
+- [Phase 27]: 27-03: Rule-1 auto-fix -- GET /people's list_people call updated from the removed (incomplete, tenure_gaps) signature to the current (is_justice, missing, tenure_gaps) signature Plan 27-02 had already introduced
 
 ### Pending Todos
 
@@ -148,9 +151,10 @@ Deployment blockers (v1.4, unresolved — not in v1.5 scope):
 | Phase 26 P06 | 20min | 2 tasks | 4 files |
 | Phase 27 P01 | 5min | 2 tasks | 3 files |
 | Phase 27 P02 | 12min | 2 tasks | 2 files |
+| Phase 27 P03 | 20min | 3 tasks | 3 files |
 
 ## Session Continuity
 
-Last session: 2026-07-09T04:42:28.334Z
+Last session: 2026-07-09T04:56:29.036Z
 Stopped at: Completed 27-01-PLAN.md
 Resume file: .planning/phases/27-people-admin/27-02-PLAN.md

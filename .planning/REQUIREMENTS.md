@@ -75,7 +75,7 @@
 - [x] **PDIR-04** Advocate view columns: name, argument count, photo/bio completeness
 - [~] **PDIR-05** ~~"Incomplete only" filter retained, scoped per tab~~ — **Reworked by Phase 27 D-04**: the toggle is removed entirely; replaced by click-to-filter missing-field pills scoped per tab (same underlying capability, different interaction model)
 - [x] **PDIR-06** "Justices with tenure gaps" filter retained (bench tab only)
-- [ ] **PDIR-07** "Create person" button on list page — navigates to full person editor starting blank; enables creating Justices before any argument is uploaded
+- [x] **PDIR-07** "Create person" button on list page — navigates to full person editor starting blank; enables creating Justices before any argument is uploaded
 
 ### Person Editor (`/admin/people/[id]`)
 
@@ -162,7 +162,7 @@
 | PDIR-04 | Phase 27 | Complete |
 | PDIR-05 | Phase 27 | Reworked (D-04) |
 | PDIR-06 | Phase 27 | Complete |
-| PDIR-07 | Phase 27 | Pending |
+| PDIR-07 | Phase 27 | Complete |
 | PEDIT-01 | Phase 27 | Pending |
 | PEDIT-02 | Phase 27 | Complete |
 | PEDIT-03 | Phase 27 | Pending |

@@ -100,3 +100,10 @@ None - no external service configuration required.
 ---
 *Phase: 27-people-admin*
 *Completed: 2026-07-09*
+
+## Self-Check: PASSED
+
+- FOUND: `app/src/routes/admin/people/[id]/+page.svelte`
+- FOUND: `.planning/phases/27-people-admin/27-11-SUMMARY.md`
+- FOUND commit: `9651e27c`
+- FOUND commit: `bbd792fc`

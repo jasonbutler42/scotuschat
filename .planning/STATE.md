@@ -5,15 +5,15 @@ milestone_name: Admin Screens Cleanup
 current_phase: 27
 current_phase_name: people-admin
 status: executing
-stopped_at: Phase 27 gap-closure plan 27-10 executed (CR-01/CR-02 fixed) — awaiting 4th verification pass
-last_updated: "2026-07-09T15:52:29.646Z"
+stopped_at: Phase 27 gap-closure plan 27-11 executed (effect_update_depth_exceeded fix) — 4th UAT retest re-run pending
+last_updated: "2026-07-09T18:10:52.812Z"
 last_activity: 2026-07-09
-last_activity_desc: 27-10-PLAN.md executed (CR-01/CR-02 gap closure)
+last_activity_desc: Plan 27-11 executed (fix for effect_update_depth_exceeded loop)
 progress:
   total_phases: 7
   completed_phases: 5
-  total_plans: 35
-  completed_plans: 35
+  total_plans: 36
+  completed_plans: 36
   percent: 86
 ---
 
@@ -28,13 +28,13 @@ See: .planning/PROJECT.md (updated 2026-07-07 after Phase 25 completion)
 
 ## Current Position
 
-Phase: 27 (people-admin) — EXECUTING
-Stage: discuss ✓ → plan ✓ → execute ✓ → verify ✓ (gaps_found) → plan ✓ → execute ✓ → **verify (pending)**
-Plan: 10 of 10 (all plans executed)
-Status: Awaiting re-verification
-Last activity: 2026-07-09 — 27-10-PLAN.md executed (CR-01/CR-02 gap closure)
+Phase: 27 (people-admin) — VERIFYING
+Stage: discuss ✓ → plan ✓ → execute ✓ → verify ✓ (gaps_found) → plan ✓ → execute ✓ → **verify (pending, 4th pass)**
+Plan: 11 of 11 (all executed, including gap-closure plan 27-11 fixing the effect_update_depth_exceeded regression)
+Status: Gap-closure plan 27-11 executed (nextKey self-referential read+write fixed); 4th UAT retest re-run pending
+Last activity: 2026-07-09 — Plan 27-11 executed (fix for effect_update_depth_exceeded loop)
 
-Progress: [██████████] 100% of Phase 27 plans executed (10/10); do NOT treat ROADMAP.md's `[x]` line or STATE.md frontmatter `completed_phases` as authoritative on their own — `roadmap update-plan-progress` marks the plan-count row Complete automatically once all plans have SUMMARYs, but Phase 27 is NOT actually done until `/gsd-verify-work 27` (a 4th pass, closing CR-01/CR-02) confirms Truth 4 / PEDIT-07 now passes. This is the same premature-completion pattern already logged for Phase 26/27 in prior sessions (see memory: GSD Roadmap Premature-Completion Bug) — `completed_phases` in this file's frontmatter has been deliberately held at 5 (not bumped to 6) until that verification runs.
+Progress: [██████████] 100% of Phase 27 plans executed (11/11); do NOT treat ROADMAP.md's `[x]` line or STATE.md frontmatter `completed_phases` as authoritative on their own — `roadmap update-plan-progress` marks the plan-count row Complete automatically once all plans have SUMMARYs, but Phase 27 is NOT actually done until `/gsd-verify-work 27` (a 4th pass, re-testing CR-01/CR-02 plus the 4 other tests this plan unblocked) confirms Truth 4 / PEDIT-07 now passes. This is the same premature-completion pattern already logged for Phase 26/27 in prior sessions (see memory: GSD Roadmap Premature-Completion Bug) — `completed_phases` in this file's frontmatter has been corrected back to 5 (not bumped to 6) until that verification runs.
 
 ## Performance Metrics
 
@@ -119,6 +119,7 @@ Full log in PROJECT.md Key Decisions table. Key decisions entering v1.5:
 - [Phase ?]: 27-08: create_person now sets first_name/middle_name/last_name/name_suffix from PersonCreateRequest, normalizing blank strings to None (matches update_person's Pitfall 5 convention); fixed as a bug (parity with [id] editor), not a D-08 scope amendment
 - [Phase 27-09]: D-16 amendment (2026-07-09): appointing_president_party reversed from free-text to a curated select scoped to that field only; appointed_by remains free-text; Seat-as-toggle deferred to backlog Phase 999.16
 - [Phase 27-10]: Relocated hidden birthdate/tenures inputs outside {#if isJustice} (CR-01) and completed the person-id-change reset effect to re-derive tenureRows/nextKey (CR-02), closing PEDIT-07's data-preservation gap
+- [Phase 27]: 27-11: Used a plain local resetKey counter (not $state) inside the person-id-change reset $effect, writing nextKey once after the .map() completes, matching the codebase's write-only reset-effect convention — Fixes effect_update_depth_exceeded regression from 27-10 CR-02 without altering CR-01/CR-02 behavior
 
 ### Pending Todos
 
@@ -173,9 +174,10 @@ Deployment blockers (v1.4, unresolved — not in v1.5 scope):
 | Phase 27 P08 | 15min | 2 tasks | 4 files |
 | Phase 27 P09 | 7min | 2 tasks | 3 files |
 | Phase 27 P10 | 5min | 2 tasks | 1 files |
+| Phase 27 P11 | 8min | 1 tasks | 1 files |
 
 ## Session Continuity
 
-Last session: 2026-07-09T15:51:13.109Z
-Stopped at: Phase 999.2 (backlog) context gathered — apolitical-framing flag captured, implementation open
-Resume file: .planning/phases/999.2-share-utterances-via-social-media/999.2-CONTEXT.md
+Last session: 2026-07-09T18:10:52.800Z
+Stopped at: Phase 27 gap-closure plan 27-11 executed (effect_update_depth_exceeded fix) — 4th UAT retest re-run pending
+Resume file: .planning/phases/27-people-admin/27-UAT.md

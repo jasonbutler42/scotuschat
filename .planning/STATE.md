@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: Admin Screens Cleanup
-current_phase: 28
-current_phase_name: Dashboard
+current_phase: 29
+current_phase_name: historical-corpus-import
 status: executing
 stopped_at: Phase 29 UI-SPEC approved
-last_updated: "2026-07-09T22:17:55.175Z"
+last_updated: "2026-07-09T22:58:49.307Z"
 last_activity: 2026-07-09
-last_activity_desc: Phase 27 complete (5th UAT retest 7/7 passed, security threat-secure), transitioned to Phase 28
+last_activity_desc: Phase 29 execution started
 progress:
   total_phases: 8
   completed_phases: 6
-  total_plans: 36
-  completed_plans: 36
+  total_plans: 42
+  completed_plans: 37
   percent: 75
 ---
 
@@ -24,15 +24,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-09 after Phase 27 completion)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** Phase 28 — dashboard
+**Current focus:** Phase 29 — historical-corpus-import
 
 ## Current Position
 
-Phase: 28 — Dashboard
+Phase: 29 (historical-corpus-import) — EXECUTING
 Stage: Ready to plan
-Plan: Not started
+Plan: 2 of 6
 Status: Ready to execute
-Last activity: 2026-07-09 — Phase 27 complete (5th UAT retest 7/7 passed, security threat-secure), transitioned to Phase 28
+Last activity: 2026-07-09 — Phase 29 execution started
 
 Progress: [████████████████████] 36/36 plans (100%). Phase 27 is now fully verified complete: 5th UAT retest passed all 7 items (including the CR-01/CR-02 data-preservation round-trips previously blocked by the effect_update_depth_exceeded regression), 27-SECURITY.md shows threats_open: 0, and 27-VERIFICATION.md status is canonically `passed`. `completed_phases` in this file's frontmatter is correctly at 6/7 (86%).
 
@@ -121,6 +121,8 @@ Full log in PROJECT.md Key Decisions table. Key decisions entering v1.5:
 - [Phase 27-10]: Relocated hidden birthdate/tenures inputs outside {#if isJustice} (CR-01) and completed the person-id-change reset effect to re-derive tenureRows/nextKey (CR-02), closing PEDIT-07's data-preservation gap
 - [Phase 27]: 27-11: Used a plain local resetKey counter (not $state) inside the person-id-change reset $effect, writing nextKey once after the .map() completes, matching the codebase's write-only reset-effect convention — Fixes effect_update_depth_exceeded regression from 27-10 CR-02 without altering CR-01/CR-02 behavior
 - [Phase 27]: Phase closed out with a 5th UAT retest (7/7 passed) after the 27-11 fix unblocked the previously-stuck 4th retest; 27-REVIEW.md's one Critical finding (CourtTenure rows unaccounted for in merge/delete FK bookkeeping, api/services/admin_people.py) predates Phase 27 (Phase 22) and was scoped out as a backlog item, not a phase gap
+- [Phase ?]: 29-01: Migration 0017 down_revision confirmed as 0016 via live alembic heads before writing the file (no branched history)
+- [Phase ?]: 29-01: python-dateutil package legitimacy checkpoint approved by human (PyPI source repo, version, exact package name all confirmed) before install
 
 ### Roadmap Evolution
 
@@ -180,9 +182,10 @@ Deployment blockers (v1.4, unresolved — not in v1.5 scope):
 | Phase 27 P09 | 7min | 2 tasks | 3 files |
 | Phase 27 P10 | 5min | 2 tasks | 1 files |
 | Phase 27 P11 | 8min | 1 tasks | 1 files |
+| Phase 29 P01 | 15min | 3 tasks | 6 files |
 
 ## Session Continuity
 
-Last session: 2026-07-09T21:42:17.051Z
+Last session: 2026-07-09T22:58:10.548Z
 Stopped at: Phase 29 UI-SPEC approved
 Resume file: .planning/phases/29-historical-corpus-import/29-UI-SPEC.md

@@ -4,9 +4,9 @@ milestone: v1.5
 milestone_name: Admin Screens Cleanup
 current_phase: 28
 current_phase_name: Dashboard
-status: Ready to plan
-stopped_at: Phase 29 context gathered
-last_updated: "2026-07-09T21:15:52.890Z"
+status: executing
+stopped_at: Phase 29 UI-SPEC approved
+last_updated: "2026-07-09T22:17:55.175Z"
 last_activity: 2026-07-09
 last_activity_desc: Phase 27 complete (5th UAT retest 7/7 passed, security threat-secure), transitioned to Phase 28
 progress:
@@ -31,7 +31,7 @@ See: .planning/PROJECT.md (updated 2026-07-09 after Phase 27 completion)
 Phase: 28 — Dashboard
 Stage: Ready to plan
 Plan: Not started
-Status: Ready to plan
+Status: Ready to execute
 Last activity: 2026-07-09 — Phase 27 complete (5th UAT retest 7/7 passed, security threat-secure), transitioned to Phase 28
 
 Progress: [████████████████████] 36/36 plans (100%). Phase 27 is now fully verified complete: 5th UAT retest passed all 7 items (including the CR-01/CR-02 data-preservation round-trips previously blocked by the effect_update_depth_exceeded regression), 27-SECURITY.md shows threats_open: 0, and 27-VERIFICATION.md status is canonically `passed`. `completed_phases` in this file's frontmatter is correctly at 6/7 (86%).
@@ -183,6 +183,6 @@ Deployment blockers (v1.4, unresolved — not in v1.5 scope):
 
 ## Session Continuity
 
-Last session: 2026-07-09T21:15:52.878Z
-Stopped at: Phase 29 context gathered
-Resume file: .planning/phases/29-historical-corpus-import/29-CONTEXT.md
+Last session: 2026-07-09T21:42:17.051Z
+Stopped at: Phase 29 UI-SPEC approved
+Resume file: .planning/phases/29-historical-corpus-import/29-UI-SPEC.md

@@ -6,8 +6,10 @@ import type { Actions, PageServerLoad } from './$types';
  * Blank person shape returned by load() — matches the fields the shared
  * [id]/+page.svelte editor template expects (D-07). `id` is null and
  * `is_justice` is null so neither Bench nor Advocate is pre-selected on
- * first render. The component's Merge/Delete/Photo cards are guarded on
- * `data.person.id` being truthy, so they stay hidden for this always-null id.
+ * first render. This route has no `merge`/`delete` actions (Merge/Delete
+ * only apply to a person that already exists — PEDIT-11/PEDIT-12), so
+ * `load()` does not return the `people`/`can_delete`/`delete_block_count`
+ * fields the [id] route needs for those cards.
  */
 interface BlankPerson {
 	id: null;
@@ -40,11 +42,7 @@ export const load: PageServerLoad = async () => {
 		is_justice: null,
 	};
 
-	// `people`/`can_delete`/`delete_block_count` are unused while the Merge/
-	// Delete cards stay hidden (data.person.id is null), but are returned so
-	// the shared [id] editor template's `data.people` references resolve
-	// safely without needing a separate optional-chaining path for this route.
-	return { person, people: [], can_delete: false, delete_block_count: 0 };
+	return { person };
 };
 
 export const actions: Actions = {

@@ -240,6 +240,26 @@
 					{/each}
 				</div>
 			</div>
+
+			<!-- Per-argument attribution note — D-22/T-29-11: gated server-side via
+				 is_corpus_sourced (derived from oyez_transcript_id in +page.server.ts).
+				 Quiet caption styling, no badge/icon (apolitical house tone). -->
+			{#if data.is_corpus_sourced}
+				<p
+					style="
+						font-size: 13px;
+						font-weight: 400;
+						color: #94a3b8;
+						line-height: 1.4;
+						margin: 8px 0 0 0;
+					"
+				>
+					Historical transcript imported from Oyez.org via Cornell ConvoKit (CC BY-NC 4.0).
+					<a href="/attributions" style="color: #93c5fd; text-decoration: underline;">
+						View attributions &rarr;
+					</a>
+				</p>
+			{/if}
 		</div>
 	</header>
 

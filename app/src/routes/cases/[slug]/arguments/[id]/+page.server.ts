@@ -44,6 +44,9 @@ export const load: PageServerLoad = async ({ params, fetch }) => {
 		utterances: data.utterances,
 		argument: data.argument, // includes case_name, docket_number, argued_date, question_number
 		argument_id: parseInt(params.id),
-		speakers // plain array — SvelteKit serializes Map as {} (Pitfall 2); +page.svelte builds Map via $derived
+		speakers, // plain array — SvelteKit serializes Map as {} (Pitfall 2); +page.svelte builds Map via $derived
+		// D-22/T-29-11: visibility decided server-side from oyez_transcript_id — never
+		// fetch/decide in browser code (Architecture Rule 2: FASTAPI_BASE_URL server-only)
+		is_corpus_sourced: data.argument.oyez_transcript_id != null
 	};
 };

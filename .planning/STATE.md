@@ -3,17 +3,17 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: Admin Screens Cleanup
 current_phase: 27
-current_phase_name: People Admin
+current_phase_name: people-admin
 status: executing
-stopped_at: Phase 27 plans verified — ready for execution
-last_updated: "2026-07-09T03:11:05.000Z"
-last_activity: 2026-07-08
-last_activity_desc: Phase 27 planned — 6 plans across 5 waves, plan-checker verified (0 blockers)
+stopped_at: Completed 27-01-PLAN.md
+last_updated: "2026-07-09T04:24:04.743Z"
+last_activity: 2026-07-09
+last_activity_desc: Phase 27 execution started
 progress:
   total_phases: 7
   completed_phases: 5
-  total_plans: 25
-  completed_plans: 25
+  total_plans: 31
+  completed_plans: 26
   percent: 71
 ---
 
@@ -24,15 +24,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-07 after Phase 25 completion)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** Phase 27 — People Admin
+**Current focus:** Phase 27 — people-admin
 
 ## Current Position
 
-Phase: 27 — People Admin
+Phase: 27 (people-admin) — EXECUTING
 Stage: discuss ✓ → plan ✓ → **execute** (next) → verify
-Plan: 0 of 6
-Status: Plans verified — ready for execution (6 plans, 5 waves; run /gsd-execute-phase 27)
-Last activity: 2026-07-08 — Phase 27 planned (6 plans, 5 waves; research skipped, pattern-mapped, plan-checker passed)
+Plan: 2 of 6
+Status: Ready to execute
+Last activity: 2026-07-09 — Phase 27 execution started
 
 Progress: [░░░░░░░░░░] 0% of Phase 27 (discuss + plan done; execute/verify not started)
 
@@ -98,6 +98,8 @@ Full log in PROJECT.md Key Decisions table. Key decisions entering v1.5:
 - [Phase ?]: 26-06: list_jobs() selects Argument.status as a scalar column via outerjoin rather than eager-loading the Argument relationship, avoiding N+1 while deriving is_archived per row
 - [Phase 26]: Phase 26 marked complete with two UAT items accepted as non-blocking rather than fixed: Test 18's own result line stays "issue" as historical record (its retest, Test 27, passed and is the authoritative outcome — see 26-VERIFICATION.md Acknowledged Gaps); Test 26 (Unresolved-advocate visual check) is a deliberate deferral pending the SEED-001 Resolve/Speakers table rework, not a defect
 - [Phase 26]: 26-REVIEW.md's 3 new Critical findings (CR-01 rerun/local-upload, CR-02 blank metadata validation, CR-03 unique-constraint collision) were all traced via git blame to Phase 11/19/pre-existing code, unrelated to Phase 26's changes — recommended as backlog items, not phase gaps
+- [Phase 27]: 27-01: Person.birthdate added via migration 0016 chained to head 0015, no backfill; Death Date and reason-left-the-bench columns explicitly deferred (D-12/D-14)
+- [Phase 27]: 27-01: role_id/role_name removed from PersonUpdate/PersonDetail/PersonListItem (D-10); new PersonCreateRequest requires only full_name + is_justice (D-08); TenureRow gains per-row appointed_by/appointing_president_party (D-16)
 
 ### Pending Todos
 
@@ -142,9 +144,10 @@ Deployment blockers (v1.4, unresolved — not in v1.5 scope):
 | Phase 26 P04 | 12min | - tasks | - files |
 | Phase 26 P05 | 15min | 3 tasks | 4 files |
 | Phase 26 P06 | 20min | 2 tasks | 4 files |
+| Phase 27 P01 | 5min | 2 tasks | 3 files |
 
 ## Session Continuity
 
-Last session: 2026-07-09T03:11:05.000Z
-Stopped at: Phase 27 plans verified — ready for execution
-Resume file: .planning/phases/27-people-admin/27-01-PLAN.md
+Last session: 2026-07-09T04:24:04.732Z
+Stopped at: Completed 27-01-PLAN.md
+Resume file: .planning/phases/27-people-admin/27-02-PLAN.md

@@ -6,7 +6,16 @@ These tests verify the schema imports and the pure-function logic
 requiring a database connection.
 
 DB-dependent service tests live in test_admin_people.py (Task 3).
+
+Phase 27 Plan 08 (UAT Gap 3 closure) adds two DB-guarded tests at the bottom
+of this file proving create_person persists structured name-part fields when
+supplied, and leaves them None when omitted — mirroring the direct-engine +
+manual-cleanup pattern in test_admin_people_merge.py (create_person calls
+db.commit() internally, so the rollback-fixture pattern used elsewhere in
+this file's sibling test modules does not apply here).
 """
+
+import os
 
 import pytest
 
@@ -361,3 +370,105 @@ def test_person_list_item_is_justice() -> None:
 
     item = PersonListItem(id=1, full_name="X", missing=[], is_justice=True)
     assert item.is_justice is True
+
+
+# ---------------------------------------------------------------------------
+# Phase 27 Plan 08 (UAT Gap 3 closure): create_person persists name parts
+# ---------------------------------------------------------------------------
+
+
+def _db_configured() -> bool:
+    """Return True if DATABASE_URL is set and non-placeholder in the environment."""
+    url = os.environ.get("DATABASE_URL", "")
+    return bool(url) and "sk-ant" not in url and url != "postgresql+asyncpg://user:pass@host/db"
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_create_person_persists_name_parts_when_supplied() -> None:
+    """create_person with all four name-part fields persists them onto the new row.
+
+    Matches the [id] editor's save-action behavior (PersonUpdate) — a person
+    created with structured name parts must retain them, not just full_name.
+    """
+    from sqlalchemy import text
+    from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+    from sqlalchemy.orm import sessionmaker
+
+    from api.schemas.admin_people import PersonCreateRequest
+    from api.services.admin_people import create_person, get_person_detail
+
+    engine = create_async_engine(os.environ["DATABASE_URL"], echo=False)
+    async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+    person_id = None
+    try:
+        async with async_session() as db:
+            body = PersonCreateRequest(
+                full_name="Gap Closure Test Person",
+                is_justice=False,
+                first_name="Gap",
+                middle_name="Closure",
+                last_name="Person",
+                name_suffix="Jr.",
+            )
+            detail = await create_person(db, body)
+            person_id = detail["id"]
+
+            assert detail["first_name"] == "Gap"
+            assert detail["middle_name"] == "Closure"
+            assert detail["last_name"] == "Person"
+            assert detail["name_suffix"] == "Jr."
+
+        async with async_session() as db:
+            refetched = await get_person_detail(db, person_id)
+            assert refetched["first_name"] == "Gap"
+            assert refetched["middle_name"] == "Closure"
+            assert refetched["last_name"] == "Person"
+            assert refetched["name_suffix"] == "Jr."
+    finally:
+        if person_id is not None:
+            async with async_session() as db:
+                await db.execute(text(f"DELETE FROM people WHERE id = {person_id}"))
+                await db.commit()
+        await engine.dispose()
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_create_person_leaves_name_parts_none_when_omitted() -> None:
+    """create_person with only full_name + is_justice leaves name parts None.
+
+    Backward-compatible with D-08's minimum-required contract — omitting the
+    name-part fields must still succeed.
+    """
+    from sqlalchemy import text
+    from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+    from sqlalchemy.orm import sessionmaker
+
+    from api.schemas.admin_people import PersonCreateRequest
+    from api.services.admin_people import create_person
+
+    engine = create_async_engine(os.environ["DATABASE_URL"], echo=False)
+    async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+    person_id = None
+    try:
+        async with async_session() as db:
+            body = PersonCreateRequest(
+                full_name="Gap Closure Minimal Person",
+                is_justice=True,
+            )
+            detail = await create_person(db, body)
+            person_id = detail["id"]
+
+            assert detail["first_name"] is None
+            assert detail["middle_name"] is None
+            assert detail["last_name"] is None
+            assert detail["name_suffix"] is None
+    finally:
+        if person_id is not None:
+            async with async_session() as db:
+                await db.execute(text(f"DELETE FROM people WHERE id = {person_id}"))
+                await db.commit()
+        await engine.dispose()

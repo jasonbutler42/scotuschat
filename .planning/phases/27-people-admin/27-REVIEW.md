@@ -17,301 +17,194 @@ files_reviewed_list:
   - app/src/routes/admin/people/new/+page.server.ts
   - app/src/routes/admin/people/new/+page.svelte
 findings:
-  critical: 1
+  critical: 2
   warning: 4
-  info: 2
-  total: 7
-status: fixed
-fixes_applied:
-  - "CR-01: update_person now guards bio_text/photo_url/first_name/last_name/middle_name/name_suffix/birthdate with model_fields_set (not is_not_None — the frontend collapses 'cleared' and 'omitted' to the same null, so only model_fields_set preserves the distinction). Mirrors the original CR-02 fix (commit 64d9d00b) that a later, unrelated commit (2af7d3f5) accidentally reverted. Added a regression test (test_update_person_partial_patch_does_not_wipe_other_fields)."
-  - "WR-01: gap-detection query now excludes NULL argued_date rows explicitly."
-  - "WR-03: create-person route no longer renders Birth Date / Tenure Period inputs it silently discarded on submit — removed for consistency with the existing Photo/Biography exclusion (same underlying reason)."
-  - "WR-04 (partial): removed stale role_id/role_name kwargs from 3 tests in test_admin_people_schemas_service.py and 1 test in test_admin_people.py; corrected test_list_people_incomplete_filter (renamed test_list_people_missing_filter) to use the current ?missing= param instead of the removed ?incomplete= param. Did not add full new-logic coverage for _tenure_coverage/_bench_role_and_missing_tenure/create_person — flagged as a separate follow-up, not fixed here."
-  - "IN-01: PersonListItem docstring's 'Possible values' list updated to match _missing_fields' actual output."
-not_fixed:
-  - "WR-02: dead first_name/last_name fields in the [id] editor's merge-picker TypeScript type — traced to Phase 12 (commit 6b008dfe), predates Phase 27 and is unrelated to it. Flagged, not fixed."
-  - "IN-02: _replace_tenures/update_person docstring wording overstates the pre-commit rollback guarantee — low value, not fixed."
+  info: 4
+  total: 10
+status: issues_found
 ---
 
 # Phase 27: Code Review Report
 
-**Reviewed:** 2026-07-09T00:00:00Z
+**Reviewed:** 2026-07-09
 **Depth:** standard
 **Files Reviewed:** 12
 **Status:** issues_found
 
 ## Summary
 
-Phase 27 adds `people.birthdate`, per-tenure appointment fields, and a Bench/Advocate
-directory rework. The migration, schemas, and most of the new query logic
-(`_tenure_coverage`, `_bench_role_and_missing_tenure`, `list_people` filtering) are
-sound. However, tracing `update_person` against its two callers (the `save` and
-`photo` form actions on `/admin/people/[id]`) surfaces a real, provable data-loss
-bug: because the two forms each submit only a subset of `PersonUpdate`'s fields,
-and `update_person` only guards `full_name`/`is_justice`/`tenures` against
-"field not supplied," every "Save Person" click wipes `bio_text`/`photo_url`, and
-every "Upload photo"/bio save wipes `first_name`/`last_name`/`middle_name`/
-`name_suffix`/`birthdate`. This is a BLOCKER. Several smaller correctness and
-test-hygiene issues (NULL-date tenure-gap false positives, a dead TypeScript
-field pair in the merge picker, silently-discarded create-form input, and stale
-test assertions referencing already-removed schema fields) round out the WARNING
-tier.
+This supersedes the prior partial review of this file, which covered plans 27-01..27-06 and left the phase in a `fixed` state for four findings (the `update_person` partial-PATCH field-wipe bug, a NULL-`argued_date` tenure-gap false positive, discarded Birth Date/Tenure input on the create form, and stale test kwargs). Direct inspection of the current code confirms all four of those fixes are present and correct: `update_person` now branches on `body.model_fields_set` for every optional field (`api/services/admin_people.py:410-434`), the tenure-gap query explicitly excludes `NULL` `argued_date` rows (`api/services/admin_people.py:252-257`), the create-person page no longer renders Birth Date/Tenure Period inputs, and the removed-schema-field test kwargs are gone. Two findings from that pass were explicitly left unfixed (dead `first_name`/`last_name` fields in the merge picker, and a docstring overstatement) and are carried forward below.
+
+This pass is a full review of all 9 plans, including the two later gap-closure plans (27-08: `PersonCreateRequest` name-part fields; 27-09/UAT: the curated President's Party dropdown and the "Person Type" card restructuring). That restructuring introduces **two new, more severe data-loss bugs** than anything in the prior pass: the hidden `tenures`/`birthdate` inputs on `[id]/+page.svelte` are nested inside the `{#if isJustice}` block, so toggling a Justice to "Advocate" and saving silently deletes their entire tenure history and birthdate — directly contradicting the service's own documented intent to preserve tenure rows in that case (D-06/D-07). Separately, the component's own SvelteKit soft-navigation reset effect resets `isJustice`/`birthdate`/merge state on a person-id change but forgets `tenureRows`, so navigating to a different person (e.g., immediately after a merge redirect) and saving can silently overwrite that person's real tenure data with a stale array from whoever was viewed previously. Both are BLOCKER — this is exactly the kind of "pipeline runs are disposable, but a person's biographical record is not" data-permanence violation this project treats as a hard constraint.
 
 ## Critical Issues
 
-### CR-01: `update_person` silently wipes fields the current request didn't intend to touch
+### CR-01: Toggling a Justice to "Advocate" and saving silently deletes all tenure history and birthdate
 
-**File:** `api/services/admin_people.py:394-410`
+**File:** `app/src/routes/admin/people/[id]/+page.svelte:477-655`
 **Issue:**
+The hidden `<input type="hidden" name="tenures" ... />` (line 653) and the visible `Birth Date` input (lines 488-495) are both nested inside `{#if isJustice} ... {/if}` (opens line 477, closes line 655). The Bench/Advocate segmented toggle (lines 434-470) has no confirmation step — clicking "Advocate" on an existing Justice's edit page immediately flips local `isJustice` state and un-renders this entire block, including those two inputs, from the DOM.
 
-`update_person` only guards three fields against "not supplied in this PATCH":
+In `app/src/routes/admin/people/[id]/+page.server.ts`'s `save` action:
+```ts
+const birthdate = ((formData.get('birthdate') as string) ?? '').trim() || null;
+const tenuresRaw = (formData.get('tenures') as string) ?? '[]';
+```
+Because the inputs are absent from `FormData` whenever `isJustice === false` at submit time, `birthdate` resolves to `null` and `tenuresRaw` resolves to `'[]'` — unconditionally, regardless of what data previously existed. This is sent as an explicit `PATCH` body (`{ ..., birthdate: null, tenures: [] }`).
 
+`api/services/admin_people.py`'s `update_person` explicitly documents that switching `is_justice` to `False` should **not** delete tenure rows:
 ```python
-if body.full_name is not None:
-    person.full_name = body.full_name
-...
+# Phase 18: write is_justice only when body supplies a non-None value (D-08)
+# ...
+# Does NOT delete tenure rows when is_justice is False (D-06, D-07).
 if body.is_justice is not None:
     person.is_justice = body.is_justice
-...
+
 if body.tenures is not None:
+    # May raise ValueError on malformed date — caller catches and returns 422
     await _replace_tenures(db, person_id, body.tenures)
 ```
+But because `body.tenures` arrives as `[]` (not `None`), this guard does not help — `_replace_tenures(db, person_id, [])` still deletes every existing `CourtTenure` row for that person (seat, start/end dates, appointing president and party) and inserts nothing. `birthdate` is wiped the same way (it is present in `fields_set` because the frontend JSON body always includes the key, with value `null`).
 
-Every other field is written unconditionally, treating "not present in the JSON
-body" (Pydantic default `None`) identically to "operator explicitly cleared this
-field":
+Net effect: any operator who toggles an existing Justice's Person Type card to "Advocate" — even briefly, even by misclick, with zero confirmation UI — and then clicks "Save Person" permanently destroys that Justice's entire tenure history and birthdate. There is no undo.
 
-```python
-person.bio_text = body.bio_text if body.bio_text else None
-person.photo_url = body.photo_url if body.photo_url else None
+**Fix:** Move both the tenures hidden input and the Birth Date input outside the `{#if isJustice}` block so they are always part of `save-form` regardless of the toggle's current value, e.g.:
+```svelte
+<!-- Always present, independent of the Bench/Advocate toggle, so `save`
+     always receives the true current tenure/birthdate state. -->
+<input type="hidden" name="birthdate" form="save-form" value={birthdate} />
+<input type="hidden" name="tenures" form="save-form" value={JSON.stringify(tenureRows)} />
 
-person.first_name = body.first_name if body.first_name else None
-person.last_name = body.last_name if body.last_name else None
-person.middle_name = body.middle_name if body.middle_name else None
-person.name_suffix = body.name_suffix if body.name_suffix else None
-
-person.birthdate = (
-    datetime.date.fromisoformat(body.birthdate) if body.birthdate else None
-)
+{#if isJustice}
+  <!-- visible Birth Date <input> and tenure-row UI stay here, bound to the
+       same state variables the always-present hidden inputs above read from -->
+{/if}
 ```
+As defense in depth, also consider having the backend refuse to clear tenures via an implicit `is_justice=False` transition unless the caller passes an explicit "confirm tenure deletion" flag.
 
-The frontend deliberately splits person edits across two separate forms/actions
-on `app/src/routes/admin/people/[id]/+page.server.ts`:
+### CR-02: Stale tenure rows from a previously-viewed person can overwrite a different person's tenures (e.g., right after a merge)
 
-- `save` (Identity + Person Type card) sends `full_name, tenures, first_name,
-  last_name, middle_name, name_suffix, is_justice, birthdate` — **omitting**
-  `bio_text` and `photo_url` (per the "Pitfall 7 extended" comment at lines
-  127-130, 178-183).
-- `photo` (Bio & Photo card) sends only `{ bio_text }` in its best-effort PATCH
-  (lines 219-228) — **omitting** `full_name, first_name, last_name,
-  middle_name, name_suffix, is_justice, birthdate, tenures`.
-
-Because the two omitted fields on each request default to `None` in the
-`PersonUpdate` Pydantic model, and `update_person` has no `is not None` guard
-for them, the result is:
-
-- Clicking **Save Person** wipes `bio_text` and `photo_url` to `NULL`, even if
-  the operator only changed the person's name.
-- Clicking **Upload photo** or saving the Biography textarea wipes
-  `first_name`, `last_name`, `middle_name`, `name_suffix`, and the new
-  Phase 27 `birthdate` field to `NULL`, even if the operator only changed the
-  photo or bio.
-
-Round-tripping between the two cards (a completely normal editing session —
-e.g. set the name, save, then upload a photo) causes progressive, silent data
-loss across every field not carried by the form that was just submitted. This
-is a genuine BLOCKER: it destroys operator-entered data (including the newly
-added Birth Date and structured name fields this phase introduces) with no
-error, warning, or confirmation. It is not caught by any existing test —
-`test_admin_people_schemas_service.py` only exercises pure schema construction
-and `_missing_fields`, never `update_person`'s partial-update semantics.
-
-**Fix:** Apply the same "only write when explicitly supplied" guard already
-used for `full_name`/`is_justice`/`tenures` to every other field, and keep the
-empty-string→`NULL` normalization *inside* that guard so an explicit `""` can
-still clear a field:
-
-```python
-if body.bio_text is not None:
-    person.bio_text = body.bio_text or None
-if body.photo_url is not None:
-    person.photo_url = body.photo_url or None
-
-if body.first_name is not None:
-    person.first_name = body.first_name or None
-if body.last_name is not None:
-    person.last_name = body.last_name or None
-if body.middle_name is not None:
-    person.middle_name = body.middle_name or None
-if body.name_suffix is not None:
-    person.name_suffix = body.name_suffix or None
-
-if body.birthdate is not None:
-    person.birthdate = (
-        datetime.date.fromisoformat(body.birthdate) if body.birthdate else None
-    )
+**File:** `app/src/routes/admin/people/[id]/+page.svelte:56-73, 125-133`
+**Issue:**
+`tenureRows` (and the `nextKey` counter) are initialized once from `data.person.tenures` at component creation:
+```ts
+let tenureRows = $state<TenureRow[]>(
+	(data.person.tenures ?? []).map((t) => ({ _key: nextKey++, ... }))
+);
 ```
+The component's own comment correctly identifies that SvelteKit reuses this component instance across soft navigations to a *different* `person.id`, and adds a reset effect for exactly that reason:
+```ts
+// Reset merge/type state when navigating to a different person (SvelteKit soft
+// navigation reuses the component — $state variables must be reset manually
+// when person.id changes).
+$effect(() => {
+	data.person.id;
+	mergeTargetId = '';
+	mergePreview = null;
+	mergeError = null;
+	mergeLoading = false;
+	isJustice = data.person.is_justice ?? false;
+	birthdate = data.person.birthdate ?? '';
+});
+```
+`tenureRows`/`nextKey` are conspicuously missing from this list. The `merge` action (`+page.server.ts:274-305`) redirects on success to `/admin/people/{target_id}` — a different person id on the same route, exactly the soft-navigation case the comment warns about. After a merge, `data.person` updates to the target person (name, identity, birthdate all correctly reset by the effect above), but `tenureRows` still holds the **source** person's stale tenure array.
 
-This is safe with the current frontend: the `photo` action's best-effort PATCH
-always sends `bio_text` as an explicit string (`""` when cleared, never
-omitted), and the `save` action always sends `first_name`/`last_name`/
-`middle_name`/`name_suffix`/`birthdate` as explicit strings or `null`
-(never omits the keys) — so no currently-relied-upon "clear the field" behavior
-is lost by adding the guard.
+If the operator then clicks "Save Person" on this post-merge page (a very plausible next step — e.g., to also fix a typo in the target's name), the stale `tenures` hidden-input value is submitted, and `update_person` will `_replace_tenures` the target's real, correct tenure rows with the wrong, stale ones from the just-merged-away source person.
+
+**Fix:** Include `tenureRows`/`nextKey` in the same reset effect:
+```ts
+$effect(() => {
+	data.person.id;
+	mergeTargetId = '';
+	mergePreview = null;
+	mergeError = null;
+	mergeLoading = false;
+	isJustice = data.person.is_justice ?? false;
+	birthdate = data.person.birthdate ?? '';
+	nextKey = 1;
+	tenureRows = (data.person.tenures ?? []).map((t) => ({
+		_key: nextKey++,
+		seat: t.seat ?? '',
+		start_date: t.start_date ?? '',
+		end_date: t.end_date ?? '',
+		appointed_by: t.appointed_by ?? '',
+		appointing_president_party: t.appointing_president_party ?? '',
+	}));
+});
+```
 
 ## Warnings
 
-### WR-01: Tenure-gap detection produces false positives when `argued_date` is NULL
+### WR-01: Merge-target picker never renders "Last, First" — dead TS fields, carried forward from the prior review (unfixed)
 
-**File:** `api/services/admin_people.py:234-257`
-**Issue:** `covering_tenure` compares `CourtTenure.start_date <= Argument.argued_date`
-and `CourtTenure.end_date >= Argument.argued_date` directly against
-`Argument.argued_date`, which is nullable (`api/models/models.py:171`, "job-driven
-ingest leaves NULL instead of a synthetic date"). In SQL, any comparison against
-`NULL` evaluates to `NULL` (not `TRUE`), so `EXISTS(...)` can never match for a
-row whose `argued_date IS NULL`, regardless of how many tenures actually cover
-the person. `not_(covering_tenure)` is therefore always `TRUE` for BENCH
-participants on unresolved/dateless arguments, incorrectly marking those people
-as `has_tenure_gap = True` and pulling them into the `tenure_gaps=1` filter even
-when every one of their dated arguments is fully covered. Contrast this with
-`_bench_role_and_missing_tenure` (same file, lines 719-739), which explicitly
-documents and handles the `argued_date is None` case as "coverage cannot be
-determined" rather than silently defaulting to "gap."
-**Fix:** Exclude NULL-date arguments from the gap-detection query explicitly,
-mirroring the documented intent:
-
-```python
-.where(
-    ArgumentParticipant.side == SideEnum.BENCH,
-    ArgumentParticipant.person_id.isnot(None),
-    Argument.argued_date.isnot(None),
-    not_(covering_tenure),
-)
+**File:** `app/src/routes/admin/people/[id]/+page.server.ts:39-44`, `app/src/routes/admin/people/[id]/+page.svelte:702-707`
+**Issue:** The local `PersonListItem` TypeScript interface declares `last_name`/`first_name`, and the merge-target `<select>` reads them to format options as `"Lastname, Firstname"`:
+```svelte
+{p.last_name ? `${p.last_name}, ${p.first_name ?? ''}` : p.full_name}
 ```
+The server's `PersonListItem` Pydantic response model (`api/schemas/admin_people.py:47-71`) has no `first_name`/`last_name` fields, so `GET /api/admin/people` never returns them — `p.last_name` is always `undefined`, and the ternary always falls through to `p.full_name`. The prior review flagged this and it was explicitly left unfixed ("predates Phase 27, unrelated to it"); it remains present in the final, complete Phase 27 code and is worth a second look now that the phase is fully closing out, since the merge picker is squarely a Phase 27/Phase 12 admin-people surface.
+**Fix:** Either add `first_name`/`last_name` to the server `PersonListItem` schema and `list_people`'s output, or drop the dead `last_name`/`first_name` branch and the two unused interface fields from the client.
 
-### WR-02: Merge-picker "Lastname, Firstname" display never renders — dead field pair
+### WR-02: Photo-by-URL fetch has no host allowlist, unlike the sibling PDF-URL validator
 
-**File:** `app/src/routes/admin/people/[id]/+page.server.ts:39-44`, used at
-`app/src/routes/admin/people/[id]/+page.svelte:662, 682, 705`
-**Issue:** The local `PersonListItem` TypeScript interface declares
-`last_name: string | null` and `first_name: string | null`, and the `.svelte`
-template reads `p.last_name` / `p.first_name` to format merge-target options as
-`"Lastname, Firstname"`. But the actual response from
-`GET /api/admin/people` is the server-side `PersonListItem` schema
-(`api/schemas/admin_people.py:42-65`), which has no `first_name`/`last_name`
-fields at all (Phase 27 dropped person-level Role but never added these). At
-runtime `p.last_name` is `undefined`, which is falsy, so the ternary always
-falls through to `p.full_name` — the intended "Lastname, Firstname" sort/display
-aid silently never activates. This is a real defect (a documented feature that
-does not work), not merely a style nit; the TS types are actively lying about
-the shape of the data crossing the API boundary.
-**Fix:** Either add `first_name`/`last_name` to the server `PersonListItem`
-schema and `list_people` service output, or drop the dead formatting branch and
-the two unused interface fields from the client.
+**File:** `api/routers/admin.py:741-752`
+**Issue:** `_validate_pdf_url` (lines 171-191) restricts ingest URLs to `https://…supremecourt.gov` specifically to mitigate SSRF (T-07-01). The photo-by-URL path in `upload_person_photo` only checks the scheme:
+```python
+_parsed_url = _urlparse(photo_url)
+if _parsed_url.scheme != 'https':
+    raise HTTPException(status_code=422, detail="Photo URL must use HTTPS.")
+...
+r = await client.get(photo_url, follow_redirects=False)
+```
+Any admin-authenticated request can direct the server to issue an HTTPS GET to an arbitrary host (internal services, cloud metadata endpoints reachable over HTTPS, etc.) before the Pillow validation ever runs — the request itself, and any resulting error detail, already completes regardless of whether the response turns out to be an image.
+**Fix:** Apply the same allowlist discipline used for `_validate_pdf_url`, or at minimum reject requests that resolve to private/link-local/loopback address ranges before issuing the `httpx` GET.
 
-### WR-03: Create-person form silently discards Birth Date and Tenure rows on submit
+### WR-03: Overly broad exception handling in image validation masks unrelated failures
 
-**File:** `app/src/routes/admin/people/new/+page.server.ts:56-59` (create action
-only reads `full_name` + `is_justice`); `app/src/routes/admin/people/new/+page.svelte`
-(Birth Date input at ~line 307 and the full Tenure Period sub-card UI at
-~lines 339-448 let the operator fill in dates/appointment data before the first save)
-**Issue:** The create form fully renders Birth Date and repeatable Tenure Period
-sub-cards once "Bench" is selected, and both are wired into hidden fields
-targeting `form="create-form"`. But the `create` action deliberately reads only
-`full_name` and `is_justice` from the submitted `FormData` — `birthdate` and
-`tenures` are never sent to the backend (this is intentional per the code
-comments referencing D-08). The result: an operator who fills in a Justice's
-birth date and one or more tenure periods before clicking "Save Person" sees no
-indication that this data is about to be discarded — clicking Save just redirects
-to the new person's editor with those fields blank again. There is no
-confirmation, warning banner, or disabling of those inputs to signal "this
-won't be saved yet."
-**Fix:** Either disable/hide the Birth Date and Tenure Period inputs on the
-create form until the person exists (consistent with how Photo/Biography is
-already hidden on this route for the same reason), or add an inline note near
-those inputs stating they will be discarded and must be re-entered after
-creation.
+**File:** `api/routers/admin.py:728-736, 754-759`
+**Issue:** Both image-validation blocks use `except (UnidentifiedImageError, Exception):`. Since `Exception` is already a superset of `UnidentifiedImageError`, the more specific exception is redundant, and the broad catch-all also swallows unrelated bugs (a stray `TypeError`, an `OSError` mid-read, etc.), surfacing them to the operator as the generic "not a valid image" message and discarding the real cause.
+**Fix:** Narrow to the exceptions Pillow actually documents for `Image.open`/`.verify()` (`UnidentifiedImageError`, `OSError`), and log the original exception server-side before returning the generic 422.
 
-### WR-04: Stale test assertions reference removed schema fields; no coverage for Phase 27 logic
+### WR-04: Gap-closure DB tests are effectively unreachable in CI, leaving Plan 27-08's fix unverified by automation
 
-**File:** `api/tests/test_admin_people_schemas_service.py:183-198, 252-298`
-**Issue:** `test_person_update_with_all_fields`, `test_person_list_item_shape`,
-`test_person_detail_shape`, and `test_participant_item_shape` construct
-`PersonUpdate`/`PersonListItem`/`PersonDetail` with `role_id=...`/`role_name=...`
-kwargs. Those fields were removed from all three schemas by this phase (D-10);
-Pydantic v2's default `extra="ignore"` behavior means the kwargs are silently
-dropped rather than raising, so the tests still pass but no longer verify
-anything about the schema's actual shape — they give false confidence that
-`role_id`/`role_name` remain meaningful. Separately, this file (the designated
-home for schema/service pure-function tests per its own module docstring) adds
-no coverage at all for this phase's new logic: `PersonUpdate.birthdate`
-round-tripping, `get_person_detail`'s birthdate serialization,
-`_tenure_coverage`, `_bench_role_and_missing_tenure`, `list_people`'s
-`is_justice`/`missing`/`tenure_gaps` filtering, or `create_person`. The
-`update_person` partial-update bug described in CR-01 is exactly the kind of
-regression a service-level unit test here would have caught.
-**Fix:** Remove the stale `role_id`/`role_name` kwargs from the affected tests
-(or replace with an explicit assertion that they are *not* accepted, if that's
-the intended regression guard), and add unit tests for `_tenure_coverage`,
-`_bench_role_and_missing_tenure`, and — critically — `update_person`'s
-per-field "omitted vs. explicitly cleared" semantics.
+**File:** `api/tests/test_admin_people_schemas_service.py:380-383`
+**Issue:** The skip guard for the two new `create_person` name-part tests is:
+```python
+def _db_configured() -> bool:
+    url = os.environ.get("DATABASE_URL", "")
+    return bool(url) and "sk-ant" not in url and url != "postgresql+asyncpg://user:pass@host/db"
+```
+The `"sk-ant" not in url` check (an Anthropic API-key prefix substring) has no relationship to a Postgres/asyncpg connection string and reads as a copy/paste artifact. More importantly, unless the test/CI environment explicitly sets a real `DATABASE_URL`, both `test_create_person_persists_name_parts_when_supplied` and `test_create_person_leaves_name_parts_none_when_omitted` — the tests specifically added to close UAT Gap 3 — are skipped, so the behavior they exist to verify has no default automated coverage.
+**Fix:** Remove the unrelated `"sk-ant"` check; confirm the CI configuration actually sets `DATABASE_URL` so these two tests run, or move the pure "name parts persist/omit" assertions into a lighter test that doesn't require a live database.
 
 ## Info
 
-### IN-01: `PersonListItem` docstring's "Possible values" list is stale
+### IN-01: Orphaned Role schema/service/route left in place across three files
 
-**File:** `api/schemas/admin_people.py:44-53`
-**Issue:** The class docstring still says `missing`'s "Possible values:
-"role", "bio", "photo" (see D-04, D-06)" — leftover from before this phase.
-The actual vocabulary produced by `_missing_fields` (and required to match the
-`missing` query-param filter per its own T-27-03 comment) is `"first name"`,
-`"last name"`, `"photo"`, `"bio"`, `"birthdate"`, `"no tenures"`. `"role"` is no
-longer ever produced.
-**Fix:** Update the docstring's "Possible values" line to match
-`_missing_fields`'s actual output.
+**File:** `api/schemas/admin_people.py:164-182`, `api/services/admin_people.py:499-519`, `api/routers/admin.py:1018-1033`
+**Issue:** `RoleCreate`, `RoleResponse`, `create_role`, and `POST /api/admin/roles` are each marked `TODO(D-10): orphaned by Phase 27 — person-level roles removed; safe to delete once confirmed.` The plan that removed the only caller (the `createRole` form action) has landed, so this is now confirmed-dead code.
+**Fix:** Delete `RoleCreate`/`RoleResponse` from the schema, `create_role` from the service, and the `POST /roles` route from the router in a follow-up cleanup pass.
 
-### IN-02: `_replace_tenures`/`update_person` docstrings overstate the "no write happens before validation" guarantee
+### IN-02: `list_participants_for_job` still joins the now-superseded person-level Role
+
+**File:** `api/services/admin_people.py:716-730`
+**Issue:** This function still does `.outerjoin(Role, Person.role_id == Role.id)` and returns `role_name` on `ParticipantItem`. Per Phase 27 (D-10), person-level Role is superseded — `PersonCreateRequest`/`PersonUpdate` no longer expose `role_id` for writing, so for any person created or edited after Phase 27, `Person.role_id` can never be populated and `role_name` will always resolve to `None` for such people. Harmless today, but a future reader could mistake this for a still-live write path.
+**Fix:** Add a short comment noting this is legacy-data-only, or remove the join once confirmed no legacy `role_id` data remains meaningful.
+
+### IN-03: No schema-level (non-DB) unit test for `birthdate` or `PersonCreateRequest`'s name-part fields
+
+**File:** `api/tests/test_admin_people_schemas_service.py`
+**Issue:** The file thoroughly unit-tests `_missing_fields`, `_derive_full_name`, and several schema shapes, but there is no pure test asserting `PersonUpdate.birthdate` defaults to `None`/accepts an ISO string, or that `PersonCreateRequest` accepts/omits the four Phase 27 Plan 08 name-part fields at the schema layer — the only coverage for the latter is the two DB-guarded tests flagged in WR-04, which are typically skipped.
+**Fix:** Add lightweight schema-only tests, e.g. `PersonUpdate(birthdate="1955-01-27").birthdate == "1955-01-27"` and `PersonCreateRequest(full_name="X", is_justice=True).first_name is None`.
+
+### IN-04: `_replace_tenures`/`update_person` docstrings overstate the "no write happens before validation" guarantee (carried forward, unfixed)
 
 **File:** `api/services/admin_people.py:131-134, 429-431`
-**Issue:** Both docstrings claim a malformed tenure date "raises ValueError...
-before any DB write completes" / "before any DB write completes (Pitfall 6)."
-In practice, by the time `_replace_tenures` is invoked (near the end of
-`update_person`), every other field (`bio_text`, `photo_url`, `first_name`,
-etc.) has already been mutated on the ORM-tracked `person` object, and
-`_replace_tenures` itself has already issued the `DELETE FROM court_tenures`
-statement before it starts parsing/inserting the new rows. "No DB write
-completes" is only true in the sense that `db.commit()` hasn't been called —
-whether the already-issued `DELETE` and pending `UPDATE`s are actually rolled
-back depends entirely on the (unreviewed) `get_db` session dependency
-performing a rollback on exception exit, not on anything in this function.
-**Fix:** Either tighten the docstring wording to "no commit occurs" rather than
-"no DB write completes," or move `_replace_tenures` before the other field
-mutations so at minimum the ordering matches the documented intent within this
-file.
+**Issue:** Both docstrings claim a malformed tenure date "raises ValueError... before any DB write completes." In practice, by the time `_replace_tenures` runs, every other field has already been mutated on the ORM-tracked `person` object, and `_replace_tenures` itself has already issued the `DELETE FROM court_tenures` statement before parsing/inserting new rows. Whether that `DELETE` is actually rolled back depends entirely on the `get_db` session dependency's exception-exit behavior, not on anything in this function.
+**Fix:** Tighten the wording to "no commit occurs," or reorder `_replace_tenures` ahead of the other field mutations so the ordering matches the documented intent.
 
 ---
 
-## Fixes Applied (post-review, orchestrator pass)
-
-CR-01, WR-01, WR-03, IN-01 fixed; WR-04 partially fixed (stale kwargs removed,
-one query-param staleness in `test_admin_people.py` found and fixed along the
-way, new-logic coverage not added). WR-02 and IN-02 left as documented,
-unfixed findings — see `not_fixed` in frontmatter for why.
-
-All fixes verified via `py_compile`, `npm run check`, `npm run build`, and a
-full pytest run diffed against the pre-phase-27 baseline (57 failed / 34
-errors, confirmed via a disposable worktree at commit `ebb14eaa`) — no new
-failures beyond that baseline, except the two DB-gated tests this pass
-touched/added (`test_list_people_missing_filter`,
-`test_update_person_partial_patch_does_not_wipe_other_fields`), which hit the
-same pre-existing, unrelated bug the baseline already contains: FastAPI's
-`AsyncSessionLocal` session factory is not initialized when tests from
-multiple pytest `testpaths` directories run together in one session
-(`api/core/database.py:62`, "lifespan may not have completed startup").
-Both tests were verified by static reading against the actual router/schema
-code, not by a passing run — that infra bug is outside phase 27's scope and
-is a separate, pre-existing issue worth its own investigation.
-
-_Reviewed: 2026-07-09T00:00:00Z_
+_Reviewed: 2026-07-09_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_

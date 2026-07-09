@@ -115,6 +115,8 @@ class Person(Base):
     # Phase 22 — migration 0013: appointment columns moved to court_tenures
     # Phase 18 — migration 0010
     is_justice = Column(Boolean, nullable=False, server_default=false())
+    # Phase 27 — migration 0016
+    birthdate = Column(Date, nullable=True)
 
 
 # ---------------------------------------------------------------------------

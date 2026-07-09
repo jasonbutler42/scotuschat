@@ -130,7 +130,7 @@
 		mergeLoading = false;
 		isJustice = data.person.is_justice ?? false;
 		birthdate = data.person.birthdate ?? '';
-		nextKey = 1;
+		let resetKey = 1;
 		tenureRows = (data.person.tenures ?? []).map(
 			(t: {
 				seat: string | null;
@@ -139,7 +139,7 @@
 				appointed_by: string | null;
 				appointing_president_party: string | null;
 			}) => ({
-				_key: nextKey++,
+				_key: resetKey++,
 				seat: t.seat ?? '',
 				start_date: t.start_date ?? '',
 				end_date: t.end_date ?? '',
@@ -147,6 +147,7 @@
 				appointing_president_party: t.appointing_president_party ?? '',
 			})
 		);
+		nextKey = resetKey;
 	});
 
 	async function fetchMergePreview(targetId: string) {

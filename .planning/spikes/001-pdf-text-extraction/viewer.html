@@ -1,0 +1,2453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Spike 001 — PDF Text Extraction</title>
+<style>
+body { font-family: system-ui, sans-serif; margin: 0; background: #0f1117; color: #e2e8f0; }
+h1 { padding: 1rem 1.5rem; margin: 0; background: #1e293b; border-bottom: 2px solid #334155; font-size: 1.1rem; color: #94a3b8; }
+.tabs { display: flex; gap: 0.5rem; padding: 0.75rem 1.5rem; background: #1e293b; }
+.tab { padding: 0.4rem 1rem; border: 1px solid #334155; border-radius: 4px; background: #0f1117; color: #94a3b8; cursor: pointer; font-size: 0.85rem; }
+.tab.active { background: #2563eb; color: #fff; border-color: #2563eb; }
+.panel { padding: 1.5rem; }
+.summary { background: #1e293b; border-radius: 6px; padding: 1rem; margin-bottom: 1.5rem; font-size: 0.85rem; line-height: 1.8; }
+.page { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2rem; border-bottom: 1px solid #1e293b; padding-bottom: 2rem; }
+.page h3 { grid-column: 1/-1; margin: 0 0 0.5rem; color: #64748b; font-size: 0.9rem; }
+h4 { margin: 0 0 0.5rem; font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
+pre { background: #1e293b; padding: 0.75rem; border-radius: 4px; font-size: 0.72rem; white-space: pre-wrap; overflow-y: auto; max-height: 400px; }
+.line { padding: 0.15rem 0; font-size: 0.78rem; display: flex; gap: 0.5rem; align-items: baseline; }
+.tag { font-size: 0.68rem; padding: 0.1rem 0.4rem; border-radius: 3px; min-width: 90px; text-align: center; }
+.speaker .tag { background: #1d4ed8; color: #bfdbfe; }
+.stage .tag { background: #92400e; color: #fde68a; }
+.header .tag { background: #374151; color: #9ca3af; }
+.pagenum .tag { background: #374151; color: #6b7280; }
+.cont .tag { background: #14532d; color: #86efac; }
+.blank .tag { background: #1e293b; color: #475569; }
+</style>
+</head>
+<body>
+<h1>Spike 001 — PDF Text Extraction (pdfplumber) | 4 SCOTUS Transcripts</h1>
+<div class="tabs"><button class="tab active" onclick="showTab(0)">Obergefell v. Hodges</button>
+<button class="tab " onclick="showTab(1)">Masterpiece Cakeshop</button>
+<button class="tab " onclick="showTab(2)">Dobbs v. Jackson</button>
+<button class="tab " onclick="showTab(3)">United States v. Rahimi</button>
+</div>
+<div class="panel" id="panel-0" style="display:block">
+<h2>Obergefell v. Hodges (Q1, 2015)</h2>
+<div class="summary">
+  <strong>Pages:</strong> 102 &nbsp;|&nbsp;
+  <strong>Speaker labels:</strong> APPEARANCES, CHIEF JUSTICE ROBERTS, ET AL., GENERAL VERRILLI, JUSTICE ALITO, JUSTICE BREYER, JUSTICE GINSBURG, JUSTICE KAGAN, JUSTICE KENNEDY, JUSTICE SCALIA, JUSTICE SOTOMAYOR, MR. BURSCH, MS. BONAUTO<br>
+  <strong>Line type counts:</strong> <code>{
+  &quot;continuation&quot;: 2687,
+  &quot;header_footer&quot;: 215,
+  &quot;speaker_turn&quot;: 371,
+  &quot;stage_direction&quot;: 8
+}</code>
+</div>
+<div class="page">
+<h3>Page 1</h3>
+<div class="raw-col"><h4>Raw pdfplumber output</h4><pre>Official
+1
+1 IN THE SUPREME COURT OF THE UNITED STATES
+2 ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ x
+3 JAMES OBERGEFELL, ET AL., :
+4 Petitioners : No. 14­556
+5 v. :
+6 RICHARD HODGES, DIRECTOR, :
+7 OHIO DEPARTMENT OF HEALTH, :
+8 ET AL. :
+9 ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ x
+10 and
+11 ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ x
+12 VALERIA TANCO, ET AL., :
+13 Petitioners : No. 14­562
+14 v. :
+15 BILL HASLAM, GOVERNOR OF :
+16 TENNESSEE, ET AL. :
+17 ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ x
+18 and
+19 ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ x
+20 APRIL DEBOER, ET AL., :
+21 Petitioners : No. 14­571
+22 v. :
+23 RICK SNYDER, GOVERNOR OF :
+24 MICHIGAN, ET AL. :
+25 ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ x
+Alderson Reporting Company</pre></div>
+<div class="classified-col"><h4>Classified lines</h4>
+<div class="line cont"><span class="tag">continuation</span> Official</div>
+<div class="line header"><span class="tag">header_footer</span> 1</div>
+<div class="line cont"><span class="tag">continuation</span> IN THE SUPREME COURT OF THE UNITED STATES</div>
+<div class="line cont"><span class="tag">continuation</span> ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ x</div>
+<div class="line cont"><span class="tag">continuation</span> JAMES OBERGEFELL, ET AL., :</div>
+<div class="line cont"><span class="tag">continuation</span> Petitioners : No. 14­556</div>
+<div class="line cont"><span class="tag">continuation</span> v. :</div>
+<div class="line cont"><span class="tag">continuation</span> RICHARD HODGES, DIRECTOR, :</div>
+<div class="line cont"><span class="tag">continuation</span> OHIO DEPARTMENT OF HEALTH, :</div>
+<div class="line speaker"><span class="tag">ET AL.</span> </div>
+<div class="line cont"><span class="tag">continuation</span> ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ x</div>
+<div class="line cont"><span class="tag">continuation</span> and</div>
+<div class="line cont"><span class="tag">continuation</span> ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ x</div>
+<div class="line cont"><span class="tag">continuation</span> VALERIA TANCO, ET AL., :</div>
+<div class="line cont"><span class="tag">continuation</span> Petitioners : No. 14­562</div>
+<div class="line cont"><span class="tag">continuation</span> v. :</div>
+<div class="line cont"><span class="tag">continuation</span> BILL HASLAM, GOVERNOR OF :</div>
+<div class="line cont"><span class="tag">continuation</span> TENNESSEE, ET AL. :</div>
+<div class="line cont"><span class="tag">continuation</span> ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ x</div>
+<div class="line cont"><span class="tag">continuation</span> and</div>
+<div class="line cont"><span class="tag">continuation</span> ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ x</div>
+<div class="line cont"><span class="tag">continuation</span> APRIL DEBOER, ET AL., :</div>
+<div class="line cont"><span class="tag">continuation</span> Petitioners : No. 14­571</div>
+<div class="line cont"><span class="tag">continuation</span> v. :</div>
+<div class="line cont"><span class="tag">continuation</span> RICK SNYDER, GOVERNOR OF :</div>
+<div class="line cont"><span class="tag">continuation</span> MICHIGAN, ET AL. :</div>
+<div class="line cont"><span class="tag">continuation</span> ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ x</div>
+<div class="line header"><span class="tag">header_footer</span> Alderson Reporting Company</div>
+</div></div>
+<div class="page">
+<h3>Page 2</h3>
+<div class="raw-col"><h4>Raw pdfplumber output</h4><pre>Official
+2
+1 and
+2 ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ x
+3 GREGORY BOURKE, ET AL., :
+4 Petitioners : No. 14­574
+5 v. :
+6 STEVE BESHEAR, GOVERNOR :
+7 OF KENTUCKY, ET AL. :
+8 ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ x
+9 Washington, D.C.
+10 Tuesday, April 28, 2015
+11
+12 The above­entitled matter came on for oral
+13 argument before the Supreme Court of the United States
+14 at 10:02 a.m.
+15 APPEARANCES:
+16 MARY L. BONAUTO, ESQ., Boston, Mass.; on behalf of
+17 Petitioners on Question 1.
+18 GEN. DONALD B. VERRILLI, JR., ESQ., Solicitor General,
+19 Department of Justice, Washington, D.C.; for United
+20 States, as amicus curiae, supporting Petitioners on
+21 Question 1.
+22 JOHN J. BURSCH, ESQ., Special Assistant Attorney
+23 General, Lansing, Mich.; on behalf of Respondents on
+24 Question 1.
+25
+Alderson Reporting Company</pre></div>
+<div class="classified-col"><h4>Classified lines</h4>
+<div class="line cont"><span class="tag">continuation</span> Official</div>
+<div class="line header"><span class="tag">header_footer</span> 2</div>
+<div class="line cont"><span class="tag">continuation</span> and</div>
+<div class="line cont"><span class="tag">continuation</span> ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ x</div>
+<div class="line cont"><span class="tag">continuation</span> GREGORY BOURKE, ET AL., :</div>
+<div class="line cont"><span class="tag">continuation</span> Petitioners : No. 14­574</div>
+<div class="line cont"><span class="tag">continuation</span> v. :</div>
+<div class="line cont"><span class="tag">continuation</span> STEVE BESHEAR, GOVERNOR :</div>
+<div class="line cont"><span class="tag">continuation</span> OF KENTUCKY, ET AL. :</div>
+<div class="line cont"><span class="tag">continuation</span> ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ ­ x</div>
+<div class="line cont"><span class="tag">continuation</span> Washington, D.C.</div>
+<div class="line cont"><span class="tag">continuation</span> Tuesday, April 28, 2015</div>
+<div class="line header"><span class="tag">header_footer</span> 11</div>
+<div class="line cont"><span class="tag">continuation</span> The above­entitled matter came on for oral</div>
+<div class="line cont"><span class="tag">continuation</span> argument before the Supreme Court of the United States</div>
+<div class="line cont"><span class="tag">continuation</span> at 10:02 a.m.</div>
+<div class="line speaker"><span class="tag">APPEARANCES</span> </div>
+<div class="line cont"><span class="tag">continuation</span> MARY L. BONAUTO, ESQ., Boston, Mass.; on behalf of</div>
+<div class="line cont"><span class="tag">continuation</span> Petitioners on Question 1.</div>
+<div class="line cont"><span class="tag">continuation</span> GEN. DONALD B. VERRILLI, JR., ESQ., Solicitor General,</div>
+<div class="line cont"><span class="tag">continuation</span> Department of Justice, Washington, D.C.; for United</div>
+<div class="line cont"><span class="tag">continuation</span> States, as amicus curiae, supporting Petitioners on</div>
+<div class="line cont"><span class="tag">continuation</span> Question 1.</div>
+<div class="line cont"><span class="tag">continuation</span> JOHN J. BURSCH, ESQ., Special Assistant Attorney</div>
+<div class="line cont"><span class="tag">continuation</span> General, Lansing, Mich.; on behalf of Respondents on</div>
+<div class="line cont"><span class="tag">continuation</span> Question 1.</div>
+<div class="line header"><span class="tag">header_footer</span> 25</div>
+<div class="line header"><span class="tag">header_footer</span> Alderson Reporting Company</div>
+</div></div>
+<div class="page">
+<h3>Page 3</h3>
+<div class="raw-col"><h4>Raw pdfplumber output</h4><pre>Official
+3
+1 C O N T E N T S
+2 ORAL ARGUMENT OF PAGE
+3 MARY L. BONAUTO, ESQ.
+4 On behalf of the Petitioners on Question 1 4
+5 ORAL ARGUMENT OF
+6 GEN. DONALD B. VERRILLI, JR., ESQ.
+7 For the United States, as amicus curiae,
+8 supporting Petitioners on Question 1 28
+9 ORAL ARGUMENT OF
+10 JOHN J. BURSCH, ESQ.
+11 On behalf of the Respondents on Question 1 41
+12 REBUTTAL ARGUMENT OF
+13 MARY L. BONAUTO, ESQ.
+14 On behalf of the Petitioners on Question 1 85
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+Alderson Reporting Company</pre></div>
+<div class="classified-col"><h4>Classified lines</h4>
+<div class="line cont"><span class="tag">continuation</span> Official</div>
+<div class="line header"><span class="tag">header_footer</span> 3</div>
+<div class="line cont"><span class="tag">continuation</span> C O N T E N T S</div>
+<div class="line cont"><span class="tag">continuation</span> ORAL ARGUMENT OF PAGE</div>
+<div class="line cont"><span class="tag">continuation</span> MARY L. BONAUTO, ESQ.</div>
+<div class="line cont"><span class="tag">continuation</span> On behalf of the Petitioners on Question 1 4</div>
+<div class="line cont"><span class="tag">continuation</span> ORAL ARGUMENT OF</div>
+<div class="line cont"><span class="tag">continuation</span> GEN. DONALD B. VERRILLI, JR., ESQ.</div>
+<div class="line cont"><span class="tag">continuation</span> For the United States, as amicus curiae,</div>
+<div class="line cont"><span class="tag">continuation</span> supporting Petitioners on Question 1 28</div>
+<div class="line cont"><span class="tag">continuation</span> ORAL ARGUMENT OF</div>
+<div class="line cont"><span class="tag">continuation</span> JOHN J. BURSCH, ESQ.</div>
+<div class="line cont"><span class="tag">continuation</span> On behalf of the Respondents on Question 1 41</div>
+<div class="line cont"><span class="tag">continuation</span> REBUTTAL ARGUMENT OF</div>
+<div class="line cont"><span class="tag">continuation</span> MARY L. BONAUTO, ESQ.</div>
+<div class="line cont"><span class="tag">continuation</span> On behalf of the Petitioners on Question 1 85</div>
+<div class="line header"><span class="tag">header_footer</span> 15</div>
+<div class="line header"><span class="tag">header_footer</span> 16</div>
+<div class="line header"><span class="tag">header_footer</span> 17</div>
+<div class="line header"><span class="tag">header_footer</span> 18</div>
+<div class="line header"><span class="tag">header_footer</span> 19</div>
+<div class="line header"><span class="tag">header_footer</span> 20</div>
+<div class="line header"><span class="tag">header_footer</span> 21</div>
+<div class="line header"><span class="tag">header_footer</span> 22</div>
+<div class="line header"><span class="tag">header_footer</span> 23</div>
+<div class="line header"><span class="tag">header_footer</span> 24</div>
+<div class="line header"><span class="tag">header_footer</span> 25</div>
+<div class="line header"><span class="tag">header_footer</span> Alderson Reporting Company</div>
+</div></div>
+<div class="page">
+<h3>Page 4</h3>
+<div class="raw-col"><h4>Raw pdfplumber output</h4><pre>Official
+4
+1 P R O C E E D I N G S
+2 (10:02 a.m.)
+3 CHIEF JUSTICE ROBERTS: We'll hear argument
+4 this morning in Case No. 14­556, Obergefell v. Hodges
+5 and the consolidated cases.
+6 Ms. Bonauto.
+7 ORAL ARGUMENT OF MARY L. BONAUTO
+8 ON BEHALF OF PETITIONERS ON QUESTION 1
+9 MS. BONAUTO: Mr. Chief Justice, and may it
+10 please the Court:
+11 The intimate and committed relationships of
+12 same­sex couples, just like those of heterosexual
+13 couples, provide mutual support and are the foundation
+14 of family life in our society. If a legal commitment,
+15 responsibility and protection that is marriage is off
+16 limits to gay people as a class, the stain of
+17 unworthiness that follows on individuals and families
+18 contravenes the basic constitutional commitment to equal
+19 dignity.
+20 Indeed, the abiding purpose of the
+21 Fourteenth Amendment is to preclude relegating classes
+22 of persons to second­tier status.
+23 JUSTICE GINSBURG: What do you do with the
+24 Windsor case where the court stressed the Federal
+25 government's historic deference to States when it comes
+Alderson Reporting Company</pre></div>
+<div class="classified-col"><h4>Classified lines</h4>
+<div class="line cont"><span class="tag">continuation</span> Official</div>
+<div class="line header"><span class="tag">header_footer</span> 4</div>
+<div class="line cont"><span class="tag">continuation</span> P R O C E E D I N G S</div>
+<div class="line stage"><span class="tag">stage_direction</span> (10:02 a.m.)</div>
+<div class="line speaker"><span class="tag">CHIEF JUSTICE ROBERTS</span> We'll hear argument</div>
+<div class="line cont"><span class="tag">continuation</span> this morning in Case No. 14­556, Obergefell v. Hodges</div>
+<div class="line cont"><span class="tag">continuation</span> and the consolidated cases.</div>
+<div class="line cont"><span class="tag">continuation</span> Ms. Bonauto.</div>
+<div class="line cont"><span class="tag">continuation</span> ORAL ARGUMENT OF MARY L. BONAUTO</div>
+<div class="line cont"><span class="tag">continuation</span> ON BEHALF OF PETITIONERS ON QUESTION 1</div>
+<div class="line speaker"><span class="tag">MS. BONAUTO</span> Mr. Chief Justice, and may it</div>
+<div class="line cont"><span class="tag">continuation</span> please the Court:</div>
+<div class="line cont"><span class="tag">continuation</span> The intimate and committed relationships of</div>
+<div class="line cont"><span class="tag">continuation</span> same­sex couples, just like those of heterosexual</div>
+<div class="line cont"><span class="tag">continuation</span> couples, provide mutual support and are the foundation</div>
+<div class="line cont"><span class="tag">continuation</span> of family life in our society. If a legal commitment,</div>
+<div class="line cont"><span class="tag">continuation</span> responsibility and protection that is marriage is off</div>
+<div class="line cont"><span class="tag">continuation</span> limits to gay people as a class, the stain of</div>
+<div class="line cont"><span class="tag">continuation</span> unworthiness that follows on individuals and families</div>
+<div class="line cont"><span class="tag">continuation</span> contravenes the basic constitutional commitment to equal</div>
+<div class="line cont"><span class="tag">continuation</span> dignity.</div>
+<div class="line cont"><span class="tag">continuation</span> Indeed, the abiding purpose of the</div>
+<div class="line cont"><span class="tag">continuation</span> Fourteenth Amendment is to preclude relegating classes</div>
+<div class="line cont"><span class="tag">continuation</span> of persons to second­tier status.</div>
+<div class="line speaker"><span class="tag">JUSTICE GINSBURG</span> What do you do with the</div>
+<div class="line cont"><span class="tag">continuation</span> Windsor case where the court stressed the Federal</div>
+<div class="line cont"><span class="tag">continuation</span> government's historic deference to States when it comes</div>
+<div class="line header"><span class="tag">header_footer</span> Alderson Reporting Company</div>
+</div></div>
+<div class="page">
+<h3>Page 5</h3>
+<div class="raw-col"><h4>Raw pdfplumber output</h4><pre>Official
+5
+1 to matters of domestic relations?
+2 MS. BONAUTO: States do have primacy over
+3 domestic relations except that their laws must respect
+4 the constitutional rights of persons, and Windsor
+5 couldn't have been clearer about that. And here we have
+6 a whole class of people who are denied the equal right
+7 to be able to join in this very extensive government
+8 institution that provides protection for families.
+9 CHIEF JUSTICE ROBERTS: Well, you say join
+10 in the institution. The argument on the other side is
+11 that they're seeking to redefine the institution. Every
+12 definition that I looked up, prior to about a dozen
+13 years ago, defined marriage as unity between a man and a
+14 woman as husband and wife. Obviously, if you succeed,
+15 that core definition will no longer be operable.
+16 MS. BONAUTO: I hope not, Your Honor,
+17 because of what we're really talking about here is a
+18 class of people who are, by State laws, excluded from
+19 being able to participate in this institution. And if
+20 Your Honor's question is about does this really draw a
+21 sexual orientation line ­­
+22 CHIEF JUSTICE ROBERTS: No. My question is
+23 you're not seeking to join the institution, you're
+24 seeking to change what the institution is. The
+25 fundamental core of the institution is the opposite­sex
+Alderson Reporting Company</pre></div>
+<div class="classified-col"><h4>Classified lines</h4>
+<div class="line cont"><span class="tag">continuation</span> Official</div>
+<div class="line header"><span class="tag">header_footer</span> 5</div>
+<div class="line cont"><span class="tag">continuation</span> to matters of domestic relations?</div>
+<div class="line speaker"><span class="tag">MS. BONAUTO</span> States do have primacy over</div>
+<div class="line cont"><span class="tag">continuation</span> domestic relations except that their laws must respect</div>
+<div class="line cont"><span class="tag">continuation</span> the constitutional rights of persons, and Windsor</div>
+<div class="line cont"><span class="tag">continuation</span> couldn't have been clearer about that. And here we have</div>
+<div class="line cont"><span class="tag">continuation</span> a whole class of people who are denied the equal right</div>
+<div class="line cont"><span class="tag">continuation</span> to be able to join in this very extensive government</div>
+<div class="line cont"><span class="tag">continuation</span> institution that provides protection for families.</div>
+<div class="line speaker"><span class="tag">CHIEF JUSTICE ROBERTS</span> Well, you say join</div>
+<div class="line cont"><span class="tag">continuation</span> in the institution. The argument on the other side is</div>
+<div class="line cont"><span class="tag">continuation</span> that they're seeking to redefine the institution. Every</div>
+<div class="line cont"><span class="tag">continuation</span> definition that I looked up, prior to about a dozen</div>
+<div class="line cont"><span class="tag">continuation</span> years ago, defined marriage as unity between a man and a</div>
+<div class="line cont"><span class="tag">continuation</span> woman as husband and wife. Obviously, if you succeed,</div>
+<div class="line cont"><span class="tag">continuation</span> that core definition will no longer be operable.</div>
+<div class="line speaker"><span class="tag">MS. BONAUTO</span> I hope not, Your Honor,</div>
+<div class="line cont"><span class="tag">continuation</span> because of what we're really talking about here is a</div>
+<div class="line cont"><span class="tag">continuation</span> class of people who are, by State laws, excluded from</div>
+<div class="line cont"><span class="tag">continuation</span> being able to participate in this institution. And if</div>
+<div class="line cont"><span class="tag">continuation</span> Your Honor's question is about does this really draw a</div>
+<div class="line cont"><span class="tag">continuation</span> sexual orientation line ­­</div>
+<div class="line speaker"><span class="tag">CHIEF JUSTICE ROBERTS</span> No. My question is</div>
+<div class="line cont"><span class="tag">continuation</span> you're not seeking to join the institution, you're</div>
+<div class="line cont"><span class="tag">continuation</span> seeking to change what the institution is. The</div>
+<div class="line cont"><span class="tag">continuation</span> fundamental core of the institution is the opposite­sex</div>
+<div class="line header"><span class="tag">header_footer</span> Alderson Reporting Company</div>
+</div></div>
+<div class="page">
+<h3>Page 6</h3>
+<div class="raw-col"><h4>Raw pdfplumber output</h4><pre>Official
+6
+1 relationship and you want to introduce into it a
+2 same­sex relationship.
+3 MS. BONAUTO: Two points on that, Your
+4 Honor. To the extent that if you're talking about the
+5 fundamental right to marry as a core male­female
+6 institution, I think when we look at the Fourteenth
+7 Amendment, we know that it provides enduring guarantees
+8 in that what we once viewed as the role of women, or
+9 even the role of gay people, is something that has
+10 changed in our society. So in a sense, just as the
+11 Lawrence court called out the Bowers court for not
+12 appreciating the extent of the liberty at stake, in the
+13 same vein here, the question is whether gay people share
+14 that same liberty to be ­­
+15 JUSTICE KENNEDY: The problem ­­
+16 MS. BONAUTO: ­­ able to form family
+17 relationships.
+18 JUSTICE KENNEDY: One ­­ one of the problems
+19 is when you think about these cases you think about
+20 words or cases, and ­­ and the word that keeps coming
+21 back to me in this case is ­­ is millennia, plus time.
+22 First of all, there has not been really time, so the
+23 Respondents say, for the Federal system to engage in
+24 this debate, the separate States. But on a larger
+25 scale, it's been ­­ it was about ­­ about the same time
+Alderson Reporting Company</pre></div>
+<div class="classified-col"><h4>Classified lines</h4>
+<div class="line cont"><span class="tag">continuation</span> Official</div>
+<div class="line header"><span class="tag">header_footer</span> 6</div>
+<div class="line cont"><span class="tag">continuation</span> relationship and you want to introduce into it a</div>
+<div class="line cont"><span class="tag">continuation</span> same­sex relationship.</div>
+<div class="line speaker"><span class="tag">MS. BONAUTO</span> Two points on that, Your</div>
+<div class="line cont"><span class="tag">continuation</span> Honor. To the extent that if you're talking about the</div>
+<div class="line cont"><span class="tag">continuation</span> fundamental right to marry as a core male­female</div>
+<div class="line cont"><span class="tag">continuation</span> institution, I think when we look at the Fourteenth</div>
+<div class="line cont"><span class="tag">continuation</span> Amendment, we know that it provides enduring guarantees</div>
+<div class="line cont"><span class="tag">continuation</span> in that what we once viewed as the role of women, or</div>
+<div class="line cont"><span class="tag">continuation</span> even the role of gay people, is something that has</div>
+<div class="line cont"><span class="tag">continuation</span> changed in our society. So in a sense, just as the</div>
+<div class="line cont"><span class="tag">continuation</span> Lawrence court called out the Bowers court for not</div>
+<div class="line cont"><span class="tag">continuation</span> appreciating the extent of the liberty at stake, in the</div>
+<div class="line cont"><span class="tag">continuation</span> same vein here, the question is whether gay people share</div>
+<div class="line cont"><span class="tag">continuation</span> that same liberty to be ­­</div>
+<div class="line speaker"><span class="tag">JUSTICE KENNEDY</span> The problem ­­</div>
+<div class="line speaker"><span class="tag">MS. BONAUTO</span> ­­ able to form family</div>
+<div class="line cont"><span class="tag">continuation</span> relationships.</div>
+<div class="line speaker"><span class="tag">JUSTICE KENNEDY</span> One ­­ one of the problems</div>
+<div class="line cont"><span class="tag">continuation</span> is when you think about these cases you think about</div>
+<div class="line cont"><span class="tag">continuation</span> words or cases, and ­­ and the word that keeps coming</div>
+<div class="line cont"><span class="tag">continuation</span> back to me in this case is ­­ is millennia, plus time.</div>
+<div class="line cont"><span class="tag">continuation</span> First of all, there has not been really time, so the</div>
+<div class="line cont"><span class="tag">continuation</span> Respondents say, for the Federal system to engage in</div>
+<div class="line cont"><span class="tag">continuation</span> this debate, the separate States. But on a larger</div>
+<div class="line cont"><span class="tag">continuation</span> scale, it's been ­­ it was about ­­ about the same time</div>
+<div class="line header"><span class="tag">header_footer</span> Alderson Reporting Company</div>
+</div></div>
+<div class="page">
+<h3>Page 7</h3>
+<div class="raw-col"><h4>Raw pdfplumber output</h4><pre>Official
+7
+1 between Brown and Loving as between Lawrence and this
+2 case. It's about 10 years.
+3 And so there's time for the scholars and the
+4 commentators and ­­ and the bar and the public to ­­ to
+5 engage in it. But still, 10 years is ­­ I don't even
+6 know how to count the decimals when we talk about
+7 millennia. This definition has been with us for
+8 millennia. And it ­­ it's very difficult for the Court
+9 to say, oh, well, we ­­ we know better.
+10 MS. BONAUTO: Well, I don't think this is a
+11 question of the Court knowing better. When we think
+12 about the debate, the place of gay people in our civic
+13 society is something that has been contested for more
+14 than a century. And in this ­­ in the last century,
+15 immigration exclusions, the place of gay people in
+16 public employment and Federal service, these are all
+17 things that have been contested and ­­ and you can ­­
+18 you can say 10 years of marriage for Massachusetts, but
+19 it's also in the 1970s that the Baker case from
+20 Minnesota reached this Court, and that's over 40 years
+21 ago.
+22 And it was over 20 years ago that the Hawaii
+23 Supreme Court seemed to indicate that it would rule in
+24 favor of marriage, and the American people have been
+25 debating and discussing this. It has been exhaustively
+Alderson Reporting Company</pre></div>
+<div class="classified-col"><h4>Classified lines</h4>
+<div class="line cont"><span class="tag">continuation</span> Official</div>
+<div class="line header"><span class="tag">header_footer</span> 7</div>
+<div class="line cont"><span class="tag">continuation</span> between Brown and Loving as between Lawrence and this</div>
+<div class="line cont"><span class="tag">continuation</span> case. It's about 10 years.</div>
+<div class="line cont"><span class="tag">continuation</span> And so there's time for the scholars and the</div>
+<div class="line cont"><span class="tag">continuation</span> commentators and ­­ and the bar and the public to ­­ to</div>
+<div class="line cont"><span class="tag">continuation</span> engage in it. But still, 10 years is ­­ I don't even</div>
+<div class="line cont"><span class="tag">continuation</span> know how to count the decimals when we talk about</div>
+<div class="line cont"><span class="tag">continuation</span> millennia. This definition has been with us for</div>
+<div class="line cont"><span class="tag">continuation</span> millennia. And it ­­ it's very difficult for the Court</div>
+<div class="line cont"><span class="tag">continuation</span> to say, oh, well, we ­­ we know better.</div>
+<div class="line speaker"><span class="tag">MS. BONAUTO</span> Well, I don't think this is a</div>
+<div class="line cont"><span class="tag">continuation</span> question of the Court knowing better. When we think</div>
+<div class="line cont"><span class="tag">continuation</span> about the debate, the place of gay people in our civic</div>
+<div class="line cont"><span class="tag">continuation</span> society is something that has been contested for more</div>
+<div class="line cont"><span class="tag">continuation</span> than a century. And in this ­­ in the last century,</div>
+<div class="line cont"><span class="tag">continuation</span> immigration exclusions, the place of gay people in</div>
+<div class="line cont"><span class="tag">continuation</span> public employment and Federal service, these are all</div>
+<div class="line cont"><span class="tag">continuation</span> things that have been contested and ­­ and you can ­­</div>
+<div class="line cont"><span class="tag">continuation</span> you can say 10 years of marriage for Massachusetts, but</div>
+<div class="line cont"><span class="tag">continuation</span> it's also in the 1970s that the Baker case from</div>
+<div class="line cont"><span class="tag">continuation</span> Minnesota reached this Court, and that's over 40 years</div>
+<div class="line cont"><span class="tag">continuation</span> ago.</div>
+<div class="line cont"><span class="tag">continuation</span> And it was over 20 years ago that the Hawaii</div>
+<div class="line header"><span class="tag">header_footer</span> Supreme Court seemed to indicate that it would rule in</div>
+<div class="line cont"><span class="tag">continuation</span> favor of marriage, and the American people have been</div>
+<div class="line cont"><span class="tag">continuation</span> debating and discussing this. It has been exhaustively</div>
+<div class="line header"><span class="tag">header_footer</span> Alderson Reporting Company</div>
+</div></div>
+<div class="page">
+<h3>Page 8</h3>
+<div class="raw-col"><h4>Raw pdfplumber output</h4><pre>Official
+8
+1 aired, and the bottom line is that gay and lesbian
+2 families live in communities as neighbors throughout
+3 this whole country. And people have seen this ­­
+4 JUSTICE ALITO: You argue in your ­­ you
+5 argue in your brief that the primary purpose of the
+6 Michigan law limiting marriage to a man and a woman was
+7 to demean gay people; is that correct?
+8 MS. BONAUTO: The Michigan ­­ the Michigan
+9 statute and amendment certainly went out of their way to
+10 say that gay people were in some sense antithetical to
+11 the good of society. They wrote that ­­
+12 JUSTICE ALITO: And did ­­ did you say in
+13 your brief that the primary purpose of that was to
+14 demean gay people?
+15 MS. BONAUTO: I think it has that effect,
+16 Your Honor. I do. Now, at the same time ­­
+17 JUSTICE ALITO: Is that true just in
+18 Michigan or is that true of ­­ of every other State that
+19 has a similar definition of marriage?
+20 MS. BONAUTO: Well, if we're talking about
+21 the States that have constitutional amendments, many of
+22 them are similar. There are a few States that have just
+23 statutes and didn't have amendments, and there's some,
+24 of course, that had none of the above.
+25 But even if there's not a purpose to demean,
+Alderson Reporting Company</pre></div>
+<div class="classified-col"><h4>Classified lines</h4>
+<div class="line cont"><span class="tag">continuation</span> Official</div>
+<div class="line header"><span class="tag">header_footer</span> 8</div>
+<div class="line cont"><span class="tag">continuation</span> aired, and the bottom line is that gay and lesbian</div>
+<div class="line cont"><span class="tag">continuation</span> families live in communities as neighbors throughout</div>
+<div class="line cont"><span class="tag">continuation</span> this whole country. And people have seen this ­­</div>
+<div class="line speaker"><span class="tag">JUSTICE ALITO</span> You argue in your ­­ you</div>
+<div class="line cont"><span class="tag">continuation</span> argue in your brief that the primary purpose of the</div>
+<div class="line cont"><span class="tag">continuation</span> Michigan law limiting marriage to a man and a woman was</div>
+<div class="line cont"><span class="tag">continuation</span> to demean gay people; is that correct?</div>
+<div class="line speaker"><span class="tag">MS. BONAUTO</span> The Michigan ­­ the Michigan</div>
+<div class="line cont"><span class="tag">continuation</span> statute and amendment certainly went out of their way to</div>
+<div class="line cont"><span class="tag">continuation</span> say that gay people were in some sense antithetical to</div>
+<div class="line cont"><span class="tag">continuation</span> the good of society. They wrote that ­­</div>
+<div class="line speaker"><span class="tag">JUSTICE ALITO</span> And did ­­ did you say in</div>
+<div class="line cont"><span class="tag">continuation</span> your brief that the primary purpose of that was to</div>
+<div class="line cont"><span class="tag">continuation</span> demean gay people?</div>
+<div class="line speaker"><span class="tag">MS. BONAUTO</span> I think it has that effect,</div>
+<div class="line cont"><span class="tag">continuation</span> Your Honor. I do. Now, at the same time ­­</div>
+<div class="line speaker"><span class="tag">JUSTICE ALITO</span> Is that true just in</div>
+<div class="line cont"><span class="tag">continuation</span> Michigan or is that true of ­­ of every other State that</div>
+<div class="line cont"><span class="tag">continuation</span> has a similar definition of marriage?</div>
+<div class="line speaker"><span class="tag">MS. BONAUTO</span> Well, if we're talking about</div>
+<div class="line cont"><span class="tag">continuation</span> the States that have constitutional amendments, many of</div>
+<div class="line cont"><span class="tag">continuation</span> them are similar. There are a few States that have just</div>
+<div class="line cont"><span class="tag">continuation</span> statutes and didn't have amendments, and there's some,</div>
+<div class="line cont"><span class="tag">continuation</span> of course, that had none of the above.</div>
+<div class="line cont"><span class="tag">continuation</span> But even if there's not a purpose to demean,</div>
+<div class="line header"><span class="tag">header_footer</span> Alderson Reporting Company</div>
+</div></div>
+<div class="page">
+<h3>Page 9</h3>
+<div class="raw-col"><h4>Raw pdfplumber output</h4><pre>Official
+9
+1 I think the common commonality among all of the
+2 statutes, whether they were enacted long ago or more
+3 recently, is that they encompass moral judgments and
+4 stereotypes about gay people. Even if you think about
+5 something 100 years ago, gay people were not worthy of
+6 the concern of the government and the ­­ and ­­ and
+7 moral judgments about ­­
+8 JUSTICE ALITO: Well, how do you account for
+9 the fact that, as far as I'm aware, until the end of the
+10 20th century, there never was a nation or a culture that
+11 recognized marriage between two people of the same sex?
+12 Now, can we infer from that that those nations and those
+13 cultures all thought that there was some rational,
+14 practical purpose for defining marriage in that way or
+15 is it your argument that they were all operating
+16 independently based solely on irrational stereotypes and
+17 prejudice?
+18 MS. BONAUTO: Your Honor, my position is
+19 that times can blind. And if you think about the
+20 example of sex discrimination and what it ­­ again, I
+21 assume it was protected by the Fourteenth Amendment, but
+22 it took over 100 years for this Court to recognize that
+23 a sex classification contravened the Constitution.
+24 But then, in short order, between Reed and
+25 Craig v. Boren, we went from a rational­basis approach
+Alderson Reporting Company</pre></div>
+<div class="classified-col"><h4>Classified lines</h4>
+<div class="line cont"><span class="tag">continuation</span> Official</div>
+<div class="line header"><span class="tag">header_footer</span> 9</div>
+<div class="line cont"><span class="tag">continuation</span> I think the common commonality among all of the</div>
+<div class="line cont"><span class="tag">continuation</span> statutes, whether they were enacted long ago or more</div>
+<div class="line cont"><span class="tag">continuation</span> recently, is that they encompass moral judgments and</div>
+<div class="line cont"><span class="tag">continuation</span> stereotypes about gay people. Even if you think about</div>
+<div class="line cont"><span class="tag">continuation</span> something 100 years ago, gay people were not worthy of</div>
+<div class="line cont"><span class="tag">continuation</span> the concern of the government and the ­­ and ­­ and</div>
+<div class="line cont"><span class="tag">continuation</span> moral judgments about ­­</div>
+<div class="line speaker"><span class="tag">JUSTICE ALITO</span> Well, how do you account for</div>
+<div class="line cont"><span class="tag">continuation</span> the fact that, as far as I'm aware, until the end of the</div>
+<div class="line cont"><span class="tag">continuation</span> 20th century, there never was a nation or a culture that</div>
+<div class="line cont"><span class="tag">continuation</span> recognized marriage between two people of the same sex?</div>
+<div class="line cont"><span class="tag">continuation</span> Now, can we infer from that that those nations and those</div>
+<div class="line cont"><span class="tag">continuation</span> cultures all thought that there was some rational,</div>
+<div class="line cont"><span class="tag">continuation</span> practical purpose for defining marriage in that way or</div>
+<div class="line cont"><span class="tag">continuation</span> is it your argument that they were all operating</div>
+<div class="line cont"><span class="tag">continuation</span> independently based solely on irrational stereotypes and</div>
+<div class="line cont"><span class="tag">continuation</span> prejudice?</div>
+<div class="line speaker"><span class="tag">MS. BONAUTO</span> Your Honor, my position is</div>
+<div class="line cont"><span class="tag">continuation</span> that times can blind. And if you think about the</div>
+<div class="line cont"><span class="tag">continuation</span> example of sex discrimination and what it ­­ again, I</div>
+<div class="line cont"><span class="tag">continuation</span> assume it was protected by the Fourteenth Amendment, but</div>
+<div class="line cont"><span class="tag">continuation</span> it took over 100 years for this Court to recognize that</div>
+<div class="line cont"><span class="tag">continuation</span> a sex classification contravened the Constitution.</div>
+<div class="line cont"><span class="tag">continuation</span> But then, in short order, between Reed and</div>
+<div class="line cont"><span class="tag">continuation</span> Craig v. Boren, we went from a rational­basis approach</div>
+<div class="line header"><span class="tag">header_footer</span> Alderson Reporting Company</div>
+</div></div>
+<div class="page">
+<h3>Page 10</h3>
+<div class="raw-col"><h4>Raw pdfplumber output</h4><pre>Official
+10
+1 to ­­ to heightened scrutiny, acknowledging that this
+2 kind of discrimination is invidious. And in the same
+3 vein here, we have a foundation of Romer, of Lawrence,
+4 of Windsor ­­
+5 JUSTICE GINSBURG: And an institution ­­
+6 JUSTICE ALITO: I don't really think you
+7 answered my question.
+8 MS. BONAUTO: I'm sorry.
+9 JUSTICE ALITO: Can we infer that these
+10 societies all thought there was a rational reason for
+11 this and a practical reason for this?
+12 MS. BONAUTO: I don't know what other
+13 societies assumed, but I do believe that times can blind
+14 and it takes time to see stereotypes and to see the
+15 common humanity of people who had once been ignored or
+16 excluded. And I do believe ­­
+17 JUSTICE GINSBURG: But you wouldn't be
+18 asking for this relief if the law of marriage was what
+19 it was a millennium ago. I mean, it wasn't possible.
+20 Same­sex unions would not have opted into the pattern of
+21 marriage, which was a relationship, a dominant and a
+22 subordinate relationship. Yes, it was marriage between
+23 a man and a woman, but the man decided where the couple
+24 would be domiciled; it was her obligation to follow him.
+25 There was a change in the institution of
+Alderson Reporting Company</pre></div>
+<div class="classified-col"><h4>Classified lines</h4>
+<div class="line cont"><span class="tag">continuation</span> Official</div>
+<div class="line header"><span class="tag">header_footer</span> 10</div>
+<div class="line cont"><span class="tag">continuation</span> to ­­ to heightened scrutiny, acknowledging that this</div>
+<div class="line cont"><span class="tag">continuation</span> kind of discrimination is invidious. And in the same</div>
+<div class="line cont"><span class="tag">continuation</span> vein here, we have a foundation of Romer, of Lawrence,</div>
+<div class="line cont"><span class="tag">continuation</span> of Windsor ­­</div>
+<div class="line speaker"><span class="tag">JUSTICE GINSBURG</span> And an institution ­­</div>
+<div class="line speaker"><span class="tag">JUSTICE ALITO</span> I don't really think you</div>
+<div class="line cont"><span class="tag">continuation</span> answered my question.</div>
+<div class="line speaker"><span class="tag">MS. BONAUTO</span> I'm sorry.</div>
+<div class="line speaker"><span class="tag">JUSTICE ALITO</span> Can we infer that these</div>
+<div class="line cont"><span class="tag">continuation</span> societies all thought there was a rational reason for</div>
+<div class="line cont"><span class="tag">continuation</span> this and a practical reason for this?</div>
+<div class="line speaker"><span class="tag">MS. BONAUTO</span> I don't know what other</div>
+<div class="line cont"><span class="tag">continuation</span> societies assumed, but I do believe that times can blind</div>
+<div class="line cont"><span class="tag">continuation</span> and it takes time to see stereotypes and to see the</div>
+<div class="line cont"><span class="tag">continuation</span> common humanity of people who had once been ignored or</div>
+<div class="line cont"><span class="tag">continuation</span> excluded. And I do believe ­­</div>
+<div class="line speaker"><span class="tag">JUSTICE GINSBURG</span> But you wouldn't be</div>
+<div class="line cont"><span class="tag">continuation</span> asking for this relief if the law of marriage was what</div>
+<div class="line cont"><span class="tag">continuation</span> it was a millennium ago. I mean, it wasn't possible.</div>
+<div class="line cont"><span class="tag">continuation</span> Same­sex unions would not have opted into the pattern of</div>
+<div class="line cont"><span class="tag">continuation</span> marriage, which was a relationship, a dominant and a</div>
+<div class="line cont"><span class="tag">continuation</span> subordinate relationship. Yes, it was marriage between</div>
+<div class="line cont"><span class="tag">continuation</span> a man and a woman, but the man decided where the couple</div>
+<div class="line cont"><span class="tag">continuation</span> would be domiciled; it was her obligation to follow him.</div>
+<div class="line cont"><span class="tag">continuation</span> There was a change in the institution of</div>
+<div class="line header"><span class="tag">header_footer</span> Alderson Reporting Company</div>
+</div></div>
+
+</div>
+<div class="panel" id="panel-1" style="display:none">
+<h2>Masterpiece Cakeshop (2017)</h2>
+<div class="summary">
+  <strong>Pages:</strong> 116 &nbsp;|&nbsp;
+  <strong>Speaker labels:</strong> APPEARANCES, CHIEF JUSTICE ROBERTS, GENERAL FRANCISCO, JUSTICE ALITO, JUSTICE BREYER, JUSTICE GINSBURG, JUSTICE GORSUCH, JUSTICE KAGAN, JUSTICE KENNEDY, JUSTICE SOTOMAYOR, MR. COLE, MR. YARGER, MS. WAGGONER, ORAL ARGUMENT OF, REBUTTAL ARGUMENT OF<br>
+  <strong>Line type counts:</strong> <code>{
+  &quot;header_footer&quot;: 297,
+  &quot;continuation&quot;: 2801,
+  &quot;speaker_turn&quot;: 545,
+  &quot;stage_direction&quot;: 9
+}</code>
+</div>
+<div class="page">
+<h3>Page 1</h3>
+<div class="raw-col"><h4>Raw pdfplumber output</h4><pre>SUPREME COURT
+OF THE UNITED STATES
+IN THE SUPREME COURT OF THE UNITED STATES
+- - - - - - - - - - - - - - - - - -
+MASTERPIECE CAKESHOP, LTD., ET AL.,)
+Petitioners, )
+v. ) No. 16-111
+COLORADO CIVIL RIGHTS COMMISSION, )
+ET AL., )
+Respondents. )
+- - - - - - - - - - - - - - - - - -
+Pages: 1 through 105
+Place: Washington, D.C.
+Date: December 5, 2017
+HERITAGE REPORTING CORPORATION
+Official Reporters
+1220 L Street, N.W., Suite 206
+Washington, D.C. 20005
+(202) 628-4888
+www.hrccourtreporters.com</pre></div>
+<div class="classified-col"><h4>Classified lines</h4>
+<div class="line header"><span class="tag">header_footer</span> SUPREME COURT</div>
+<div class="line cont"><span class="tag">continuation</span> OF THE UNITED STATES</div>
+<div class="line cont"><span class="tag">continuation</span> IN THE SUPREME COURT OF THE UNITED STATES</div>
+<div class="line cont"><span class="tag">continuation</span> - - - - - - - - - - - - - - - - - -</div>
+<div class="line cont"><span class="tag">continuation</span> MASTERPIECE CAKESHOP, LTD., ET AL.,)</div>
+<div class="line cont"><span class="tag">continuation</span> Petitioners, )</div>
+<div class="line cont"><span class="tag">continuation</span> v. ) No. 16-111</div>
+<div class="line cont"><span class="tag">continuation</span> COLORADO CIVIL RIGHTS COMMISSION, )</div>
+<div class="line cont"><span class="tag">continuation</span> ET AL., )</div>
+<div class="line cont"><span class="tag">continuation</span> Respondents. )</div>
+<div class="line cont"><span class="tag">continuation</span> - - - - - - - - - - - - - - - - - -</div>
+<div class="line cont"><span class="tag">continuation</span> Pages: 1 through 105</div>
+<div class="line cont"><span class="tag">continuation</span> Place: Washington, D.C.</div>
+<div class="line cont"><span class="tag">continuation</span> Date: December 5, 2017</div>
+<div class="line header"><span class="tag">header_footer</span> HERITAGE REPORTING CORPORATION</div>
+<div class="line header"><span class="tag">header_footer</span> Official Reporters</div>
+<div class="line cont"><span class="tag">continuation</span> 1220 L Street, N.W., Suite 206</div>
+<div class="line cont"><span class="tag">continuation</span> Washington, D.C. 20005</div>
+<div class="line cont"><span class="tag">continuation</span> (202) 628-4888</div>
+<div class="line cont"><span class="tag">continuation</span> www.hrccourtreporters.com</div>
+</div></div>
+<div class="page">
+<h3>Page 2</h3>
+<div class="raw-col"><h4>Raw pdfplumber output</h4><pre>Official
+1
+1 IN THE SUPREME COURT OF THE UNITED STATES
+2 - - - - - - - - - - - - - - - - - -
+3 MASTERPIECE CAKESHOP, LTD., ET AL.,)
+4 Petitioners, )
+5 v. ) No. 16-111
+6 COLORADO CIVIL RIGHTS COMMISSION, )
+7 ET AL., )
+8 Respondents. )
+9 - - - - - - - - - - - - - - - - - -
+10
+11 Washington, D.C.
+12 Tuesday, December 5, 2017
+13
+14 The above-entitled matter came on for oral
+15 argument before the Supreme Court of the United States
+16 at 10:03 a.m.
+17
+18
+19
+20
+21
+22
+23
+24
+25
+Heritage Reporting Corporation</pre></div>
+<div class="classified-col"><h4>Classified lines</h4>
+<div class="line cont"><span class="tag">continuation</span> Official</div>
+<div class="line header"><span class="tag">header_footer</span> 1</div>
+<div class="line cont"><span class="tag">continuation</span> IN THE SUPREME COURT OF THE UNITED STATES</div>
+<div class="line cont"><span class="tag">continuation</span> - - - - - - - - - - - - - - - - - -</div>
+<div class="line cont"><span class="tag">continuation</span> MASTERPIECE CAKESHOP, LTD., ET AL.,)</div>
+<div class="line cont"><span class="tag">continuation</span> Petitioners, )</div>
+<div class="line cont"><span class="tag">continuation</span> v. ) No. 16-111</div>
+<div class="line cont"><span class="tag">continuation</span> COLORADO CIVIL RIGHTS COMMISSION, )</div>
+<div class="line cont"><span class="tag">continuation</span> ET AL., )</div>
+<div class="line cont"><span class="tag">continuation</span> Respondents. )</div>
+<div class="line cont"><span class="tag">continuation</span> - - - - - - - - - - - - - - - - - -</div>
+<div class="line header"><span class="tag">header_footer</span> 10</div>
+<div class="line cont"><span class="tag">continuation</span> Washington, D.C.</div>
+<div class="line cont"><span class="tag">continuation</span> Tuesday, December 5, 2017</div>
+<div class="line header"><span class="tag">header_footer</span> 13</div>
+<div class="line cont"><span class="tag">continuation</span> The above-entitled matter came on for oral</div>
+<div class="line cont"><span class="tag">continuation</span> argument before the Supreme Court of the United States</div>
+<div class="line cont"><span class="tag">continuation</span> at 10:03 a.m.</div>
+<div class="line header"><span class="tag">header_footer</span> 17</div>
+<div class="line header"><span class="tag">header_footer</span> 18</div>
+<div class="line header"><span class="tag">header_footer</span> 19</div>
+<div class="line header"><span class="tag">header_footer</span> 20</div>
+<div class="line header"><span class="tag">header_footer</span> 21</div>
+<div class="line header"><span class="tag">header_footer</span> 22</div>
+<div class="line header"><span class="tag">header_footer</span> 23</div>
+<div class="line header"><span class="tag">header_footer</span> 24</div>
+<div class="line header"><span class="tag">header_footer</span> 25</div>
+<div class="line header"><span class="tag">header_footer</span> Heritage Reporting Corporation</div>
+</div></div>
+<div class="page">
+<h3>Page 3</h3>
+<div class="raw-col"><h4>Raw pdfplumber output</h4><pre>Official
+2
+1 APPEARANCES:
+2 KRISTEN K. WAGGONER, Scottsdale, Arizona; on
+3 behalf of the Petitioners
+4 GEN. NOEL J. FRANCISCO, Solicitor General,
+5 Department of Justice, Washington, D.C.; on behalf
+6 of the United States, as amicus curiae, supporting
+7 the Petitioners
+8 FREDERICK R. YARGER, Solicitor General,
+9 Denver, Colorado; on behalf of the State
+10 Respondent
+11 DAVID D. COLE, Washington, D.C.; on behalf of
+12 the private Respondents
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+Heritage Reporting Corporation</pre></div>
+<div class="classified-col"><h4>Classified lines</h4>
+<div class="line cont"><span class="tag">continuation</span> Official</div>
+<div class="line header"><span class="tag">header_footer</span> 2</div>
+<div class="line speaker"><span class="tag">APPEARANCES</span> </div>
+<div class="line cont"><span class="tag">continuation</span> KRISTEN K. WAGGONER, Scottsdale, Arizona; on</div>
+<div class="line cont"><span class="tag">continuation</span> behalf of the Petitioners</div>
+<div class="line cont"><span class="tag">continuation</span> GEN. NOEL J. FRANCISCO, Solicitor General,</div>
+<div class="line cont"><span class="tag">continuation</span> Department of Justice, Washington, D.C.; on behalf</div>
+<div class="line cont"><span class="tag">continuation</span> of the United States, as amicus curiae, supporting</div>
+<div class="line cont"><span class="tag">continuation</span> the Petitioners</div>
+<div class="line cont"><span class="tag">continuation</span> FREDERICK R. YARGER, Solicitor General,</div>
+<div class="line cont"><span class="tag">continuation</span> Denver, Colorado; on behalf of the State</div>
+<div class="line cont"><span class="tag">continuation</span> Respondent</div>
+<div class="line cont"><span class="tag">continuation</span> DAVID D. COLE, Washington, D.C.; on behalf of</div>
+<div class="line cont"><span class="tag">continuation</span> the private Respondents</div>
+<div class="line header"><span class="tag">header_footer</span> 13</div>
+<div class="line header"><span class="tag">header_footer</span> 14</div>
+<div class="line header"><span class="tag">header_footer</span> 15</div>
+<div class="line header"><span class="tag">header_footer</span> 16</div>
+<div class="line header"><span class="tag">header_footer</span> 17</div>
+<div class="line header"><span class="tag">header_footer</span> 18</div>
+<div class="line header"><span class="tag">header_footer</span> 19</div>
+<div class="line header"><span class="tag">header_footer</span> 20</div>
+<div class="line header"><span class="tag">header_footer</span> 21</div>
+<div class="line header"><span class="tag">header_footer</span> 22</div>
+<div class="line header"><span class="tag">header_footer</span> 23</div>
+<div class="line header"><span class="tag">header_footer</span> 24</div>
+<div class="line header"><span class="tag">header_footer</span> 25</div>
+<div class="line header"><span class="tag">header_footer</span> Heritage Reporting Corporation</div>
+</div></div>
+<div class="page">
+<h3>Page 4</h3>
+<div class="raw-col"><h4>Raw pdfplumber output</h4><pre>Official
+3
+1 C O N T E N T S
+2 ORAL ARGUMENT OF: PAGE:
+3 KRISTEN K. WAGGONER
+4 On behalf of the Petitioners 4
+5 ORAL ARGUMENT OF:
+6 GEN. NOEL J. FRANCISCO
+7 On behalf of the United States,
+8 as amicus curiae, supporting the
+9 Petitioners 25
+10 ORAL ARGUMENT OF:
+11 FREDERICK R. YARGER
+12 On behalf of the State Respondent 47
+13 ORAL ARGUMENT OF:
+14 DAVID D. COLE
+15 On behalf of the private Respondents 74
+16 REBUTTAL ARGUMENT OF:
+17 KRISTEN K. WAGGONER
+18 On behalf of the Petitioners 99
+19
+20
+21
+22
+23
+24
+25
+Heritage Reporting Corporation</pre></div>
+<div class="classified-col"><h4>Classified lines</h4>
+<div class="line cont"><span class="tag">continuation</span> Official</div>
+<div class="line header"><span class="tag">header_footer</span> 3</div>
+<div class="line cont"><span class="tag">continuation</span> C O N T E N T S</div>
+<div class="line speaker"><span class="tag">ORAL ARGUMENT OF</span> PAGE:</div>
+<div class="line cont"><span class="tag">continuation</span> KRISTEN K. WAGGONER</div>
+<div class="line cont"><span class="tag">continuation</span> On behalf of the Petitioners 4</div>
+<div class="line speaker"><span class="tag">ORAL ARGUMENT OF</span> </div>
+<div class="line cont"><span class="tag">continuation</span> GEN. NOEL J. FRANCISCO</div>
+<div class="line cont"><span class="tag">continuation</span> On behalf of the United States,</div>
+<div class="line cont"><span class="tag">continuation</span> as amicus curiae, supporting the</div>
+<div class="line cont"><span class="tag">continuation</span> Petitioners 25</div>
+<div class="line speaker"><span class="tag">ORAL ARGUMENT OF</span> </div>
+<div class="line cont"><span class="tag">continuation</span> FREDERICK R. YARGER</div>
+<div class="line cont"><span class="tag">continuation</span> On behalf of the State Respondent 47</div>
+<div class="line speaker"><span class="tag">ORAL ARGUMENT OF</span> </div>
+<div class="line cont"><span class="tag">continuation</span> DAVID D. COLE</div>
+<div class="line cont"><span class="tag">continuation</span> On behalf of the private Respondents 74</div>
+<div class="line speaker"><span class="tag">REBUTTAL ARGUMENT OF</span> </div>
+<div class="line cont"><span class="tag">continuation</span> KRISTEN K. WAGGONER</div>
+<div class="line cont"><span class="tag">continuation</span> On behalf of the Petitioners 99</div>
+<div class="line header"><span class="tag">header_footer</span> 19</div>
+<div class="line header"><span class="tag">header_footer</span> 20</div>
+<div class="line header"><span class="tag">header_footer</span> 21</div>
+<div class="line header"><span class="tag">header_footer</span> 22</div>
+<div class="line header"><span class="tag">header_footer</span> 23</div>
+<div class="line header"><span class="tag">header_footer</span> 24</div>
+<div class="line header"><span class="tag">header_footer</span> 25</div>
+<div class="line header"><span class="tag">header_footer</span> Heritage Reporting Corporation</div>
+</div></div>
+<div class="page">
+<h3>Page 5</h3>
+<div class="raw-col"><h4>Raw pdfplumber output</h4><pre>Official
+4
+1 P R O C E E D I N G S
+2 (10:03 a.m.)
+3 CHIEF JUSTICE ROBERTS: We'll hear
+4 argument this morning in Case 16-111,
+5 Masterpiece Cakeshop versus Colorado Civil
+6 Rights Commission.
+7 Ms. Waggoner.
+8 ORAL ARGUMENT OF KRISTEN K. WAGGONER
+9 ON BEHALF OF THE PETITIONERS
+10 MS. WAGGONER: Mr. Chief Justice, and
+11 may it please the Court:
+12 The First Amendment prohibits the
+13 government from forcing people to express
+14 messages that their violate religious
+15 convictions. Yet the Commission requires Mr.
+16 Phillips to do just that, ordering him to
+17 sketch, sculpt, and hand-paint cakes that
+18 celebrate a view of marriage in violation of
+19 his religious convictions.
+20 JUSTICE SOTOMAYOR: Can I ask you -­
+21 JUSTICE GINSBURG: What if -- what if
+22 it's a -- if it's an item off the shelf? That
+23 is, they don't commission a cake just for them
+24 but they walk into the shop, they see a lovely
+25 cake, and they say we'd like to purchase it for
+Heritage Reporting Corporation</pre></div>
+<div class="classified-col"><h4>Classified lines</h4>
+<div class="line cont"><span class="tag">continuation</span> Official</div>
+<div class="line header"><span class="tag">header_footer</span> 4</div>
+<div class="line cont"><span class="tag">continuation</span> P R O C E E D I N G S</div>
+<div class="line stage"><span class="tag">stage_direction</span> (10:03 a.m.)</div>
+<div class="line speaker"><span class="tag">CHIEF JUSTICE ROBERTS</span> We'll hear</div>
+<div class="line cont"><span class="tag">continuation</span> argument this morning in Case 16-111,</div>
+<div class="line cont"><span class="tag">continuation</span> Masterpiece Cakeshop versus Colorado Civil</div>
+<div class="line cont"><span class="tag">continuation</span> Rights Commission.</div>
+<div class="line cont"><span class="tag">continuation</span> Ms. Waggoner.</div>
+<div class="line cont"><span class="tag">continuation</span> ORAL ARGUMENT OF KRISTEN K. WAGGONER</div>
+<div class="line cont"><span class="tag">continuation</span> ON BEHALF OF THE PETITIONERS</div>
+<div class="line speaker"><span class="tag">MS. WAGGONER</span> Mr. Chief Justice, and</div>
+<div class="line cont"><span class="tag">continuation</span> may it please the Court:</div>
+<div class="line cont"><span class="tag">continuation</span> The First Amendment prohibits the</div>
+<div class="line cont"><span class="tag">continuation</span> government from forcing people to express</div>
+<div class="line cont"><span class="tag">continuation</span> messages that their violate religious</div>
+<div class="line cont"><span class="tag">continuation</span> convictions. Yet the Commission requires Mr.</div>
+<div class="line cont"><span class="tag">continuation</span> Phillips to do just that, ordering him to</div>
+<div class="line cont"><span class="tag">continuation</span> sketch, sculpt, and hand-paint cakes that</div>
+<div class="line cont"><span class="tag">continuation</span> celebrate a view of marriage in violation of</div>
+<div class="line cont"><span class="tag">continuation</span> his religious convictions.</div>
+<div class="line speaker"><span class="tag">JUSTICE SOTOMAYOR</span> Can I ask you -­</div>
+<div class="line speaker"><span class="tag">JUSTICE GINSBURG</span> What if -- what if</div>
+<div class="line cont"><span class="tag">continuation</span> it's a -- if it's an item off the shelf? That</div>
+<div class="line cont"><span class="tag">continuation</span> is, they don't commission a cake just for them</div>
+<div class="line cont"><span class="tag">continuation</span> but they walk into the shop, they see a lovely</div>
+<div class="line cont"><span class="tag">continuation</span> cake, and they say we'd like to purchase it for</div>
+<div class="line header"><span class="tag">header_footer</span> Heritage Reporting Corporation</div>
+</div></div>
+<div class="page">
+<h3>Page 6</h3>
+<div class="raw-col"><h4>Raw pdfplumber output</h4><pre>Official
+5
+1 the celebration of our marriage tonight.
+2 The Colorado law would prohibit that.
+3 Would you claim that you are entitled to an
+4 exception?
+5 MS. WAGGONER: Absolutely not. The
+6 compelled speech doctrine is triggered by
+7 compelled speech. And in the context of a
+8 pre-made cake, that is not compelled speech.
+9 Mr. Phillips is happy to sell anything
+10 in his store, including -­
+11 JUSTICE KENNEDY: Well, didn't -­
+12 didn't he express himself when he made it?
+13 MS. WAGGONER: Yes, he did express
+14 himself when he made it. And the purpose for
+15 which he expressed it is important to the
+16 compelled speech doctrine and how it applies,
+17 but when he -­
+18 JUSTICE SOTOMAYOR: I'm sorry, he did
+19 refuse to sell -­
+20 JUSTICE KENNEDY: Well, could I -- but
+21 could I get the answer to the question? So -­
+22 so -- so if it -- if you agree that it's
+23 speech, then why can he not refuse to sell the
+24 cake that's in the window according to Justice
+25 Ginsburg's hypothetical?
+Heritage Reporting Corporation</pre></div>
+<div class="classified-col"><h4>Classified lines</h4>
+<div class="line cont"><span class="tag">continuation</span> Official</div>
+<div class="line header"><span class="tag">header_footer</span> 5</div>
+<div class="line cont"><span class="tag">continuation</span> the celebration of our marriage tonight.</div>
+<div class="line cont"><span class="tag">continuation</span> The Colorado law would prohibit that.</div>
+<div class="line cont"><span class="tag">continuation</span> Would you claim that you are entitled to an</div>
+<div class="line cont"><span class="tag">continuation</span> exception?</div>
+<div class="line speaker"><span class="tag">MS. WAGGONER</span> Absolutely not. The</div>
+<div class="line cont"><span class="tag">continuation</span> compelled speech doctrine is triggered by</div>
+<div class="line cont"><span class="tag">continuation</span> compelled speech. And in the context of a</div>
+<div class="line cont"><span class="tag">continuation</span> pre-made cake, that is not compelled speech.</div>
+<div class="line cont"><span class="tag">continuation</span> Mr. Phillips is happy to sell anything</div>
+<div class="line cont"><span class="tag">continuation</span> in his store, including -­</div>
+<div class="line speaker"><span class="tag">JUSTICE KENNEDY</span> Well, didn't -­</div>
+<div class="line cont"><span class="tag">continuation</span> didn't he express himself when he made it?</div>
+<div class="line speaker"><span class="tag">MS. WAGGONER</span> Yes, he did express</div>
+<div class="line cont"><span class="tag">continuation</span> himself when he made it. And the purpose for</div>
+<div class="line cont"><span class="tag">continuation</span> which he expressed it is important to the</div>
+<div class="line cont"><span class="tag">continuation</span> compelled speech doctrine and how it applies,</div>
+<div class="line cont"><span class="tag">continuation</span> but when he -­</div>
+<div class="line speaker"><span class="tag">JUSTICE SOTOMAYOR</span> I'm sorry, he did</div>
+<div class="line cont"><span class="tag">continuation</span> refuse to sell -­</div>
+<div class="line speaker"><span class="tag">JUSTICE KENNEDY</span> Well, could I -- but</div>
+<div class="line cont"><span class="tag">continuation</span> could I get the answer to the question? So -­</div>
+<div class="line cont"><span class="tag">continuation</span> so -- so if it -- if you agree that it's</div>
+<div class="line cont"><span class="tag">continuation</span> speech, then why can he not refuse to sell the</div>
+<div class="line cont"><span class="tag">continuation</span> cake that's in the window according to Justice</div>
+<div class="line cont"><span class="tag">continuation</span> Ginsburg's hypothetical?</div>
+<div class="line header"><span class="tag">header_footer</span> Heritage Reporting Corporation</div>
+</div></div>
+<div class="page">
+<h3>Page 7</h3>
+<div class="raw-col"><h4>Raw pdfplumber output</h4><pre>Official
+6
+1 MS. WAGGONER: Well, in the context of
+2 if it's already been placed in the stream of
+3 commerce in a public accommodation setting, his
+4 speech has been completed. He -- he intended
+5 to speak through that cake with the purpose of
+6 whatever it was when he created it.
+7 In contrast, though, when he has a
+8 different purpose, and is expressing a message
+9 through a cake, it would render a different
+10 result. It's still speech.
+11 JUSTICE SOTOMAYOR: I'm sorry, didn't
+12 he refuse to sell cupcakes that he sells
+13 regularly to the public to some same-sex
+14 couples who intended to marry?
+15 MS. WAGGONER: That allegation was
+16 never involved in the complaint, the formal
+17 charges, the ALJ's decision.
+18 JUSTICE SOTOMAYOR: But I thought -­
+19 I'm a little bit surprised by what you're
+20 saying because your brief seemed to suggest
+21 differently -- that the couple was looking at
+22 his already pre-designed cakes that he appears
+23 to sell without any customization, and they sat
+24 down with him, and he said I don't supply cakes
+25 of any kind to gay couples.
+Heritage Reporting Corporation</pre></div>
+<div class="classified-col"><h4>Classified lines</h4>
+<div class="line cont"><span class="tag">continuation</span> Official</div>
+<div class="line header"><span class="tag">header_footer</span> 6</div>
+<div class="line speaker"><span class="tag">MS. WAGGONER</span> Well, in the context of</div>
+<div class="line cont"><span class="tag">continuation</span> if it's already been placed in the stream of</div>
+<div class="line cont"><span class="tag">continuation</span> commerce in a public accommodation setting, his</div>
+<div class="line cont"><span class="tag">continuation</span> speech has been completed. He -- he intended</div>
+<div class="line cont"><span class="tag">continuation</span> to speak through that cake with the purpose of</div>
+<div class="line cont"><span class="tag">continuation</span> whatever it was when he created it.</div>
+<div class="line cont"><span class="tag">continuation</span> In contrast, though, when he has a</div>
+<div class="line cont"><span class="tag">continuation</span> different purpose, and is expressing a message</div>
+<div class="line cont"><span class="tag">continuation</span> through a cake, it would render a different</div>
+<div class="line cont"><span class="tag">continuation</span> result. It's still speech.</div>
+<div class="line speaker"><span class="tag">JUSTICE SOTOMAYOR</span> I'm sorry, didn't</div>
+<div class="line cont"><span class="tag">continuation</span> he refuse to sell cupcakes that he sells</div>
+<div class="line cont"><span class="tag">continuation</span> regularly to the public to some same-sex</div>
+<div class="line cont"><span class="tag">continuation</span> couples who intended to marry?</div>
+<div class="line speaker"><span class="tag">MS. WAGGONER</span> That allegation was</div>
+<div class="line cont"><span class="tag">continuation</span> never involved in the complaint, the formal</div>
+<div class="line cont"><span class="tag">continuation</span> charges, the ALJ's decision.</div>
+<div class="line speaker"><span class="tag">JUSTICE SOTOMAYOR</span> But I thought -­</div>
+<div class="line cont"><span class="tag">continuation</span> I'm a little bit surprised by what you're</div>
+<div class="line cont"><span class="tag">continuation</span> saying because your brief seemed to suggest</div>
+<div class="line cont"><span class="tag">continuation</span> differently -- that the couple was looking at</div>
+<div class="line cont"><span class="tag">continuation</span> his already pre-designed cakes that he appears</div>
+<div class="line cont"><span class="tag">continuation</span> to sell without any customization, and they sat</div>
+<div class="line cont"><span class="tag">continuation</span> down with him, and he said I don't supply cakes</div>
+<div class="line cont"><span class="tag">continuation</span> of any kind to gay couples.</div>
+<div class="line header"><span class="tag">header_footer</span> Heritage Reporting Corporation</div>
+</div></div>
+<div class="page">
+<h3>Page 8</h3>
+<div class="raw-col"><h4>Raw pdfplumber output</h4><pre>Official
+7
+1 So I thought this cake was about his
+2 refusal to supply a cake for any wedding
+3 ceremony.
+4 MS. WAGGONER: Justice Sotomayor,
+5 that's not how he responded to the couple. The
+6 couple came in and they requested a custom cake
+7 for their wedding. At that point, they brought
+8 in a folder with all kinds of designs they
+9 wanted to discuss and ended up purchasing a
+10 rainbow-layered cake or -- or received a free
+11 rainbow-layered cake, which certainly is
+12 expression.
+13 The order below requires Mr. Phillips
+14 also to include words and symbols on his cakes.
+15 It's that broad. So if, for example,
+16 Mr. Phillips had used a Bible verse on a cake
+17 in the past, he would be compelled to use that
+18 Bible verse in a different context.
+19 JUSTICE GINSBURG: Where does it -­
+20 where does it say -- I -- I thought that the
+21 requirement was he supply a custom-made cake,
+22 as he would to any other shopper, but that he
+23 didn't have to convey somebody else's message;
+24 that is, he didn't have to write anything on
+25 the cake.
+Heritage Reporting Corporation</pre></div>
+<div class="classified-col"><h4>Classified lines</h4>
+<div class="line cont"><span class="tag">continuation</span> Official</div>
+<div class="line header"><span class="tag">header_footer</span> 7</div>
+<div class="line cont"><span class="tag">continuation</span> So I thought this cake was about his</div>
+<div class="line cont"><span class="tag">continuation</span> refusal to supply a cake for any wedding</div>
+<div class="line cont"><span class="tag">continuation</span> ceremony.</div>
+<div class="line speaker"><span class="tag">MS. WAGGONER</span> Justice Sotomayor,</div>
+<div class="line cont"><span class="tag">continuation</span> that's not how he responded to the couple. The</div>
+<div class="line cont"><span class="tag">continuation</span> couple came in and they requested a custom cake</div>
+<div class="line cont"><span class="tag">continuation</span> for their wedding. At that point, they brought</div>
+<div class="line cont"><span class="tag">continuation</span> in a folder with all kinds of designs they</div>
+<div class="line cont"><span class="tag">continuation</span> wanted to discuss and ended up purchasing a</div>
+<div class="line cont"><span class="tag">continuation</span> rainbow-layered cake or -- or received a free</div>
+<div class="line cont"><span class="tag">continuation</span> rainbow-layered cake, which certainly is</div>
+<div class="line cont"><span class="tag">continuation</span> expression.</div>
+<div class="line cont"><span class="tag">continuation</span> The order below requires Mr. Phillips</div>
+<div class="line cont"><span class="tag">continuation</span> also to include words and symbols on his cakes.</div>
+<div class="line cont"><span class="tag">continuation</span> It's that broad. So if, for example,</div>
+<div class="line cont"><span class="tag">continuation</span> Mr. Phillips had used a Bible verse on a cake</div>
+<div class="line cont"><span class="tag">continuation</span> in the past, he would be compelled to use that</div>
+<div class="line cont"><span class="tag">continuation</span> Bible verse in a different context.</div>
+<div class="line speaker"><span class="tag">JUSTICE GINSBURG</span> Where does it -­</div>
+<div class="line cont"><span class="tag">continuation</span> where does it say -- I -- I thought that the</div>
+<div class="line cont"><span class="tag">continuation</span> requirement was he supply a custom-made cake,</div>
+<div class="line cont"><span class="tag">continuation</span> as he would to any other shopper, but that he</div>
+<div class="line cont"><span class="tag">continuation</span> didn't have to convey somebody else's message;</div>
+<div class="line cont"><span class="tag">continuation</span> that is, he didn't have to write anything on</div>
+<div class="line cont"><span class="tag">continuation</span> the cake.</div>
+<div class="line header"><span class="tag">header_footer</span> Heritage Reporting Corporation</div>
+</div></div>
+<div class="page">
+<h3>Page 9</h3>
+<div class="raw-col"><h4>Raw pdfplumber output</h4><pre>Official
+8
+1 MS. WAGGONER: In Petitioners'
+2 Appendix 57(a), the order is provided, and that
+3 order requires him to provide anything that he
+4 would provide on a cake in another setting for
+5 a marriage between a man and a woman, which
+6 includes words and images that he would provide
+7 on -­
+8 JUSTICE GINSBURG: Well, suppose we
+9 exclude that and say let's make the assumption
+10 that he -- if he makes custom-made cakes for
+11 others, he must make it for this pair, but he
+12 doesn't have to write anything for anybody. He
+13 doesn't have to write a message that he
+14 disagrees with.
+15 MS. WAGGONER: Well, this Court has
+16 recognized in Hurley as well as in other
+17 decisions that artistic expression doesn't need
+18 to include words and symbols to express a
+19 message or to be protected speech.
+20 JUSTICE KENNEDY: Well, just -- just
+21 one more thing, and then we'll leave this part
+22 alone, so at least as far as I'm concerned.
+23 Suppose the couple goes in and sees the cake in
+24 the window and the cake has a biblical verse.
+25 Does he have to sell that cake?
+Heritage Reporting Corporation</pre></div>
+<div class="classified-col"><h4>Classified lines</h4>
+<div class="line cont"><span class="tag">continuation</span> Official</div>
+<div class="line header"><span class="tag">header_footer</span> 8</div>
+<div class="line speaker"><span class="tag">MS. WAGGONER</span> In Petitioners'</div>
+<div class="line cont"><span class="tag">continuation</span> Appendix 57(a), the order is provided, and that</div>
+<div class="line cont"><span class="tag">continuation</span> order requires him to provide anything that he</div>
+<div class="line cont"><span class="tag">continuation</span> would provide on a cake in another setting for</div>
+<div class="line cont"><span class="tag">continuation</span> a marriage between a man and a woman, which</div>
+<div class="line cont"><span class="tag">continuation</span> includes words and images that he would provide</div>
+<div class="line cont"><span class="tag">continuation</span> on -­</div>
+<div class="line speaker"><span class="tag">JUSTICE GINSBURG</span> Well, suppose we</div>
+<div class="line cont"><span class="tag">continuation</span> exclude that and say let's make the assumption</div>
+<div class="line cont"><span class="tag">continuation</span> that he -- if he makes custom-made cakes for</div>
+<div class="line cont"><span class="tag">continuation</span> others, he must make it for this pair, but he</div>
+<div class="line cont"><span class="tag">continuation</span> doesn't have to write anything for anybody. He</div>
+<div class="line cont"><span class="tag">continuation</span> doesn't have to write a message that he</div>
+<div class="line cont"><span class="tag">continuation</span> disagrees with.</div>
+<div class="line speaker"><span class="tag">MS. WAGGONER</span> Well, this Court has</div>
+<div class="line cont"><span class="tag">continuation</span> recognized in Hurley as well as in other</div>
+<div class="line cont"><span class="tag">continuation</span> decisions that artistic expression doesn't need</div>
+<div class="line cont"><span class="tag">continuation</span> to include words and symbols to express a</div>
+<div class="line cont"><span class="tag">continuation</span> message or to be protected speech.</div>
+<div class="line speaker"><span class="tag">JUSTICE KENNEDY</span> Well, just -- just</div>
+<div class="line cont"><span class="tag">continuation</span> one more thing, and then we'll leave this part</div>
+<div class="line cont"><span class="tag">continuation</span> alone, so at least as far as I'm concerned.</div>
+<div class="line cont"><span class="tag">continuation</span> Suppose the couple goes in and sees the cake in</div>
+<div class="line cont"><span class="tag">continuation</span> the window and the cake has a biblical verse.</div>
+<div class="line cont"><span class="tag">continuation</span> Does he have to sell that cake?</div>
+<div class="line header"><span class="tag">header_footer</span> Heritage Reporting Corporation</div>
+</div></div>
+<div class="page">
+<h3>Page 10</h3>
+<div class="raw-col"><h4>Raw pdfplumber output</h4><pre>Official
+9
+1 MS. WAGGONER: Under our theory, he
+2 would need to sell that cake because he's
+3 already created that cake with the message that
+4 he intended for it, but we are drawing the line
+5 prior to the compulsion -- there can be no
+6 compulsion of speech.
+7 If the Court were to choose to draw
+8 that line in a different place and protect more
+9 speech, there certainly is precedent for that.
+10 But under the compelled speech doctrine, when
+11 someone comes in and requests speech, if that
+12 speech has already been created, then that
+13 would be -- not be compelled.
+14 JUSTICE SOTOMAYOR: Could you tell me
+15 how far -­
+16 CHIEF JUSTICE ROBERTS: There's no -­
+17 there's no -- there's no compulsion of speech,
+18 but if he is required to sell a cake in the
+19 window with the message already on it, that is
+20 compelling him to associate that message with
+21 the ceremony. And I thought that was something
+22 to which you objected.
+23 MS. WAGGONER: There would possibly be
+24 an expressive association claim and potentially
+25 a free exercise claim if he was delivering the
+Heritage Reporting Corporation</pre></div>
+<div class="classified-col"><h4>Classified lines</h4>
+<div class="line cont"><span class="tag">continuation</span> Official</div>
+<div class="line header"><span class="tag">header_footer</span> 9</div>
+<div class="line speaker"><span class="tag">MS. WAGGONER</span> Under our theory, he</div>
+<div class="line cont"><span class="tag">continuation</span> would need to sell that cake because he's</div>
+<div class="line cont"><span class="tag">continuation</span> already created that cake with the message that</div>
+<div class="line cont"><span class="tag">continuation</span> he intended for it, but we are drawing the line</div>
+<div class="line cont"><span class="tag">continuation</span> prior to the compulsion -- there can be no</div>
+<div class="line cont"><span class="tag">continuation</span> compulsion of speech.</div>
+<div class="line cont"><span class="tag">continuation</span> If the Court were to choose to draw</div>
+<div class="line cont"><span class="tag">continuation</span> that line in a different place and protect more</div>
+<div class="line cont"><span class="tag">continuation</span> speech, there certainly is precedent for that.</div>
+<div class="line cont"><span class="tag">continuation</span> But under the compelled speech doctrine, when</div>
+<div class="line cont"><span class="tag">continuation</span> someone comes in and requests speech, if that</div>
+<div class="line cont"><span class="tag">continuation</span> speech has already been created, then that</div>
+<div class="line cont"><span class="tag">continuation</span> would be -- not be compelled.</div>
+<div class="line speaker"><span class="tag">JUSTICE SOTOMAYOR</span> Could you tell me</div>
+<div class="line cont"><span class="tag">continuation</span> how far -­</div>
+<div class="line speaker"><span class="tag">CHIEF JUSTICE ROBERTS</span> There's no -­</div>
+<div class="line cont"><span class="tag">continuation</span> there's no -- there's no compulsion of speech,</div>
+<div class="line cont"><span class="tag">continuation</span> but if he is required to sell a cake in the</div>
+<div class="line cont"><span class="tag">continuation</span> window with the message already on it, that is</div>
+<div class="line cont"><span class="tag">continuation</span> compelling him to associate that message with</div>
+<div class="line cont"><span class="tag">continuation</span> the ceremony. And I thought that was something</div>
+<div class="line cont"><span class="tag">continuation</span> to which you objected.</div>
+<div class="line speaker"><span class="tag">MS. WAGGONER</span> There would possibly be</div>
+<div class="line cont"><span class="tag">continuation</span> an expressive association claim and potentially</div>
+<div class="line cont"><span class="tag">continuation</span> a free exercise claim if he was delivering the</div>
+<div class="line header"><span class="tag">header_footer</span> Heritage Reporting Corporation</div>
+</div></div>
+
+</div>
+<div class="panel" id="panel-2" style="display:none">
+<h2>Dobbs v. Jackson (2021)</h2>
+<div class="summary">
+  <strong>Pages:</strong> 126 &nbsp;|&nbsp;
+  <strong>Speaker labels:</strong> APPEARANCES, CHIEF JUSTICE ROBERTS, GENERAL PRELOGAR, JUSTICE ALITO, JUSTICE BARRETT, JUSTICE BREYER, JUSTICE GORSUCH, JUSTICE KAGAN, JUSTICE KAVANAUGH, JUSTICE SOTOMAYOR, JUSTICE THOMAS, MR. STEWART, MS. RIKELMAN, ORAL ARGUMENT OF, REBUTTAL ARGUMENT OF<br>
+  <strong>Line type counts:</strong> <code>{
+  &quot;header_footer&quot;: 316,
+  &quot;continuation&quot;: 3404,
+  &quot;speaker_turn&quot;: 325,
+  &quot;stage_direction&quot;: 1
+}</code>
+</div>
+<div class="page">
+<h3>Page 1</h3>
+<div class="raw-col"><h4>Raw pdfplumber output</h4><pre>SUPREME COURT
+OF THE UNITED STATES
+IN THE SUPREME COURT OF THE UNITED STATES
+- - - - - - - - - - - - - - - - - -
+THOMAS E. DOBBS, STATE HEALTH )
+OFFICER OF THE MISSISSIPPI )
+DEPARTMENT OF HEALTH, ET AL., )
+Petitioners, )
+v. ) No. 19-1392
+JACKSON WOMEN'S HEALTH )
+ORGANIZATION, ET AL., )
+Respondents. )
+- - - - - - - - - - - - - - - - - -
+Pages: 1 through 114
+Place: Washington, D.C.
+Date: December 1, 2021
+HERITAGE REPORTING CORPORATION
+Official Reporters
+1220 L Street, N.W., Suite 206
+Washington, D.C. 20005
+(202) 628-4888
+www.hrccourtreporters.com</pre></div>
+<div class="classified-col"><h4>Classified lines</h4>
+<div class="line header"><span class="tag">header_footer</span> SUPREME COURT</div>
+<div class="line cont"><span class="tag">continuation</span> OF THE UNITED STATES</div>
+<div class="line cont"><span class="tag">continuation</span> IN THE SUPREME COURT OF THE UNITED STATES</div>
+<div class="line cont"><span class="tag">continuation</span> - - - - - - - - - - - - - - - - - -</div>
+<div class="line cont"><span class="tag">continuation</span> THOMAS E. DOBBS, STATE HEALTH )</div>
+<div class="line cont"><span class="tag">continuation</span> OFFICER OF THE MISSISSIPPI )</div>
+<div class="line cont"><span class="tag">continuation</span> DEPARTMENT OF HEALTH, ET AL., )</div>
+<div class="line cont"><span class="tag">continuation</span> Petitioners, )</div>
+<div class="line cont"><span class="tag">continuation</span> v. ) No. 19-1392</div>
+<div class="line cont"><span class="tag">continuation</span> JACKSON WOMEN'S HEALTH )</div>
+<div class="line cont"><span class="tag">continuation</span> ORGANIZATION, ET AL., )</div>
+<div class="line cont"><span class="tag">continuation</span> Respondents. )</div>
+<div class="line cont"><span class="tag">continuation</span> - - - - - - - - - - - - - - - - - -</div>
+<div class="line cont"><span class="tag">continuation</span> Pages: 1 through 114</div>
+<div class="line cont"><span class="tag">continuation</span> Place: Washington, D.C.</div>
+<div class="line cont"><span class="tag">continuation</span> Date: December 1, 2021</div>
+<div class="line header"><span class="tag">header_footer</span> HERITAGE REPORTING CORPORATION</div>
+<div class="line header"><span class="tag">header_footer</span> Official Reporters</div>
+<div class="line cont"><span class="tag">continuation</span> 1220 L Street, N.W., Suite 206</div>
+<div class="line cont"><span class="tag">continuation</span> Washington, D.C. 20005</div>
+<div class="line cont"><span class="tag">continuation</span> (202) 628-4888</div>
+<div class="line cont"><span class="tag">continuation</span> www.hrccourtreporters.com</div>
+</div></div>
+<div class="page">
+<h3>Page 2</h3>
+<div class="raw-col"><h4>Raw pdfplumber output</h4><pre>Official
+1
+1 IN THE SUPREME COURT OF THE UNITED STATES
+2 - - - - - - - - - - - - - - - - - -
+3 THOMAS E. DOBBS, STATE HEALTH )
+4 OFFICER OF THE MISSISSIPPI )
+5 DEPARTMENT OF HEALTH, ET AL., )
+6 Petitioners, )
+7 v. ) No. 19-1392
+8 JACKSON WOMEN'S HEALTH )
+9 ORGANIZATION, ET AL., )
+10 Respondents. )
+11 - - - - - - - - - - - - - - - - - -
+12
+13 Washington, D.C.
+14 Wednesday, December 1, 2021
+15
+16 The above-entitled matter came on for
+17 oral argument before the Supreme Court of the
+18 United States at 10:00 a.m.
+19
+20
+21
+22
+23
+24
+25
+Heritage Reporting Corporation</pre></div>
+<div class="classified-col"><h4>Classified lines</h4>
+<div class="line cont"><span class="tag">continuation</span> Official</div>
+<div class="line header"><span class="tag">header_footer</span> 1</div>
+<div class="line cont"><span class="tag">continuation</span> IN THE SUPREME COURT OF THE UNITED STATES</div>
+<div class="line cont"><span class="tag">continuation</span> - - - - - - - - - - - - - - - - - -</div>
+<div class="line cont"><span class="tag">continuation</span> THOMAS E. DOBBS, STATE HEALTH )</div>
+<div class="line cont"><span class="tag">continuation</span> OFFICER OF THE MISSISSIPPI )</div>
+<div class="line cont"><span class="tag">continuation</span> DEPARTMENT OF HEALTH, ET AL., )</div>
+<div class="line cont"><span class="tag">continuation</span> Petitioners, )</div>
+<div class="line cont"><span class="tag">continuation</span> v. ) No. 19-1392</div>
+<div class="line cont"><span class="tag">continuation</span> JACKSON WOMEN'S HEALTH )</div>
+<div class="line cont"><span class="tag">continuation</span> ORGANIZATION, ET AL., )</div>
+<div class="line cont"><span class="tag">continuation</span> Respondents. )</div>
+<div class="line cont"><span class="tag">continuation</span> - - - - - - - - - - - - - - - - - -</div>
+<div class="line header"><span class="tag">header_footer</span> 12</div>
+<div class="line cont"><span class="tag">continuation</span> Washington, D.C.</div>
+<div class="line cont"><span class="tag">continuation</span> Wednesday, December 1, 2021</div>
+<div class="line header"><span class="tag">header_footer</span> 15</div>
+<div class="line cont"><span class="tag">continuation</span> The above-entitled matter came on for</div>
+<div class="line cont"><span class="tag">continuation</span> oral argument before the Supreme Court of the</div>
+<div class="line cont"><span class="tag">continuation</span> United States at 10:00 a.m.</div>
+<div class="line header"><span class="tag">header_footer</span> 19</div>
+<div class="line header"><span class="tag">header_footer</span> 20</div>
+<div class="line header"><span class="tag">header_footer</span> 21</div>
+<div class="line header"><span class="tag">header_footer</span> 22</div>
+<div class="line header"><span class="tag">header_footer</span> 23</div>
+<div class="line header"><span class="tag">header_footer</span> 24</div>
+<div class="line header"><span class="tag">header_footer</span> 25</div>
+<div class="line header"><span class="tag">header_footer</span> Heritage Reporting Corporation</div>
+</div></div>
+<div class="page">
+<h3>Page 3</h3>
+<div class="raw-col"><h4>Raw pdfplumber output</h4><pre>Official
+2
+1 APPEARANCES:
+2 SCOTT G. STEWART, Solicitor General, Jackson,
+3 Mississippi; on behalf of the Petitioners.
+4 JULIE RIKELMAN, ESQUIRE, New York, New York; on behalf
+5 of the Respondents.
+6 GEN. ELIZABETH B. PRELOGAR, Solicitor General,
+7 Department of Justice, Washington, D.C.; for the
+8 United States, as amicus curiae, supporting the
+9 Respondents.
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+Heritage Reporting Corporation</pre></div>
+<div class="classified-col"><h4>Classified lines</h4>
+<div class="line cont"><span class="tag">continuation</span> Official</div>
+<div class="line header"><span class="tag">header_footer</span> 2</div>
+<div class="line speaker"><span class="tag">APPEARANCES</span> </div>
+<div class="line cont"><span class="tag">continuation</span> SCOTT G. STEWART, Solicitor General, Jackson,</div>
+<div class="line cont"><span class="tag">continuation</span> Mississippi; on behalf of the Petitioners.</div>
+<div class="line cont"><span class="tag">continuation</span> JULIE RIKELMAN, ESQUIRE, New York, New York; on behalf</div>
+<div class="line cont"><span class="tag">continuation</span> of the Respondents.</div>
+<div class="line cont"><span class="tag">continuation</span> GEN. ELIZABETH B. PRELOGAR, Solicitor General,</div>
+<div class="line cont"><span class="tag">continuation</span> Department of Justice, Washington, D.C.; for the</div>
+<div class="line cont"><span class="tag">continuation</span> United States, as amicus curiae, supporting the</div>
+<div class="line cont"><span class="tag">continuation</span> Respondents.</div>
+<div class="line header"><span class="tag">header_footer</span> 10</div>
+<div class="line header"><span class="tag">header_footer</span> 11</div>
+<div class="line header"><span class="tag">header_footer</span> 12</div>
+<div class="line header"><span class="tag">header_footer</span> 13</div>
+<div class="line header"><span class="tag">header_footer</span> 14</div>
+<div class="line header"><span class="tag">header_footer</span> 15</div>
+<div class="line header"><span class="tag">header_footer</span> 16</div>
+<div class="line header"><span class="tag">header_footer</span> 17</div>
+<div class="line header"><span class="tag">header_footer</span> 18</div>
+<div class="line header"><span class="tag">header_footer</span> 19</div>
+<div class="line header"><span class="tag">header_footer</span> 20</div>
+<div class="line header"><span class="tag">header_footer</span> 21</div>
+<div class="line header"><span class="tag">header_footer</span> 22</div>
+<div class="line header"><span class="tag">header_footer</span> 23</div>
+<div class="line header"><span class="tag">header_footer</span> 24</div>
+<div class="line header"><span class="tag">header_footer</span> 25</div>
+<div class="line header"><span class="tag">header_footer</span> Heritage Reporting Corporation</div>
+</div></div>
+<div class="page">
+<h3>Page 4</h3>
+<div class="raw-col"><h4>Raw pdfplumber output</h4><pre>Official
+3
+1 C O N T E N T S
+2 ORAL ARGUMENT OF: PAGE:
+3 SCOTT G. STEWART, ESQ.
+4 On behalf of the Petitioners 4
+5 ORAL ARGUMENT OF:
+6 JULIE RIKELMAN, ESQ.
+7 On behalf of the Respondents 47
+8 ORAL ARGUMENT OF:
+9 GEN. ELIZABETH B. PRELOGAR, ESQ.
+10 For the United States, as amicus
+11 curiae, supporting the Respondents 84
+12 REBUTTAL ARGUMENT OF:
+13 SCOTT G. STEWART, ESQ.
+14 On behalf of the Petitioners 111
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+Heritage Reporting Corporation</pre></div>
+<div class="classified-col"><h4>Classified lines</h4>
+<div class="line cont"><span class="tag">continuation</span> Official</div>
+<div class="line header"><span class="tag">header_footer</span> 3</div>
+<div class="line cont"><span class="tag">continuation</span> C O N T E N T S</div>
+<div class="line speaker"><span class="tag">ORAL ARGUMENT OF</span> PAGE:</div>
+<div class="line cont"><span class="tag">continuation</span> SCOTT G. STEWART, ESQ.</div>
+<div class="line cont"><span class="tag">continuation</span> On behalf of the Petitioners 4</div>
+<div class="line speaker"><span class="tag">ORAL ARGUMENT OF</span> </div>
+<div class="line cont"><span class="tag">continuation</span> JULIE RIKELMAN, ESQ.</div>
+<div class="line cont"><span class="tag">continuation</span> On behalf of the Respondents 47</div>
+<div class="line speaker"><span class="tag">ORAL ARGUMENT OF</span> </div>
+<div class="line cont"><span class="tag">continuation</span> GEN. ELIZABETH B. PRELOGAR, ESQ.</div>
+<div class="line cont"><span class="tag">continuation</span> For the United States, as amicus</div>
+<div class="line cont"><span class="tag">continuation</span> curiae, supporting the Respondents 84</div>
+<div class="line speaker"><span class="tag">REBUTTAL ARGUMENT OF</span> </div>
+<div class="line cont"><span class="tag">continuation</span> SCOTT G. STEWART, ESQ.</div>
+<div class="line cont"><span class="tag">continuation</span> On behalf of the Petitioners 111</div>
+<div class="line header"><span class="tag">header_footer</span> 15</div>
+<div class="line header"><span class="tag">header_footer</span> 16</div>
+<div class="line header"><span class="tag">header_footer</span> 17</div>
+<div class="line header"><span class="tag">header_footer</span> 18</div>
+<div class="line header"><span class="tag">header_footer</span> 19</div>
+<div class="line header"><span class="tag">header_footer</span> 20</div>
+<div class="line header"><span class="tag">header_footer</span> 21</div>
+<div class="line header"><span class="tag">header_footer</span> 22</div>
+<div class="line header"><span class="tag">header_footer</span> 23</div>
+<div class="line header"><span class="tag">header_footer</span> 24</div>
+<div class="line header"><span class="tag">header_footer</span> 25</div>
+<div class="line header"><span class="tag">header_footer</span> Heritage Reporting Corporation</div>
+</div></div>
+<div class="page">
+<h3>Page 5</h3>
+<div class="raw-col"><h4>Raw pdfplumber output</h4><pre>Official
+4
+1 P R O C E E D I N G S
+2 (10:00 a.m.)
+3 CHIEF JUSTICE ROBERTS: We will hear
+4 argument this morning in Case 19-1392, Dobbs
+5 versus Jackson Women's Health Organization.
+6 General Stewart.
+7 ORAL ARGUMENT OF SCOTT G. STEWART
+8 ON BEHALF OF THE PETITIONERS
+9 MR. STEWART: Mr. Chief Justice, and
+10 may it please the Court:
+11 Roe versus Wade and Planned Parenthood
+12 versus Casey haunt our country. They have no
+13 basis in the Constitution. They have no home in
+14 our history or traditions. They've damaged the
+15 democratic process. They've poisoned the law.
+16 They've choked off compromise.
+17 For 50 years, they've kept this Court
+18 at the center of a political battle that it can
+19 never resolve. And 50 years on, they stand
+20 alone. Nowhere else does this Court recognize a
+21 right to end a human life.
+22 Consider this case: The Mississippi
+23 law here prohibits abortions after 15 weeks.
+24 The law includes robust exceptions for a woman's
+25 life and health. It leaves months to obtain an
+Heritage Reporting Corporation</pre></div>
+<div class="classified-col"><h4>Classified lines</h4>
+<div class="line cont"><span class="tag">continuation</span> Official</div>
+<div class="line header"><span class="tag">header_footer</span> 4</div>
+<div class="line cont"><span class="tag">continuation</span> P R O C E E D I N G S</div>
+<div class="line stage"><span class="tag">stage_direction</span> (10:00 a.m.)</div>
+<div class="line speaker"><span class="tag">CHIEF JUSTICE ROBERTS</span> We will hear</div>
+<div class="line cont"><span class="tag">continuation</span> argument this morning in Case 19-1392, Dobbs</div>
+<div class="line cont"><span class="tag">continuation</span> versus Jackson Women's Health Organization.</div>
+<div class="line cont"><span class="tag">continuation</span> General Stewart.</div>
+<div class="line cont"><span class="tag">continuation</span> ORAL ARGUMENT OF SCOTT G. STEWART</div>
+<div class="line cont"><span class="tag">continuation</span> ON BEHALF OF THE PETITIONERS</div>
+<div class="line speaker"><span class="tag">MR. STEWART</span> Mr. Chief Justice, and</div>
+<div class="line cont"><span class="tag">continuation</span> may it please the Court:</div>
+<div class="line cont"><span class="tag">continuation</span> Roe versus Wade and Planned Parenthood</div>
+<div class="line cont"><span class="tag">continuation</span> versus Casey haunt our country. They have no</div>
+<div class="line cont"><span class="tag">continuation</span> basis in the Constitution. They have no home in</div>
+<div class="line cont"><span class="tag">continuation</span> our history or traditions. They've damaged the</div>
+<div class="line cont"><span class="tag">continuation</span> democratic process. They've poisoned the law.</div>
+<div class="line cont"><span class="tag">continuation</span> They've choked off compromise.</div>
+<div class="line cont"><span class="tag">continuation</span> For 50 years, they've kept this Court</div>
+<div class="line cont"><span class="tag">continuation</span> at the center of a political battle that it can</div>
+<div class="line cont"><span class="tag">continuation</span> never resolve. And 50 years on, they stand</div>
+<div class="line cont"><span class="tag">continuation</span> alone. Nowhere else does this Court recognize a</div>
+<div class="line cont"><span class="tag">continuation</span> right to end a human life.</div>
+<div class="line cont"><span class="tag">continuation</span> Consider this case: The Mississippi</div>
+<div class="line cont"><span class="tag">continuation</span> law here prohibits abortions after 15 weeks.</div>
+<div class="line cont"><span class="tag">continuation</span> The law includes robust exceptions for a woman's</div>
+<div class="line cont"><span class="tag">continuation</span> life and health. It leaves months to obtain an</div>
+<div class="line header"><span class="tag">header_footer</span> Heritage Reporting Corporation</div>
+</div></div>
+<div class="page">
+<h3>Page 6</h3>
+<div class="raw-col"><h4>Raw pdfplumber output</h4><pre>Official
+5
+1 abortion. Yet, the courts below struck the law
+2 down. It didn't matter that the law apply --
+3 that the law applies when an unborn child is
+4 undeniably human, when risks to women surge, and
+5 when the common abortion procedure is brutal.
+6 The lower courts held that because the law
+7 prohibits abortions before viability, it is
+8 unconstitutional no matter what.
+9 Roe and Casey's core holding,
+10 according to those courts, is that the people
+11 can protect an unborn girl's life when she just
+12 barely can survive outside the womb but not any
+13 earlier when she needs a little more help. That
+14 is the world under Roe and Casey.
+15 That is not the world the Constitution
+16 promises. The Constitution places its trust in
+17 the people. On hard issue after hard issue, the
+18 people make this country work. Abortion is a
+19 hard issue. It demands the best from all of us,
+20 not a judgment by just a few of us. When an
+21 issue affects everyone and when the Constitution
+22 does not take sides on it, it belongs to the
+23 people.
+24 Roe and Casey have failed, but the
+25 people, if given the chance, will succeed. This
+Heritage Reporting Corporation</pre></div>
+<div class="classified-col"><h4>Classified lines</h4>
+<div class="line cont"><span class="tag">continuation</span> Official</div>
+<div class="line header"><span class="tag">header_footer</span> 5</div>
+<div class="line cont"><span class="tag">continuation</span> abortion. Yet, the courts below struck the law</div>
+<div class="line cont"><span class="tag">continuation</span> down. It didn't matter that the law apply --</div>
+<div class="line cont"><span class="tag">continuation</span> that the law applies when an unborn child is</div>
+<div class="line cont"><span class="tag">continuation</span> undeniably human, when risks to women surge, and</div>
+<div class="line cont"><span class="tag">continuation</span> when the common abortion procedure is brutal.</div>
+<div class="line cont"><span class="tag">continuation</span> The lower courts held that because the law</div>
+<div class="line cont"><span class="tag">continuation</span> prohibits abortions before viability, it is</div>
+<div class="line cont"><span class="tag">continuation</span> unconstitutional no matter what.</div>
+<div class="line cont"><span class="tag">continuation</span> Roe and Casey's core holding,</div>
+<div class="line cont"><span class="tag">continuation</span> according to those courts, is that the people</div>
+<div class="line cont"><span class="tag">continuation</span> can protect an unborn girl's life when she just</div>
+<div class="line cont"><span class="tag">continuation</span> barely can survive outside the womb but not any</div>
+<div class="line cont"><span class="tag">continuation</span> earlier when she needs a little more help. That</div>
+<div class="line cont"><span class="tag">continuation</span> is the world under Roe and Casey.</div>
+<div class="line cont"><span class="tag">continuation</span> That is not the world the Constitution</div>
+<div class="line cont"><span class="tag">continuation</span> promises. The Constitution places its trust in</div>
+<div class="line cont"><span class="tag">continuation</span> the people. On hard issue after hard issue, the</div>
+<div class="line cont"><span class="tag">continuation</span> people make this country work. Abortion is a</div>
+<div class="line cont"><span class="tag">continuation</span> hard issue. It demands the best from all of us,</div>
+<div class="line cont"><span class="tag">continuation</span> not a judgment by just a few of us. When an</div>
+<div class="line cont"><span class="tag">continuation</span> issue affects everyone and when the Constitution</div>
+<div class="line cont"><span class="tag">continuation</span> does not take sides on it, it belongs to the</div>
+<div class="line cont"><span class="tag">continuation</span> people.</div>
+<div class="line cont"><span class="tag">continuation</span> Roe and Casey have failed, but the</div>
+<div class="line cont"><span class="tag">continuation</span> people, if given the chance, will succeed. This</div>
+<div class="line header"><span class="tag">header_footer</span> Heritage Reporting Corporation</div>
+</div></div>
+<div class="page">
+<h3>Page 7</h3>
+<div class="raw-col"><h4>Raw pdfplumber output</h4><pre>Official
+6
+1 Court should overrule Roe and Casey and uphold
+2 the state's law.
+3 I welcome the Court's questions.
+4 JUSTICE THOMAS: General Stewart, you
+5 focus on the right to abortion, but our
+6 jurisprudence seems to -- seem to focus on, in
+7 Casey, autonomy; in Roe, privacy. Does it make
+8 a difference that we focus on privacy or
+9 autonomy or more specifically on abortion?
+10 MR. STEWART: I think whichever one of
+11 those you're focusing on, Your Honor,
+12 particularly if you're focusing on -- on the
+13 right to abortion, each of those starts to
+14 become a step removed for what's provided in the
+15 Constitution. Yes, the Constitution does
+16 provide certain -- protect certain aspects of
+17 privacy, of autonomy, and the like. But, as
+18 this Court said in Glucksberg, going directly
+19 from general concepts of autonomy, of privacy,
+20 of bodily integrity, to -- to a right is not how
+21 we traditionally, this Court traditionally, does
+22 due process analysis.
+23 So I think it just confirms, whichever
+24 one of those you look at, Your Honor, a right to
+25 abortion is -- is not grounded in the text, and
+Heritage Reporting Corporation</pre></div>
+<div class="classified-col"><h4>Classified lines</h4>
+<div class="line cont"><span class="tag">continuation</span> Official</div>
+<div class="line header"><span class="tag">header_footer</span> 6</div>
+<div class="line cont"><span class="tag">continuation</span> Court should overrule Roe and Casey and uphold</div>
+<div class="line cont"><span class="tag">continuation</span> the state's law.</div>
+<div class="line cont"><span class="tag">continuation</span> I welcome the Court's questions.</div>
+<div class="line speaker"><span class="tag">JUSTICE THOMAS</span> General Stewart, you</div>
+<div class="line cont"><span class="tag">continuation</span> focus on the right to abortion, but our</div>
+<div class="line cont"><span class="tag">continuation</span> jurisprudence seems to -- seem to focus on, in</div>
+<div class="line cont"><span class="tag">continuation</span> Casey, autonomy; in Roe, privacy. Does it make</div>
+<div class="line cont"><span class="tag">continuation</span> a difference that we focus on privacy or</div>
+<div class="line cont"><span class="tag">continuation</span> autonomy or more specifically on abortion?</div>
+<div class="line speaker"><span class="tag">MR. STEWART</span> I think whichever one of</div>
+<div class="line cont"><span class="tag">continuation</span> those you're focusing on, Your Honor,</div>
+<div class="line cont"><span class="tag">continuation</span> particularly if you're focusing on -- on the</div>
+<div class="line cont"><span class="tag">continuation</span> right to abortion, each of those starts to</div>
+<div class="line cont"><span class="tag">continuation</span> become a step removed for what's provided in the</div>
+<div class="line cont"><span class="tag">continuation</span> Constitution. Yes, the Constitution does</div>
+<div class="line cont"><span class="tag">continuation</span> provide certain -- protect certain aspects of</div>
+<div class="line cont"><span class="tag">continuation</span> privacy, of autonomy, and the like. But, as</div>
+<div class="line cont"><span class="tag">continuation</span> this Court said in Glucksberg, going directly</div>
+<div class="line cont"><span class="tag">continuation</span> from general concepts of autonomy, of privacy,</div>
+<div class="line cont"><span class="tag">continuation</span> of bodily integrity, to -- to a right is not how</div>
+<div class="line cont"><span class="tag">continuation</span> we traditionally, this Court traditionally, does</div>
+<div class="line cont"><span class="tag">continuation</span> due process analysis.</div>
+<div class="line cont"><span class="tag">continuation</span> So I think it just confirms, whichever</div>
+<div class="line cont"><span class="tag">continuation</span> one of those you look at, Your Honor, a right to</div>
+<div class="line cont"><span class="tag">continuation</span> abortion is -- is not grounded in the text, and</div>
+<div class="line header"><span class="tag">header_footer</span> Heritage Reporting Corporation</div>
+</div></div>
+<div class="page">
+<h3>Page 8</h3>
+<div class="raw-col"><h4>Raw pdfplumber output</h4><pre>Official
+7
+1 it's grounded on abstract concepts that this
+2 Court has rejected in -- in other contexts as
+3 supplying a substantive right.
+4 JUSTICE THOMAS: You say that this is
+5 the only constitutional right that involves the
+6 taking of a life. What difference does that
+7 make in your analysis?
+8 MR. STEWART: Sure, Your Honor. I --
+9 I -- I think it -- it makes a -- a number of
+10 differences. One, I -- I'd mention two in
+11 particular.
+12 One is it -- it really does mark out
+13 the unbelievably profound ramifications of this
+14 area, which, in many other areas, assisted
+15 suicide, a whole host of important areas that
+16 are important to dignity, autonomy, freedom, and
+17 important to matters of conscience, it -- it
+18 marks it out as one of the unique areas where
+19 this Court has taken that important issue to the
+20 people, and it's -- it's something that
+21 implicates life, and it just, I think, marks
+22 off, Justice Thomas, how problematic and unusual
+23 and how much of a break the Court's abortion
+24 jurisprudence is from those other cases.
+25 JUSTICE THOMAS: If we don't overrule
+Heritage Reporting Corporation</pre></div>
+<div class="classified-col"><h4>Classified lines</h4>
+<div class="line cont"><span class="tag">continuation</span> Official</div>
+<div class="line header"><span class="tag">header_footer</span> 7</div>
+<div class="line cont"><span class="tag">continuation</span> it's grounded on abstract concepts that this</div>
+<div class="line cont"><span class="tag">continuation</span> Court has rejected in -- in other contexts as</div>
+<div class="line cont"><span class="tag">continuation</span> supplying a substantive right.</div>
+<div class="line speaker"><span class="tag">JUSTICE THOMAS</span> You say that this is</div>
+<div class="line cont"><span class="tag">continuation</span> the only constitutional right that involves the</div>
+<div class="line cont"><span class="tag">continuation</span> taking of a life. What difference does that</div>
+<div class="line cont"><span class="tag">continuation</span> make in your analysis?</div>
+<div class="line speaker"><span class="tag">MR. STEWART</span> Sure, Your Honor. I --</div>
+<div class="line cont"><span class="tag">continuation</span> I -- I think it -- it makes a -- a number of</div>
+<div class="line cont"><span class="tag">continuation</span> differences. One, I -- I'd mention two in</div>
+<div class="line cont"><span class="tag">continuation</span> particular.</div>
+<div class="line cont"><span class="tag">continuation</span> One is it -- it really does mark out</div>
+<div class="line cont"><span class="tag">continuation</span> the unbelievably profound ramifications of this</div>
+<div class="line cont"><span class="tag">continuation</span> area, which, in many other areas, assisted</div>
+<div class="line cont"><span class="tag">continuation</span> suicide, a whole host of important areas that</div>
+<div class="line cont"><span class="tag">continuation</span> are important to dignity, autonomy, freedom, and</div>
+<div class="line cont"><span class="tag">continuation</span> important to matters of conscience, it -- it</div>
+<div class="line cont"><span class="tag">continuation</span> marks it out as one of the unique areas where</div>
+<div class="line cont"><span class="tag">continuation</span> this Court has taken that important issue to the</div>
+<div class="line cont"><span class="tag">continuation</span> people, and it's -- it's something that</div>
+<div class="line cont"><span class="tag">continuation</span> implicates life, and it just, I think, marks</div>
+<div class="line cont"><span class="tag">continuation</span> off, Justice Thomas, how problematic and unusual</div>
+<div class="line cont"><span class="tag">continuation</span> and how much of a break the Court's abortion</div>
+<div class="line cont"><span class="tag">continuation</span> jurisprudence is from those other cases.</div>
+<div class="line speaker"><span class="tag">JUSTICE THOMAS</span> If we don't overrule</div>
+<div class="line header"><span class="tag">header_footer</span> Heritage Reporting Corporation</div>
+</div></div>
+<div class="page">
+<h3>Page 9</h3>
+<div class="raw-col"><h4>Raw pdfplumber output</h4><pre>Official
+8
+1 Casey or Roe, do you have a standard that you
+2 propose other than the viability standard?
+3 MR. STEWART: It would be, Your Honor,
+4 a clarified version of the undue burden
+5 standard. I -- I -- I would -- I would
+6 emphasize, I -- I think, as Your Honor is
+7 alluding to, that no standard other than the
+8 rational basis review that applies to all laws
+9 will promote an administrable, workable,
+10 practicable, consistent jurisprudence that put
+11 -- puts matters back with the people. I think
+12 anything heightened here is going to be
+13 problematic.
+14 But I would say, if the Court were not
+15 inclined to -- to overrule Casey, the -- the
+16 choice would be undue burden standard,
+17 untethered from any bright-line viability rule.
+18 JUSTICE THOMAS: Thank you.
+19 JUSTICE BREYER: Well, I'd -- I'd like
+20 to go to a different topic, back to Casey.
+21 MR. STEWART: Yes, Your Honor.
+22 JUSTICE BREYER: I assume you've read
+23 Casey pretty thoroughly.
+24 MR. STEWART: Yes, Your Honor.
+25 JUSTICE BREYER: And there are two
+Heritage Reporting Corporation</pre></div>
+<div class="classified-col"><h4>Classified lines</h4>
+<div class="line cont"><span class="tag">continuation</span> Official</div>
+<div class="line header"><span class="tag">header_footer</span> 8</div>
+<div class="line cont"><span class="tag">continuation</span> Casey or Roe, do you have a standard that you</div>
+<div class="line cont"><span class="tag">continuation</span> propose other than the viability standard?</div>
+<div class="line speaker"><span class="tag">MR. STEWART</span> It would be, Your Honor,</div>
+<div class="line cont"><span class="tag">continuation</span> a clarified version of the undue burden</div>
+<div class="line cont"><span class="tag">continuation</span> standard. I -- I -- I would -- I would</div>
+<div class="line cont"><span class="tag">continuation</span> emphasize, I -- I think, as Your Honor is</div>
+<div class="line cont"><span class="tag">continuation</span> alluding to, that no standard other than the</div>
+<div class="line cont"><span class="tag">continuation</span> rational basis review that applies to all laws</div>
+<div class="line cont"><span class="tag">continuation</span> will promote an administrable, workable,</div>
+<div class="line cont"><span class="tag">continuation</span> practicable, consistent jurisprudence that put</div>
+<div class="line cont"><span class="tag">continuation</span> -- puts matters back with the people. I think</div>
+<div class="line cont"><span class="tag">continuation</span> anything heightened here is going to be</div>
+<div class="line cont"><span class="tag">continuation</span> problematic.</div>
+<div class="line cont"><span class="tag">continuation</span> But I would say, if the Court were not</div>
+<div class="line cont"><span class="tag">continuation</span> inclined to -- to overrule Casey, the -- the</div>
+<div class="line cont"><span class="tag">continuation</span> choice would be undue burden standard,</div>
+<div class="line cont"><span class="tag">continuation</span> untethered from any bright-line viability rule.</div>
+<div class="line speaker"><span class="tag">JUSTICE THOMAS</span> Thank you.</div>
+<div class="line speaker"><span class="tag">JUSTICE BREYER</span> Well, I'd -- I'd like</div>
+<div class="line cont"><span class="tag">continuation</span> to go to a different topic, back to Casey.</div>
+<div class="line speaker"><span class="tag">MR. STEWART</span> Yes, Your Honor.</div>
+<div class="line speaker"><span class="tag">JUSTICE BREYER</span> I assume you've read</div>
+<div class="line cont"><span class="tag">continuation</span> Casey pretty thoroughly.</div>
+<div class="line speaker"><span class="tag">MR. STEWART</span> Yes, Your Honor.</div>
+<div class="line speaker"><span class="tag">JUSTICE BREYER</span> And there are two</div>
+<div class="line header"><span class="tag">header_footer</span> Heritage Reporting Corporation</div>
+</div></div>
+<div class="page">
+<h3>Page 10</h3>
+<div class="raw-col"><h4>Raw pdfplumber output</h4><pre>Official
+9
+1 parts. One is they reaffirm Roe. Put that to
+2 the side. The second is an opinion for the
+3 Court, not for three people but for the Court,
+4 and that second part is about what stare decisis
+5 principles should be used to overrule a case
+6 like Roe.
+7 And they say Roe is special. What's
+8 special about it? They say it's rare. They
+9 call it a watershed. Why? Because the country
+10 is divided. Because feelings run high. And yet
+11 the country, for better or for worse, decided to
+12 resolve their differences by this Court laying
+13 down a constitutional principle, in this case,
+14 women's choice. All right. That's what makes
+15 it rare.
+16 That's not what I'm asking about. I
+17 want your reaction to what they said follows
+18 from that. What the Court said follows from
+19 that is that it should be more unwilling to
+20 overrule a prior case, far more unwilling we
+21 should be, whether that case is right or wrong,
+22 than the ordinary case.
+23 And why? Well, they have a lot of
+24 words there, but I'll give you about 10 or 20.
+25 There will be &quot;inevitable efforts to overturn
+Heritage Reporting Corporation</pre></div>
+<div class="classified-col"><h4>Classified lines</h4>
+<div class="line cont"><span class="tag">continuation</span> Official</div>
+<div class="line header"><span class="tag">header_footer</span> 9</div>
+<div class="line cont"><span class="tag">continuation</span> parts. One is they reaffirm Roe. Put that to</div>
+<div class="line cont"><span class="tag">continuation</span> the side. The second is an opinion for the</div>
+<div class="line cont"><span class="tag">continuation</span> Court, not for three people but for the Court,</div>
+<div class="line cont"><span class="tag">continuation</span> and that second part is about what stare decisis</div>
+<div class="line cont"><span class="tag">continuation</span> principles should be used to overrule a case</div>
+<div class="line cont"><span class="tag">continuation</span> like Roe.</div>
+<div class="line cont"><span class="tag">continuation</span> And they say Roe is special. What's</div>
+<div class="line cont"><span class="tag">continuation</span> special about it? They say it's rare. They</div>
+<div class="line cont"><span class="tag">continuation</span> call it a watershed. Why? Because the country</div>
+<div class="line cont"><span class="tag">continuation</span> is divided. Because feelings run high. And yet</div>
+<div class="line cont"><span class="tag">continuation</span> the country, for better or for worse, decided to</div>
+<div class="line cont"><span class="tag">continuation</span> resolve their differences by this Court laying</div>
+<div class="line cont"><span class="tag">continuation</span> down a constitutional principle, in this case,</div>
+<div class="line cont"><span class="tag">continuation</span> women's choice. All right. That's what makes</div>
+<div class="line cont"><span class="tag">continuation</span> it rare.</div>
+<div class="line cont"><span class="tag">continuation</span> That's not what I'm asking about. I</div>
+<div class="line cont"><span class="tag">continuation</span> want your reaction to what they said follows</div>
+<div class="line cont"><span class="tag">continuation</span> from that. What the Court said follows from</div>
+<div class="line cont"><span class="tag">continuation</span> that is that it should be more unwilling to</div>
+<div class="line cont"><span class="tag">continuation</span> overrule a prior case, far more unwilling we</div>
+<div class="line cont"><span class="tag">continuation</span> should be, whether that case is right or wrong,</div>
+<div class="line cont"><span class="tag">continuation</span> than the ordinary case.</div>
+<div class="line cont"><span class="tag">continuation</span> And why? Well, they have a lot of</div>
+<div class="line cont"><span class="tag">continuation</span> words there, but I'll give you about 10 or 20.</div>
+<div class="line cont"><span class="tag">continuation</span> There will be &quot;inevitable efforts to overturn</div>
+<div class="line header"><span class="tag">header_footer</span> Heritage Reporting Corporation</div>
+</div></div>
+
+</div>
+<div class="panel" id="panel-3" style="display:none">
+<h2>United States v. Rahimi (2023)</h2>
+<div class="summary">
+  <strong>Pages:</strong> 116 &nbsp;|&nbsp;
+  <strong>Speaker labels:</strong> APPEARANCES, CHIEF JUSTICE ROBERTS, GENERAL PRELOGAR, JUSTICE ALITO, JUSTICE BARRETT, JUSTICE GORSUCH, JUSTICE JACKSON, JUSTICE KAGAN, JUSTICE KAVANAUGH, JUSTICE SOTOMAYOR, JUSTICE THOMAS, MR. WRIGHT, ORAL ARGUMENT OF, REBUTTAL ARGUMENT OF<br>
+  <strong>Line type counts:</strong> <code>{
+  &quot;header_footer&quot;: 266,
+  &quot;continuation&quot;: 3107,
+  &quot;speaker_turn&quot;: 305,
+  &quot;stage_direction&quot;: 3
+}</code>
+</div>
+<div class="page">
+<h3>Page 1</h3>
+<div class="raw-col"><h4>Raw pdfplumber output</h4><pre>SUPREME COURT
+OF THE UNITED STATES
+IN THE SUPREME COURT OF THE UNITED STATES
+- - - - - - - - - - - - - - - - - -
+UNITED STATES, )
+Petitioner, )
+v. ) No. 22-915
+ZACKEY RAHIMI, )
+Respondent. )
+- - - - - - - - - - - - - - - - - -
+Pages: 1 through 105
+Place: Washington, D.C.
+Date: November 7, 2023
+HERITAGE REPORTING CORPORATION
+Official Reporters
+1220 L Street, N.W., Suite 206
+Washington, D.C. 20005
+(202) 628-4888
+www.hrccourtreporters.com</pre></div>
+<div class="classified-col"><h4>Classified lines</h4>
+<div class="line header"><span class="tag">header_footer</span> SUPREME COURT</div>
+<div class="line cont"><span class="tag">continuation</span> OF THE UNITED STATES</div>
+<div class="line cont"><span class="tag">continuation</span> IN THE SUPREME COURT OF THE UNITED STATES</div>
+<div class="line cont"><span class="tag">continuation</span> - - - - - - - - - - - - - - - - - -</div>
+<div class="line cont"><span class="tag">continuation</span> UNITED STATES, )</div>
+<div class="line cont"><span class="tag">continuation</span> Petitioner, )</div>
+<div class="line cont"><span class="tag">continuation</span> v. ) No. 22-915</div>
+<div class="line cont"><span class="tag">continuation</span> ZACKEY RAHIMI, )</div>
+<div class="line cont"><span class="tag">continuation</span> Respondent. )</div>
+<div class="line cont"><span class="tag">continuation</span> - - - - - - - - - - - - - - - - - -</div>
+<div class="line cont"><span class="tag">continuation</span> Pages: 1 through 105</div>
+<div class="line cont"><span class="tag">continuation</span> Place: Washington, D.C.</div>
+<div class="line cont"><span class="tag">continuation</span> Date: November 7, 2023</div>
+<div class="line header"><span class="tag">header_footer</span> HERITAGE REPORTING CORPORATION</div>
+<div class="line header"><span class="tag">header_footer</span> Official Reporters</div>
+<div class="line cont"><span class="tag">continuation</span> 1220 L Street, N.W., Suite 206</div>
+<div class="line cont"><span class="tag">continuation</span> Washington, D.C. 20005</div>
+<div class="line cont"><span class="tag">continuation</span> (202) 628-4888</div>
+<div class="line cont"><span class="tag">continuation</span> www.hrccourtreporters.com</div>
+</div></div>
+<div class="page">
+<h3>Page 2</h3>
+<div class="raw-col"><h4>Raw pdfplumber output</h4><pre>Official
+1
+1 IN THE SUPREME COURT OF THE UNITED STATES
+2 - - - - - - - - - - - - - - - - - -
+3 UNITED STATES, )
+4 Petitioner, )
+5 v. ) No. 22-915
+6 ZACKEY RAHIMI, )
+7 Respondent. )
+8 - - - - - - - - - - - - - - - - - -
+9
+10 Washington, D.C.
+11 Tuesday, November 7, 2023
+12
+13 The above-entitled matter came on for
+14 oral argument before the Supreme Court of the
+15 United States at 10:04 a.m.
+16
+17 APPEARANCES:
+18 GEN. ELIZABETH B. PRELOGAR, Solicitor General,
+19 Department of Justice, Washington, D.C.; on behalf
+20 of the Petitioner.
+21 J. MATTHEW WRIGHT, Assistant Federal Public Defender,
+22 Amarillo, Texas; on behalf of the Respondent.
+23
+24
+25
+Heritage Reporting Corporation</pre></div>
+<div class="classified-col"><h4>Classified lines</h4>
+<div class="line cont"><span class="tag">continuation</span> Official</div>
+<div class="line header"><span class="tag">header_footer</span> 1</div>
+<div class="line cont"><span class="tag">continuation</span> IN THE SUPREME COURT OF THE UNITED STATES</div>
+<div class="line cont"><span class="tag">continuation</span> - - - - - - - - - - - - - - - - - -</div>
+<div class="line cont"><span class="tag">continuation</span> UNITED STATES, )</div>
+<div class="line cont"><span class="tag">continuation</span> Petitioner, )</div>
+<div class="line cont"><span class="tag">continuation</span> v. ) No. 22-915</div>
+<div class="line cont"><span class="tag">continuation</span> ZACKEY RAHIMI, )</div>
+<div class="line cont"><span class="tag">continuation</span> Respondent. )</div>
+<div class="line cont"><span class="tag">continuation</span> - - - - - - - - - - - - - - - - - -</div>
+<div class="line header"><span class="tag">header_footer</span> 9</div>
+<div class="line cont"><span class="tag">continuation</span> Washington, D.C.</div>
+<div class="line cont"><span class="tag">continuation</span> Tuesday, November 7, 2023</div>
+<div class="line header"><span class="tag">header_footer</span> 12</div>
+<div class="line cont"><span class="tag">continuation</span> The above-entitled matter came on for</div>
+<div class="line cont"><span class="tag">continuation</span> oral argument before the Supreme Court of the</div>
+<div class="line cont"><span class="tag">continuation</span> United States at 10:04 a.m.</div>
+<div class="line header"><span class="tag">header_footer</span> 16</div>
+<div class="line speaker"><span class="tag">APPEARANCES</span> </div>
+<div class="line cont"><span class="tag">continuation</span> GEN. ELIZABETH B. PRELOGAR, Solicitor General,</div>
+<div class="line cont"><span class="tag">continuation</span> Department of Justice, Washington, D.C.; on behalf</div>
+<div class="line cont"><span class="tag">continuation</span> of the Petitioner.</div>
+<div class="line cont"><span class="tag">continuation</span> J. MATTHEW WRIGHT, Assistant Federal Public Defender,</div>
+<div class="line cont"><span class="tag">continuation</span> Amarillo, Texas; on behalf of the Respondent.</div>
+<div class="line header"><span class="tag">header_footer</span> 23</div>
+<div class="line header"><span class="tag">header_footer</span> 24</div>
+<div class="line header"><span class="tag">header_footer</span> 25</div>
+<div class="line header"><span class="tag">header_footer</span> Heritage Reporting Corporation</div>
+</div></div>
+<div class="page">
+<h3>Page 3</h3>
+<div class="raw-col"><h4>Raw pdfplumber output</h4><pre>Official
+2
+1 C O N T E N T S
+2 ORAL ARGUMENT OF: PAGE:
+3 GEN. ELIZABETH B. PRELOGAR, ESQ.
+4 On behalf of the Petitioner 3
+5 ORAL ARGUMENT OF:
+6 J. MATTHEW WRIGHT, ESQ.
+7 On behalf of the Respondent 57
+8 REBUTTAL ARGUMENT OF:
+9 GEN. ELIZABETH B. PRELOGAR, ESQ.
+10 On behalf of the Petitioner 101
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+Heritage Reporting Corporation</pre></div>
+<div class="classified-col"><h4>Classified lines</h4>
+<div class="line cont"><span class="tag">continuation</span> Official</div>
+<div class="line header"><span class="tag">header_footer</span> 2</div>
+<div class="line cont"><span class="tag">continuation</span> C O N T E N T S</div>
+<div class="line speaker"><span class="tag">ORAL ARGUMENT OF</span> PAGE:</div>
+<div class="line cont"><span class="tag">continuation</span> GEN. ELIZABETH B. PRELOGAR, ESQ.</div>
+<div class="line cont"><span class="tag">continuation</span> On behalf of the Petitioner 3</div>
+<div class="line speaker"><span class="tag">ORAL ARGUMENT OF</span> </div>
+<div class="line cont"><span class="tag">continuation</span> J. MATTHEW WRIGHT, ESQ.</div>
+<div class="line cont"><span class="tag">continuation</span> On behalf of the Respondent 57</div>
+<div class="line speaker"><span class="tag">REBUTTAL ARGUMENT OF</span> </div>
+<div class="line cont"><span class="tag">continuation</span> GEN. ELIZABETH B. PRELOGAR, ESQ.</div>
+<div class="line cont"><span class="tag">continuation</span> On behalf of the Petitioner 101</div>
+<div class="line header"><span class="tag">header_footer</span> 11</div>
+<div class="line header"><span class="tag">header_footer</span> 12</div>
+<div class="line header"><span class="tag">header_footer</span> 13</div>
+<div class="line header"><span class="tag">header_footer</span> 14</div>
+<div class="line header"><span class="tag">header_footer</span> 15</div>
+<div class="line header"><span class="tag">header_footer</span> 16</div>
+<div class="line header"><span class="tag">header_footer</span> 17</div>
+<div class="line header"><span class="tag">header_footer</span> 18</div>
+<div class="line header"><span class="tag">header_footer</span> 19</div>
+<div class="line header"><span class="tag">header_footer</span> 20</div>
+<div class="line header"><span class="tag">header_footer</span> 21</div>
+<div class="line header"><span class="tag">header_footer</span> 22</div>
+<div class="line header"><span class="tag">header_footer</span> 23</div>
+<div class="line header"><span class="tag">header_footer</span> 24</div>
+<div class="line header"><span class="tag">header_footer</span> 25</div>
+<div class="line header"><span class="tag">header_footer</span> Heritage Reporting Corporation</div>
+</div></div>
+<div class="page">
+<h3>Page 4</h3>
+<div class="raw-col"><h4>Raw pdfplumber output</h4><pre>Official
+3
+1 P R O C E E D I N G S
+2 (10:04 a.m.)
+3 CHIEF JUSTICE ROBERTS: We'll hear
+4 argument this morning in Case 22-915, United
+5 States versus Rahimi.
+6 General Prelogar.
+7 ORAL ARGUMENT OF GEN. ELIZABETH B. PRELOGAR
+8 ON BEHALF OF THE PETITIONER
+9 GENERAL PRELOGAR: Mr. Chief Justice,
+10 and may it please the Court:
+11 Guns and domestic abuse are a deadly
+12 combination. As this Court has said, all too
+13 often, the only difference between a battered
+14 woman and a dead woman is the presence of a gun.
+15 Armed abusers also pose grave danger to police
+16 officers responding to domestic violence calls
+17 and to the public at large, as Zackey Rahimi's
+18 own conduct shows.
+19 To address that acute threat, Congress
+20 and 48 states and territories temporarily disarm
+21 individuals subject to domestic violence
+22 protective orders. Congress designed Section
+23 922(g)(8) to target the most dangerous domestic
+24 abusers. It applies only if, after notice and a
+25 hearing, a court makes an express finding that
+Heritage Reporting Corporation</pre></div>
+<div class="classified-col"><h4>Classified lines</h4>
+<div class="line cont"><span class="tag">continuation</span> Official</div>
+<div class="line header"><span class="tag">header_footer</span> 3</div>
+<div class="line cont"><span class="tag">continuation</span> P R O C E E D I N G S</div>
+<div class="line stage"><span class="tag">stage_direction</span> (10:04 a.m.)</div>
+<div class="line speaker"><span class="tag">CHIEF JUSTICE ROBERTS</span> We'll hear</div>
+<div class="line cont"><span class="tag">continuation</span> argument this morning in Case 22-915, United</div>
+<div class="line cont"><span class="tag">continuation</span> States versus Rahimi.</div>
+<div class="line cont"><span class="tag">continuation</span> General Prelogar.</div>
+<div class="line cont"><span class="tag">continuation</span> ORAL ARGUMENT OF GEN. ELIZABETH B. PRELOGAR</div>
+<div class="line cont"><span class="tag">continuation</span> ON BEHALF OF THE PETITIONER</div>
+<div class="line speaker"><span class="tag">GENERAL PRELOGAR</span> Mr. Chief Justice,</div>
+<div class="line cont"><span class="tag">continuation</span> and may it please the Court:</div>
+<div class="line cont"><span class="tag">continuation</span> Guns and domestic abuse are a deadly</div>
+<div class="line cont"><span class="tag">continuation</span> combination. As this Court has said, all too</div>
+<div class="line cont"><span class="tag">continuation</span> often, the only difference between a battered</div>
+<div class="line cont"><span class="tag">continuation</span> woman and a dead woman is the presence of a gun.</div>
+<div class="line cont"><span class="tag">continuation</span> Armed abusers also pose grave danger to police</div>
+<div class="line cont"><span class="tag">continuation</span> officers responding to domestic violence calls</div>
+<div class="line cont"><span class="tag">continuation</span> and to the public at large, as Zackey Rahimi's</div>
+<div class="line cont"><span class="tag">continuation</span> own conduct shows.</div>
+<div class="line cont"><span class="tag">continuation</span> To address that acute threat, Congress</div>
+<div class="line cont"><span class="tag">continuation</span> and 48 states and territories temporarily disarm</div>
+<div class="line cont"><span class="tag">continuation</span> individuals subject to domestic violence</div>
+<div class="line cont"><span class="tag">continuation</span> protective orders. Congress designed Section</div>
+<div class="line cont"><span class="tag">continuation</span> 922(g)(8) to target the most dangerous domestic</div>
+<div class="line cont"><span class="tag">continuation</span> abusers. It applies only if, after notice and a</div>
+<div class="line cont"><span class="tag">continuation</span> hearing, a court makes an express finding that</div>
+<div class="line header"><span class="tag">header_footer</span> Heritage Reporting Corporation</div>
+</div></div>
+<div class="page">
+<h3>Page 5</h3>
+<div class="raw-col"><h4>Raw pdfplumber output</h4><pre>Official
+4
+1 the person poses a credible threat to an
+2 intimate partner's physical safety or imposes a
+3 specific prohibition on the use of physical
+4 force, and the disarmament lasts only as long as
+5 the order remains in effect.
+6 The Fifth Circuit profoundly erred in
+7 reading this Court's decision in Bruen to
+8 prohibit that widespread common-sense response
+9 to the deadly threat of armed domestic violence.
+10 Like Heller and McDonald, Bruen recognized that
+11 Congress may disarm those who are not
+12 law-abiding, responsible citizens.
+13 That principle is firmly grounded in
+14 the Second Amendment's history and tradition.
+15 Throughout our nation's history, legislatures
+16 have disarmed those who have committed serious
+17 criminal conduct or whose access to guns poses a
+18 danger, for example, loyalists, rebels, minors,
+19 individuals with mental illness, felons, and
+20 drug addicts.
+21 Rahimi offers no historical evidence
+22 that those laws were thought to violate the
+23 right to keep and bear arms or that the Second
+24 Amendment was originally understood to prevent
+25 legislatures from disarming dangerous
+Heritage Reporting Corporation</pre></div>
+<div class="classified-col"><h4>Classified lines</h4>
+<div class="line cont"><span class="tag">continuation</span> Official</div>
+<div class="line header"><span class="tag">header_footer</span> 4</div>
+<div class="line cont"><span class="tag">continuation</span> the person poses a credible threat to an</div>
+<div class="line cont"><span class="tag">continuation</span> intimate partner's physical safety or imposes a</div>
+<div class="line cont"><span class="tag">continuation</span> specific prohibition on the use of physical</div>
+<div class="line cont"><span class="tag">continuation</span> force, and the disarmament lasts only as long as</div>
+<div class="line cont"><span class="tag">continuation</span> the order remains in effect.</div>
+<div class="line cont"><span class="tag">continuation</span> The Fifth Circuit profoundly erred in</div>
+<div class="line cont"><span class="tag">continuation</span> reading this Court's decision in Bruen to</div>
+<div class="line cont"><span class="tag">continuation</span> prohibit that widespread common-sense response</div>
+<div class="line cont"><span class="tag">continuation</span> to the deadly threat of armed domestic violence.</div>
+<div class="line cont"><span class="tag">continuation</span> Like Heller and McDonald, Bruen recognized that</div>
+<div class="line cont"><span class="tag">continuation</span> Congress may disarm those who are not</div>
+<div class="line cont"><span class="tag">continuation</span> law-abiding, responsible citizens.</div>
+<div class="line cont"><span class="tag">continuation</span> That principle is firmly grounded in</div>
+<div class="line cont"><span class="tag">continuation</span> the Second Amendment's history and tradition.</div>
+<div class="line cont"><span class="tag">continuation</span> Throughout our nation's history, legislatures</div>
+<div class="line cont"><span class="tag">continuation</span> have disarmed those who have committed serious</div>
+<div class="line cont"><span class="tag">continuation</span> criminal conduct or whose access to guns poses a</div>
+<div class="line cont"><span class="tag">continuation</span> danger, for example, loyalists, rebels, minors,</div>
+<div class="line cont"><span class="tag">continuation</span> individuals with mental illness, felons, and</div>
+<div class="line cont"><span class="tag">continuation</span> drug addicts.</div>
+<div class="line cont"><span class="tag">continuation</span> Rahimi offers no historical evidence</div>
+<div class="line cont"><span class="tag">continuation</span> that those laws were thought to violate the</div>
+<div class="line cont"><span class="tag">continuation</span> right to keep and bear arms or that the Second</div>
+<div class="line cont"><span class="tag">continuation</span> Amendment was originally understood to prevent</div>
+<div class="line cont"><span class="tag">continuation</span> legislatures from disarming dangerous</div>
+<div class="line header"><span class="tag">header_footer</span> Heritage Reporting Corporation</div>
+</div></div>
+<div class="page">
+<h3>Page 6</h3>
+<div class="raw-col"><h4>Raw pdfplumber output</h4><pre>Official
+5
+1 individuals.
+2 Despite all that, the Fifth Circuit
+3 held that Section 922(g)(8) is facially
+4 unconstitutional because the founding generation
+5 didn't disarm domestic abusers in particular.
+6 But Bruen specifically approved that kind of
+7 demand for a historical twin. The Fifth
+8 Circuit's approach departs from the Second
+9 Amendment's original meaning and would enact the
+10 very sort of regulatory straitjacket that this
+11 Court disclaimed in Bruen.
+12 I welcome the Court's questions.
+13 JUSTICE THOMAS: General, would you
+14 just briefly define what you mean by
+15 &quot;law-abiding and responsible&quot;?
+16 GENERAL PRELOGAR: Of course, Justice
+17 Thomas. So I would break that into its two
+18 constituent components. With respect to those
+19 who are not law-abiding, history and tradition
+20 shows that that's defined by those who have
+21 committed serious crimes defined by the
+22 felony-level punishment that can attach to those
+23 crimes.
+24 This case focuses on the &quot;not
+25 responsible citizens&quot; principle, and in this
+Heritage Reporting Corporation</pre></div>
+<div class="classified-col"><h4>Classified lines</h4>
+<div class="line cont"><span class="tag">continuation</span> Official</div>
+<div class="line header"><span class="tag">header_footer</span> 5</div>
+<div class="line cont"><span class="tag">continuation</span> individuals.</div>
+<div class="line cont"><span class="tag">continuation</span> Despite all that, the Fifth Circuit</div>
+<div class="line cont"><span class="tag">continuation</span> held that Section 922(g)(8) is facially</div>
+<div class="line cont"><span class="tag">continuation</span> unconstitutional because the founding generation</div>
+<div class="line cont"><span class="tag">continuation</span> didn't disarm domestic abusers in particular.</div>
+<div class="line cont"><span class="tag">continuation</span> But Bruen specifically approved that kind of</div>
+<div class="line cont"><span class="tag">continuation</span> demand for a historical twin. The Fifth</div>
+<div class="line cont"><span class="tag">continuation</span> Circuit's approach departs from the Second</div>
+<div class="line cont"><span class="tag">continuation</span> Amendment's original meaning and would enact the</div>
+<div class="line cont"><span class="tag">continuation</span> very sort of regulatory straitjacket that this</div>
+<div class="line cont"><span class="tag">continuation</span> Court disclaimed in Bruen.</div>
+<div class="line cont"><span class="tag">continuation</span> I welcome the Court's questions.</div>
+<div class="line speaker"><span class="tag">JUSTICE THOMAS</span> General, would you</div>
+<div class="line cont"><span class="tag">continuation</span> just briefly define what you mean by</div>
+<div class="line cont"><span class="tag">continuation</span> &quot;law-abiding and responsible&quot;?</div>
+<div class="line speaker"><span class="tag">GENERAL PRELOGAR</span> Of course, Justice</div>
+<div class="line cont"><span class="tag">continuation</span> Thomas. So I would break that into its two</div>
+<div class="line cont"><span class="tag">continuation</span> constituent components. With respect to those</div>
+<div class="line cont"><span class="tag">continuation</span> who are not law-abiding, history and tradition</div>
+<div class="line cont"><span class="tag">continuation</span> shows that that's defined by those who have</div>
+<div class="line cont"><span class="tag">continuation</span> committed serious crimes defined by the</div>
+<div class="line cont"><span class="tag">continuation</span> felony-level punishment that can attach to those</div>
+<div class="line cont"><span class="tag">continuation</span> crimes.</div>
+<div class="line cont"><span class="tag">continuation</span> This case focuses on the &quot;not</div>
+<div class="line cont"><span class="tag">continuation</span> responsible citizens&quot; principle, and in this</div>
+<div class="line header"><span class="tag">header_footer</span> Heritage Reporting Corporation</div>
+</div></div>
+<div class="page">
+<h3>Page 7</h3>
+<div class="raw-col"><h4>Raw pdfplumber output</h4><pre>Official
+6
+1 context, we think that history and tradition
+2 show that it applies to those whose possession
+3 of firearms would pose an unusual danger, beyond
+4 the ordinary citizen, with respect to harm to
+5 themselves or harm to others.
+6 JUSTICE THOMAS: What if someone --
+7 this is a civil action. I think we could agree
+8 on the -- if this were -- these were criminal
+9 proceedings. What if someone is categorized as
+10 irresponsible for not storing firearms properly?
+11 GENERAL PRELOGAR: So I think that
+12 there would be a history and tradition to
+13 support the idea that if someone has improperly
+14 stored their firearms and thus demonstrated by
+15 their conduct that they're not fit to keep and
+16 bear arms, they would fit within this category
+17 of those who are not responsible. And -- and
+18 there were a number of historical laws that
+19 operated that way, for example, those who had
+20 improperly stored gunpowder and caused the risk
+21 of explosions.
+22 JUSTICE THOMAS: Below, you in your --
+23 you -- you had a list of classes of individuals
+24 who were excluded in -- in your opening
+25 argument. Now below you included in that class
+Heritage Reporting Corporation</pre></div>
+<div class="classified-col"><h4>Classified lines</h4>
+<div class="line cont"><span class="tag">continuation</span> Official</div>
+<div class="line header"><span class="tag">header_footer</span> 6</div>
+<div class="line cont"><span class="tag">continuation</span> context, we think that history and tradition</div>
+<div class="line cont"><span class="tag">continuation</span> show that it applies to those whose possession</div>
+<div class="line cont"><span class="tag">continuation</span> of firearms would pose an unusual danger, beyond</div>
+<div class="line cont"><span class="tag">continuation</span> the ordinary citizen, with respect to harm to</div>
+<div class="line cont"><span class="tag">continuation</span> themselves or harm to others.</div>
+<div class="line speaker"><span class="tag">JUSTICE THOMAS</span> What if someone --</div>
+<div class="line cont"><span class="tag">continuation</span> this is a civil action. I think we could agree</div>
+<div class="line cont"><span class="tag">continuation</span> on the -- if this were -- these were criminal</div>
+<div class="line cont"><span class="tag">continuation</span> proceedings. What if someone is categorized as</div>
+<div class="line cont"><span class="tag">continuation</span> irresponsible for not storing firearms properly?</div>
+<div class="line speaker"><span class="tag">GENERAL PRELOGAR</span> So I think that</div>
+<div class="line cont"><span class="tag">continuation</span> there would be a history and tradition to</div>
+<div class="line cont"><span class="tag">continuation</span> support the idea that if someone has improperly</div>
+<div class="line cont"><span class="tag">continuation</span> stored their firearms and thus demonstrated by</div>
+<div class="line cont"><span class="tag">continuation</span> their conduct that they're not fit to keep and</div>
+<div class="line cont"><span class="tag">continuation</span> bear arms, they would fit within this category</div>
+<div class="line cont"><span class="tag">continuation</span> of those who are not responsible. And -- and</div>
+<div class="line cont"><span class="tag">continuation</span> there were a number of historical laws that</div>
+<div class="line cont"><span class="tag">continuation</span> operated that way, for example, those who had</div>
+<div class="line cont"><span class="tag">continuation</span> improperly stored gunpowder and caused the risk</div>
+<div class="line cont"><span class="tag">continuation</span> of explosions.</div>
+<div class="line speaker"><span class="tag">JUSTICE THOMAS</span> Below, you in your --</div>
+<div class="line cont"><span class="tag">continuation</span> you -- you had a list of classes of individuals</div>
+<div class="line cont"><span class="tag">continuation</span> who were excluded in -- in your opening</div>
+<div class="line cont"><span class="tag">continuation</span> argument. Now below you included in that class</div>
+<div class="line header"><span class="tag">header_footer</span> Heritage Reporting Corporation</div>
+</div></div>
+<div class="page">
+<h3>Page 8</h3>
+<div class="raw-col"><h4>Raw pdfplumber output</h4><pre>Official
+7
+1 or in those classes slaves and Native Americans.
+2 Why did you drop those classes?
+3 GENERAL PRELOGAR: We haven't invoked
+4 those laws at this stage of the proceedings
+5 because we think that they speak to a distinct
+6 principle and the textual hook that at the
+7 particular point in time those categories of
+8 people were viewed as being not among the people
+9 protected by the Second Amendment in the first
+10 instance.
+11 Obviously, that was an odious
+12 classification, but those laws were generally
+13 accompanied by stripping of other political
+14 rights or ability to -- to participate in the
+15 political community, and we think they were
+16 justified at that time on that basis.
+17 And so the reason we haven't invoked
+18 them here is because we focused on the more
+19 directly relevant laws that apply to those who
+20 are indisputably among the people but
+21 nevertheless fit within this enduring
+22 constitutional principle that the legislature
+23 has authority to draw lines and make predictive
+24 judgments about those whose access to firearms
+25 will create that untenable risk of danger.
+Heritage Reporting Corporation</pre></div>
+<div class="classified-col"><h4>Classified lines</h4>
+<div class="line cont"><span class="tag">continuation</span> Official</div>
+<div class="line header"><span class="tag">header_footer</span> 7</div>
+<div class="line cont"><span class="tag">continuation</span> or in those classes slaves and Native Americans.</div>
+<div class="line cont"><span class="tag">continuation</span> Why did you drop those classes?</div>
+<div class="line speaker"><span class="tag">GENERAL PRELOGAR</span> We haven't invoked</div>
+<div class="line cont"><span class="tag">continuation</span> those laws at this stage of the proceedings</div>
+<div class="line cont"><span class="tag">continuation</span> because we think that they speak to a distinct</div>
+<div class="line cont"><span class="tag">continuation</span> principle and the textual hook that at the</div>
+<div class="line cont"><span class="tag">continuation</span> particular point in time those categories of</div>
+<div class="line cont"><span class="tag">continuation</span> people were viewed as being not among the people</div>
+<div class="line cont"><span class="tag">continuation</span> protected by the Second Amendment in the first</div>
+<div class="line cont"><span class="tag">continuation</span> instance.</div>
+<div class="line cont"><span class="tag">continuation</span> Obviously, that was an odious</div>
+<div class="line cont"><span class="tag">continuation</span> classification, but those laws were generally</div>
+<div class="line cont"><span class="tag">continuation</span> accompanied by stripping of other political</div>
+<div class="line cont"><span class="tag">continuation</span> rights or ability to -- to participate in the</div>
+<div class="line cont"><span class="tag">continuation</span> political community, and we think they were</div>
+<div class="line cont"><span class="tag">continuation</span> justified at that time on that basis.</div>
+<div class="line cont"><span class="tag">continuation</span> And so the reason we haven't invoked</div>
+<div class="line cont"><span class="tag">continuation</span> them here is because we focused on the more</div>
+<div class="line cont"><span class="tag">continuation</span> directly relevant laws that apply to those who</div>
+<div class="line cont"><span class="tag">continuation</span> are indisputably among the people but</div>
+<div class="line cont"><span class="tag">continuation</span> nevertheless fit within this enduring</div>
+<div class="line cont"><span class="tag">continuation</span> constitutional principle that the legislature</div>
+<div class="line cont"><span class="tag">continuation</span> has authority to draw lines and make predictive</div>
+<div class="line cont"><span class="tag">continuation</span> judgments about those whose access to firearms</div>
+<div class="line cont"><span class="tag">continuation</span> will create that untenable risk of danger.</div>
+<div class="line header"><span class="tag">header_footer</span> Heritage Reporting Corporation</div>
+</div></div>
+<div class="page">
+<h3>Page 9</h3>
+<div class="raw-col"><h4>Raw pdfplumber output</h4><pre>Official
+8
+1 CHIEF JUSTICE ROBERTS: Is someone who
+2 drives 30 miles an hour in a 25-mile --
+3 mile-an-hour zone -- does that person qualify as
+4 law-abiding or -- or not?
+5 GENERAL PRELOGAR: I think that that
+6 wouldn't qualify to the extent that it's
+7 classified as a misdemeanor or a minor criminal
+8 conduct under state law. And I do want to be
+9 clear that we -- we certainly think that
+10 wouldn't apply under the not responsible
+11 category, but if you're focusing on law-abiding
+12 in particular, we think that history and
+13 tradition there support the conclusion that you
+14 can disarm those who have committed serious
+15 crimes.
+16 So it's not just that any kind of --
+17 of conduct that is an offense would qualify.
+18 CHIEF JUSTICE ROBERTS: Is it -- are
+19 you making a misdemeanor/felony distinction?
+20 GENERAL PRELOGAR: That's the line
+21 that history and tradition reflect, and so, yes,
+22 I think that that is the relevant category with
+23 respect to law-abiding citizens. But, again, I
+24 would just emphasize here we're not directly
+25 invoking the law-abiding aspect of the principle
+Heritage Reporting Corporation</pre></div>
+<div class="classified-col"><h4>Classified lines</h4>
+<div class="line cont"><span class="tag">continuation</span> Official</div>
+<div class="line header"><span class="tag">header_footer</span> 8</div>
+<div class="line speaker"><span class="tag">CHIEF JUSTICE ROBERTS</span> Is someone who</div>
+<div class="line cont"><span class="tag">continuation</span> drives 30 miles an hour in a 25-mile --</div>
+<div class="line cont"><span class="tag">continuation</span> mile-an-hour zone -- does that person qualify as</div>
+<div class="line cont"><span class="tag">continuation</span> law-abiding or -- or not?</div>
+<div class="line speaker"><span class="tag">GENERAL PRELOGAR</span> I think that that</div>
+<div class="line cont"><span class="tag">continuation</span> wouldn't qualify to the extent that it's</div>
+<div class="line cont"><span class="tag">continuation</span> classified as a misdemeanor or a minor criminal</div>
+<div class="line cont"><span class="tag">continuation</span> conduct under state law. And I do want to be</div>
+<div class="line cont"><span class="tag">continuation</span> clear that we -- we certainly think that</div>
+<div class="line cont"><span class="tag">continuation</span> wouldn't apply under the not responsible</div>
+<div class="line cont"><span class="tag">continuation</span> category, but if you're focusing on law-abiding</div>
+<div class="line cont"><span class="tag">continuation</span> in particular, we think that history and</div>
+<div class="line cont"><span class="tag">continuation</span> tradition there support the conclusion that you</div>
+<div class="line cont"><span class="tag">continuation</span> can disarm those who have committed serious</div>
+<div class="line cont"><span class="tag">continuation</span> crimes.</div>
+<div class="line cont"><span class="tag">continuation</span> So it's not just that any kind of --</div>
+<div class="line cont"><span class="tag">continuation</span> of conduct that is an offense would qualify.</div>
+<div class="line speaker"><span class="tag">CHIEF JUSTICE ROBERTS</span> Is it -- are</div>
+<div class="line cont"><span class="tag">continuation</span> you making a misdemeanor/felony distinction?</div>
+<div class="line speaker"><span class="tag">GENERAL PRELOGAR</span> That's the line</div>
+<div class="line cont"><span class="tag">continuation</span> that history and tradition reflect, and so, yes,</div>
+<div class="line cont"><span class="tag">continuation</span> I think that that is the relevant category with</div>
+<div class="line cont"><span class="tag">continuation</span> respect to law-abiding citizens. But, again, I</div>
+<div class="line cont"><span class="tag">continuation</span> would just emphasize here we're not directly</div>
+<div class="line cont"><span class="tag">continuation</span> invoking the law-abiding aspect of the principle</div>
+<div class="line header"><span class="tag">header_footer</span> Heritage Reporting Corporation</div>
+</div></div>
+<div class="page">
+<h3>Page 10</h3>
+<div class="raw-col"><h4>Raw pdfplumber output</h4><pre>Official
+9
+1 because Mr. Rahimi didn't have the kind of -- of
+2 -- of criminal record that would justify
+3 disarmament on that basis. Instead, our
+4 arguments here are directed at the aspect of the
+5 standard focused on those who are not
+6 responsible.
+7 JUSTICE BARRETT: You say --
+8 CHIEF JUSTICE ROBERTS: Responsibility
+9 is a very broad concept. I mean, not taking
+10 your recycling to the curb on Thursdays. I
+11 mean, if you're -- if it's a serious problem,
+12 you're -- it -- it's irresponsible. Setting a
+13 bad example, you know, by yelling at a
+14 basketball game in a particular way.
+15 It seems to me that the problem with
+16 responsibility is that it's extremely broad, and
+17 what -- what seems responsible to some --
+18 irresponsible to some people might seem like,
+19 well, that's not a big deal to others.
+20 So what is the model? I mean, is --
+21 is -- do you go back to what was irresponsible
+22 at the common law or what's -- take a poll and
+23 see if people think it's irresponsible, you
+24 know, to get into a fistfight at a -- at a, you
+25 know, sports event where tempers were running
+Heritage Reporting Corporation</pre></div>
+<div class="classified-col"><h4>Classified lines</h4>
+<div class="line cont"><span class="tag">continuation</span> Official</div>
+<div class="line header"><span class="tag">header_footer</span> 9</div>
+<div class="line cont"><span class="tag">continuation</span> because Mr. Rahimi didn't have the kind of -- of</div>
+<div class="line cont"><span class="tag">continuation</span> -- of criminal record that would justify</div>
+<div class="line cont"><span class="tag">continuation</span> disarmament on that basis. Instead, our</div>
+<div class="line cont"><span class="tag">continuation</span> arguments here are directed at the aspect of the</div>
+<div class="line cont"><span class="tag">continuation</span> standard focused on those who are not</div>
+<div class="line cont"><span class="tag">continuation</span> responsible.</div>
+<div class="line speaker"><span class="tag">JUSTICE BARRETT</span> You say --</div>
+<div class="line speaker"><span class="tag">CHIEF JUSTICE ROBERTS</span> Responsibility</div>
+<div class="line cont"><span class="tag">continuation</span> is a very broad concept. I mean, not taking</div>
+<div class="line cont"><span class="tag">continuation</span> your recycling to the curb on Thursdays. I</div>
+<div class="line cont"><span class="tag">continuation</span> mean, if you're -- if it's a serious problem,</div>
+<div class="line cont"><span class="tag">continuation</span> you're -- it -- it's irresponsible. Setting a</div>
+<div class="line cont"><span class="tag">continuation</span> bad example, you know, by yelling at a</div>
+<div class="line cont"><span class="tag">continuation</span> basketball game in a particular way.</div>
+<div class="line cont"><span class="tag">continuation</span> It seems to me that the problem with</div>
+<div class="line cont"><span class="tag">continuation</span> responsibility is that it's extremely broad, and</div>
+<div class="line cont"><span class="tag">continuation</span> what -- what seems responsible to some --</div>
+<div class="line cont"><span class="tag">continuation</span> irresponsible to some people might seem like,</div>
+<div class="line cont"><span class="tag">continuation</span> well, that's not a big deal to others.</div>
+<div class="line cont"><span class="tag">continuation</span> So what is the model? I mean, is --</div>
+<div class="line cont"><span class="tag">continuation</span> is -- do you go back to what was irresponsible</div>
+<div class="line cont"><span class="tag">continuation</span> at the common law or what's -- take a poll and</div>
+<div class="line cont"><span class="tag">continuation</span> see if people think it's irresponsible, you</div>
+<div class="line cont"><span class="tag">continuation</span> know, to get into a fistfight at a -- at a, you</div>
+<div class="line cont"><span class="tag">continuation</span> know, sports event where tempers were running</div>
+<div class="line header"><span class="tag">header_footer</span> Heritage Reporting Corporation</div>
+</div></div>
+
+</div>
+
+<script>
+function showTab(n) {
+  document.querySelectorAll('.panel').forEach((p,i) => p.style.display = i===n?'block':'none');
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', i===n));
+}
+</script>
+</body>
+</html>

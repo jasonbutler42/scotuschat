@@ -10,7 +10,9 @@
     "verifier": true,
     "nyquist_validation": false,
     "auto_advance": false,
-    "_auto_chain_active": false
+    "_auto_chain_active": false,
+    "test_command": ".\\\\.venv\\\\Scripts\\\\python.exe -m pytest",
+    "ai_integration_phase": true
   },
   "ship": {
     "pr_body_sections": [

@@ -69,7 +69,7 @@
 
 ### People List (`/admin/people/`)
 
-- [ ] **PDIR-01** Page title: "People" (was "People Editor")
+- [x] **PDIR-01** Page title: "People" (was "People Editor")
 - [x] **PDIR-02** Bench / Advocate tab or toggle at top of page
 - [x] **PDIR-03** Bench view columns: name, tenure coverage, tenure gaps indicator, photo/bio completeness
 - [x] **PDIR-04** Advocate view columns: name, argument count, photo/bio completeness
@@ -156,7 +156,7 @@
 | AEDIT-07 | Phase 26 | Complete |
 | AEDIT-08 | Phase 26 | Complete |
 | AEDIT-09 | Phase 26 | Complete |
-| PDIR-01 | Phase 27 | Pending |
+| PDIR-01 | Phase 27 | Complete |
 | PDIR-02 | Phase 27 | Complete |
 | PDIR-03 | Phase 27 | Complete |
 | PDIR-04 | Phase 27 | Complete |

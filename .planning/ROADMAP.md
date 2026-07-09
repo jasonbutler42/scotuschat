@@ -91,7 +91,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 - [x] **Phase 24: Pipeline List Page** - Redesigned run-start form and run table at `/admin/pipeline/` (completed 2026-07-07)
 - [x] **Phase 25: Pipeline Job Detail Page** - Restructured job detail layout with run status card, resolve redesign, and no floating buttons at `/admin/pipeline/[id]` (completed 2026-07-07)
 - [x] **Phase 26: Arguments Admin** - New `unpublished` status lifecycle + refined list and edit screens at `/admin/arguments/` and `/admin/arguments/[id]` (completed 2026-07-08)
-- [ ] **Phase 27: People Admin** - Benchmarks/advocate tabs, tenure-per-row appointment data, and create-person flow at `/admin/people/` and `/admin/people/[id]` (11 of 11 plans executed 2026-07-09, including gap-closure plan 27-11 fixing the `effect_update_depth_exceeded` regression from 27-10's CR-02 fix; 4th UAT retest re-run pending — see known GSD Roadmap Premature-Completion pattern)
+- [x] **Phase 27: People Admin** - Benchmarks/advocate tabs, tenure-per-row appointment data, and create-person flow at `/admin/people/` and `/admin/people/[id]` (11 of 11 plans executed 2026-07-09, including gap-closure plan 27-11 fixing the `effect_update_depth_exceeded` regression from 27-10's CR-02 fix; 4th UAT retest re-run pending — see known GSD Roadmap Premature-Completion pattern) (completed 2026-07-09)
 - [ ] **Phase 28: Dashboard** - Intentional stat cards, "needs attention" section, and actionable CTAs at `/admin/`
 
 ## Phase Details
@@ -334,7 +334,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 | 24. Pipeline List Page | v1.5 | 5/5 | Complete    | 2026-07-07 |
 | 25. Pipeline Job Detail Page | v1.5 | 4/4 | Complete    | 2026-07-07 |
 | 26. Arguments Admin | v1.5 | 6/6 | Complete    | 2026-07-08 |
-| 27. People Admin | v1.5 | 11/11 | In Progress |  |
+| 27. People Admin | v1.5 | 11/11 | Complete    | 2026-07-09 |
 | 28. Dashboard | v1.5 | 0/TBD | Not started | - |
 
 ## Backlog
@@ -345,7 +345,7 @@ Standard: all backlog items live here as 999.x entries (`.planning/phases/999.N-
 
 **Goal:** Whenever a value has been extracted from a source PDF, use a consistent design pattern that lets the operator click the value to copy it to their clipboard. If a value was not extracted (showing N/A), clicking to copy is disabled. Includes an appropriate icon and tooltip. The pattern must be identical everywhere it appears — pipeline run pages and argument editor pages alike — including extracted docket number(s). Expected to decompose into at least: (1) reusable tooltip component, (2) click-to-copy implementation for extracted hint values, and possibly others.
 **Requirements:** TBD
-**Plans:** 0 plans
+**Plans:** 11/11 plans complete
 
 Plans:
 
@@ -504,6 +504,16 @@ Plans:
 ### Phase 999.17: Fix FastAPI test lifespan/session-factory failure (BACKLOG)
 
 **Goal:** [Captured for future planning] [Added 2026-07-09, surfaced during Phase 27 execution] `RuntimeError: Database session factory is not initialised — lifespan may not have completed startup.` (`api/core/database.py:62`, `get_db()`) fires on ~57-58 tests + 34 collection errors when running the full pytest suite (`pytest`, `testpaths = tests pipeline/tests api/tests`). Confirmed pre-existing via a disposable git worktree at commit `ebb14eaa` (immediately before Phase 27) — identical failure baseline exists there too, so this is test-infrastructure debt, not a phase regression. Suspected root cause: the `client` fixture's plain `AsyncClient(transport=ASGITransport(app=app))` doesn't invoke the ASGI lifespan protocol, so `AsyncSessionLocal` is only initialized when some other test/module triggers it as a side effect — order-dependent across the `tests/`+`pipeline/tests/`+`api/tests/` testpaths. Also bundles 3 stale hardcoded assertions in `tests/test_models_import.py` (expects exactly 12 tables / 3 SideEnum values; actual is 13 tables / 6 enum values as of Phase 26+). Needs its own investigation into app lifespan/fixture wiring across `tests/conftest.py`, `api/tests/conftest.py` (if any), and `api/main.py`'s lifespan handler — out of scope for any single phase.
+**Requirements:** TBD
+**Plans:** 0 plans
+
+Plans:
+
+- [ ] TBD (promote with /gsd-review-backlog when ready)
+
+### Phase 999.18: Fix CourtTenure FK bookkeeping gap in merge/delete person service paths (BACKLOG)
+
+**Goal:** [Captured for future planning] [Added 2026-07-09, from 27-REVIEW.md CR-01, surfaced during Phase 27 gap-closure execution] `CourtTenure.person_id` is `nullable=False` with a plain `ForeignKeyConstraint` and no `ON DELETE CASCADE` in any Alembic migration, but none of `get_merge_preview`, `merge_people`, or `delete_person_if_orphan` (`api/services/admin_people.py`) account for `CourtTenure` rows. Merging or deleting any Bench person with one or more tenure rows raises an unhandled `IntegrityError` (500) instead of the documented graceful response. Predates Phase 27 — `CourtTenure` and the merge/delete service paths were introduced in Phase 22 — but is newly reachable now that Phase 27 added full tenure-row CRUD to the People editor. Fix: count `CourtTenure` in `get_merge_preview`'s counted-tables loop, transfer `CourtTenure` rows to the target person in `merge_people`, and include `CourtTenure` in `delete_person_if_orphan`'s orphan check — mirroring the existing `Utterance`/`SpeakerAlias`/`CaseAppearance`/`ArgumentParticipant` handling.
 **Requirements:** TBD
 **Plans:** 0 plans
 

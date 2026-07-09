@@ -162,3 +162,11 @@ The risk that needs to be explored, too, is around bias. I want to give visitors
 **Area:** Admin — Argument metadata (`api/services/admin_arguments.py`)
 **Added:** 2026-07-08 (from 26-REVIEW.md CR-03)
 **Context:** `update_argument_metadata` writes `source_docket`/`question_number` without first checking whether another `Argument` row already holds that combination. Introduced in Phase 19 (`a9cbf218`), untouched by Phase 26. Saving a metadata edit that collides with an existing row will raise an unhandled `IntegrityError` (500) instead of a clean, user-facing validation error. Fix: add a pre-write existence check (or catch `IntegrityError` and map it to a 409/422 with a clear message) before committing the update.
+
+---
+
+## B-019 — Rethink Full Name vs. name-part fields in the people editor
+
+**Area:** Admin — People editor (`app/src/routes/admin/people/[id]/+page.svelte`, `/new`)
+**Added:** 2026-07-09 (from Phase 27 UAT)
+**Context:** Jason expected that filling in only the component name fields (first/last/middle/suffix) without Full Name would auto-backfill Full Name on save — instead, Full Name is currently required standalone. Proposed direction: stop making Full Name operator-editable at all, and derive it entirely from the component fields — "We'd have to adjust the way parsing works but that feels like the better way to go." Needs a design decision on exactly how derivation should work (ordering, suffix placement, punctuation) and what changes on the pipeline/parsing side before this can be scoped. Related to the real bug tracked as a Phase 27 UAT gap (create route silently discards name-part fields when Full Name is also filled) — that bug is being fixed now; this backlog item is the broader "should Full Name exist as a separate editable field at all" question, deferred.

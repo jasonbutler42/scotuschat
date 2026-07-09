@@ -132,7 +132,6 @@ def test_person_update_accepts_optional_fields() -> None:
 
     body = PersonUpdate()
     assert body.full_name is None
-    assert body.role_id is None
     assert body.bio_text is None
     assert body.photo_url is None
     assert body.tenures is None

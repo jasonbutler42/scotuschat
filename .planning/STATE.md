@@ -4,17 +4,17 @@ milestone: v1.5
 milestone_name: Admin Screens Cleanup
 current_phase: 27
 current_phase_name: people-admin
-status: executing
+status: verifying
 stopped_at: Completed 27-05-PLAN.md
-last_updated: "2026-07-09T05:17:14.359Z"
+last_updated: "2026-07-09T05:28:56.681Z"
 last_activity: 2026-07-09
 last_activity_desc: Phase 27 execution started
 progress:
   total_phases: 7
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 31
-  completed_plans: 30
-  percent: 71
+  completed_plans: 31
+  percent: 86
 ---
 
 # Project State
@@ -31,7 +31,7 @@ See: .planning/PROJECT.md (updated 2026-07-07 after Phase 25 completion)
 Phase: 27 (people-admin) — EXECUTING
 Stage: discuss ✓ → plan ✓ → **execute** (next) → verify
 Plan: 6 of 6
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-07-09 — Phase 27 execution started
 
 Progress: [░░░░░░░░░░] 0% of Phase 27 (discuss + plan done; execute/verify not started)
@@ -112,6 +112,9 @@ Full log in PROJECT.md Key Decisions table. Key decisions entering v1.5:
 - [Phase 27-05]: Breadcrumb + Cancel target derived from data.person.is_justice at load time (backTab), not the live Bench/Advocate toggle state
 - [Phase 27-05]: Save Person/Cancel action row moved to bottom of page (after Merge/Delete) per UI-SPEC card order item 8
 - [Phase 27-05]: Removed dead roles-building loop/RoleItem/role_id/role_name from +page.server.ts load() and types, completing D-10's full Role removal
+- [Phase ?]: 27-06: Photo and Biography cards both omitted on the create route (not just Photo) -- they share a single ?/photo form/action on [id] that has no analog on this route, and D-08 excludes bio/photo from the create payload
+- [Phase ?]: 27-06: isJustice starts as boolean|null (not defaulting to false) so neither Bench nor Advocate is pre-selected on /admin/people/new, matching D-08's explicit-choice requirement
+- [Phase ?]: 27-06: Merge/Delete markup, state, and fetchMergePreview removed entirely from the create page (not just guarded) since this route has no merge/delete actions for those forms to target
 
 ### Pending Todos
 
@@ -161,9 +164,10 @@ Deployment blockers (v1.4, unresolved — not in v1.5 scope):
 | Phase 27 P03 | 20min | 3 tasks | 3 files |
 | Phase 27-people-admin P04 | 15min | 2 tasks | 2 files |
 | Phase 27-people-admin P05 | 15min | 2 tasks | 2 files |
+| Phase 27 P06 | 20min | 2 tasks | 2 files |
 
 ## Session Continuity
 
-Last session: 2026-07-09T05:17:14.348Z
+Last session: 2026-07-09T05:28:03.801Z
 Stopped at: Completed 27-05-PLAN.md
 Resume file: .planning/phases/27-people-admin/27-06-PLAN.md

@@ -40,7 +40,7 @@ from api.models.models import (
     SpeakerAlias,
     Utterance,
 )
-from api.schemas.admin_people import PersonUpdate, TenureRow
+from api.schemas.admin_people import PersonCreateRequest, PersonUpdate, TenureRow
 from api.services.speakers import ADVOCATE_LABEL_MAP
 
 
@@ -432,6 +432,37 @@ async def update_person(
 
     await db.commit()
     return await get_person_detail(db, person_id)
+
+
+async def create_person(db: AsyncSession, body: PersonCreateRequest) -> dict:
+    """Create a standalone Person from the minimum required fields (D-08, D-09).
+
+    This is a general, unscoped create used by the People directory's
+    "Create person" flow — no pipeline-run lookup, no status-paused guard,
+    and no raw_speaker_label / participant-row linkage of any kind.
+
+    Validation (D-08): raises ValueError when body.full_name (stripped) is
+    empty. is_justice is a required bool on PersonCreateRequest, so no
+    additional server-side guard is needed for it.
+
+    Only full_name and is_justice are set on the new row — first_name,
+    last_name, middle_name, name_suffix, bio_text, photo_url, and birthdate
+    are left at their column defaults (None), and no tenure rows are created.
+    Everything else is filled in later via the existing PATCH /people/{id}
+    update flow (D-08).
+
+    Returns the full person detail dict via get_person_detail, matching the
+    detail-refetch-after-mutation idiom every other mutation in this module
+    follows (update_person, merge_people, update_photo_url, upload_photo).
+    """
+    if not body.full_name.strip():
+        raise ValueError("Full name is required.")
+
+    person = Person(full_name=body.full_name.strip(), is_justice=body.is_justice)
+    db.add(person)
+    await db.commit()
+    await db.refresh(person)
+    return await get_person_detail(db, person.id)
 
 
 async def create_role(db: AsyncSession, name: str) -> dict:

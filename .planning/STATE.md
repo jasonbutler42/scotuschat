@@ -6,14 +6,14 @@ current_phase: 29
 current_phase_name: historical-corpus-import
 status: executing
 stopped_at: Phase 29 UI-SPEC approved
-last_updated: "2026-07-09T22:58:49.307Z"
+last_updated: "2026-07-09T23:06:15.798Z"
 last_activity: 2026-07-09
 last_activity_desc: Phase 29 execution started
 progress:
   total_phases: 8
   completed_phases: 6
   total_plans: 42
-  completed_plans: 37
+  completed_plans: 38
   percent: 75
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-07-09 after Phase 27 completion)
 
 Phase: 29 (historical-corpus-import) — EXECUTING
 Stage: Ready to plan
-Plan: 2 of 6
+Plan: 3 of 6
 Status: Ready to execute
 Last activity: 2026-07-09 — Phase 29 execution started
 
@@ -123,6 +123,8 @@ Full log in PROJECT.md Key Decisions table. Key decisions entering v1.5:
 - [Phase 27]: Phase closed out with a 5th UAT retest (7/7 passed) after the 27-11 fix unblocked the previously-stuck 4th retest; 27-REVIEW.md's one Critical finding (CourtTenure rows unaccounted for in merge/delete FK bookkeeping, api/services/admin_people.py) predates Phase 27 (Phase 22) and was scoped out as a backlog item, not a phase gap
 - [Phase ?]: 29-01: Migration 0017 down_revision confirmed as 0016 via live alembic heads before writing the file (no branched history)
 - [Phase ?]: 29-01: python-dateutil package legitimacy checkpoint approved by human (PyPI source repo, version, exact package name all confirmed) before install
+- [Phase 29-02]: detect_stage_direction requires the ENTIRE utterance text be a single bracket/paren token before any vocabulary match, ruling out embedded parenthetical citations mid-sentence without extra heuristics
+- [Phase 29-02]: apolitical.py field lists sourced from 29-CONTEXT.md's verified real cases.jsonl/conversations.json field names (title/petitioner/respondent/...) rather than the plan's illustrative title/case_name shorthand
 
 ### Roadmap Evolution
 
@@ -183,9 +185,10 @@ Deployment blockers (v1.4, unresolved — not in v1.5 scope):
 | Phase 27 P10 | 5min | 2 tasks | 1 files |
 | Phase 27 P11 | 8min | 1 tasks | 1 files |
 | Phase 29 P01 | 15min | 3 tasks | 6 files |
+| Phase 29 P02 | 12min | 3 tasks | 7 files |
 
 ## Session Continuity
 
-Last session: 2026-07-09T22:58:10.548Z
+Last session: 2026-07-09T23:06:07.939Z
 Stopped at: Phase 29 UI-SPEC approved
 Resume file: .planning/phases/29-historical-corpus-import/29-UI-SPEC.md

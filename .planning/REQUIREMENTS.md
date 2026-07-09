@@ -100,8 +100,8 @@ Requirements for the one-time bulk-import of terms 1955–2019 from the Cornell 
 - [x] **CORPUS-02** Alembic migration adding nullable `Case.oyez_case_id`, `Argument.oyez_transcript_id`, `Person.oyez_speaker_id` columns (D-10)
 - [ ] **CORPUS-03** New `import-convokit` pipeline CLI subcommand: parses corpus files directly (no `convokit` package), staged/batched by October Term via `--term`/`--term-range`, resumable/idempotent (check-before-insert per argument), writes real `pipeline_runs` rows (`strategy="convokit_import"`), lands arguments at `status=draft`, lead-docket-only for consolidated cases (D-06–D-09, D-15, D-19)
 - [x] **CORPUS-04** Source-file handling: copy the 5 needed files into a new gitignored `data/corpus/` directory (mirroring `data/pdfs/`); explicitly exclude the 3 NLP-annotation files; add `python-dateutil` dependency (D-20, D-21)
-- [ ] **CORPUS-05** Speaker identity resolution: `oyez_speaker_id` primary re-run match key, `full_name` exact-match fallback; import everything with no automated QA gate; apolitical field stripping (never persist `win_side`/`votes_side`/`scdb_docket_id`) (D-11, D-12, D-13)
-- [ ] **CORPUS-06** Stage-direction detection and row-splitting: curated typo-tolerant vocabulary match inside `[brackets]` or `(parens)`, split into separate `Utterance` rows with `is_stage_direction=true`, `raw_speaker_label=None` (D-16, D-17)
+- [x] **CORPUS-05** Speaker identity resolution: `oyez_speaker_id` primary re-run match key, `full_name` exact-match fallback; import everything with no automated QA gate; apolitical field stripping (never persist `win_side`/`votes_side`/`scdb_docket_id`) (D-11, D-12, D-13)
+- [x] **CORPUS-06** Stage-direction detection and row-splitting: curated typo-tolerant vocabulary match inside `[brackets]` or `(parens)`, split into separate `Utterance` rows with `is_stage_direction=true`, `raw_speaker_label=None` (D-16, D-17)
 - [ ] **CORPUS-07** Multi-sentence utterance storage: one `Utterance` row per ConvoKit turn, `\n`-delimited segment boundaries preserved verbatim in `Text` (D-18)
 - [ ] **CORPUS-08** Per-batch summary report printed at the end of each term/batch run (counts created/skipped/flagged) (D-14)
 - [ ] **CORPUS-09** Attributions/License static page (`/attributions`) crediting Oyez.org, Cornell ConvoKit, and SCDB; states the Oyez CC BY-NC 4.0 license fact (D-22–D-26)
@@ -195,8 +195,8 @@ Requirements for the one-time bulk-import of terms 1955–2019 from the Cornell 
 | CORPUS-02 | Phase 29 | Complete |
 | CORPUS-03 | Phase 29 | Pending |
 | CORPUS-04 | Phase 29 | Complete |
-| CORPUS-05 | Phase 29 | Pending |
-| CORPUS-06 | Phase 29 | Pending |
+| CORPUS-05 | Phase 29 | Complete |
+| CORPUS-06 | Phase 29 | Complete |
 | CORPUS-07 | Phase 29 | Pending |
 | CORPUS-08 | Phase 29 | Pending |
 | CORPUS-09 | Phase 29 | Pending |

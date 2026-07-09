@@ -28,13 +28,13 @@ See: .planning/PROJECT.md (updated 2026-07-07 after Phase 25 completion)
 
 ## Current Position
 
-Phase: 27 (people-admin) — EXECUTING
+Phase: 27 (people-admin) — VERIFYING
 Stage: discuss ✓ → plan ✓ → execute ✓ → **verify** (in progress)
-Plan: 4 of 9
-Status: Ready to execute
-Last activity: 2026-07-09 — Phase 27 execution started
+Plan: 9 of 9 (all executed, including 3 gap-closure plans 27-07/08/09)
+Status: Gap-closure plans executed for all 3 UAT gaps; re-verification and UAT retest pending
+Last activity: 2026-07-09 — Gap-closure execution complete (27-07, 27-08, 27-09)
 
-Progress: [██████████] 100% of Phase 27 execution; verification human_needed — run /gsd-verify-work 27
+Progress: [██████████] 100% of Phase 27 execution (9/9 plans); re-verification pending — do not treat ROADMAP.md's "9/9" as phase-complete until /gsd-verify-work 27 retest confirms the 3 closed gaps
 
 ## Performance Metrics
 

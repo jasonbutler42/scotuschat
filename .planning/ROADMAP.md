@@ -256,7 +256,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
   4. Justice Details card is collapsed by default; checking "Is Justice" opens it with animation; unchecking hides the fields without deleting tenure or appointment data
   5. Each tenure row in the editor contains Seat, Appointed by, Appointing president's party, Start date, and End date — data reads correctly from the migrated `court_tenures` columns
 
-**Plans**: 7/9 plans executed
+**Plans**: 8/9 plans executed
 
 - [x] 27-01-PLAN.md — Schema foundation: birthdate migration + Pydantic schemas (BLOCKING migration)
 - [x] 27-02-PLAN.md — List directory service: tab/missing filters + per-tab columns
@@ -265,7 +265,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 - [x] 27-05-PLAN.md — Person editor restructure: Person Type card, tenure sub-cards, role removal
 - [x] 27-06-PLAN.md — Create-person page (/admin/people/new) reusing the shared template
 - [x] 27-07-PLAN.md — Gap closure (UAT Gap 1): people-list middle-column padding gutter fix
-- [ ] 27-08-PLAN.md — Gap closure (UAT Gap 3): create-person persists structured name parts (schema + service + action)
+- [x] 27-08-PLAN.md — Gap closure (UAT Gap 3): create-person persists structured name parts (schema + service + action)
 - [ ] 27-09-PLAN.md — Gap closure (UAT Gap 2): President's Party dropdown (D-16 reversal for that field only)
 
 **UI hint**: yes
@@ -316,7 +316,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 | 24. Pipeline List Page | v1.5 | 5/5 | Complete    | 2026-07-07 |
 | 25. Pipeline Job Detail Page | v1.5 | 4/4 | Complete    | 2026-07-07 |
 | 26. Arguments Admin | v1.5 | 6/6 | Complete    | 2026-07-08 |
-| 27. People Admin | v1.5 | 7/9 | In Progress|  |
+| 27. People Admin | v1.5 | 8/9 | In Progress|  |
 | 28. Dashboard | v1.5 | 0/TBD | Not started | - |
 
 ## Backlog

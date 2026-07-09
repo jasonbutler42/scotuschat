@@ -5,16 +5,16 @@ milestone_name: Admin Screens Cleanup
 current_phase: 27
 current_phase_name: people-admin
 status: executing
-stopped_at: Completed 27-08-PLAN.md
-last_updated: "2026-07-09T13:32:41.011Z"
+stopped_at: Completed 27-09-PLAN.md
+last_updated: "2026-07-09T13:42:07.553Z"
 last_activity: 2026-07-09
 last_activity_desc: Phase 27 execution started
 progress:
   total_phases: 7
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 34
-  completed_plans: 33
-  percent: 71
+  completed_plans: 34
+  percent: 86
 ---
 
 # Project State
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-07-07 after Phase 25 completion)
 
 Phase: 27 (people-admin) — EXECUTING
 Stage: discuss ✓ → plan ✓ → execute ✓ → **verify** (in progress)
-Plan: 3 of 9
+Plan: 4 of 9
 Status: Ready to execute
 Last activity: 2026-07-09 — Phase 27 execution started
 
@@ -117,6 +117,7 @@ Full log in PROJECT.md Key Decisions table. Key decisions entering v1.5:
 - [Phase ?]: 27-06: Merge/Delete markup, state, and fetchMergePreview removed entirely from the create page (not just guarded) since this route has no merge/delete actions for those forms to target
 - [Phase ?]: 27-07: Fixed all four middle columns (Bench Tenure coverage/gap plus Advocate Argument count/Missing fields), not just the reported Advocate pair -- Bench tab had the identical latent zero-horizontal-padding defect.
 - [Phase ?]: 27-08: create_person now sets first_name/middle_name/last_name/name_suffix from PersonCreateRequest, normalizing blank strings to None (matches update_person's Pitfall 5 convention); fixed as a bug (parity with [id] editor), not a D-08 scope amendment
+- [Phase 27-09]: D-16 amendment (2026-07-09): appointing_president_party reversed from free-text to a curated select scoped to that field only; appointed_by remains free-text; Seat-as-toggle deferred to BACKLOG.md B-020
 
 ### Pending Todos
 
@@ -169,9 +170,10 @@ Deployment blockers (v1.4, unresolved — not in v1.5 scope):
 | Phase 27 P06 | 20min | 2 tasks | 2 files |
 | Phase 27 P07 | 8min | 1 tasks | 1 files |
 | Phase 27 P08 | 15min | 2 tasks | 4 files |
+| Phase 27 P09 | 7min | 2 tasks | 3 files |
 
 ## Session Continuity
 
-Last session: 2026-07-09T13:32:40.997Z
-Stopped at: Completed 27-08-PLAN.md
+Last session: 2026-07-09T13:42:07.541Z
+Stopped at: Completed 27-09-PLAN.md
 Resume file: None

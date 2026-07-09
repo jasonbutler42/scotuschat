@@ -1,0 +1,113 @@
+"""
+Tests for pipeline.corpus.loader against small temporary fixtures (never
+the real 900MB utterances.jsonl file, D-18).
+"""
+
+import inspect
+import json
+
+from pipeline.corpus.loader import (
+    load_cases,
+    load_conversations_for_term,
+    load_speakers,
+    stream_utterances_for_conversation_ids,
+)
+
+
+class TestStreamUtterancesForConversationIds:
+    def test_is_a_generator(self):
+        assert inspect.isgeneratorfunction(stream_utterances_for_conversation_ids)
+
+    def test_yields_only_wanted_conversation_ids(self, tmp_path):
+        fixture = tmp_path / "utterances.jsonl"
+        fixture.write_text(
+            "\n".join(
+                json.dumps(row)
+                for row in [
+                    {"id": "u1", "conversation_id": "1955_71", "text": "wanted"},
+                    {"id": "u2", "conversation_id": "1955_99", "text": "not wanted"},
+                    {"id": "u3", "conversation_id": "1956_12", "text": "not wanted"},
+                    {"id": "u4", "conversation_id": "1955_71", "text": "also wanted"},
+                ]
+            ),
+            encoding="utf-8",
+        )
+
+        result = list(
+            stream_utterances_for_conversation_ids(fixture, {"1955_71"})
+        )
+
+        assert [row["id"] for row in result] == ["u1", "u4"]
+
+    def test_skips_blank_lines(self, tmp_path):
+        fixture = tmp_path / "utterances_with_blanks.jsonl"
+        fixture.write_text(
+            "\n".join(
+                [
+                    json.dumps({"id": "u1", "conversation_id": "1955_71"}),
+                    "",
+                    "   ",
+                    json.dumps({"id": "u2", "conversation_id": "1955_71"}),
+                ]
+            ),
+            encoding="utf-8",
+        )
+
+        result = list(
+            stream_utterances_for_conversation_ids(fixture, {"1955_71"})
+        )
+
+        assert [row["id"] for row in result] == ["u1", "u2"]
+
+
+class TestLoadConversationsForTerm:
+    def test_returns_only_prefix_matching_case_ids(self, tmp_path):
+        fixture = tmp_path / "conversations.json"
+        fixture.write_text(
+            json.dumps(
+                {
+                    "1955_71": {"case_id": "1955_71", "advocates": {}},
+                    "1955_99": {"case_id": "1955_99", "advocates": {}},
+                    "1956_12": {"case_id": "1956_12", "advocates": {}},
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        result = load_conversations_for_term(fixture, 1955)
+
+        assert set(result.keys()) == {"1955_71", "1955_99"}
+
+
+class TestLoadSpeakers:
+    def test_loads_speakers_fully(self, tmp_path):
+        fixture = tmp_path / "speakers.json"
+        fixture.write_text(
+            json.dumps({"j__earl_warren": {"name": "Earl Warren"}}),
+            encoding="utf-8",
+        )
+
+        result = load_speakers(fixture)
+
+        assert result == {"j__earl_warren": {"name": "Earl Warren"}}
+
+
+class TestLoadCases:
+    def test_indexes_by_docket_number(self, tmp_path):
+        fixture = tmp_path / "cases.jsonl"
+        fixture.write_text(
+            "\n".join(
+                [
+                    json.dumps({"docket_no": "55-71", "title": "Smith v. Jones"}),
+                    "",
+                    json.dumps({"docket_no": "55-99", "title": "Doe v. Roe"}),
+                ]
+            ),
+            encoding="utf-8",
+        )
+
+        result = load_cases(fixture)
+
+        assert result["55-71"]["title"] == "Smith v. Jones"
+        assert result["55-99"]["title"] == "Doe v. Roe"
+        assert len(result) == 2

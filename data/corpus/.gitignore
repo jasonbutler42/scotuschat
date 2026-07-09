@@ -1,0 +1,11 @@
+# ConvoKit/Oyez historical corpus source files — immutable local source files,
+# not tracked in git. These are operator-supplied inputs to the Phase 29
+# historical-corpus importer (utterances.jsonl, conversations.json,
+# speakers.json, cases.jsonl, and the justices tenure CSV).
+#
+# utterances.jsonl alone is ~900MB — GitHub hard-blocks any file over 100MiB,
+# so it (and its siblings) must never be `git add`-ed. Only .gitkeep and this
+# .gitignore are tracked so the directory exists in the repository.
+*.jsonl
+*.json
+*.csv

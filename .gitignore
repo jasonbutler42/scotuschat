@@ -9,6 +9,12 @@ data/pgdata/
 # actual PDF files are ignored via data/pdfs/.gitignore
 data/pdfs/*.pdf
 
+# Historical corpus source files (ConvoKit/Oyez) — immutable local source files,
+# not tracked in git (utterances.jsonl alone is ~900MB; GitHub hard-blocks >100MiB).
+# The directory itself is tracked via data/corpus/.gitkeep;
+# actual corpus files are ignored via data/corpus/.gitignore (defense-in-depth here).
+data/corpus/*.jsonl
+
 # Python
 __pycache__/
 *.pyc

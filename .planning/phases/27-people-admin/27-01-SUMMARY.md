@@ -120,3 +120,12 @@ None - no external service configuration required. The migration was already app
 ---
 *Phase: 27-people-admin*
 *Completed: 2026-07-09*
+
+## Self-Check: PASSED
+
+- FOUND: alembic/versions/0016_add_person_birthdate.py
+- FOUND: api/models/models.py
+- FOUND: api/schemas/admin_people.py
+- FOUND: .planning/phases/27-people-admin/27-01-SUMMARY.md
+- FOUND commit: f8337826 (Task 1)
+- FOUND commit: 4797377a (Task 2)

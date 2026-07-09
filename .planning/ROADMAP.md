@@ -251,7 +251,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 **Success Criteria** (what must be TRUE):
 
   1. People list page is titled "People" and has Bench and Advocate tabs; Bench tab columns include tenure coverage and tenure gap indicator; Advocate tab columns include argument count
-  2. "Incomplete only" filter works per tab; "Justices with tenure gaps" filter is present and functional on the Bench tab only
+  2. Click-to-filter missing-field pills work per tab (replaces the old "Incomplete only" toggle per D-04); "Justices with tenure gaps" filter is present and functional on the Bench tab only
   3. "Create person" button navigates to a blank person editor — operator can create a Justice before any argument is uploaded
   4. Justice Details card is collapsed by default; checking "Is Justice" opens it with animation; unchecking hides the fields without deleting tenure or appointment data
   5. Each tenure row in the editor contains Seat, Appointed by, Appointing president's party, Start date, and End date — data reads correctly from the migrated `court_tenures` columns

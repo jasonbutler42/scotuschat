@@ -73,7 +73,7 @@
 - [ ] **PDIR-02** Bench / Advocate tab or toggle at top of page
 - [ ] **PDIR-03** Bench view columns: name, tenure coverage, tenure gaps indicator, photo/bio completeness
 - [ ] **PDIR-04** Advocate view columns: name, argument count, photo/bio completeness
-- [ ] **PDIR-05** "Incomplete only" filter retained, scoped per tab
+- [~] **PDIR-05** ~~"Incomplete only" filter retained, scoped per tab~~ — **Reworked by Phase 27 D-04**: the toggle is removed entirely; replaced by click-to-filter missing-field pills scoped per tab (same underlying capability, different interaction model)
 - [ ] **PDIR-06** "Justices with tenure gaps" filter retained (bench tab only)
 - [ ] **PDIR-07** "Create person" button on list page — navigates to full person editor starting blank; enables creating Justices before any argument is uploaded
 
@@ -160,7 +160,7 @@
 | PDIR-02 | Phase 27 | Pending |
 | PDIR-03 | Phase 27 | Pending |
 | PDIR-04 | Phase 27 | Pending |
-| PDIR-05 | Phase 27 | Pending |
+| PDIR-05 | Phase 27 | Reworked (D-04) |
 | PDIR-06 | Phase 27 | Pending |
 | PDIR-07 | Phase 27 | Pending |
 | PEDIT-01 | Phase 27 | Pending |
@@ -184,4 +184,4 @@
 
 ---
 *Requirements defined: 2026-07-02*
-*Last updated: 2026-07-08 — PEDIT-04 and PEDIT-08 marked Superseded per Phase 27 discuss-phase decision D-10 (person-level Role field dropped; role is argument-level via `argument_participants`)*
+*Last updated: 2026-07-08 — PEDIT-04 and PEDIT-08 marked Superseded per Phase 27 discuss-phase decision D-10 (person-level Role field dropped; role is argument-level via `argument_participants`); PDIR-05 marked Reworked per decision D-04 (toggle replaced by click-to-filter pills) — flagged by gsd-plan-checker during Phase 27 plan verification*

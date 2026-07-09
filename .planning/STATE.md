@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: Admin Screens Cleanup
-current_phase: 27
-current_phase_name: people-admin
-status: executing
-stopped_at: Phase 27 gap-closure plan 27-11 executed (effect_update_depth_exceeded fix) — 4th UAT retest re-run pending
-last_updated: "2026-07-09T18:10:52.812Z"
+current_phase: 28
+current_phase_name: Dashboard
+status: Ready to plan
+stopped_at: Phase 27 complete — 5th UAT retest passed 7/7, security threat-secure (0 open), ready to plan Phase 28
+last_updated: "2026-07-09T19:45:00.000Z"
 last_activity: 2026-07-09
-last_activity_desc: Plan 27-11 executed (fix for effect_update_depth_exceeded loop)
+last_activity_desc: Phase 27 complete, transitioned to Phase 28
 progress:
   total_phases: 7
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 36
   completed_plans: 36
   percent: 86
@@ -21,20 +21,20 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-07-07 after Phase 25 completion)
+See: .planning/PROJECT.md (updated 2026-07-09 after Phase 27 completion)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** Phase 27 — people-admin
+**Current focus:** Phase 28 — dashboard
 
 ## Current Position
 
-Phase: 27 (people-admin) — VERIFYING
-Stage: discuss ✓ → plan ✓ → execute ✓ → verify ✓ (gaps_found) → plan ✓ → execute ✓ → **verify (pending, 4th pass)**
-Plan: 11 of 11 (all executed, including gap-closure plan 27-11 fixing the effect_update_depth_exceeded regression)
-Status: Gap-closure plan 27-11 executed (nextKey self-referential read+write fixed); 4th UAT retest re-run pending
-Last activity: 2026-07-09 — Plan 27-11 executed (fix for effect_update_depth_exceeded loop)
+Phase: 28 — Dashboard
+Stage: Ready to plan
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-07-09 — Phase 27 complete (5th UAT retest 7/7 passed, security threat-secure), transitioned to Phase 28
 
-Progress: [██████████] 100% of Phase 27 plans executed (11/11); do NOT treat ROADMAP.md's `[x]` line or STATE.md frontmatter `completed_phases` as authoritative on their own — `roadmap update-plan-progress` marks the plan-count row Complete automatically once all plans have SUMMARYs, but Phase 27 is NOT actually done until `/gsd-verify-work 27` (a 4th pass, re-testing CR-01/CR-02 plus the 4 other tests this plan unblocked) confirms Truth 4 / PEDIT-07 now passes. This is the same premature-completion pattern already logged for Phase 26/27 in prior sessions (see memory: GSD Roadmap Premature-Completion Bug) — `completed_phases` in this file's frontmatter has been corrected back to 5 (not bumped to 6) until that verification runs.
+Progress: [████████████████████] 36/36 plans (100%). Phase 27 is now fully verified complete: 5th UAT retest passed all 7 items (including the CR-01/CR-02 data-preservation round-trips previously blocked by the effect_update_depth_exceeded regression), 27-SECURITY.md shows threats_open: 0, and 27-VERIFICATION.md status is canonically `passed`. `completed_phases` in this file's frontmatter is correctly at 6/7 (86%).
 
 ## Performance Metrics
 
@@ -120,6 +120,7 @@ Full log in PROJECT.md Key Decisions table. Key decisions entering v1.5:
 - [Phase 27-09]: D-16 amendment (2026-07-09): appointing_president_party reversed from free-text to a curated select scoped to that field only; appointed_by remains free-text; Seat-as-toggle deferred to backlog Phase 999.16
 - [Phase 27-10]: Relocated hidden birthdate/tenures inputs outside {#if isJustice} (CR-01) and completed the person-id-change reset effect to re-derive tenureRows/nextKey (CR-02), closing PEDIT-07's data-preservation gap
 - [Phase 27]: 27-11: Used a plain local resetKey counter (not $state) inside the person-id-change reset $effect, writing nextKey once after the .map() completes, matching the codebase's write-only reset-effect convention — Fixes effect_update_depth_exceeded regression from 27-10 CR-02 without altering CR-01/CR-02 behavior
+- [Phase 27]: Phase closed out with a 5th UAT retest (7/7 passed) after the 27-11 fix unblocked the previously-stuck 4th retest; 27-REVIEW.md's one Critical finding (CourtTenure rows unaccounted for in merge/delete FK bookkeeping, api/services/admin_people.py) predates Phase 27 (Phase 22) and was scoped out as a backlog item, not a phase gap
 
 ### Pending Todos
 
@@ -178,6 +179,6 @@ Deployment blockers (v1.4, unresolved — not in v1.5 scope):
 
 ## Session Continuity
 
-Last session: 2026-07-09T18:10:52.800Z
-Stopped at: Phase 27 gap-closure plan 27-11 executed (effect_update_depth_exceeded fix) — 4th UAT retest re-run pending
-Resume file: .planning/phases/27-people-admin/27-UAT.md
+Last session: 2026-07-09T19:45:00.000Z
+Stopped at: Phase 27 complete, ready to plan Phase 28
+Resume file: None

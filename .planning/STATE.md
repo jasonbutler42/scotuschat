@@ -4,17 +4,17 @@ milestone: v1.5
 milestone_name: Admin Screens Cleanup
 current_phase: 27
 current_phase_name: people-admin
-status: verifying
-stopped_at: Phase 27 verified (human_needed) — awaiting UAT
-last_updated: "2026-07-09T11:30:00.000Z"
+status: executing
+stopped_at: Completed 27-07-PLAN.md
+last_updated: "2026-07-09T13:23:01.925Z"
 last_activity: 2026-07-09
-last_activity_desc: Phase 27 execution + verification complete; 3 human-verification items pending
+last_activity_desc: Phase 27 execution started
 progress:
   total_phases: 7
-  completed_phases: 6
-  total_plans: 31
-  completed_plans: 31
-  percent: 86
+  completed_phases: 5
+  total_plans: 34
+  completed_plans: 32
+  percent: 71
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-07-07 after Phase 25 completion)
 
 ## Current Position
 
-Phase: 27 (people-admin) — VERIFYING
+Phase: 27 (people-admin) — EXECUTING
 Stage: discuss ✓ → plan ✓ → execute ✓ → **verify** (in progress)
-Plan: 6 of 6 (all executed)
-Status: Verified twice — 1 gap found (missing Seat field, PEDIT-09) and closed; 5/5 success criteria now pass. Awaiting human UAT (3 items in 27-UAT.md) before phase can close.
-Last activity: 2026-07-09 — Phase 27 execution + verification complete
+Plan: 2 of 9
+Status: Ready to execute
+Last activity: 2026-07-09 — Phase 27 execution started
 
 Progress: [██████████] 100% of Phase 27 execution; verification human_needed — run /gsd-verify-work 27
 
@@ -115,6 +115,7 @@ Full log in PROJECT.md Key Decisions table. Key decisions entering v1.5:
 - [Phase ?]: 27-06: Photo and Biography cards both omitted on the create route (not just Photo) -- they share a single ?/photo form/action on [id] that has no analog on this route, and D-08 excludes bio/photo from the create payload
 - [Phase ?]: 27-06: isJustice starts as boolean|null (not defaulting to false) so neither Bench nor Advocate is pre-selected on /admin/people/new, matching D-08's explicit-choice requirement
 - [Phase ?]: 27-06: Merge/Delete markup, state, and fetchMergePreview removed entirely from the create page (not just guarded) since this route has no merge/delete actions for those forms to target
+- [Phase ?]: 27-07: Fixed all four middle columns (Bench Tenure coverage/gap plus Advocate Argument count/Missing fields), not just the reported Advocate pair -- Bench tab had the identical latent zero-horizontal-padding defect.
 
 ### Pending Todos
 
@@ -165,9 +166,10 @@ Deployment blockers (v1.4, unresolved — not in v1.5 scope):
 | Phase 27-people-admin P04 | 15min | 2 tasks | 2 files |
 | Phase 27-people-admin P05 | 15min | 2 tasks | 2 files |
 | Phase 27 P06 | 20min | 2 tasks | 2 files |
+| Phase 27 P07 | 8min | 1 tasks | 1 files |
 
 ## Session Continuity
 
-Last session: 2026-07-09T05:28:03.801Z
-Stopped at: Completed 27-05-PLAN.md
-Resume file: .planning/phases/27-people-admin/27-06-PLAN.md
+Last session: 2026-07-09T13:23:01.913Z
+Stopped at: Completed 27-07-PLAN.md
+Resume file: None

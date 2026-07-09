@@ -5,16 +5,16 @@ milestone_name: Admin Screens Cleanup
 current_phase: 28
 current_phase_name: Dashboard
 status: Ready to plan
-stopped_at: Phase 28 context gathered
-last_updated: "2026-07-09T19:49:21.930Z"
+stopped_at: Phase 29 context gathered
+last_updated: "2026-07-09T21:15:52.890Z"
 last_activity: 2026-07-09
 last_activity_desc: Phase 27 complete (5th UAT retest 7/7 passed, security threat-secure), transitioned to Phase 28
 progress:
-  total_phases: 7
+  total_phases: 8
   completed_phases: 6
   total_plans: 36
   completed_plans: 36
-  percent: 86
+  percent: 75
 ---
 
 # Project State
@@ -122,6 +122,10 @@ Full log in PROJECT.md Key Decisions table. Key decisions entering v1.5:
 - [Phase 27]: 27-11: Used a plain local resetKey counter (not $state) inside the person-id-change reset $effect, writing nextKey once after the .map() completes, matching the codebase's write-only reset-effect convention — Fixes effect_update_depth_exceeded regression from 27-10 CR-02 without altering CR-01/CR-02 behavior
 - [Phase 27]: Phase closed out with a 5th UAT retest (7/7 passed) after the 27-11 fix unblocked the previously-stuck 4th retest; 27-REVIEW.md's one Critical finding (CourtTenure rows unaccounted for in merge/delete FK bookkeeping, api/services/admin_people.py) predates Phase 27 (Phase 22) and was scoped out as a backlog item, not a phase gap
 
+### Roadmap Evolution
+
+- Phase 29 added: Historical Corpus Import — bulk-import ~7,800 historical oral arguments (terms 1955-2019) from the Cornell ConvoKit supreme-corpus dataset, bypassing PDF/LLM parsing for this batch; depends on Phase 28
+
 ### Pending Todos
 
 - `2026-07-08-edit-affordance-on-utterances-and-speaker-popover.md` (ui) — authenticated "Edit" affordance on every utterance + on the speaker popover card; no phase assigned yet
@@ -179,6 +183,6 @@ Deployment blockers (v1.4, unresolved — not in v1.5 scope):
 
 ## Session Continuity
 
-Last session: 2026-07-09T19:49:21.915Z
-Stopped at: Phase 28 context gathered
-Resume file: .planning/phases/28-dashboard/28-CONTEXT.md
+Last session: 2026-07-09T21:15:52.878Z
+Stopped at: Phase 29 context gathered
+Resume file: .planning/phases/29-historical-corpus-import/29-CONTEXT.md

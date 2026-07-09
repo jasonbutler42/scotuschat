@@ -27,6 +27,12 @@
 			Cases
 		</a>
 		<a
+			href="/attributions"
+			style="font-size: 14px; color: #93c5fd; text-decoration: none;"
+		>
+			Attributions
+		</a>
+		<a
 			href="/admin"
 			style="font-size: 14px; color: #94a3b8; text-decoration: none; margin-left: auto;"
 		>

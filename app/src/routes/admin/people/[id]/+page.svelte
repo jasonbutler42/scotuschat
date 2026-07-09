@@ -474,6 +474,13 @@
 			     submits a value, unlike the old checkbox which was absent when unchecked). -->
 			<input type="hidden" name="is_justice" form="save-form" value={isJustice ? 'true' : 'false'} />
 
+			<!-- Always present, independent of the Bench/Advocate toggle (CR-01 gap-closure
+			     fix, 27-10) — so the save action always receives the true current
+			     birthdate/tenure state, regardless of whether the Bench-only UI below
+			     is currently mounted. -->
+			<input type="hidden" name="birthdate" form="save-form" value={birthdate} />
+			<input type="hidden" name="tenures" form="save-form" value={JSON.stringify(tenureRows)} />
+
 			{#if isJustice}
 			<div transition:slide>
 				<!-- Birth Date + disabled Death Date (D-15, D-19) -->
@@ -488,8 +495,6 @@
 						<input
 							id="birthdate"
 							type="date"
-							name="birthdate"
-							form="save-form"
 							bind:value={birthdate}
 							style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
 						/>
@@ -648,9 +653,6 @@
 				>
 					+ Add Tenure Period
 				</button>
-
-				<!-- Hidden field carrying the serialized tenure array (Pattern 1 / Pitfall 3) -->
-				<input type="hidden" name="tenures" form="save-form" value={JSON.stringify(tenureRows)} />
 			</div>
 			{/if}
 		</div>

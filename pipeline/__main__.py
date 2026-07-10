@@ -38,6 +38,10 @@ from pipeline.commands.import_justices_csv import (
     DEFAULT_CSV_PATH,
     run_import_justices_csv,
 )
+from pipeline.commands.import_convokit import (
+    DEFAULT_CORPUS_DIR,
+    run_import_convokit,
+)
 from pipeline.commands.parse import run_parse
 from pipeline.commands.resolve import run_resolve
 from pipeline.commands.seed_aliases import run_seed_aliases
@@ -263,6 +267,42 @@ def main() -> None:
         help=f"Path to the justices tenure CSV (default: {DEFAULT_CSV_PATH})",
     )
 
+    # -----------------------------------------------------------------------
+    # import-convokit subcommand (Phase 29, D-07)
+    # -----------------------------------------------------------------------
+    import_convokit_p = sub.add_parser(
+        "import-convokit",
+        help="Bulk-import historical arguments from the ConvoKit supreme-corpus",
+        description=(
+            "Import oral arguments for one October Term or a term range from "
+            "the Cornell ConvoKit supreme-corpus dataset, bypassing PDF/LLM "
+            "parsing. Scaffolds Case/Argument/CaseArgument/PipelineRun rows "
+            "and resolves bench/advocate speakers into Person/"
+            "ArgumentParticipant rows. Arguments land at status=draft. "
+            "Idempotent -- safe to re-run any term."
+        ),
+    )
+    import_convokit_term_group = import_convokit_p.add_mutually_exclusive_group(
+        required=True
+    )
+    import_convokit_term_group.add_argument(
+        "--term", type=int, help="Single October Term year, e.g. 1955"
+    )
+    import_convokit_term_group.add_argument(
+        "--term-range",
+        type=str,
+        help="Inclusive October Term range, e.g. 1955-1960",
+    )
+    import_convokit_p.add_argument(
+        "--corpus-dir",
+        required=False,
+        default=None,
+        help=(
+            "Directory containing conversations.json/cases.jsonl/speakers.json "
+            f"(default: {DEFAULT_CORPUS_DIR})"
+        ),
+    )
+
     try:
         args = parser.parse_args()
     except SystemExit as exc:
@@ -296,6 +336,8 @@ def main() -> None:
         asyncio.run(run_seed_aliases(args))
     elif args.command == "import-justices":
         asyncio.run(run_import_justices_csv(args))
+    elif args.command == "import-convokit":
+        asyncio.run(run_import_convokit(args))
 
 
 if __name__ == "__main__":

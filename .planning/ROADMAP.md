@@ -526,8 +526,10 @@ Plans:
 ### Phase 999.19: Audit ~28 stale DB-gated test fixtures + fix real data leakage into the shared dev DB (BACKLOG)
 
 **Goal:** [Captured for future planning] [Added 2026-07-10, surfaced while fixing 999.17 during Phase 30 Wave 1; escalated 2026-07-10 during Phase 30 Wave 3 after leaked test rows actively blocked the 30-04 operator runbook] Fixing the FastAPI lifespan/session-factory bug (999.17) means DB-gated tests across `pipeline/tests/` and `api/tests/` now genuinely execute against the live local dev Postgres (`postgresql+asyncpg://scotus:scotus@localhost:5432/scotus`) instead of silently erroring at session setup. Two distinct consequences:
+
 1. ~28 tests fail on real schema/data-assumption mismatches never actually exercised in a full-suite run before now (e.g. `pipeline/tests/test_pipeline_run.py::test_rerun_creates_new_rows` inserts an `Utterance` without `strategy`, which is `nullable=False` per pre-existing PIPE-04 — a stale fixture, not a regression). Spread across `pipeline/tests/test_ingest.py`, `test_parse.py`, `test_resolve.py`, `test_seed_aliases.py`, `test_pipeline_run.py`, `api/tests/test_admin_arguments_service.py`, `test_admin_jobs_phase25.py`, `test_admin_jobs_service.py`, `test_admin_jobs_stats.py`, `test_arguments.py`.
 2. **Confirmed real data leakage, more serious than originally scoped:** the `db_session` fixture's `session.begin()` + explicit `rollback()` pattern only protects against the test's OWN direct writes — it does NOT protect against writes made by production service functions the test calls (e.g. `create_person_for_job`, `publish_argument`) that commit internally as normal application behavior. Once a service function commits, the fixture's later rollback is a no-op — those rows are permanent. Confirmed 2026-07-10: 3 full-suite pytest runs left 18 leaked `Person` rows (duplicate "Ketanji Brown Jackson" x3 plus 5 fake test names x3 each: "Advocate Example", "Bench Example", "John Smith", "Justice Example", "Status Log Advocate") and 15 fully-synthetic `Argument` rows (no docket, no date, no utterances) in the shared dev DB — one of which actively broke `python -m pipeline import-justices` (`MultipleResultsFound` on the duplicated "Ketanji Brown Jackson" `Person.full_name` lookup in `pipeline/commands/import_justices_csv.py:182`) mid-execution of plan 30-04. Cleaned up manually (scoped DELETE, verified each row was zero-content synthetic test data, keeping the one legitimate `Person` id=116 with a real `court_tenures` row) — this is a stopgap, not a fix. **Needs its own investigation:** likely fix is a dedicated test database (not the shared dev DB) for any test that exercises commit-invoking service code, or an autouse fixture that snapshots/restores affected tables, or savepoint-based nesting that survives inner commits.
+
 **Requirements:** TBD
 **Plans:** 0 plans
 
@@ -577,7 +579,7 @@ Plans:
 **Goal:** Corpus-imported arguments currently land at `status=draft` with `resolved_at` permanently NULL, which means they can never pass the existing publish gate. Route them through the same AdminJob-based paused/resolve review workflow the PDF-ingest pipeline already uses, so an operator can review and fix auto-created people (missing name parts) and speaker attributions before an argument becomes publishable.
 **Requirements**: PJOB-01, PJOB-02, PJOB-14, PJOB-15, PJOB-18, PJOB-19, PJOB-20, PJOB-21 (reused family — no new REQ IDs)
 **Depends on:** Phase 29
-**Plans:** 3/4 plans executed
+**Plans:** 4/4 plans complete
 
 Plans:
 **Wave 1**
@@ -591,4 +593,4 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 30-04-PLAN.md — Operator runbook: FK-safe scoped wipe + re-import of the term-1955 batch (D-02)
+- [x] 30-04-PLAN.md — Operator runbook: FK-safe scoped wipe + re-import of the term-1955 batch (D-02)

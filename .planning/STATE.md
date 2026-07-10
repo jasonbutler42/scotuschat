@@ -4,17 +4,17 @@ milestone: v1.5
 milestone_name: Admin Screens Cleanup
 current_phase: 30
 current_phase_name: corpus-import-resolve-workflow
-status: executing
-stopped_at: Phase 30 UI-SPEC approved
-last_updated: "2026-07-10T21:43:02.952Z"
+status: verifying
+stopped_at: Completed 30-04-PLAN.md — Phase 30 complete (4/4 plans)
+last_updated: "2026-07-10T22:11:03.702Z"
 last_activity: 2026-07-10
 last_activity_desc: Phase 30 execution started
 progress:
   total_phases: 9
-  completed_phases: 7
+  completed_phases: 8
   total_plans: 49
-  completed_plans: 48
-  percent: 78
+  completed_plans: 49
+  percent: 89
 ---
 
 # Project State
@@ -31,7 +31,7 @@ See: .planning/PROJECT.md (updated 2026-07-09 after Phase 27 completion)
 Phase: 30 (corpus-import-resolve-workflow) — EXECUTING
 Stage: Ready to plan
 Plan: 4 of 4
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-07-10 — Phase 30 execution started
 
 Progress: [████████████████████] 36/36 plans (100%). Phase 27 is now fully verified complete: 5th UAT retest passed all 7 items (including the CR-01/CR-02 data-preservation round-trips previously blocked by the effect_update_depth_exceeded regression), 27-SECURITY.md shows threats_open: 0, and 27-VERIFICATION.md status is canonically `passed`. `completed_phases` in this file's frontmatter is correctly at 6/7 (86%).
@@ -148,6 +148,8 @@ Full log in PROJECT.md Key Decisions table. Key decisions entering v1.5:
 - [Phase 30]: 30-02: get_job()'s exists() correlates on the already-loaded job.argument_id Python value (not a second AdminJob-correlated subquery) since a single-row lookup has no need to join back to AdminJob
 - [Phase 30]: 30-02: PIPELINE_RUN_STRATEGY imported from pipeline.commands.import_convokit into api/services/admin_jobs.py, following the established cross-layer import precedent (normalize_label)
 - [Phase 30-03]: Visual verification (Task 2) completed via direct dev-database inspection because the dev DB currently has zero corpus-imported AdminJob rows (they predate 30-01's paired-AdminJob insert); full Corpus-tag confirmation deferred to plan 30-04's wipe-and-rerun
+- [Phase 30-04]: D-02 upheld: term-1955 corpus wipe-and-rerun delivered with zero committed code — ad hoc FK-safe scoped wipe SQL plus re-run of the existing idempotent import-justices/import-convokit CLI; no migration/backfill script added.
+- [Phase 30-04]: Mid-execution test-data-leakage blocker (duplicate Ketanji Brown Jackson Person row from leaked pytest fixture commits) resolved via its own scoped DELETE, separate from this plan's convokit_import-scoped wipe; underlying test-isolation defect escalated to ROADMAP.md backlog Phase 999.19 rather than fixed in-plan.
 
 ### Roadmap Evolution
 
@@ -219,9 +221,10 @@ Deployment blockers (v1.4, unresolved — not in v1.5 scope):
 | Phase 30 P01 | 20min | 2 tasks | 3 files |
 | Phase 30 P02 | 15min | 2 tasks | 3 files |
 | Phase 30 P03 | 12min | 2 tasks | 1 files |
+| Phase 30 P04 | N/A | 2 tasks | 0 files |
 
 ## Session Continuity
 
-Last session: 2026-07-10T21:42:28.139Z
-Stopped at: Phase 30 UI-SPEC approved
-Resume file: .planning/phases/30-corpus-import-resolve-workflow/30-UI-SPEC.md
+Last session: 2026-07-10T22:11:03.689Z
+Stopped at: Completed 30-04-PLAN.md — Phase 30 complete (4/4 plans)
+Resume file: None

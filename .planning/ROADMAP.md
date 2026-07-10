@@ -565,12 +565,12 @@ Plans:
 **Goal:** Corpus-imported arguments currently land at `status=draft` with `resolved_at` permanently NULL, which means they can never pass the existing publish gate. Route them through the same AdminJob-based paused/resolve review workflow the PDF-ingest pipeline already uses, so an operator can review and fix auto-created people (missing name parts) and speaker attributions before an argument becomes publishable.
 **Requirements**: PJOB-01, PJOB-02, PJOB-14, PJOB-15, PJOB-18, PJOB-19, PJOB-20, PJOB-21 (reused family — no new REQ IDs)
 **Depends on:** Phase 29
-**Plans:** 4 plans
+**Plans:** 1/4 plans executed
 
 Plans:
 **Wave 1**
 
-- [ ] 30-01-PLAN.md — Pipeline write-path fix: Argument.status→PIPELINE + paired PAUSED/RESOLVE AdminJob + HIT-shaped discrepancies (crux; D-01, D-03, D-05)
+- [x] 30-01-PLAN.md — Pipeline write-path fix: Argument.status→PIPELINE + paired PAUSED/RESOLVE AdminJob + HIT-shaped discrepancies (crux; D-01, D-03, D-05)
 - [ ] 30-02-PLAN.md — API `source` derived field on AdminJobResponse via exists() in list_jobs()/get_job() (no migration)
 
 **Wave 2** *(blocked on Wave 1 completion)*

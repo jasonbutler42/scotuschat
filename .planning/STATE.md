@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: Admin Screens Cleanup
-current_phase: 999.1
-current_phase_name: BACKLOG
+current_phase: 30
+current_phase_name: corpus-import-resolve-workflow
 status: executing
 stopped_at: Phase 30 UI-SPEC approved
-last_updated: "2026-07-10T19:38:36.198Z"
+last_updated: "2026-07-10T20:33:24.163Z"
 last_activity: 2026-07-10
-last_activity_desc: Phase 29 complete, transitioned to Phase 999.1
+last_activity_desc: Phase 30 execution started
 progress:
   total_phases: 9
   completed_phases: 7
-  total_plans: 45
-  completed_plans: 45
+  total_plans: 49
+  completed_plans: 46
   percent: 78
 ---
 
@@ -24,15 +24,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-09 after Phase 27 completion)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** Phase 29 — historical-corpus-import
+**Current focus:** Phase 30 — corpus-import-resolve-workflow
 
 ## Current Position
 
-Phase: 999.1 — Click-to-copy extracted values design pattern (BACKLOG)
+Phase: 30 (corpus-import-resolve-workflow) — EXECUTING
 Stage: Ready to plan
-Plan: Not started
+Plan: 2 of 4
 Status: Ready to execute
-Last activity: 2026-07-10 — Phase 29 complete, transitioned to Phase 999.1
+Last activity: 2026-07-10 — Phase 30 execution started
 
 Progress: [████████████████████] 36/36 plans (100%). Phase 27 is now fully verified complete: 5th UAT retest passed all 7 items (including the CR-01/CR-02 data-preservation round-trips previously blocked by the effect_update_depth_exceeded regression), 27-SECURITY.md shows threats_open: 0, and 27-VERIFICATION.md status is canonically `passed`. `completed_phases` in this file's frontmatter is correctly at 6/7 (86%).
 
@@ -141,6 +141,10 @@ Full log in PROJECT.md Key Decisions table. Key decisions entering v1.5:
 - [Phase 29-08]: Relabeled import_convokit.py's single per-argument PipelineRun.step from ingest to parse, matching api/services/arguments.py's established read-side contract (step==parse filter) -- fixed the write side rather than adding a second query branch to a shared read contract
 - [Phase 29-08]: New end-to-end test calls get_argument_with_utterances directly (no HTTP client, no api.main import), avoiding the pre-existing FastAPI test lifespan/session-factory failure, consistent with 29-07's established pattern
 - [Phase 29-09]: docket_question_conflict counted and printed distinctly from conversations_errored so an operator can tell a data-loss-prevented collision apart from an unrelated malformed-row error — IntegrityError handling kept as defense-in-depth only -- the primary fix is _next_question_number aligning the write path with the DB's real (source_docket, question_number) constraint before any flush is attempted
+- [Phase ?]: 30-01: Argument.status write flipped from DRAFT to PIPELINE in _import_conversation (D-06 superseded per 30-RESEARCH.md Pitfall 1)
+- [Phase ?]: 30-01: AdminJob insertion placed immediately after _import_utterances returns -- bench Justice participants are only discovered while streaming utterances
+- [Phase ?]: 30-01: _build_discrepancies() built from ArgumentParticipant rows, mirroring resolve.py's exact 7-key HIT shape so ResolveCard.svelte renders unmodified for corpus jobs
+- [Phase ?]: 30-01: No separate commit/flush or create_job() reuse for the AdminJob insert -- get_session()'s context manager commits the whole per-conversation transaction atomically
 
 ### Roadmap Evolution
 
@@ -209,9 +213,10 @@ Deployment blockers (v1.4, unresolved — not in v1.5 scope):
 | Phase 29 P07 | 4min | 2 tasks | 5 files |
 | Phase 29 P08 | 10min | 2 tasks | 3 files |
 | Phase 29 P09 | 20min | 2 tasks | 2 files |
+| Phase 30 P01 | 20min | 2 tasks | 3 files |
 
 ## Session Continuity
 
-Last session: 2026-07-10T19:38:36.185Z
+Last session: 2026-07-10T20:31:55.285Z
 Stopped at: Phase 30 UI-SPEC approved
 Resume file: .planning/phases/30-corpus-import-resolve-workflow/30-UI-SPEC.md

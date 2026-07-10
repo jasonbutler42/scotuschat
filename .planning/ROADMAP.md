@@ -559,3 +559,14 @@ Plans:
 **Gap closure** *(from 29-VERIFICATION.md BLOCKER CR-01 — docket/question uniqueness collision — independent, no deps)*
 
 - [x] 29-09-PLAN.md — Derive question_number per docket (aligns importer with the real uq_arguments_source_docket_question constraint) so reargued cases and PDF-ingest-overlap dockets import at question_number=2+ instead of silently colliding; add distinct docket_question_conflict counter to the per-batch summary + explicit IntegrityError handling; add regression tests (CORPUS-03, CORPUS-08)
+
+### Phase 30: Corpus Import Resolve Workflow
+
+**Goal:** Corpus-imported arguments currently land at `status=draft` with `resolved_at` permanently NULL, which means they can never pass the existing publish gate. Route them through the same AdminJob-based paused/resolve review workflow the PDF-ingest pipeline already uses, so an operator can review and fix auto-created people (missing name parts) and speaker attributions before an argument becomes publishable.
+**Requirements**: TBD
+**Depends on:** Phase 29
+**Plans:** 0 plans
+
+Plans:
+
+- [ ] TBD (run /gsd-plan-phase 30 to break down)

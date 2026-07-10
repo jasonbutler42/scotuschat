@@ -9,12 +9,35 @@ conversations.json + cases.jsonl + speakers.json (D-21). Utterance import and
 the batch summary land in Plan 05/06 -- this module stops at scaffolding +
 speaker resolution (this plan's declared objective boundary).
 
-This file is built up task-by-task per 29-04-PLAN.md:
-    Task 1 (this stage): CLI subcommand, --term/--term-range validation,
-        --corpus-dir validation, and the per-term file-loading skeleton
-        that delegates entity creation to Task 2's function.
-    Task 2: Case/Argument/CaseArgument/PipelineRun entity creation.
-    Task 3: bench/advocate speaker resolution into Person/ArgumentParticipant.
+Built task-by-task per 29-04-PLAN.md:
+    Task 1: CLI subcommand, --term/--term-range validation, --corpus-dir
+        validation, and the per-term file-loading skeleton.
+    Task 2: idempotent Case/Argument/CaseArgument/PipelineRun entity
+        creation, apolitical field stripping (T-29-02), and per-conversation
+        resilience (T-29-05b).
+    Task 3: bench/advocate speaker resolution into Person (D-11 key order)
+        + ArgumentParticipant rows (side classification, D-12/D-13).
+
+Join key note: cases.jsonl rows carry their OWN "case_id" field with the
+same value as conversations.json's top-level key/"case_id" attribute (the
+apolitical-extractor test fixtures confirm this: case_id "1955_71" on both
+sides, vs. a differently-formatted "docket_no" like "55-71" used for the
+Case.docket_number column). The conversation/case join is therefore done on
+case_id equality, not on docket matching -- pipeline.corpus.loader.load_cases
+indexes by docket_no (for the Case.docket_number lookups this module also
+needs), so a secondary case_id -> raw_case index is built here from its
+values.
+
+Speaker-resolution scope note (Task 3): conversations.json's "advocates"
+dict is the only per-conversation participant list available at this
+plan's stage -- utterances.jsonl (Plan 05's input) is what actually reveals
+which bench justices spoke in a given conversation. The speaker-resolution
++ side-classification helpers below are written generically (a speaker's
+side is derived from speakers.json's authoritative `type` field, not from
+which caller/dict supplied the id), so Plan 05 can reuse them unchanged
+once it streams utterances and discovers the real per-conversation bench
+roster. This plan wires them up for every id in the conversation's
+"advocates" dict now.
 
 Usage:
     python -m pipeline import-convokit --term 1955
@@ -33,11 +56,14 @@ from sqlalchemy import select
 
 from api.models.models import (
     Argument,
+    ArgumentParticipant,
     ArgumentStatusEnum,
     Case,
     CaseArgument,
+    Person,
     PipelineRun,
     PipelineRunStatus,
+    SideEnum,
 )
 from pipeline.commands.ingest import _derive_slug
 from pipeline.corpus import apolitical
@@ -56,6 +82,20 @@ DEFAULT_CORPUS_DIR = Path("data/corpus")
 # row stamped with this strategy value, ahead of any utterance write path
 # (Utterance.pipeline_run_id is NOT NULL, T-29-09).
 PIPELINE_RUN_STRATEGY = "convokit_import"
+
+# conversations.json advocate side codes -> SideEnum (RESEARCH.md Standard
+# Stack cross-check / ConvoKit's official Supreme Court Corpus docs; A2).
+_ADVOCATE_SIDE_MAP: dict[int, SideEnum] = {
+    0: SideEnum.RESPONDENT,
+    1: SideEnum.PETITIONER,
+    2: SideEnum.AMICUS,
+    3: SideEnum.UNKNOWN,
+}
+
+# speakers.json speaker `type` values treated as the bench classification
+# (RESEARCH.md Open Question 3: type is authoritative, never a name-pattern
+# guess like a "j__" id prefix).
+_JUSTICE_TYPE_VALUES = {"justice", "j", "bench"}
 
 
 # ---------------------------------------------------------------------------
@@ -274,6 +314,140 @@ async def _import_conversation(
     )
     session.add(run)
     await session.flush()
+
+    # ---- Task 3: speaker resolution for the conversation's advocates ----
+    advocates = conversation.get("advocates") or {}
+    for speaker_id, advocate_meta in advocates.items():
+        side_code = (
+            advocate_meta.get("side") if isinstance(advocate_meta, dict) else advocate_meta
+        )
+        await _resolve_and_link_participant(
+            session=session,
+            argument_id=argument.id,
+            speaker_id=speaker_id,
+            speakers_index=speakers_index,
+            side_code=side_code,
+            counters=counters,
+        )
+
+
+# ---------------------------------------------------------------------------
+# Task 3: speaker resolution -- Person (D-11) + ArgumentParticipant (side)
+# ---------------------------------------------------------------------------
+
+
+def _is_justice_type(speaker_meta: dict) -> bool | None:
+    """
+    Read speakers.json's speaker `type` field as the AUTHORITATIVE bench vs.
+    advocate signal (RESEARCH.md Open Question 3) -- never inferred from a
+    speaker id's naming convention (e.g. a "j__" prefix). Returns None when
+    the type is missing/unrecognized so the caller can flag it (D-12)
+    instead of guessing.
+    """
+    speaker_type = speaker_meta.get("type")
+    if speaker_type is None:
+        return None
+    return str(speaker_type).strip().lower() in _JUSTICE_TYPE_VALUES
+
+
+async def _resolve_person(
+    session, speaker_id: str, full_name: str, is_justice: bool
+) -> Person:
+    """
+    Resolve or create a Person for `speaker_id`, per D-11's key order:
+    Person.oyez_speaker_id checked FIRST, then Person.full_name (D-13, same
+    exact-match dedup as the justice importer). When a full_name match is
+    found with no oyez_speaker_id yet, backfill it (D-11) so the next run
+    matches by the stable ID.
+    """
+    result = await session.execute(
+        select(Person).where(Person.oyez_speaker_id == speaker_id)
+    )
+    person = result.scalar_one_or_none()
+    if person is not None:
+        return person
+
+    result = await session.execute(select(Person).where(Person.full_name == full_name))
+    person = result.scalar_one_or_none()
+    if person is not None:
+        if person.oyez_speaker_id is None:
+            person.oyez_speaker_id = speaker_id  # D-11 backfill
+        return person
+
+    person = Person(
+        full_name=full_name,
+        oyez_speaker_id=speaker_id,
+        is_justice=is_justice,
+    )
+    session.add(person)
+    await session.flush()
+    return person
+
+
+async def _resolve_and_link_participant(
+    session,
+    argument_id: int,
+    speaker_id: str,
+    speakers_index: dict,
+    side_code,
+    counters: dict,
+) -> ArgumentParticipant:
+    """
+    Resolve `speaker_id` to a Person and idempotently create its
+    ArgumentParticipant row for `argument_id` (D-11/D-12/D-13).
+
+    `side_code` is the raw conversations.json 0/1/2/3 advocate side code;
+    it is ignored (side is always BENCH) when the resolved speaker's
+    speakers.json `type` classifies as a justice. No automated QA gate on
+    identity matching (D-12) -- ambiguous/missing types are imported and
+    flagged for the batch summary, never silently skipped.
+    """
+    speaker_meta = speakers_index.get(speaker_id)
+    if speaker_meta is None:
+        counters["flagged"] += 1
+        print(
+            f"WARNING: speaker {speaker_id!r} not found in speakers.json -- "
+            "flagged, imported anyway (D-12)."
+        )
+        speaker_meta = {}
+
+    is_justice = _is_justice_type(speaker_meta)
+    if is_justice is None:
+        counters["flagged"] += 1
+        print(
+            f"WARNING: speaker {speaker_id!r} has ambiguous/missing 'type' in "
+            "speakers.json -- treated as non-justice, flagged for summary "
+            "(D-12, RESEARCH Open Question 3)."
+        )
+        is_justice = False
+
+    full_name = speaker_meta.get("name") or speaker_meta.get("full_name") or speaker_id
+    raw_speaker_label = full_name
+
+    person = await _resolve_person(session, speaker_id, full_name, is_justice)
+
+    side = SideEnum.BENCH if is_justice else _ADVOCATE_SIDE_MAP.get(side_code, SideEnum.UNKNOWN)
+
+    existing = await session.execute(
+        select(ArgumentParticipant).where(
+            ArgumentParticipant.argument_id == argument_id,
+            ArgumentParticipant.raw_speaker_label == raw_speaker_label,
+        )
+    )
+    participant = existing.scalar_one_or_none()
+    if participant is not None:
+        return participant
+
+    participant = ArgumentParticipant(
+        argument_id=argument_id,
+        person_id=person.id,
+        raw_speaker_label=raw_speaker_label,
+        side=side,
+    )
+    session.add(participant)
+    await session.flush()
+    counters["participants_created"] += 1
+    return participant
 
 
 # ---------------------------------------------------------------------------

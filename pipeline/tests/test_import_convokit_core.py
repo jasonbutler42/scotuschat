@@ -28,12 +28,19 @@ from sqlalchemy import select
 
 from api.models.models import (
     Argument,
+    ArgumentParticipant,
     ArgumentStatusEnum,
     Case,
     CaseArgument,
+    Person,
     PipelineRun,
+    SideEnum,
 )
-from pipeline.commands.import_convokit import _parse_term_range, run_import_convokit
+from pipeline.commands.import_convokit import (
+    _parse_term_range,
+    _resolve_and_link_participant,
+    run_import_convokit,
+)
 
 # ===========================================================================
 # Task 1: _parse_term_range() / --corpus-dir -- no DB required
@@ -353,3 +360,310 @@ async def test_malformed_conversation_flagged_not_aborting_term(
         )
     ).scalar_one_or_none()
     assert missing_argument is None
+
+
+# ===========================================================================
+# Task 3: speaker resolution -- Person (D-11) + ArgumentParticipant (side)
+# ===========================================================================
+
+_CONVERSATION_MULTI_SIDE = {
+    "1955_72": {
+        "conversation_id": "1955_72",
+        "case_id": "1955_72",
+        "advocates": {
+            "adv__resp_counsel": {"side": 0},
+            "adv__pet_counsel": {"side": 1},
+            "adv__amicus_counsel": {"side": 2},
+            "adv__unknown_counsel": {"side": 3},
+        },
+    }
+}
+_CASE_1955_72 = {
+    "case_id": "1955_72",
+    "docket_no": "55-72",
+    "title": "Doe v. Roe",
+    "petitioner": "Doe",
+    "respondent": "Roe",
+    "year": 1955,
+    "transcripts": [{"name": "Oral Argument - December 1, 1955"}],
+}
+_SPEAKERS_SIDES = {
+    "adv__resp_counsel": {"name": "Resp Counsel", "type": "advocate"},
+    "adv__pet_counsel": {"name": "Pet Counsel", "type": "advocate"},
+    "adv__amicus_counsel": {"name": "Amicus Counsel", "type": "advocate"},
+    "adv__unknown_counsel": {"name": "Unknown Counsel", "type": "advocate"},
+}
+
+
+@pytest.mark.asyncio
+async def test_advocate_side_codes_map_onto_side_enum(isolated_session, tmp_path):
+    """Advocate side codes 0/1/2/3 map to RESPONDENT/PETITIONER/AMICUS/UNKNOWN."""
+    corpus_dir = _write_corpus_fixture(
+        tmp_path, _CONVERSATION_MULTI_SIDE, [_CASE_1955_72], _SPEAKERS_SIDES
+    )
+    args = _args(1955, corpus_dir)
+
+    with patch(
+        "pipeline.commands.import_convokit.get_session",
+        new=_make_session_cm(isolated_session),
+    ):
+        await run_import_convokit(args)
+
+    argument = (
+        await isolated_session.execute(
+            select(Argument).where(Argument.oyez_transcript_id == "1955_72")
+        )
+    ).scalar_one()
+    participants = (
+        await isolated_session.execute(
+            select(ArgumentParticipant).where(
+                ArgumentParticipant.argument_id == argument.id
+            )
+        )
+    ).scalars().all()
+    side_by_label = {p.raw_speaker_label: p.side for p in participants}
+    assert side_by_label["Resp Counsel"] == SideEnum.RESPONDENT
+    assert side_by_label["Pet Counsel"] == SideEnum.PETITIONER
+    assert side_by_label["Amicus Counsel"] == SideEnum.AMICUS
+    assert side_by_label["Unknown Counsel"] == SideEnum.UNKNOWN
+
+
+@pytest.mark.asyncio
+async def test_existing_oyez_speaker_id_match_reuses_person_no_new_row(
+    isolated_session, tmp_path
+):
+    """D-11: a Person row already matched by oyez_speaker_id is reused, not
+    duplicated -- even if its full_name differs from the corpus label."""
+    existing = Person(
+        full_name="Some Other Name", oyez_speaker_id="adv__john_smith", is_justice=False
+    )
+    isolated_session.add(existing)
+    await isolated_session.flush()
+    existing_id = existing.id
+
+    corpus_dir = _write_corpus_fixture(
+        tmp_path, _CONVERSATION_1955_71, [_CASE_1955_71], _SPEAKERS
+    )
+    args = _args(1955, corpus_dir)
+
+    with patch(
+        "pipeline.commands.import_convokit.get_session",
+        new=_make_session_cm(isolated_session),
+    ):
+        await run_import_convokit(args)
+
+    people = (
+        await isolated_session.execute(
+            select(Person).where(Person.oyez_speaker_id == "adv__john_smith")
+        )
+    ).scalars().all()
+    assert len(people) == 1
+    assert people[0].id == existing_id
+    assert people[0].full_name == "Some Other Name"  # matched by ID, untouched
+
+
+@pytest.mark.asyncio
+async def test_full_name_only_match_backfills_oyez_speaker_id(
+    isolated_session, tmp_path
+):
+    """D-11: a pre-existing Person matched only by full_name gets its
+    oyez_speaker_id backfilled so the next run matches by stable ID."""
+    existing = Person(full_name="John Smith", oyez_speaker_id=None, is_justice=False)
+    isolated_session.add(existing)
+    await isolated_session.flush()
+    existing_id = existing.id
+
+    corpus_dir = _write_corpus_fixture(
+        tmp_path, _CONVERSATION_1955_71, [_CASE_1955_71], _SPEAKERS
+    )
+    args = _args(1955, corpus_dir)
+
+    with patch(
+        "pipeline.commands.import_convokit.get_session",
+        new=_make_session_cm(isolated_session),
+    ):
+        await run_import_convokit(args)
+
+    people = (
+        await isolated_session.execute(
+            select(Person).where(Person.full_name == "John Smith")
+        )
+    ).scalars().all()
+    assert len(people) == 1, "Full-name match must not create a duplicate Person row"
+    assert people[0].id == existing_id
+    assert people[0].oyez_speaker_id == "adv__john_smith"  # D-11 backfill
+
+
+@pytest.mark.asyncio
+async def test_brand_new_speaker_creates_person_with_oyez_id_and_is_justice_false(
+    isolated_session, tmp_path
+):
+    """A speaker with no existing Person match at all gets a new row with
+    oyez_speaker_id set and is_justice derived from speakers.json's type."""
+    conversations = {
+        "1955_73": {
+            "conversation_id": "1955_73",
+            "case_id": "1955_73",
+            "advocates": {"adv__brand_new": {"side": 1}},
+        }
+    }
+    case = {
+        "case_id": "1955_73",
+        "docket_no": "55-73",
+        "title": "New v. Case",
+        "petitioner": "New",
+        "respondent": "Case",
+        "year": 1955,
+        "transcripts": [{"name": "Oral Argument - January 10, 1955"}],
+    }
+    speakers = {"adv__brand_new": {"name": "Brand New Advocate", "type": "advocate"}}
+    corpus_dir = _write_corpus_fixture(tmp_path, conversations, [case], speakers)
+    args = _args(1955, corpus_dir)
+
+    with patch(
+        "pipeline.commands.import_convokit.get_session",
+        new=_make_session_cm(isolated_session),
+    ):
+        await run_import_convokit(args)
+
+    person = (
+        await isolated_session.execute(
+            select(Person).where(Person.oyez_speaker_id == "adv__brand_new")
+        )
+    ).scalar_one()
+    assert person.full_name == "Brand New Advocate"
+    assert person.is_justice is False
+
+
+@pytest.mark.asyncio
+async def test_justice_type_speaker_resolves_to_bench_side(isolated_session, tmp_path):
+    """
+    speakers.json's `type` field is authoritative for BENCH classification
+    (RESEARCH Open Question 3) -- a justice-typed speaker id gets
+    is_justice=True and side=BENCH regardless of which dict it's supplied
+    through (Plan 04 only has conversations.json's "advocates" dict
+    available pre-utterance-import; Plan 05 supplies the real bench roster
+    once utterances.jsonl is streamed, reusing this same classification
+    logic unchanged).
+    """
+    conversations = {
+        "1955_74": {
+            "conversation_id": "1955_74",
+            "case_id": "1955_74",
+            "advocates": {"j__earl_warren": {"side": 3}},
+        }
+    }
+    case = {
+        "case_id": "1955_74",
+        "docket_no": "55-74",
+        "title": "Bench v. Test",
+        "petitioner": "Bench",
+        "respondent": "Test",
+        "year": 1955,
+        "transcripts": [{"name": "Oral Argument - February 2, 1955"}],
+    }
+    speakers = {"j__earl_warren": {"name": "Earl Warren", "type": "justice"}}
+    corpus_dir = _write_corpus_fixture(tmp_path, conversations, [case], speakers)
+    args = _args(1955, corpus_dir)
+
+    with patch(
+        "pipeline.commands.import_convokit.get_session",
+        new=_make_session_cm(isolated_session),
+    ):
+        await run_import_convokit(args)
+
+    person = (
+        await isolated_session.execute(
+            select(Person).where(Person.oyez_speaker_id == "j__earl_warren")
+        )
+    ).scalar_one()
+    assert person.is_justice is True
+
+    argument = (
+        await isolated_session.execute(
+            select(Argument).where(Argument.oyez_transcript_id == "1955_74")
+        )
+    ).scalar_one()
+    participant = (
+        await isolated_session.execute(
+            select(ArgumentParticipant).where(
+                ArgumentParticipant.argument_id == argument.id
+            )
+        )
+    ).scalar_one()
+    assert participant.side == SideEnum.BENCH
+
+
+@pytest.mark.asyncio
+async def test_rerun_creates_no_duplicate_argument_participants(
+    isolated_session, tmp_path
+):
+    """Re-running creates zero duplicate ArgumentParticipant rows."""
+    corpus_dir = _write_corpus_fixture(
+        tmp_path, _CONVERSATION_1955_71, [_CASE_1955_71], _SPEAKERS
+    )
+    args = _args(1955, corpus_dir)
+    session_cm = _make_session_cm(isolated_session)
+
+    for _ in range(2):
+        with patch(
+            "pipeline.commands.import_convokit.get_session", new=session_cm
+        ):
+            await run_import_convokit(args)
+
+    argument = (
+        await isolated_session.execute(
+            select(Argument).where(Argument.oyez_transcript_id == "1955_71")
+        )
+    ).scalar_one()
+    participants = (
+        await isolated_session.execute(
+            select(ArgumentParticipant).where(
+                ArgumentParticipant.argument_id == argument.id
+            )
+        )
+    ).scalars().all()
+    assert len(participants) == 1
+
+
+@pytest.mark.asyncio
+async def test_resolve_and_link_participant_idempotent_check_before_insert(
+    isolated_session,
+):
+    """
+    Direct unit test of the participant-linking helper's check-before-insert
+    idempotency (T-29-04) -- defense-in-depth beyond the Argument-level
+    oyez_transcript_id dedup, exercising the (argument_id,
+    raw_speaker_label) uniqueness guard described in the plan directly.
+    """
+    argument = Argument(
+        question_number=1,
+        status=ArgumentStatusEnum.DRAFT,
+        source_docket="55-99",
+        oyez_transcript_id="1955_99",
+    )
+    isolated_session.add(argument)
+    await isolated_session.flush()
+
+    speakers_index = {"adv__repeat": {"name": "Repeat Advocate", "type": "advocate"}}
+    counters = {"participants_created": 0, "flagged": 0}
+
+    for _ in range(2):
+        await _resolve_and_link_participant(
+            session=isolated_session,
+            argument_id=argument.id,
+            speaker_id="adv__repeat",
+            speakers_index=speakers_index,
+            side_code=1,
+            counters=counters,
+        )
+
+    participants = (
+        await isolated_session.execute(
+            select(ArgumentParticipant).where(
+                ArgumentParticipant.argument_id == argument.id
+            )
+        )
+    ).scalars().all()
+    assert len(participants) == 1
+    assert counters["participants_created"] == 1

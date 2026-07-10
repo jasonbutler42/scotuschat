@@ -143,6 +143,10 @@ def _write_corpus_fixture(
         for case in cases:
             f.write(json.dumps(case) + "\n")
     (corpus_dir / "speakers.json").write_text(json.dumps(speakers), encoding="utf-8")
+    # Plan 05: run_import_convokit now requires utterances.jsonl to exist
+    # (streamed once per term, T-29-03) -- these Task 2/3 tests don't
+    # exercise utterance import, so an empty file (zero turns) is enough.
+    (corpus_dir / "utterances.jsonl").write_text("", encoding="utf-8")
     return corpus_dir
 
 

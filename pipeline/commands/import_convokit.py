@@ -3,20 +3,25 @@ Pipeline import-convokit command.
 
 Term-batched orchestration (D-07) for Phase 29's bulk historical import: for
 one October Term (--term) or an inclusive range (--term-range), scaffolds
-Case / Argument / CaseArgument / PipelineRun rows and resolves bench/advocate
-speakers into Person + ArgumentParticipant rows -- entirely from
-conversations.json + cases.jsonl + speakers.json (D-21). Utterance import and
-the batch summary land in Plan 05/06 -- this module stops at scaffolding +
-speaker resolution (this plan's declared objective boundary).
+Case / Argument / CaseArgument / PipelineRun rows, resolves bench/advocate
+speakers into Person + ArgumentParticipant rows, streams each argument's
+utterances.jsonl turns into Utterance rows (D-18), splits detected stage
+directions into their own rows (D-16/D-17), and prints a per-batch summary
+report (D-14).
 
-Built task-by-task per 29-04-PLAN.md:
-    Task 1: CLI subcommand, --term/--term-range validation, --corpus-dir
-        validation, and the per-term file-loading skeleton.
-    Task 2: idempotent Case/Argument/CaseArgument/PipelineRun entity
+Built task-by-task:
+    29-04 Task 1: CLI subcommand, --term/--term-range validation,
+        --corpus-dir validation, and the per-term file-loading skeleton.
+    29-04 Task 2: idempotent Case/Argument/CaseArgument/PipelineRun entity
         creation, apolitical field stripping (T-29-02), and per-conversation
         resilience (T-29-05b).
-    Task 3: bench/advocate speaker resolution into Person (D-11 key order)
-        + ArgumentParticipant rows (side classification, D-12/D-13).
+    29-04 Task 3: bench/advocate speaker resolution into Person (D-11 key
+        order) + ArgumentParticipant rows (side classification, D-12/D-13).
+    29-05 Task 1: streaming utterance import (D-18) -- one Utterance row per
+        ConvoKit turn, \\n segment boundaries preserved verbatim, stage
+        directions split into their own rows via
+        pipeline.corpus.stage_directions.detect_stage_direction (D-16/D-17).
+    29-05 Task 2: per-batch/rollup summary report (D-14).
 
 Join key note: cases.jsonl rows carry their OWN "case_id" field with the
 same value as conversations.json's top-level key/"case_id" attribute (the
@@ -37,7 +42,18 @@ side is derived from speakers.json's authoritative `type` field, not from
 which caller/dict supplied the id), so Plan 05 can reuse them unchanged
 once it streams utterances and discovers the real per-conversation bench
 roster. This plan wires them up for every id in the conversation's
-"advocates" dict now.
+"advocates" dict now. Plan 05 reuses `_resolve_and_link_participant`
+unchanged to resolve each utterance turn's speaker as well.
+
+Utterance streaming note (Plan 05, Task 1): utterances.jsonl (~900MB) is
+never loaded whole (T-29-03) -- one streaming pass per term is made via
+pipeline.corpus.loader.stream_utterances_for_conversation_ids, filtered to
+that term's conversation_id set, grouping rows into an in-memory
+conversation_id -> [turn, ...] index that is held only for the term
+currently being imported (RESEARCH.md Pattern 3 option (b) -- a single
+term's utterance subset is small even though the full file is 900MB).
+Turns are written in the order encountered in the stream, which is the
+corpus's own transcript order for a given conversation_id.
 
 Usage:
     python -m pipeline import-convokit --term 1955
@@ -48,6 +64,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+from collections import defaultdict
 from datetime import date
 from pathlib import Path
 
@@ -64,13 +81,15 @@ from api.models.models import (
     PipelineRun,
     PipelineRunStatus,
     SideEnum,
+    Utterance,
 )
 from pipeline.commands.ingest import _derive_slug
-from pipeline.corpus import apolitical
+from pipeline.corpus import apolitical, stage_directions
 from pipeline.corpus.loader import (
     load_cases,
     load_conversations_for_term,
     load_speakers,
+    stream_utterances_for_conversation_ids,
 )
 from pipeline.db import get_session
 
@@ -159,7 +178,8 @@ def _resolve_corpus_dir(args) -> Path:
         raise FileNotFoundError(
             f"--corpus-dir does not exist: {corpus_dir}. Place the ConvoKit "
             "supreme-corpus source files (conversations.json, cases.jsonl, "
-            "speakers.json) there before running import-convokit."
+            "speakers.json, utterances.jsonl) there before running "
+            "import-convokit."
         )
     return corpus_dir
 
@@ -238,37 +258,41 @@ async def _import_conversation(
     raw_conversation: dict,
     cases_by_case_id: dict[str, dict],
     speakers_index: dict,
+    turns: list[dict],
     counters: dict,
 ) -> None:
     """
     Import one conversation: idempotent Case/Argument/CaseArgument/
-    PipelineRun scaffolding (Task 2). Speaker resolution (Task 3) lands in
-    the next task.
+    PipelineRun scaffolding (29-04 Task 2), bench/advocate speaker
+    resolution (29-04 Task 3), and utterance streaming/stage-direction
+    splitting (29-05 Task 1) for this conversation's `turns` (already
+    filtered/grouped by the caller from utterances.jsonl, T-29-03).
 
     Never raises for an anticipated bad/missing join -- increments
-    counters["flagged"] and returns early (T-29-05b / RESEARCH Pitfall 5)
-    so one malformed conversation doesn't abort the whole term batch. Truly
-    unexpected exceptions are left to propagate to the caller's per-row
-    try/except (run_import_convokit), which also flags and continues.
+    counters["conversations_errored"] and returns early (T-29-05b /
+    RESEARCH Pitfall 5) so one malformed conversation doesn't abort the
+    whole term batch. Truly unexpected exceptions are left to propagate to
+    the caller's per-row try/except (run_import_convokit), which also
+    counts the conversation as errored and continues.
     """
     conversation = apolitical.extract_conversation_fields(raw_conversation)
 
     raw_case = cases_by_case_id.get(conversation["case_id"])
     if raw_case is None:
-        counters["flagged"] += 1
+        counters["conversations_errored"] = counters.get("conversations_errored", 0) + 1
         print(
             f"WARNING: conversation {conversation_id!r} (case_id="
             f"{conversation['case_id']!r}) has no matching cases.jsonl row "
-            "-- flagged, skipped."
+            "-- errored, skipped."
         )
         return
 
     case_fields = apolitical.extract_case_fields(raw_case)
     if not case_fields.get("docket_no") or not case_fields.get("year"):
-        counters["flagged"] += 1
+        counters["conversations_errored"] = counters.get("conversations_errored", 0) + 1
         print(
             f"WARNING: conversation {conversation_id!r} case row is missing "
-            "docket_no/year -- flagged, skipped."
+            "docket_no/year -- errored, skipped."
         )
         return
 
@@ -316,12 +340,19 @@ async def _import_conversation(
     await session.flush()
 
     # ---- Task 3: speaker resolution for the conversation's advocates ----
+    # `resolved_participants` caches speaker_id -> ArgumentParticipant for
+    # this conversation only (not persisted/global) -- both the advocates
+    # loop below and the utterance-import loop (29-05 Task 1) share it, so
+    # a speaker with many turns is resolved via _resolve_and_link_participant
+    # (a DB round trip + counters increment) exactly ONCE per conversation,
+    # not once per turn.
+    resolved_participants: dict[str, ArgumentParticipant] = {}
     advocates = conversation.get("advocates") or {}
     for speaker_id, advocate_meta in advocates.items():
         side_code = (
             advocate_meta.get("side") if isinstance(advocate_meta, dict) else advocate_meta
         )
-        await _resolve_and_link_participant(
+        resolved_participants[speaker_id] = await _resolve_and_link_participant(
             session=session,
             argument_id=argument.id,
             speaker_id=speaker_id,
@@ -329,6 +360,18 @@ async def _import_conversation(
             side_code=side_code,
             counters=counters,
         )
+
+    # ---- 29-05 Task 1: stream this conversation's turns into Utterance rows ----
+    await _import_utterances(
+        session=session,
+        argument_id=argument.id,
+        pipeline_run_id=run.id,
+        strategy=run.strategy,
+        turns=turns,
+        speakers_index=speakers_index,
+        resolved_participants=resolved_participants,
+        counters=counters,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -351,7 +394,7 @@ def _is_justice_type(speaker_meta: dict) -> bool | None:
 
 
 async def _resolve_person(
-    session, speaker_id: str, full_name: str, is_justice: bool
+    session, speaker_id: str, full_name: str, is_justice: bool, counters: dict
 ) -> Person:
     """
     Resolve or create a Person for `speaker_id`, per D-11's key order:
@@ -359,12 +402,17 @@ async def _resolve_person(
     exact-match dedup as the justice importer). When a full_name match is
     found with no oyez_speaker_id yet, backfill it (D-11) so the next run
     matches by the stable ID.
+
+    Increments counters["people_matched"] on either reuse path, or
+    counters["people_created"] when a brand-new Person row is created
+    (D-14 per-batch summary).
     """
     result = await session.execute(
         select(Person).where(Person.oyez_speaker_id == speaker_id)
     )
     person = result.scalar_one_or_none()
     if person is not None:
+        counters["people_matched"] = counters.get("people_matched", 0) + 1
         return person
 
     result = await session.execute(select(Person).where(Person.full_name == full_name))
@@ -372,6 +420,7 @@ async def _resolve_person(
     if person is not None:
         if person.oyez_speaker_id is None:
             person.oyez_speaker_id = speaker_id  # D-11 backfill
+        counters["people_matched"] = counters.get("people_matched", 0) + 1
         return person
 
     person = Person(
@@ -381,6 +430,7 @@ async def _resolve_person(
     )
     session.add(person)
     await session.flush()
+    counters["people_created"] = counters.get("people_created", 0) + 1
     return person
 
 
@@ -400,11 +450,12 @@ async def _resolve_and_link_participant(
     it is ignored (side is always BENCH) when the resolved speaker's
     speakers.json `type` classifies as a justice. No automated QA gate on
     identity matching (D-12) -- ambiguous/missing types are imported and
-    flagged for the batch summary, never silently skipped.
+    counted in counters["speakers_flagged"] for the batch summary, never
+    silently skipped.
     """
     speaker_meta = speakers_index.get(speaker_id)
     if speaker_meta is None:
-        counters["flagged"] += 1
+        counters["speakers_flagged"] = counters.get("speakers_flagged", 0) + 1
         print(
             f"WARNING: speaker {speaker_id!r} not found in speakers.json -- "
             "flagged, imported anyway (D-12)."
@@ -413,7 +464,7 @@ async def _resolve_and_link_participant(
 
     is_justice = _is_justice_type(speaker_meta)
     if is_justice is None:
-        counters["flagged"] += 1
+        counters["speakers_flagged"] = counters.get("speakers_flagged", 0) + 1
         print(
             f"WARNING: speaker {speaker_id!r} has ambiguous/missing 'type' in "
             "speakers.json -- treated as non-justice, flagged for summary "
@@ -424,7 +475,7 @@ async def _resolve_and_link_participant(
     full_name = speaker_meta.get("name") or speaker_meta.get("full_name") or speaker_id
     raw_speaker_label = full_name
 
-    person = await _resolve_person(session, speaker_id, full_name, is_justice)
+    person = await _resolve_person(session, speaker_id, full_name, is_justice, counters)
 
     side = SideEnum.BENCH if is_justice else _ADVOCATE_SIDE_MAP.get(side_code, SideEnum.UNKNOWN)
 
@@ -451,6 +502,228 @@ async def _resolve_and_link_participant(
 
 
 # ---------------------------------------------------------------------------
+# 29-05 Task 1: utterance streaming + stage-direction row-splitting
+# (D-16/D-17/D-18)
+# ---------------------------------------------------------------------------
+
+
+def _split_turn_into_rows(text: str) -> list[tuple[str, bool]]:
+    """
+    Split one ConvoKit turn's `text` on its `\\n`-delimited segment
+    boundaries (D-18) and classify each segment via
+    stage_directions.detect_stage_direction (D-16/D-17 -- no re-implemented
+    regex here).
+
+    Returns an ordered list of (row_text, is_stage_direction) tuples:
+    contiguous non-marker segments are rejoined with `\\n` into a single
+    row (D-18's default -- a turn with no marker segments becomes exactly
+    one row, `\\n` boundaries preserved verbatim), while each detected
+    marker segment becomes its own adjacent row (D-16 -- "a turn that
+    begins or contains an inline marker segment" is split, keeping the
+    spoken remainder as its own row(s); losslessly reversible later).
+    """
+    segments = text.split("\n")
+    rows: list[tuple[str, bool]] = []
+    pending: list[str] = []
+
+    def _flush_pending() -> None:
+        if pending:
+            rows.append(("\n".join(pending), False))
+            pending.clear()
+
+    for segment in segments:
+        if stage_directions.detect_stage_direction(segment) is not None:
+            _flush_pending()
+            rows.append((segment, True))
+        else:
+            pending.append(segment)
+    _flush_pending()
+    return rows
+
+
+async def _import_utterances(
+    session,
+    argument_id: int,
+    pipeline_run_id: int,
+    strategy: str,
+    turns: list[dict],
+    speakers_index: dict,
+    resolved_participants: dict[str, ArgumentParticipant],
+    counters: dict,
+) -> None:
+    """
+    Write one Utterance row per ConvoKit turn (D-18), or per split-out
+    segment when a turn contains stage-direction marker segments (D-16),
+    for one already-scaffolded argument + pipeline run, in the streamed
+    (transcript) order the turns were encountered (T-29-03 -- `turns` is
+    already a small, term-scoped in-memory list; never the full 900MB
+    file).
+
+    `resolved_participants` is a per-conversation speaker_id ->
+    ArgumentParticipant cache shared with the caller's advocates-loop
+    resolution (Task 3) -- a speaker with many turns is resolved via
+    _resolve_and_link_participant (a DB round trip + people-counter
+    increment) exactly ONCE per conversation, not once per turn, keeping
+    the D-14 summary's people-created/matched counts accurate and
+    avoiding redundant DB round trips across a conversation's turns.
+
+    `sequence` is a fresh monotonic counter starting at 1 for this
+    argument_id/pipeline_run_id pair (T-29-09 -- every row created here
+    carries a non-null pipeline_run_id and a sequence unique within
+    (argument_id, pipeline_run_id), matching uq_utterance_arg_run_seq).
+
+    Malformed turns (missing "conversation_id"/"text", or missing
+    "speaker" on a spoken row) are validated (V5) and counted in
+    counters["utterance_rows_errored"] rather than raising an unhandled
+    KeyError mid-batch (T-29-10) -- one bad row does not abort the
+    argument's whole utterance import.
+    """
+    sequence = 0
+    for turn in turns:
+        if not isinstance(turn, dict) or "conversation_id" not in turn or turn.get("text") is None:
+            counters["utterance_rows_errored"] = (
+                counters.get("utterance_rows_errored", 0) + 1
+            )
+            print(
+                f"WARNING: malformed utterance row {turn!r} -- missing "
+                "conversation_id/text key(s), flagged, skipped (V5)."
+            )
+            continue
+
+        rows = _split_turn_into_rows(turn["text"])
+        if not rows:
+            continue
+
+        # Resolve the turn's speaker ONCE -- every spoken row split out of
+        # this turn shares the same speaker; an all-marker turn needs no
+        # participant resolution at all.
+        participant = None
+        if any(not is_stage for _, is_stage in rows):
+            speaker_id = turn.get("speaker")
+            if not speaker_id:
+                counters["utterance_rows_errored"] = (
+                    counters.get("utterance_rows_errored", 0) + 1
+                )
+                print(
+                    f"WARNING: utterance row for conversation "
+                    f"{turn.get('conversation_id')!r} missing 'speaker' key "
+                    "-- flagged, skipped (V5)."
+                )
+                continue
+            participant = resolved_participants.get(speaker_id)
+            if participant is None:
+                participant = await _resolve_and_link_participant(
+                    session=session,
+                    argument_id=argument_id,
+                    speaker_id=speaker_id,
+                    speakers_index=speakers_index,
+                    side_code=None,  # BENCH vs advocate side is derived
+                    # from speakers.json's authoritative `type` field
+                    # inside _resolve_and_link_participant, not a side
+                    # code utterance rows carry -- see _is_justice_type.
+                    counters=counters,
+                )
+                resolved_participants[speaker_id] = participant
+
+        for row_text, is_stage in rows:
+            sequence += 1
+            if is_stage:
+                session.add(
+                    Utterance(
+                        argument_id=argument_id,
+                        pipeline_run_id=pipeline_run_id,
+                        sequence=sequence,
+                        raw_speaker_label=None,  # D-16
+                        text=row_text,
+                        is_stage_direction=True,
+                        side=SideEnum.UNKNOWN,
+                        person_id=None,
+                        strategy=strategy,
+                    )
+                )
+                counters["stage_direction_utterances_created"] = (
+                    counters.get("stage_direction_utterances_created", 0) + 1
+                )
+            else:
+                session.add(
+                    Utterance(
+                        argument_id=argument_id,
+                        pipeline_run_id=pipeline_run_id,
+                        sequence=sequence,
+                        raw_speaker_label=participant.raw_speaker_label,
+                        text=row_text,  # D-18: verbatim, \n preserved
+                        is_stage_direction=False,
+                        side=participant.side,
+                        person_id=participant.person_id,
+                        strategy=strategy,
+                    )
+                )
+                counters["utterances_created"] = (
+                    counters.get("utterances_created", 0) + 1
+                )
+
+    await session.flush()
+
+
+# ---------------------------------------------------------------------------
+# 29-05 Task 2: per-batch/rollup summary report (D-14)
+# ---------------------------------------------------------------------------
+
+# Every counter key referenced by the summary print, in report order. Using
+# .get(key, 0) throughout means a missing key never raises -- new counters
+# introduced here don't need every call site retrofitted.
+_SUMMARY_COUNTER_KEYS: tuple[str, ...] = (
+    "arguments_created",
+    "skipped_existing",
+    "cases_created",
+    "utterances_created",
+    "stage_direction_utterances_created",
+    "people_created",
+    "people_matched",
+    "speakers_flagged",
+    "conversations_errored",
+    "utterance_rows_errored",
+)
+
+
+def _new_counters() -> dict:
+    """Fresh, fully-initialized per-term counters dict (D-14)."""
+    return {key: 0 for key in _SUMMARY_COUNTER_KEYS} | {"participants_created": 0}
+
+
+def _accumulate_counters(rollup: dict, term_counters: dict) -> dict:
+    """Add one term's counters into the running rollup dict (term-range)."""
+    for key in _SUMMARY_COUNTER_KEYS:
+        rollup[key] = rollup.get(key, 0) + term_counters.get(key, 0)
+    return rollup
+
+
+def _print_summary(label: str, counters: dict) -> None:
+    """
+    Print one per-batch summary block (D-14): term year, arguments
+    created, arguments skipped (already imported), cases created,
+    utterances created, stage-direction utterances created, people
+    created, people matched (reused), speakers flagged (ambiguous/missing
+    type), and cases/conversations errored (join failures or bad rows).
+    """
+    c = counters
+    print(
+        f"{label}: "
+        f"{c.get('arguments_created', 0)} arguments created, "
+        f"{c.get('skipped_existing', 0)} arguments skipped (already imported), "
+        f"{c.get('cases_created', 0)} cases created, "
+        f"{c.get('utterances_created', 0)} utterances created, "
+        f"{c.get('stage_direction_utterances_created', 0)} stage-direction "
+        "utterances created, "
+        f"{c.get('people_created', 0)} people created, "
+        f"{c.get('people_matched', 0)} people matched (reused), "
+        f"{c.get('speakers_flagged', 0)} speakers flagged, "
+        f"{c.get('conversations_errored', 0)} conversations errored, "
+        f"{c.get('utterance_rows_errored', 0)} utterance rows errored."
+    )
+
+
+# ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
 
@@ -461,10 +734,14 @@ async def run_import_convokit(args) -> None:
 
     Resolves --term/--term-range into a sorted list of October Terms,
     validates --corpus-dir exists, loads speakers.json/cases.jsonl once
-    (global directories, not term-scoped), then for each term loads
-    conversations.json filtered to that term and delegates each conversation
-    to _import_conversation (Task 2/3 implement the real entity-creation and
-    speaker-resolution logic there).
+    (global directories, not term-scoped), then for each term: loads
+    conversations.json filtered to that term, streams utterances.jsonl
+    ONCE per term (never the whole 900MB file, T-29-03) filtered to that
+    term's conversation_id set and grouped into an in-memory
+    conversation_id -> [turn, ...] index, then delegates each conversation
+    to _import_conversation (entity creation, speaker resolution, and
+    utterance import). Prints a per-term summary (D-14); a --term-range
+    spanning more than one term also prints a final rollup block.
     """
     terms = _resolve_terms(args)
     corpus_dir = _resolve_corpus_dir(args)
@@ -472,7 +749,8 @@ async def run_import_convokit(args) -> None:
     conversations_path = corpus_dir / "conversations.json"
     cases_path = corpus_dir / "cases.jsonl"
     speakers_path = corpus_dir / "speakers.json"
-    for required in (conversations_path, cases_path, speakers_path):
+    utterances_path = corpus_dir / "utterances.jsonl"
+    for required in (conversations_path, cases_path, speakers_path, utterances_path):
         if not required.exists():
             raise FileNotFoundError(f"Required corpus file not found: {required}")
 
@@ -485,15 +763,23 @@ async def run_import_convokit(args) -> None:
         row["case_id"]: row for row in cases_by_docket.values() if row.get("case_id")
     }
 
+    rollup = _new_counters()
+
     for term in terms:
         conversations = load_conversations_for_term(conversations_path, term)
-        counters = {
-            "cases_created": 0,
-            "arguments_created": 0,
-            "skipped_existing": 0,
-            "participants_created": 0,
-            "flagged": 0,
-        }
+
+        # ---- 29-05 Task 1: one streaming pass over utterances.jsonl per
+        # term, filtered to this term's conversation_id set (Pattern 3
+        # option (b)) -- held in memory only for this term, never the
+        # whole 900MB file.
+        turns_by_conversation: dict[str, list[dict]] = defaultdict(list)
+        wanted_ids = set(conversations.keys())
+        for row in stream_utterances_for_conversation_ids(utterances_path, wanted_ids):
+            cid = row.get("conversation_id") if isinstance(row, dict) else None
+            if cid is not None:
+                turns_by_conversation[cid].append(row)
+
+        counters = _new_counters()
         for conversation_id, raw_conversation in conversations.items():
             try:
                 async with get_session() as session:
@@ -503,19 +789,20 @@ async def run_import_convokit(args) -> None:
                         raw_conversation=raw_conversation,
                         cases_by_case_id=cases_by_case_id,
                         speakers_index=speakers_index,
+                        turns=turns_by_conversation.get(conversation_id, []),
                         counters=counters,
                     )
             except Exception as exc:  # per-row resilience, T-29-05b/Pitfall 5
-                counters["flagged"] += 1
+                counters["conversations_errored"] = (
+                    counters.get("conversations_errored", 0) + 1
+                )
                 print(
                     f"WARNING: conversation {conversation_id!r} raised "
-                    f"{exc!r} -- flagged, term continues."
+                    f"{exc!r} -- errored, term continues."
                 )
 
-        print(
-            f"Term {term}: {counters['arguments_created']} arguments created, "
-            f"{counters['skipped_existing']} already existed, "
-            f"{counters['cases_created']} cases created, "
-            f"{counters['participants_created']} participants created, "
-            f"{counters['flagged']} conversations flagged."
-        )
+        _print_summary(f"Term {term}", counters)
+        _accumulate_counters(rollup, counters)
+
+    if len(terms) > 1:
+        _print_summary(f"Rollup ({terms[0]}-{terms[-1]}, {len(terms)} terms)", rollup)

@@ -526,6 +526,25 @@ async def _import_conversation(
         counters=counters,
     )
 
+    # ---- Phase 30: pause every corpus-imported argument for operator
+    # review (D-01, D-03) ---- Inserted here, after _import_utterances
+    # returns, because bench (Justice) participants are discovered only
+    # while streaming utterances -- both the advocates loop above and
+    # _import_utterances write into resolved_participants by reference, so
+    # only now does resolved_participants.values() hold every participant
+    # for this argument (30-RESEARCH.md Pattern 3). No separate
+    # commit/flush -- get_session()'s context manager commits this whole
+    # per-conversation transaction atomically on clean exit.
+    resolved = [p for p in resolved_participants.values() if p is not None]
+    session.add(
+        AdminJob(
+            status=AdminJobStatus.PAUSED,
+            current_step=AdminJobStep.RESOLVE,
+            argument_id=argument.id,
+            discrepancies=_build_discrepancies(resolved),
+        )
+    )
+
 
 # ---------------------------------------------------------------------------
 # Task 3: speaker resolution -- Person (D-11) + ArgumentParticipant (side)

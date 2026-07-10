@@ -202,7 +202,8 @@ async def test_creates_case_argument_caseargument_pipelinerun_entities(
 ):
     """
     Given a synthetic conversation+case fixture, a Case (lead docket only),
-    Argument (status=draft, oyez_transcript_id set), CaseArgument
+    Argument (status=pipeline -- Phase 30 supersedes D-06, see
+    30-RESEARCH.md Pitfall 1; oyez_transcript_id set), CaseArgument
     (is_lead=True), and PipelineRun (strategy='convokit_import') are
     created. term_year comes from cases.jsonl's "year" (1955) even though
     the argued_date's calendar year (1956) differs (D-15 regression case).
@@ -231,7 +232,10 @@ async def test_creates_case_argument_caseargument_pipelinerun_entities(
             select(Argument).where(Argument.oyez_transcript_id == "9999_71")
         )
     ).scalar_one()
-    assert argument.status == ArgumentStatusEnum.DRAFT
+    # Phase 30 fix: corpus arguments now start at PIPELINE (not DRAFT),
+    # matching the state the PDF pipeline's ingest step already produces,
+    # so the Resolve card renders editable (30-RESEARCH.md Pitfall 1).
+    assert argument.status == ArgumentStatusEnum.PIPELINE
     assert argument.source_docket == "55-71"
     assert argument.argued_date.isoformat() == "1956-11-15"  # calendar year != term_year
 
@@ -357,7 +361,8 @@ async def test_malformed_conversation_flagged_not_aborting_term(
             select(Argument).where(Argument.oyez_transcript_id == "9999_71")
         )
     ).scalar_one()
-    assert good_argument.status == ArgumentStatusEnum.DRAFT
+    # Phase 30 fix: corpus arguments now start at PIPELINE (not DRAFT).
+    assert good_argument.status == ArgumentStatusEnum.PIPELINE
 
     missing_argument = (
         await isolated_session.execute(

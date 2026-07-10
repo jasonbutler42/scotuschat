@@ -154,6 +154,16 @@
 		return stepLabel + ' · ' + statusLabel;
 	}
 
+	// sourceTagStyle/sourceLabel: renders "PDF" or "Corpus" as a quiet, neutral tag
+	// distinct from the semantic-color compound status badge (Phase 30 gap closure).
+	function sourceLabel(source: 'pdf' | 'corpus'): string {
+		return source === 'corpus' ? 'Corpus' : 'PDF';
+	}
+
+	function sourceTagStyle(): string {
+		return `border: 1px solid #94a3b8; border-radius: 4px; padding: 2px 8px; font-size: 14px; font-weight: 400; background-color: #0f1117; color: #94a3b8; display: inline-block;`;
+	}
+
 	// Format ISO date string for display (date only — time detail not needed in history).
 	function formatDate(iso: string): string {
 		try {
@@ -607,6 +617,19 @@
 										border-bottom: 1px solid #334155;
 									"
 								>
+									Source
+								</th>
+								<th
+									scope="col"
+									style="
+										font-size: 14px;
+										font-weight: 400;
+										color: #94a3b8;
+										text-align: left;
+										padding: 8px 0;
+										border-bottom: 1px solid #334155;
+									"
+								>
 									Created
 								</th>
 								<th
@@ -637,6 +660,18 @@
 									>
 										<span style={badgeStyle(job.status, job.is_archived)}>
 											{badgeLabel(job.status, job.current_step, job.is_archived)}
+										</span>
+									</td>
+									<td
+										style="
+											font-size: 16px;
+											color: #e2e8f0;
+											padding: 12px 0;
+											border-bottom: 1px solid #334155;
+										"
+									>
+										<span style={sourceTagStyle()}>
+											{sourceLabel(job.source)}
 										</span>
 									</td>
 									<td

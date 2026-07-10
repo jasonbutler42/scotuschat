@@ -8,7 +8,8 @@
 	 * We append T00:00:00 to force local-date parsing and avoid UTC midnight
 	 * roll-back on systems west of UTC.
 	 */
-	function formatDate(dateStr: string): string {
+	function formatDate(dateStr: string | null | undefined): string {
+		if (!dateStr) return 'Date unknown';
 		const date = new Date(dateStr + 'T00:00:00');
 		return new Intl.DateTimeFormat('en-US', {
 			month: 'long',

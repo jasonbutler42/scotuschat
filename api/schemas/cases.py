@@ -13,7 +13,13 @@ class CaseItem(BaseModel):
     case_name: str
     docket_number: str
     term_year: int
-    argued_date: datetime.date
+    # Optional: nullable at the DB layer (Argument.argued_date, models.py:175),
+    # identical non-optional-over-nullable-column pattern as
+    # ArgumentMetadataResponse (see api/schemas/utterance.py). Not reachable
+    # today because get_cases() filters WHERE Argument.published_at.isnot(None)
+    # (drafts excluded), but fixed now so a corpus-imported draft with a null
+    # argued_date doesn't 500 the public case list the moment it is published.
+    argued_date: datetime.date | None = None
     argument_id: int
     question_number: int
 

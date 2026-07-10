@@ -16,7 +16,7 @@ Critical guards (mirroring pipeline/commands/resolve.py):
   - normalize_label imported from pipeline.commands.resolve (single source of truth)
 """
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, exists, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from sqlalchemy import func
@@ -44,6 +44,7 @@ from api.schemas.admin_jobs import (
     ResolveRowUpdate,
     RunReadiness,
 )
+from pipeline.commands.import_convokit import PIPELINE_RUN_STRATEGY
 from pipeline.commands.resolve import normalize_label
 
 
@@ -142,6 +143,25 @@ async def get_job(db: AsyncSession, job_id: int) -> AdminJob | None:
     # this only guards AdminJobResponse serialization from AttributeError.
     job.__dict__.setdefault("is_archived", False)
 
+    # Phase 30 (PJOB-01): derive source ("pdf" vs "corpus") for parity with
+    # list_jobs() — unlike is_archived, this is the real per-job value, not a
+    # default, since the detail page's schema should also report provenance
+    # even though 30-03's Source tag only renders on the list page. Correlated
+    # directly on job.argument_id (a plain Python value already loaded above)
+    # rather than AdminJob.argument_id, since a single-row exists() has no
+    # need to join back to AdminJob — argument_id being None (ingest not yet
+    # finished) correctly yields no PipelineRun match (NOT NULL column) → "pdf".
+    is_corpus_result = await db.execute(
+        select(
+            exists().where(
+                PipelineRun.argument_id == job.argument_id,
+                PipelineRun.strategy == PIPELINE_RUN_STRATEGY,
+            )
+        )
+    )
+    is_corpus = is_corpus_result.scalar_one()
+    job.__dict__["source"] = "corpus" if is_corpus else "pdf"
+
     # Attach parse_stats as a dynamic attribute — AdminJobResponse reads it via
     # the parse_stats field when model_validate(job, from_attributes=True) is called.
     parse_run_id = await get_run_id_for_step(db, job_id, "parse")
@@ -231,10 +251,22 @@ async def list_jobs(
     true only when a linked argument exists and its status is no longer
     PIPELINE, mirroring RunReadiness's already_created state used by the
     detail page's RunStatusCard.
+
+    Phase 30 (PJOB-01): also derives source ("pdf" vs "corpus") via an
+    exists() subquery on PipelineRun.strategy == "convokit_import" — exists()
+    rather than a second outerjoin because Argument -> PipelineRun is 1:many
+    (an argument accumulates multiple PipelineRun rows over reruns/step-
+    advances); a naive join would risk duplicate AdminJob rows in the result.
     """
-    query = select(AdminJob, Argument.status).outerjoin(
-        Argument, AdminJob.argument_id == Argument.id
+    is_corpus_subq = exists(
+        select(PipelineRun.id).where(
+            PipelineRun.argument_id == AdminJob.argument_id,
+            PipelineRun.strategy == PIPELINE_RUN_STRATEGY,
+        )
     )
+    query = select(
+        AdminJob, Argument.status, is_corpus_subq.label("is_corpus")
+    ).outerjoin(Argument, AdminJob.argument_id == Argument.id)
     if incomplete:
         query = query.where(
             AdminJob.status.in_([AdminJobStatus.PAUSED, AdminJobStatus.FAILED])
@@ -243,10 +275,11 @@ async def list_jobs(
     result = await db.execute(query)
     rows = result.all()
     jobs: list[AdminJob] = []
-    for job, arg_status in rows:
+    for job, arg_status, is_corpus in rows:
         job.__dict__["is_archived"] = (
             arg_status is not None and arg_status != ArgumentStatusEnum.PIPELINE
         )
+        job.__dict__["source"] = "corpus" if is_corpus else "pdf"
         # Inject parse_stats=None so Pydantic's from_attributes mode can serialize the
         # field without raising AttributeError (WR-03). get_job injects the real value;
         # list_jobs only needs a safe default since the list view does not display parse_stats.

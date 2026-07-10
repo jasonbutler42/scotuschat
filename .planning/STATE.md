@@ -5,16 +5,16 @@ milestone_name: Admin Screens Cleanup
 current_phase: 29
 current_phase_name: historical-corpus-import
 status: executing
-stopped_at: Completed 29-05-PLAN.md
-last_updated: "2026-07-10T12:53:52.830Z"
-last_activity: 2026-07-09
+stopped_at: Completed 29-07-PLAN.md
+last_updated: "2026-07-10T13:09:47.829Z"
+last_activity: 2026-07-10
 last_activity_desc: Phase 29 execution started
 progress:
   total_phases: 8
-  completed_phases: 7
-  total_plans: 42
-  completed_plans: 42
-  percent: 88
+  completed_phases: 6
+  total_plans: 44
+  completed_plans: 43
+  percent: 75
 ---
 
 # Project State
@@ -30,9 +30,9 @@ See: .planning/PROJECT.md (updated 2026-07-09 after Phase 27 completion)
 
 Phase: 29 (historical-corpus-import) — EXECUTING
 Stage: Ready to plan
-Plan: 6 of 6
+Plan: 2 of 8
 Status: Ready to execute
-Last activity: 2026-07-09 — Phase 29 execution started
+Last activity: 2026-07-10 — Phase 29 execution started
 
 Progress: [████████████████████] 36/36 plans (100%). Phase 27 is now fully verified complete: 5th UAT retest passed all 7 items (including the CR-01/CR-02 data-preservation round-trips previously blocked by the effect_update_depth_exceeded regression), 27-SECURITY.md shows threats_open: 0, and 27-VERIFICATION.md status is canonically `passed`. `completed_phases` in this file's frontmatter is correctly at 6/7 (86%).
 
@@ -135,6 +135,9 @@ Full log in PROJECT.md Key Decisions table. Key decisions entering v1.5:
 - [Phase 29]: 29-05: per-conversation resolved_participants cache shared between advocates-dict resolution and utterance-speaker resolution -- avoids inflated people_matched counts and redundant DB round trips for speakers with many turns
 - [Phase 29]: 29-05: stage-direction row-splitting reconciles D-16/D-18 via one algorithm -- split turn text on \n, classify each segment with detect_stage_direction, rejoin contiguous non-marker segments; handles whole-turn markers and inline mid-turn markers with no re-implemented regex
 - [Phase 29]: 29-05: counters split from Plan 04's single 'flagged' bucket into speakers_flagged/conversations_errored plus new people_created/people_matched/utterances_created/stage_direction_utterances_created/utterance_rows_errored, all via counters.get(key,0)-safe increments (D-14 per-batch summary)
+- [Phase 29-07]: No service-layer change needed; api/services/arguments.py and api/services/cases.py already pass argued_date through with no coercion once the schema accepts None
+- [Phase 29-07]: New DB-gated test calls get_argument_with_utterances() directly, avoiding the api.main HTTP client path affected by the pre-existing FastAPI test lifespan/session-factory failure
+- [Phase 29-07]: CaseItem.argued_date fixed proactively even though unreachable today (get_cases() filters published_at IS NOT NULL) to avoid a second gap-closure round
 
 ### Roadmap Evolution
 
@@ -200,9 +203,10 @@ Deployment blockers (v1.4, unresolved — not in v1.5 scope):
 | Phase 29 P06 | 12min | 3 tasks | 8 files |
 | Phase 29 P04 | 25min | 3 tasks | 3 files |
 | Phase 29 P05 | 45min | 2 tasks | 3 files |
+| Phase 29 P07 | 4min | 2 tasks | 5 files |
 
 ## Session Continuity
 
-Last session: 2026-07-10T11:57:19.572Z
-Stopped at: Completed 29-05-PLAN.md
+Last session: 2026-07-10T13:09:47.818Z
+Stopped at: Completed 29-07-PLAN.md
 Resume file: None

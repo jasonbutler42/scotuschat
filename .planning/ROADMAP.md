@@ -528,7 +528,7 @@ Plans:
 **Goal:** Bulk-import historical oral arguments (terms 1955-2019, ~7,800 arguments) from the Cornell ConvoKit supreme-corpus dataset directly into cases/arguments/utterances/people/court_tenures, bypassing PDF download and LLM parsing for this batch. Source files: supreme-corpus/{utterances.jsonl,conversations.json,speakers.json}, a separately-located cases.jsonl (title/docket/dates/citation), and a justices tenure CSV (appointment/tenure backfill). Open questions: dedup against existing Person/CourtTenure rows, stage-direction inline-vs-row policy, apolitical-field stripping (win_side/votes_side/scdb_docket_id must never be persisted), lead-docket-only limitation for consolidated cases, advocate identity QA. Existing PDF ingest/parse/resolve pipeline stays for terms 2020+ and all future terms -- this is a new, separate one-time bulk-import CLI command, not a replacement.
 **Requirements**: CORPUS-01, CORPUS-02, CORPUS-03, CORPUS-04, CORPUS-05, CORPUS-06, CORPUS-07, CORPUS-08, CORPUS-09, CORPUS-10, CORPUS-11
 **Depends on:** Phase 28
-**Plans:** 6/8 plans complete
+**Plans:** 7/8 plans executed
 
 **Wave 1** *(parallel — disjoint files)*
 
@@ -550,7 +550,7 @@ Plans:
 
 **Gap closure** *(from 29-VERIFICATION.md BLOCKER gap #13 / 29-REVIEW.md CR-01 — independent, no deps)*
 
-- [ ] 29-07-PLAN.md — Widen ArgumentMetadataResponse.argued_date and CaseItem.argued_date to Optional (matches nullable Argument.argued_date), fix one frontend null-date-guard parity gap, add regression tests (CORPUS-03, CORPUS-10)
+- [x] 29-07-PLAN.md — Widen ArgumentMetadataResponse.argued_date and CaseItem.argued_date to Optional (matches nullable Argument.argued_date), fix one frontend null-date-guard parity gap, add regression tests (CORPUS-03, CORPUS-10)
 
 **Gap closure** *(newly discovered during this gap-closure session, not in 29-VERIFICATION.md — independent, no deps)*
 

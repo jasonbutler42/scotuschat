@@ -136,3 +136,7 @@ None - no external service configuration required.
 ---
 *Phase: 29-historical-corpus-import*
 *Completed: 2026-07-10*
+
+## Self-Check: PASSED
+
+All created/modified files confirmed present on disk; all three commit hashes (49fde2c7, d47dc0a8, 5e21ab56) confirmed in git log.

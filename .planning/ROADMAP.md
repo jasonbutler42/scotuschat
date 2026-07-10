@@ -528,7 +528,7 @@ Plans:
 **Goal:** Bulk-import historical oral arguments (terms 1955-2019, ~7,800 arguments) from the Cornell ConvoKit supreme-corpus dataset directly into cases/arguments/utterances/people/court_tenures, bypassing PDF download and LLM parsing for this batch. Source files: supreme-corpus/{utterances.jsonl,conversations.json,speakers.json}, a separately-located cases.jsonl (title/docket/dates/citation), and a justices tenure CSV (appointment/tenure backfill). Open questions: dedup against existing Person/CourtTenure rows, stage-direction inline-vs-row policy, apolitical-field stripping (win_side/votes_side/scdb_docket_id must never be persisted), lead-docket-only limitation for consolidated cases, advocate identity QA. Existing PDF ingest/parse/resolve pipeline stays for terms 2020+ and all future terms -- this is a new, separate one-time bulk-import CLI command, not a replacement.
 **Requirements**: CORPUS-01, CORPUS-02, CORPUS-03, CORPUS-04, CORPUS-05, CORPUS-06, CORPUS-07, CORPUS-08, CORPUS-09, CORPUS-10, CORPUS-11
 **Depends on:** Phase 28
-**Plans:** 5/6 plans executed
+**Plans:** 6/6 plans complete
 
 **Wave 1** *(parallel — disjoint files)*
 
@@ -546,4 +546,4 @@ Plans:
 
 **Wave 4** *(blocked on 29-04)*
 
-- [ ] 29-05-PLAN.md — Utterance import (streaming, \n preserved, stage-direction row-splitting) + per-batch summary report (CORPUS-06, CORPUS-07, CORPUS-08)
+- [x] 29-05-PLAN.md — Utterance import (streaming, \n preserved, stage-direction row-splitting) + per-batch summary report (CORPUS-06, CORPUS-07, CORPUS-08)

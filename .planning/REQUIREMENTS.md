@@ -102,8 +102,8 @@ Requirements for the one-time bulk-import of terms 1955–2019 from the Cornell 
 - [x] **CORPUS-04** Source-file handling: copy the 5 needed files into a new gitignored `data/corpus/` directory (mirroring `data/pdfs/`); explicitly exclude the 3 NLP-annotation files; add `python-dateutil` dependency (D-20, D-21)
 - [x] **CORPUS-05** Speaker identity resolution: `oyez_speaker_id` primary re-run match key, `full_name` exact-match fallback; import everything with no automated QA gate; apolitical field stripping (never persist `win_side`/`votes_side`/`scdb_docket_id`) (D-11, D-12, D-13)
 - [x] **CORPUS-06** Stage-direction detection and row-splitting: curated typo-tolerant vocabulary match inside `[brackets]` or `(parens)`, split into separate `Utterance` rows with `is_stage_direction=true`, `raw_speaker_label=None` (D-16, D-17)
-- [ ] **CORPUS-07** Multi-sentence utterance storage: one `Utterance` row per ConvoKit turn, `\n`-delimited segment boundaries preserved verbatim in `Text` (D-18)
-- [ ] **CORPUS-08** Per-batch summary report printed at the end of each term/batch run (counts created/skipped/flagged) (D-14)
+- [x] **CORPUS-07** Multi-sentence utterance storage: one `Utterance` row per ConvoKit turn, `\n`-delimited segment boundaries preserved verbatim in `Text` (D-18)
+- [x] **CORPUS-08** Per-batch summary report printed at the end of each term/batch run (counts created/skipped/flagged) (D-14)
 - [x] **CORPUS-09** Attributions/License static page (`/attributions`) crediting Oyez.org, Cornell ConvoKit, and SCDB; states the Oyez CC BY-NC 4.0 license fact (D-22–D-26)
 - [x] **CORPUS-10** Per-argument attribution note visible only on corpus-sourced arguments, linking to the Attributions page (D-22)
 - [x] **CORPUS-11** Roadmap bookkeeping: mark backlog Phase 999.10 superseded/absorbed by Phase 29 (D-01)
@@ -197,8 +197,8 @@ Requirements for the one-time bulk-import of terms 1955–2019 from the Cornell 
 | CORPUS-04 | Phase 29 | Complete |
 | CORPUS-05 | Phase 29 | Complete |
 | CORPUS-06 | Phase 29 | Complete |
-| CORPUS-07 | Phase 29 | Pending |
-| CORPUS-08 | Phase 29 | Pending |
+| CORPUS-07 | Phase 29 | Complete |
+| CORPUS-08 | Phase 29 | Complete |
 | CORPUS-09 | Phase 29 | Complete |
 | CORPUS-10 | Phase 29 | Complete |
 | CORPUS-11 | Phase 29 | Complete |

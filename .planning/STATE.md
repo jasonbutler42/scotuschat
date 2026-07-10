@@ -4,9 +4,9 @@ milestone: v1.5
 milestone_name: Admin Screens Cleanup
 current_phase: 29
 current_phase_name: historical-corpus-import
-status: verifying
+status: executing
 stopped_at: Completed 29-05-PLAN.md
-last_updated: "2026-07-10T11:57:19.585Z"
+last_updated: "2026-07-10T12:53:52.830Z"
 last_activity: 2026-07-09
 last_activity_desc: Phase 29 execution started
 progress:
@@ -31,7 +31,7 @@ See: .planning/PROJECT.md (updated 2026-07-09 after Phase 27 completion)
 Phase: 29 (historical-corpus-import) — EXECUTING
 Stage: Ready to plan
 Plan: 6 of 6
-Status: Phase complete — ready for verification
+Status: Ready to execute
 Last activity: 2026-07-09 — Phase 29 execution started
 
 Progress: [████████████████████] 36/36 plans (100%). Phase 27 is now fully verified complete: 5th UAT retest passed all 7 items (including the CR-01/CR-02 data-preservation round-trips previously blocked by the effect_update_depth_exceeded regression), 27-SECURITY.md shows threats_open: 0, and 27-VERIFICATION.md status is canonically `passed`. `completed_phases` in this file's frontmatter is correctly at 6/7 (86%).

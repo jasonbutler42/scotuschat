@@ -69,7 +69,8 @@ from datetime import date
 from pathlib import Path
 
 from dateutil import parser as dateutil_parser
-from sqlalchemy import select
+from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 
 from api.models.models import (
     Argument,
@@ -252,6 +253,31 @@ async def _get_or_create_case(session, case_fields: dict, counters: dict) -> Cas
     return new_case
 
 
+async def _next_question_number(session, source_docket: str) -> int:
+    """
+    Return the next available `question_number` for `source_docket` -- the
+    same `(source_docket, question_number)` pair the DB's real
+    `uq_arguments_source_docket_question` constraint enforces (CR-01 gap
+    closure, 29-VERIFICATION.md).
+
+    Executes `select(func.max(Argument.question_number)).where(source_docket
+    == ...)` and returns 1 when no row exists yet for the docket (first
+    argument), else `max + 1`. This is what lets a reargued case, or a
+    docket already occupying question_number=1 from the ordinary PDF
+    pipeline, receive question_number=2 (or higher) instead of colliding at
+    `session.flush()`. `source_docket` is always non-null here -- the
+    caller already validated `case_fields["docket_no"]` is present before
+    calling this.
+    """
+    result = await session.execute(
+        select(func.max(Argument.question_number)).where(
+            Argument.source_docket == source_docket
+        )
+    )
+    current_max = result.scalar()
+    return 1 if current_max is None else current_max + 1
+
+
 async def _import_conversation(
     session,
     conversation_id: str,
@@ -308,15 +334,43 @@ async def _import_conversation(
 
     argued_date = _parse_argued_date(case_fields)
 
+    # Derive the next available question_number for this docket (CR-01 gap
+    # closure) instead of hardcoding 1 -- aligns the write with the DB's
+    # real (source_docket, question_number) uniqueness contract so a
+    # reargued case, or a docket already occupying question_number=1 from
+    # the PDF pipeline, gets question_number=2+ instead of colliding.
+    next_question_number = await _next_question_number(
+        session, case_fields["docket_no"]
+    )
+
     argument = Argument(
         argued_date=argued_date,
-        question_number=1,
+        question_number=next_question_number,
         source_docket=case_fields["docket_no"],
         status=ArgumentStatusEnum.DRAFT,  # D-06
         oyez_transcript_id=conversation_id,  # D-10
     )
     session.add(argument)
-    await session.flush()
+    try:
+        await session.flush()
+    except IntegrityError:
+        # Defense-in-depth safety net: any residual (source_docket,
+        # question_number) collision that _next_question_number could not
+        # prevent (e.g. a concurrent writer) is caught here, rolled back,
+        # and counted DISTINCTLY from conversations_errored so it is never
+        # silently folded into the generic error bucket (CR-01,
+        # 29-VERIFICATION.md truth #14 / CORPUS-08 visibility).
+        await session.rollback()
+        counters["docket_question_conflict"] = (
+            counters.get("docket_question_conflict", 0) + 1
+        )
+        print(
+            f"WARNING: conversation {conversation_id!r} (source_docket="
+            f"{case_fields['docket_no']!r}) hit a docket/question "
+            "uniqueness conflict at flush -- distinct from a generic "
+            "error, counted in docket_question_conflict, skipped."
+        )
+        return
     counters["arguments_created"] += 1
 
     # ---- CaseArgument (lead-docket-only, D-19) ----
@@ -690,6 +744,7 @@ _SUMMARY_COUNTER_KEYS: tuple[str, ...] = (
     "speakers_flagged",
     "conversations_errored",
     "utterance_rows_errored",
+    "docket_question_conflict",
 )
 
 
@@ -711,7 +766,10 @@ def _print_summary(label: str, counters: dict) -> None:
     created, arguments skipped (already imported), cases created,
     utterances created, stage-direction utterances created, people
     created, people matched (reused), speakers flagged (ambiguous/missing
-    type), and cases/conversations errored (join failures or bad rows).
+    type), cases/conversations errored (join failures or bad rows), and
+    docket/question conflicts -- a distinct, clearly-labeled count of any
+    residual (source_docket, question_number) collision caught at flush
+    (CR-01, 29-VERIFICATION.md), never folded into conversations_errored.
     """
     c = counters
     print(
@@ -726,7 +784,8 @@ def _print_summary(label: str, counters: dict) -> None:
         f"{c.get('people_matched', 0)} people matched (reused), "
         f"{c.get('speakers_flagged', 0)} speakers flagged, "
         f"{c.get('conversations_errored', 0)} conversations errored, "
-        f"{c.get('utterance_rows_errored', 0)} utterance rows errored."
+        f"{c.get('utterance_rows_errored', 0)} utterance rows errored, "
+        f"{c.get('docket_question_conflict', 0)} docket/question conflicts."
     )
 
 

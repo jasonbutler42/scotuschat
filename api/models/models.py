@@ -150,9 +150,19 @@ class CourtTenure(Base):
 
 class Case(Base):
     __tablename__ = "cases"
+    __table_args__ = (
+        # Migration 0018: historical docket numbers recycle across October
+        # Terms (e.g. docket "71" is a different, unrelated case in nearly
+        # a dozen different terms) -- modern dockets embed the term and stay
+        # unique on their own, so this composite constraint is a superset,
+        # not a narrowing, of the old bare UNIQUE(docket_number).
+        UniqueConstraint(
+            "docket_number", "term_year", name="uq_cases_docket_number_term_year"
+        ),
+    )
 
     id = Column(Integer, primary_key=True)
-    docket_number = Column(String(50), nullable=False, unique=True)  # "14-556"
+    docket_number = Column(String(50), nullable=False)  # "14-556"
     docket_number_norm = Column(String(50), nullable=False)           # normalized form
     case_name = Column(String(500), nullable=False)
     term_year = Column(Integer, nullable=False)

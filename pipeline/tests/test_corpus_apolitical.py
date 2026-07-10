@@ -28,7 +28,7 @@ RAW_CASE_WITH_FORBIDDEN_FIELDS = {
     "year": 1955,
     "transcripts": [{"name": "Oral Argument - November 15, 1955"}],
     "advocates": {"j__earl_warren": {"role": "Chief Justice"}},
-    "case_id": "1955_71",
+    "id": "1955_71",
     # Forbidden outcome/vote fields -- must never appear in the output.
     "win_side": 1,
     "win_side_detail": "affirmed",

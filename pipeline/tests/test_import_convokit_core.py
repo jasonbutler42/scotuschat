@@ -153,10 +153,10 @@ def _write_corpus_fixture(
 # D-15 regression fixture: cases.jsonl "year" (1955) intentionally differs
 # from the argued_date's calendar year (1956) -- SCOTUS October Terms span
 # the Oct/Dec calendar boundary.
-_CONVERSATION_1955_71 = {
-    "1955_71": {
-        "conversation_id": "1955_71",
-        "case_id": "1955_71",
+_CONVERSATION_9999_71 = {
+    "9999_71": {
+        "conversation_id": "9999_71",
+        "case_id": "9999_71",
         "advocates": {"adv__john_smith": {"side": 1}},
         # Forbidden apolitical fields present in the raw source -- must
         # never reach any DB column (T-29-02).
@@ -165,8 +165,8 @@ _CONVERSATION_1955_71 = {
     }
 }
 
-_CASE_1955_71 = {
-    "case_id": "1955_71",
+_CASE_9999_71 = {
+    "id": "9999_71",
     "docket_no": "55-71",
     "title": "Smith v. Jones",
     "petitioner": "Smith",
@@ -208,9 +208,9 @@ async def test_creates_case_argument_caseargument_pipelinerun_entities(
     the argued_date's calendar year (1956) differs (D-15 regression case).
     """
     corpus_dir = _write_corpus_fixture(
-        tmp_path, _CONVERSATION_1955_71, [_CASE_1955_71], _SPEAKERS
+        tmp_path, _CONVERSATION_9999_71, [_CASE_9999_71], _SPEAKERS
     )
-    args = _args(1955, corpus_dir)
+    args = _args(9999, corpus_dir)
 
     with patch(
         "pipeline.commands.import_convokit.get_session",
@@ -224,11 +224,11 @@ async def test_creates_case_argument_caseargument_pipelinerun_entities(
         )
     ).scalar_one()
     assert case.term_year == 1955  # D-15: from cases.jsonl "year", not argued_date
-    assert case.oyez_case_id == "1955_71"
+    assert case.oyez_case_id == "9999_71"
 
     argument = (
         await isolated_session.execute(
-            select(Argument).where(Argument.oyez_transcript_id == "1955_71")
+            select(Argument).where(Argument.oyez_transcript_id == "9999_71")
         )
     ).scalar_one()
     assert argument.status == ArgumentStatusEnum.DRAFT
@@ -264,9 +264,9 @@ async def test_apolitical_fields_never_persisted_to_any_column(
     ever contains them.
     """
     corpus_dir = _write_corpus_fixture(
-        tmp_path, _CONVERSATION_1955_71, [_CASE_1955_71], _SPEAKERS
+        tmp_path, _CONVERSATION_9999_71, [_CASE_9999_71], _SPEAKERS
     )
-    args = _args(1955, corpus_dir)
+    args = _args(9999, corpus_dir)
 
     with patch(
         "pipeline.commands.import_convokit.get_session",
@@ -286,7 +286,7 @@ async def test_apolitical_fields_never_persisted_to_any_column(
 
     argument = (
         await isolated_session.execute(
-            select(Argument).where(Argument.oyez_transcript_id == "1955_71")
+            select(Argument).where(Argument.oyez_transcript_id == "9999_71")
         )
     ).scalar_one()
     argument_attrs = {k for k in vars(argument) if not k.startswith("_")}
@@ -303,9 +303,9 @@ async def test_idempotent_rerun_creates_no_duplicate_arguments(
 ):
     """D-08: re-running the same conversation creates zero new Argument rows."""
     corpus_dir = _write_corpus_fixture(
-        tmp_path, _CONVERSATION_1955_71, [_CASE_1955_71], _SPEAKERS
+        tmp_path, _CONVERSATION_9999_71, [_CASE_9999_71], _SPEAKERS
     )
-    args = _args(1955, corpus_dir)
+    args = _args(9999, corpus_dir)
     session_cm = _make_session_cm(isolated_session)
 
     for _ in range(2):
@@ -316,7 +316,7 @@ async def test_idempotent_rerun_creates_no_duplicate_arguments(
 
     arguments = (
         await isolated_session.execute(
-            select(Argument).where(Argument.oyez_transcript_id == "1955_71")
+            select(Argument).where(Argument.oyez_transcript_id == "9999_71")
         )
     ).scalars().all()
     assert len(arguments) == 1, (
@@ -334,17 +334,17 @@ async def test_malformed_conversation_flagged_not_aborting_term(
     sibling conversation in the same term still imports successfully.
     """
     conversations = {
-        "1955_71": _CONVERSATION_1955_71["1955_71"],
-        "1955_98": {
-            "conversation_id": "1955_98",
-            "case_id": "1955_98",  # no matching cases.jsonl row
+        "9999_71": _CONVERSATION_9999_71["9999_71"],
+        "9999_98": {
+            "conversation_id": "9999_98",
+            "case_id": "9999_98",  # no matching cases.jsonl row
             "advocates": {},
         },
     }
     corpus_dir = _write_corpus_fixture(
-        tmp_path, conversations, [_CASE_1955_71], _SPEAKERS
+        tmp_path, conversations, [_CASE_9999_71], _SPEAKERS
     )
-    args = _args(1955, corpus_dir)
+    args = _args(9999, corpus_dir)
 
     with patch(
         "pipeline.commands.import_convokit.get_session",
@@ -354,14 +354,14 @@ async def test_malformed_conversation_flagged_not_aborting_term(
 
     good_argument = (
         await isolated_session.execute(
-            select(Argument).where(Argument.oyez_transcript_id == "1955_71")
+            select(Argument).where(Argument.oyez_transcript_id == "9999_71")
         )
     ).scalar_one()
     assert good_argument.status == ArgumentStatusEnum.DRAFT
 
     missing_argument = (
         await isolated_session.execute(
-            select(Argument).where(Argument.oyez_transcript_id == "1955_98")
+            select(Argument).where(Argument.oyez_transcript_id == "9999_98")
         )
     ).scalar_one_or_none()
     assert missing_argument is None
@@ -372,9 +372,9 @@ async def test_malformed_conversation_flagged_not_aborting_term(
 # ===========================================================================
 
 _CONVERSATION_MULTI_SIDE = {
-    "1955_72": {
-        "conversation_id": "1955_72",
-        "case_id": "1955_72",
+    "9999_72": {
+        "conversation_id": "9999_72",
+        "case_id": "9999_72",
         "advocates": {
             "adv__resp_counsel": {"side": 0},
             "adv__pet_counsel": {"side": 1},
@@ -383,8 +383,8 @@ _CONVERSATION_MULTI_SIDE = {
         },
     }
 }
-_CASE_1955_72 = {
-    "case_id": "1955_72",
+_CASE_9999_72 = {
+    "id": "9999_72",
     "docket_no": "55-72",
     "title": "Doe v. Roe",
     "petitioner": "Doe",
@@ -404,9 +404,9 @@ _SPEAKERS_SIDES = {
 async def test_advocate_side_codes_map_onto_side_enum(isolated_session, tmp_path):
     """Advocate side codes 0/1/2/3 map to RESPONDENT/PETITIONER/AMICUS/UNKNOWN."""
     corpus_dir = _write_corpus_fixture(
-        tmp_path, _CONVERSATION_MULTI_SIDE, [_CASE_1955_72], _SPEAKERS_SIDES
+        tmp_path, _CONVERSATION_MULTI_SIDE, [_CASE_9999_72], _SPEAKERS_SIDES
     )
-    args = _args(1955, corpus_dir)
+    args = _args(9999, corpus_dir)
 
     with patch(
         "pipeline.commands.import_convokit.get_session",
@@ -416,7 +416,7 @@ async def test_advocate_side_codes_map_onto_side_enum(isolated_session, tmp_path
 
     argument = (
         await isolated_session.execute(
-            select(Argument).where(Argument.oyez_transcript_id == "1955_72")
+            select(Argument).where(Argument.oyez_transcript_id == "9999_72")
         )
     ).scalar_one()
     participants = (
@@ -447,9 +447,9 @@ async def test_existing_oyez_speaker_id_match_reuses_person_no_new_row(
     existing_id = existing.id
 
     corpus_dir = _write_corpus_fixture(
-        tmp_path, _CONVERSATION_1955_71, [_CASE_1955_71], _SPEAKERS
+        tmp_path, _CONVERSATION_9999_71, [_CASE_9999_71], _SPEAKERS
     )
-    args = _args(1955, corpus_dir)
+    args = _args(9999, corpus_dir)
 
     with patch(
         "pipeline.commands.import_convokit.get_session",
@@ -479,9 +479,9 @@ async def test_full_name_only_match_backfills_oyez_speaker_id(
     existing_id = existing.id
 
     corpus_dir = _write_corpus_fixture(
-        tmp_path, _CONVERSATION_1955_71, [_CASE_1955_71], _SPEAKERS
+        tmp_path, _CONVERSATION_9999_71, [_CASE_9999_71], _SPEAKERS
     )
-    args = _args(1955, corpus_dir)
+    args = _args(9999, corpus_dir)
 
     with patch(
         "pipeline.commands.import_convokit.get_session",
@@ -506,14 +506,14 @@ async def test_brand_new_speaker_creates_person_with_oyez_id_and_is_justice_fals
     """A speaker with no existing Person match at all gets a new row with
     oyez_speaker_id set and is_justice derived from speakers.json's type."""
     conversations = {
-        "1955_73": {
-            "conversation_id": "1955_73",
-            "case_id": "1955_73",
+        "9999_73": {
+            "conversation_id": "9999_73",
+            "case_id": "9999_73",
             "advocates": {"adv__brand_new": {"side": 1}},
         }
     }
     case = {
-        "case_id": "1955_73",
+        "id": "9999_73",
         "docket_no": "55-73",
         "title": "New v. Case",
         "petitioner": "New",
@@ -523,7 +523,7 @@ async def test_brand_new_speaker_creates_person_with_oyez_id_and_is_justice_fals
     }
     speakers = {"adv__brand_new": {"name": "Brand New Advocate", "type": "advocate"}}
     corpus_dir = _write_corpus_fixture(tmp_path, conversations, [case], speakers)
-    args = _args(1955, corpus_dir)
+    args = _args(9999, corpus_dir)
 
     with patch(
         "pipeline.commands.import_convokit.get_session",
@@ -552,14 +552,14 @@ async def test_justice_type_speaker_resolves_to_bench_side(isolated_session, tmp
     logic unchanged).
     """
     conversations = {
-        "1955_74": {
-            "conversation_id": "1955_74",
-            "case_id": "1955_74",
-            "advocates": {"j__earl_warren": {"side": 3}},
+        "9999_74": {
+            "conversation_id": "9999_74",
+            "case_id": "9999_74",
+            "advocates": {"j__test_justice_doe": {"side": 3}},
         }
     }
     case = {
-        "case_id": "1955_74",
+        "id": "9999_74",
         "docket_no": "55-74",
         "title": "Bench v. Test",
         "petitioner": "Bench",
@@ -567,9 +567,9 @@ async def test_justice_type_speaker_resolves_to_bench_side(isolated_session, tmp
         "year": 1955,
         "transcripts": [{"name": "Oral Argument - February 2, 1955"}],
     }
-    speakers = {"j__earl_warren": {"name": "Earl Warren", "type": "justice"}}
+    speakers = {"j__test_justice_doe": {"name": "Test Justice Doe", "type": "justice"}}
     corpus_dir = _write_corpus_fixture(tmp_path, conversations, [case], speakers)
-    args = _args(1955, corpus_dir)
+    args = _args(9999, corpus_dir)
 
     with patch(
         "pipeline.commands.import_convokit.get_session",
@@ -579,14 +579,14 @@ async def test_justice_type_speaker_resolves_to_bench_side(isolated_session, tmp
 
     person = (
         await isolated_session.execute(
-            select(Person).where(Person.oyez_speaker_id == "j__earl_warren")
+            select(Person).where(Person.oyez_speaker_id == "j__test_justice_doe")
         )
     ).scalar_one()
     assert person.is_justice is True
 
     argument = (
         await isolated_session.execute(
-            select(Argument).where(Argument.oyez_transcript_id == "1955_74")
+            select(Argument).where(Argument.oyez_transcript_id == "9999_74")
         )
     ).scalar_one()
     participant = (
@@ -605,9 +605,9 @@ async def test_rerun_creates_no_duplicate_argument_participants(
 ):
     """Re-running creates zero duplicate ArgumentParticipant rows."""
     corpus_dir = _write_corpus_fixture(
-        tmp_path, _CONVERSATION_1955_71, [_CASE_1955_71], _SPEAKERS
+        tmp_path, _CONVERSATION_9999_71, [_CASE_9999_71], _SPEAKERS
     )
-    args = _args(1955, corpus_dir)
+    args = _args(9999, corpus_dir)
     session_cm = _make_session_cm(isolated_session)
 
     for _ in range(2):
@@ -618,7 +618,7 @@ async def test_rerun_creates_no_duplicate_argument_participants(
 
     argument = (
         await isolated_session.execute(
-            select(Argument).where(Argument.oyez_transcript_id == "1955_71")
+            select(Argument).where(Argument.oyez_transcript_id == "9999_71")
         )
     ).scalar_one()
     participants = (
@@ -645,7 +645,7 @@ async def test_resolve_and_link_participant_idempotent_check_before_insert(
         question_number=1,
         status=ArgumentStatusEnum.DRAFT,
         source_docket="55-99",
-        oyez_transcript_id="1955_99",
+        oyez_transcript_id="9999_99",
     )
     isolated_session.add(argument)
     await isolated_session.flush()
@@ -710,9 +710,9 @@ async def test_docket_already_at_question_number_1_imports_at_question_number_2(
     pdf_argument_id = pdf_argument.id
 
     corpus_dir = _write_corpus_fixture(
-        tmp_path, _CONVERSATION_1955_71, [_CASE_1955_71], _SPEAKERS
+        tmp_path, _CONVERSATION_9999_71, [_CASE_9999_71], _SPEAKERS
     )
-    args = _args(1955, corpus_dir)
+    args = _args(9999, corpus_dir)
 
     with patch(
         "pipeline.commands.import_convokit.get_session",
@@ -722,7 +722,7 @@ async def test_docket_already_at_question_number_1_imports_at_question_number_2(
 
     corpus_argument = (
         await isolated_session.execute(
-            select(Argument).where(Argument.oyez_transcript_id == "1955_71")
+            select(Argument).where(Argument.oyez_transcript_id == "9999_71")
         )
     ).scalar_one()
     assert corpus_argument.question_number == 2
@@ -780,9 +780,9 @@ async def test_forced_collision_increments_docket_question_conflict_not_errored(
     )
 
     corpus_dir = _write_corpus_fixture(
-        tmp_path, _CONVERSATION_1955_71, [_CASE_1955_71], _SPEAKERS
+        tmp_path, _CONVERSATION_9999_71, [_CASE_9999_71], _SPEAKERS
     )
-    args = _args(1955, corpus_dir)
+    args = _args(9999, corpus_dir)
 
     with patch(
         "pipeline.commands.import_convokit.get_session",
@@ -792,7 +792,7 @@ async def test_forced_collision_increments_docket_question_conflict_not_errored(
 
     no_corpus_argument = (
         await isolated_session.execute(
-            select(Argument).where(Argument.oyez_transcript_id == "1955_71")
+            select(Argument).where(Argument.oyez_transcript_id == "9999_71")
         )
     ).scalar_one_or_none()
     assert no_corpus_argument is None, (
@@ -802,7 +802,96 @@ async def test_forced_collision_increments_docket_question_conflict_not_errored(
 
     captured = capsys.readouterr()
     summary_line = next(
-        line for line in captured.out.splitlines() if line.startswith("Term 1955:")
+        line for line in captured.out.splitlines() if line.startswith("Term 9999:")
     )
     assert "0 conversations errored" in summary_line
     assert "1 docket/question conflicts" in summary_line
+
+
+# ===========================================================================
+# Migration 0018 gap-closure: historical docket numbers recycle across terms
+# ===========================================================================
+
+
+@pytest.mark.asyncio
+async def test_recycled_docket_number_across_terms_creates_two_distinct_cases(
+    isolated_session, tmp_path
+):
+    """
+    Real historical docket numbers reset every October Term (e.g. docket
+    "71" is a different, unrelated case in 1955 and 1956) -- unlike modern
+    dockets, which embed the term and are naturally globally unique.
+    _get_or_create_case must not conflate two different terms' same-docket
+    cases into one Case row; it dedups on the stable oyez_case_id, backed by
+    the DB's (docket_number, term_year) composite unique constraint
+    (migration 0018), not on docket_number alone.
+
+    Uses an entirely fictional docket ("TEST-71") and term years (9998/9999)
+    -- not just a fictional oyez_case_id -- so this test can never silently
+    match a real historical Case row already sitting in a dev database that
+    has run a real corpus import (docket "71" alone recurs across a dozen
+    real terms; reusing a real term_year here previously caused this test
+    to match live data via the (docket_number, term_year) fallback path).
+    """
+    conversations = {
+        "9999_TEST-71": {
+            "conversation_id": "9999_TEST-71",
+            "case_id": "9999_TEST-71",
+            "advocates": {"adv__test_advocate_a": {"side": 1}},
+        },
+        "9998_TEST-71": {
+            "conversation_id": "9998_TEST-71",
+            "case_id": "9998_TEST-71",
+            "advocates": {"adv__test_advocate_b": {"side": 1}},
+        },
+    }
+    case_a = {
+        "id": "9999_TEST-71",
+        "docket_no": "TEST-71",
+        "title": "Test Case A",
+        "petitioner": "A",
+        "respondent": "Aardvark",
+        "year": 9999,
+        "transcripts": [{"name": "Oral Argument - November 15, 9999"}],
+    }
+    case_b = {
+        "id": "9998_TEST-71",
+        "docket_no": "TEST-71",
+        "title": "Test Case B",
+        "petitioner": "B",
+        "respondent": "Bumblebee",
+        "year": 9998,
+        "transcripts": [{"name": "Oral Argument - January 8, 9998"}],
+    }
+    speakers = {
+        "adv__test_advocate_a": {"name": "Test Advocate A", "type": "advocate"},
+        "adv__test_advocate_b": {"name": "Test Advocate B", "type": "advocate"},
+    }
+    corpus_dir = _write_corpus_fixture(
+        tmp_path, conversations, [case_a, case_b], speakers
+    )
+    args = argparse.Namespace(
+        term=None, term_range="9998-9999", corpus_dir=str(corpus_dir)
+    )
+
+    with patch(
+        "pipeline.commands.import_convokit.get_session",
+        new=_make_session_cm(isolated_session),
+    ):
+        await run_import_convokit(args)
+
+    cases = (
+        await isolated_session.execute(
+            select(Case)
+            .where(Case.docket_number == "TEST-71")
+            .order_by(Case.term_year)
+        )
+    ).scalars().all()
+
+    assert len(cases) == 2, "Both terms' docket-TEST-71 cases must survive as distinct rows"
+    assert cases[0].term_year == 9998
+    assert cases[0].case_name == "Test Case B"
+    assert cases[0].oyez_case_id == "9998_TEST-71"
+    assert cases[1].term_year == 9999
+    assert cases[1].case_name == "Test Case A"
+    assert cases[1].oyez_case_id == "9999_TEST-71"

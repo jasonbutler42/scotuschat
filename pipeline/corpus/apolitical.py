@@ -52,7 +52,9 @@ def extract_case_fields(raw_case: dict) -> dict:
         "year": raw_case.get("year"),
         "transcripts": raw_case.get("transcripts"),
         "advocates": raw_case.get("advocates"),
-        "case_id": raw_case.get("case_id"),
+        # Real cases.jsonl rows key this as "id" (e.g. "1955_71"), not
+        # "case_id" -- "case_id" only appears nested per-transcript.
+        "case_id": raw_case.get("id"),
     }
 
 

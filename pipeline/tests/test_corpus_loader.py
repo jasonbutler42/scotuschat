@@ -93,14 +93,18 @@ class TestLoadSpeakers:
 
 
 class TestLoadCases:
-    def test_indexes_by_docket_number(self, tmp_path):
+    def test_indexes_by_id_not_docket_number(self, tmp_path):
         fixture = tmp_path / "cases.jsonl"
         fixture.write_text(
             "\n".join(
                 [
-                    json.dumps({"docket_no": "55-71", "title": "Smith v. Jones"}),
+                    json.dumps(
+                        {"id": "1955_71", "docket_no": "71", "title": "Smith v. Jones"}
+                    ),
                     "",
-                    json.dumps({"docket_no": "55-99", "title": "Doe v. Roe"}),
+                    json.dumps(
+                        {"id": "1955_99", "docket_no": "99", "title": "Doe v. Roe"}
+                    ),
                 ]
             ),
             encoding="utf-8",
@@ -108,6 +112,31 @@ class TestLoadCases:
 
         result = load_cases(fixture)
 
-        assert result["55-71"]["title"] == "Smith v. Jones"
-        assert result["55-99"]["title"] == "Doe v. Roe"
+        assert result["1955_71"]["title"] == "Smith v. Jones"
+        assert result["1955_99"]["title"] == "Doe v. Roe"
         assert len(result) == 2
+
+    def test_recycled_docket_number_across_terms_does_not_collide(self, tmp_path):
+        """Historical docket numbers repeat across terms (docket "71" is a
+        different case in 1955 and 1956) -- indexing by "id" must keep both,
+        not silently overwrite one with the other."""
+        fixture = tmp_path / "cases.jsonl"
+        fixture.write_text(
+            "\n".join(
+                [
+                    json.dumps(
+                        {"id": "1955_71", "docket_no": "71", "title": "1955 Case"}
+                    ),
+                    json.dumps(
+                        {"id": "1956_71", "docket_no": "71", "title": "1956 Case"}
+                    ),
+                ]
+            ),
+            encoding="utf-8",
+        )
+
+        result = load_cases(fixture)
+
+        assert len(result) == 2
+        assert result["1955_71"]["title"] == "1955 Case"
+        assert result["1956_71"]["title"] == "1956 Case"

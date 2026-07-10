@@ -107,14 +107,14 @@ def _args(term, corpus_dir: Path):
 
 
 _CONVERSATION = {
-    "1955_71": {
-        "conversation_id": "1955_71",
-        "case_id": "1955_71",
+    "9999_71": {
+        "conversation_id": "9999_71",
+        "case_id": "9999_71",
         "advocates": {"adv__john_smith": {"side": 1}},
     }
 }
 _CASE = {
-    "case_id": "1955_71",
+    "id": "9999_71",
     "docket_no": "55-71",
     "title": "Smith v. Jones",
     "petitioner": "Smith",
@@ -124,7 +124,7 @@ _CASE = {
 }
 _SPEAKERS = {
     "adv__john_smith": {"name": "John Smith", "type": "advocate"},
-    "j__earl_warren": {"name": "Earl Warren", "type": "justice"},
+    "j__test_justice_doe": {"name": "Test Justice Doe", "type": "justice"},
 }
 
 
@@ -132,7 +132,7 @@ async def _run_and_fetch_argument(isolated_session, tmp_path, utterances) -> Arg
     corpus_dir = _write_corpus_fixture(
         tmp_path, _CONVERSATION, [_CASE], _SPEAKERS, utterances
     )
-    args = _args(1955, corpus_dir)
+    args = _args(9999, corpus_dir)
 
     with patch(
         "pipeline.commands.import_convokit.get_session",
@@ -142,7 +142,7 @@ async def _run_and_fetch_argument(isolated_session, tmp_path, utterances) -> Arg
 
     return (
         await isolated_session.execute(
-            select(Argument).where(Argument.oyez_transcript_id == "1955_71")
+            select(Argument).where(Argument.oyez_transcript_id == "9999_71")
         )
     ).scalar_one()
 
@@ -162,7 +162,7 @@ async def test_multi_segment_turn_stored_as_one_row_newline_preserved(
     utterances = [
         {
             "id": "u1",
-            "conversation_id": "1955_71",
+            "conversation_id": "9999_71",
             "speaker": "adv__john_smith",
             "text": "May it please the Court.\nThis case concerns a simple contract dispute.\nWe ask that the judgment be affirmed.",
         }
@@ -200,13 +200,13 @@ async def test_whole_turn_stage_direction_produces_separate_row(
     utterances = [
         {
             "id": "u1",
-            "conversation_id": "1955_71",
+            "conversation_id": "9999_71",
             "speaker": "adv__john_smith",
             "text": "That is an amusing hypothetical, counsel.",
         },
         {
             "id": "u2",
-            "conversation_id": "1955_71",
+            "conversation_id": "9999_71",
             "speaker": None,
             "text": "(Laughter)",
         },
@@ -240,7 +240,7 @@ async def test_inline_marker_segment_splits_spoken_remainder_into_own_rows(
     utterances = [
         {
             "id": "u1",
-            "conversation_id": "1955_71",
+            "conversation_id": "9999_71",
             "speaker": "adv__john_smith",
             "text": "That is absurd, Your Honor.\n(Laughter)\nBut moving on to the merits.",
         }
@@ -279,7 +279,7 @@ async def test_stage_direction_delegated_to_detect_stage_direction_no_regex(
     utterances = [
         {
             "id": "u1",
-            "conversation_id": "1955_71",
+            "conversation_id": "9999_71",
             "speaker": "adv__john_smith",
             "text": "Mr. Smith (ph) testified that the contract was signed.\n(a) the first element;\n(b) the second element.",
         }
@@ -315,8 +315,8 @@ async def test_repeat_speaker_across_many_turns_resolved_once_no_duplicate_parti
     utterances = [
         {
             "id": f"u{i}",
-            "conversation_id": "1955_71",
-            "speaker": "j__earl_warren",
+            "conversation_id": "9999_71",
+            "speaker": "j__test_justice_doe",
             "text": f"Bench turn number {i}.",
         }
         for i in range(1, 6)
@@ -331,12 +331,12 @@ async def test_repeat_speaker_across_many_turns_resolved_once_no_duplicate_parti
         )
     ).scalars().all()
     assert len(rows) == 5
-    assert all(r.raw_speaker_label == "Earl Warren" for r in rows)
+    assert all(r.raw_speaker_label == "Test Justice Doe" for r in rows)
     assert all(r.side == SideEnum.BENCH for r in rows)
 
     people = (
         await isolated_session.execute(
-            select(Person).where(Person.oyez_speaker_id == "j__earl_warren")
+            select(Person).where(Person.oyez_speaker_id == "j__test_justice_doe")
         )
     ).scalars().all()
     assert len(people) == 1
@@ -345,7 +345,7 @@ async def test_repeat_speaker_across_many_turns_resolved_once_no_duplicate_parti
         await isolated_session.execute(
             select(ArgumentParticipant).where(
                 ArgumentParticipant.argument_id == argument.id,
-                ArgumentParticipant.raw_speaker_label == "Earl Warren",
+                ArgumentParticipant.raw_speaker_label == "Test Justice Doe",
             )
         )
     ).scalars().all()
@@ -364,19 +364,19 @@ async def test_every_utterance_has_pipeline_run_id_and_unique_sequence(
     utterances = [
         {
             "id": "u1",
-            "conversation_id": "1955_71",
+            "conversation_id": "9999_71",
             "speaker": "adv__john_smith",
             "text": "First turn.",
         },
         {
             "id": "u2",
-            "conversation_id": "1955_71",
-            "speaker": "j__earl_warren",
+            "conversation_id": "9999_71",
+            "speaker": "j__test_justice_doe",
             "text": "Second turn, by the bench.",
         },
         {
             "id": "u3",
-            "conversation_id": "1955_71",
+            "conversation_id": "9999_71",
             "speaker": None,
             "text": "(Recess)",
         },
@@ -409,7 +409,7 @@ async def test_every_utterance_has_pipeline_run_id_and_unique_sequence(
     # conversations.json's advocates dict) gets BENCH side.
     bench_row = rows[1]
     assert bench_row.side == SideEnum.BENCH
-    assert bench_row.raw_speaker_label == "Earl Warren"
+    assert bench_row.raw_speaker_label == "Test Justice Doe"
 
 
 @pytest.mark.asyncio
@@ -433,19 +433,19 @@ async def test_utterances_readable_via_arguments_service_after_import(
     utterances = [
         {
             "id": "u1",
-            "conversation_id": "1955_71",
+            "conversation_id": "9999_71",
             "speaker": "adv__john_smith",
             "text": "First turn.",
         },
         {
             "id": "u2",
-            "conversation_id": "1955_71",
-            "speaker": "j__earl_warren",
+            "conversation_id": "9999_71",
+            "speaker": "j__test_justice_doe",
             "text": "Second turn, by the bench.",
         },
         {
             "id": "u3",
-            "conversation_id": "1955_71",
+            "conversation_id": "9999_71",
             "speaker": None,
             "text": "(Recess)",
         },
@@ -461,7 +461,7 @@ async def test_utterances_readable_via_arguments_service_after_import(
     assert result["utterances"][0]["text"] == "First turn."
     assert result["utterances"][0]["side"] == SideEnum.PETITIONER
 
-    assert result["utterances"][1]["raw_speaker_label"] == "Earl Warren"
+    assert result["utterances"][1]["raw_speaker_label"] == "Test Justice Doe"
     assert result["utterances"][1]["side"] == SideEnum.BENCH
 
     assert result["utterances"][2]["is_stage_direction"] is True
@@ -469,7 +469,7 @@ async def test_utterances_readable_via_arguments_service_after_import(
 
     response = ArgumentUtterancesResponse(**result)
     assert len(response.utterances) == 3
-    assert response.argument.oyez_transcript_id == "1955_71"
+    assert response.argument.oyez_transcript_id == "9999_71"
     assert response.utterances[0].text == "First turn."
     assert response.utterances[0].raw_speaker_label == "John Smith"
 
@@ -482,10 +482,10 @@ async def test_malformed_utterance_row_flagged_not_crashing_import(
     rather than raising an unhandled KeyError -- the well-formed sibling
     turn in the same conversation still imports."""
     utterances = [
-        {"id": "u1", "conversation_id": "1955_71", "speaker": "adv__john_smith"},
+        {"id": "u1", "conversation_id": "9999_71", "speaker": "adv__john_smith"},
         {
             "id": "u2",
-            "conversation_id": "1955_71",
+            "conversation_id": "9999_71",
             "speaker": "adv__john_smith",
             "text": "Well-formed turn.",
         },
@@ -514,7 +514,7 @@ async def test_summary_prints_term_year_and_core_counts(
     utterances = [
         {
             "id": "u1",
-            "conversation_id": "1955_71",
+            "conversation_id": "9999_71",
             "speaker": "adv__john_smith",
             "text": "Spoken turn.\n(Laughter)",
         }
@@ -522,7 +522,7 @@ async def test_summary_prints_term_year_and_core_counts(
     await _run_and_fetch_argument(isolated_session, tmp_path, utterances)
 
     captured = capsys.readouterr()
-    assert "Term 1955" in captured.out
+    assert "Term 9999" in captured.out
     assert "arguments created" in captured.out
     assert "arguments skipped" in captured.out
     assert "utterances created" in captured.out
@@ -542,23 +542,23 @@ async def test_broken_case_join_counted_as_errored_not_crashing_batch(
     sibling conversation in the same term still imports and its
     utterances still land."""
     conversations = {
-        "1955_71": _CONVERSATION["1955_71"],
-        "1955_98": {
-            "conversation_id": "1955_98",
-            "case_id": "1955_98",  # no matching cases.jsonl row
+        "9999_71": _CONVERSATION["9999_71"],
+        "9999_98": {
+            "conversation_id": "9999_98",
+            "case_id": "9999_98",  # no matching cases.jsonl row
             "advocates": {},
         },
     }
     utterances = [
         {
             "id": "u1",
-            "conversation_id": "1955_71",
+            "conversation_id": "9999_71",
             "speaker": "adv__john_smith",
             "text": "Well-formed sibling conversation's turn.",
         },
         {
             "id": "u2",
-            "conversation_id": "1955_98",
+            "conversation_id": "9999_98",
             "speaker": "adv__john_smith",
             "text": "This belongs to the broken-join conversation.",
         },
@@ -566,7 +566,7 @@ async def test_broken_case_join_counted_as_errored_not_crashing_batch(
     corpus_dir = _write_corpus_fixture(
         tmp_path, conversations, [_CASE], _SPEAKERS, utterances
     )
-    args = _args(1955, corpus_dir)
+    args = _args(9999, corpus_dir)
 
     with patch(
         "pipeline.commands.import_convokit.get_session",
@@ -576,7 +576,7 @@ async def test_broken_case_join_counted_as_errored_not_crashing_batch(
 
     good_argument = (
         await isolated_session.execute(
-            select(Argument).where(Argument.oyez_transcript_id == "1955_71")
+            select(Argument).where(Argument.oyez_transcript_id == "9999_71")
         )
     ).scalar_one()
     good_rows = (
@@ -588,7 +588,7 @@ async def test_broken_case_join_counted_as_errored_not_crashing_batch(
 
     missing_argument = (
         await isolated_session.execute(
-            select(Argument).where(Argument.oyez_transcript_id == "1955_98")
+            select(Argument).where(Argument.oyez_transcript_id == "9999_98")
         )
     ).scalar_one_or_none()
     assert missing_argument is None

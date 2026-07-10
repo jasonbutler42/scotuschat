@@ -23,15 +23,14 @@ Built task-by-task:
         pipeline.corpus.stage_directions.detect_stage_direction (D-16/D-17).
     29-05 Task 2: per-batch/rollup summary report (D-14).
 
-Join key note: cases.jsonl rows carry their OWN "case_id" field with the
-same value as conversations.json's top-level key/"case_id" attribute (the
-apolitical-extractor test fixtures confirm this: case_id "1955_71" on both
-sides, vs. a differently-formatted "docket_no" like "55-71" used for the
-Case.docket_number column). The conversation/case join is therefore done on
-case_id equality, not on docket matching -- pipeline.corpus.loader.load_cases
-indexes by docket_no (for the Case.docket_number lookups this module also
-needs), so a secondary case_id -> raw_case index is built here from its
-values.
+Join key note: each cases.jsonl row's term-prefixed identifier lives in its
+"id" field (e.g. "1955_71"), matching conversations.json's per-conversation
+"case_id" field -- a differently-formatted "docket_no" like "55-71" is used
+separately for the Case.docket_number column. The conversation/case join is
+therefore done on raw_case["id"] == conversation["case_id"], not on docket
+matching -- pipeline.corpus.loader.load_cases already indexes by "id" for
+this reason (never by docket_no, which recycles across terms and would
+silently drop same-docket rows from earlier terms -- migration 0018).
 
 Speaker-resolution scope note (Task 3): conversations.json's "advocates"
 dict is the only per-conversation participant list available at this
@@ -117,6 +116,13 @@ _ADVOCATE_SIDE_MAP: dict[int, SideEnum] = {
 # guess like a "j__" id prefix).
 _JUSTICE_TYPE_VALUES = {"justice", "j", "bench"}
 
+# speakers.json speaker `type` value "U" marks ConvoKit's own "could not
+# identify a speaker for this turn" placeholders (e.g. "<INAUDIBLE>",
+# "<UNKNOWN>") -- these are not real people and must never become a
+# Person/ArgumentParticipant row (gap-closure: importing the real corpus
+# created a bogus "<INAUDIBLE>" advocate before this guard existed).
+_UNATTRIBUTED_TYPE_VALUES = {"u", "unattributed", "unknown"}
+
 
 # ---------------------------------------------------------------------------
 # Task 1: term-range parsing + CLI arg validation (V5)
@@ -190,19 +196,34 @@ def _resolve_corpus_dir(args) -> Path:
 # ---------------------------------------------------------------------------
 
 
-def _parse_argued_date(case_fields: dict) -> date | None:
+def _parse_argued_date(case_fields: dict, conversation_id: str) -> date | None:
     """
-    Parse an argued_date from the first entry of cases.jsonl's allowlisted
-    "transcripts" list (e.g. "Oral Argument - November 15, 1955"), via
-    dateutil fuzzy parsing (RESEARCH.md Standard Stack). None-safe: returns
-    None when there is no transcripts entry or no parseable date
-    (Argument.argued_date is nullable, matching ingest.py's D-08 precedent).
+    Parse an argued_date from cases.jsonl's allowlisted "transcripts" list
+    entry matching THIS conversation (each transcript's own "id" equals the
+    oyez_transcript_id being imported, e.g. "Oral Argument - November 15,
+    1955"), via dateutil fuzzy parsing (RESEARCH.md Standard Stack). A case
+    argued across multiple sessions has one transcripts entry per session
+    with its own date -- blindly using transcripts[0] would stamp every
+    session with the first session's date (gap-closure: this produced
+    identical argued_date values across multi-session cases before this
+    fix). Falls back to the first entry only if no transcript's "id"
+    matches (defensive). None-safe: returns None when there is no
+    transcripts entry or no parseable date (Argument.argued_date is
+    nullable, matching ingest.py's D-08 precedent).
     """
     transcripts = case_fields.get("transcripts") or []
     if not transcripts:
         return None
-    first = transcripts[0]
-    name = first.get("name") if isinstance(first, dict) else None
+    matching = next(
+        (
+            t
+            for t in transcripts
+            if isinstance(t, dict) and str(t.get("id")) == conversation_id
+        ),
+        None,
+    )
+    entry = matching or transcripts[0]
+    name = entry.get("name") if isinstance(entry, dict) else None
     if not name:
         return None
     try:
@@ -223,18 +244,45 @@ def _case_name_from_fields(case_fields: dict) -> str:
 
 async def _get_or_create_case(session, case_fields: dict, counters: dict) -> Case:
     """
-    Idempotent Case create (select on Case.docket_number, D-08). term_year
-    comes DIRECTLY from cases.jsonl's allowlisted "year" field (D-15) --
-    never derived from argued_date's calendar year. Lead-docket-only
-    (D-19): this is the single Case row for the conversation's docket; no
-    consolidated-companion sourcing happens here.
+    Idempotent Case create. Historical docket numbers recycle across
+    October Terms (migration 0018 gap-closure) -- e.g. docket "71" is a
+    distinct, unrelated case in nearly a dozen different terms -- so lookup
+    prefers the corpus's stable oyez_case_id first (this alone disambiguates
+    same-docket cases from different terms). If that misses, falls back to
+    the (docket_number, term_year) composite -- this is what lets a docket
+    already occupied by the ordinary PDF pipeline (no oyez_case_id set) be
+    reused rather than duplicated (CR-01); the existing row's oyez_case_id
+    is then backfilled, mirroring the same pattern already used for
+    Person.oyez_speaker_id (D-11). term_year comes DIRECTLY from
+    cases.jsonl's allowlisted "year" field (D-15) -- never derived from
+    argued_date's calendar year. Lead-docket-only (D-19): this is the single
+    Case row for the conversation's docket; no consolidated-companion
+    sourcing happens here.
 
     Increments counters["cases_created"] only when a new row is actually
     created (not on the reuse-existing path).
     """
     docket = case_fields["docket_no"]
-    result = await session.execute(select(Case).where(Case.docket_number == docket))
-    existing = result.scalar_one_or_none()
+    year = case_fields["year"]
+    oyez_case_id = case_fields.get("case_id")
+
+    existing = None
+    if oyez_case_id:
+        result = await session.execute(
+            select(Case).where(Case.oyez_case_id == oyez_case_id)
+        )
+        existing = result.scalar_one_or_none()
+
+    if existing is None:
+        result = await session.execute(
+            select(Case).where(
+                Case.docket_number == docket, Case.term_year == year
+            )
+        )
+        existing = result.scalar_one_or_none()
+        if existing is not None and oyez_case_id and existing.oyez_case_id is None:
+            existing.oyez_case_id = oyez_case_id  # D-11-style backfill
+
     if existing is not None:
         return existing
 
@@ -332,7 +380,7 @@ async def _import_conversation(
 
     case = await _get_or_create_case(session, case_fields, counters)
 
-    argued_date = _parse_argued_date(case_fields)
+    argued_date = _parse_argued_date(case_fields, conversation_id)
 
     # Derive the next available question_number for this docket (CR-01 gap
     # closure) instead of hardcoding 1 -- aligns the write with the DB's
@@ -407,7 +455,7 @@ async def _import_conversation(
     # a speaker with many turns is resolved via _resolve_and_link_participant
     # (a DB round trip + counters increment) exactly ONCE per conversation,
     # not once per turn.
-    resolved_participants: dict[str, ArgumentParticipant] = {}
+    resolved_participants: dict[str, ArgumentParticipant | None] = {}
     advocates = conversation.get("advocates") or {}
     for speaker_id, advocate_meta in advocates.items():
         side_code = (
@@ -452,6 +500,20 @@ def _is_justice_type(speaker_meta: dict) -> bool | None:
     if speaker_type is None:
         return None
     return str(speaker_type).strip().lower() in _JUSTICE_TYPE_VALUES
+
+
+def _is_unattributed_speaker_type(speaker_meta: dict) -> bool:
+    """
+    True when speakers.json's `type` field is ConvoKit's own "no
+    identifiable speaker" sentinel ("U", e.g. for "<INAUDIBLE>"/"<UNKNOWN>")
+    -- distinct from a genuinely missing/ambiguous type (D-12, which is
+    still imported as a flagged advocate). This one must never produce a
+    Person/ArgumentParticipant row at all.
+    """
+    speaker_type = speaker_meta.get("type")
+    if speaker_type is None:
+        return False
+    return str(speaker_type).strip().lower() in _UNATTRIBUTED_TYPE_VALUES
 
 
 async def _resolve_person(
@@ -502,10 +564,16 @@ async def _resolve_and_link_participant(
     speakers_index: dict,
     side_code,
     counters: dict,
-) -> ArgumentParticipant:
+) -> ArgumentParticipant | None:
     """
     Resolve `speaker_id` to a Person and idempotently create its
     ArgumentParticipant row for `argument_id` (D-11/D-12/D-13).
+
+    Returns None -- creating no Person/ArgumentParticipant row at all --
+    when speakers.json's `type` is ConvoKit's own "no identifiable speaker"
+    sentinel ("U", e.g. "<INAUDIBLE>"/"<UNKNOWN>"). Callers must treat a
+    None return as "this turn has no attributable speaker" (mirrors how a
+    stage-direction row already has no participant), not as an error.
 
     `side_code` is the raw conversations.json 0/1/2/3 advocate side code;
     it is ignored (side is always BENCH) when the resolved speaker's
@@ -522,6 +590,12 @@ async def _resolve_and_link_participant(
             "flagged, imported anyway (D-12)."
         )
         speaker_meta = {}
+
+    if _is_unattributed_speaker_type(speaker_meta):
+        counters["unattributed_speakers_skipped"] = (
+            counters.get("unattributed_speakers_skipped", 0) + 1
+        )
+        return None
 
     is_justice = _is_justice_type(speaker_meta)
     if is_justice is None:
@@ -671,9 +745,13 @@ async def _import_utterances(
                     "-- flagged, skipped (V5)."
                 )
                 continue
-            participant = resolved_participants.get(speaker_id)
-            if participant is None:
-                participant = await _resolve_and_link_participant(
+            # `in` (not `.get(...) is None`) -- a speaker can legitimately
+            # resolve to None (ConvoKit's own unattributed-speaker sentinel,
+            # e.g. "<INAUDIBLE>"); using a None-check here would re-attempt
+            # resolution on every subsequent turn by that same speaker_id
+            # instead of caching the "no attributable speaker" result once.
+            if speaker_id not in resolved_participants:
+                resolved_participants[speaker_id] = await _resolve_and_link_participant(
                     session=session,
                     argument_id=argument_id,
                     speaker_id=speaker_id,
@@ -684,7 +762,7 @@ async def _import_utterances(
                     # code utterance rows carry -- see _is_justice_type.
                     counters=counters,
                 )
-                resolved_participants[speaker_id] = participant
+            participant = resolved_participants[speaker_id]
 
         for row_text, is_stage in rows:
             sequence += 1
@@ -706,16 +784,23 @@ async def _import_utterances(
                     counters.get("stage_direction_utterances_created", 0) + 1
                 )
             else:
+                # participant is None for ConvoKit's own unattributed-speaker
+                # sentinel (ambiguous_speaker_id resolved to no Person at
+                # all) -- the row's spoken text is still preserved verbatim,
+                # just with no speaker attribution, mirroring how a
+                # stage-direction row already carries no participant.
                 session.add(
                     Utterance(
                         argument_id=argument_id,
                         pipeline_run_id=pipeline_run_id,
                         sequence=sequence,
-                        raw_speaker_label=participant.raw_speaker_label,
+                        raw_speaker_label=(
+                            participant.raw_speaker_label if participant else None
+                        ),
                         text=row_text,  # D-18: verbatim, \n preserved
                         is_stage_direction=False,
-                        side=participant.side,
-                        person_id=participant.person_id,
+                        side=participant.side if participant else SideEnum.UNKNOWN,
+                        person_id=participant.person_id if participant else None,
                         strategy=strategy,
                     )
                 )
@@ -745,6 +830,7 @@ _SUMMARY_COUNTER_KEYS: tuple[str, ...] = (
     "conversations_errored",
     "utterance_rows_errored",
     "docket_question_conflict",
+    "unattributed_speakers_skipped",
 )
 
 
@@ -766,10 +852,12 @@ def _print_summary(label: str, counters: dict) -> None:
     created, arguments skipped (already imported), cases created,
     utterances created, stage-direction utterances created, people
     created, people matched (reused), speakers flagged (ambiguous/missing
-    type), cases/conversations errored (join failures or bad rows), and
+    type), cases/conversations errored (join failures or bad rows),
     docket/question conflicts -- a distinct, clearly-labeled count of any
     residual (source_docket, question_number) collision caught at flush
-    (CR-01, 29-VERIFICATION.md), never folded into conversations_errored.
+    (CR-01, 29-VERIFICATION.md), never folded into conversations_errored --
+    and unattributed speakers skipped (ConvoKit's own "<INAUDIBLE>"/
+    "<UNKNOWN>" sentinels, never turned into a Person row).
     """
     c = counters
     print(
@@ -785,7 +873,8 @@ def _print_summary(label: str, counters: dict) -> None:
         f"{c.get('speakers_flagged', 0)} speakers flagged, "
         f"{c.get('conversations_errored', 0)} conversations errored, "
         f"{c.get('utterance_rows_errored', 0)} utterance rows errored, "
-        f"{c.get('docket_question_conflict', 0)} docket/question conflicts."
+        f"{c.get('docket_question_conflict', 0)} docket/question conflicts, "
+        f"{c.get('unattributed_speakers_skipped', 0)} unattributed speakers skipped."
     )
 
 
@@ -821,13 +910,11 @@ async def run_import_convokit(args) -> None:
             raise FileNotFoundError(f"Required corpus file not found: {required}")
 
     speakers_index = load_speakers(speakers_path)
-    cases_by_docket = load_cases(cases_path)
-    # Secondary index: cases.jsonl carries its own "case_id" field matching
-    # conversations.json's key/case_id (docket_no is a DIFFERENT format,
-    # used for the Case.docket_number column -- see Task 2).
-    cases_by_case_id = {
-        row["case_id"]: row for row in cases_by_docket.values() if row.get("case_id")
-    }
+    # load_cases already indexes by "id" (cases.jsonl's own globally-unique
+    # identifier, matching conversations.json's per-conversation "case_id"
+    # field); docket_no is a DIFFERENT format, used for the
+    # Case.docket_number column -- see Task 2.
+    cases_by_case_id = load_cases(cases_path)
 
     rollup = _new_counters()
 

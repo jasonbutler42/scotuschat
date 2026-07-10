@@ -5,16 +5,16 @@ milestone_name: Admin Screens Cleanup
 current_phase: 29
 current_phase_name: historical-corpus-import
 status: executing
-stopped_at: Completed 29-07-PLAN.md
-last_updated: "2026-07-10T13:09:47.829Z"
+stopped_at: Completed 29-08-PLAN.md
+last_updated: "2026-07-10T13:20:08.374Z"
 last_activity: 2026-07-10
 last_activity_desc: Phase 29 execution started
 progress:
   total_phases: 8
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 44
-  completed_plans: 43
-  percent: 75
+  completed_plans: 44
+  percent: 88
 ---
 
 # Project State
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-07-09 after Phase 27 completion)
 
 Phase: 29 (historical-corpus-import) — EXECUTING
 Stage: Ready to plan
-Plan: 2 of 8
+Plan: 3 of 8
 Status: Ready to execute
 Last activity: 2026-07-10 — Phase 29 execution started
 
@@ -138,6 +138,8 @@ Full log in PROJECT.md Key Decisions table. Key decisions entering v1.5:
 - [Phase 29-07]: No service-layer change needed; api/services/arguments.py and api/services/cases.py already pass argued_date through with no coercion once the schema accepts None
 - [Phase 29-07]: New DB-gated test calls get_argument_with_utterances() directly, avoiding the api.main HTTP client path affected by the pre-existing FastAPI test lifespan/session-factory failure
 - [Phase 29-07]: CaseItem.argued_date fixed proactively even though unreachable today (get_cases() filters published_at IS NOT NULL) to avoid a second gap-closure round
+- [Phase 29-08]: Relabeled import_convokit.py's single per-argument PipelineRun.step from ingest to parse, matching api/services/arguments.py's established read-side contract (step==parse filter) -- fixed the write side rather than adding a second query branch to a shared read contract
+- [Phase 29-08]: New end-to-end test calls get_argument_with_utterances directly (no HTTP client, no api.main import), avoiding the pre-existing FastAPI test lifespan/session-factory failure, consistent with 29-07's established pattern
 
 ### Roadmap Evolution
 
@@ -204,9 +206,10 @@ Deployment blockers (v1.4, unresolved — not in v1.5 scope):
 | Phase 29 P04 | 25min | 3 tasks | 3 files |
 | Phase 29 P05 | 45min | 2 tasks | 3 files |
 | Phase 29 P07 | 4min | 2 tasks | 5 files |
+| Phase 29 P08 | 10min | 2 tasks | 3 files |
 
 ## Session Continuity
 
-Last session: 2026-07-10T13:09:47.818Z
-Stopped at: Completed 29-07-PLAN.md
+Last session: 2026-07-10T13:20:08.362Z
+Stopped at: Completed 29-08-PLAN.md
 Resume file: None

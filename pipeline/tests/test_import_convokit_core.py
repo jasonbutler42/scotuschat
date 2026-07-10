@@ -251,6 +251,7 @@ async def test_creates_case_argument_caseargument_pipelinerun_entities(
         )
     ).scalar_one()
     assert run.strategy == "convokit_import"
+    assert run.step == "parse"
 
 
 @pytest.mark.asyncio

@@ -401,6 +401,7 @@ async def test_every_utterance_has_pipeline_run_id_and_unique_sequence(
     for r in rows:
         assert r.pipeline_run_id == run.id
         assert r.pipeline_run_id is not None
+    assert run.step == "parse"
 
     # Justice speaker resolved via utterances.jsonl (not present in
     # conversations.json's advocates dict) gets BENCH side.

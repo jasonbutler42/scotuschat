@@ -329,10 +329,17 @@ async def _import_conversation(
     if link_result.scalar_one_or_none() is None:
         session.add(CaseArgument(case_id=case.id, argument_id=argument.id, is_lead=True))
 
-    # ---- PipelineRun -- BEFORE any utterance write path (T-29-09) ----
+    # ---- PipelineRun -- this single row performs the combined work the PDF
+    # pipeline splits across three separate CLI-invoked stages (ingest,
+    # parse, resolve), but is labeled by its function -- the run that writes
+    # this argument's Utterance rows -- matching the meaning
+    # api/services/arguments.py's get_argument_with_utterances and
+    # api/services/admin_jobs.py's get_run_id_for_step already give
+    # step="parse" everywhere else in the codebase. Created BEFORE any
+    # utterance write path (T-29-09).
     run = PipelineRun(
         argument_id=argument.id,
-        step="ingest",
+        step="parse",
         status=PipelineRunStatus.COMPLETED,
         strategy=PIPELINE_RUN_STRATEGY,  # D-09
     )

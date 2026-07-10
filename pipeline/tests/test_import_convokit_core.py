@@ -672,3 +672,137 @@ async def test_resolve_and_link_participant_idempotent_check_before_insert(
     ).scalars().all()
     assert len(participants) == 1
     assert counters["participants_created"] == 1
+
+
+# ===========================================================================
+# 29-09 (CR-01 gap closure): per-docket question_number derivation +
+# distinct docket_question_conflict counter
+# ===========================================================================
+
+
+@pytest.mark.asyncio
+async def test_docket_already_at_question_number_1_imports_at_question_number_2(
+    isolated_session, tmp_path
+):
+    """
+    A docket already occupying question_number=1 (as if from the PDF
+    pipeline, no oyez_transcript_id) does not collide with a corpus-
+    imported conversation for the same docket -- the corpus record is
+    imported at question_number=2 instead of being silently dropped
+    (29-VERIFICATION.md CR-01, reargued-case / PDF-overlap scenario).
+    """
+    pdf_case = Case(
+        docket_number="55-71",
+        docket_number_norm="5571",
+        case_name="Smith v. Jones (PDF ingest)",
+        term_year=1955,
+        slug="smith-v-jones-pdf-ingest",
+    )
+    isolated_session.add(pdf_case)
+    await isolated_session.flush()
+    pdf_argument = Argument(
+        source_docket="55-71",
+        question_number=1,
+        status=ArgumentStatusEnum.DRAFT,
+    )
+    isolated_session.add(pdf_argument)
+    await isolated_session.flush()
+    pdf_argument_id = pdf_argument.id
+
+    corpus_dir = _write_corpus_fixture(
+        tmp_path, _CONVERSATION_1955_71, [_CASE_1955_71], _SPEAKERS
+    )
+    args = _args(1955, corpus_dir)
+
+    with patch(
+        "pipeline.commands.import_convokit.get_session",
+        new=_make_session_cm(isolated_session),
+    ):
+        await run_import_convokit(args)
+
+    corpus_argument = (
+        await isolated_session.execute(
+            select(Argument).where(Argument.oyez_transcript_id == "1955_71")
+        )
+    ).scalar_one()
+    assert corpus_argument.question_number == 2
+
+    # The pre-existing PDF-ingested row at question_number=1 must still be
+    # present -- both rows coexist for this docket, neither was dropped.
+    pdf_row_still_present = (
+        await isolated_session.execute(
+            select(Argument).where(
+                Argument.source_docket == "55-71",
+                Argument.question_number == 1,
+            )
+        )
+    ).scalar_one_or_none()
+    assert pdf_row_still_present is not None
+    assert pdf_row_still_present.id == pdf_argument_id
+
+
+@pytest.mark.asyncio
+async def test_forced_collision_increments_docket_question_conflict_not_errored(
+    isolated_session, tmp_path, monkeypatch, capsys
+):
+    """
+    Safety-net path: when the per-docket question_number derivation itself
+    returns a colliding value (simulating a residual collision that
+    _next_question_number cannot prevent, e.g. a concurrent writer), the
+    IntegrityError raised at flush is caught, rolled back, and counted in a
+    DISTINCT docket_question_conflict counter -- never folded into
+    conversations_errored -- and no corpus Argument row is created
+    (29-VERIFICATION.md CR-01).
+    """
+    pdf_case = Case(
+        docket_number="55-71",
+        docket_number_norm="5571",
+        case_name="Smith v. Jones (PDF ingest)",
+        term_year=1955,
+        slug="smith-v-jones-pdf-collision",
+    )
+    isolated_session.add(pdf_case)
+    await isolated_session.flush()
+    isolated_session.add(
+        Argument(
+            source_docket="55-71",
+            question_number=1,
+            status=ArgumentStatusEnum.DRAFT,
+        )
+    )
+    await isolated_session.flush()
+
+    async def _always_collide(session, source_docket):
+        return 1  # forces a collision with the pre-existing question_number=1 row
+
+    monkeypatch.setattr(
+        "pipeline.commands.import_convokit._next_question_number", _always_collide
+    )
+
+    corpus_dir = _write_corpus_fixture(
+        tmp_path, _CONVERSATION_1955_71, [_CASE_1955_71], _SPEAKERS
+    )
+    args = _args(1955, corpus_dir)
+
+    with patch(
+        "pipeline.commands.import_convokit.get_session",
+        new=_make_session_cm(isolated_session),
+    ):
+        await run_import_convokit(args)
+
+    no_corpus_argument = (
+        await isolated_session.execute(
+            select(Argument).where(Argument.oyez_transcript_id == "1955_71")
+        )
+    ).scalar_one_or_none()
+    assert no_corpus_argument is None, (
+        "A conversation that hits a docket/question collision at flush "
+        "must not create a corpus Argument row."
+    )
+
+    captured = capsys.readouterr()
+    summary_line = next(
+        line for line in captured.out.splitlines() if line.startswith("Term 1955:")
+    )
+    assert "0 conversations errored" in summary_line
+    assert "1 docket/question conflicts" in summary_line

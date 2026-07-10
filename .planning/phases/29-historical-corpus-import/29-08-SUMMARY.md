@@ -137,3 +137,7 @@ None — no external service configuration required. No migration is required (`
 ---
 *Phase: 29-historical-corpus-import*
 *Completed: 2026-07-10*
+
+## Self-Check: PASSED
+
+All created/modified files confirmed present on disk; all three commit hashes (b7467715, e8d7c285, afbca408) confirmed in git log.

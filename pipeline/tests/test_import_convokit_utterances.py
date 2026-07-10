@@ -33,6 +33,8 @@ import pytest
 from sqlalchemy import select
 
 from api.models.models import Argument, PipelineRun, SideEnum, Utterance
+from api.schemas.utterance import ArgumentUtterancesResponse
+from api.services.arguments import get_argument_with_utterances
 from pipeline.commands.import_convokit import run_import_convokit
 
 # ===========================================================================
@@ -408,6 +410,68 @@ async def test_every_utterance_has_pipeline_run_id_and_unique_sequence(
     bench_row = rows[1]
     assert bench_row.side == SideEnum.BENCH
     assert bench_row.raw_speaker_label == "Earl Warren"
+
+
+@pytest.mark.asyncio
+async def test_utterances_readable_via_arguments_service_after_import(
+    isolated_session, tmp_path
+):
+    """
+    End-to-end regression test proving corpus-imported utterances are
+    actually retrievable through the real read path -- not merely that the
+    write-side query survives. Runs the real run_import_convokit orchestrator
+    (not a hand-built fixture) and the real get_argument_with_utterances
+    service against the same isolated_session, then constructs
+    ArgumentUtterancesResponse(**result) to prove the same content survives
+    the Pydantic round-trip the router relies on.
+
+    Before Task 1's step="parse" fix, result["utterances"] was always []
+    for a corpus-imported argument (max_run_id never resolved because the
+    PipelineRun was labeled step="ingest") -- this is the exact assertion
+    29-07-PLAN.md's own regression test explicitly declined to make.
+    """
+    utterances = [
+        {
+            "id": "u1",
+            "conversation_id": "1955_71",
+            "speaker": "adv__john_smith",
+            "text": "First turn.",
+        },
+        {
+            "id": "u2",
+            "conversation_id": "1955_71",
+            "speaker": "j__earl_warren",
+            "text": "Second turn, by the bench.",
+        },
+        {
+            "id": "u3",
+            "conversation_id": "1955_71",
+            "speaker": None,
+            "text": "(Recess)",
+        },
+    ]
+    argument = await _run_and_fetch_argument(isolated_session, tmp_path, utterances)
+
+    result = await get_argument_with_utterances(isolated_session, argument.id)
+
+    assert result is not None
+    assert len(result["utterances"]) == 3
+
+    assert result["utterances"][0]["raw_speaker_label"] == "John Smith"
+    assert result["utterances"][0]["text"] == "First turn."
+    assert result["utterances"][0]["side"] == SideEnum.PETITIONER
+
+    assert result["utterances"][1]["raw_speaker_label"] == "Earl Warren"
+    assert result["utterances"][1]["side"] == SideEnum.BENCH
+
+    assert result["utterances"][2]["is_stage_direction"] is True
+    assert result["utterances"][2]["raw_speaker_label"] is None
+
+    response = ArgumentUtterancesResponse(**result)
+    assert len(response.utterances) == 3
+    assert response.argument.oyez_transcript_id == "1955_71"
+    assert response.utterances[0].text == "First turn."
+    assert response.utterances[0].raw_speaker_label == "John Smith"
 
 
 @pytest.mark.asyncio

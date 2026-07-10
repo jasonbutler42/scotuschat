@@ -72,6 +72,9 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 
 from api.models.models import (
+    AdminJob,
+    AdminJobStatus,
+    AdminJobStep,
     Argument,
     ArgumentParticipant,
     ArgumentStatusEnum,
@@ -84,6 +87,7 @@ from api.models.models import (
     Utterance,
 )
 from pipeline.commands.ingest import _derive_slug
+from pipeline.commands.resolve import normalize_label
 from pipeline.corpus import apolitical, stage_directions
 from pipeline.corpus.loader import (
     load_cases,
@@ -326,6 +330,42 @@ async def _next_question_number(session, source_docket: str) -> int:
     return 1 if current_max is None else current_max + 1
 
 
+def _build_discrepancies(participants: list[ArgumentParticipant]) -> list[dict]:
+    """
+    Build one HIT-shaped discrepancy dict per already-resolved corpus
+    participant (D-05 parity), mirroring `pipeline.commands.resolve`'s
+    HIT-branch `discrepancies.append(...)` shape exactly (30-PATTERNS.md)
+    so `ResolveCard.svelte`'s per-row Action column (Confirm/Change/Create
+    person) renders unmodified for corpus jobs.
+
+    Only participants with a resolved `person_id` are included -- there is
+    no MISS branch here (corpus speakers are always resolved to a Person
+    by `_resolve_and_link_participant` before this is called; a `None`
+    entry in `resolved_participants` means "no attributable speaker", not
+    "unresolved", and is filtered out by the caller before this function
+    ever sees it -- this second guard is defense-in-depth).
+
+    `auto_match_name` is `p.raw_speaker_label` (not a Person query) because
+    for corpus rows `full_name IS raw_speaker_label` (see
+    `_resolve_and_link_participant`). `auto_match_role` is always `None`
+    because corpus-imported Person rows never set `role_id` (Assumptions
+    Log A2).
+    """
+    return [
+        {
+            "raw_speaker_label": p.raw_speaker_label,
+            "normalized": normalize_label(p.raw_speaker_label),
+            "candidates": [],
+            "auto_match_id": p.person_id,
+            "auto_match_name": p.raw_speaker_label,
+            "auto_match_role": None,
+            "auto_resolved": True,
+        }
+        for p in participants
+        if p.person_id is not None
+    ]
+
+
 async def _import_conversation(
     session,
     conversation_id: str,
@@ -395,7 +435,11 @@ async def _import_conversation(
         argued_date=argued_date,
         question_number=next_question_number,
         source_docket=case_fields["docket_no"],
-        status=ArgumentStatusEnum.DRAFT,  # D-06
+        # Phase 30 fix (supersedes Phase 29's D-06 for this write, see
+        # 30-RESEARCH.md Pitfall 1): every read path that gates Resolve-card
+        # editability keys on ArgumentStatusEnum.PIPELINE, so a corpus
+        # argument must start there, not DRAFT, to ever become editable.
+        status=ArgumentStatusEnum.PIPELINE,
         oyez_transcript_id=conversation_id,  # D-10
     )
     session.add(argument)

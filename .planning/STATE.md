@@ -6,14 +6,14 @@ current_phase: 30
 current_phase_name: corpus-import-resolve-workflow
 status: executing
 stopped_at: Phase 30 UI-SPEC approved
-last_updated: "2026-07-10T20:33:24.163Z"
+last_updated: "2026-07-10T20:42:19.803Z"
 last_activity: 2026-07-10
 last_activity_desc: Phase 30 execution started
 progress:
   total_phases: 9
   completed_phases: 7
   total_plans: 49
-  completed_plans: 46
+  completed_plans: 47
   percent: 78
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-07-09 after Phase 27 completion)
 
 Phase: 30 (corpus-import-resolve-workflow) — EXECUTING
 Stage: Ready to plan
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-07-10 — Phase 30 execution started
 
@@ -145,6 +145,8 @@ Full log in PROJECT.md Key Decisions table. Key decisions entering v1.5:
 - [Phase ?]: 30-01: AdminJob insertion placed immediately after _import_utterances returns -- bench Justice participants are only discovered while streaming utterances
 - [Phase ?]: 30-01: _build_discrepancies() built from ArgumentParticipant rows, mirroring resolve.py's exact 7-key HIT shape so ResolveCard.svelte renders unmodified for corpus jobs
 - [Phase ?]: 30-01: No separate commit/flush or create_job() reuse for the AdminJob insert -- get_session()'s context manager commits the whole per-conversation transaction atomically
+- [Phase 30]: 30-02: get_job()'s exists() correlates on the already-loaded job.argument_id Python value (not a second AdminJob-correlated subquery) since a single-row lookup has no need to join back to AdminJob
+- [Phase 30]: 30-02: PIPELINE_RUN_STRATEGY imported from pipeline.commands.import_convokit into api/services/admin_jobs.py, following the established cross-layer import precedent (normalize_label)
 
 ### Roadmap Evolution
 
@@ -214,9 +216,10 @@ Deployment blockers (v1.4, unresolved — not in v1.5 scope):
 | Phase 29 P08 | 10min | 2 tasks | 3 files |
 | Phase 29 P09 | 20min | 2 tasks | 2 files |
 | Phase 30 P01 | 20min | 2 tasks | 3 files |
+| Phase 30 P02 | 15min | 2 tasks | 3 files |
 
 ## Session Continuity
 
-Last session: 2026-07-10T20:31:55.285Z
+Last session: 2026-07-10T20:42:01.461Z
 Stopped at: Phase 30 UI-SPEC approved
 Resume file: .planning/phases/30-corpus-import-resolve-workflow/30-UI-SPEC.md

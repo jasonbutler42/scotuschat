@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: Admin Screens Cleanup
-current_phase: 30
-current_phase_name: corpus-import-resolve-workflow
+current_phase: 999.1
+current_phase_name: BACKLOG
 status: verifying
 stopped_at: Completed 30-04-PLAN.md — Phase 30 complete (4/4 plans)
-last_updated: "2026-07-10T22:11:03.702Z"
+last_updated: "2026-07-10T22:37:48.203Z"
 last_activity: 2026-07-10
-last_activity_desc: Phase 30 execution started
+last_activity_desc: Phase 30 complete, transitioned to Phase 999.1
 progress:
   total_phases: 9
   completed_phases: 8
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-07-09 after Phase 27 completion)
 
 ## Current Position
 
-Phase: 30 (corpus-import-resolve-workflow) — EXECUTING
+Phase: 999.1 — Click-to-copy extracted values design pattern (BACKLOG)
 Stage: Ready to plan
-Plan: 4 of 4
+Plan: Not started
 Status: Phase complete — ready for verification
-Last activity: 2026-07-10 — Phase 30 execution started
+Last activity: 2026-07-10 — Phase 30 complete, transitioned to Phase 999.1
 
 Progress: [████████████████████] 36/36 plans (100%). Phase 27 is now fully verified complete: 5th UAT retest passed all 7 items (including the CR-01/CR-02 data-preservation round-trips previously blocked by the effect_update_depth_exceeded regression), 27-SECURITY.md shows threats_open: 0, and 27-VERIFICATION.md status is canonically `passed`. `completed_phases` in this file's frontmatter is correctly at 6/7 (86%).
 

@@ -7,32 +7,36 @@ import pytest
 
 
 def test_all_tables_count():
-    """All 12 ORM model tables must be importable from api.models.models."""
+    """All 13 ORM model tables must be importable from api.models.models."""
     from api.models.models import Base
     tables = list(Base.metadata.tables.keys())
-    assert len(tables) == 12, f"Expected 12 tables, got {len(tables)}: {tables}"
+    assert len(tables) == 13, f"Expected 13 tables, got {len(tables)}: {tables}"
 
 
 def test_expected_table_names():
-    """All 12 exact table names must be present."""
+    """All 13 exact table names must be present."""
     from api.models.models import Base
     tables = set(Base.metadata.tables.keys())
     expected = {
         "roles", "people", "court_tenures", "cases", "arguments",
         "case_arguments", "case_appearances", "argument_participants",
         "pipeline_runs", "utterances", "speaker_alias", "admin_jobs",
+        "argument_status_log",
     }
     assert tables == expected, f"Table mismatch: {tables.symmetric_difference(expected)}"
 
 
 def test_side_enum_values():
-    """SideEnum must have exactly BENCH, ADVOCATE, UNKNOWN."""
+    """SideEnum must have exactly BENCH, ADVOCATE, UNKNOWN, PETITIONER, RESPONDENT, AMICUS."""
     from api.models.models import SideEnum
     values = [e.value for e in SideEnum]
     assert "BENCH" in values
     assert "ADVOCATE" in values
     assert "UNKNOWN" in values
-    assert len(values) == 3
+    assert "PETITIONER" in values
+    assert "RESPONDENT" in values
+    assert "AMICUS" in values
+    assert len(values) == 6
 
 
 def test_pipeline_run_status_values():

@@ -6,14 +6,14 @@ current_phase: 29
 current_phase_name: historical-corpus-import
 status: executing
 stopped_at: Phase 29 UI-SPEC approved
-last_updated: "2026-07-09T23:24:07.303Z"
+last_updated: "2026-07-10T11:15:27.181Z"
 last_activity: 2026-07-09
 last_activity_desc: Phase 29 execution started
 progress:
   total_phases: 8
   completed_phases: 6
   total_plans: 42
-  completed_plans: 39
+  completed_plans: 40
   percent: 75
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-07-09 after Phase 27 completion)
 
 Phase: 29 (historical-corpus-import) — EXECUTING
 Stage: Ready to plan
-Plan: 4 of 6
+Plan: 5 of 6
 Status: Ready to execute
 Last activity: 2026-07-09 — Phase 29 execution started
 
@@ -128,6 +128,8 @@ Full log in PROJECT.md Key Decisions table. Key decisions entering v1.5:
 - [Phase ?]: 29-03: reconstruct_full_name is a plain concatenation (no punctuation synthesis needed) since the CSV's Middle Name or Initial column already embeds the trailing period for single-initial values; no MANUAL_NAME_OVERRIDES entries were needed for the 13 seeded justices
 - [Phase ?]: 29-03: court_tenures.seat for CSV-imported justices uses the CSV section header text itself (Chief Justice / Associate Justice), per RESEARCH.md Open Question 2
 - [Phase ?]: 29-03: Task 2 integration tests use a dedicated per-test engine/session fixture (isolated_session) instead of conftest.py's shared session-scoped engine fixture, avoiding a pre-existing Windows asyncpg/pytest-asyncio stale-event-loop failure without touching conftest.py
+- [Phase 29-06]: oyez_transcript_id is the only corpus-sourced signal added to the public payload (no outcome/vote data), preserving apolitical constraint on public surface
+- [Phase 29-06]: Per-argument attribution note visibility computed server-side in +page.server.ts, never in browser code (Architecture Rule 2)
 
 ### Roadmap Evolution
 
@@ -190,9 +192,10 @@ Deployment blockers (v1.4, unresolved — not in v1.5 scope):
 | Phase 29 P01 | 15min | 3 tasks | 6 files |
 | Phase 29 P02 | 12min | 3 tasks | 7 files |
 | Phase 29-historical-corpus-import P03 | 25min | 3 tasks | 3 files |
+| Phase 29 P06 | 12min | 3 tasks | 8 files |
 
 ## Session Continuity
 
-Last session: 2026-07-09T23:23:07.315Z
+Last session: 2026-07-10T11:14:32.851Z
 Stopped at: Phase 29 UI-SPEC approved
 Resume file: .planning/phases/29-historical-corpus-import/29-UI-SPEC.md

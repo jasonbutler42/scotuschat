@@ -5,8 +5,8 @@ milestone_name: Admin Screens Cleanup
 current_phase: 999.1
 current_phase_name: BACKLOG
 status: executing
-stopped_at: Phase 30 context gathered
-last_updated: "2026-07-10T19:30:42.451Z"
+stopped_at: Phase 30 UI-SPEC approved
+last_updated: "2026-07-10T19:38:36.198Z"
 last_activity: 2026-07-10
 last_activity_desc: Phase 29 complete, transitioned to Phase 999.1
 progress:
@@ -212,6 +212,6 @@ Deployment blockers (v1.4, unresolved — not in v1.5 scope):
 
 ## Session Continuity
 
-Last session: 2026-07-10T19:30:42.437Z
-Stopped at: Phase 30 context gathered
-Resume file: .planning/phases/30-corpus-import-resolve-workflow/30-CONTEXT.md
+Last session: 2026-07-10T19:38:36.185Z
+Stopped at: Phase 30 UI-SPEC approved
+Resume file: .planning/phases/30-corpus-import-resolve-workflow/30-UI-SPEC.md

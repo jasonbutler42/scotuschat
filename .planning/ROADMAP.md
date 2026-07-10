@@ -568,8 +568,15 @@ Plans:
 **Plans:** 4 plans
 
 Plans:
+**Wave 1**
 
 - [ ] 30-01-PLAN.md — Pipeline write-path fix: Argument.status→PIPELINE + paired PAUSED/RESOLVE AdminJob + HIT-shaped discrepancies (crux; D-01, D-03, D-05)
 - [ ] 30-02-PLAN.md — API `source` derived field on AdminJobResponse via exists() in list_jobs()/get_job() (no migration)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 30-03-PLAN.md — Pipeline list "Source" tag/column (PDF vs Corpus), list page only (D-05 scope boundary)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 30-04-PLAN.md — Operator runbook: FK-safe scoped wipe + re-import of the term-1955 batch (D-02)

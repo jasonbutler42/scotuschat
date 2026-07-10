@@ -90,3 +90,108 @@ async def test_utterances_payload_includes_oyez_transcript_id(client: AsyncClien
 
     body = response.json()
     assert "oyez_transcript_id" in body["argument"]
+
+
+# ---------------------------------------------------------------------------
+# Test 3: ArgumentMetadataResponse accepts a null argued_date — no database
+# ---------------------------------------------------------------------------
+#
+# Regression test for 29-VERIFICATION.md gap #13 / 29-REVIEW.md CR-01: prior
+# to this plan's fix, constructing this model with argued_date=None raised
+# pydantic.ValidationError: "Input should be a valid date [type=date_type]".
+# Real historical rows imported via pipeline/commands/import_convokit.py's
+# _parse_argued_date legitimately produce None when cases.jsonl has no
+# parseable transcript date.
+
+
+def test_argument_metadata_response_accepts_null_argued_date() -> None:
+    """Constructing ArgumentMetadataResponse with argued_date=None must not raise."""
+    from api.schemas.utterance import ArgumentMetadataResponse
+
+    response = ArgumentMetadataResponse(
+        argument_id=99,
+        case_name="Synthetic Historical Case",
+        docket_number="1955-71",
+        argued_date=None,
+        question_number=1,
+        oyez_transcript_id="13127",
+    )
+    assert response.argued_date is None
+
+
+# ---------------------------------------------------------------------------
+# Test 4: GET /arguments/{id}/utterances survives a null argued_date — DB-gated
+# ---------------------------------------------------------------------------
+#
+# Exercises the real get_argument_with_utterances() -> ArgumentUtterancesResponse
+# construction path directly (no HTTP client, no api.main import) to avoid the
+# documented pre-existing FastAPI test lifespan/session-factory failure. Uses
+# the db_session rollback pattern from test_admin_jobs_phase25.py so this test
+# leaves no rows behind and is safely repeatable.
+
+
+@pytest_asyncio.fixture
+async def db_session():
+    """Async DB session seeded for this test, rolled back after (no leftover rows)."""
+    from api.core.database import AsyncSessionLocal
+
+    async with AsyncSessionLocal() as session:
+        async with session.begin():
+            yield session
+            await session.rollback()
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL with a live schema")
+async def test_utterances_endpoint_returns_200_for_null_argued_date(db_session) -> None:
+    """
+    get_argument_with_utterances() -> ArgumentUtterancesResponse must not raise
+    for an Argument with argued_date=None — this is the exact 500 (previously
+    ResponseValidationError) that GET /arguments/{id}/utterances raised for
+    corpus-imported arguments before this plan's fix.
+
+    Does not assert on response.utterances length/contents: whether any
+    utterances are returned for a corpus-imported row depends on a separate,
+    out-of-scope PipelineRun.step="ingest" vs. get_argument_with_utterances'
+    step=="parse" filter mismatch (see this plan's <objective>) — an empty
+    utterances list is still a valid 200 response for this test's purpose.
+    """
+    from api.models.models import (
+        Argument,
+        ArgumentStatusEnum,
+        Case,
+        CaseArgument,
+    )
+    from api.schemas.utterance import ArgumentUtterancesResponse
+    from api.services.arguments import get_argument_with_utterances
+
+    case = Case(
+        docket_number="1955-99-CR01-TEST",
+        docket_number_norm="195599CR01TEST",
+        case_name="Synthetic Null-Date Case (CR-01 regression)",
+        term_year=1955,
+        slug="synthetic-null-date-case-cr01-test",
+        oyez_case_id="1955_test_cr01",
+    )
+    db_session.add(case)
+    await db_session.flush()
+
+    argument = Argument(
+        argued_date=None,
+        question_number=1,
+        source_docket="1955-99-CR01-TEST",
+        status=ArgumentStatusEnum.DRAFT,
+        oyez_transcript_id="synthetic-null-date-transcript-cr01",
+    )
+    db_session.add(argument)
+    await db_session.flush()
+
+    case_argument = CaseArgument(case_id=case.id, argument_id=argument.id, is_lead=True)
+    db_session.add(case_argument)
+    await db_session.flush()
+
+    result = await get_argument_with_utterances(db_session, argument.id)
+    assert result is not None
+
+    response = ArgumentUtterancesResponse(**result)
+    assert response.argument.argued_date is None

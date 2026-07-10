@@ -35,9 +35,9 @@ async def db_session():
     Requires DATABASE_URL to be set. Each test gets a fresh transaction
     that is rolled back, so seeded rows do not persist across tests.
     """
-    from api.core.database import async_session_factory
+    from api.core.database import AsyncSessionLocal
 
-    async with async_session_factory() as session:
+    async with AsyncSessionLocal() as session:
         async with session.begin():
             yield session
             await session.rollback()

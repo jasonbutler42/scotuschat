@@ -25,17 +25,37 @@ Usage:
 from __future__ import annotations
 
 import argparse
+from datetime import date
 from pathlib import Path
 
+from dateutil import parser as dateutil_parser
+from sqlalchemy import select
+
+from api.models.models import (
+    Argument,
+    ArgumentStatusEnum,
+    Case,
+    CaseArgument,
+    PipelineRun,
+    PipelineRunStatus,
+)
+from pipeline.commands.ingest import _derive_slug
+from pipeline.corpus import apolitical
 from pipeline.corpus.loader import (
     load_cases,
     load_conversations_for_term,
     load_speakers,
 )
+from pipeline.db import get_session
 
 # Matches the data/corpus/ scaffolding (D-20/D-21) -- the operator copies the
 # ConvoKit source files here locally; it is gitignored, not tracked.
 DEFAULT_CORPUS_DIR = Path("data/corpus")
+
+# D-09: every argument imported by this command gets a real pipeline_runs
+# row stamped with this strategy value, ahead of any utterance write path
+# (Utterance.pipeline_run_id is NOT NULL, T-29-09).
+PIPELINE_RUN_STRATEGY = "convokit_import"
 
 
 # ---------------------------------------------------------------------------
@@ -105,10 +125,71 @@ def _resolve_corpus_dir(args) -> Path:
 
 
 # ---------------------------------------------------------------------------
-# Per-conversation entity creation -- Task 2 implements the real logic;
-# this skeleton stage just counts conversations seen so the per-term loop
-# below is fully wired end-to-end.
+# Task 2: per-conversation entity creation (Case/Argument/CaseArgument/PipelineRun)
 # ---------------------------------------------------------------------------
+
+
+def _parse_argued_date(case_fields: dict) -> date | None:
+    """
+    Parse an argued_date from the first entry of cases.jsonl's allowlisted
+    "transcripts" list (e.g. "Oral Argument - November 15, 1955"), via
+    dateutil fuzzy parsing (RESEARCH.md Standard Stack). None-safe: returns
+    None when there is no transcripts entry or no parseable date
+    (Argument.argued_date is nullable, matching ingest.py's D-08 precedent).
+    """
+    transcripts = case_fields.get("transcripts") or []
+    if not transcripts:
+        return None
+    first = transcripts[0]
+    name = first.get("name") if isinstance(first, dict) else None
+    if not name:
+        return None
+    try:
+        return dateutil_parser.parse(name, fuzzy=True).date()
+    except (ValueError, OverflowError):
+        return None
+
+
+def _case_name_from_fields(case_fields: dict) -> str:
+    """Prefer cases.jsonl's "title"; fall back to "{petitioner} v. {respondent}"."""
+    title = case_fields.get("title")
+    if title:
+        return title
+    petitioner = case_fields.get("petitioner") or "Unknown"
+    respondent = case_fields.get("respondent") or "Unknown"
+    return f"{petitioner} v. {respondent}"
+
+
+async def _get_or_create_case(session, case_fields: dict, counters: dict) -> Case:
+    """
+    Idempotent Case create (select on Case.docket_number, D-08). term_year
+    comes DIRECTLY from cases.jsonl's allowlisted "year" field (D-15) --
+    never derived from argued_date's calendar year. Lead-docket-only
+    (D-19): this is the single Case row for the conversation's docket; no
+    consolidated-companion sourcing happens here.
+
+    Increments counters["cases_created"] only when a new row is actually
+    created (not on the reuse-existing path).
+    """
+    docket = case_fields["docket_no"]
+    result = await session.execute(select(Case).where(Case.docket_number == docket))
+    existing = result.scalar_one_or_none()
+    if existing is not None:
+        return existing
+
+    case_name = _case_name_from_fields(case_fields)
+    new_case = Case(
+        docket_number=docket,
+        docket_number_norm=docket.replace("-", ""),
+        case_name=case_name,
+        term_year=case_fields["year"],  # D-15 -- never int(argued_date[:4])
+        slug=_derive_slug(case_name),
+        oyez_case_id=case_fields.get("case_id"),  # D-10
+    )
+    session.add(new_case)
+    await session.flush()
+    counters["cases_created"] += 1
+    return new_case
 
 
 async def _import_conversation(
@@ -120,12 +201,79 @@ async def _import_conversation(
     counters: dict,
 ) -> None:
     """
-    Import one conversation -- Case/Argument/CaseArgument/PipelineRun
-    scaffolding (Task 2) + speaker resolution (Task 3) land here in
-    subsequent tasks. This skeleton stage records that the conversation was
-    reached by the per-term loop.
+    Import one conversation: idempotent Case/Argument/CaseArgument/
+    PipelineRun scaffolding (Task 2). Speaker resolution (Task 3) lands in
+    the next task.
+
+    Never raises for an anticipated bad/missing join -- increments
+    counters["flagged"] and returns early (T-29-05b / RESEARCH Pitfall 5)
+    so one malformed conversation doesn't abort the whole term batch. Truly
+    unexpected exceptions are left to propagate to the caller's per-row
+    try/except (run_import_convokit), which also flags and continues.
     """
-    counters["seen"] = counters.get("seen", 0) + 1
+    conversation = apolitical.extract_conversation_fields(raw_conversation)
+
+    raw_case = cases_by_case_id.get(conversation["case_id"])
+    if raw_case is None:
+        counters["flagged"] += 1
+        print(
+            f"WARNING: conversation {conversation_id!r} (case_id="
+            f"{conversation['case_id']!r}) has no matching cases.jsonl row "
+            "-- flagged, skipped."
+        )
+        return
+
+    case_fields = apolitical.extract_case_fields(raw_case)
+    if not case_fields.get("docket_no") or not case_fields.get("year"):
+        counters["flagged"] += 1
+        print(
+            f"WARNING: conversation {conversation_id!r} case row is missing "
+            "docket_no/year -- flagged, skipped."
+        )
+        return
+
+    # ---- Idempotent Argument dedup on oyez_transcript_id (D-08) ----
+    existing_argument_result = await session.execute(
+        select(Argument).where(Argument.oyez_transcript_id == conversation_id)
+    )
+    if existing_argument_result.scalar_one_or_none() is not None:
+        counters["skipped_existing"] += 1
+        return
+
+    case = await _get_or_create_case(session, case_fields, counters)
+
+    argued_date = _parse_argued_date(case_fields)
+
+    argument = Argument(
+        argued_date=argued_date,
+        question_number=1,
+        source_docket=case_fields["docket_no"],
+        status=ArgumentStatusEnum.DRAFT,  # D-06
+        oyez_transcript_id=conversation_id,  # D-10
+    )
+    session.add(argument)
+    await session.flush()
+    counters["arguments_created"] += 1
+
+    # ---- CaseArgument (lead-docket-only, D-19) ----
+    link_result = await session.execute(
+        select(CaseArgument).where(
+            CaseArgument.case_id == case.id,
+            CaseArgument.argument_id == argument.id,
+        )
+    )
+    if link_result.scalar_one_or_none() is None:
+        session.add(CaseArgument(case_id=case.id, argument_id=argument.id, is_lead=True))
+
+    # ---- PipelineRun -- BEFORE any utterance write path (T-29-09) ----
+    run = PipelineRun(
+        argument_id=argument.id,
+        step="ingest",
+        status=PipelineRunStatus.COMPLETED,
+        strategy=PIPELINE_RUN_STRATEGY,  # D-09
+    )
+    session.add(run)
+    await session.flush()
 
 
 # ---------------------------------------------------------------------------
@@ -165,17 +313,35 @@ async def run_import_convokit(args) -> None:
 
     for term in terms:
         conversations = load_conversations_for_term(conversations_path, term)
-        counters: dict = {}
+        counters = {
+            "cases_created": 0,
+            "arguments_created": 0,
+            "skipped_existing": 0,
+            "participants_created": 0,
+            "flagged": 0,
+        }
         for conversation_id, raw_conversation in conversations.items():
-            await _import_conversation(
-                session=None,
-                conversation_id=conversation_id,
-                raw_conversation=raw_conversation,
-                cases_by_case_id=cases_by_case_id,
-                speakers_index=speakers_index,
-                counters=counters,
-            )
+            try:
+                async with get_session() as session:
+                    await _import_conversation(
+                        session=session,
+                        conversation_id=conversation_id,
+                        raw_conversation=raw_conversation,
+                        cases_by_case_id=cases_by_case_id,
+                        speakers_index=speakers_index,
+                        counters=counters,
+                    )
+            except Exception as exc:  # per-row resilience, T-29-05b/Pitfall 5
+                counters["flagged"] += 1
+                print(
+                    f"WARNING: conversation {conversation_id!r} raised "
+                    f"{exc!r} -- flagged, term continues."
+                )
+
         print(
-            f"Term {term}: {counters.get('seen', 0)} conversations seen "
-            "(entity creation lands in Task 2)."
+            f"Term {term}: {counters['arguments_created']} arguments created, "
+            f"{counters['skipped_existing']} already existed, "
+            f"{counters['cases_created']} cases created, "
+            f"{counters['participants_created']} participants created, "
+            f"{counters['flagged']} conversations flagged."
         )

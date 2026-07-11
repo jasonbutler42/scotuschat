@@ -94,7 +94,7 @@ Supporting semantic colors reused from the existing palette (not new, but requir
 | Arguments — Published count | `{n} Published` (link) | `/admin/arguments?status=published` |
 | Arguments — Draft count | `{n} Draft` (link) | `/admin/arguments?status=draft` (same target as the Drafts Needs Attention "View all") |
 | Arguments — Unpublished count | `{n} Unpublished` (link) | `/admin/arguments?status=unpublished` |
-| People — incomplete count | `{n} missing fields → Review` | `/admin/people?tab={bench\|advocate}` unfiltered, per D-05 |
+| People — incomplete count | `{n} missing fields → Review` | `/admin/people` (literal path, no query params — combined bench+advocate count lands on the page default tab, per D-05 as amended) |
 | Utterances | no CTA — count only, no linked admin screen exists for utterances | n/a |
 | Pipeline runs | `View all runs →` | `/admin/pipeline` unfiltered, per D-07 |
 
@@ -106,7 +106,7 @@ Supporting semantic colors reused from the existing palette (not new, but requir
 | Sub-list heading — People | `People` |
 | Sub-list heading — Justices | `Justices` |
 | Sub-list heading — Drafts | `Drafts` |
-| Per-row "View all" link (People) | `View all →` → `/admin/people?tab={bench\|advocate}` unfiltered (D-05) |
+| Per-row "View all" link (People) | `View all →` → `/admin/people` (literal path, no query params — combined bench+advocate list lands on the page default tab, per D-05 as amended) |
 | Per-row "View all" link (Justices) | `View all →` → `/admin/people?tab=bench&tenure_gaps=1` (D-06) |
 | Per-row "View all" link (Drafts) | `View all →` → `/admin/arguments?status=draft` (D-04) |
 | Empty sub-list — People | `No people currently have missing fields.` |

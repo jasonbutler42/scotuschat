@@ -4,14 +4,14 @@ milestone: v1.5
 milestone_name: Admin Screens Cleanup
 current_phase: 30.1
 current_phase_name: close-gap-aedit-04-dash-02-wire-argumentdetailscard-status-f
-status: verifying
-stopped_at: Completed 30.1-02-PLAN.md
-last_updated: "2026-07-11T18:28:14.398Z"
+status: executing
+stopped_at: Completed 30.1-03-PLAN.md
+last_updated: "2026-07-11T20:28:48.011Z"
 progress:
   total_phases: 10
   completed_phases: 10
-  total_plans: 54
-  completed_plans: 54
+  total_plans: 55
+  completed_plans: 55
   percent: 100
 ---
 
@@ -28,8 +28,8 @@ See: .planning/PROJECT.md (updated 2026-07-09 after Phase 27 completion)
 
 Phase: 30.1 (close-gap-aedit-04-dash-02-wire-argumentdetailscard-status-f) — EXECUTING
 Stage: Gap-closure phase inserted after milestone audit; awaiting `/gsd-discuss-phase 30.1`.
-Plan: 2 of 2
-Status: Phase complete — ready for verification
+Plan: 3 of 3
+Status: Ready to execute
 
 **Known roadmap bookkeeping gap (not blocking):** `/gsd-execute-phase 28`'s auto-transition suggested "next: Phase 29" — this is misleading. Phases 29 (Historical Corpus Import) and 30 (Corpus Import Resolve Workflow) were already executed and verified (`passed`) out of order, in a separate session, before Phase 28 was finished. Phase 29 specifically has `roadmap_complete: false` in `roadmap.analyze` output even though its disk status and VERIFICATION.md are both fully complete — its checkbox was never added to ROADMAP.md's `## Phases > v1.5` checklist section (only Phases 22-28 are listed there). This is a documentation-only gap; no code or plan work is missing. Worth a small `/gsd-phase` housekeeping pass to add proper checklist entries for 29/30, but does not block milestone completion.
 
@@ -160,6 +160,8 @@ Full log in PROJECT.md Key Decisions table. Key decisions entering v1.5:
 - [Phase ?]: 30.1-01: status filter guarded by an allow-list membership check against ArgumentStatusEnum.value strings BEFORE ArgumentStatusEnum(status) is ever called - unrecognized/absent values fall through to the full unfiltered list, never raise, never 422 (D-05)
 - [Phase 30.1]: 30.1-02: saveArgumentDetails derives argument id solely from params.id (never a form field), and never sends case_name, matching the Case card's sole ownership and the project IDOR convention (T-30.1-04/T-30.1-05)
 - [Phase 30.1]: 30.1-02: argued_date deleted (not hidden) from the Case card form/action; lives solely in ArgumentDetailsCard/saveArgumentDetails going forward
+- [Phase 30.1]: 30.1-03: arguments.question_number nullable via migration 0019, full parity with argued_date (blank = NULL = unknown)
+- [Phase 30.1]: 30.1-03: IntegrityError handling in update_argument_metadata is defense-in-depth only -- post-migration 0019 the blank-question_number path no longer raises it
 
 ### Roadmap Evolution
 
@@ -238,9 +240,10 @@ Deployment blockers (v1.4, unresolved — not in v1.5 scope):
 | Phase 28 P03 | 25min | 3 tasks | 3 files |
 | Phase 30.1 P01 | 5min | 3 tasks | 5 files |
 | Phase 30.1 P02 | 12min | 2 tasks | 2 files |
+| Phase 30.1 P03 | 20min | 2 tasks | 6 files |
 
 ## Session Continuity
 
-Last session: 2026-07-11T18:28:14.384Z
-Stopped at: Completed 30.1-02-PLAN.md
+Last session: 2026-07-11T20:28:47.996Z
+Stopped at: Completed 30.1-03-PLAN.md
 Resume file: None

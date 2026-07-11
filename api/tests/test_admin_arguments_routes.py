@@ -140,6 +140,33 @@ async def test_unpublish_argument_wrong_token_returns_401(client_no_db: AsyncCli
     assert response.status_code == 401
 
 
+@pytest.mark.asyncio
+async def test_list_arguments_status_param_route_resolution_returns_401_not_422(
+    client_no_db: AsyncClient,
+) -> None:
+    """GET /api/admin/arguments?status=... must return 401 (not 422) regardless of
+    whether the status value is recognized (DASH-02, D-05, Task 1).
+
+    Proves the new `status` query param is accepted at the route-signature layer
+    (no 422 unprocessable-entity at query-parsing) and that auth still fires
+    before any DB access — mirroring the sibling wrong-token tests above, this
+    uses client_no_db so no live database is required.
+    """
+    # A recognized value must not trip a 422 at the query-parsing layer.
+    response = await client_no_db.get(
+        "/api/admin/arguments?status=draft", headers=_WRONG_TOKEN_HEADERS
+    )
+    assert response.status_code == 401
+
+    # An unrecognized value must likewise never 422 — the route accepts any
+    # string; the service-layer allow-list guard (Task 1) decides what to do
+    # with it, never the route/query-parsing layer (D-05).
+    response = await client_no_db.get(
+        "/api/admin/arguments?status=bogus", headers=_WRONG_TOKEN_HEADERS
+    )
+    assert response.status_code == 401
+
+
 # ---------------------------------------------------------------------------
 # DB-guarded tests — skipped when DATABASE_URL is not configured
 # ---------------------------------------------------------------------------

@@ -53,6 +53,10 @@ type ArgumentDetail = {
 	tenure_gap_warnings: TenureGapWarning[];
 	status_log: StatusLogEntry[];
 	speakers: SpeakerRow[];
+	source_docket: string | null;
+	source_dockets: string[];
+	cover_metadata: Record<string, unknown> | null;
+	question_number: number | null;
 };
 
 export const load: PageServerLoad = async ({ fetch, params }) => {
@@ -76,7 +80,36 @@ export const load: PageServerLoad = async ({ fetch, params }) => {
 	// are both blocked (T-21-01-PUB, T-26-11, Pitfall 4).
 	const can_delete = argument.status === 'draft';
 
-	return { argument, can_delete };
+	// Construct savedValues and hints for the second ArgumentDetailsCard consumer
+	// (AEDIT-04, mirroring the pipeline job detail page's Plan 23-03 derivation,
+	// adapted to source from the already-fetched `argument` — no second fetch needed).
+	// savedValues: operator-confirmed values from the Argument record.
+	// Pitfall 3: source_dockets defaults to [] (never null), so a bare `??` would
+	// never fall back to source_docket — an argument with only source_docket set
+	// would show an empty pill list. Use `.length ?` instead.
+	const savedValues = {
+		dockets: argument.source_dockets?.length
+			? argument.source_dockets
+			: argument.source_docket
+				? [argument.source_docket]
+				: [],
+		question_number: argument.question_number != null ? String(argument.question_number) : '',
+		argued_date: argument.argued_date ? argument.argued_date.slice(0, 10) : null,
+	};
+
+	// hints: raw extraction output from cover_metadata JSONB — always visible (D-04).
+	// question_number is frozen to null (existing project-wide decision 23-04):
+	// Argument.question_number is operator-editable, not an immutable extraction source.
+	const hints = {
+		dockets: argument.cover_metadata?.primary_docket
+			? [String(argument.cover_metadata.primary_docket)]
+			: [],
+		question_number: null,
+		argued_date: (argument.cover_metadata?.argued_date as string) ?? null,
+		case_name: (argument.cover_metadata?.case_name as string) ?? null,
+	};
+
+	return { argument, can_delete, savedValues, hints };
 };
 
 export const actions: Actions = {
@@ -116,7 +149,9 @@ export const actions: Actions = {
 	},
 
 	/**
-	 * save — PATCH /api/admin/arguments/{id} with the three editable fields.
+	 * save — PATCH /api/admin/arguments/{id} with the Case card's two editable fields.
+	 * argued_date is no longer part of this action (Pitfall 2) — it is edited solely
+	 * via the ArgumentDetailsCard's own saveArgumentDetails action below.
 	 * On slug_collision 422, surface the UI-SPEC error copy (D-11).
 	 * On success, redirect re-runs load returning fresh data.
 	 */
@@ -125,8 +160,6 @@ export const actions: Actions = {
 
 		const case_name = ((formData.get('case_name') as string) ?? '').trim();
 		const docket_number = ((formData.get('docket_number') as string) ?? '').trim();
-		const argued_date_raw = ((formData.get('argued_date') as string) ?? '').trim();
-		const argued_date = argued_date_raw || null;
 
 		let res: Response;
 		try {
@@ -136,7 +169,7 @@ export const actions: Actions = {
 					'X-Admin-Token': ADMIN_TOKEN,
 					'Content-Type': 'application/json',
 				},
-				body: JSON.stringify({ case_name, docket_number, argued_date }),
+				body: JSON.stringify({ case_name, docket_number }),
 			});
 		} catch {
 			return fail(502, { error: 'Could not save changes. Check your inputs and try again.' });
@@ -168,6 +201,54 @@ export const actions: Actions = {
 		}
 
 		throw redirect(303, '/admin/arguments/' + params.id);
+	},
+
+	/**
+	 * saveArgumentDetails — persist source_dockets, question_number, and argued_date
+	 * for this argument via the shared ArgumentDetailsCard's own action target (AEDIT-04).
+	 *
+	 * Mirrors the pipeline job detail page's saveJobMetadata, simplified: params.id
+	 * IS the argument id directly, no job-fetch indirection is needed. Argument id is
+	 * derived solely from params.id (never a form field) — matches every other action
+	 * on this page (V4 IDOR guard, T-30.1-04).
+	 *
+	 * CRITICAL (Pitfall 1 / WR-02): case_name is intentionally omitted from this PATCH
+	 * body — the Case card's ?/save action above is the sole owner of case_name, so it
+	 * can never be double-written from two actions.
+	 *
+	 * Does NOT redirect on success — ArgumentDetailsCard's own use:enhance expects
+	 * update({reset:false}) and renders its own "Saved." message; a redirect would
+	 * bypass that UI (RESEARCH.md Pattern 1 / A1).
+	 */
+	saveArgumentDetails: async ({ request, params, fetch }) => {
+		const data = await request.formData();
+		const dockets = (data.getAll('docket[]') as string[]).map((v) => v.trim()).filter(Boolean);
+		const question_number = ((data.get('question_number') as string) ?? '').trim();
+		const argued_date = ((data.get('argued_date') as string) ?? '').trim() || null;
+
+		let res: Response;
+		try {
+			res = await fetch(`${FASTAPI_BASE_URL}/api/admin/arguments/${params.id}/metadata`, {
+				method: 'PATCH',
+				headers: {
+					'X-Admin-Token': ADMIN_TOKEN,
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					source_dockets: dockets,
+					argued_date,
+					question_number: question_number || null,
+				}),
+			});
+		} catch {
+			return fail(502, { saveError: 'Could not save. Try again.', dockets });
+		}
+
+		if (!res.ok) {
+			return fail(422, { saveError: 'Could not save. Try again.', dockets });
+		}
+
+		return { saved: true };
 	},
 
 	/**

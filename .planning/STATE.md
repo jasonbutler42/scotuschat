@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: Admin Screens Cleanup
-current_phase: 28
-current_phase_name: dashboard
-status: verifying
-stopped_at: Completed 28-02-PLAN.md
-last_updated: "2026-07-11T12:55:58.333Z"
+current_phase: 999.1
+current_phase_name: BACKLOG
+status: ready
+stopped_at: Phase 28 verified complete (UAT 2/2 passed, SECURITY.md threats_open 0)
+last_updated: "2026-07-11T14:15:00.000Z"
 last_activity: 2026-07-11
-last_activity_desc: "Phase 28 Plan 03 (frontend) executed: StatCard.svelte, +page.server.ts load(), +page.svelte rewrite"
+last_activity_desc: Phase 28 fully verified and marked complete — all 9 known v1.5 phases (22-30) now execution-complete and verified
 progress:
   total_phases: 9
   completed_phases: 9
@@ -24,17 +24,18 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-09 after Phase 27 completion)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** Phase 28 — dashboard
+**Current focus:** All known v1.5 phases complete — milestone wrap-up decision needed
 
 ## Current Position
 
-Phase: 28 (dashboard) — ALL 3 PLANS EXECUTED
-Stage: Ready for phase-level verification (`/gsd-verify-work 28`)
-Plan: 3 of 3 — complete (28-01 backend data layer, 28-02 router endpoints, 28-03 frontend all have SUMMARY.md)
-Status: All plans executed — phase NOT yet verified (do not treat as Complete until `/gsd-verify-work 28` passes; see known GSD Roadmap Premature-Completion pattern, applied again this session in ROADMAP.md — Phase 28's checkbox/table row reverted from a premature "Complete"/date back to "In Progress" pending verification)
-Last activity: 2026-07-11 — Phase 28 Plan 03 (frontend) executed: StatCard.svelte, +page.server.ts load(), +page.svelte rewrite
+Phase: None active — all 9 known phases (22 through 30) are execution-complete and verified (`passed`).
+Stage: Milestone-boundary decision point.
+Plan: Not started
+Status: Phase 28 (Dashboard) fully verified this session — UAT 2/2 passed, 28-SECURITY.md threats_open: 0, 28-VERIFICATION.md status `passed`, ROADMAP checkbox/date correctly set to complete 2026-07-11.
 
-Progress: [████████████████████] 52/52 plans across all executed phases have SUMMARY.md (100% plan-execution coverage). This does NOT mean every phase is phase-verified — Phase 28 specifically is execution-complete but verification-pending as of this update. Phase 27 is fully verified complete: 5th UAT retest passed all 7 items (including the CR-01/CR-02 data-preservation round-trips previously blocked by the effect_update_depth_exceeded regression), 27-SECURITY.md shows threats_open: 0, and 27-VERIFICATION.md status is canonically `passed`.
+**Known roadmap bookkeeping gap (not blocking):** `/gsd-execute-phase 28`'s auto-transition suggested "next: Phase 29" — this is misleading. Phases 29 (Historical Corpus Import) and 30 (Corpus Import Resolve Workflow) were already executed and verified (`passed`) out of order, in a separate session, before Phase 28 was finished. Phase 29 specifically has `roadmap_complete: false` in `roadmap.analyze` output even though its disk status and VERIFICATION.md are both fully complete — its checkbox was never added to ROADMAP.md's `## Phases > v1.5` checklist section (only Phases 22-28 are listed there). This is a documentation-only gap; no code or plan work is missing. Worth a small `/gsd-phase` housekeeping pass to add proper checklist entries for 29/30, but does not block milestone completion.
+
+Progress: [████████████████████] 52/52 plans across all 9 known phases (22-30) have SUMMARY.md, and all 9 have VERIFICATION.md status `passed` (100%). Phase 27: 5th UAT retest passed all 7 items, 27-SECURITY.md threats_open: 0. Phase 28: UAT 2/2 passed, 28-SECURITY.md threats_open: 0. Phases 29/30: verified `passed` (executed in an earlier out-of-order session).
 
 ## Performance Metrics
 
@@ -236,6 +237,6 @@ Deployment blockers (v1.4, unresolved — not in v1.5 scope):
 
 ## Session Continuity
 
-Last session: 2026-07-11T12:52:41.800Z
-Stopped at: Completed 28-02-PLAN.md
+Last session: 2026-07-11T14:15:00.000Z
+Stopped at: Phase 28 complete and verified (UAT + SECURITY passed). All 9 known v1.5 phases (22-30) now execution-complete and verified — milestone wrap-up decision needed (see roadmap bookkeeping gap note above for Phase 29's checklist entry).
 Resume file: None

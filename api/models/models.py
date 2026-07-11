@@ -183,7 +183,9 @@ class Argument(Base):
     id = Column(Integer, primary_key=True)
     # Phase 19 (D-08): nullable — job-driven ingest leaves NULL instead of a synthetic date.
     argued_date = Column(Date, nullable=True)
-    question_number = Column(Integer, nullable=False, default=1)  # Q1 or Q2
+    # Migration 0019 (AEDIT-04): nullable, no default — blank = NULL = "unknown",
+    # parity with argued_date above (not a mandatory Q1/Q2 value anymore).
+    question_number = Column(Integer, nullable=True)
     # NULL = resolve not yet completed; retains its pipeline-completion meaning.
     # resolved_at IS NOT NULL means the pipeline resolve step has stamped this argument.
     resolved_at = Column(DateTime(timezone=True), nullable=True)

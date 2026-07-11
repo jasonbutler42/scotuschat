@@ -322,6 +322,42 @@ async def list_people(
     return rows
 
 
+async def get_people_stats(db: AsyncSession) -> dict:
+    """Aggregate counts for the People stat card (DASH-01) — total + incomplete.
+
+    Reuses list_people(db) unfiltered (both tabs) and counts/filters in Python
+    (D-05 — this must NOT add a new SQL "any missing field" filter mode to
+    list_people; the People directory is a small/bounded table so a Python
+    filter over the full result set is acceptable).
+    """
+    rows = await list_people(db)
+    total = len(rows)
+    incomplete = sum(1 for r in rows if r["missing"])
+    return {"total": total, "incomplete": incomplete}
+
+
+async def get_incomplete_people(db: AsyncSession, limit: int = 5) -> list[dict]:
+    """Top-``limit`` incomplete people across both tabs (DASH-03 Needs Attention).
+
+    One combined People sub-list spanning both Bench and Advocate tabs (D-02) —
+    reuses list_people(db) unfiltered and slices in Python; no new SQL filter
+    mode is added (D-05).
+    """
+    rows = await list_people(db)
+    return [r for r in rows if r["missing"]][:limit]
+
+
+async def get_tenure_gap_justices(db: AsyncSession, limit: int = 5) -> list[dict]:
+    """Top-``limit`` tenure-gap Justices (DASH-03 Needs Attention, D-06).
+
+    Delegates to the existing public list_people(is_justice=True, tenure_gaps=True)
+    rather than duplicating the private gap_person_ids_query subquery defined
+    inside list_people (that local variable is not importable/exported).
+    """
+    rows = await list_people(db, is_justice=True, tenure_gaps=True)
+    return rows[:limit]
+
+
 async def get_person_detail(db: AsyncSession, person_id: int) -> dict | None:
     """Return full person data for the edit form, including all tenure rows.
 

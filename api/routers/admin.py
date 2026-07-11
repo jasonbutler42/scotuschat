@@ -70,6 +70,15 @@ from api.schemas.admin_arguments import (
     MetadataUpdate,
     ParticipantSideUpdate,
 )
+from api.schemas.admin_dashboard import (
+    ArgumentStats,
+    IncompletePerson,
+    PeopleStats,
+    PipelineStats,
+    RecentDraft,
+    TenureGapJustice,
+    UtteranceCount,
+)
 from api.schemas.admin_people import (
     MergePreview,
     MergeRequest,
@@ -334,6 +343,21 @@ async def list_jobs(
     - incomplete=true: return only PAUSED and FAILED jobs (require operator action, PIPE-20)
     """
     return await jobs_service.list_jobs(db, incomplete=incomplete)  # type: ignore[return-value]
+
+
+@router.get("/jobs/stats", response_model=PipelineStats)
+async def get_pipeline_stats_route(
+    db: AsyncSession = Depends(get_db),
+) -> PipelineStats:
+    """
+    Aggregate stat-card counts for the Pipeline runs dashboard card (DASH-01).
+
+    CRITICAL ordering note (mirrors T-19-03-05 / check-duplicate): this literal
+    route MUST be registered before GET /jobs/{job_id} so FastAPI resolves the
+    literal segment "stats" first rather than consuming it as job_id.
+    """
+    stats = await jobs_service.get_pipeline_stats(db)
+    return PipelineStats(**stats)
 
 
 @router.get("/jobs/{job_id}", response_model=AdminJobResponse)
@@ -653,6 +677,53 @@ async def create_person_for_job(
     return person  # type: ignore[return-value]
 
 
+@router.get("/people/stats", response_model=PeopleStats)
+async def get_people_stats_route(
+    db: AsyncSession = Depends(get_db),
+) -> PeopleStats:
+    """
+    Aggregate stat-card counts for the People dashboard card (DASH-01).
+
+    CRITICAL ordering note (mirrors T-19-03-05 / check-duplicate): this literal
+    route MUST be registered before GET /people/{person_id} so FastAPI resolves
+    the literal segment "stats" first rather than consuming it as person_id.
+    """
+    stats = await people_service.get_people_stats(db)
+    return PeopleStats(**stats)
+
+
+@router.get("/people/incomplete", response_model=list[IncompletePerson])
+async def get_incomplete_people_route(
+    db: AsyncSession = Depends(get_db),
+) -> list[IncompletePerson]:
+    """
+    Top-5 incomplete people across both tabs for the People Needs Attention
+    sub-list (DASH-03).
+
+    CRITICAL ordering note: this literal route MUST be registered before
+    GET /people/{person_id} so FastAPI resolves the literal segment
+    "incomplete" first rather than consuming it as person_id.
+    """
+    rows = await people_service.get_incomplete_people(db)
+    return [IncompletePerson(**r) for r in rows]
+
+
+@router.get("/people/tenure-gaps", response_model=list[TenureGapJustice])
+async def get_tenure_gap_justices_route(
+    db: AsyncSession = Depends(get_db),
+) -> list[TenureGapJustice]:
+    """
+    Top-5 tenure-gap Justices for the Justices Needs Attention sub-list
+    (DASH-03).
+
+    CRITICAL ordering note: this literal route MUST be registered before
+    GET /people/{person_id} so FastAPI resolves the literal segment
+    "tenure-gaps" first rather than consuming it as person_id.
+    """
+    rows = await people_service.get_tenure_gap_justices(db)
+    return [TenureGapJustice(**r) for r in rows]
+
+
 @router.get("/people/{person_id}", response_model=PersonDetail)
 async def get_person(
     person_id: int,
@@ -871,6 +942,53 @@ async def check_duplicate_argument(
     "check-duplicate" first rather than consuming it as the argument_id param.
     """
     return await arguments_service.check_duplicate_argument(db, docket, question)
+
+
+@router.get("/arguments/stats", response_model=ArgumentStats)
+async def get_argument_stats_route(
+    db: AsyncSession = Depends(get_db),
+) -> ArgumentStats:
+    """
+    Aggregate stat-card counts for the Arguments dashboard card (DASH-01).
+
+    CRITICAL ordering note (mirrors T-19-03-05 / check-duplicate): this literal
+    route MUST be registered before GET /arguments/{argument_id} so FastAPI
+    resolves the literal segment "stats" first rather than consuming it as
+    argument_id.
+    """
+    counts = await arguments_service.get_argument_stats(db)
+    return ArgumentStats(**counts)
+
+
+@router.get("/arguments/recent-drafts", response_model=list[RecentDraft])
+async def get_recent_drafts_route(
+    db: AsyncSession = Depends(get_db),
+) -> list[RecentDraft]:
+    """
+    Top-5 most recently created DRAFT arguments for the Arguments Needs
+    Attention sub-list (DASH-03).
+
+    CRITICAL ordering note: this literal route MUST be registered before
+    GET /arguments/{argument_id} so FastAPI resolves the literal segment
+    "recent-drafts" first rather than consuming it as argument_id.
+    """
+    rows = await arguments_service.get_recent_drafts(db)
+    return [RecentDraft(**r) for r in rows]
+
+
+@router.get("/utterances/count", response_model=UtteranceCount)
+async def get_utterance_count_route(
+    db: AsyncSession = Depends(get_db),
+) -> UtteranceCount:
+    """
+    Total Utterance row count for the Utterances dashboard stat card (DASH-01).
+
+    No {id}-parameterized sibling route exists for /utterances today, so there
+    is no ordering hazard — placed here alongside the other new stats routes
+    for discoverability.
+    """
+    total = await arguments_service.get_utterance_count(db)
+    return UtteranceCount(total=total)
 
 
 @router.get("/arguments/{argument_id}", response_model=ArgumentDetail)

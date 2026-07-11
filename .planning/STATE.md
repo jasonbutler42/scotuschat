@@ -2,19 +2,17 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: Admin Screens Cleanup
-current_phase: 999.1
-current_phase_name: BACKLOG
+current_phase: 30.1
+current_phase_name: "Close gap: AEDIT-04/DASH-02 — wire ArgumentDetailsCard + status filter into arguments admin page"
 status: ready
-stopped_at: Phase 28 verified complete (UAT 2/2 passed, SECURITY.md threats_open 0)
-last_updated: "2026-07-11T14:15:00.000Z"
-last_activity: 2026-07-11
-last_activity_desc: Phase 28 fully verified and marked complete — all 9 known v1.5 phases (22-30) now execution-complete and verified
+stopped_at: Phase 30.1 context gathered
+last_updated: "2026-07-11T14:48:41.226Z"
 progress:
-  total_phases: 9
+  total_phases: 10
   completed_phases: 9
   total_plans: 52
   completed_plans: 52
-  percent: 100
+  percent: 90
 ---
 
 # Project State
@@ -24,14 +22,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-09 after Phase 27 completion)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** All known v1.5 phases complete — milestone wrap-up decision needed
+**Current focus:** v1.5 milestone audit found 2 gaps (AEDIT-04, DASH-02) — closure Phase 30.1 inserted, needs discuss → plan → execute before milestone can complete
 
 ## Current Position
 
-Phase: None active — all 9 known phases (22 through 30) are execution-complete and verified (`passed`).
-Stage: Milestone-boundary decision point.
+Phase: 30.1 (Close gap: AEDIT-04/DASH-02 — wire ArgumentDetailsCard + status filter into arguments admin page) — inserted, not yet discussed/planned.
+Stage: Gap-closure phase inserted after milestone audit; awaiting `/gsd-discuss-phase 30.1`.
 Plan: Not started
-Status: Phase 28 (Dashboard) fully verified this session — UAT 2/2 passed, 28-SECURITY.md threats_open: 0, 28-VERIFICATION.md status `passed`, ROADMAP checkbox/date correctly set to complete 2026-07-11.
+Status: All 9 known v1.5 phases (22-30) execution-complete and verified `passed`. `/gsd-audit-milestone v1.5` ran 2026-07-11 and found status `gaps_found`: AEDIT-04 (shared ArgumentDetailsCard never consumed by /admin/arguments/[id] — duplicate hand-rolled form instead) and DASH-02 (dashboard status CTAs link to `/admin/arguments?status=X` but no layer of the arguments list reads the query param). Both confirmed directly against source, not just agent-reported. See `.planning/v1.5-MILESTONE-AUDIT.md` for full detail. User chose "close gaps inline"; Phase 30.1 inserted to fix both (they overlap in the same route).
 
 **Known roadmap bookkeeping gap (not blocking):** `/gsd-execute-phase 28`'s auto-transition suggested "next: Phase 29" — this is misleading. Phases 29 (Historical Corpus Import) and 30 (Corpus Import Resolve Workflow) were already executed and verified (`passed`) out of order, in a separate session, before Phase 28 was finished. Phase 29 specifically has `roadmap_complete: false` in `roadmap.analyze` output even though its disk status and VERIFICATION.md are both fully complete — its checkbox was never added to ROADMAP.md's `## Phases > v1.5` checklist section (only Phases 22-28 are listed there). This is a documentation-only gap; no code or plan work is missing. Worth a small `/gsd-phase` housekeeping pass to add proper checklist entries for 29/30, but does not block milestone completion.
 
@@ -163,6 +161,7 @@ Full log in PROJECT.md Key Decisions table. Key decisions entering v1.5:
 ### Roadmap Evolution
 
 - Phase 29 added: Historical Corpus Import — bulk-import ~7,800 historical oral arguments (terms 1955-2019) from the Cornell ConvoKit supreme-corpus dataset, bypassing PDF/LLM parsing for this batch; depends on Phase 28
+- Phase 30.1 inserted after Phase 30: Close gap: AEDIT-04/DASH-02 — wire ArgumentDetailsCard + status filter into arguments admin page (from v1.5-MILESTONE-AUDIT.md gaps_found) (URGENT)
 
 ### Pending Todos
 
@@ -237,6 +236,6 @@ Deployment blockers (v1.4, unresolved — not in v1.5 scope):
 
 ## Session Continuity
 
-Last session: 2026-07-11T14:15:00.000Z
-Stopped at: Phase 28 complete and verified (UAT + SECURITY passed). All 9 known v1.5 phases (22-30) now execution-complete and verified — milestone wrap-up decision needed (see roadmap bookkeeping gap note above for Phase 29's checklist entry).
-Resume file: None
+Last session: 2026-07-11T14:48:41.204Z
+Stopped at: Phase 30.1 context gathered
+Resume file: .planning/phases/30.1-close-gap-aedit-04-dash-02-wire-argumentdetailscard-status-f/30.1-CONTEXT.md

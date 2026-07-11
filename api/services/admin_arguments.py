@@ -834,8 +834,11 @@ async def update_argument_metadata(
     # c. Update Argument row — only write fields that were explicitly provided.
     # WR-01: always writing source_docket=body.source_docket would NULL an existing
     # docket when the operator saves the form with that field left blank.
+    # Distinguish "field omitted from the request" (model_fields_set) from "field
+    # present but empty/null" — the latter is an explicit clear and must write NULL,
+    # not silently no-op (WR-01, 30.1-REVIEW.md).
     values_to_set: dict = {}
-    if parsed_date is not None:
+    if "argued_date" in body.model_fields_set:
         values_to_set["argued_date"] = parsed_date
     if body.source_dockets is not None:
         # D-MULTI-DOCKET: normalize the full docket array — strip, drop empties, de-duplicate
@@ -853,12 +856,16 @@ async def update_argument_metadata(
     elif body.source_docket is not None:
         values_to_set["source_docket"] = body.source_docket or None
     # Phase 23 (PJOB-07 / T-23-02): parse question_number from free-text string.
-    # Non-numeric input is silently skipped (never raises 500 per T-23-02).
-    if body.question_number is not None and body.question_number.strip():
-        try:
-            values_to_set["question_number"] = int(body.question_number)
-        except ValueError:
-            pass  # Non-numeric value — skip silently per T-23-02
+    # Non-numeric input is silently skipped (never raises 500 per T-23-02) — but an
+    # explicitly-cleared value (empty/null) must NULL the column, not no-op (WR-01).
+    if "question_number" in body.model_fields_set:
+        if body.question_number is not None and body.question_number.strip():
+            try:
+                values_to_set["question_number"] = int(body.question_number)
+            except ValueError:
+                pass  # Non-numeric value — skip silently per T-23-02
+        else:
+            values_to_set["question_number"] = None
     if values_to_set:
         await db.execute(
             update(Argument)

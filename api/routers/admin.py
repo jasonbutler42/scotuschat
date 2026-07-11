@@ -1096,9 +1096,13 @@ async def update_argument_metadata(
     Auth inherited at router level (T-19-03-04).
 
     Returns 404 if the argument does not exist (T-19-03-02 IDOR guard).
+    Returns 422 if argued_date is malformed.
     Returns {"success": True} on success.
     """
-    result = await arguments_service.update_argument_metadata(db, argument_id, body)
+    try:
+        result = await arguments_service.update_argument_metadata(db, argument_id, body)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     if result is False:
         raise HTTPException(status_code=404, detail="Argument not found")
     return {"success": True}

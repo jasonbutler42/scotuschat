@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: Admin Screens Cleanup
 current_phase: 30.1
-current_phase_name: "Close gap: AEDIT-04/DASH-02 — wire ArgumentDetailsCard + status filter into arguments admin page"
-status: ready
+current_phase_name: close-gap-aedit-04-dash-02-wire-argumentdetailscard-status-f
+status: executing
 stopped_at: Phase 30.1 UI-SPEC approved
-last_updated: "2026-07-11T17:19:39.993Z"
+last_updated: "2026-07-11T18:19:24.848Z"
 progress:
   total_phases: 10
   completed_phases: 9
-  total_plans: 52
-  completed_plans: 52
+  total_plans: 54
+  completed_plans: 53
   percent: 90
 ---
 
@@ -22,14 +22,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-09 after Phase 27 completion)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** v1.5 milestone audit found 2 gaps (AEDIT-04, DASH-02) — closure Phase 30.1 inserted, needs discuss → plan → execute before milestone can complete
+**Current focus:** Phase 30.1 — close-gap-aedit-04-dash-02-wire-argumentdetailscard-status-f
 
 ## Current Position
 
-Phase: 30.1 (Close gap: AEDIT-04/DASH-02 — wire ArgumentDetailsCard + status filter into arguments admin page) — inserted, not yet discussed/planned.
+Phase: 30.1 (close-gap-aedit-04-dash-02-wire-argumentdetailscard-status-f) — EXECUTING
 Stage: Gap-closure phase inserted after milestone audit; awaiting `/gsd-discuss-phase 30.1`.
-Plan: Not started
-Status: All 9 known v1.5 phases (22-30) execution-complete and verified `passed`. `/gsd-audit-milestone v1.5` ran 2026-07-11 and found status `gaps_found`: AEDIT-04 (shared ArgumentDetailsCard never consumed by /admin/arguments/[id] — duplicate hand-rolled form instead) and DASH-02 (dashboard status CTAs link to `/admin/arguments?status=X` but no layer of the arguments list reads the query param). Both confirmed directly against source, not just agent-reported. See `.planning/v1.5-MILESTONE-AUDIT.md` for full detail. User chose "close gaps inline"; Phase 30.1 inserted to fix both (they overlap in the same route).
+Plan: 2 of 2
+Status: Ready to execute
 
 **Known roadmap bookkeeping gap (not blocking):** `/gsd-execute-phase 28`'s auto-transition suggested "next: Phase 29" — this is misleading. Phases 29 (Historical Corpus Import) and 30 (Corpus Import Resolve Workflow) were already executed and verified (`passed`) out of order, in a separate session, before Phase 28 was finished. Phase 29 specifically has `roadmap_complete: false` in `roadmap.analyze` output even though its disk status and VERIFICATION.md are both fully complete — its checkbox was never added to ROADMAP.md's `## Phases > v1.5` checklist section (only Phases 22-28 are listed there). This is a documentation-only gap; no code or plan work is missing. Worth a small `/gsd-phase` housekeeping pass to add proper checklist entries for 29/30, but does not block milestone completion.
 
@@ -157,6 +157,7 @@ Full log in PROJECT.md Key Decisions table. Key decisions entering v1.5:
 - [Phase 28]: 28-03: Missing-fields row copy on People Needs Attention sub-list generated as singular/plural '{n} missing field(s)' -- UI-SPEC specified row shape but not exact wording
 - [Phase 28]: 28-03: last_activity_at renders 'N/A' both on fetch failure and genuine null (no jobs yet) -- no distinct empty-state copy exists for that case
 - [Phase 28]: 28-03: ROADMAP.md's Phase 28 checkbox/table row was auto-marked Complete by roadmap update-plan-progress upon the 3rd/3rd plan summary landing -- reverted to In Progress/no-date pending /gsd-verify-work 28, per the recurring GSD Roadmap Premature-Completion pattern (previously hit on Phase 26 and Phase 27)
+- [Phase ?]: 30.1-01: status filter guarded by an allow-list membership check against ArgumentStatusEnum.value strings BEFORE ArgumentStatusEnum(status) is ever called - unrecognized/absent values fall through to the full unfiltered list, never raise, never 422 (D-05)
 
 ### Roadmap Evolution
 
@@ -233,9 +234,10 @@ Deployment blockers (v1.4, unresolved — not in v1.5 scope):
 | Phase 28 P01 | 30min | 3 tasks | 5 files |
 | Phase 28 P02 | 20min | 2 tasks | 2 files |
 | Phase 28 P03 | 25min | 3 tasks | 3 files |
+| Phase 30.1 P01 | 5min | 3 tasks | 5 files |
 
 ## Session Continuity
 
-Last session: 2026-07-11T17:19:39.777Z
+Last session: 2026-07-11T18:18:05.910Z
 Stopped at: Phase 30.1 UI-SPEC approved
 Resume file: .planning/phases/30.1-close-gap-aedit-04-dash-02-wire-argumentdetailscard-status-f/30.1-UI-SPEC.md

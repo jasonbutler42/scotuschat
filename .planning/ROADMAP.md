@@ -613,7 +613,7 @@ Plans:
 **Goal:** `/admin/arguments/[id]` actually reuses the shared `ArgumentDetailsCard` component (not a hand-rolled duplicate form), and the dashboard's Draft/Published/Unpublished status CTAs on `/admin/arguments?status=X` actually filter the arguments list instead of being silently ignored.
 **Requirements**: AEDIT-04, DASH-02
 **Depends on:** Phase 23, Phase 26, Phase 28
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Source: v1.5-MILESTONE-AUDIT.md (gaps_found, 2026-07-11) — both requirements were marked "Complete" in REQUIREMENTS.md by their originating phase, but neither phase's own verification checked actual cross-phase consumption; the integration checker caught it at milestone-audit time.
 
@@ -621,5 +621,5 @@ Source: v1.5-MILESTONE-AUDIT.md (gaps_found, 2026-07-11) — both requirements w
 
 Plans:
 
-- [ ] 30.1-01-PLAN.md — DASH-02: thread `?status=` through list_arguments() service + GET /arguments route + list load(), add segmented status filter control + active-filter indicator + filtered empty-state (DASH-02)
+- [x] 30.1-01-PLAN.md — DASH-02: thread `?status=` through list_arguments() service + GET /arguments route + list load(), add segmented status filter control + active-filter indicator + filtered empty-state (DASH-02)
 - [ ] 30.1-02-PLAN.md — AEDIT-04: consume shared ArgumentDetailsCard on /admin/arguments/[id] — split Card 1 into a "Case" card + second ArgumentDetailsCard consumer, new saveArgumentDetails action reusing PATCH /metadata (AEDIT-04)

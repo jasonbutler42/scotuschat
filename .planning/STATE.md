@@ -5,8 +5,8 @@ milestone_name: Admin Screens Cleanup
 current_phase: 30.1
 current_phase_name: "Close gap: AEDIT-04/DASH-02 — wire ArgumentDetailsCard + status filter into arguments admin page"
 status: ready
-stopped_at: Phase 30.1 context gathered
-last_updated: "2026-07-11T14:48:41.226Z"
+stopped_at: Phase 30.1 UI-SPEC approved
+last_updated: "2026-07-11T17:19:39.993Z"
 progress:
   total_phases: 10
   completed_phases: 9
@@ -236,6 +236,6 @@ Deployment blockers (v1.4, unresolved — not in v1.5 scope):
 
 ## Session Continuity
 
-Last session: 2026-07-11T14:48:41.204Z
-Stopped at: Phase 30.1 context gathered
-Resume file: .planning/phases/30.1-close-gap-aedit-04-dash-02-wire-argumentdetailscard-status-f/30.1-CONTEXT.md
+Last session: 2026-07-11T17:19:39.777Z
+Stopped at: Phase 30.1 UI-SPEC approved
+Resume file: .planning/phases/30.1-close-gap-aedit-04-dash-02-wire-argumentdetailscard-status-f/30.1-UI-SPEC.md

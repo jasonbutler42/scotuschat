@@ -4,17 +4,17 @@ milestone: v1.5
 milestone_name: Admin Screens Cleanup
 current_phase: 28
 current_phase_name: dashboard
-status: executing
+status: verifying
 stopped_at: Completed 28-02-PLAN.md
-last_updated: "2026-07-11T12:44:29.050Z"
+last_updated: "2026-07-11T12:55:58.333Z"
 last_activity: 2026-07-11
-last_activity_desc: Phase 28 execution started
+last_activity_desc: "Phase 28 Plan 03 (frontend) executed: StatCard.svelte, +page.server.ts load(), +page.svelte rewrite"
 progress:
   total_phases: 9
-  completed_phases: 8
+  completed_phases: 9
   total_plans: 52
-  completed_plans: 51
-  percent: 89
+  completed_plans: 52
+  percent: 100
 ---
 
 # Project State
@@ -28,13 +28,13 @@ See: .planning/PROJECT.md (updated 2026-07-09 after Phase 27 completion)
 
 ## Current Position
 
-Phase: 28 (dashboard) — EXECUTING
-Stage: Ready to plan
-Plan: 3 of 3
-Status: Ready to execute
-Last activity: 2026-07-11 — Phase 28 execution started
+Phase: 28 (dashboard) — ALL 3 PLANS EXECUTED
+Stage: Ready for phase-level verification (`/gsd-verify-work 28`)
+Plan: 3 of 3 — complete (28-01 backend data layer, 28-02 router endpoints, 28-03 frontend all have SUMMARY.md)
+Status: All plans executed — phase NOT yet verified (do not treat as Complete until `/gsd-verify-work 28` passes; see known GSD Roadmap Premature-Completion pattern, applied again this session in ROADMAP.md — Phase 28's checkbox/table row reverted from a premature "Complete"/date back to "In Progress" pending verification)
+Last activity: 2026-07-11 — Phase 28 Plan 03 (frontend) executed: StatCard.svelte, +page.server.ts load(), +page.svelte rewrite
 
-Progress: [████████████████████] 36/36 plans (100%). Phase 27 is now fully verified complete: 5th UAT retest passed all 7 items (including the CR-01/CR-02 data-preservation round-trips previously blocked by the effect_update_depth_exceeded regression), 27-SECURITY.md shows threats_open: 0, and 27-VERIFICATION.md status is canonically `passed`. `completed_phases` in this file's frontmatter is correctly at 6/7 (86%).
+Progress: [████████████████████] 52/52 plans across all executed phases have SUMMARY.md (100% plan-execution coverage). This does NOT mean every phase is phase-verified — Phase 28 specifically is execution-complete but verification-pending as of this update. Phase 27 is fully verified complete: 5th UAT retest passed all 7 items (including the CR-01/CR-02 data-preservation round-trips previously blocked by the effect_update_depth_exceeded regression), 27-SECURITY.md shows threats_open: 0, and 27-VERIFICATION.md status is canonically `passed`.
 
 ## Performance Metrics
 
@@ -155,6 +155,9 @@ Full log in PROJECT.md Key Decisions table. Key decisions entering v1.5:
 - [Phase 28]: 28-01: get_recent_drafts orders by Argument.id DESC (not resolved_at) — Argument has no created_at column (Pitfall 3)
 - [Phase 28]: 28-02: GET /utterances/count placed adjacent to /arguments/stats and /arguments/recent-drafts (no {id}-sibling ordering constraint applied)
 - [Phase 28]: 28-02: Route test file omits client_no_db/401 auth-gate tests -- Task 2 scope is proving 200-not-422 resolution and response shape, router auth inheritance already covered elsewhere
+- [Phase 28]: 28-03: Missing-fields row copy on People Needs Attention sub-list generated as singular/plural '{n} missing field(s)' -- UI-SPEC specified row shape but not exact wording
+- [Phase 28]: 28-03: last_activity_at renders 'N/A' both on fetch failure and genuine null (no jobs yet) -- no distinct empty-state copy exists for that case
+- [Phase 28]: 28-03: ROADMAP.md's Phase 28 checkbox/table row was auto-marked Complete by roadmap update-plan-progress upon the 3rd/3rd plan summary landing -- reverted to In Progress/no-date pending /gsd-verify-work 28, per the recurring GSD Roadmap Premature-Completion pattern (previously hit on Phase 26 and Phase 27)
 
 ### Roadmap Evolution
 
@@ -229,9 +232,10 @@ Deployment blockers (v1.4, unresolved — not in v1.5 scope):
 | Phase 30 P04 | N/A | 2 tasks | 0 files |
 | Phase 28 P01 | 30min | 3 tasks | 5 files |
 | Phase 28 P02 | 20min | 2 tasks | 2 files |
+| Phase 28 P03 | 25min | 3 tasks | 3 files |
 
 ## Session Continuity
 
-Last session: 2026-07-11T12:44:29.035Z
+Last session: 2026-07-11T12:52:41.800Z
 Stopped at: Completed 28-02-PLAN.md
 Resume file: None

@@ -92,7 +92,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 - [x] **Phase 25: Pipeline Job Detail Page** - Restructured job detail layout with run status card, resolve redesign, and no floating buttons at `/admin/pipeline/[id]` (completed 2026-07-07)
 - [x] **Phase 26: Arguments Admin** - New `unpublished` status lifecycle + refined list and edit screens at `/admin/arguments/` and `/admin/arguments/[id]` (completed 2026-07-08)
 - [x] **Phase 27: People Admin** - Benchmarks/advocate tabs, tenure-per-row appointment data, and create-person flow at `/admin/people/` and `/admin/people/[id]` (11 of 11 plans executed 2026-07-09, including gap-closure plan 27-11 fixing the `effect_update_depth_exceeded` regression from 27-10's CR-02 fix; 4th UAT retest re-run pending — see known GSD Roadmap Premature-Completion pattern) (completed 2026-07-09)
-- [ ] **Phase 28: Dashboard** - Intentional stat cards, "needs attention" section, and actionable CTAs at `/admin/`
+- [ ] **Phase 28: Dashboard** - Intentional stat cards, "needs attention" section, and actionable CTAs at `/admin/` (3/3 plans executed 2026-07-11; phase-level verification pending — see known GSD Roadmap Premature-Completion pattern)
 
 ## Phase Details
 
@@ -301,7 +301,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
   4. A web traffic placeholder card is present and labelled "coming soon"
   5. Dashboard layout is intentionally designed — not a generic table dump; visual hierarchy guides the operator to the most urgent items
 
-**Plans**: 2/3 plans executed
+**Plans**: 3/3 plans complete
 
 **Wave 1**
 
@@ -313,7 +313,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 
 **Wave 3** *(blocked on Wave 2)*
 
-- [ ] 28-03-PLAN.md — Frontend: shared StatCard.svelte + degrade-gracefully load() (logout preserved) + rewritten +page.svelte (Needs Attention first, 4 neutral stat cards, Web Traffic placeholder) (DASH-01, DASH-02, DASH-03, DASH-04, DASH-05)
+- [x] 28-03-PLAN.md — Frontend: shared StatCard.svelte + degrade-gracefully load() (logout preserved) + rewritten +page.svelte (Needs Attention first, 4 neutral stat cards, Web Traffic placeholder) (DASH-01, DASH-02, DASH-03, DASH-04, DASH-05)
 
 **UI hint**: yes
 
@@ -348,7 +348,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 | 25. Pipeline Job Detail Page | v1.5 | 4/4 | Complete    | 2026-07-07 |
 | 26. Arguments Admin | v1.5 | 6/6 | Complete    | 2026-07-08 |
 | 27. People Admin | v1.5 | 11/11 | Complete    | 2026-07-09 |
-| 28. Dashboard | v1.5 | 2/3 | In Progress|  |
+| 28. Dashboard | v1.5 | 3/3 | In Progress |            |
 
 ## Backlog
 

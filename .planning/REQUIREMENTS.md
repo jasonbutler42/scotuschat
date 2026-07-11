@@ -9,10 +9,10 @@
 ### Dashboard (`/admin/`)
 
 - [x] **DASH-01** Stat cards: Arguments (total / published / draft / unpublished), People (total / incomplete), Utterances (total), Pipeline runs (recent + last activity date)
-- [ ] **DASH-02** Each stat card includes an inline actionable CTA where applicable (e.g. "12 people missing fields → Review")
+- [x] **DASH-02** Each stat card includes an inline actionable CTA where applicable (e.g. "12 people missing fields → Review")
 - [x] **DASH-03** "Needs attention" section: people with incomplete fields, Justices with tenure gaps, draft arguments — excludes intentionally unpublished arguments
-- [ ] **DASH-04** Web traffic placeholder card ("coming soon")
-- [ ] **DASH-05** Intentional visual design — not a generic table dump
+- [x] **DASH-04** Web traffic placeholder card ("coming soon")
+- [x] **DASH-05** Intentional visual design — not a generic table dump
 
 ### Pipeline List (`/admin/pipeline/`)
 
@@ -127,10 +127,10 @@ Requirements for the one-time bulk-import of terms 1955–2019 from the Cornell 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | DASH-01 | Phase 28 | Complete |
-| DASH-02 | Phase 28 | Pending |
+| DASH-02 | Phase 28 | Complete |
 | DASH-03 | Phase 28 | Complete |
-| DASH-04 | Phase 28 | Pending |
-| DASH-05 | Phase 28 | Pending |
+| DASH-04 | Phase 28 | Complete |
+| DASH-05 | Phase 28 | Complete |
 | PLIST-01 | Phase 24 | Complete |
 | PLIST-02 | Phase 24 | Complete |
 | PLIST-03 | Phase 24 | Complete |

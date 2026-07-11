@@ -913,14 +913,21 @@ async def delete_person(
 
 @router.get("/arguments", response_model=list[ArgumentListItem])
 async def list_arguments(
+    status: str | None = None,
     db: AsyncSession = Depends(get_db),
 ) -> list[ArgumentListItem]:
     """
     Return all arguments with lead case metadata, sorted argued_date DESC (D-01).
 
     One row per argument — consolidated dockets are not shown here (see detail endpoint).
+
+    Query params:
+    - status: optional single-value filter (DASH-02, D-05/D-06) — one of
+      "draft"/"published"/"unpublished". Any other value (including "pipeline",
+      absent, or unrecognized) is ignored by the service and the full list is
+      returned; never interpolated into SQL, never raises 422 (D-05).
     """
-    args = await arguments_service.list_arguments(db)
+    args = await arguments_service.list_arguments(db, status=status)
     return [ArgumentListItem(**a) for a in args]
 
 

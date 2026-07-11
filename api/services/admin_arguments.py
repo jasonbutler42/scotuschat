@@ -46,7 +46,7 @@ from pipeline.commands.ingest import _derive_slug  # noqa: F401 — re-exported 
 # ---------------------------------------------------------------------------
 
 
-async def list_arguments(db: AsyncSession) -> list[dict]:
+async def list_arguments(db: AsyncSession, status: str | None = None) -> list[dict]:
     """Return all Argument rows joined to their lead Case, sorted by argued_date DESC.
 
     One dict per argument with keys: id, argued_date, case_name, docket_number,
@@ -54,6 +54,15 @@ async def list_arguments(db: AsyncSession) -> list[dict]:
 
     Only joins where CaseArgument.is_lead == True so the result is one row per
     argument regardless of how many consolidated dockets the argument has.
+
+    status (DASH-02, D-05/D-06) is an optional single-value filter narrowing
+    the list to one of "draft"/"published"/"unpublished" (the exact
+    ArgumentStatusEnum.value strings). It is validated against an allow-list
+    of those three values BEFORE ever being passed to ArgumentStatusEnum() —
+    any unrecognized value (including "pipeline", which is never a selectable
+    filter — ALIST-02) or None applies no additional filter and the full
+    DRAFT+PUBLISHED+UNPUBLISHED list is returned, matching list_people's
+    established "invalid/unrecognized value produces no filter" convention.
     """
     q = (
         select(
@@ -80,8 +89,17 @@ async def list_arguments(db: AsyncSession) -> list[dict]:
                 ]
             )
         )
-        .order_by(Argument.argued_date.desc())
     )
+
+    valid_status_values = {
+        ArgumentStatusEnum.DRAFT.value,
+        ArgumentStatusEnum.PUBLISHED.value,
+        ArgumentStatusEnum.UNPUBLISHED.value,
+    }
+    if status in valid_status_values:
+        q = q.where(Argument.status == ArgumentStatusEnum(status))
+
+    q = q.order_by(Argument.argued_date.desc())
     result = await db.execute(q)
     rows = result.all()
     return [

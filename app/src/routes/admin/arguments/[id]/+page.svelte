@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import ArgumentDetailsCard from '$lib/components/ArgumentDetailsCard.svelte';
 
 	let { data, form } = $props();
 
@@ -73,13 +74,6 @@
 		)
 	);
 
-	// Convert ISO timestamp or date string to value compatible with <input type="date"> (YYYY-MM-DD).
-	function toDateInputValue(iso: string | null): string {
-		if (!iso) return '';
-		// Take only the date portion (first 10 chars of ISO 8601)
-		return iso.slice(0, 10);
-	}
-
 	// Danger Zone delete state (ADMIN-01).
 	// Two-step confirm: first click sets deleteConfirming = true; second click submits form.
 	// Pitfall 7: $effect resets state when argument id changes (SvelteKit soft nav reuses component).
@@ -114,18 +108,18 @@
 
 	<div style="max-width: 640px; margin: 0 auto; padding: 48px 24px;">
 
-		<!-- Card 1: Argument Details — save form -->
+		<!-- Card 1: Case — case title + Case docket number + consolidated dockets (D-03) -->
 		<div
 			style="
 				background-color: #1e293b;
 				border: 1px solid #334155;
 				border-radius: 8px;
 				padding: 24px;
-				margin-bottom: 16px;
+				margin-bottom: 24px;
 			"
 		>
 			<h2 style="font-size: 20px; font-weight: 600; color: #e2e8f0; margin: 0 0 24px 0;">
-				Argument Details
+				Case
 			</h2>
 
 			<form
@@ -164,42 +158,19 @@
 					/>
 				</div>
 
-				<!-- Docket number field — plain text per Date Format Contract (NOT a date input) -->
-				<div style="margin-bottom: 16px;">
+				<!-- Case docket number field — plain text per Date Format Contract (NOT a date input) -->
+				<!-- D-01/D-02: labeled "Case docket number" to disambiguate Case.docket_number
+				     from the source_dockets pill field in the ArgumentDetailsCard immediately below. -->
+				<div style="margin-bottom: {data.argument.consolidated_dockets.length > 0 ? '16px' : '0'};">
 					<label
 						for="docket_number"
 						style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
-					>Docket number</label>
+					>Case docket number</label>
 					<input
 						type="text"
 						id="docket_number"
 						name="docket_number"
 						value={data.argument.docket_number}
-						style="
-							display: block;
-							width: 100%;
-							background-color: #0f1117;
-							border: 1px solid #334155;
-							border-radius: 6px;
-							padding: 8px 12px;
-							font-size: 16px;
-							color: #e2e8f0;
-							box-sizing: border-box;
-						"
-					/>
-				</div>
-
-				<!-- Argued date field — date input per Date Format Contract -->
-				<div style="margin-bottom: {data.argument.consolidated_dockets.length > 0 ? '16px' : '0'};">
-					<label
-						for="argued_date"
-						style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
-					>Argued date</label>
-					<input
-						type="date"
-						id="argued_date"
-						name="argued_date"
-						value={toDateInputValue(data.argument.argued_date)}
 						style="
 							display: block;
 							width: 100%;
@@ -267,6 +238,18 @@
 				</button>
 			</form>
 		</div>
+
+		<!-- Card 1b: Argument Details — shared ArgumentDetailsCard, second consumer (AEDIT-04) -->
+		<!-- Owns its own card chrome (24px bottom margin baked in) — not wrapped in an extra div. -->
+		<!-- readonly is always false here: this page's argument details remain editable
+		     regardless of publish status (unlike the pipeline page's already_created state). -->
+		<ArgumentDetailsCard
+			savedValues={data.savedValues}
+			hints={data.hints}
+			action="?/saveArgumentDetails"
+			readonly={false}
+			{form}
+		/>
 
 		<!-- Card 2: Status — current badge + resolved/published dates + slug preview -->
 		<div

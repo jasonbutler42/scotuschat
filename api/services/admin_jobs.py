@@ -16,6 +16,8 @@ Critical guards (mirroring pipeline/commands/resolve.py):
   - normalize_label imported from pipeline.commands.resolve (single source of truth)
 """
 
+import datetime
+
 from sqlalchemy import delete, exists, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -286,6 +288,29 @@ async def list_jobs(
         job.__dict__.setdefault("parse_stats", None)
         jobs.append(job)
     return jobs
+
+
+async def get_pipeline_stats(db: AsyncSession) -> dict:
+    """Recent-window count + unbounded last-activity timestamp for the Pipeline
+    runs stat card (DASH-01, A1: 30-day window).
+
+    recent_count is scoped to AdminJob.created_at within the last 30 days.
+    last_activity_at is the MAX(AdminJob.updated_at) across ALL jobs, unbounded
+    by that same window — a job created 40+ days ago is excluded from
+    recent_count but can still be the most recent activity. scalar_one() is
+    safe for COUNT (always returns a row); scalar_one_or_none() is required
+    for MAX since it is NULL over an empty table.
+    """
+    cutoff = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=30)
+    recent_result = await db.execute(
+        select(func.count(AdminJob.id)).where(AdminJob.created_at >= cutoff)
+    )
+    recent_count = recent_result.scalar_one()
+
+    last_activity_result = await db.execute(select(func.max(AdminJob.updated_at)))
+    last_activity_at = last_activity_result.scalar_one_or_none()
+
+    return {"recent_count": recent_count, "last_activity_at": last_activity_at}
 
 
 # ---------------------------------------------------------------------------

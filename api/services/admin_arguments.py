@@ -98,6 +98,78 @@ async def list_arguments(db: AsyncSession) -> list[dict]:
     ]
 
 
+async def get_argument_stats(db: AsyncSession) -> dict:
+    """Aggregate stat-card counts for the Arguments card (DASH-01).
+
+    One grouped COUNT query keyed on Argument.status, restricted to
+    DRAFT/PUBLISHED/UNPUBLISHED (ALIST-02 parity — PIPELINE-status rows are
+    excluded from total, matching list_arguments' existing status filter).
+    Missing statuses default to 0 (e.g. an empty table returns all zeros).
+    """
+    q = (
+        select(Argument.status, sqlfunc.count())
+        .where(
+            Argument.status.in_(
+                [
+                    ArgumentStatusEnum.DRAFT,
+                    ArgumentStatusEnum.PUBLISHED,
+                    ArgumentStatusEnum.UNPUBLISHED,
+                ]
+            )
+        )
+        .group_by(Argument.status)
+    )
+    result = await db.execute(q)
+    counts_by_status = dict(result.all())
+
+    published = counts_by_status.get(ArgumentStatusEnum.PUBLISHED, 0)
+    draft = counts_by_status.get(ArgumentStatusEnum.DRAFT, 0)
+    unpublished = counts_by_status.get(ArgumentStatusEnum.UNPUBLISHED, 0)
+    return {
+        "total": published + draft + unpublished,
+        "published": published,
+        "draft": draft,
+        "unpublished": unpublished,
+    }
+
+
+async def get_recent_drafts(db: AsyncSession, limit: int = 5) -> list[dict]:
+    """Top-``limit`` most recently created DRAFT arguments (DASH-03, Needs Attention).
+
+    Ordered by Argument.id DESC (Pitfall 3 — Argument has no created_at column;
+    resolved_at is not a reliable proxy for insertion order). D-03: no age
+    threshold — every DRAFT argument is eligible regardless of age. D-01: caps
+    at ``limit`` (default 5).
+    """
+    q = (
+        select(Argument.id, Case.case_name, Case.docket_number)
+        .join(CaseArgument, CaseArgument.argument_id == Argument.id)
+        .join(Case, CaseArgument.case_id == Case.id)
+        .where(
+            CaseArgument.is_lead == True,  # noqa: E712
+            Argument.status == ArgumentStatusEnum.DRAFT,
+        )
+        .order_by(Argument.id.desc())
+        .limit(limit)
+    )
+    result = await db.execute(q)
+    rows = result.all()
+    return [
+        {"id": row.id, "case_name": row.case_name, "docket_number": row.docket_number}
+        for row in rows
+    ]
+
+
+async def get_utterance_count(db: AsyncSession) -> int:
+    """Total count of every Utterance row, regardless of parent argument status (DASH-01, A3).
+
+    Counts utterances under PIPELINE/DRAFT/PUBLISHED/UNPUBLISHED arguments alike —
+    this is a raw table-wide count, not scoped to the admin-visible argument set.
+    """
+    result = await db.execute(select(sqlfunc.count()).select_from(Utterance))
+    return result.scalar_one()
+
+
 async def list_argument_speakers(db: AsyncSession, argument_id: int) -> list[dict]:
     """Return a unified bench+advocate speaker row per ArgumentParticipant (D-05).
 

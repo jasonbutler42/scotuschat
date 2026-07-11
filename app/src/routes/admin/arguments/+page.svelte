@@ -1,7 +1,43 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { goto } from '$app/navigation';
 
 	let { data } = $props();
+
+	// Segmented status filter (DASH-02, D-05, D-06) — one-param goto() round-trip,
+	// same idiom as the People page's Bench/Advocate toggle.
+	function selectStatus(value: 'all' | 'draft' | 'published' | 'unpublished') {
+		if (value === 'all') {
+			goto('/admin/arguments');
+		} else {
+			goto('/admin/arguments?status=' + value);
+		}
+	}
+
+	function clearFilter() {
+		goto('/admin/arguments');
+	}
+
+	function statusLabel(status: string): string {
+		if (status === 'draft') return 'Draft';
+		if (status === 'published') return 'Published';
+		if (status === 'unpublished') return 'Unpublished';
+		return status;
+	}
+
+	// Selected-state fill per UI-SPEC — each option uses its own semantic color.
+	function filterButtonStyle(active: boolean, selectedColor: string): string {
+		return `
+			min-height: 44px;
+			padding: 8px 16px;
+			font-size: 16px;
+			font-weight: 600;
+			cursor: pointer;
+			border: 1px solid ${active ? selectedColor : '#334155'};
+			background-color: ${active ? selectedColor : '#1e293b'};
+			color: ${active ? '#0f1117' : '#e2e8f0'};
+		`;
+	}
 
 	// Format ISO date string for display — matches pipeline/+page.svelte formatDate pattern.
 	function formatDate(iso: string): string {
@@ -45,10 +81,67 @@
 	<header
 		style="background-color: #1e293b; border-bottom: 1px solid #334155; padding: 16px 24px;"
 	>
-		<h1 style="font-size: 20px; font-weight: 600; color: #e2e8f0; margin: 0;">Arguments</h1>
+		<div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+			<h1 style="font-size: 20px; font-weight: 600; color: #e2e8f0; margin: 0;">Arguments</h1>
+
+			<!-- Status segmented filter control (DASH-02, D-05) -->
+			<div style="display: flex; gap: 0;">
+				<button
+					type="button"
+					aria-pressed={!data.status}
+					aria-label="All arguments"
+					onclick={() => selectStatus('all')}
+					style="{filterButtonStyle(!data.status, '#93c5fd')} border-radius: 6px 0 0 6px;"
+				>All</button>
+				<button
+					type="button"
+					aria-pressed={data.status === 'draft'}
+					aria-label="Draft arguments"
+					onclick={() => selectStatus('draft')}
+					style="{filterButtonStyle(data.status === 'draft', '#a78bfa')} border-left: none;"
+				>Draft</button>
+				<button
+					type="button"
+					aria-pressed={data.status === 'published'}
+					aria-label="Published arguments"
+					onclick={() => selectStatus('published')}
+					style="{filterButtonStyle(data.status === 'published', '#4ade80')} border-left: none;"
+				>Published</button>
+				<button
+					type="button"
+					aria-pressed={data.status === 'unpublished'}
+					aria-label="Unpublished arguments"
+					onclick={() => selectStatus('unpublished')}
+					style="{filterButtonStyle(data.status === 'unpublished', '#fb923c')} border-left: none; border-radius: 0 6px 6px 0;"
+				>Unpublished</button>
+			</div>
+		</div>
 	</header>
 
 	<div style="max-width: 860px; margin: 0 auto; padding: 48px 24px;">
+		<!-- Active-filter indicator (D-05) — only for a specific status, never "All" -->
+		{#if data.status === 'draft' || data.status === 'published' || data.status === 'unpublished'}
+			<p style="font-size: 14px; font-weight: 400; color: #94a3b8; margin: 0 0 16px 0;">
+				Showing: {statusLabel(data.status)} arguments ·
+				<button
+					type="button"
+					onclick={clearFilter}
+					aria-label="Clear status filter"
+					style="
+						background: none;
+						border: none;
+						padding: 0;
+						margin: 0;
+						color: #93c5fd;
+						text-decoration: underline;
+						font-size: 14px;
+						font-weight: 400;
+						cursor: pointer;
+					"
+				>Clear filter</button>
+			</p>
+		{/if}
+
 		{#if data.arguments.length === 0}
 			<!-- Empty state per UI-SPEC Copywriting Contract -->
 			<div
@@ -60,9 +153,15 @@
 					text-align: center;
 				"
 			>
-				<p style="font-size: 16px; color: #94a3b8; margin: 0;">
-					No arguments yet. Start a pipeline run to ingest a transcript.
-				</p>
+				{#if data.status === 'draft' || data.status === 'published' || data.status === 'unpublished'}
+					<p style="font-size: 16px; color: #94a3b8; margin: 0;">
+						No {statusLabel(data.status)} arguments.
+					</p>
+				{:else}
+					<p style="font-size: 16px; color: #94a3b8; margin: 0;">
+						No arguments yet. Start a pipeline run to ingest a transcript.
+					</p>
+				{/if}
 			</div>
 		{:else}
 			<!-- ArgumentsTable — WCAG 1.3.1: th scope=col for all column headers -->

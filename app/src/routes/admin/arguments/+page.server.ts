@@ -12,11 +12,21 @@ type ArgumentListItem = {
 	status: string;
 };
 
-export const load: PageServerLoad = async ({ fetch }) => {
+export const load: PageServerLoad = async ({ fetch, url }) => {
+	// status (DASH-02, D-05/D-06): optional single-value filter driven by the
+	// segmented control and by dashboard status CTAs. Not validated client-side —
+	// unrecognized values pass through and list_arguments() no-ops on them.
+	const status = url.searchParams.get('status');
+
+	const params = new URLSearchParams();
+	if (status) params.set('status', status);
+	const queryString = params.toString();
+	const apiUrl = `${FASTAPI_BASE_URL}/api/admin/arguments${queryString ? '?' + queryString : ''}`;
+
 	let args: ArgumentListItem[] = [];
 
 	try {
-		const res = await fetch(`${FASTAPI_BASE_URL}/api/admin/arguments`, {
+		const res = await fetch(apiUrl, {
 			headers: { 'X-Admin-Token': ADMIN_TOKEN },
 		});
 
@@ -32,7 +42,7 @@ export const load: PageServerLoad = async ({ fetch }) => {
 		);
 	}
 
-	return { arguments: args };
+	return { arguments: args, status };
 };
 
 export const actions: Actions = {

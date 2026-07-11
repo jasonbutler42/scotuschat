@@ -301,7 +301,20 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
   4. A web traffic placeholder card is present and labelled "coming soon"
   5. Dashboard layout is intentionally designed — not a generic table dump; visual hierarchy guides the operator to the most urgent items
 
-**Plans**: TBD
+**Plans**: 3 plans
+
+**Wave 1**
+
+- [ ] 28-01-PLAN.md — Backend stats data layer: admin_dashboard.py schemas + 7 read-only aggregation service functions (COUNT/MAX/LIMIT) across admin_arguments/people/jobs + DB-gated tests (DASH-01, DASH-03)
+
+**Wave 2** *(blocked on Wave 1)*
+
+- [ ] 28-02-PLAN.md — Seven resource-scoped dashboard routes in admin.py with literal-before-{id} ordering discipline + route resolution tests (DASH-01, DASH-03)
+
+**Wave 3** *(blocked on Wave 2)*
+
+- [ ] 28-03-PLAN.md — Frontend: shared StatCard.svelte + degrade-gracefully load() (logout preserved) + rewritten +page.svelte (Needs Attention first, 4 neutral stat cards, Web Traffic placeholder) (DASH-01, DASH-02, DASH-03, DASH-04, DASH-05)
+
 **UI hint**: yes
 
 ## Progress
@@ -335,7 +348,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 | 25. Pipeline Job Detail Page | v1.5 | 4/4 | Complete    | 2026-07-07 |
 | 26. Arguments Admin | v1.5 | 6/6 | Complete    | 2026-07-08 |
 | 27. People Admin | v1.5 | 11/11 | Complete    | 2026-07-09 |
-| 28. Dashboard | v1.5 | 0/TBD | Not started | - |
+| 28. Dashboard | v1.5 | 0/3 | Not started | - |
 
 ## Backlog
 

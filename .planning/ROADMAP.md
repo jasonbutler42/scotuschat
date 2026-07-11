@@ -92,7 +92,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 - [x] **Phase 25: Pipeline Job Detail Page** - Restructured job detail layout with run status card, resolve redesign, and no floating buttons at `/admin/pipeline/[id]` (completed 2026-07-07)
 - [x] **Phase 26: Arguments Admin** - New `unpublished` status lifecycle + refined list and edit screens at `/admin/arguments/` and `/admin/arguments/[id]` (completed 2026-07-08)
 - [x] **Phase 27: People Admin** - Benchmarks/advocate tabs, tenure-per-row appointment data, and create-person flow at `/admin/people/` and `/admin/people/[id]` (11 of 11 plans executed 2026-07-09, including gap-closure plan 27-11 fixing the `effect_update_depth_exceeded` regression from 27-10's CR-02 fix; 4th UAT retest re-run pending — see known GSD Roadmap Premature-Completion pattern) (completed 2026-07-09)
-- [ ] **Phase 28: Dashboard** - Intentional stat cards, "needs attention" section, and actionable CTAs at `/admin/` (3/3 plans executed 2026-07-11; phase-level verification pending — see known GSD Roadmap Premature-Completion pattern)
+- [x] **Phase 28: Dashboard** - Intentional stat cards, "needs attention" section, and actionable CTAs at `/admin/` (3/3 plans executed 2026-07-11; UAT 2/2 passed, 28-SECURITY.md threats_open: 0, 28-VERIFICATION.md status `passed`) (completed 2026-07-11)
 
 ## Phase Details
 
@@ -348,7 +348,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 | 25. Pipeline Job Detail Page | v1.5 | 4/4 | Complete    | 2026-07-07 |
 | 26. Arguments Admin | v1.5 | 6/6 | Complete    | 2026-07-08 |
 | 27. People Admin | v1.5 | 11/11 | Complete    | 2026-07-09 |
-| 28. Dashboard | v1.5 | 3/3 | In Progress |            |
+| 28. Dashboard | v1.5 | 3/3 | Complete    | 2026-07-11 |
 
 ## Backlog
 

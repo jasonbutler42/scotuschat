@@ -5,15 +5,15 @@ milestone_name: Admin Screens Cleanup
 current_phase: 28
 current_phase_name: dashboard
 status: executing
-stopped_at: Completed 28-01-PLAN.md
-last_updated: "2026-07-11T12:35:37.636Z"
+stopped_at: Completed 28-02-PLAN.md
+last_updated: "2026-07-11T12:44:29.050Z"
 last_activity: 2026-07-11
 last_activity_desc: Phase 28 execution started
 progress:
   total_phases: 9
   completed_phases: 8
   total_plans: 52
-  completed_plans: 50
+  completed_plans: 51
   percent: 89
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-07-09 after Phase 27 completion)
 
 Phase: 28 (dashboard) — EXECUTING
 Stage: Ready to plan
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-07-11 — Phase 28 execution started
 
@@ -153,6 +153,8 @@ Full log in PROJECT.md Key Decisions table. Key decisions entering v1.5:
 - [Phase 28]: 28-01: get_tenure_gap_justices delegates to existing list_people(is_justice=True, tenure_gaps=True) rather than duplicating the private gap_person_ids_query subquery
 - [Phase 28]: 28-01: get_people_stats/get_incomplete_people call list_people(db) unfiltered and count/slice in Python — no new SQL filter surface (D-05)
 - [Phase 28]: 28-01: get_recent_drafts orders by Argument.id DESC (not resolved_at) — Argument has no created_at column (Pitfall 3)
+- [Phase 28]: 28-02: GET /utterances/count placed adjacent to /arguments/stats and /arguments/recent-drafts (no {id}-sibling ordering constraint applied)
+- [Phase 28]: 28-02: Route test file omits client_no_db/401 auth-gate tests -- Task 2 scope is proving 200-not-422 resolution and response shape, router auth inheritance already covered elsewhere
 
 ### Roadmap Evolution
 
@@ -226,9 +228,10 @@ Deployment blockers (v1.4, unresolved — not in v1.5 scope):
 | Phase 30 P03 | 12min | 2 tasks | 1 files |
 | Phase 30 P04 | N/A | 2 tasks | 0 files |
 | Phase 28 P01 | 30min | 3 tasks | 5 files |
+| Phase 28 P02 | 20min | 2 tasks | 2 files |
 
 ## Session Continuity
 
-Last session: 2026-07-11T12:35:37.622Z
-Stopped at: Completed 28-01-PLAN.md
+Last session: 2026-07-11T12:44:29.035Z
+Stopped at: Completed 28-02-PLAN.md
 Resume file: None

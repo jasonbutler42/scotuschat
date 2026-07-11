@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: Admin Screens Cleanup
-current_phase: 999.1
-current_phase_name: BACKLOG
+current_phase: 28
+current_phase_name: dashboard
 status: executing
-stopped_at: Phase 28 UI-SPEC approved
-last_updated: "2026-07-11T12:04:40.696Z"
-last_activity: 2026-07-10
-last_activity_desc: Phase 30 complete, transitioned to Phase 999.1
+stopped_at: Completed 28-01-PLAN.md
+last_updated: "2026-07-11T12:35:37.636Z"
+last_activity: 2026-07-11
+last_activity_desc: Phase 28 execution started
 progress:
   total_phases: 9
   completed_phases: 8
-  total_plans: 49
-  completed_plans: 49
+  total_plans: 52
+  completed_plans: 50
   percent: 89
 ---
 
@@ -24,15 +24,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-09 after Phase 27 completion)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** Phase 30 — corpus-import-resolve-workflow
+**Current focus:** Phase 28 — dashboard
 
 ## Current Position
 
-Phase: 999.1 — Click-to-copy extracted values design pattern (BACKLOG)
+Phase: 28 (dashboard) — EXECUTING
 Stage: Ready to plan
-Plan: Not started
+Plan: 2 of 3
 Status: Ready to execute
-Last activity: 2026-07-10 — Phase 30 complete, transitioned to Phase 999.1
+Last activity: 2026-07-11 — Phase 28 execution started
 
 Progress: [████████████████████] 36/36 plans (100%). Phase 27 is now fully verified complete: 5th UAT retest passed all 7 items (including the CR-01/CR-02 data-preservation round-trips previously blocked by the effect_update_depth_exceeded regression), 27-SECURITY.md shows threats_open: 0, and 27-VERIFICATION.md status is canonically `passed`. `completed_phases` in this file's frontmatter is correctly at 6/7 (86%).
 
@@ -150,6 +150,9 @@ Full log in PROJECT.md Key Decisions table. Key decisions entering v1.5:
 - [Phase 30-03]: Visual verification (Task 2) completed via direct dev-database inspection because the dev DB currently has zero corpus-imported AdminJob rows (they predate 30-01's paired-AdminJob insert); full Corpus-tag confirmation deferred to plan 30-04's wipe-and-rerun
 - [Phase 30-04]: D-02 upheld: term-1955 corpus wipe-and-rerun delivered with zero committed code — ad hoc FK-safe scoped wipe SQL plus re-run of the existing idempotent import-justices/import-convokit CLI; no migration/backfill script added.
 - [Phase 30-04]: Mid-execution test-data-leakage blocker (duplicate Ketanji Brown Jackson Person row from leaked pytest fixture commits) resolved via its own scoped DELETE, separate from this plan's convokit_import-scoped wipe; underlying test-isolation defect escalated to ROADMAP.md backlog Phase 999.19 rather than fixed in-plan.
+- [Phase 28]: 28-01: get_tenure_gap_justices delegates to existing list_people(is_justice=True, tenure_gaps=True) rather than duplicating the private gap_person_ids_query subquery
+- [Phase 28]: 28-01: get_people_stats/get_incomplete_people call list_people(db) unfiltered and count/slice in Python — no new SQL filter surface (D-05)
+- [Phase 28]: 28-01: get_recent_drafts orders by Argument.id DESC (not resolved_at) — Argument has no created_at column (Pitfall 3)
 
 ### Roadmap Evolution
 
@@ -222,9 +225,10 @@ Deployment blockers (v1.4, unresolved — not in v1.5 scope):
 | Phase 30 P02 | 15min | 2 tasks | 3 files |
 | Phase 30 P03 | 12min | 2 tasks | 1 files |
 | Phase 30 P04 | N/A | 2 tasks | 0 files |
+| Phase 28 P01 | 30min | 3 tasks | 5 files |
 
 ## Session Continuity
 
-Last session: 2026-07-11T03:13:08.672Z
-Stopped at: Phase 28 UI-SPEC approved
-Resume file: .planning/phases/28-dashboard/28-UI-SPEC.md
+Last session: 2026-07-11T12:35:37.622Z
+Stopped at: Completed 28-01-PLAN.md
+Resume file: None

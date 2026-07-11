@@ -301,11 +301,11 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
   4. A web traffic placeholder card is present and labelled "coming soon"
   5. Dashboard layout is intentionally designed — not a generic table dump; visual hierarchy guides the operator to the most urgent items
 
-**Plans**: 3 plans
+**Plans**: 1/3 plans executed
 
 **Wave 1**
 
-- [ ] 28-01-PLAN.md — Backend stats data layer: admin_dashboard.py schemas + 7 read-only aggregation service functions (COUNT/MAX/LIMIT) across admin_arguments/people/jobs + DB-gated tests (DASH-01, DASH-03)
+- [x] 28-01-PLAN.md — Backend stats data layer: admin_dashboard.py schemas + 7 read-only aggregation service functions (COUNT/MAX/LIMIT) across admin_arguments/people/jobs + DB-gated tests (DASH-01, DASH-03)
 
 **Wave 2** *(blocked on Wave 1)*
 
@@ -348,7 +348,7 @@ Full phase details: `.planning/milestones/v1.4-ROADMAP.md`
 | 25. Pipeline Job Detail Page | v1.5 | 4/4 | Complete    | 2026-07-07 |
 | 26. Arguments Admin | v1.5 | 6/6 | Complete    | 2026-07-08 |
 | 27. People Admin | v1.5 | 11/11 | Complete    | 2026-07-09 |
-| 28. Dashboard | v1.5 | 0/3 | Not started | - |
+| 28. Dashboard | v1.5 | 1/3 | In Progress|  |
 
 ## Backlog
 

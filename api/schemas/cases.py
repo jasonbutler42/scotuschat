@@ -21,7 +21,9 @@ class CaseItem(BaseModel):
     # argued_date doesn't 500 the public case list the moment it is published.
     argued_date: datetime.date | None = None
     argument_id: int
-    question_number: int
+    # Optional: nullable at the DB layer as of migration 0019 (AEDIT-04),
+    # mirroring argued_date's nullable-column handling directly above.
+    question_number: int | None = None
 
     model_config = {"from_attributes": True}
 

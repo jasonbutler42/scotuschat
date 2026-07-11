@@ -48,7 +48,9 @@ class ArgumentMetadataResponse(BaseModel):
     # Corpus-imported arguments (import_convokit.py _parse_argued_date) can
     # legitimately have no parseable transcript date (CR-01 / gap #13 fix).
     argued_date: datetime.date | None = None
-    question_number: int
+    # Optional: nullable at the DB layer as of migration 0019 (AEDIT-04),
+    # mirroring argued_date's nullable-column handling directly above.
+    question_number: int | None = None
     oyez_transcript_id: str | None = None  # ConvoKit conversation_id; null for PDF-ingested arguments
 
 

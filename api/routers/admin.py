@@ -48,6 +48,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, UploadFile
 from PIL import Image, UnidentifiedImageError
 from sqlalchemy import select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import FileResponse, RedirectResponse, Response
 
@@ -1097,12 +1098,17 @@ async def update_argument_metadata(
 
     Returns 404 if the argument does not exist (T-19-03-02 IDOR guard).
     Returns 422 if argued_date is malformed.
+    Returns 409 if the write violates a DB constraint (defense-in-depth;
+    T-30.1-06 — never leaks the raw DB/asyncpg message).
     Returns {"success": True} on success.
     """
     try:
         result = await arguments_service.update_argument_metadata(db, argument_id, body)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except IntegrityError as exc:
+        await db.rollback()
+        raise HTTPException(status_code=409, detail="constraint_violation") from exc
     if result is False:
         raise HTTPException(status_code=404, detail="Argument not found")
     return {"success": True}

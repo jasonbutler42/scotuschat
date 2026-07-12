@@ -1,5 +1,66 @@
 # Milestones
 
+## v1.5 Admin Screens Cleanup (Shipped: 2026-07-12)
+
+**Phases completed:** 10 phases, 55 plans, 110 tasks
+
+**Key accomplishments:**
+
+- Migration 0012 adds `unpublished` to the `argument_status` PG enum, creates the `argument_status_log` audit table, and backfills one row per argument using its current status — with matching ORM changes and schema test registration.
+- Alembic migration 0013 adds `argument_participants.title` and moves appointment columns from `people` to `court_tenures`, with simultaneous ORM/schema/service/frontend cleanup eliminating every person-level `appointing_president` reference.
+- TDD implementation of `_parse_toc_titles` + `extract_toc_data` in cover_extractor.py, and `_update_participant_titles` wired into parse.py via a single shared PDF open (D-12).
+- Expanded ParseStats with bench/advocate/total speaker counts and cover_metadata fields; added question_number to MetadataUpdate and ArgumentDetail; wired get_job and update_argument_metadata service functions to populate and persist these fields.
+- Reusable `ArgumentDetailsCard.svelte` with docket pill input, free-text question number, argued date, always-visible extracted hints, and action-prop-driven form — built in Svelte 5 Runes exclusively.
+- Wired ArgumentDetailsCard into /admin/pipeline/[job_id] with saveJobMetadata action, savedValues/hints from load(), expanded parse stat card (8 fields, N/A fallbacks), and removal of the ingest Source file row.
+- Closed all five Phase 23 UAT failures: removed two orphaned UI cards, fixed silent docket-clear bug via empty-string sentinel, froze question_number hint to null, and promoted docket instruction from placeholder to always-visible static label.
+- Client-side max-count guard prevents a second docket pill from being added, making the server CR-02 rejection unreachable from normal UI interaction.
+- 1. [Rule 1 - Bug] Corrupted em-dash in CR-02 comment blocked Edit match
+- Admin jobs listing now returns the full pipeline run history newest-first, with incomplete filtering preserved.
+- Extracted a standalone `DocketPillInput.svelte` Svelte 5 Runes component from `ArgumentDetailsCard.svelte`'s inline pill logic, ready for reuse on both the job detail page (Plan 03) and the New Run form (Plan 04).
+- Refactored ArgumentDetailsCard.svelte to delegate docket pill add/remove/render logic to the shared DocketPillInput component, replacing ~90 lines of inline pill markup and state with a single keyed component instance.
+- Typed FastAPI/Pydantic contract for run readiness, failed-step recovery, job-scoped mini create-person, and a new resolve-row side/title mutation that allows BENCH — all guarded by argument ownership derived from job_id.
+- Typed FastAPI/Pydantic `ResolveRow` shape and job-scoped `GET /api/admin/jobs/{job_id}/resolve-rows` endpoint that returns every participant on a job's argument — including unresolved rows — with backend-derived tenure-based bench role, an explicit "Missing tenure" state, and advocate title/hint data.
+- SvelteKit `+page.server.ts` load/action bridge for the Phase 25 job detail page — new readiness, failed-recovery, and resolve-row HTTP fetches feeding a computed `readonlyMode`, plus a `saveResolveRow` action and extended `addPerson`/`saveJobMetadata` actions — including two router endpoints (`GET .../readiness`, `GET .../failed-recovery`) that Plan 25-01 had built the service layer for but never exposed over HTTP.
+- Four new Svelte 5 components (RunStatusCard, ResolveCard, FailedStepGuidance, CreatePersonPopover) plus a full `+page.svelte` recomposition that turns `/admin/pipeline/[id]` into a sibling-card operator workflow — run status first, resolve fully restructured with locked columns and side-first gating, failed recovery contextual to its step card, and Danger Zone unchanged and last.
+- Rewrote publish/unpublish/delete/slug-freeze/list guards to key on Argument.status (not published_at), and started writing the ArgumentStatusLog audit trail on every transition.
+- New `list_argument_speakers` service helper backing `ArgumentDetail.status_log` and `ArgumentDetail.speakers` (unified bench+advocate rows with utterance counts), plus a writable advocate `title` on the existing participant-update endpoint.
+- Arguments list gains a three-state (Draft/Published/Unpublished) badge, a Created column, and status-driven row actions; RunStatusCard gains a neutral-grey "Archived" badge override for already-created pipeline runs.
+- Rebuilt the `/admin/arguments/[id]` edit page around the three-state lifecycle: Status card with Created/Published dates and in-card Publish/Unpublish, a new timestamped Status history card, a unified Speakers section replacing the old Advocate Roles card and tenure-gap banners, and a Draft-only delete gate.
+- Tightened delete_argument to a single positive DRAFT-only status gate and added an authoritative backend + explicit UI guard preventing an unresolved advocate's side from being silently persisted.
+- Closed Phase 26 UAT gap (Test 18) by adding `is_archived` to `AdminJobResponse` via a `list_jobs()` outerjoin on `Argument`, and rendering the same grey "Archived" badge on `/admin/pipeline` that RunStatusCard already shows on the detail page.
+- New Alembic migration 0016 adds people.birthdate; admin_people schemas gain per-tenure appointment fields, drop person-level Role, and add a two-field PersonCreateRequest
+- `list_people`/`_missing_fields` now drive Bench/Advocate tabs, click-to-filter-by-missing-field, and per-tab columns (tenure coverage/gap, distinct argument count) with zero person-level Role and zero N+1 tenure queries
+- `get_person_detail`/`update_person`/`_replace_tenures` now carry birthdate + per-tenure appointment data with zero person-level Role, and a new `POST /people` exposes a general `create_person` behind the standard admin-auth boundary
+- `/admin/people/` is now a tabbed "People" directory (Bench default, Advocate via `?tab=`) with click-to-filter missing-field pills, a Bench-only tenure-gaps toggle, and a "Create person" entry point — all driven by Plan 27-02/27-03's `is_justice`/`missing`/`tenure_gaps` query-param contract
+- `/admin/people/[id]` rebuilt into Identity/Photo/Biography/Person Type cards with a Bench/Advocate segmented toggle that slide-reveals Birth Date, disabled Death Date, and bordered Tenure Period sub-cards carrying free-text appointment fields — the Role field and its inline-creation machinery are gone entirely
+- `/admin/people/new` — a new static route reusing the `/admin/people/[id]` editor's Identity/Person Type card structure, with a three-state (unselected) Bench/Advocate toggle, D-08 minimum validation, and a create action that POSTs to the general `POST /api/admin/people` endpoint before redirecting into the freshly-created person's editor
+- Fixed zero-horizontal-padding defect on all four middle columns (Tenure coverage, Tenure gap, Argument count, Missing fields) in the /admin/people list table, restoring the codebase's 8px gutter convention.
+- Closed UAT Gap 3 — PersonCreateRequest, create_person, and the SvelteKit create action now carry first_name/middle_name/last_name/name_suffix end-to-end, matching the [id] editor's save behavior.
+- Converted the tenure sub-card's President's Party free-text input to a curated `<select>` (six historical US parties + blank + legacy-value fallback), reversing D-16 for that field only while leaving Appointing President free-text.
+- Relocated the hidden birthdate/tenures save-form inputs outside the Bench/Advocate toggle's conditional, and completed the person-id-change reset effect to also re-derive tenureRows/nextKey — closing the two BLOCKER data-loss defects (CR-01, CR-02) that failed Phase 27's third verification pass.
+- Replaced a self-referential `nextKey` $state read+write inside the person-id-change reset `$effect` with a write-only pattern using a local non-reactive counter, eliminating the infinite-loop regression introduced by the 27-10 CR-02 fix.
+- Seven read-only COUNT/MAX/LIMIT aggregation service functions across three admin service files, plus a new Pydantic schema module and DB-gated test suite proving their I/O contracts against the corpus-scale (~7,800 row) dev database.
+- Seven thin, resource-scoped GET routes on the existing `/api/admin` router exposing Plan 01's aggregation service functions, each literal route registered before its `{id}`-parameterized sibling and proven via a DB-gated test suite to resolve 200 (not 422).
+- Rewrote `/admin/` from a placeholder into an at-a-glance operator dashboard: a new shared `StatCard.svelte` component, a sequential degrade-gracefully `load()` fetching all seven Plan 02 endpoints, and a `+page.svelte` rendering Needs Attention first, four neutral stat cards, then a visually-distinct Web Traffic placeholder — all from DESIGN-SYSTEM.md tokens with no mockup pass.
+- External services require manual configuration.
+- Three tested pure-Python modules -- streaming JSONL loader, typo-tolerant curated-vocabulary stage-direction detector, and a positive apolitical allowlist extractor -- that Plan 05's ConvoKit importer will orchestrate.
+- A new `import-justices` CLI command upgrades the 13 pre-existing seed_aliases.py Person rows in place (is_justice=True + court_tenures) and creates the remaining historical justices, with idempotent check-before-insert dedup and auto dual-tenure handling for elevated justices.
+- New `import-convokit` term-batched CLI command that idempotently scaffolds draft Case/Argument/CaseArgument/PipelineRun rows and resolves bench/advocate speakers into Person/ArgumentParticipant rows, entirely from conversations.json/cases.jsonl/speakers.json with a provably apolitical field allowlist.
+- Streams ConvoKit utterances.jsonl one term at a time (never the full 900MB file) into Utterance rows with `\n` boundaries preserved verbatim, splits curated-vocabulary stage-direction markers (including inline mid-turn ones) into their own rows via the existing `detect_stage_direction` helper, and prints a per-term/rollup summary of created/skipped/matched/flagged/errored counts.
+- Static /attributions page (Oyez.org/ConvoKit/SCDB credits + CC BY-NC 4.0 callout), a server-gated per-argument attribution note, TopNav entry point, and README credit — clearing the D-26 gate before any corpus-imported argument can go live
+- ArgumentMetadataResponse and CaseItem now accept argued_date=None without a pydantic ValidationError, closing the BLOCKER gap where GET /arguments/{id}/utterances 500'd for historical corpus rows lacking a parseable transcript date.
+- `pipeline/commands/import_convokit.py`'s single per-argument `PipelineRun` now writes `step="parse"` instead of `step="ingest"`, and a new end-to-end test proves `get_argument_with_utterances` now returns the actual, non-empty, correctly-attributed `Utterance` rows for a corpus-imported argument — closing the gap 29-07-PLAN.md's own regression test explicitly left open.
+- Per-docket `question_number` derivation aligned with the DB's real `(source_docket, question_number)` UNIQUE constraint, plus a distinct `docket_question_conflict` counter and explicit `IntegrityError` safety net, so reargued cases and PDF-ingest-overlap dockets import instead of being silently dropped into `conversations_errored`.
+- Corpus-imported arguments now start at `status=PIPELINE` (not `DRAFT`) and are paired with a HIT-shaped `PAUSED`/`RESOLVE` `AdminJob`, making the existing resolve→approve→publish workflow reachable for the ~7,800 historical corpus arguments for the first time.
+- Derived `source: Literal["pdf","corpus"]` field on `AdminJobResponse`, computed at read time in both `list_jobs()` and `get_job()` via a duplication-safe `exists()` subquery on `PipelineRun.strategy == "convokit_import"` — no schema change.
+- Quiet neutral "PDF"/"Corpus" provenance tag added to the /admin/pipeline/ list table, positioned between Status and Created, using only pre-existing color tokens.
+- Term-1955 corpus batch (163 arguments) wiped via a scoped FK-safe transaction and re-imported through the 30-01-patched path, landing at status=PIPELINE with paired paused/resolve AdminJobs — closing the D-02 stored-data gap that left the batch permanently unpublishable and unreviewable.
+- GET /api/admin/arguments now accepts an allow-list-guarded `?status=` query param that narrows results to a single status end-to-end, with a new segmented filter control, active-filter indicator, and filtered empty-state on the `/admin/arguments` list page (DASH-02).
+- `/admin/arguments/[id]` now renders the shared `ArgumentDetailsCard.svelte` component as a true second consumer, with the old hand-rolled docket/date form reduced to a small "Case" identity card whose `?/save` action no longer touches `argued_date` (AEDIT-04).
+- Migration 0019 makes arguments.question_number nullable (parity with argued_date); admin router now catches IntegrityError as a 409 instead of leaking a 500; CaseItem/ArgumentMetadataResponse schemas accept None
+
+---
+
 ## v1.4 Admin Completeness (Shipped: 2026-07-02)
 
 **Phases completed:** 4 phases (18–21), 13 plans

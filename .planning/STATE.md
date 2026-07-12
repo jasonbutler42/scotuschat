@@ -2,17 +2,19 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: Admin Screens Cleanup
-current_phase: 999.1
-current_phase_name: BACKLOG
-status: executing
+current_phase: 5
+status: Awaiting next milestone
 stopped_at: Completed 30.1-03-PLAN.md
-last_updated: "2026-07-12T17:06:06.281Z"
+last_updated: "2026-07-12T18:37:21.357Z"
+last_activity: 2026-07-12
+last_activity_desc: Milestone v1.5 completed and archived
 progress:
   total_phases: 10
   completed_phases: 10
   total_plans: 55
   completed_plans: 55
   percent: 100
+current_phase_name: BACKLOG
 ---
 
 # Project State
@@ -26,14 +28,10 @@ See: .planning/PROJECT.md (updated 2026-07-09 after Phase 27 completion)
 
 ## Current Position
 
-Phase: 999.1 — Click-to-copy extracted values design pattern (BACKLOG)
-Stage: Gap-closure phase inserted after milestone audit; awaiting `/gsd-discuss-phase 30.1`.
-Plan: Not started
-Status: Ready to execute
-
-**Known roadmap bookkeeping gap (not blocking):** `/gsd-execute-phase 28`'s auto-transition suggested "next: Phase 29" — this is misleading. Phases 29 (Historical Corpus Import) and 30 (Corpus Import Resolve Workflow) were already executed and verified (`passed`) out of order, in a separate session, before Phase 28 was finished. Phase 29 specifically has `roadmap_complete: false` in `roadmap.analyze` output even though its disk status and VERIFICATION.md are both fully complete — its checkbox was never added to ROADMAP.md's `## Phases > v1.5` checklist section (only Phases 22-28 are listed there). This is a documentation-only gap; no code or plan work is missing. Worth a small `/gsd-phase` housekeeping pass to add proper checklist entries for 29/30, but does not block milestone completion.
-
-Progress: [████████████████████] 52/52 plans across all 9 known phases (22-30) have SUMMARY.md, and all 9 have VERIFICATION.md status `passed` (100%). Phase 27: 5th UAT retest passed all 7 items, 27-SECURITY.md threats_open: 0. Phase 28: UAT 2/2 passed, 28-SECURITY.md threats_open: 0. Phases 29/30: verified `passed` (executed in an earlier out-of-order session).
+Phase: Milestone v1.5 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-07-12 — Milestone v1.5 completed and archived
 
 ## Performance Metrics
 
@@ -182,6 +180,14 @@ Deployment blockers (v1.4, unresolved — not in v1.5 scope):
 
 ## Deferred Items
 
+Items acknowledged and deferred at v1.5 milestone close on 2026-07-12:
+
+| Category | Item | Status |
+|----------|------|--------|
+| todo | 2026-07-08-edit-affordance-on-utterances-and-speaker-popover.md | pending (ui, no phase assigned) |
+| seed | SEED-001-rework-resolve-table-requirements | dormant |
+| context_question | Phase 999.2 (999.2-CONTEXT.md, 3 open questions) | not started |
+
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
 | verification | 01-VERIFICATION.md | human_needed (stale — human UAT completed per commits) | 2026-06-15 |
@@ -247,3 +253,7 @@ Deployment blockers (v1.4, unresolved — not in v1.5 scope):
 Last session: 2026-07-11T20:28:47.996Z
 Stopped at: Completed 30.1-03-PLAN.md
 Resume file: None
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone

@@ -8,15 +8,13 @@ A website that displays Supreme Court oral arguments as a chat-style interface �
 
 Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
 
-## Current Milestone: v1.5 Admin Screens Cleanup
+## Current State
 
-**Goal:** Screen-by-screen audit and refinement of all 7 admin screens — defining what belongs on each, removing redundant elements, and adding missing capabilities now that the admin interface is functionally complete.
+**v1.5 Admin Screens Cleanup — SHIPPED 2026-07-12.** All 7 admin screens (`/admin/`, `/admin/pipeline/`, `/admin/pipeline/[id]`, `/admin/arguments/`, `/admin/arguments/[id]`, `/admin/people/`, `/admin/people/[id]`) audited and refined: three-state argument lifecycle with status log, shared Argument Details component, redesigned pipeline list/detail pages, People admin with Bench/Advocate tabs and per-tenure appointment data, and a real dashboard. Also absorbed an out-of-band addition mid-milestone: bulk historical corpus import (~7,800 arguments, 1955–2019, from Cornell ConvoKit) routed through the same resolve/publish workflow as PDF ingest. Full details: `.planning/milestones/v1.5-ROADMAP.md`, `.planning/milestones/v1.5-REQUIREMENTS.md`.
 
-**Target features:**
-- Screen audit and polish: `/admin/`, `/admin/pipeline/`, `/admin/pipeline/[id]`, `/admin/arguments/`, `/admin/arguments/[id]`, `/admin/people/`, `/admin/people/[id]`
-- Remove redundant argument preview card on job detail page
-- Clarify run vs. argument distinction in language and visual design across admin
-- Justice roster by date tool for operator verification
+## Next Milestone Goals
+
+The only unaddressed Active requirement is deployment (DEPLOY-01, DEPLOY-03) — Digital Ocean App Platform hosting, deferred since v1.4. Known deployment blockers are listed under Context below. A substantial 999.x backlog has also accumulated across v1.2–v1.5 (see `.planning/ROADMAP.md` Backlog section) and is worth a review pass (`/gsd-review-backlog`) before or alongside scoping the next milestone.
 
 ## Requirements
 
@@ -113,6 +111,7 @@ Anyone can open a SCOTUS oral argument and immediately follow the conversation �
 
 ## Context
 
+- Shipped v1.5 — 362 files changed (91 code files: +17,308 / -2,473 lines), 10 phases (22–30, 30.1), 55 plans, 10 days (2026-07-02 → 2026-07-12). Includes the historical corpus import (Phase 29/30), which was scoped in mid-milestone and is not part of the original v1.5 requirement set.
 - Shipped v1.4 — 94 files changed, +11,903 / -330 lines (Phases 18–21, 3 days 2026-06-29 → 2026-07-02)
 - Shipped v1.0–v1.4 cumulatively; tech stack finalized: SvelteKit 2.x + Svelte 5 Runes (frontend), FastAPI 0.115+ + Pydantic v2 (API), PostgreSQL 16 + SQLAlchemy 2.0 async + Alembic (database), Python 3.12 + pdfplumber + Anthropic SDK + instructor + tenacity (pipeline)
 - Alembic migrations through 0011: schema includes argument_status enum (pipeline/draft/published), SideEnum (PETITIONER/RESPONDENT/AMICUS), original_filename on admin_jobs, is_justice on people, source_docket + cover_metadata JSONB + argued_date nullable on arguments, UNIQUE(source_docket, question_number)
@@ -206,4 +205,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-12 — Phase 30.1 complete (close-gap-aedit-04-dash-02, gap closure inserted by the v1.5 milestone audit): `/admin/arguments/[id]` now consumes the shared `ArgumentDetailsCard` component (Case card + ArgumentDetailsCard card, `saveArgumentDetails` action reusing `PATCH /metadata`) instead of a hand-rolled duplicate form, and the dashboard's Draft/Published/Unpublished status CTAs on `/admin/arguments?status=X` actually filter the list (service/route/load param threading + segmented control + active-filter indicator + filtered empty-state). A UAT pass (2/3 tests) found one blocker: blanking Question number threw an unhandled 500 instead of persisting NULL, unlike Argued date. Root cause was schema drift — `arguments.question_number` was never migrated to nullable when `argued_date` was (migration 0011). Plan 30.1-03 closed the gap: migration 0019 makes the column nullable (drops server default, downgrade backfills NULL→1 before re-tightening), `admin.py`'s metadata handler now catches `IntegrityError` separately (rollback + generic 409, defense-in-depth against any future constraint mismatch), and `CaseItem`/`ArgumentMetadataResponse` accept `question_number=None`. Re-verification passed 12/12 must-haves with live DB proof (read-only transaction against the real dev DB confirmed the NOT NULL constraint is gone, then rolled back). AEDIT-04 and DASH-02 fully closed. Note: a full-suite `pytest` run shows 41 pre-existing failures unrelated to this phase — confirmed via isolation testing that they're either the already-tracked shared-dev-DB test-pollution issue (backlog Phase 999.19) or failures in pipeline/ code this phase never touched.*
+*Last updated: 2026-07-12 after v1.5 milestone completion — all 57 v1.5 requirements moved to Validated; re-audit confirmed 57/57 satisfied and wired end-to-end with zero new gaps (`.planning/milestones/v1.5-MILESTONE-AUDIT.md`). Full v1.5 detail archived to `.planning/milestones/v1.5-ROADMAP.md` and `.planning/milestones/v1.5-REQUIREMENTS.md`. Next milestone: deployment (DEPLOY-01/03), pending `/gsd-new-milestone`.*

@@ -1,8 +1,10 @@
 ---
-status: diagnosed
+status: resolved
 trigger: "Resolve card has no visible trigger to create or switch a person on the pipeline job detail page (/admin/pipeline/[job_id]), so the CR-01 regression check (side persistence after create-new-person) could not even be started."
 created: 2026-07-07T00:00:00Z
-updated: 2026-07-07T00:10:00Z
+updated: 2026-07-12T00:00:00Z
+goal: find_root_cause_only
+resolved_by: "No code fix needed — same root cause as the sibling gap (continue-resolve-not-visible-for-zero-discrepancies): the tested job was not in jobStatus === 'paused', so all paused-only discrepancy-resolution UI was correctly hidden by design. Closed at v1.5 milestone completion 2026-07-12 with no further action."
 ---
 
 ## Current Focus

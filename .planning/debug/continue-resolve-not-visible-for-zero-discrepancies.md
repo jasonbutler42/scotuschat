@@ -1,8 +1,10 @@
 ---
-status: diagnosed
+status: resolved
 trigger: "Investigate issue: continue-resolve-not-visible-for-zero-discrepancies — The Continue Resolve control (footer action on ResolveCard) is not visible to a human tester on the pipeline job detail page, so the WR-04 regression check (Continue Resolve with zero discrepancies) could not be confirmed."
 created: 2026-07-07T00:00:00Z
-updated: 2026-07-07T00:10:00Z
+updated: 2026-07-12T00:00:00Z
+goal: find_root_cause_only
+resolved_by: "No code fix needed — diagnosis confirmed this is correct, intentional behavior (paused-only UI correctly hidden when jobStatus !== 'paused'), not a defect. Closed at v1.5 milestone completion 2026-07-12 with no further action; re-testing against a genuinely paused job is the only outstanding recommendation, left as a UAT-process note rather than a tracked bug."
 ---
 
 ## Current Focus

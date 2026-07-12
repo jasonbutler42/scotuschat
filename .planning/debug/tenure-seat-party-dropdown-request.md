@@ -1,8 +1,10 @@
 ---
-status: diagnosed
+status: resolved
 trigger: "In the person editor's Tenure Period sub-card (Bench toggle), the Seat and President's Party fields are free-text inputs. The user expected/wants them to be dropdowns instead."
 created: 2026-07-09T12:15:00Z
-updated: 2026-07-09T12:35:00Z
+updated: 2026-07-12T00:00:00Z
+goal: find_root_cause_only
+resolved_by: "No code fix — President's Party free-text is a deliberate locked decision (D-16, 27-CONTEXT.md), not a bug. Seat's dropdown question is a genuine open design question (curated seat list needed since real values include numbered seats like 'Associate Justice Seat 3', not just Chief/Associate) — already tracked as ROADMAP.md backlog Phase 999.16. Closed at v1.5 milestone completion 2026-07-12; further work routes through 999.16."
 ---
 
 ## Current Focus

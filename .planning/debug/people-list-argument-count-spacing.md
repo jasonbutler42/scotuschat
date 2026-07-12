@@ -1,8 +1,10 @@
 ---
-status: diagnosed
+status: resolved
 trigger: "people-list-argument-count-spacing — On the Advocate tab of /admin/people, the table's Argument count and Missing fields columns visually run together with too little spacing — headers render as 'Argument countMissing fields' with no gap."
 created: 2026-07-09T12:15:00Z
-updated: 2026-07-09T12:35:00Z
+updated: 2026-07-12T00:00:00Z
+goal: find_root_cause_only
+resolved_by: "commit b9ee6eac (fix(27-07): add horizontal gutter padding to people-table middle columns) — all Bench/Advocate middle-column headers and cells now use padding: 8px 8px / 12px 8px. Verified in code 2026-07-12."
 ---
 
 ## Current Focus

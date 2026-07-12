@@ -1,8 +1,10 @@
 ---
-status: diagnosed
+status: resolved
 trigger: "create-person-discards-name-parts"
 created: 2026-07-09T12:10:00Z
-updated: 2026-07-09T12:35:00Z
+updated: 2026-07-12T00:00:00Z
+goal: find_root_cause_only
+resolved_by: "27-08-PLAN — create action in new/+page.server.ts now reads/forwards first_name/middle_name/last_name/name_suffix; PersonCreateRequest schema and create_person service both accept and persist all four fields with empty-string-to-None normalization, matching the [id] editor's save action. Verified in code 2026-07-12: all three layers confirmed fixed."
 ---
 
 ## Current Focus

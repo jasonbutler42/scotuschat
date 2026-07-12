@@ -1,5 +1,6 @@
 ---
-status: diagnosed
+status: resolved
+resolved_by: "27-11-PLAN — replaced the reactive nextKey read+write inside the person-id-change $effect with a plain local resetKey counter, writing nextKey ($state) exactly once after the map completes, matching this codebase's write-only reset-effect convention. Applied exactly as proposed in this file's Resolution.fix. Verified in code 2026-07-12."
 trigger: |
   DATA_START
   Investigate a Svelte 5 runes bug reported during UAT for Phase 27 (people-admin).

@@ -2,11 +2,11 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: Admin Screens Cleanup
-current_phase: 30.1
-current_phase_name: close-gap-aedit-04-dash-02-wire-argumentdetailscard-status-f
+current_phase: 999.1
+current_phase_name: BACKLOG
 status: executing
 stopped_at: Completed 30.1-03-PLAN.md
-last_updated: "2026-07-11T20:28:48.011Z"
+last_updated: "2026-07-12T17:06:06.281Z"
 progress:
   total_phases: 10
   completed_phases: 10
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-07-09 after Phase 27 completion)
 
 ## Current Position
 
-Phase: 30.1 (close-gap-aedit-04-dash-02-wire-argumentdetailscard-status-f) — EXECUTING
+Phase: 999.1 — Click-to-copy extracted values design pattern (BACKLOG)
 Stage: Gap-closure phase inserted after milestone audit; awaiting `/gsd-discuss-phase 30.1`.
-Plan: 3 of 3
+Plan: Not started
 Status: Ready to execute
 
 **Known roadmap bookkeeping gap (not blocking):** `/gsd-execute-phase 28`'s auto-transition suggested "next: Phase 29" — this is misleading. Phases 29 (Historical Corpus Import) and 30 (Corpus Import Resolve Workflow) were already executed and verified (`passed`) out of order, in a separate session, before Phase 28 was finished. Phase 29 specifically has `roadmap_complete: false` in `roadmap.analyze` output even though its disk status and VERIFICATION.md are both fully complete — its checkbox was never added to ROADMAP.md's `## Phases > v1.5` checklist section (only Phases 22-28 are listed there). This is a documentation-only gap; no code or plan work is missing. Worth a small `/gsd-phase` housekeeping pass to add proper checklist entries for 29/30, but does not block milestone completion.

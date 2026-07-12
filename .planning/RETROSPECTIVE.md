@@ -206,6 +206,56 @@
 
 ---
 
+## Milestone: v1.5 — Admin Screens Cleanup
+
+**Shipped:** 2026-07-12
+**Phases:** 10 (22–30, 30.1) | **Plans:** 55 | **Timeline:** 10 days (2026-07-02 → 2026-07-12)
+**Files changed:** 362 (91 code files: +17,308 / -2,473 lines)
+
+### What Was Built
+
+- Three-state argument lifecycle (Draft/Published/Unpublished) with a full timestamped status log
+- Shared `ArgumentDetailsCard` component consumed by both the pipeline job detail page and the argument edit page
+- Redesigned pipeline list/detail pages — multi-docket pill input, compound status badges, restructured resolve card with locked columns and side-first gating
+- People admin overhaul — Bench/Advocate tabs, click-to-filter missing-field pills, per-tenure appointment data, create-person flow
+- Dashboard rebuilt with intentional stat cards, a "needs attention" section, and actionable CTAs
+- Out-of-band addition absorbed mid-milestone: bulk historical corpus import (~7,800 arguments, 1955–2019, from Cornell ConvoKit), routed through the same resolve/publish workflow as PDF ingest (Phases 29–30)
+- Milestone-audit gap-closure phase (30.1) wiring the shared Argument Details component and dashboard status filter into the arguments admin page
+
+### What Worked
+
+- **Independent milestone re-audit caught real gaps individual phase verification missed** — AEDIT-04 and DASH-02 were both marked "Complete" by their originating phases, but neither phase's own verification checked actual cross-phase consumption. The milestone audit's integration checker caught both, and gap-closure Phase 30.1 closed them cleanly with live-DB-verified re-audits.
+- **TDD discipline on corpus import** — streaming loader, stage-direction detector, and apolitical allowlist were all test-first (Phase 29-02), and the corpus importer reused existing speaker-resolution helpers unchanged rather than re-implementing them.
+- **Debug session framework scaled to a complex UI phase** — 6 structured diagnoses during Phase 27 (People Admin) correctly separated "real bug" from "working as designed, tester was in the wrong precondition state" without guessing.
+- **Reusing the PDF-ingest resolve/approve/publish machinery for corpus-imported arguments** (Phase 30) avoided building a second review workflow from scratch — a single `source: "pdf"|"corpus"` derived field was enough to distinguish origin everywhere it mattered.
+
+### What Was Inefficient
+
+- **Debug sessions left in `diagnosed` status after their fixes landed** — 4 of the 6 open Phase 27 debug sessions were already resolved by later phases (27-07, 27-08, 27-11) or were never actual bugs, but their tracking files were never updated. This was only caught by the pre-close artifact audit at milestone completion, not at the time each fix landed — the same "close debug sessions when the fix lands" lesson from v1.1, still recurring in v1.5.
+- **ROADMAP.md's summary table/header went stale when phases executed out of dependency order** — Phases 29, 30, and 30.1 were fully executed and verified but never added to the top-of-file milestone header/table (which still read "Phases 22–28 (in progress)" until this close). Full phase detail sections existed further down the file the whole time; only the summary view was stale.
+- **Real test-data leakage into the shared dev database** — fixing a long-standing FastAPI test lifespan bug (999.17) unmasked that DB-gated tests actually execute against the live dev Postgres, and that some production service functions commit internally in a way the test fixture's rollback can't undo. This actively broke an operator runbook mid-Phase-30 (duplicate `Person` row) and required manual cleanup; the underlying fix was escalated to backlog (999.19) rather than resolved in-milestone.
+
+### Patterns Established
+
+- Bulk one-time CLI import (`import-justices`, `import-convokit`) as a second ingestion path that bypasses PDF/LLM parsing entirely but still lands in the same schema and, after Phase 30, the same resolve/publish workflow as PDF ingest — the two paths converge as early as possible rather than needing parallel downstream handling.
+- Inserted gap-closure phase (30.1) pattern for milestone-audit findings — when an audit finds a requirement is technically shipped but not actually cross-phase-wired, insert a numbered phase (not a hotfix) so the fix gets its own plan, SUMMARY, and re-verification.
+- Per-docket `question_number` derivation aligned to the DB's real `(source_docket, question_number)` UNIQUE constraint, rather than hardcoding — the general lesson: when a bulk importer and an interactive form both write to the same constrained columns, derive from the constraint, don't duplicate its logic.
+
+### Key Lessons
+
+1. **Close debug sessions when the fix lands, not at milestone close.** This is at least the third milestone where this exact lesson has recurred (v1.1, and now v1.5 with 4 stale sessions). Consider making it a phase-completion checklist item rather than relying on the milestone pre-close audit to catch it.
+2. **Milestone audits should independently re-verify cross-phase wiring, not trust each phase's own "Complete" marking.** This is exactly what surfaced AEDIT-04/DASH-02 — a phase can correctly build a component and still fail to wire it into a sibling page.
+3. **Keep ROADMAP.md's top-of-file summary in sync when phases execute out of dependency order.** Detailed phase sections being current isn't enough if the header/table operators actually scan first is stale — this creates a documentation-only gap that looks worse than it is.
+4. **Shared dev DB test pollution is a systemic risk once tests genuinely execute against real data.** A test fixture's `rollback()` only undoes the test's own direct writes, not commits made internally by production service functions the test calls. This needs a dedicated test database or a fix at the fixture level, not per-incident manual cleanup.
+
+### Cost Observations
+
+- Model mix: balanced profile, Sonnet primary throughout
+- Sessions: multiple across the 10-day window — largest milestone yet by phase count (10, including one inserted gap-closure phase) and by file/line change volume
+- Notable: absorbed an unplanned ~7,800-argument historical corpus import (Phases 29–30) mid-milestone, executed out of dependency order relative to Phase 28, without derailing the original v1.5 admin-screens scope
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -217,6 +267,7 @@
 | v1.2 Pre-Launch Polish | 6 | 21 | Largest milestone; UI-heavy (5/6 phases had UI hints); bits-ui introduced; milestone close deferred |
 | v1.3 Speaker Accuracy + Pipeline Confidence | 3 | 9 | TDD applied to tenure logic; cover extractor module; gap-closure plan (17-03) as named artifact |
 | v1.4 Admin Completeness | 4 | 13 | Shortest milestone (3 days); tri-state delete pattern; unconditional polling fix; stale todos/requirements repeated lesson |
+| v1.5 Admin Screens Cleanup | 10 (incl. inserted 30.1) | 55 | Largest milestone yet; absorbed an unplanned 7,800-argument bulk corpus import mid-milestone; inserted gap-closure phase pattern for milestone-audit findings; recurring "close debug sessions at fix time" lesson |
 
 ### Cumulative Quality
 

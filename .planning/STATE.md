@@ -4,9 +4,9 @@ milestone: v1.6
 milestone_name: Backlog Cleanup
 current_phase: 31
 current_phase_name: Audit ~28 stale DB-gated test fixtures + fix real data leakage into shared dev DB
-status: planning
+status: executing
 stopped_at: Phase 31 context gathered
-last_updated: "2026-07-13T12:28:22.027Z"
+last_updated: "2026-07-13T13:49:17.068Z"
 last_activity: 2026-07-13
 last_activity_desc: ROADMAP.md created; phases 31–40 folded in from the 999.x backlog promotion with full goal text, success criteria, and requirement mappings
 progress:
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-07-12 after v1.5 milestone completion)
 
 Phase: 31 of 40 (Audit ~28 stale DB-gated test fixtures + fix real data leakage into shared dev DB)
 Plan: — (not yet planned)
-Status: Ready to plan
+Status: Ready to execute
 Last activity: 2026-07-13 — ROADMAP.md created; phases 31–40 folded in from the 999.x backlog promotion with full goal text, success criteria, and requirement mappings
 
 ## Performance Metrics

@@ -1,7 +1,7 @@
 ---
 phase: 27-people-admin
 verified: 2026-07-09T19:00:00Z
-status: human_needed
+status: passed
 score: 5/5 roadmap success criteria structurally verified
 behavior_unverified: 1
 overrides_applied: 0
@@ -9,35 +9,44 @@ re_verification:
   previous_status: human_needed
   previous_score: "5/5 roadmap success criteria verified"
   gaps_closed:
+
     - "Blocking regression that prevented ANY UAT retest attempt: the `effect_update_depth_exceeded` infinite-loop on `/admin/people/[id]` (introduced by 27-10's CR-02 fix, commit b02a2681) is fixed by gap-closure plan 27-11 (commit 9651e27c). The person-id-change reset `$effect`'s `nextKey` $state variable is now written exactly once (`nextKey = resetKey;`, line 150), after a local non-reactive `resetKey` counter computes all intermediate `_key` values inside the `tenureRows` `.map()` callback (line 142) — the effect no longer reads `nextKey` during its own execution, eliminating the self-referential dependency Svelte's reactivity system was tracking."
   gaps_remaining: []
   regressions: []
 gaps: []
 deferred: []
 behavior_unverified_items:
+
   - truth: "Justice Details card is collapsed by default; checking 'Is Justice' opens it with animation; unchecking hides fields without deleting tenure/appointment data (ROADMAP Success Criterion 4 / REQUIREMENTS.md PEDIT-07)"
     test: "(a) Open an existing Justice with >=1 tenure row and a birthdate, click 'Advocate', click 'Save Person', reload the page — confirm tenure rows and birthdate are unchanged, AND confirm no console errors / no effect_update_depth_exceeded / no navigation lag. (b) Merge person A into person B (redirects to /admin/people/{B}); on that page click 'Save Person' without further edits, reload — confirm B's tenure rows are B's own, not A's stale pre-merge rows. (c) As a smoke test independent of (a)/(b): simply open /admin/people/{id} for any Justice with >=1 tenure row and watch the browser console/network tab for a few seconds — confirm no repeated 'updated at' effect-rerun spam and no thrown Svelte error."
     expected: "In (a), the PATCH body's `tenures` array and `birthdate` field carry the Justice's real, unchanged values (not `[]`/`null`), the DB still shows the original tenure rows and birthdate after reload, and the page remains responsive throughout (no 3-5s lag, no thrown error). In (b), B's tenure rows after reload match B's own pre-merge tenures (or B's tenures plus any legitimately transferred from A via the merge's FK-transfer, not A's raw `tenureRows` array). In (c), the page settles after one effect run with no error."
     why_human: "This is a state-transition / data-preservation invariant (toggle-then-save, merge-then-save) plus a runtime reactivity-loop invariant (effect settles after one run), both of which only a live browser session can prove. Static/structural checks (grep for input position, input-name uniqueness, the write-only nextKey pattern, svelte-check) prove the code is present and correctly wired — reconfirmed in this pass, including the 27-11 fix — but cannot execute the runtime data flow or observe the Svelte reactivity scheduler settling. No unit/component/e2e test in the codebase exercises any of these three paths (confirmed via `find` for test/spec files in `app/` — none exist); 27-REVIEW.md's WR-07 finding explicitly notes this same gap in automated coverage. This is the exact test that was attempted in the 4th UAT retest and blocked by the now-fixed infinite loop before it could complete — it has not yet been re-attempted."
 human_verification:
+
   - test: "Person-detail page loads without the effect_update_depth_exceeded loop (smoke test, unblocks everything else below)."
     expected: "Opening /admin/people/{id} for a Justice with >=1 tenure row shows no repeated 'updated at' console spam, no thrown 'Uncaught (in promise) Svelte error: effect_update_depth_exceeded', and normal click-to-navigation responsiveness (not the previously-reported 3-5s lag)."
     why_human: "This is exactly the runtime behavior a live browser session exercises that static analysis cannot: the debug session's own 'blind spot' note stated 'have not yet run the app in a browser to watch the actual console output' — this pass's structural re-trace (below) gives high confidence the fix is correct, but only a live reload proves the scheduler actually settles."
+
   - test: "CR-01 data-preservation round-trip: open an existing Justice with tenure rows + birthdate, click 'Advocate', click 'Save Person', reload."
     expected: "Tenure rows and birthdate are unchanged after reload (not wiped)."
     why_human: "State-transition/data-integrity invariant; requires a live browser + backend round-trip. No automated test exists. This is UAT Test 1, which failed on the (now-fixed) infinite loop before the actual save/reload could be observed — it has not yet been cleanly re-attempted."
+
   - test: "CR-02 data-preservation round-trip: merge person A into person B (redirects to /admin/people/{B}); on that page click 'Save Person' with no further edits, reload."
     expected: "B's tenure rows after reload are B's own (not A's stale pre-merge tenureRows array)."
     why_human: "State-transition/data-integrity invariant across a soft-navigation redirect; requires a live browser + backend round-trip. No automated test exists. This is UAT Test 2, blocked (not attempted) in the 4th retest."
+
   - test: "Bench/Advocate slide-reveal animation and visual token compliance re-check."
     expected: "Slide transition still animates smoothly (not fade/snap); colors/spacing still match DESIGN-SYSTEM.md tokens; toggling Advocate→Bench→Advocate still preserves in-progress tenure edits."
     why_human: "Animation fidelity is not type-checkable. This is UAT Test 3, blocked (not attempted) in the 4th retest."
+
   - test: "Column spacing visual re-check (27-07 fix, carried forward)."
     expected: "A clear horizontal gutter between Tenure coverage/Tenure gap (Bench tab) and Argument count/Missing fields (Advocate tab) columns."
     why_human: "Visual gutter perception cannot be assessed by grep/svelte-check. This is UAT Test 4, blocked (not attempted) in the 4th retest."
+
   - test: "President's Party dropdown round-trip (27-09 fix, carried forward)."
     expected: "Selected party persists across save/reload; any legacy out-of-list stored value still displays selected (not reset to blank) on load."
     why_human: "Full click-through round-trip cannot be exercised by static checks alone. This is UAT Test 5, blocked (not attempted) in the 4th retest."
+
   - test: "Create-person name-parts persistence, full click-through (27-08 fix, carried forward)."
     expected: "All four name-part fields (first/middle/last/suffix) show the submitted values when reopening the newly created person's editor."
     why_human: "Automated coverage proves each layer independently but not the full browser click-through flow. This is UAT Test 6, blocked (not attempted) in the 4th retest."

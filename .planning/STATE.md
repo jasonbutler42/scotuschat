@@ -4,17 +4,17 @@ milestone: v1.6
 milestone_name: Backlog Cleanup
 current_phase: 32
 current_phase_name: fix-courttenure-fk-bookkeeping-gap-in-merge-delete-person-se
-status: executing
+status: verifying
 stopped_at: Phase 32 context gathered
-last_updated: "2026-07-13T18:56:37.700Z"
+last_updated: "2026-07-13T19:03:37.335Z"
 last_activity: 2026-07-13
 last_activity_desc: Phase 32 execution started
 progress:
   total_phases: 10
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 10
-  completed_plans: 9
-  percent: 10
+  completed_plans: 10
+  percent: 20
 ---
 
 # Project State
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-07-12 after v1.5 milestone completion)
 
 Phase: 32 (fix-courttenure-fk-bookkeeping-gap-in-merge-delete-person-se) — EXECUTING
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-07-13 — Phase 32 execution started
 
 ## Performance Metrics
@@ -67,6 +67,7 @@ Two open design questions remain unresolved by design and are intentionally defe
 - [Phase 31]: Operator reviewed the 31-08 dry-run report and authorized the destructive cleanup; fresh re-detection immediately before --execute matched the authorized 81-row candidate set exactly, so no drift-abort was needed
 - [Phase 32]: CourtTenure joins the blocking tier (Utterance/CaseAppearance/ArgumentParticipant), not the SpeakerAlias intrinsic-unconditional-delete tier (D-01)
 - [Phase 32]: New field/key name is 'tenures' (matches existing tenure_coverage/tenure_gaps naming convention), not 'court_tenure'
+- [Phase 32]: tenures joins the blocking tier (utterances/appearances/argument_participants) in the client-side can_delete/delete_block_count check, not the aliases bucket (D-01/D-05)
 
 ### Roadmap Evolution
 
@@ -165,10 +166,11 @@ Items acknowledged and deferred at v1.5 milestone close on 2026-07-12:
 | Phase 31 P07 | 55min | 2 tasks | 5 files |
 | Phase 31 P08 | 25min | 2 tasks | 1 files |
 | Phase 32 P01 | 15min | 2 tasks | 3 files |
+| Phase 32 P02 | 10min | 2 tasks | 2 files |
 
 ## Session Continuity
 
-Last session: 2026-07-13T18:55:43.176Z
+Last session: 2026-07-13T19:02:54.759Z
 Stopped at: Phase 32 context gathered
 Resume file: .planning/phases/32-fix-courttenure-fk-bookkeeping-gap-in-merge-delete-person-se/32-CONTEXT.md
 

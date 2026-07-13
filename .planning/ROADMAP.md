@@ -108,7 +108,7 @@ Full phase details: `.planning/milestones/v1.5-ROADMAP.md`
 **Overview:** Close out the 10 phases promoted from the 999.x backlog on 2026-07-12 before starting anything new — an escalated data-integrity risk (stale test fixtures + real data leakage), four small pipeline/people-admin bug fixes, one operator UX pattern, two open design questions to resolve during discuss-phase, a public-UI enrichment, and a README gap. Deployment (DEPLOY-01/03) and the remaining 999.x backlog (999.2–999.8) are explicitly out of scope.
 
 - [x] **Phase 31: Audit ~28 stale DB-gated test fixtures + fix real data leakage into shared dev DB** - Escalated data-integrity risk; fix test isolation so service-function commits can't leak synthetic Person/Argument rows (completed 2026-07-13)
-- [ ] **Phase 32: Fix CourtTenure FK bookkeeping gap in merge/delete person service paths** - Merge/delete on a Justice with tenure rows no longer 500s
+- [x] **Phase 32: Fix CourtTenure FK bookkeeping gap in merge/delete person service paths** - Merge/delete on a Justice with tenure rows no longer 500s (completed 2026-07-13)
 - [ ] **Phase 33: `update_argument_metadata` unique-constraint guard** - Colliding (source_docket, question_number) returns 409/422 instead of 500
 - [ ] **Phase 34: Blank case_name/docket_number validation** - Prevents slug/dedup corruption from cleared fields
 - [ ] **Phase 35: `rerun_job` never spawns ingest for locally-uploaded jobs** - Local-upload reruns actually progress instead of sitting at PENDING forever
@@ -165,12 +165,12 @@ Full phase details: `.planning/milestones/v1.5-ROADMAP.md`
   3. Attempting to delete a Justice with CourtTenure rows returns the documented graceful non-orphan response instead of an unhandled 500.
   4. Deleting a genuinely orphaned Justice (no CourtTenure rows) still succeeds exactly as before.
 
-**Plans**: 1/2 plans executed
+**Plans**: 2/2 plans complete
 
 Plans:
 
 - [x] 32-01-PLAN.md — Backend: add CourtTenure to MergePreview schema + all 3 service FK loops (preview/merge/delete) + mirrored tests (D-01–D-04)
-- [ ] 32-02-PLAN.md — Frontend: sync merge-preview contract — tenures in server-load can_delete/block-count + component breakdown/all-zero check (D-05)
+- [x] 32-02-PLAN.md — Frontend: sync merge-preview contract — tenures in server-load can_delete/block-count + component breakdown/all-zero check (D-05)
 
 ### Phase 33: `update_argument_metadata` unique-constraint guard
 
@@ -321,7 +321,7 @@ Plans:
 | 30. Corpus Import Resolve Workflow | v1.5 | 4/4 | Complete | 2026-07-10 |
 | 30.1. Close gap AEDIT-04/DASH-02 | v1.5 | 3/3 | Complete | 2026-07-12 |
 | 31. Audit ~28 stale DB-gated test fixtures + fix real data leakage into shared dev DB | v1.6 | 8/8 | Complete    | 2026-07-13 |
-| 32. Fix CourtTenure FK bookkeeping gap in merge/delete person service paths | v1.6 | 1/2 | In Progress|  |
+| 32. Fix CourtTenure FK bookkeeping gap in merge/delete person service paths | v1.6 | 2/2 | Complete   | 2026-07-13 |
 | 33. `update_argument_metadata` unique-constraint guard | v1.6 | TBD | Not started | - |
 | 34. Blank case_name/docket_number validation | v1.6 | TBD | Not started | - |
 | 35. `rerun_job` never spawns ingest for locally-uploaded jobs | v1.6 | TBD | Not started | - |

@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Backlog Cleanup
-current_phase: 31
-current_phase_name: audit-stale-db-gated-test-fixtures
+current_phase: 32
+current_phase_name: Fix CourtTenure FK bookkeeping gap in merge/delete person service paths
 status: verifying
 stopped_at: Completed 31-08-PLAN.md (Phase 31 complete, all 8 plans done)
-last_updated: "2026-07-13T17:36:44.416Z"
+last_updated: "2026-07-13T18:02:20.552Z"
 last_activity: 2026-07-13
-last_activity_desc: Phase 31 execution started
+last_activity_desc: Phase 31 complete, transitioned to Phase 32
 progress:
   total_phases: 10
   completed_phases: 1
@@ -28,10 +28,10 @@ See: .planning/PROJECT.md (updated 2026-07-12 after v1.5 milestone completion)
 
 ## Current Position
 
-Phase: 31 (audit-stale-db-gated-test-fixtures) — EXECUTING
-Plan: 8 of 8
+Phase: 32 — Fix CourtTenure FK bookkeeping gap in merge/delete person service paths
+Plan: Not started
 Status: Phase complete — ready for verification
-Last activity: 2026-07-13 — Phase 31 execution started
+Last activity: 2026-07-13 — Phase 31 complete, transitioned to Phase 32
 
 ## Performance Metrics
 

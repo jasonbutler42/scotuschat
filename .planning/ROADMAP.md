@@ -165,7 +165,11 @@ Full phase details: `.planning/milestones/v1.5-ROADMAP.md`
   3. Attempting to delete a Justice with CourtTenure rows returns the documented graceful non-orphan response instead of an unhandled 500.
   4. Deleting a genuinely orphaned Justice (no CourtTenure rows) still succeeds exactly as before.
 
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 32-01-PLAN.md — Backend: add CourtTenure to MergePreview schema + all 3 service FK loops (preview/merge/delete) + mirrored tests (D-01–D-04)
+- [ ] 32-02-PLAN.md — Frontend: sync merge-preview contract — tenures in server-load can_delete/block-count + component breakdown/all-zero check (D-05)
 
 ### Phase 33: `update_argument_metadata` unique-constraint guard
 
@@ -316,7 +320,7 @@ Full phase details: `.planning/milestones/v1.5-ROADMAP.md`
 | 30. Corpus Import Resolve Workflow | v1.5 | 4/4 | Complete | 2026-07-10 |
 | 30.1. Close gap AEDIT-04/DASH-02 | v1.5 | 3/3 | Complete | 2026-07-12 |
 | 31. Audit ~28 stale DB-gated test fixtures + fix real data leakage into shared dev DB | v1.6 | 8/8 | Complete    | 2026-07-13 |
-| 32. Fix CourtTenure FK bookkeeping gap in merge/delete person service paths | v1.6 | TBD | Not started | - |
+| 32. Fix CourtTenure FK bookkeeping gap in merge/delete person service paths | v1.6 | 0/2 | Planned | - |
 | 33. `update_argument_metadata` unique-constraint guard | v1.6 | TBD | Not started | - |
 | 34. Blank case_name/docket_number validation | v1.6 | TBD | Not started | - |
 | 35. `rerun_job` never spawns ingest for locally-uploaded jobs | v1.6 | TBD | Not started | - |

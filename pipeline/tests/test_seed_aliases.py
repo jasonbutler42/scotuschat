@@ -28,6 +28,14 @@ requires_db = pytest.mark.skipif(
 
 @requires_db
 @pytest.mark.asyncio
+@pytest.mark.xfail(
+    reason=(
+        "Never implemented — pre-existing pytest.fail('not implemented') stub, "
+        "not schema drift. Out of scope for TEST-02 fixture repair; see "
+        "31-06-SUMMARY.md / deferred-items.md."
+    ),
+    strict=True,
+)
 async def test_seed_creates_justices(async_session):
     """
     After run_seed_aliases() completes, the database must contain:
@@ -45,6 +53,14 @@ async def test_seed_creates_justices(async_session):
 
 @requires_db
 @pytest.mark.asyncio
+@pytest.mark.xfail(
+    reason=(
+        "Never implemented — pre-existing pytest.fail('not implemented') stub, "
+        "not schema drift. Out of scope for TEST-02 fixture repair; see "
+        "31-06-SUMMARY.md / deferred-items.md."
+    ),
+    strict=True,
+)
 async def test_seed_idempotent(async_session):
     """
     Running run_seed_aliases() twice must produce identical row counts.

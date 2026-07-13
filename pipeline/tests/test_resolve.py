@@ -45,6 +45,14 @@ def test_normalize_label():
 
 @requires_db
 @pytest.mark.asyncio
+@pytest.mark.xfail(
+    reason=(
+        "Never implemented — pre-existing pytest.fail('not implemented') stub, "
+        "not schema drift. Out of scope for TEST-02 fixture repair; see "
+        "31-06-SUMMARY.md / deferred-items.md."
+    ),
+    strict=True,
+)
 async def test_resolve_alias_hit(async_session):
     """
     When a SpeakerAlias row exists for a label, run_resolve() sets
@@ -58,6 +66,14 @@ async def test_resolve_alias_hit(async_session):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.xfail(
+    reason=(
+        "Never implemented — pre-existing pytest.fail('not implemented') stub, "
+        "not schema drift. Out of scope for TEST-02 fixture repair; see "
+        "31-06-SUMMARY.md / deferred-items.md."
+    ),
+    strict=True,
+)
 def test_resolve_interactive_prompt():
     """
     When no SpeakerAlias row exists, run_resolve() displays a numbered
@@ -128,7 +144,7 @@ def test_resolve_interrupt_sets_needs_review():
     async def fake_get_session():
         yield mock_session
 
-    args = argparse.Namespace(run_id=1)
+    args = argparse.Namespace(run_id=1, job_id=None)
 
     with patch("pipeline.commands.resolve.get_session", new=fake_get_session):
         asyncio.run(_run_resolve_catching_interrupt(args))
@@ -160,6 +176,14 @@ async def _run_resolve_catching_interrupt(args):
 
 @requires_db
 @pytest.mark.asyncio
+@pytest.mark.xfail(
+    reason=(
+        "Never implemented — pre-existing pytest.fail('not implemented') stub, "
+        "not schema drift. Out of scope for TEST-02 fixture repair; see "
+        "31-06-SUMMARY.md / deferred-items.md."
+    ),
+    strict=True,
+)
 async def test_resolve_resumes_after_interrupt(async_session):
     """
     Re-running resolve after a prior interrupted run skips labels that

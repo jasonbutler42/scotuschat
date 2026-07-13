@@ -87,3 +87,76 @@ here for a future fix.
 - **Suggested next step:** Confirm Plan 31-06/31-07 (or whichever plan owns
   `pipeline/tests`) picks these up; do not assume they are already tracked
   just because they're now visible.
+
+## Plan 31-06
+
+### `test_argument_oyez_field.py` / `test_people.py` — NOT actually in this plan's scope
+
+Plan 31-05's entry above says these two `api/tests` files are "explicitly
+assigned to Plan 31-06". That's inaccurate — 31-06-PLAN.md's
+`files_modified` lists only the 5 `pipeline/tests` files
+(`test_ingest.py`, `test_parse.py`, `test_resolve.py`,
+`test_seed_aliases.py`, `test_pipeline_run.py`); it does not mention
+either `api/tests` file. Both still fail (`404` on
+`GET /arguments/1/utterances` and `GET /people/1`) when run as part of
+the full suite — reproduced on both the pre- and post-31-06 `pytest.ini`
+(see below), so this is pre-existing and unrelated to this plan's
+changes. They pass/skip when run in isolation, which points to an
+order-dependent test-data assumption (fixed `id=1` rows that only exist
+if an earlier-running test seeded them) rather than schema drift.
+Whichever plan actually owns these two files should re-check this
+before assuming it's already fixed.
+
+### `pipeline/tests/test_pipeline_run.py`::`test_state_machine` /
+### `test_rerun_creates_new_rows` — root cause was `pytest.ini`, not the test files
+
+Both failed with `RuntimeError: Event loop is closed` /
+`sqlalchemy.exc.InterfaceError: ... another operation is in progress`
+whenever a second DB-touching test ran in the same session.
+`conftest.py`'s `engine` fixture (Plan 01) is session-scoped — one
+asyncpg connection pool shared for the whole `pipeline/tests` session —
+but pytest-asyncio's default loop scope is function-scoped, so each
+test tears its event loop down at teardown; a pooled connection checked
+out under one test's (closed) loop and reused by the next test's (new)
+loop breaks. Fixed via `pytest.ini`
+(`asyncio_default_fixture_loop_scope`/`asyncio_default_test_loop_scope
+= session`) — no changes were needed inside `test_pipeline_run.py`
+itself, or inside `conftest.py` (out of this plan's scope per Plan 01
+ownership). Verified against the full suite: fixes 5 failures (this
+plan's target 5 files), introduces 0 regressions.
+
+### `test_resolve_interrupt_sets_needs_review` — pre-existing cross-test event-loop-policy pollution (full pipeline/tests dir only, NOT triggered by this plan's 5-file verification command)
+
+`pipeline/tests/test_ingest_startup_guard.py` (not in this plan's
+scope) imports `pipeline.__main__`, whose module body calls
+`asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())`
+unconditionally at import time — a *global*, process-wide policy
+mutation. When the full `pipeline/tests/` directory runs (not just this
+plan's 5 files), that import happens before
+`test_resolve_interrupt_sets_needs_review` runs, and its internal
+`asyncio.run(...)` call then behaves differently, causing
+`run_resolve()`'s `except KeyboardInterrupt:` branch to never execute
+(0 `PipelineRun` rows added, test asserts 1). Reproduced identically
+with both the pre- and post-31-06 `pytest.ini` — confirmed pre-existing
+and NOT caused by this plan's `asyncio_default_*_loop_scope = session`
+change. Does not affect this plan's own acceptance criteria (the
+verification command runs only the 5 target files, which never imports
+`pipeline.__main__`). Suggested fix for whoever owns
+`test_ingest_startup_guard.py`: don't mutate the global event loop
+policy at import time in a test module; scope it to the specific test
+that needs it (fixture with setup/teardown), or guard it behind
+`if __name__ == "__main__"` in `pipeline/__main__.py` itself.
+
+### `test_resolve_alias_hit`, `test_resolve_interactive_prompt`, `test_resolve_resumes_after_interrupt`, `test_seed_creates_justices`, `test_seed_idempotent` — never implemented (not schema drift)
+
+All 5 tests' bodies are literally `pytest.fail("not implemented")` —
+pre-existing stubs, not tests broken by schema drift. Implementing them
+for real (mocked interactive `input()` flow for the resolve prompt,
+a DB-integration resume-after-interrupt scenario, and full
+seed-aliases integration coverage including justice/role seeding and
+idempotent re-run) is substantial new test-authoring work, outside this
+plan's scope (repairing existing fixtures against the current schema,
+not writing new tests). Marked `xfail(strict=True)` with a documented
+reason so `pytest` reports 0 failures per this plan's acceptance
+criteria; the underlying test coverage gap remains open for a future
+phase/plan.

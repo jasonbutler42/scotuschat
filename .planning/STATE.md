@@ -3,17 +3,17 @@ gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Backlog Cleanup
 current_phase: 31
-current_phase_name: Audit ~28 stale DB-gated test fixtures + fix real data leakage into shared dev DB
+current_phase_name: audit-stale-db-gated-test-fixtures
 status: executing
-stopped_at: Phase 31 context gathered
-last_updated: "2026-07-13T13:49:17.068Z"
+stopped_at: Completed 31-01-PLAN.md
+last_updated: "2026-07-13T14:14:28.827Z"
 last_activity: 2026-07-13
-last_activity_desc: ROADMAP.md created; phases 31–40 folded in from the 999.x backlog promotion with full goal text, success criteria, and requirement mappings
+last_activity_desc: Phase 31 execution started
 progress:
   total_phases: 10
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 8
+  completed_plans: 1
   percent: 0
 ---
 
@@ -24,14 +24,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-12 after v1.5 milestone completion)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** Phase 31: Audit ~28 stale DB-gated test fixtures + fix real data leakage into shared dev DB (escalated data-integrity risk; first of the 10 v1.6 phases)
+**Current focus:** Phase 31 — audit-stale-db-gated-test-fixtures
 
 ## Current Position
 
-Phase: 31 of 40 (Audit ~28 stale DB-gated test fixtures + fix real data leakage into shared dev DB)
-Plan: — (not yet planned)
+Phase: 31 (audit-stale-db-gated-test-fixtures) — EXECUTING
+Plan: 2 of 8
 Status: Ready to execute
-Last activity: 2026-07-13 — ROADMAP.md created; phases 31–40 folded in from the 999.x backlog promotion with full goal text, success criteria, and requirement mappings
+Last activity: 2026-07-13 — Phase 31 execution started
 
 ## Performance Metrics
 
@@ -49,6 +49,8 @@ Two open design questions remain unresolved by design and are intentionally defe
 
 - Phase 37 (Tenure Seat): numbered-seat data vs. binary Chief/Associate toggle
 - Phase 38 (Full Name): auto-derive vs. independently editable
+- [Phase 31]: _reset_test_db reads TEST_DATABASE_URL directly rather than depending on test_db_url/engine fixtures, avoiding fallback-to-shared-dev-DB risk (T-31-01)
+- [Phase 31]: Database-name equality via sqlalchemy.engine.make_url used for all dev-DB/scotus_test guard checks instead of raw URL string comparison
 
 ### Roadmap Evolution
 
@@ -137,12 +139,13 @@ Items acknowledged and deferred at v1.5 milestone close on 2026-07-12:
 | Phase 30.1 P01 | 5min | 3 tasks | 5 files |
 | Phase 30.1 P02 | 12min | 2 tasks | 2 files |
 | Phase 30.1 P03 | 20min | 2 tasks | 6 files |
+| Phase 31 P01 | 25min | 2 tasks | 3 files |
 
 ## Session Continuity
 
-Last session: 2026-07-13T12:28:22.015Z
-Stopped at: Phase 31 context gathered
-Resume file: .planning/phases/31-audit-stale-db-gated-test-fixtures/31-CONTEXT.md
+Last session: 2026-07-13T14:14:28.816Z
+Stopped at: Completed 31-01-PLAN.md
+Resume file: None
 
 ## Operator Next Steps
 

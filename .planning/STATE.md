@@ -4,9 +4,9 @@ milestone: v1.6
 milestone_name: Backlog Cleanup
 current_phase: 31
 current_phase_name: audit-stale-db-gated-test-fixtures
-status: executing
-stopped_at: Completed 31-05-PLAN.md
-last_updated: "2026-07-13T17:26:17.098Z"
+status: verifying
+stopped_at: Completed 31-08-PLAN.md (Phase 31 complete, all 8 plans done)
+last_updated: "2026-07-13T17:36:44.416Z"
 last_activity: 2026-07-13
 last_activity_desc: Phase 31 execution started
 progress:
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-07-12 after v1.5 milestone completion)
 
 Phase: 31 (audit-stale-db-gated-test-fixtures) — EXECUTING
 Plan: 8 of 8
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-07-13 — Phase 31 execution started
 
 ## Performance Metrics
@@ -64,6 +64,7 @@ Two open design questions remain unresolved by design and are intentionally defe
 - [Phase 31, Plan 06]: SECTION_HINT_MAP plural regex bug (PETITIONERS/RESPONDENTS) fixed directly in state_machine.py rather than only documented -- self-contained, low-risk, real user-facing impact
 - [Phase 31]: [Phase 31, Plan 07]: test_resolve_interrupt_sets_needs_review's full-suite-only failure root-caused to a module-reimport identity split (tests/test_admin_router.py reimports api.* mid-session; pipeline.commands.resolve keeps stale PipelineRun/PipelineRunStatus references) -- not the event-loop-policy theory in deferred-items.md, which bisection disproved
 - [Phase 31]: [Phase 31, Plan 07]: test_argument_oyez_field.py/test_people.py's hardcoded id=1 assumption is permanently broken (pipeline/tests/test_seed_aliases.py's seeding tests are xfail stubs that never call run_seed_aliases()) -- fixed by making both tests self-contained rather than re-ordering fixtures
+- [Phase 31]: Operator reviewed the 31-08 dry-run report and authorized the destructive cleanup; fresh re-detection immediately before --execute matched the authorized 81-row candidate set exactly, so no drift-abort was needed
 
 ### Roadmap Evolution
 
@@ -83,7 +84,6 @@ Deployment blockers (v1.4, unresolved — not in v1.6 scope):
 - `ORIGIN`, `PROTOCOL_HEADER`, `HOST_HEADER` env vars required on DO
 - `admin.scotuschat.com` DNS entry must be created before smoke test
 - admin_arguments.py::delete_argument omits argument_status_log from its FK cascade (found during 31-04) -- likely ForeignKeyViolation on deleting a DRAFT argument with a status log row; see deferred-items.md for suggested fix
-- Phase 31 Plan 08 paused at Task 2 blocking-human checkpoint: dry-run found 81 leaked rows (25 duplicate Person rows in 6 groups incl. 6 KBJ rows, 56 orphaned Argument rows) in the shared dev DB, larger than the 5-row KBJ baseline in 31-CONTEXT.md (current counts 358 people/219 arguments vs 352/211 baseline). Awaiting operator review of .planning/phases/31-audit-stale-db-gated-test-fixtures/31-08-SUMMARY.md and authorization to run scripts/cleanup_leaked_test_rows.py --execute + python -m pipeline import-justices.
 
 ## Deferred Items
 
@@ -161,11 +161,12 @@ Items acknowledged and deferred at v1.5 milestone close on 2026-07-12:
 | Phase 31 P05 | 55min | 1 tasks | 9 files |
 | Phase 31 P06 | 40min | 1 tasks | 6 files |
 | Phase 31 P07 | 55min | 2 tasks | 5 files |
+| Phase 31 P08 | 25min | 2 tasks | 1 files |
 
 ## Session Continuity
 
-Last session: 2026-07-13T17:25:10.987Z
-Stopped at: Completed 31-05-PLAN.md
+Last session: 2026-07-13T17:36:32.097Z
+Stopped at: Completed 31-08-PLAN.md (Phase 31 complete, all 8 plans done)
 Resume file: None
 
 ## Operator Next Steps

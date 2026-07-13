@@ -6,14 +6,14 @@ current_phase: 31
 current_phase_name: audit-stale-db-gated-test-fixtures
 status: executing
 stopped_at: Completed 31-05-PLAN.md
-last_updated: "2026-07-13T16:00:52.760Z"
+last_updated: "2026-07-13T16:40:42.754Z"
 last_activity: 2026-07-13
 last_activity_desc: Phase 31 execution started
 progress:
   total_phases: 10
   completed_phases: 0
   total_plans: 8
-  completed_plans: 5
+  completed_plans: 6
   percent: 0
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-07-12 after v1.5 milestone completion)
 ## Current Position
 
 Phase: 31 (audit-stale-db-gated-test-fixtures) — EXECUTING
-Plan: 6 of 8
+Plan: 7 of 8
 Status: Ready to execute
 Last activity: 2026-07-13 — Phase 31 execution started
 
@@ -60,6 +60,8 @@ Two open design questions remain unresolved by design and are intentionally defe
 - [Phase 31, Plan 05]: Fixed 3 stale-identity-map bugs (publish_argument, unpublish_argument, approve_job) rather than xfailing them — db.refresh() after synchronize_session=False bulk updates, matching sibling functions
 - [Phase 31, Plan 05]: api/core/config.py Settings needed a declared test_database_url field — pydantic-settings reads .env directly regardless of os.environ, independent of any conftest.py dotenv loading
 - [Phase 31, Plan 05]: test_admin_jobs_phase25.py's committing-function tests (create_person_for_job, update_resolve_row_for_job) switched from the shared db_session fixture to per-block AsyncSessionLocal() sessions — commit() inside db_session's outer session.begin() breaks the transaction
+- [Phase 31, Plan 06]: pytest.ini asyncio loop scope set to session (not conftest.py) to fix session-scoped engine fixture vs function-scoped event loop mismatch across pipeline/tests DB-gated tests
+- [Phase 31, Plan 06]: SECTION_HINT_MAP plural regex bug (PETITIONERS/RESPONDENTS) fixed directly in state_machine.py rather than only documented -- self-contained, low-risk, real user-facing impact
 
 ### Roadmap Evolution
 
@@ -154,10 +156,11 @@ Items acknowledged and deferred at v1.5 milestone close on 2026-07-12:
 | Phase 31 P03 | 15min | 3 tasks | 8 files |
 | Phase 31 P04 | 20min | 2 tasks | 1 files |
 | Phase 31 P05 | 55min | 1 tasks | 9 files |
+| Phase 31 P06 | 40min | 1 tasks | 6 files |
 
 ## Session Continuity
 
-Last session: 2026-07-13T16:00:52.747Z
+Last session: 2026-07-13T16:39:08.255Z
 Stopped at: Completed 31-05-PLAN.md
 Resume file: None
 

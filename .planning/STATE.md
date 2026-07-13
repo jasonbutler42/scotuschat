@@ -6,15 +6,15 @@ current_phase: 31
 current_phase_name: audit-stale-db-gated-test-fixtures
 status: executing
 stopped_at: Completed 31-05-PLAN.md
-last_updated: "2026-07-13T17:17:07.560Z"
+last_updated: "2026-07-13T17:26:17.098Z"
 last_activity: 2026-07-13
 last_activity_desc: Phase 31 execution started
 progress:
   total_phases: 10
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 8
-  completed_plans: 7
-  percent: 0
+  completed_plans: 8
+  percent: 10
 ---
 
 # Project State
@@ -83,6 +83,7 @@ Deployment blockers (v1.4, unresolved — not in v1.6 scope):
 - `ORIGIN`, `PROTOCOL_HEADER`, `HOST_HEADER` env vars required on DO
 - `admin.scotuschat.com` DNS entry must be created before smoke test
 - admin_arguments.py::delete_argument omits argument_status_log from its FK cascade (found during 31-04) -- likely ForeignKeyViolation on deleting a DRAFT argument with a status log row; see deferred-items.md for suggested fix
+- Phase 31 Plan 08 paused at Task 2 blocking-human checkpoint: dry-run found 81 leaked rows (25 duplicate Person rows in 6 groups incl. 6 KBJ rows, 56 orphaned Argument rows) in the shared dev DB, larger than the 5-row KBJ baseline in 31-CONTEXT.md (current counts 358 people/219 arguments vs 352/211 baseline). Awaiting operator review of .planning/phases/31-audit-stale-db-gated-test-fixtures/31-08-SUMMARY.md and authorization to run scripts/cleanup_leaked_test_rows.py --execute + python -m pipeline import-justices.
 
 ## Deferred Items
 
@@ -163,7 +164,7 @@ Items acknowledged and deferred at v1.5 milestone close on 2026-07-12:
 
 ## Session Continuity
 
-Last session: 2026-07-13T17:15:44.039Z
+Last session: 2026-07-13T17:25:10.987Z
 Stopped at: Completed 31-05-PLAN.md
 Resume file: None
 

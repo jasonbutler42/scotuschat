@@ -14,7 +14,7 @@ Requirements for the v1.6 Backlog Cleanup milestone. Each maps to a roadmap phas
 
 ### People Admin
 
-- [ ] **PADM-05**: Merging or deleting a Justice with CourtTenure rows no longer raises an unhandled 500 (CourtTenure counted in merge preview, transferred on merge, checked on delete)
+- [x] **PADM-05**: Merging or deleting a Justice with CourtTenure rows no longer raises an unhandled 500 (CourtTenure counted in merge preview, transferred on merge, checked on delete)
 
 ### Pipeline Reliability
 
@@ -75,7 +75,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | TEST-01 | Phase 31 | Complete |
 | TEST-02 | Phase 31 | Complete |
-| PADM-05 | Phase 32 | Pending |
+| PADM-05 | Phase 32 | Complete |
 | PIPE-27 | Phase 33 | Pending |
 | PIPE-28 | Phase 34 | Pending |
 | PIPE-29 | Phase 35 | Pending |

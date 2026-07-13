@@ -3,17 +3,17 @@ gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Backlog Cleanup
 current_phase: 32
-current_phase_name: Fix CourtTenure FK bookkeeping gap in merge/delete person service paths
+current_phase_name: fix-courttenure-fk-bookkeeping-gap-in-merge-delete-person-se
 status: executing
 stopped_at: Phase 32 context gathered
-last_updated: "2026-07-13T18:39:58.388Z"
+last_updated: "2026-07-13T18:56:37.700Z"
 last_activity: 2026-07-13
-last_activity_desc: Phase 31 complete, transitioned to Phase 32
+last_activity_desc: Phase 32 execution started
 progress:
   total_phases: 10
   completed_phases: 1
-  total_plans: 8
-  completed_plans: 8
+  total_plans: 10
+  completed_plans: 9
   percent: 10
 ---
 
@@ -24,14 +24,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-12 after v1.5 milestone completion)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** Phase 31 — audit-stale-db-gated-test-fixtures
+**Current focus:** Phase 32 — fix-courttenure-fk-bookkeeping-gap-in-merge-delete-person-se
 
 ## Current Position
 
-Phase: 32 — Fix CourtTenure FK bookkeeping gap in merge/delete person service paths
-Plan: Not started
+Phase: 32 (fix-courttenure-fk-bookkeeping-gap-in-merge-delete-person-se) — EXECUTING
+Plan: 2 of 2
 Status: Ready to execute
-Last activity: 2026-07-13 — Phase 31 complete, transitioned to Phase 32
+Last activity: 2026-07-13 — Phase 32 execution started
 
 ## Performance Metrics
 
@@ -65,6 +65,8 @@ Two open design questions remain unresolved by design and are intentionally defe
 - [Phase 31]: [Phase 31, Plan 07]: test_resolve_interrupt_sets_needs_review's full-suite-only failure root-caused to a module-reimport identity split (tests/test_admin_router.py reimports api.* mid-session; pipeline.commands.resolve keeps stale PipelineRun/PipelineRunStatus references) -- not the event-loop-policy theory in deferred-items.md, which bisection disproved
 - [Phase 31]: [Phase 31, Plan 07]: test_argument_oyez_field.py/test_people.py's hardcoded id=1 assumption is permanently broken (pipeline/tests/test_seed_aliases.py's seeding tests are xfail stubs that never call run_seed_aliases()) -- fixed by making both tests self-contained rather than re-ordering fixtures
 - [Phase 31]: Operator reviewed the 31-08 dry-run report and authorized the destructive cleanup; fresh re-detection immediately before --execute matched the authorized 81-row candidate set exactly, so no drift-abort was needed
+- [Phase 32]: CourtTenure joins the blocking tier (Utterance/CaseAppearance/ArgumentParticipant), not the SpeakerAlias intrinsic-unconditional-delete tier (D-01)
+- [Phase 32]: New field/key name is 'tenures' (matches existing tenure_coverage/tenure_gaps naming convention), not 'court_tenure'
 
 ### Roadmap Evolution
 
@@ -162,10 +164,11 @@ Items acknowledged and deferred at v1.5 milestone close on 2026-07-12:
 | Phase 31 P06 | 40min | 1 tasks | 6 files |
 | Phase 31 P07 | 55min | 2 tasks | 5 files |
 | Phase 31 P08 | 25min | 2 tasks | 1 files |
+| Phase 32 P01 | 15min | 2 tasks | 3 files |
 
 ## Session Continuity
 
-Last session: 2026-07-13T18:15:56.592Z
+Last session: 2026-07-13T18:55:43.176Z
 Stopped at: Phase 32 context gathered
 Resume file: .planning/phases/32-fix-courttenure-fk-bookkeeping-gap-in-merge-delete-person-se/32-CONTEXT.md
 

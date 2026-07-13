@@ -5,15 +5,15 @@ milestone_name: Backlog Cleanup
 current_phase: 31
 current_phase_name: audit-stale-db-gated-test-fixtures
 status: executing
-stopped_at: Completed 31-04-PLAN.md
-last_updated: "2026-07-13T14:51:18.983Z"
+stopped_at: Completed 31-05-PLAN.md
+last_updated: "2026-07-13T16:00:52.760Z"
 last_activity: 2026-07-13
 last_activity_desc: Phase 31 execution started
 progress:
   total_phases: 10
   completed_phases: 0
   total_plans: 8
-  completed_plans: 4
+  completed_plans: 5
   percent: 0
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-07-12 after v1.5 milestone completion)
 ## Current Position
 
 Phase: 31 (audit-stale-db-gated-test-fixtures) — EXECUTING
-Plan: 5 of 8
+Plan: 6 of 8
 Status: Ready to execute
 Last activity: 2026-07-13 — Phase 31 execution started
 
@@ -57,6 +57,9 @@ Two open design questions remain unresolved by design and are intentionally defe
 - [Phase 31]: [Phase 31, Plan 04]: Person duplicate survivor selection scores (court_tenures linkage, non-null bio field count, -id) as a tuple; lowest id is only the documented last-resort tie-break, never the default
 - [Phase 31]: [Phase 31, Plan 04]: cleanup script deliberately excludes job-{id} source_docket values from orphan/pattern detection -- that is a legitimate production placeholder for in-progress admin-job arguments, not test leakage
 - [Phase 31]: [Phase 31, Plan 04]: execute path re-runs detection inside the delete transaction and aborts if the candidate set drifted since the dry-run report, closing the TOCTOU gap between reporting and deleting
+- [Phase 31, Plan 05]: Fixed 3 stale-identity-map bugs (publish_argument, unpublish_argument, approve_job) rather than xfailing them — db.refresh() after synchronize_session=False bulk updates, matching sibling functions
+- [Phase 31, Plan 05]: api/core/config.py Settings needed a declared test_database_url field — pydantic-settings reads .env directly regardless of os.environ, independent of any conftest.py dotenv loading
+- [Phase 31, Plan 05]: test_admin_jobs_phase25.py's committing-function tests (create_person_for_job, update_resolve_row_for_job) switched from the shared db_session fixture to per-block AsyncSessionLocal() sessions — commit() inside db_session's outer session.begin() breaks the transaction
 
 ### Roadmap Evolution
 
@@ -150,11 +153,12 @@ Items acknowledged and deferred at v1.5 milestone close on 2026-07-12:
 | Phase 31 P02 | 20min | 2 tasks | 1 files |
 | Phase 31 P03 | 15min | 3 tasks | 8 files |
 | Phase 31 P04 | 20min | 2 tasks | 1 files |
+| Phase 31 P05 | 55min | 1 tasks | 9 files |
 
 ## Session Continuity
 
-Last session: 2026-07-13T14:51:18.971Z
-Stopped at: Completed 31-04-PLAN.md
+Last session: 2026-07-13T16:00:52.747Z
+Stopped at: Completed 31-05-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

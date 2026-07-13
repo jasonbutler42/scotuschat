@@ -160,6 +160,14 @@ None - no external service configuration required.
 - Full suite is green (429 passed, 5 xfailed, 0 failed, 0 errored) — ready for Plan 08 (this phase's final plan) to close out the phase.
 - No blockers.
 
+## Self-Check: PASSED
+
+- FOUND: `api/tests/test_isolation_survives_inner_commit.py`
+- FOUND: `.planning/phases/31-audit-stale-db-gated-test-fixtures/31-07-SUMMARY.md`
+- FOUND commit: `3580066` (Task 1)
+- FOUND commit: `33978fc` (Task 2)
+- FOUND commit: `b664e65` (SUMMARY)
+
 ---
 *Phase: 31-audit-stale-db-gated-test-fixtures*
 *Completed: 2026-07-13*

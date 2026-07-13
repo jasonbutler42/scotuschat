@@ -79,13 +79,19 @@ WORD_INDEX_RE = re.compile(r"^\w[\w\s,'.\-]{0,30}\s+\[\d+\]\s+\d+:\d+")
 # Inline stage direction within a line: "(text)" surrounded by other content
 INLINE_STAGE_RE = re.compile(r"\(([^)]{2,60})\)")
 
-# Section hint mapping from TOC marker text → canonical value
+# Section hint mapping from TOC marker text → canonical value.
+# RESPONDENT/PETITIONER use an optional trailing "S" — real transcripts almost
+# always use the plural ("ON BEHALF OF PETITIONERS", e.g. Obergefell) since a
+# consolidated case can have multiple counsel on a side. \bPETITIONER\b alone
+# never matches "PETITIONERS" (the trailing S removes the word boundary right
+# after "PETITIONER"), which silently dropped every section_hint on plural TOC
+# markers — surfaced by pipeline/tests/test_parse.py::test_section_hint_not_cascade.
 SECTION_HINT_MAP = [
-    (re.compile(r"\bREBUTTAL\b",     re.IGNORECASE), "rebuttal"),
-    (re.compile(r"\bAMICUS\b",       re.IGNORECASE), "amicus"),
-    (re.compile(r"\bRESPONDENT\b",   re.IGNORECASE), "respondent"),
-    (re.compile(r"\bPETITIONER\b",   re.IGNORECASE), "petitioner"),
-    (re.compile(r"\bUNITED STATES\b", re.IGNORECASE), "amicus"),
+    (re.compile(r"\bREBUTTAL\b",       re.IGNORECASE), "rebuttal"),
+    (re.compile(r"\bAMICUS\b",         re.IGNORECASE), "amicus"),
+    (re.compile(r"\bRESPONDENTS?\b",   re.IGNORECASE), "respondent"),
+    (re.compile(r"\bPETITIONERS?\b",   re.IGNORECASE), "petitioner"),
+    (re.compile(r"\bUNITED STATES\b",  re.IGNORECASE), "amicus"),
 ]
 
 # Lines that look like case captions (false-positive speaker labels)

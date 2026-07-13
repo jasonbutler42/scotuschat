@@ -164,7 +164,7 @@ async def test_run_id_strategy(async_session, monkeypatch):
 
     # Run the parse command
     import argparse
-    args = argparse.Namespace(run_id=pipeline_run.id, dry_run=False)
+    args = argparse.Namespace(run_id=pipeline_run.id, dry_run=False, job_id=None)
 
     # Override get_session to use the test session
     from unittest.mock import AsyncMock, MagicMock
@@ -179,16 +179,31 @@ async def test_run_id_strategy(async_session, monkeypatch):
     from pipeline.commands.parse import run_parse
     await run_parse(args)
 
+    # run_parse() creates a BRAND-NEW PipelineRun row for this parse attempt
+    # (PIPE-11 re-run semantics: re-running a step never overwrites a prior
+    # run's row) rather than writing utterances against `pipeline_run` above
+    # — that row is only the *source* record parse reads pdf_path/argument_id
+    # from via args.run_id. Utterances link to the new run's id, not the
+    # source run's id.
+    new_run_result = await async_session.execute(
+        select(PipelineRun).where(
+            PipelineRun.argument_id == argument.id,
+            PipelineRun.step == "parse",
+            PipelineRun.id != pipeline_run.id,
+        )
+    )
+    new_run = new_run_result.scalar_one()
+
     # Verify utterance rows have pipeline_run_id and strategy set
     result = await async_session.execute(
-        select(Utterance).where(Utterance.pipeline_run_id == pipeline_run.id)
+        select(Utterance).where(Utterance.pipeline_run_id == new_run.id)
     )
     rows = result.scalars().all()
 
     assert len(rows) > 0, "Expected at least 1 utterance row after parse"
     for row in rows:
         assert row.pipeline_run_id is not None, "pipeline_run_id must not be None"
-        assert row.pipeline_run_id == pipeline_run.id
+        assert row.pipeline_run_id == new_run.id
         assert row.strategy is not None, "strategy must not be None"
         assert row.strategy in ("rule_based", "llm_corrective")
 
@@ -286,13 +301,24 @@ async def test_llm_failure_modes(monkeypatch):
 
     call_count = {"n": 0}
 
-    async def mock_call_rate_limited(pages_text):
-        call_count["n"] += 1
-        raise anthropic.RateLimitError(
+    # anthropic.RateLimitError.__init__ dereferences response.request unconditionally
+    # (current anthropic SDK) — a bare response=None (as older SDKs tolerated)
+    # now raises AttributeError before the test's own assertion is ever reached.
+    # Build a real httpx.Response bound to a request so construction succeeds.
+    import httpx
+
+    def _make_rate_limit_error() -> "anthropic.RateLimitError":
+        fake_request = httpx.Request("POST", "https://api.anthropic.com/v1/messages")
+        fake_response = httpx.Response(429, request=fake_request, headers={"request-id": "test-request-id"})
+        return anthropic.RateLimitError(
             "Rate limited",
-            response=None,
+            response=fake_response,
             body={"error": {"type": "rate_limit_error"}},
         )
+
+    async def mock_call_rate_limited(pages_text):
+        call_count["n"] += 1
+        raise _make_rate_limit_error()
 
     monkeypatch.setattr(lp, "call_llm_parse", mock_call_rate_limited)
 

@@ -10,7 +10,7 @@ Requirements for the v1.6 Backlog Cleanup milestone. Each maps to a roadmap phas
 ### Data Integrity & Testing
 
 - [x] **TEST-01**: Full test suite runs without leaking synthetic Person/Argument rows into the shared dev database
-- [ ] **TEST-02**: The ~28 identified stale DB-gated test fixtures pass against the current schema (no nullable/enum mismatches)
+- [x] **TEST-02**: The ~28 identified stale DB-gated test fixtures pass against the current schema (no nullable/enum mismatches)
 
 ### People Admin
 
@@ -74,7 +74,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | TEST-01 | Phase 31 | Complete |
-| TEST-02 | Phase 31 | Pending |
+| TEST-02 | Phase 31 | Complete |
 | PADM-05 | Phase 32 | Pending |
 | PIPE-27 | Phase 33 | Pending |
 | PIPE-28 | Phase 34 | Pending |

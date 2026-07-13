@@ -34,21 +34,6 @@ def _db_configured() -> bool:
     return bool(url) and "sk-ant" not in url and url != "postgresql+asyncpg://user:pass@host/db"
 
 
-@pytest_asyncio.fixture
-async def db_session():
-    """Async DB session seeded for each test, rolled back after.
-
-    Requires DATABASE_URL. Each test gets a fresh transaction that is rolled
-    back, so seeded rows never persist across tests.
-    """
-    from api.core.database import AsyncSessionLocal
-
-    async with AsyncSessionLocal() as session:
-        async with session.begin():
-            yield session
-            await session.rollback()
-
-
 # ===========================================================================
 # Task 1: Run readiness and failed recovery
 # ===========================================================================

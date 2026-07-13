@@ -130,17 +130,6 @@ def test_argument_metadata_response_accepts_null_argued_date() -> None:
 # leaves no rows behind and is safely repeatable.
 
 
-@pytest_asyncio.fixture
-async def db_session():
-    """Async DB session seeded for this test, rolled back after (no leftover rows)."""
-    from api.core.database import AsyncSessionLocal
-
-    async with AsyncSessionLocal() as session:
-        async with session.begin():
-            yield session
-            await session.rollback()
-
-
 @pytest.mark.asyncio
 @pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL with a live schema")
 async def test_utterances_endpoint_returns_200_for_null_argued_date(db_session) -> None:

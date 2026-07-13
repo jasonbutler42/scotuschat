@@ -126,3 +126,65 @@ async def clean_db(async_session: AsyncSession) -> None:
         )
     )
     await async_session.flush()
+
+
+@pytest.fixture(scope="session", autouse=True)
+async def _reset_test_db():
+    """
+    Session-scoped auto-reset: TRUNCATE all pipeline-relevant tables once,
+    before the suite runs (D-02), so tests start from an empty database.
+
+    HARD SAFETY GUARD (T-31-01): this fixture must never TRUNCATE the shared
+    dev DB. It reads TEST_DATABASE_URL directly (NOT the test_db_url/engine
+    fixtures below, which fall back to DATABASE_URL and would truncate the
+    shared dev DB if TEST_DATABASE_URL were unset) and no-ops unless BOTH:
+        1. TEST_DATABASE_URL is set, AND
+        2. the resolved database name is exactly "scotus_test".
+
+    Reuses the exact table list/order from `clean_db` above — do not
+    re-derive it.
+    """
+    test_url = os.getenv("TEST_DATABASE_URL", "")
+    if not test_url:
+        # Never fall back to DATABASE_URL here — no dedicated test DB means
+        # no auto-reset, full stop.
+        yield
+        return
+
+    from sqlalchemy import text
+    from sqlalchemy.engine import make_url
+
+    if make_url(test_url).database != "scotus_test":
+        yield
+        return
+
+    reset_engine = create_async_engine(
+        test_url,
+        connect_args={"statement_cache_size": 0},
+        pool_size=2,
+        echo=False,
+    )
+    try:
+        async with reset_engine.begin() as conn:
+            await conn.execute(
+                text(
+                    """
+                    TRUNCATE TABLE
+                        utterances,
+                        pipeline_runs,
+                        case_arguments,
+                        case_appearances,
+                        argument_participants,
+                        arguments,
+                        cases,
+                        court_tenures,
+                        people,
+                        roles
+                    CASCADE
+                    """
+                )
+            )
+    finally:
+        await reset_engine.dispose()
+
+    yield

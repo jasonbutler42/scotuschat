@@ -12,9 +12,23 @@ Anyone can open a SCOTUS oral argument and immediately follow the conversation �
 
 **v1.5 Admin Screens Cleanup — SHIPPED 2026-07-12.** All 7 admin screens (`/admin/`, `/admin/pipeline/`, `/admin/pipeline/[id]`, `/admin/arguments/`, `/admin/arguments/[id]`, `/admin/people/`, `/admin/people/[id]`) audited and refined: three-state argument lifecycle with status log, shared Argument Details component, redesigned pipeline list/detail pages, People admin with Bench/Advocate tabs and per-tenure appointment data, and a real dashboard. Also absorbed an out-of-band addition mid-milestone: bulk historical corpus import (~7,800 arguments, 1955–2019, from Cornell ConvoKit) routed through the same resolve/publish workflow as PDF ingest. Full details: `.planning/milestones/v1.5-ROADMAP.md`, `.planning/milestones/v1.5-REQUIREMENTS.md`.
 
-## Next Milestone Goals
+## Current Milestone: v1.6 Backlog Cleanup
 
-The only unaddressed Active requirement is deployment (DEPLOY-01, DEPLOY-03) — Digital Ocean App Platform hosting, deferred since v1.4. Known deployment blockers are listed under Context below. A substantial 999.x backlog has also accumulated across v1.2–v1.5 (see `.planning/ROADMAP.md` Backlog section) and is worth a review pass (`/gsd-review-backlog`) before or alongside scoping the next milestone.
+**Goal:** Close out the 10 promoted backlog phases (31–40) — data-integrity fixes, small operator UX improvements, and two open design questions — before starting anything new.
+
+**Target features:**
+- Phase 31: Audit stale DB-gated test fixtures + fix real data leakage into shared dev DB (escalated risk)
+- Phase 32: Fix CourtTenure FK bookkeeping gap in merge/delete person paths
+- Phase 33: `update_argument_metadata` unique-constraint guard (409 instead of 500)
+- Phase 34: Blank case_name/docket_number validation (prevents slug/dedup corruption)
+- Phase 35: `rerun_job` never spawns ingest for locally-uploaded jobs
+- Phase 36: Click-to-copy design pattern for extracted values
+- Phase 37: Tenure Seat — Chief/Associate toggle vs. numbered seats (design decision during discuss-phase)
+- Phase 38: Full Name vs. name-parts rethink (design decision during discuss-phase)
+- Phase 39: Bench popover — additional context data for Justices
+- Phase 40: README — how to start the local stack
+
+Deployment (DEPLOY-01, DEPLOY-03) and the remaining 999.x backlog (999.2–999.8) are explicitly out of scope for this milestone.
 
 ## Requirements
 
@@ -205,4 +219,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-12 after v1.5 milestone completion — all 57 v1.5 requirements moved to Validated; re-audit confirmed 57/57 satisfied and wired end-to-end with zero new gaps (`.planning/milestones/v1.5-MILESTONE-AUDIT.md`). Full v1.5 detail archived to `.planning/milestones/v1.5-ROADMAP.md` and `.planning/milestones/v1.5-REQUIREMENTS.md`. Next milestone: deployment (DEPLOY-01/03), pending `/gsd-new-milestone`.*
+*Last updated: 2026-07-12 after starting milestone v1.6 (Backlog Cleanup) — scoped to the 10 promoted backlog phases (31–40); deployment (DEPLOY-01/03) and remaining 999.x backlog items deferred to a future milestone.*

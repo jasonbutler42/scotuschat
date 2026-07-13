@@ -1,20 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.5
-milestone_name: Admin Screens Cleanup
-current_phase: 5
-status: Awaiting next milestone
-stopped_at: Completed 30.1-03-PLAN.md
-last_updated: "2026-07-12T18:37:21.357Z"
-last_activity: 2026-07-12
-last_activity_desc: Milestone v1.5 completed and archived
+milestone: v1.6
+milestone_name: Backlog Cleanup
+status: planning
+last_updated: "2026-07-13T03:37:15.950Z"
+last_activity: 2026-07-13
 progress:
-  total_phases: 10
-  completed_phases: 10
-  total_plans: 55
-  completed_plans: 55
-  percent: 100
-current_phase_name: BACKLOG
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -28,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-07-12 after v1.5 milestone completion)
 
 ## Current Position
 
-Phase: Milestone v1.5 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-07-12 — Milestone v1.5 completed and archived
+Status: Defining requirements
+Last activity: 2026-07-13 — Milestone v1.6 started
 
 ## Performance Metrics
 

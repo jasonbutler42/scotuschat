@@ -107,7 +107,7 @@ Full phase details: `.planning/milestones/v1.5-ROADMAP.md`
 
 **Overview:** Close out the 10 phases promoted from the 999.x backlog on 2026-07-12 before starting anything new — an escalated data-integrity risk (stale test fixtures + real data leakage), four small pipeline/people-admin bug fixes, one operator UX pattern, two open design questions to resolve during discuss-phase, a public-UI enrichment, and a README gap. Deployment (DEPLOY-01/03) and the remaining 999.x backlog (999.2–999.8) are explicitly out of scope.
 
-- [x] **Phase 31: Audit ~28 stale DB-gated test fixtures + fix real data leakage into shared dev DB** - Escalated data-integrity risk; fix test isolation so service-function commits can't leak synthetic Person/Argument rows (completed 2026-07-13)
+- [ ] **Phase 31: Audit ~28 stale DB-gated test fixtures + fix real data leakage into shared dev DB** - Escalated data-integrity risk; fix test isolation so service-function commits can't leak synthetic Person/Argument rows
 - [ ] **Phase 32: Fix CourtTenure FK bookkeeping gap in merge/delete person service paths** - Merge/delete on a Justice with tenure rows no longer 500s
 - [ ] **Phase 33: `update_argument_metadata` unique-constraint guard** - Colliding (source_docket, question_number) returns 409/422 instead of 500
 - [ ] **Phase 34: Blank case_name/docket_number validation** - Prevents slug/dedup corruption from cleared fields
@@ -315,7 +315,7 @@ Full phase details: `.planning/milestones/v1.5-ROADMAP.md`
 | 29. Historical Corpus Import | v1.5 | 9/9 | Complete | 2026-07-10 |
 | 30. Corpus Import Resolve Workflow | v1.5 | 4/4 | Complete | 2026-07-10 |
 | 30.1. Close gap AEDIT-04/DASH-02 | v1.5 | 3/3 | Complete | 2026-07-12 |
-| 31. Audit ~28 stale DB-gated test fixtures + fix real data leakage into shared dev DB | v1.6 | 8/8 | Complete   | 2026-07-13 |
+| 31. Audit ~28 stale DB-gated test fixtures + fix real data leakage into shared dev DB | v1.6 | 8/8 | In Progress | - |
 | 32. Fix CourtTenure FK bookkeeping gap in merge/delete person service paths | v1.6 | TBD | Not started | - |
 | 33. `update_argument_metadata` unique-constraint guard | v1.6 | TBD | Not started | - |
 | 34. Blank case_name/docket_number validation | v1.6 | TBD | Not started | - |

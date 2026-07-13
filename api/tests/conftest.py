@@ -42,3 +42,19 @@ async def _api_lifespan():
 
     async with lifespan(app):
         yield
+
+
+@pytest_asyncio.fixture
+async def db_session():
+    """
+    Async DB session seeded for each test, rolled back after.
+
+    Requires DATABASE_URL to be set. Each test gets a fresh transaction
+    that is rolled back, so seeded rows do not persist across tests.
+    """
+    from api.core.database import AsyncSessionLocal
+
+    async with AsyncSessionLocal() as session:
+        async with session.begin():
+            yield session
+            await session.rollback()

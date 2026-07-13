@@ -4,9 +4,9 @@ milestone: v1.6
 milestone_name: Backlog Cleanup
 current_phase: 32
 current_phase_name: Fix CourtTenure FK bookkeeping gap in merge/delete person service paths
-status: verifying
+status: executing
 stopped_at: Phase 32 context gathered
-last_updated: "2026-07-13T18:15:56.605Z"
+last_updated: "2026-07-13T18:39:58.388Z"
 last_activity: 2026-07-13
 last_activity_desc: Phase 31 complete, transitioned to Phase 32
 progress:
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-07-12 after v1.5 milestone completion)
 
 Phase: 32 — Fix CourtTenure FK bookkeeping gap in merge/delete person service paths
 Plan: Not started
-Status: Phase complete — ready for verification
+Status: Ready to execute
 Last activity: 2026-07-13 — Phase 31 complete, transitioned to Phase 32
 
 ## Performance Metrics

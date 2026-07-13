@@ -166,6 +166,7 @@ async def test_ingest_creates_pipeline_run(async_session, tmp_path):
         case_name="Obergefell v. Hodges",
         argued_date="2015-04-28",
         question=1,
+        job_id=None,
     )
 
     with (
@@ -206,6 +207,7 @@ async def test_consolidated_dockets(async_session, tmp_path):
         case_name="Obergefell v. Hodges",
         argued_date="2015-04-28",
         question=1,
+        job_id=None,
     )
 
     with (
@@ -226,15 +228,26 @@ async def test_consolidated_dockets(async_session, tmp_path):
 @pytest.mark.asyncio
 async def test_ingest_idempotent(async_session, tmp_path):
     """
-    Running ingest twice with the same primary docket creates exactly 1 Case row.
+    Running ingest twice with the same primary docket + question reuses the
+    existing Case row (SELECT-first) and rejects the duplicate Argument.
 
-    Verifies idempotency: SELECT-first prevents duplicate case rows when ingest is re-run.
+    Schema-drift note: this test originally expected the second run_ingest()
+    call to complete silently. Current ingest.py (D-01) enforces the
+    UNIQUE(source_docket, question_number) constraint on Argument by
+    attempting a fresh INSERT and converting the resulting IntegrityError
+    into a ValueError("Duplicate argument: ...") — it does NOT silently
+    no-op on a duplicate docket+question the way Case creation does. The
+    dedup guarantee this test verifies is now "duplicate submissions are
+    rejected with a clear error", not "duplicate submissions are silently
+    absorbed" — Case-level idempotency (SELECT-first) is unchanged and still
+    holds because the Case row is looked up/reused before the Argument
+    insert is attempted.
 
     Requires DATABASE_URL.
     """
     from sqlalchemy import select
 
-    from api.models.models import Case
+    from api.models.models import Argument, Case
 
     args = argparse.Namespace(
         url="https://www.supremecourt.gov/oral_arguments/argument_transcripts/2014/14-556q1_l5gm.pdf",
@@ -243,24 +256,46 @@ async def test_ingest_idempotent(async_session, tmp_path):
         case_name="Obergefell v. Hodges",
         argued_date="2015-04-28",
         question=1,
+        job_id=None,
     )
 
     session_cm = _make_session_cm(async_session)
 
-    # Run ingest twice with the same arguments
-    for _ in range(2):
-        with (
-            patch("pipeline.commands.ingest.httpx.AsyncClient", return_value=_make_mock_client()),
-            patch("pipeline.commands.ingest.get_session", new=session_cm),
-            patch("pipeline.commands.ingest.Path", return_value=_make_mock_path(tmp_path)),
-        ):
-            await run_ingest(args)
+    with (
+        patch("pipeline.commands.ingest.httpx.AsyncClient", return_value=_make_mock_client()),
+        patch("pipeline.commands.ingest.get_session", new=session_cm),
+        patch("pipeline.commands.ingest.Path", return_value=_make_mock_path(tmp_path)),
+    ):
+        # First run: creates the Case + Argument rows.
+        await run_ingest(args)
+
+        # Second run with identical primary_docket + question: Case is reused
+        # (SELECT-first), but the Argument insert hits the UNIQUE constraint
+        # and ingest.py raises ValueError rather than silently succeeding.
+        # `_make_session_cm` never commits (unlike the real get_session()),
+        # so both calls share one transaction — wrap the expected-to-fail
+        # second call in a SAVEPOINT so its rollback doesn't also undo the
+        # first call's Case/Argument rows.
+        with pytest.raises(ValueError, match="Duplicate argument"):
+            async with async_session.begin_nested():
+                await run_ingest(args)
 
     result = await async_session.execute(
         select(Case).where(Case.docket_number == "14-556")
     )
     cases = result.scalars().all()
     assert len(cases) == 1, (
-        f"Expected exactly 1 Case row for 14-556 after 2 ingest runs, "
-        f"got {len(cases)} — idempotency failure"
+        f"Expected exactly 1 Case row for 14-556 after 2 ingest attempts, "
+        f"got {len(cases)} — Case-level idempotency failure"
+    )
+
+    result_args = await async_session.execute(
+        select(Argument).where(
+            Argument.source_docket == "14-556", Argument.question_number == 1
+        )
+    )
+    arguments = result_args.scalars().all()
+    assert len(arguments) == 1, (
+        f"Expected exactly 1 Argument row for 14-556 Q1 after 2 ingest attempts, "
+        f"got {len(arguments)} — duplicate rejection failure"
     )

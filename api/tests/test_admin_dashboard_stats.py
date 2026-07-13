@@ -55,22 +55,6 @@ def _token() -> str:
 # ---------------------------------------------------------------------------
 
 
-@pytest_asyncio.fixture
-async def db_session():
-    """
-    Async DB session seeded for each test, rolled back after.
-
-    Requires DATABASE_URL to be set. Each test gets a fresh transaction
-    that is rolled back, so seeded rows do not persist across tests (999.19).
-    """
-    from api.core.database import AsyncSessionLocal
-
-    async with AsyncSessionLocal() as session:
-        async with session.begin():
-            yield session
-            await session.rollback()
-
-
 # ---------------------------------------------------------------------------
 # admin_arguments.get_argument_stats
 # ---------------------------------------------------------------------------

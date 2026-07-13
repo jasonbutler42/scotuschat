@@ -6,7 +6,7 @@ status: planning
 last_updated: "2026-07-13T03:37:15.950Z"
 last_activity: 2026-07-13
 progress:
-  total_phases: 0
+  total_phases: 10
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -20,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-12 after v1.5 milestone completion)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** Awaiting next milestone — run `/gsd-new-milestone` to scope deployment (DEPLOY-01/03) or review the 999.x backlog first
+**Current focus:** Phase 31: Audit ~28 stale DB-gated test fixtures + fix real data leakage into shared dev DB (escalated data-integrity risk; first of the 10 v1.6 phases)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-07-13 — Milestone v1.6 started
+Phase: 31 of 40 (Audit ~28 stale DB-gated test fixtures + fix real data leakage into shared dev DB)
+Plan: — (not yet planned)
+Status: Ready to plan
+Last activity: 2026-07-13 — ROADMAP.md created; phases 31–40 folded in from the 999.x backlog promotion with full goal text, success criteria, and requirement mappings
 
 ## Performance Metrics
 
@@ -41,9 +41,15 @@ v1.5: 10 phases, 55 plans, 10 days (2026-07-02 → 2026-07-12).
 
 Full decision log lives in PROJECT.md's Key Decisions table (all v1.0-v1.5 decisions logged there with outcomes). Cleared here at v1.5 milestone close per the standard STATE.md reset.
 
+Two open design questions remain unresolved by design and are intentionally deferred to their own discuss-phase, not pre-decided in the roadmap:
+- Phase 37 (Tenure Seat): numbered-seat data vs. binary Chief/Associate toggle
+- Phase 38 (Full Name): auto-derive vs. independently editable
+
 ### Roadmap Evolution
 
 v1.5's roadmap evolution (Phase 29 added, Phase 30.1 inserted) is archived in `.planning/milestones/v1.5-ROADMAP.md`. Cleared here at milestone close.
+
+2026-07-13: Phases 31–40 moved from ROADMAP.md's "Unscheduled Phases" section into the active "## Phases" / "## Phase Details" sections for v1.6 — no renumbering, no new phases created; requirement coverage 11/11 confirmed.
 
 ### Pending Todos
 
@@ -51,7 +57,7 @@ v1.5's roadmap evolution (Phase 29 added, Phase 30.1 inserted) is archived in `.
 
 ### Blockers/Concerns
 
-Deployment blockers (v1.4, unresolved — not in v1.5 scope):
+Deployment blockers (v1.4, unresolved — not in v1.6 scope):
 
 - `BODY_SIZE_LIMIT=10M` must be set in DO App Platform env
 - `ORIGIN`, `PROTOCOL_HEADER`, `HOST_HEADER` env vars required on DO
@@ -129,10 +135,10 @@ Items acknowledged and deferred at v1.5 milestone close on 2026-07-12:
 
 ## Session Continuity
 
-Last session: 2026-07-11T20:28:47.996Z
-Stopped at: Completed 30.1-03-PLAN.md
+Last session: 2026-07-13T03:37:15.950Z
+Stopped at: ROADMAP.md created for v1.6 — phases 31–40 fully detailed with success criteria; awaiting user approval before /gsd-plan-phase 31
 Resume file: None
 
 ## Operator Next Steps
 
-- Start the next milestone with /gsd-new-milestone
+- Review the v1.6 roadmap; then run /gsd-discuss-phase 31 (or /gsd-plan-phase 31 if discussion is unnecessary for a well-scoped bug fix) to begin execution

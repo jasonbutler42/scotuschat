@@ -8,6 +8,7 @@
 - ✅ **v1.3 Speaker Accuracy + Pipeline Confidence** — Phases 15–17 (shipped 2026-06-29)
 - ✅ **v1.4 Admin Completeness** — Phases 18–21 (shipped 2026-07-02)
 - ✅ **v1.5 Admin Screens Cleanup** — Phases 22–30, 30.1 (shipped 2026-07-12)
+- 🚧 **v1.6 Backlog Cleanup** — Phases 31–40 (in progress)
 
 ## Phases
 
@@ -102,6 +103,134 @@ Full phase details: `.planning/milestones/v1.5-ROADMAP.md`
 
 </details>
 
+### 🚧 v1.6 Backlog Cleanup (Phases 31–40) — IN PROGRESS
+
+**Overview:** Close out the 10 phases promoted from the 999.x backlog on 2026-07-12 before starting anything new — an escalated data-integrity risk (stale test fixtures + real data leakage), four small pipeline/people-admin bug fixes, one operator UX pattern, two open design questions to resolve during discuss-phase, a public-UI enrichment, and a README gap. Deployment (DEPLOY-01/03) and the remaining 999.x backlog (999.2–999.8) are explicitly out of scope.
+
+- [ ] **Phase 31: Audit ~28 stale DB-gated test fixtures + fix real data leakage into shared dev DB** - Escalated data-integrity risk; fix test isolation so service-function commits can't leak synthetic Person/Argument rows
+- [ ] **Phase 32: Fix CourtTenure FK bookkeeping gap in merge/delete person service paths** - Merge/delete on a Justice with tenure rows no longer 500s
+- [ ] **Phase 33: `update_argument_metadata` unique-constraint guard** - Colliding (source_docket, question_number) returns 409/422 instead of 500
+- [ ] **Phase 34: Blank case_name/docket_number validation** - Prevents slug/dedup corruption from cleared fields
+- [ ] **Phase 35: `rerun_job` never spawns ingest for locally-uploaded jobs** - Local-upload reruns actually progress instead of sitting at PENDING forever
+- [ ] **Phase 36: Click-to-copy extracted values design pattern** - Consistent click-to-copy affordance across pipeline run pages and argument editor
+- [ ] **Phase 37: Represent tenure Seat as a Chief/Associate toggle instead of free text** - Open design question (numbered-seat data vs. binary toggle) resolved during discuss-phase
+- [ ] **Phase 38: Rethink Full Name vs. name-part fields in the people editor** - Open design question (auto-derive vs. independently editable) resolved during discuss-phase
+- [ ] **Phase 39: Bench popover — additional context data for Justices** - Birthdate, death date, and per-tenure appointment context, presented apolitically
+- [ ] **Phase 40: README — how to start the local stack** - Documents SvelteKit + FastAPI + Postgres local setup end to end
+
+## Phase Details
+
+### Phase 31: Audit ~28 stale DB-gated test fixtures + fix real data leakage into shared dev DB
+**Goal**: Fixing the FastAPI lifespan/session-factory bug (999.17, resolved 2026-07-10) means DB-gated tests across `pipeline/tests/` and `api/tests/` now genuinely execute against the live local dev Postgres instead of silently erroring at session setup, surfacing two problems: (1) ~28 tests fail on real schema/data-assumption mismatches never actually exercised before now (e.g. `test_rerun_creates_new_rows` inserts an `Utterance` without the NOT NULL `strategy` field) — spread across `test_ingest.py`, `test_parse.py`, `test_resolve.py`, `test_seed_aliases.py`, `test_pipeline_run.py`, `test_admin_arguments_service.py`, `test_admin_jobs_phase25.py`, `test_admin_jobs_service.py`, `test_admin_jobs_stats.py`, `test_arguments.py`; (2) confirmed real data leakage — the `db_session` fixture's rollback pattern only protects against a test's own direct writes, not against production service functions (`create_person_for_job`, `publish_argument`, `run_import_convokit`) that commit internally, so full-suite runs have left leaked `Person` rows (duplicate "Ketanji Brown Jackson" plus synthetic test names) and synthetic `Argument` rows in the shared dev DB — one leaked duplicate actively broke `import-justices` with `MultipleResultsFound` mid-execution of a prior operator runbook. Needs a real fix (dedicated test database, snapshot/restore fixture, or savepoint-based nesting that survives inner commits) — the manual DELETE cleanup performed so far is only a stopgap.
+**Depends on**: Nothing (first phase of v1.6 — escalated data-integrity risk, run first)
+**Requirements**: TEST-01, TEST-02
+**Success Criteria** (what must be TRUE):
+  1. Full pytest suite (`pipeline/tests/` and `api/tests/`) runs without leaving any new synthetic Person or Argument rows in the shared dev DB — verified via a before/after row-count check.
+  2. All ~28 previously-failing DB-gated test fixtures pass against the current schema (no NOT NULL/enum mismatches).
+  3. The chosen isolation mechanism (dedicated test DB, snapshot/restore, or savepoint nesting) demonstrably survives an inner commit made by a production service function (e.g. `create_person_for_job` or `run_import_convokit`) during a test.
+  4. Running `import-justices` or `import-convokit` immediately after a full test-suite run does not fail with `MultipleResultsFound` or any other error caused by leaked test data.
+**Plans**: TBD
+
+### Phase 32: Fix CourtTenure FK bookkeeping gap in merge/delete person service paths
+**Goal**: `CourtTenure.person_id` is `nullable=False` with a plain `ForeignKeyConstraint` and no `ON DELETE CASCADE` in any Alembic migration, but none of `get_merge_preview`, `merge_people`, or `delete_person_if_orphan` (`api/services/admin_people.py`) account for `CourtTenure` rows. Merging or deleting any Bench person with one or more tenure rows raises an unhandled `IntegrityError` (500) instead of the documented graceful response. This predates Phase 27 (`CourtTenure` and the merge/delete paths were introduced in Phase 22) but became newly reachable once Phase 27 added full tenure-row CRUD to the People editor. Fix: count `CourtTenure` in `get_merge_preview`'s counted-tables loop, transfer `CourtTenure` rows to the target person in `merge_people`, and include `CourtTenure` in `delete_person_if_orphan`'s orphan check — mirroring the existing `Utterance`/`SpeakerAlias`/`CaseAppearance`/`ArgumentParticipant` handling.
+**Depends on**: Nothing (independent bug fix)
+**Requirements**: PADM-05
+**Success Criteria** (what must be TRUE):
+  1. Merge preview for a Justice with one or more CourtTenure rows shows an accurate count of tenure rows that will be transferred, not silently omitted.
+  2. Merging two Justice person records transfers all CourtTenure rows to the target person without raising an IntegrityError.
+  3. Attempting to delete a Justice with CourtTenure rows returns the documented graceful non-orphan response instead of an unhandled 500.
+  4. Deleting a genuinely orphaned Justice (no CourtTenure rows) still succeeds exactly as before.
+**Plans**: TBD
+
+### Phase 33: `update_argument_metadata` unique-constraint guard
+**Goal**: `update_argument_metadata` writes `source_docket`/`question_number` without first checking whether another Argument row already holds that combination. Introduced in Phase 19, untouched by Phase 26. Saving a metadata edit that collides with an existing row raises an unhandled `IntegrityError` (500) instead of a clean, user-facing validation error. Fix: add a pre-write existence check (or catch `IntegrityError` and map it to a 409/422 with a clear message) before committing the update.
+**Depends on**: Nothing (independent bug fix)
+**Requirements**: PIPE-27
+**Success Criteria** (what must be TRUE):
+  1. Saving argument metadata with a `(source_docket, question_number)` combination that collides with an existing argument returns a 409/422 with a clear message instead of an unhandled 500.
+  2. Saving argument metadata with a unique combination continues to succeed exactly as before.
+  3. The fix is applied consistently to every code path that writes `source_docket`/`question_number`, not just the primary save action.
+**Plans**: TBD
+
+### Phase 34: Blank case_name/docket_number validation
+**Goal**: `ArgumentUpdate.case_name`/`.docket_number` are `Optional[str] = None` with no non-empty validation; `update_argument` treats "not None" as "provided," not "non-empty." The edit form's `?/save` action always sends a trimmed string (never undefined) and the `<input>` elements have no `required` attribute. If an operator clears either field and saves: for a DRAFT argument, `_derive_slug("")` corrupts the case's public URL slug; for any status, `docket_number`/`docket_number_norm` can be wiped to `""`, breaking dedup semantics. The same gap exists in the sibling `update_argument_metadata` (`case_name`, `source_docket`). Fix: add a Pydantic `field_validator` rejecting blank/whitespace-only values on `ArgumentUpdate` and `MetadataUpdate`, plus `required` on both `<input>` elements as defense-in-depth.
+**Depends on**: Nothing (independent bug fix)
+**Requirements**: PIPE-28
+**Success Criteria** (what must be TRUE):
+  1. Clearing `case_name` or `docket_number` to blank/whitespace-only in the argument editor is rejected with a validation error, not silently saved.
+  2. Clearing `case_name` or `source_docket` to blank/whitespace-only via `update_argument_metadata` (pipeline job metadata card) is likewise rejected.
+  3. Argument slug and `docket_number`/`docket_number_norm` can never be corrupted to an empty string through either save path.
+  4. Both affected `<input>` elements carry a `required` attribute as UI-level defense-in-depth.
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 35: `rerun_job` never spawns ingest for locally-uploaded jobs
+**Goal**: `create_job`'s upload path stores the PDF at `data/uploads/{job.id}.pdf` and sets neither `spaces_key` nor `pdf_url` when `settings.do_spaces_bucket` is falsy (local/dev mode, no DO Spaces configured). `rerun_job` copies `pdf_url`/`spaces_key`/`original_filename`/`source_dockets` onto the new job, but the rerun endpoint (`api/routers/admin.py`) only branches on `spaces_key` or `pdf_url` — no branch exists for a local-disk-backed original, so no ingest subprocess is ever spawned for the rerun. The endpoint still returns 202 with a fresh PENDING job, giving the operator every indication the rerun started, but the job sits at PENDING/INGEST forever with no error surfaced. Fix: persist the resolved local file path on `AdminJob` at creation time and add a third rerun branch that re-spawns ingest with `--local-file`, or at minimum raise a `ValueError` (422) instead of silently creating a job that can never progress.
+**Depends on**: Nothing (independent bug fix)
+**Requirements**: PIPE-29
+**Success Criteria** (what must be TRUE):
+  1. Rerunning a locally-uploaded (non-Spaces) pipeline job actually spawns an ingest subprocess and progresses past PENDING.
+  2. `AdminJob` persists the resolved local file path at creation time so a later rerun can locate the original upload.
+  3. If the local file is missing or unavailable at rerun time, the endpoint raises a clear 422 error instead of silently creating a job that can never progress.
+**Plans**: TBD
+
+### Phase 36: Click-to-copy extracted values design pattern
+**Goal**: Whenever a value has been extracted from a source PDF, use a consistent design pattern that lets the operator click the value to copy it to their clipboard. If a value was not extracted (showing N/A), clicking to copy is disabled. Includes an appropriate icon and tooltip. The pattern must be identical everywhere it appears — pipeline run pages and argument editor pages alike — including extracted docket number(s). Expected to decompose into at least: (1) a reusable tooltip component, and (2) the click-to-copy implementation for extracted hint values.
+**Depends on**: Nothing (independent UX pattern)
+**Requirements**: UX-01
+**Success Criteria** (what must be TRUE):
+  1. Every extracted-value display on pipeline run pages offers a click-to-copy affordance with icon and tooltip.
+  2. Every extracted-value display on argument editor pages (including extracted docket number pills) offers the identical click-to-copy affordance.
+  3. Click-to-copy is visibly disabled when the underlying value is N/A (not extracted).
+  4. The pattern is implemented as one reusable component, not duplicated per page.
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 37: Represent tenure Seat as a Chief/Associate toggle instead of free text
+**Goal**: During Phase 27 UAT, Jason asked for the tenure-row Seat field (currently free text) to become the same segmented-toggle component used for the Bench/Advocate choice, since for a Justice it's really just Chief or Associate. This was deferred rather than fixed immediately because real historical `court_tenures.seat` data includes specific numbered seats (e.g. "Associate Justice Seat 3"), not just a binary Chief/Associate split — collapsing to a 2-option toggle is a genuine data-model simplification that needs a decision on whether the numbered-seat detail is dropped, kept as a secondary field, or reconciled some other way, plus a migration/backfill pass over existing rows. **Open design question — resolve during `/gsd-discuss-phase 37`, not during roadmapping:** does numbered-seat detail get dropped, retained as a secondary field, or reconciled some other way?
+**Depends on**: Nothing (independent design decision + implementation; open question resolved at discuss-phase)
+**Requirements**: PEOPLE-08
+**Success Criteria** (what must be TRUE):
+  1. Tenure Seat is captured via a decision-backed UI control instead of unconstrained free text — the exact control shape (binary toggle vs. a richer control preserving numbered-seat detail) is resolved during `/gsd-discuss-phase 37`.
+  2. Existing `court_tenures.seat` data (including numbered-seat rows) is preserved or migrated according to the resolved design decision — no silent data loss.
+  3. Operator can set or change a person's tenure Seat through the new control, and the value round-trips correctly through save and reload.
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 38: Rethink Full Name vs. name-part fields in the people editor
+**Goal**: Jason expected that filling in only the component name fields (first/last/middle/suffix) without Full Name would auto-backfill Full Name on save — instead, Full Name is currently required standalone. Proposed direction (not yet locked): stop making Full Name operator-editable at all, and derive it entirely from the component fields. **Open design question — resolve during `/gsd-discuss-phase 38`, not during roadmapping:** exactly how derivation should work (ordering, suffix placement, punctuation) and what changes on the pipeline/parsing side are needed before this can be scoped. Distinct from the real bug this surfaced alongside (create route silently discarding name-part fields when Full Name is also filled — already fixed in Phase 27 gap-closure); this item is the broader "should Full Name exist as a separate editable field at all" question, still open.
+**Depends on**: Nothing (independent design decision + implementation; open question resolved at discuss-phase)
+**Requirements**: PEOPLE-09
+**Success Criteria** (what must be TRUE):
+  1. Full Name field behavior is resolved per a locked design decision (auto-derived vs. independently editable) — decided during `/gsd-discuss-phase 38`, not here.
+  2. Operator can save a person record after filling in only the component name fields, consistent with whichever direction the locked decision takes (auto-derive removes the standalone Full Name requirement; independently-editable keeps it but the editor clearly explains why).
+  3. Existing Full Name values for already-created people are not corrupted or silently overwritten by the new behavior.
+  4. Any pipeline/parsing-side changes needed to support the decision are identified and applied consistently with the admin editor's behavior.
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 39: Bench popover — additional context data for Justices
+**Goal**: When a visitor clicks a Justice's avatar on the public argument view, the popover should show richer persistent context about them: birthdate, death date, and a list of tenures with start/end dates, appointing president, that president's party affiliation, and why they left that tenure (death, retirement, promotion) — presented identically for every Justice per the apolitical-framing constraint. `SpeakerPopover.svelte` currently shows photo, name, role, tenure dates, and appointing president, but no birthdate/death date despite `Person.birthdate` existing since Phase 27. Case-specific presentation (age at argument, tenure length, case-heard count) needs explicit exploration before implementation per the apolitical constraint and is not required for this phase's scope.
+**Depends on**: Nothing (independent public UI feature)
+**Requirements**: PUB-04
+**Success Criteria** (what must be TRUE):
+  1. Justice bench popover on the public argument page displays birthdate and death date (when known), in addition to the existing name/photo/role.
+  2. Popover displays each tenure with start/end dates, appointing president, that president's party affiliation, and reason for leaving (death, retirement, promotion) when known.
+  3. All added fields are presented identically for every Justice — no differential framing, omission, or emphasis based on any political consideration.
+  4. Case-specific presentation (age at argument, tenure-length indicators, case-heard counts) remains out of scope for this phase.
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 40: README — how to start the local stack
+**Goal**: No README documents how to start the full local stack (SvelteKit dev server, FastAPI backend, Postgres). Add one so setup steps don't have to be rediscovered each session.
+**Depends on**: Nothing (documentation only, no code dependency)
+**Requirements**: DOCS-01
+**Success Criteria** (what must be TRUE):
+  1. A README documents step-by-step how to start Postgres, the FastAPI backend, and the SvelteKit frontend locally, end to end.
+  2. README covers required environment variables/config for local dev, referencing existing `.env` patterns without exposing secrets.
+  3. A contributor (or the operator after time away) can follow the README from a clean checkout to a running local stack without needing to rediscover steps from memory or git history.
+**Plans**: TBD
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -137,23 +266,16 @@ Full phase details: `.planning/milestones/v1.5-ROADMAP.md`
 | 29. Historical Corpus Import | v1.5 | 9/9 | Complete | 2026-07-10 |
 | 30. Corpus Import Resolve Workflow | v1.5 | 4/4 | Complete | 2026-07-10 |
 | 30.1. Close gap AEDIT-04/DASH-02 | v1.5 | 3/3 | Complete | 2026-07-12 |
-
-## Unscheduled Phases (promoted from backlog 2026-07-12, awaiting next milestone)
-
-Promoted via `/gsd-review-backlog`. No active milestone exists yet (v1.5 shipped 2026-07-12) — these are numbered and ready to be picked up by the next `/gsd-new-milestone` or discussed/planned individually.
-
-- [ ] Phase 31: Audit ~28 stale DB-gated test fixtures + fix real data leakage into shared dev DB — escalated, active data-integrity risk
-- [ ] Phase 32: Fix CourtTenure FK bookkeeping gap in merge/delete person service paths
-- [ ] Phase 33: `update_argument_metadata` unique-constraint guard
-- [ ] Phase 34: Blank case_name/docket_number can corrupt slug and dedup-key data
-- [ ] Phase 35: `rerun_job` never spawns ingest for locally-uploaded jobs
-- [ ] Phase 36: Click-to-copy extracted values design pattern
-- [ ] Phase 37: Represent tenure Seat as a Chief/Associate toggle instead of free text
-- [ ] Phase 38: Rethink Full Name vs. name-part fields in the people editor
-- [ ] Phase 39: Bench popover: additional context data for Justices
-- [ ] Phase 40: README: how to start the local stack
-
-Full goal text for each carries over unchanged from its original 999.x backlog capture (see git history of this file for the pre-promotion wording, or the phase directory itself once discussed).
+| 31. Audit ~28 stale DB-gated test fixtures + fix real data leakage into shared dev DB | v1.6 | TBD | Not started | - |
+| 32. Fix CourtTenure FK bookkeeping gap in merge/delete person service paths | v1.6 | TBD | Not started | - |
+| 33. `update_argument_metadata` unique-constraint guard | v1.6 | TBD | Not started | - |
+| 34. Blank case_name/docket_number validation | v1.6 | TBD | Not started | - |
+| 35. `rerun_job` never spawns ingest for locally-uploaded jobs | v1.6 | TBD | Not started | - |
+| 36. Click-to-copy extracted values design pattern | v1.6 | TBD | Not started | - |
+| 37. Represent tenure Seat as a Chief/Associate toggle instead of free text | v1.6 | TBD | Not started | - |
+| 38. Rethink Full Name vs. name-part fields in the people editor | v1.6 | TBD | Not started | - |
+| 39. Bench popover — additional context data for Justices | v1.6 | TBD | Not started | - |
+| 40. README — how to start the local stack | v1.6 | TBD | Not started | - |
 
 ## Backlog
 
@@ -229,14 +351,4 @@ Plans:
 
 - [ ] TBD (promote with /gsd-review-backlog when ready)
 
-### Phase 999.9: README: how to start the local stack (BACKLOG)
-
-**Goal:** [Captured for future planning] [Migrated from BACKLOG.md B-012, added 2026-07-01] No README documents how to start the full local stack (SvelteKit dev server, FastAPI backend, Postgres). Add one so setup steps don't have to be rediscovered each session.
-**Requirements:** TBD
-**Plans:** 0 plans
-
-Plans:
-
-- [ ] TBD (promote with /gsd-review-backlog when ready)
-
-**Note:** 999.10 (bulk-import historical justices CSV) was removed 2026-07-12 during backlog review — SUPERSEDED/ABSORBED into Phase 29's `import-justices` command per CONTEXT.md D-01, 2026-07-09. 999.17 (FastAPI test lifespan/session-factory failure) was removed 2026-07-12 — FIXED 2026-07-10 during Phase 30 Wave 1, commits `1a99f28a`/`f7ad3082`. 999.1, 999.9, 999.11, 999.12, 999.13, 999.14, 999.15, 999.16, 999.18, 999.19 were promoted 2026-07-12 to Phases 36, 40, 39, 35, 34, 33, 38, 37, 32, 31 respectively — see the Unscheduled Phases section above for current goal text.
+**Note:** 999.10 (bulk-import historical justices CSV) was removed 2026-07-12 during backlog review — SUPERSEDED/ABSORBED into Phase 29's `import-justices` command per CONTEXT.md D-01, 2026-07-09. 999.17 (FastAPI test lifespan/session-factory failure) was removed 2026-07-12 — FIXED 2026-07-10 during Phase 30 Wave 1, commits `1a99f28a`/`f7ad3082`. 999.1, 999.9, 999.11, 999.12, 999.13, 999.14, 999.15, 999.16, 999.18, 999.19 were promoted 2026-07-12 to Phases 36, 40, 39, 35, 34, 33, 38, 37, 32, 31 respectively, and folded into the v1.6 milestone on 2026-07-13 — see the Phase Details section above for full goal text and success criteria.

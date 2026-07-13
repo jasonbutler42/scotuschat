@@ -114,6 +114,7 @@
 		aliases: number;
 		appearances: number;
 		argument_participants: number;
+		tenures: number;
 	} | null>(null);
 	let mergeLoading = $state(false);
 	let mergeError = $state<string | null>(null);
@@ -743,13 +744,13 @@
 							<p style="font-size: 14px; color: #94a3b8; margin: 0 0 8px 0;">
 								This will transfer from <strong style="color: #e2e8f0;">{data.person.full_name}</strong> to <strong style="color: #e2e8f0;">{targetPerson?.full_name ?? targetPerson?.last_name ?? 'selected person'}</strong>:
 							</p>
-							{#if mergePreview.utterances === 0 && mergePreview.aliases === 0 && mergePreview.appearances === 0 && mergePreview.argument_participants === 0}
+							{#if mergePreview.utterances === 0 && mergePreview.aliases === 0 && mergePreview.appearances === 0 && mergePreview.argument_participants === 0 && mergePreview.tenures === 0}
 								<p style="font-size: 14px; color: #94a3b8; margin: 0;">
 									No records to transfer. This person has no associated data.
 								</p>
 							{:else}
 								<p style="font-size: 14px; color: #e2e8f0; margin: 0;">
-									{mergePreview.utterances} utterance(s) · {mergePreview.aliases} alias(es) · {mergePreview.appearances} appearance(s) · {mergePreview.argument_participants} argument participant(s)
+									{mergePreview.utterances} utterance(s) · {mergePreview.aliases} alias(es) · {mergePreview.appearances} appearance(s) · {mergePreview.argument_participants} argument participant(s) · {mergePreview.tenures} tenure(s)
 								</p>
 							{/if}
 						{/if}

@@ -5,15 +5,15 @@ milestone_name: Backlog Cleanup
 current_phase: 31
 current_phase_name: audit-stale-db-gated-test-fixtures
 status: executing
-stopped_at: Completed 31-01-PLAN.md
-last_updated: "2026-07-13T14:33:12.336Z"
+stopped_at: Completed 31-04-PLAN.md
+last_updated: "2026-07-13T14:51:18.983Z"
 last_activity: 2026-07-13
 last_activity_desc: Phase 31 execution started
 progress:
   total_phases: 10
   completed_phases: 0
   total_plans: 8
-  completed_plans: 3
+  completed_plans: 4
   percent: 0
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-07-12 after v1.5 milestone completion)
 ## Current Position
 
 Phase: 31 (audit-stale-db-gated-test-fixtures) — EXECUTING
-Plan: 4 of 8
+Plan: 5 of 8
 Status: Ready to execute
 Last activity: 2026-07-13 — Phase 31 execution started
 
@@ -54,6 +54,9 @@ Two open design questions remain unresolved by design and are intentionally defe
 - [Phase 31]: _REAL_DATABASE_URL captured before TEST_DATABASE_URL override so the leak-detection hooks always watch the real dev DB, never the redirected DATABASE_URL
 - [Phase 31]: pytest_sessionstart/pytest_sessionfinish leak guard checks only people/arguments counts, not the full clean_db table list, to keep the failure message unambiguous
 - [Phase 31]: Plan 03 canonical db_session fixture body taken from test_admin_jobs_list.py; docstring divergence across the 7 copies documented but non-blocking (functional code was byte-identical)
+- [Phase 31]: [Phase 31, Plan 04]: Person duplicate survivor selection scores (court_tenures linkage, non-null bio field count, -id) as a tuple; lowest id is only the documented last-resort tie-break, never the default
+- [Phase 31]: [Phase 31, Plan 04]: cleanup script deliberately excludes job-{id} source_docket values from orphan/pattern detection -- that is a legitimate production placeholder for in-progress admin-job arguments, not test leakage
+- [Phase 31]: [Phase 31, Plan 04]: execute path re-runs detection inside the delete transaction and aborts if the candidate set drifted since the dry-run report, closing the TOCTOU gap between reporting and deleting
 
 ### Roadmap Evolution
 
@@ -72,6 +75,7 @@ Deployment blockers (v1.4, unresolved — not in v1.6 scope):
 - `BODY_SIZE_LIMIT=10M` must be set in DO App Platform env
 - `ORIGIN`, `PROTOCOL_HEADER`, `HOST_HEADER` env vars required on DO
 - `admin.scotuschat.com` DNS entry must be created before smoke test
+- admin_arguments.py::delete_argument omits argument_status_log from its FK cascade (found during 31-04) -- likely ForeignKeyViolation on deleting a DRAFT argument with a status log row; see deferred-items.md for suggested fix
 
 ## Deferred Items
 
@@ -145,11 +149,12 @@ Items acknowledged and deferred at v1.5 milestone close on 2026-07-12:
 | Phase 31 P01 | 25min | 2 tasks | 3 files |
 | Phase 31 P02 | 20min | 2 tasks | 1 files |
 | Phase 31 P03 | 15min | 3 tasks | 8 files |
+| Phase 31 P04 | 20min | 2 tasks | 1 files |
 
 ## Session Continuity
 
-Last session: 2026-07-13T14:32:26.888Z
-Stopped at: Completed 31-01-PLAN.md
+Last session: 2026-07-13T14:51:18.971Z
+Stopped at: Completed 31-04-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

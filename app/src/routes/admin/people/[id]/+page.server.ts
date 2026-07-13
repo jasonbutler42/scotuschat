@@ -48,6 +48,7 @@ interface MergePreviewCounts {
 	aliases: number;
 	appearances: number;
 	argument_participants: number;
+	tenures: number;
 }
 
 export const load: PageServerLoad = async ({ fetch, params }) => {
@@ -104,8 +105,10 @@ export const load: PageServerLoad = async ({ fetch, params }) => {
 			can_delete =
 				counts.utterances === 0 &&
 				counts.appearances === 0 &&
-				counts.argument_participants === 0;
-			delete_block_count = counts.utterances + counts.appearances + counts.argument_participants;
+				counts.argument_participants === 0 &&
+				counts.tenures === 0;
+			delete_block_count =
+				counts.utterances + counts.appearances + counts.argument_participants + counts.tenures;
 		}
 	} catch {
 		// Degrade gracefully: can_delete stays false (safe default), delete_block_count stays 0

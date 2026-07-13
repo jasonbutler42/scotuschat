@@ -99,7 +99,25 @@ def test_resolve_interrupt_sets_needs_review():
     from unittest.mock import AsyncMock, MagicMock, patch
     from contextlib import asynccontextmanager
 
-    from api.models.models import PipelineRun, PipelineRunStatus
+    # Import PipelineRun/PipelineRunStatus via pipeline.commands.resolve's own
+    # namespace (not a fresh `from api.models.models import ...`) so the
+    # isinstance/equality checks below always compare against the exact same
+    # class objects that run_resolve() itself binds to internally — immune to
+    # tests/test_admin_router.py::test_api_main_imports_without_error deleting
+    # and re-importing every api.* module elsewhere in the same pytest
+    # session. A fresh `api.models.models` import picks up whichever module
+    # identity is current in sys.modules at that instant; if it has already
+    # been reimported (a fresh class object) while pipeline.commands.resolve
+    # (imported earlier, e.g. via api/services/admin_jobs.py's module-level
+    # import chain) still holds the OLD class object bound at its own import
+    # time, `isinstance(obj, PipelineRun)` silently returns False for every
+    # object added by run_resolve() — this is what caused
+    # "Expected exactly 1 PipelineRun added, got 0" when the full suite ran
+    # with tests/ collected before pipeline/tests/ (Phase 31, T-31-19).
+    from pipeline.commands import resolve as resolve_module
+
+    PipelineRun = resolve_module.PipelineRun
+    PipelineRunStatus = resolve_module.PipelineRunStatus
 
     # Build a fake parse_run that looks like a completed parse step
     fake_parse_run = MagicMock(spec=PipelineRun)

@@ -25,11 +25,6 @@ import argparse
 import asyncio
 import sys
 
-# asyncpg is incompatible with the Windows ProactorEventLoop (Python 3.8+ default).
-# Guard with platform check so production Linux deployments are unaffected.
-if sys.platform == "win32":
-    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-
 from sqlalchemy import update
 
 from api.models.models import AdminJob, AdminJobStatus
@@ -101,6 +96,22 @@ def _write_early_failure(job_id: int | None, message: str) -> None:
 
 
 def main() -> None:
+    # asyncpg is incompatible with the Windows ProactorEventLoop (Python 3.8+
+    # default). Guarded with a platform check so production Linux deployments
+    # are unaffected. Set here (inside main(), not at module import time) so
+    # merely importing this module — e.g. pipeline/tests/test_ingest_startup_guard.py
+    # imports _scrape_job_id/_write_early_failure without invoking main() —
+    # does not mutate the process-wide asyncio event loop policy. That
+    # import-time mutation previously leaked into every test that ran later
+    # in the same pytest session (Phase 31, T-31-18): it silently changed the
+    # behavior of unrelated asyncio.run() calls (e.g.
+    # pipeline/commands/resolve.py's KeyboardInterrupt handling). A real CLI
+    # invocation (`python -m pipeline ...`) still sets __name__ == "__main__"
+    # and calls main() exactly as before — this only removes the side effect
+    # for callers that merely import the module without invoking main().
+    if sys.platform == "win32":
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
     parser = argparse.ArgumentParser(
         prog="pipeline",
         description="SCOTUS Chat pipeline — offline operator CLI",

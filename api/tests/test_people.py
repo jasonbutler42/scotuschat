@@ -48,19 +48,45 @@ async def test_get_person(client: AsyncClient) -> None:
     GET /people/{id} should return 200 with id, full_name, and role_name keys
     when the person exists in the database.
 
-    Uses person_id=1 (a Justice seeded by seed-aliases) as the canonical
-    test subject. Requires a running DB with at least one Person row.
+    Creates its own durable Person row via a committed AsyncSessionLocal()
+    session rather than assuming a hardcoded person_id=1 row exists (Phase
+    31, T-31-19: the previous hardcoded-id=1 assumption relied on
+    pipeline/tests/test_seed_aliases.py seeding real justices first — those
+    tests are pre-existing pytest.fail("not implemented") stubs marked
+    xfail, so run_seed_aliases() never actually executes in the current
+    suite and no such row exists; this version is self-contained). Uses a
+    plain committed session (not the shared db_session rollback fixture)
+    because the HTTP client's request handler opens its own separate DB
+    session via the app's get_db dependency — an uncommitted row in a
+    different session/connection would not be visible to it.
     """
-    response = await client.get("/people/1")
-    assert response.status_code == 200
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import Person
 
-    body = response.json()
-    assert "id" in body, "Response must have 'id' key"
-    assert "full_name" in body, "Response must have 'full_name' key"
-    assert "role_name" in body, "Response must have 'role_name' key"
-    assert isinstance(body["id"], int), "id must be an integer"
-    assert isinstance(body["full_name"], str), "full_name must be a string"
-    assert len(body["full_name"]) > 0, "full_name must not be empty"
+    async with AsyncSessionLocal() as db:
+        person = Person(full_name="Test Get Person Regression", is_justice=False)
+        db.add(person)
+        await db.commit()
+        person_id = person.id
+
+    try:
+        response = await client.get(f"/people/{person_id}")
+        assert response.status_code == 200
+
+        body = response.json()
+        assert "id" in body, "Response must have 'id' key"
+        assert "full_name" in body, "Response must have 'full_name' key"
+        assert "role_name" in body, "Response must have 'role_name' key"
+        assert isinstance(body["id"], int), "id must be an integer"
+        assert isinstance(body["full_name"], str), "full_name must be a string"
+        assert len(body["full_name"]) > 0, "full_name must not be empty"
+    finally:
+        # Cleanup — the row above was committed, not protected by any rollback.
+        async with AsyncSessionLocal() as db:
+            person = await db.get(Person, person_id)
+            if person is not None:
+                await db.delete(person)
+                await db.commit()
 
 
 # ---------------------------------------------------------------------------

@@ -82,14 +82,70 @@ def _db_configured() -> bool:
 @pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL with parsed data")
 async def test_utterances_payload_includes_oyez_transcript_id(client: AsyncClient) -> None:
     """
-    GET /arguments/1/utterances — the argument payload must include the
+    GET /arguments/{id}/utterances — the argument payload must include the
     oyez_transcript_id key (null for PDF-ingested arguments).
-    """
-    response = await client.get("/arguments/1/utterances")
-    assert response.status_code == 200
 
-    body = response.json()
-    assert "oyez_transcript_id" in body["argument"]
+    Creates its own durable Argument/Case/CaseArgument via a committed
+    AsyncSessionLocal() session rather than assuming a hardcoded argument_id=1
+    row exists (Phase 31, T-31-19: the previous hardcoded-id=1 assumption was
+    order-dependent on another test file seeding it first — no test in the
+    current suite reliably does that, so it 404'd; this version is
+    self-contained). Uses a plain committed session (not the shared
+    db_session rollback fixture) because the HTTP client's request handler
+    opens its own separate DB session via the app's get_db dependency —
+    an uncommitted row in a different session/connection would not be
+    visible to it.
+    """
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import Argument, ArgumentStatusEnum, Case, CaseArgument
+
+    async with AsyncSessionLocal() as db:
+        case = Case(
+            docket_number="14-556-OYEZ-FIELD-TEST",
+            docket_number_norm="14556OYEZFIELDTEST",
+            case_name="Synthetic Oyez-Field Test Case",
+            term_year=2015,
+            slug="synthetic-oyez-field-test-case",
+            oyez_case_id="oyez-field-test",
+        )
+        db.add(case)
+        await db.flush()
+
+        argument = Argument(
+            argued_date=None,
+            question_number=1,
+            source_docket="14-556-OYEZ-FIELD-TEST",
+            status=ArgumentStatusEnum.DRAFT,
+        )
+        db.add(argument)
+        await db.flush()
+
+        case_argument = CaseArgument(case_id=case.id, argument_id=argument.id, is_lead=True)
+        db.add(case_argument)
+        await db.commit()
+
+        case_id = case.id
+        argument_id = argument.id
+
+    try:
+        response = await client.get(f"/arguments/{argument_id}/utterances")
+        assert response.status_code == 200
+
+        body = response.json()
+        assert "oyez_transcript_id" in body["argument"]
+    finally:
+        # Cleanup — rows above were committed, not protected by any rollback.
+        async with AsyncSessionLocal() as db:
+            case_argument = await db.get(CaseArgument, (case_id, argument_id))
+            if case_argument is not None:
+                await db.delete(case_argument)
+            argument = await db.get(Argument, argument_id)
+            if argument is not None:
+                await db.delete(argument)
+            case = await db.get(Case, case_id)
+            if case is not None:
+                await db.delete(case)
+            await db.commit()
 
 
 # ---------------------------------------------------------------------------

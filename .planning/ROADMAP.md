@@ -129,7 +129,15 @@ Full phase details: `.planning/milestones/v1.5-ROADMAP.md`
   2. All ~28 previously-failing DB-gated test fixtures pass against the current schema (no NOT NULL/enum mismatches).
   3. The chosen isolation mechanism (dedicated test DB, snapshot/restore, or savepoint nesting) demonstrably survives an inner commit made by a production service function (e.g. `create_person_for_job` or `run_import_convokit`) during a test.
   4. Running `import-justices` or `import-convokit` immediately after a full test-suite run does not fail with `MultipleResultsFound` or any other error caused by leaked test data.
-**Plans**: TBD
+**Plans**: 8 plans
+- [ ] 31-01-PLAN.md — Provision scotus_test + session auto-reset fixture (D-01/D-02/D-03)
+- [ ] 31-02-PLAN.md — Root conftest DATABASE_URL redirect + leak-detection hook (D-01/D-11/D-12/D-13)
+- [ ] 31-03-PLAN.md — Consolidate the 7 duplicated db_session fixtures (D-09/D-10)
+- [ ] 31-04-PLAN.md — Build leaked-row cleanup script, dry-run default (D-04–D-08)
+- [ ] 31-05-PLAN.md — Fix stale api/tests DB-gated fixtures (TEST-02)
+- [ ] 31-06-PLAN.md — Fix stale pipeline/tests DB-gated fixtures (TEST-02)
+- [ ] 31-07-PLAN.md — Inner-commit regression test + full-suite green run (criteria 1/2/3)
+- [ ] 31-08-PLAN.md — Operator-gated cleanup execution + import-justices smoke (criterion 4)
 
 ### Phase 32: Fix CourtTenure FK bookkeeping gap in merge/delete person service paths
 **Goal**: `CourtTenure.person_id` is `nullable=False` with a plain `ForeignKeyConstraint` and no `ON DELETE CASCADE` in any Alembic migration, but none of `get_merge_preview`, `merge_people`, or `delete_person_if_orphan` (`api/services/admin_people.py`) account for `CourtTenure` rows. Merging or deleting any Bench person with one or more tenure rows raises an unhandled `IntegrityError` (500) instead of the documented graceful response. This predates Phase 27 (`CourtTenure` and the merge/delete paths were introduced in Phase 22) but became newly reachable once Phase 27 added full tenure-row CRUD to the People editor. Fix: count `CourtTenure` in `get_merge_preview`'s counted-tables loop, transfer `CourtTenure` rows to the target person in `merge_people`, and include `CourtTenure` in `delete_person_if_orphan`'s orphan check — mirroring the existing `Utterance`/`SpeakerAlias`/`CaseAppearance`/`ArgumentParticipant` handling.

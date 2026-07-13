@@ -2,9 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Backlog Cleanup
+current_phase: 31
+current_phase_name: Audit ~28 stale DB-gated test fixtures + fix real data leakage into shared dev DB
 status: planning
-last_updated: "2026-07-13T03:37:15.950Z"
+stopped_at: Phase 31 context gathered
+last_updated: "2026-07-13T12:28:22.027Z"
 last_activity: 2026-07-13
+last_activity_desc: ROADMAP.md created; phases 31–40 folded in from the 999.x backlog promotion with full goal text, success criteria, and requirement mappings
 progress:
   total_phases: 10
   completed_phases: 0
@@ -42,6 +46,7 @@ v1.5: 10 phases, 55 plans, 10 days (2026-07-02 → 2026-07-12).
 Full decision log lives in PROJECT.md's Key Decisions table (all v1.0-v1.5 decisions logged there with outcomes). Cleared here at v1.5 milestone close per the standard STATE.md reset.
 
 Two open design questions remain unresolved by design and are intentionally deferred to their own discuss-phase, not pre-decided in the roadmap:
+
 - Phase 37 (Tenure Seat): numbered-seat data vs. binary Chief/Associate toggle
 - Phase 38 (Full Name): auto-derive vs. independently editable
 
@@ -135,9 +140,9 @@ Items acknowledged and deferred at v1.5 milestone close on 2026-07-12:
 
 ## Session Continuity
 
-Last session: 2026-07-13T03:37:15.950Z
-Stopped at: ROADMAP.md created for v1.6 — phases 31–40 fully detailed with success criteria; awaiting user approval before /gsd-plan-phase 31
-Resume file: None
+Last session: 2026-07-13T12:28:22.015Z
+Stopped at: Phase 31 context gathered
+Resume file: .planning/phases/31-audit-stale-db-gated-test-fixtures/31-CONTEXT.md
 
 ## Operator Next Steps
 

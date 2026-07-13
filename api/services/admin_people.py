@@ -556,10 +556,10 @@ async def create_role(db: AsyncSession, name: str) -> dict:
 
 
 async def get_merge_preview(db: AsyncSession, source_id: int) -> dict | None:
-    """Return row counts for the 4 FK tables that would transfer from source to target.
+    """Return row counts for the 5 FK tables that would transfer from source to target.
 
     Returns None if source person does not exist.
-    Returns dict with keys: utterances, aliases, appearances, argument_participants.
+    Returns dict with keys: utterances, aliases, appearances, argument_participants, tenures.
     target_id is not required for counts — the source's rows are what transfer (D-09, PADM-04).
     """
     result = await db.execute(select(Person).where(Person.id == source_id))
@@ -573,6 +573,7 @@ async def get_merge_preview(db: AsyncSession, source_id: int) -> dict | None:
         ("aliases", SpeakerAlias, SpeakerAlias.person_id),
         ("appearances", CaseAppearance, CaseAppearance.person_id),
         ("argument_participants", ArgumentParticipant, ArgumentParticipant.person_id),
+        ("tenures", CourtTenure, CourtTenure.person_id),
     ]:
         count = (await db.execute(
             select(sqlfunc.count()).select_from(model).where(col == source_id)
@@ -590,7 +591,7 @@ async def merge_people(
     Returns None if either source or target does not exist (router → 404).
     Raises ValueError if source_id == target_id (T-12-SELF guard).
 
-    All 4 UPDATEs and the DELETE execute on the active implicit transaction started
+    All 5 UPDATEs and the DELETE execute on the active implicit transaction started
     by the fetch-guard SELECTs above. db.commit() is called once after all statements
     complete — any failure rolls back all steps atomically (D-10, T-12-ATOMIC).
     Every bulk statement carries .execution_options(synchronize_session=False) (T-12-SYNC).
@@ -613,6 +614,7 @@ async def merge_people(
         (SpeakerAlias, SpeakerAlias.person_id),
         (CaseAppearance, CaseAppearance.person_id),
         (ArgumentParticipant, ArgumentParticipant.person_id),
+        (CourtTenure, CourtTenure.person_id),
     ]:
         await db.execute(
             update(model)
@@ -631,14 +633,14 @@ async def merge_people(
 
 
 async def delete_person_if_orphan(db: AsyncSession, person_id: int) -> bool | None:
-    """Delete a person only if they have zero rows across all 4 FK tables.
+    """Delete a person only if they have zero rows across all 5 FK tables.
 
     Returns True on successful deletion.
     Returns False if any FK row exists (router → 409 Conflict); person row is NOT deleted.
     Returns None if the person does not exist (router → 404).
 
     Server-side orphan check is authoritative — client disabled state is defense-in-depth
-    only (D-06, T-12-ORPHAN). COUNT check covers all 4 FK tables.
+    only (D-06, T-12-ORPHAN). COUNT check covers all 5 FK tables.
     """
     result = await db.execute(select(Person).where(Person.id == person_id))
     person = result.scalar_one_or_none()
@@ -656,6 +658,7 @@ async def delete_person_if_orphan(db: AsyncSession, person_id: int) -> bool | No
         (Utterance, Utterance.person_id),
         (CaseAppearance, CaseAppearance.person_id),
         (ArgumentParticipant, ArgumentParticipant.person_id),
+        (CourtTenure, CourtTenure.person_id),
     ]:
         count = (await db.execute(
             select(sqlfunc.count()).select_from(model).where(col == person_id)

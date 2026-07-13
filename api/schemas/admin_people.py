@@ -220,6 +220,7 @@ class MergePreview(BaseModel):
     aliases: int
     appearances: int
     argument_participants: int
+    tenures: int
 
     model_config = {"from_attributes": True}
 

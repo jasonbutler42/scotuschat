@@ -1,5 +1,5 @@
 ---
-status: testing
+status: complete
 phase: 32-fix-courttenure-fk-bookkeeping-gap-in-merge-delete-person-se
 source: [32-VERIFICATION.md]
 started: 2026-07-13T20:00:00Z
@@ -8,28 +8,20 @@ updated: 2026-07-13T20:00:00Z
 
 ## Current Test
 
-number: 1
-name: Manual UI exercise of merge/delete on a Justice with tenure rows
-expected: |
-  In the dev/staging admin UI, open a Justice person record that has ≥1 CourtTenure row.
-  Attempting to delete them shows a disabled delete button (and a 409 if forced via API).
-  Merging them into another person shows the merge-preview breakdown rendering "N tenure(s)",
-  the merge completes with no IntegrityError, and the target person's tenure history includes
-  the transferred rows afterward.
-awaiting: user response
+[testing complete]
 
 ## Tests
 
 ### 1. Manual UI exercise of merge/delete on a Justice with tenure rows
 expected: Delete button disabled with tenure rows present; merge-preview breakdown renders the tenure count; after merge, no IntegrityError, and the target person's tenure history includes the transferred rows.
-result: [pending]
+result: pass
 
 ## Summary
 
 total: 1
-passed: 0
+passed: 1
 issues: 0
-pending: 1
+pending: 0
 skipped: 0
 blocked: 0
 

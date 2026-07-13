@@ -62,6 +62,15 @@ created: 2026-07-13
 | Audit Date | Threats Total | Closed | Open | Run By |
 |------------|---------------|--------|------|--------|
 | 2026-07-13 | 9 | 9 | 0 | Claude (orchestrator, L1/ASVS-1 short-circuit — register authored at plan time, threats_open resolved to 0 via verifier/code-review evidence, no auditor spawn required per gsd-secure-phase short-circuit rule) |
+| 2026-07-13 | 9 | 9 | 0 | Codex (L1/ASVS-1 re-audit — confirmed the plan-time STRIDE register, single-commit transaction boundary, server-side `CourtTenure` blocking count, 409 mapping, and matching `tenures` contract across backend/frontend; short-circuit rule applied) |
+
+## Security Audit 2026-07-13 (Codex Re-audit)
+
+| Metric | Count |
+|--------|-------|
+| Threats found | 9 |
+| Closed | 9 |
+| Open | 0 |
 
 ---
 

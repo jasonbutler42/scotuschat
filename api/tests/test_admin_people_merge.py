@@ -63,11 +63,14 @@ def test_merge_schemas_import() -> None:
     req = MergeRequest(target_id=7)
     assert req.target_id == 7
 
-    preview = MergePreview(utterances=2, aliases=1, appearances=3, argument_participants=0)
+    preview = MergePreview(
+        utterances=2, aliases=1, appearances=3, argument_participants=0, tenures=4
+    )
     assert preview.utterances == 2
     assert preview.aliases == 1
     assert preview.appearances == 3
     assert preview.argument_participants == 0
+    assert preview.tenures == 4
 
 
 # ---------------------------------------------------------------------------
@@ -274,6 +277,171 @@ async def test_merge_people_transfers_and_deletes_source() -> None:
 
     # Clean up
     async with async_session() as db:
+        await db.execute(text(f"DELETE FROM people WHERE id = {tgt_id}"))
+        await db.commit()
+
+    await engine.dispose()
+
+
+# ---------------------------------------------------------------------------
+# CourtTenure (5th FK table) — mirrors the 4-table coverage above (Phase 32)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_get_merge_preview_counts_tenures() -> None:
+    """get_merge_preview reports the correct 'tenures' count for a person with
+
+    a court_tenures row, and 0 for a genuinely tenure-less person (SC#1).
+    """
+    from sqlalchemy import text
+    from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+    from sqlalchemy.orm import sessionmaker
+    from api.services.admin_people import get_merge_preview
+
+    engine = create_async_engine(os.environ["DATABASE_URL"], echo=False)
+    async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+    async with async_session() as db:
+        async with db.begin():
+            await db.execute(text(
+                "INSERT INTO people (full_name) VALUES ('Test Tenure Preview Person') "
+                "ON CONFLICT DO NOTHING"
+            ))
+            row = (await db.execute(
+                text("SELECT id FROM people WHERE full_name = 'Test Tenure Preview Person' LIMIT 1")
+            )).one_or_none()
+            if row is None:
+                pytest.skip("Could not insert test person")
+            person_id = row[0]
+
+            # Zero-tenure case first
+            result = await get_merge_preview(db, source_id=person_id)
+            assert result is not None
+            assert result["tenures"] == 0
+
+            await db.execute(
+                text("INSERT INTO court_tenures (person_id) VALUES (:pid)"),
+                {"pid": person_id},
+            )
+
+            result = await get_merge_preview(db, source_id=person_id)
+            assert result is not None
+            assert result["tenures"] == 1
+
+            # Clean up — delete tenure row(s) before the person (FK, no CASCADE)
+            await db.execute(text("DELETE FROM court_tenures WHERE person_id = :pid"), {"pid": person_id})
+            await db.execute(text(f"DELETE FROM people WHERE id = {person_id}"))
+
+    await engine.dispose()
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_delete_person_if_orphan_blocked_by_tenure() -> None:
+    """delete_person_if_orphan returns False when the person has a CourtTenure
+
+    row (SC#3), and the person row survives.
+    """
+    from sqlalchemy import text
+    from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+    from sqlalchemy.orm import sessionmaker
+    from api.services.admin_people import delete_person_if_orphan, get_person_detail
+
+    engine = create_async_engine(os.environ["DATABASE_URL"], echo=False)
+    async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+    async with async_session() as db:
+        await db.execute(text(
+            "INSERT INTO people (full_name) VALUES ('Tenure Blocked Delete Person')"
+        ))
+        await db.commit()
+        row = (await db.execute(
+            text("SELECT id FROM people WHERE full_name = 'Tenure Blocked Delete Person' LIMIT 1")
+        )).one_or_none()
+        assert row is not None
+        person_id = row[0]
+
+        await db.execute(
+            text("INSERT INTO court_tenures (person_id) VALUES (:pid)"),
+            {"pid": person_id},
+        )
+        await db.commit()
+
+    async with async_session() as db:
+        result = await delete_person_if_orphan(db, person_id=person_id)
+        assert result is False
+
+    # Person must still exist — not deleted
+    async with async_session() as db:
+        detail = await get_person_detail(db, person_id)
+        assert detail is not None
+
+    # Clean up — tenure row(s) first, then the person
+    async with async_session() as db:
+        await db.execute(text("DELETE FROM court_tenures WHERE person_id = :pid"), {"pid": person_id})
+        await db.execute(text(f"DELETE FROM people WHERE id = {person_id}"))
+        await db.commit()
+
+    await engine.dispose()
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_merge_people_transfers_tenures() -> None:
+    """merge_people reassigns a CourtTenure row's person_id from source to
+
+    target and deletes the source (SC#2).
+    """
+    from sqlalchemy import text
+    from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+    from sqlalchemy.orm import sessionmaker
+    from api.services.admin_people import merge_people, get_person_detail
+
+    engine = create_async_engine(os.environ["DATABASE_URL"], echo=False)
+    async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+    async with async_session() as db:
+        await db.execute(text("INSERT INTO people (full_name) VALUES ('Tenure Merge Source Person')"))
+        await db.execute(text("INSERT INTO people (full_name) VALUES ('Tenure Merge Target Person')"))
+        await db.commit()
+
+        src_row = (await db.execute(
+            text("SELECT id FROM people WHERE full_name = 'Tenure Merge Source Person' LIMIT 1")
+        )).one_or_none()
+        tgt_row = (await db.execute(
+            text("SELECT id FROM people WHERE full_name = 'Tenure Merge Target Person' LIMIT 1")
+        )).one_or_none()
+        assert src_row and tgt_row
+        src_id = src_row[0]
+        tgt_id = tgt_row[0]
+
+        await db.execute(
+            text("INSERT INTO court_tenures (person_id) VALUES (:pid)"),
+            {"pid": src_id},
+        )
+        await db.commit()
+
+    async with async_session() as db:
+        result = await merge_people(db, source_id=src_id, target_id=tgt_id)
+        assert result is not None
+        assert result["id"] == tgt_id
+
+    # Tenure row must now point at the target; source person must be gone
+    async with async_session() as db:
+        tenure_row = (await db.execute(
+            text("SELECT person_id FROM court_tenures WHERE person_id = :pid"), {"pid": tgt_id}
+        )).one_or_none()
+        assert tenure_row is not None
+        assert tenure_row[0] == tgt_id
+
+        source_detail = await get_person_detail(db, src_id)
+        assert source_detail is None, "Source person must be deleted after merge"
+
+    # Clean up — tenure row(s) first, then the target person
+    async with async_session() as db:
+        await db.execute(text("DELETE FROM court_tenures WHERE person_id = :pid"), {"pid": tgt_id})
         await db.execute(text(f"DELETE FROM people WHERE id = {tgt_id}"))
         await db.commit()
 

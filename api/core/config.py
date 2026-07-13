@@ -13,6 +13,14 @@ class Settings(BaseSettings):
 
     database_url: str  # postgresql+asyncpg://user:pass@host/db
 
+    # Test-DB isolation (Phase 31, D-01): read directly via os.environ by
+    # tests/conftest.py (which redirects DATABASE_URL to this value before any
+    # module import) and by pipeline/tests/conftest.py's test_db_url fixture.
+    # Declared here — not used by the running API — solely so Settings() does
+    # not raise extra_forbidden when TEST_DATABASE_URL is present in .env
+    # alongside DATABASE_URL.
+    test_database_url: str = ""
+
     # Optional in API — only needed for pipeline steps
     anthropic_api_key: str = ""
 

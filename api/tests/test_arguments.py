@@ -49,6 +49,126 @@ def _db_configured() -> bool:
     return bool(url) and "sk-ant" not in url and url != "postgresql+asyncpg://user:pass@host/db"
 
 
+@pytest_asyncio.fixture
+async def seeded_argument():
+    """
+    Self-contained Argument + Case + CaseArgument(is_lead) + Person/Role +
+    a COMPLETED parse PipelineRun + 2 Utterances (one resolved to a Person).
+
+    Phase 31 (TEST-02): Tests 3-5 used to assume a persistent, pre-seeded
+    Obergefell Q1 row at argument_id=1 on the shared dev DB. Against the
+    isolated scotus_test DB (empty except migrations), that row does not
+    exist, so every request 404'd. Each test now seeds and tears down its
+    own minimal argument instead of depending on external state.
+    """
+    import datetime
+
+    from sqlalchemy import delete
+
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import (
+        Argument,
+        ArgumentStatusEnum,
+        Case,
+        CaseArgument,
+        Person,
+        PipelineRun,
+        PipelineRunStatus,
+        Role,
+        Utterance,
+    )
+
+    async with AsyncSessionLocal() as db:
+        role = Role(name="Test Arguments Fixture Role (Phase 31 seed)")
+        db.add(role)
+        await db.flush()
+
+        person = Person(full_name="Test Fixture Speaker", role_id=role.id)
+        db.add(person)
+        await db.flush()
+
+        arg = Argument(
+            status=ArgumentStatusEnum.DRAFT,
+            argued_date=datetime.date(2015, 4, 28),
+            question_number=1,
+            resolved_at=datetime.datetime.now(datetime.timezone.utc),
+        )
+        db.add(arg)
+        await db.flush()
+
+        case = Case(
+            docket_number="14-556-TEST-SEED",
+            docket_number_norm="14-556-test-seed",
+            case_name="Test Fixture Case v. Seed",
+            term_year=2015,
+            slug="test-fixture-case-v-seed-14-556",
+        )
+        db.add(case)
+        await db.flush()
+
+        db.add(CaseArgument(case_id=case.id, argument_id=arg.id, is_lead=True))
+
+        run = PipelineRun(argument_id=arg.id, step="parse", status=PipelineRunStatus.COMPLETED)
+        db.add(run)
+        await db.flush()
+
+        db.add_all(
+            [
+                # Sequence 1 is left unresolved (person_id=None) — Test 3
+                # (test_get_utterances_returns_utterances) asserts the first
+                # utterance has no person_id at Phase 1, before Resolve runs.
+                Utterance(
+                    argument_id=arg.id,
+                    pipeline_run_id=run.id,
+                    sequence=1,
+                    raw_speaker_label="TEST FIXTURE SPEAKER",
+                    text="First utterance.",
+                    strategy="rule_based",
+                    person_id=None,
+                ),
+                # Sequence 2 is resolved — Test 5
+                # (test_utterances_have_speaker_name_after_resolve) asserts at
+                # least one resolved utterance has a non-null speaker_name.
+                Utterance(
+                    argument_id=arg.id,
+                    pipeline_run_id=run.id,
+                    sequence=2,
+                    raw_speaker_label="TEST FIXTURE SPEAKER",
+                    text="Second utterance.",
+                    strategy="rule_based",
+                    person_id=person.id,
+                ),
+            ]
+        )
+        await db.commit()
+
+        arg_id = arg.id
+        case_id = case.id
+        run_id = run.id
+        person_id = person.id
+        role_id = role.id
+
+    yield arg_id
+
+    async with AsyncSessionLocal() as db:
+        await db.execute(delete(Utterance).where(Utterance.argument_id == arg_id))
+        await db.execute(delete(PipelineRun).where(PipelineRun.id == run_id))
+        await db.execute(delete(CaseArgument).where(CaseArgument.argument_id == arg_id))
+        case_obj = await db.get(Case, case_id)
+        if case_obj is not None:
+            await db.delete(case_obj)
+        arg_obj = await db.get(Argument, arg_id)
+        if arg_obj is not None:
+            await db.delete(arg_obj)
+        person_obj = await db.get(Person, person_id)
+        if person_obj is not None:
+            await db.delete(person_obj)
+        role_obj = await db.get(Role, role_id)
+        if role_obj is not None:
+            await db.delete(role_obj)
+        await db.commit()
+
+
 # ---------------------------------------------------------------------------
 # Test 1: Health endpoint — works without a real database
 # ---------------------------------------------------------------------------
@@ -94,12 +214,13 @@ async def test_get_utterances_returns_404_for_unknown_argument(
 
 @pytest.mark.asyncio
 @pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL with parsed data")
-async def test_get_utterances_returns_utterances(client: AsyncClient) -> None:
+async def test_get_utterances_returns_utterances(client: AsyncClient, seeded_argument: int) -> None:
     """
-    GET /arguments/1/utterances should return 200 with utterances list and
-    argument metadata for Obergefell Q1 (argument_id=1 after a fresh ingest).
+    GET /arguments/{id}/utterances should return 200 with utterances list and
+    argument metadata for a self-seeded argument (Phase 31 — no longer
+    hardcoded to argument_id=1; scotus_test starts empty).
     """
-    response = await client.get("/arguments/1/utterances")
+    response = await client.get(f"/arguments/{seeded_argument}/utterances")
     assert response.status_code == 200
 
     body = response.json()
@@ -137,12 +258,12 @@ async def test_get_utterances_returns_utterances(client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 @pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL with parsed data")
-async def test_utterances_ordered_by_sequence(client: AsyncClient) -> None:
+async def test_utterances_ordered_by_sequence(client: AsyncClient, seeded_argument: int) -> None:
     """
-    Utterances in GET /arguments/1/utterances must be monotonically ascending
-    by sequence number.
+    Utterances in GET /arguments/{id}/utterances must be monotonically
+    ascending by sequence number.
     """
-    response = await client.get("/arguments/1/utterances")
+    response = await client.get(f"/arguments/{seeded_argument}/utterances")
     assert response.status_code == 200
 
     sequences = [u["sequence"] for u in response.json()["utterances"]]
@@ -158,9 +279,11 @@ async def test_utterances_ordered_by_sequence(client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 @pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL with resolved data")
-async def test_utterances_have_speaker_name_after_resolve(client: AsyncClient) -> None:
+async def test_utterances_have_speaker_name_after_resolve(
+    client: AsyncClient, seeded_argument: int
+) -> None:
     """
-    GET /arguments/1/utterances — utterances must include speaker_name and
+    GET /arguments/{id}/utterances — utterances must include speaker_name and
     speaker_role keys in the response after the Resolve step has run.
 
     Both fields may be null for unresolved utterances (e.g. stage directions),
@@ -168,7 +291,7 @@ async def test_utterances_have_speaker_name_after_resolve(client: AsyncClient) -
     At least one utterance with a resolved person_id must have a non-null
     speaker_name.
     """
-    response = await client.get("/arguments/1/utterances")
+    response = await client.get(f"/arguments/{seeded_argument}/utterances")
     assert response.status_code == 200
 
     utterances = response.json()["utterances"]

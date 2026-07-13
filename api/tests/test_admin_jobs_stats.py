@@ -155,6 +155,7 @@ async def test_get_job_parse_stats_counts_from_latest_parse_run(db_session: Asyn
             sequence=i,
             raw_speaker_label=f"SPEAKER_{i}",
             text=f"Utterance {i} text.",
+            strategy="rule_based",
         )
         db_session.add(utt)
     await db_session.flush()
@@ -289,6 +290,7 @@ async def test_get_job_parse_stats_uses_latest_parse_run_when_two_exist(db_sessi
             sequence=i,
             raw_speaker_label=f"OLD_SPEAKER_{i}",
             text=f"Old utterance {i}.",
+            strategy="rule_based",
         ))
     await db_session.flush()
 
@@ -309,6 +311,7 @@ async def test_get_job_parse_stats_uses_latest_parse_run_when_two_exist(db_sessi
             sequence=i,
             raw_speaker_label=f"NEW_SPEAKER_{i}",
             text=f"New utterance {i}.",
+            strategy="rule_based",
         ))
     await db_session.flush()
 

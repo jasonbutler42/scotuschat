@@ -141,6 +141,7 @@ async def test_delete_job_removes_only_admin_job_row() -> None:
         Argument,
         ArgumentStatusEnum,
         PipelineRun,
+        PipelineRunStatus,
         Utterance,
     )
     from api.services.admin_jobs import delete_job
@@ -158,19 +159,22 @@ async def test_delete_job_removes_only_admin_job_row() -> None:
         run = PipelineRun(
             argument_id=arg.id,
             step="ingest",
-            status="completed",
+            status=PipelineRunStatus.COMPLETED,
             created_at=datetime.datetime.now(datetime.timezone.utc),
         )
         db.add(run)
         await db.flush()
 
         # --- seed: utterance (linked to argument + pipeline run) ---
+        # Utterance has no `raw_text` column — the field is `text` (stale test
+        # assumption). `strategy` is NOT NULL (PIPE-04).
         utt = Utterance(
             argument_id=arg.id,
             pipeline_run_id=run.id,
             sequence=1,
             raw_speaker_label="CHIEF JUSTICE ROBERTS",
-            raw_text="We'll hear argument next in this case.",
+            text="We'll hear argument next in this case.",
+            strategy="rule_based",
         )
         db.add(utt)
         await db.flush()
@@ -217,8 +221,16 @@ async def test_delete_job_removes_only_admin_job_row() -> None:
         )
 
         # --- cleanup: remove seeded data ---
+        # No relationship() is configured between these models (Core-style FK
+        # columns only), so the ORM unit-of-work cannot auto-derive delete
+        # order from FK dependencies — an explicit flush() after each delete
+        # forces FK-safe ordering (utterances -> pipeline_runs -> arguments),
+        # matching the manual-ordering convention used elsewhere in this
+        # codebase (e.g. admin_arguments.delete_argument's Pitfall 2 comment).
         await db.delete(surviving_utt)
+        await db.flush()
         await db.delete(surviving_run)
+        await db.flush()
         await db.delete(surviving_arg)
         await db.commit()
 
@@ -281,10 +293,12 @@ async def test_approve_job_writes_one_draft_log_row() -> None:
         assert len(log_rows) == 1
         assert log_rows[0].status == ArgumentStatusEnum.DRAFT
 
-        # --- cleanup ---
+        # --- cleanup --- (explicit flush() forces FK-safe delete order — no
+        # relationship() is configured between these models)
         job = await db.get(AdminJob, job_id)
         for row in log_rows:
             await db.delete(row)
         await db.delete(job)
+        await db.flush()
         await db.delete(arg)
         await db.commit()

@@ -424,7 +424,7 @@ async def test_publish_argument_from_draft_writes_one_published_log_row() -> Non
     from sqlalchemy import select
 
     from api.core.database import AsyncSessionLocal
-    from api.models.models import Argument, ArgumentStatusEnum, ArgumentStatusLog
+    from api.models.models import Argument, ArgumentStatusEnum, ArgumentStatusLog, Case, CaseArgument
     from api.services.admin_arguments import publish_argument
 
     async with AsyncSessionLocal() as db:
@@ -433,8 +433,26 @@ async def test_publish_argument_from_draft_writes_one_published_log_row() -> Non
             resolved_at=datetime.datetime.now(datetime.timezone.utc),
         )
         db.add(arg)
+        await db.flush()
+
+        # get_argument_detail (which publish_argument's return value delegates
+        # to) requires a lead case to return non-None — without one it treats
+        # the argument as a data-integrity issue and returns None.
+        case = Case(
+            docket_number="26-01-TEST-PUB",
+            docket_number_norm="26-01-test-pub",
+            case_name="Synthetic Test Case v. Publish",
+            term_year=2026,
+            slug="synthetic-test-case-v-publish-26-01",
+        )
+        db.add(case)
+        await db.flush()
+
+        db.add(CaseArgument(case_id=case.id, argument_id=arg.id, is_lead=True))
         await db.commit()
+
         arg_id = arg.id
+        case_id = case.id
 
     async with AsyncSessionLocal() as db:
         result = await publish_argument(db, arg_id)
@@ -451,9 +469,17 @@ async def test_publish_argument_from_draft_writes_one_published_log_row() -> Non
         assert len(log_rows) == 1
         assert log_rows[0].status == ArgumentStatusEnum.PUBLISHED
 
-        # cleanup
-        arg = await db.get(Argument, arg_id)
+        # cleanup — no relationship() is configured between these models, so
+        # the ORM unit-of-work cannot auto-derive FK-safe delete order; an
+        # explicit flush() forces CaseArgument/log rows to delete before
+        # Argument/Case (both of which they reference).
+        ca = await db.get(CaseArgument, {"case_id": case_id, "argument_id": arg_id})
+        await db.delete(ca)
         await db.delete(log_rows[0])
+        await db.flush()
+        case = await db.get(Case, case_id)
+        await db.delete(case)
+        arg = await db.get(Argument, arg_id)
         await db.delete(arg)
         await db.commit()
 
@@ -470,7 +496,7 @@ async def test_unpublish_then_republish_succeeds_and_preserves_published_at() ->
     from sqlalchemy import select
 
     from api.core.database import AsyncSessionLocal
-    from api.models.models import Argument, ArgumentStatusEnum, ArgumentStatusLog
+    from api.models.models import Argument, ArgumentStatusEnum, ArgumentStatusLog, Case, CaseArgument
     from api.services.admin_arguments import publish_argument, unpublish_argument
 
     async with AsyncSessionLocal() as db:
@@ -480,8 +506,25 @@ async def test_unpublish_then_republish_succeeds_and_preserves_published_at() ->
             published_at=datetime.datetime.now(datetime.timezone.utc),
         )
         db.add(arg)
+        await db.flush()
+
+        # get_argument_detail (which publish_argument's return value delegates
+        # to) requires a lead case to return non-None.
+        case = Case(
+            docket_number="26-01-TEST-REPUB",
+            docket_number_norm="26-01-test-republ",
+            case_name="Synthetic Test Case v. Republish",
+            term_year=2026,
+            slug="synthetic-test-case-v-republish-26-01",
+        )
+        db.add(case)
+        await db.flush()
+
+        db.add(CaseArgument(case_id=case.id, argument_id=arg.id, is_lead=True))
         await db.commit()
+
         arg_id = arg.id
+        case_id = case.id
         original_published_at = arg.published_at
 
     # --- unpublish ---
@@ -517,10 +560,16 @@ async def test_unpublish_then_republish_succeeds_and_preserves_published_at() ->
         assert log_rows[0].status == ArgumentStatusEnum.UNPUBLISHED
         assert log_rows[1].status == ArgumentStatusEnum.PUBLISHED
 
-        # cleanup
-        arg = await db.get(Argument, arg_id)
+        # cleanup — explicit flush() forces FK-safe delete order (see comment
+        # in test_publish_argument_from_draft_writes_one_published_log_row).
+        ca = await db.get(CaseArgument, {"case_id": case_id, "argument_id": arg_id})
+        await db.delete(ca)
         for row in log_rows:
             await db.delete(row)
+        await db.flush()
+        case = await db.get(Case, case_id)
+        await db.delete(case)
+        arg = await db.get(Argument, arg_id)
         await db.delete(arg)
         await db.commit()
 
@@ -774,6 +823,7 @@ async def test_list_argument_speakers_bench_advocate_and_utterance_counts() -> N
                     raw_speaker_label="MR. ADVOCATE",
                     text=f"Advocate utterance {i}.",
                     person_id=advocate.id,
+                    strategy="rule_based",
                 )
             )
         db.add(
@@ -784,6 +834,7 @@ async def test_list_argument_speakers_bench_advocate_and_utterance_counts() -> N
                 raw_speaker_label="COVERED JUSTICE",
                 text="Justice utterance.",
                 person_id=covered_justice.id,
+                strategy="rule_based",
             )
         )
         await db.commit()
@@ -868,12 +919,16 @@ async def test_get_argument_detail_includes_status_log_and_speakers() -> None:
     """
     import datetime
 
+    from sqlalchemy import select
+
     from api.core.database import AsyncSessionLocal
     from api.models.models import (
         Argument,
         ArgumentParticipant,
         ArgumentStatusEnum,
         ArgumentStatusLog,
+        Case,
+        CaseArgument,
         Person,
         SideEnum,
     )
@@ -886,6 +941,19 @@ async def test_get_argument_detail_includes_status_log_and_speakers() -> None:
         )
         db.add(arg)
         await db.flush()
+
+        # get_argument_detail requires a lead case to return non-None.
+        case = Case(
+            docket_number="26-01-TEST-DETAIL",
+            docket_number_norm="26-01-test-detail",
+            case_name="Synthetic Test Case v. Detail",
+            term_year=2026,
+            slug="synthetic-test-case-v-detail-26-01",
+        )
+        db.add(case)
+        await db.flush()
+
+        db.add(CaseArgument(case_id=case.id, argument_id=arg.id, is_lead=True))
 
         advocate = Person(full_name="Status Log Advocate")
         db.add(advocate)
@@ -901,6 +969,7 @@ async def test_get_argument_detail_includes_status_log_and_speakers() -> None:
         await db.commit()
 
         arg_id = arg.id
+        case_id = case.id
         advocate_id = advocate.id
         participant_id = participant.id
 
@@ -917,7 +986,10 @@ async def test_get_argument_detail_includes_status_log_and_speakers() -> None:
     speaker_ids = {row["participant_id"] for row in result["speakers"]}
     assert participant_id in speaker_ids
 
-    # Cleanup
+    # Cleanup — explicit flush() forces FK-safe delete order (no relationship()
+    # is configured between these models, so the ORM cannot auto-derive it):
+    # log rows / participant / case_arguments (all reference Argument or
+    # Case) must be gone before Person/Case/Argument themselves are deleted.
     async with AsyncSessionLocal() as db:
         log_result = await db.execute(
             select(ArgumentStatusLog).where(ArgumentStatusLog.argument_id == arg_id)
@@ -926,8 +998,14 @@ async def test_get_argument_detail_includes_status_log_and_speakers() -> None:
             await db.delete(row)
         p = await db.get(ArgumentParticipant, participant_id)
         await db.delete(p)
+        ca = await db.get(CaseArgument, {"case_id": case_id, "argument_id": arg_id})
+        await db.delete(ca)
+        await db.flush()
+
         person = await db.get(Person, advocate_id)
         await db.delete(person)
+        case = await db.get(Case, case_id)
+        await db.delete(case)
         arg = await db.get(Argument, arg_id)
         await db.delete(arg)
         await db.commit()

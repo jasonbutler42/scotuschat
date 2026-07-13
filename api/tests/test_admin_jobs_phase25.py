@@ -429,10 +429,20 @@ def test_create_person_for_job_validates_participant_before_person_insert() -> N
 
 @pytest.mark.asyncio
 @pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
-async def test_create_person_for_job_bench_sets_is_justice_and_participant_side(db_session) -> None:
+async def test_create_person_for_job_bench_sets_is_justice_and_participant_side() -> None:
     """Test 1: a BENCH mini person request creates Person.is_justice true and
     updates the target argument_participants row to BENCH for the job's linked
-    argument per D-12."""
+    argument per D-12.
+
+    Uses AsyncSessionLocal() directly rather than the shared db_session
+    fixture — create_person_for_job commits internally (D-12/D-13), which
+    raises "Can't operate on closed transaction" when nested inside
+    db_session's outer session.begin() wrapper. This mirrors the multi-block
+    AsyncSessionLocal pattern used throughout test_admin_arguments_service.py
+    for the same reason (Phase 31, T-31-12: fixed in test usage, not by
+    changing the service's commit semantics).
+    """
+    from api.core.database import AsyncSessionLocal
     from api.models.models import (
         AdminJob,
         AdminJobStatus,
@@ -440,48 +450,74 @@ async def test_create_person_for_job_bench_sets_is_justice_and_participant_side(
         Argument,
         ArgumentParticipant,
         ArgumentStatusEnum,
+        Person,
         SideEnum,
     )
     from api.schemas.admin_jobs import PersonCreate
     from api.services.admin_jobs import create_person_for_job
 
-    arg = Argument(status=ArgumentStatusEnum.PIPELINE, question_number=1)
-    db_session.add(arg)
-    await db_session.flush()
+    async with AsyncSessionLocal() as db:
+        arg = Argument(status=ArgumentStatusEnum.PIPELINE, question_number=1)
+        db.add(arg)
+        await db.flush()
 
-    participant = ArgumentParticipant(
-        argument_id=arg.id,
-        person_id=None,
-        raw_speaker_label="JUSTICE JACKSON",
-        side=SideEnum.UNKNOWN,
-    )
-    db_session.add(participant)
-    await db_session.flush()
+        participant = ArgumentParticipant(
+            argument_id=arg.id,
+            person_id=None,
+            raw_speaker_label="JUSTICE JACKSON",
+            side=SideEnum.UNKNOWN,
+        )
+        db.add(participant)
+        await db.flush()
 
-    job = AdminJob(status=AdminJobStatus.PAUSED, current_step=AdminJobStep.RESOLVE, argument_id=arg.id)
-    db_session.add(job)
-    await db_session.flush()
+        job = AdminJob(status=AdminJobStatus.PAUSED, current_step=AdminJobStep.RESOLVE, argument_id=arg.id)
+        db.add(job)
+        await db.commit()
+
+        arg_id = arg.id
+        participant_id = participant.id
+        job_id = job.id
 
     body = PersonCreate(
         full_name="Ketanji Brown Jackson",
         raw_speaker_label="JUSTICE JACKSON",
         side=SideEnum.BENCH,
     )
-    person = await create_person_for_job(db_session, job.id, body)
 
-    assert person.is_justice is True
+    async with AsyncSessionLocal() as db:
+        person = await create_person_for_job(db, job_id, body)
+        person_id = person.id
+        assert person.is_justice is True
 
-    await db_session.refresh(participant)
-    assert participant.person_id == person.id
-    assert participant.side == SideEnum.BENCH
+    async with AsyncSessionLocal() as db:
+        participant = await db.get(ArgumentParticipant, participant_id)
+        assert participant.person_id == person_id
+        assert participant.side == SideEnum.BENCH
+
+        # cleanup — create_person_for_job commits internally, so nothing here
+        # is protected by a rollback; must delete explicitly.
+        await db.delete(participant)
+        job = await db.get(AdminJob, job_id)
+        await db.delete(job)
+        arg = await db.get(Argument, arg_id)
+        await db.delete(arg)
+        person = await db.get(Person, person_id)
+        await db.delete(person)
+        await db.commit()
 
 
 @pytest.mark.asyncio
 @pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
-async def test_create_person_for_job_advocate_sets_is_justice_false(db_session) -> None:
+async def test_create_person_for_job_advocate_sets_is_justice_false() -> None:
     """Test 2: an advocate mini person request creates Person.is_justice false
     and updates the target participant side to the submitted advocate side
-    per PJOB-19."""
+    per PJOB-19.
+
+    Uses AsyncSessionLocal() directly rather than the shared db_session
+    fixture — create_person_for_job commits internally (see the bench test
+    above for the full explanation).
+    """
+    from api.core.database import AsyncSessionLocal
     from api.models.models import (
         AdminJob,
         AdminJobStatus,
@@ -489,40 +525,59 @@ async def test_create_person_for_job_advocate_sets_is_justice_false(db_session) 
         Argument,
         ArgumentParticipant,
         ArgumentStatusEnum,
+        Person,
         SideEnum,
     )
     from api.schemas.admin_jobs import PersonCreate
     from api.services.admin_jobs import create_person_for_job
 
-    arg = Argument(status=ArgumentStatusEnum.PIPELINE, question_number=1)
-    db_session.add(arg)
-    await db_session.flush()
+    async with AsyncSessionLocal() as db:
+        arg = Argument(status=ArgumentStatusEnum.PIPELINE, question_number=1)
+        db.add(arg)
+        await db.flush()
 
-    participant = ArgumentParticipant(
-        argument_id=arg.id,
-        person_id=None,
-        raw_speaker_label="MR. SMITH",
-        side=SideEnum.UNKNOWN,
-    )
-    db_session.add(participant)
-    await db_session.flush()
+        participant = ArgumentParticipant(
+            argument_id=arg.id,
+            person_id=None,
+            raw_speaker_label="MR. SMITH",
+            side=SideEnum.UNKNOWN,
+        )
+        db.add(participant)
+        await db.flush()
 
-    job = AdminJob(status=AdminJobStatus.PAUSED, current_step=AdminJobStep.RESOLVE, argument_id=arg.id)
-    db_session.add(job)
-    await db_session.flush()
+        job = AdminJob(status=AdminJobStatus.PAUSED, current_step=AdminJobStep.RESOLVE, argument_id=arg.id)
+        db.add(job)
+        await db.commit()
+
+        arg_id = arg.id
+        participant_id = participant.id
+        job_id = job.id
 
     body = PersonCreate(
         full_name="John Smith",
         raw_speaker_label="MR. SMITH",
         side=SideEnum.PETITIONER,
     )
-    person = await create_person_for_job(db_session, job.id, body)
 
-    assert person.is_justice is False
+    async with AsyncSessionLocal() as db:
+        person = await create_person_for_job(db, job_id, body)
+        person_id = person.id
+        assert person.is_justice is False
 
-    await db_session.refresh(participant)
-    assert participant.person_id == person.id
-    assert participant.side == SideEnum.PETITIONER
+    async with AsyncSessionLocal() as db:
+        participant = await db.get(ArgumentParticipant, participant_id)
+        assert participant.person_id == person_id
+        assert participant.side == SideEnum.PETITIONER
+
+        # cleanup
+        await db.delete(participant)
+        job = await db.get(AdminJob, job_id)
+        await db.delete(job)
+        arg = await db.get(Argument, arg_id)
+        await db.delete(arg)
+        person = await db.get(Person, person_id)
+        await db.delete(person)
+        await db.commit()
 
 
 @pytest.mark.asyncio
@@ -678,10 +733,18 @@ def test_update_resolve_row_for_job_does_not_reuse_advocate_side_endpoint() -> N
 
 @pytest.mark.asyncio
 @pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
-async def test_update_resolve_row_bench_side_persists(db_session) -> None:
+async def test_update_resolve_row_bench_side_persists() -> None:
     """Test 1: updating an already-resolved bench participant to BENCH succeeds
     and persists ArgumentParticipant.side on the job's linked argument (D-18,
-    PJOB-18) — the old advocate-side path rejects BENCH."""
+    PJOB-18) — the old advocate-side path rejects BENCH.
+
+    Uses AsyncSessionLocal() directly rather than the shared db_session
+    fixture — update_resolve_row_for_job commits internally, which raises
+    "Can't operate on closed transaction" when nested inside db_session's
+    outer session.begin() wrapper (Phase 31, T-31-12: fixed in test usage,
+    not by changing the service's commit semantics).
+    """
+    from api.core.database import AsyncSessionLocal
     from api.models.models import (
         AdminJob,
         AdminJobStatus,
@@ -695,39 +758,64 @@ async def test_update_resolve_row_bench_side_persists(db_session) -> None:
     from api.schemas.admin_jobs import ResolveRowUpdate
     from api.services.admin_jobs import update_resolve_row_for_job
 
-    person = Person(full_name="Justice Example")
-    db_session.add(person)
-    await db_session.flush()
+    async with AsyncSessionLocal() as db:
+        person = Person(full_name="Justice Example")
+        db.add(person)
+        await db.flush()
 
-    arg = Argument(status=ArgumentStatusEnum.PIPELINE, question_number=1)
-    db_session.add(arg)
-    await db_session.flush()
+        arg = Argument(status=ArgumentStatusEnum.PIPELINE, question_number=1)
+        db.add(arg)
+        await db.flush()
 
-    participant = ArgumentParticipant(
-        argument_id=arg.id,
-        person_id=person.id,
-        raw_speaker_label="JUSTICE EXAMPLE",
-        side=SideEnum.UNKNOWN,
-    )
-    db_session.add(participant)
-    await db_session.flush()
+        participant = ArgumentParticipant(
+            argument_id=arg.id,
+            person_id=person.id,
+            raw_speaker_label="JUSTICE EXAMPLE",
+            side=SideEnum.UNKNOWN,
+        )
+        db.add(participant)
+        await db.flush()
 
-    job = AdminJob(status=AdminJobStatus.PAUSED, current_step=AdminJobStep.RESOLVE, argument_id=arg.id)
-    db_session.add(job)
-    await db_session.flush()
+        job = AdminJob(status=AdminJobStatus.PAUSED, current_step=AdminJobStep.RESOLVE, argument_id=arg.id)
+        db.add(job)
+        await db.commit()
 
-    body = ResolveRowUpdate(participant_id=participant.id, side=SideEnum.BENCH, title=None)
-    updated = await update_resolve_row_for_job(db_session, job.id, body)
+        person_id = person.id
+        arg_id = arg.id
+        participant_id = participant.id
+        job_id = job.id
 
-    assert updated.side == SideEnum.BENCH
-    assert updated.title is None
+    body = ResolveRowUpdate(participant_id=participant_id, side=SideEnum.BENCH, title=None)
+
+    async with AsyncSessionLocal() as db:
+        updated = await update_resolve_row_for_job(db, job_id, body)
+        assert updated.side == SideEnum.BENCH
+        assert updated.title is None
+
+    async with AsyncSessionLocal() as db:
+        # cleanup
+        participant = await db.get(ArgumentParticipant, participant_id)
+        await db.delete(participant)
+        job = await db.get(AdminJob, job_id)
+        await db.delete(job)
+        arg = await db.get(Argument, arg_id)
+        await db.delete(arg)
+        person = await db.get(Person, person_id)
+        await db.delete(person)
+        await db.commit()
 
 
 @pytest.mark.asyncio
 @pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
-async def test_update_resolve_row_advocate_title_persists_bench_title_forced_null(db_session) -> None:
+async def test_update_resolve_row_advocate_title_persists_bench_title_forced_null() -> None:
     """Test 2: updating an advocate row persists title and the selected non-bench
-    side (D-14, PJOB-14), while a bench-row payload stores title as null (PJOB-15)."""
+    side (D-14, PJOB-14), while a bench-row payload stores title as null (PJOB-15).
+
+    Uses AsyncSessionLocal() directly rather than the shared db_session
+    fixture — update_resolve_row_for_job commits internally (see the bench
+    test above for the full explanation).
+    """
+    from api.core.database import AsyncSessionLocal
     from api.models.models import (
         AdminJob,
         AdminJobStatus,
@@ -741,52 +829,80 @@ async def test_update_resolve_row_advocate_title_persists_bench_title_forced_nul
     from api.schemas.admin_jobs import ResolveRowUpdate
     from api.services.admin_jobs import update_resolve_row_for_job
 
-    advocate_person = Person(full_name="Advocate Example")
-    bench_person = Person(full_name="Bench Example", is_justice=True)
-    db_session.add_all([advocate_person, bench_person])
-    await db_session.flush()
+    async with AsyncSessionLocal() as db:
+        advocate_person = Person(full_name="Advocate Example")
+        bench_person = Person(full_name="Bench Example", is_justice=True)
+        db.add_all([advocate_person, bench_person])
+        await db.flush()
 
-    arg = Argument(status=ArgumentStatusEnum.PIPELINE, question_number=1)
-    db_session.add(arg)
-    await db_session.flush()
+        arg = Argument(status=ArgumentStatusEnum.PIPELINE, question_number=1)
+        db.add(arg)
+        await db.flush()
 
-    advocate_participant = ArgumentParticipant(
-        argument_id=arg.id,
-        person_id=advocate_person.id,
-        raw_speaker_label="MR. ADVOCATE",
-        side=SideEnum.UNKNOWN,
-    )
-    bench_participant = ArgumentParticipant(
-        argument_id=arg.id,
-        person_id=bench_person.id,
-        raw_speaker_label="JUSTICE BENCH",
-        side=SideEnum.UNKNOWN,
-    )
-    db_session.add_all([advocate_participant, bench_participant])
-    await db_session.flush()
+        advocate_participant = ArgumentParticipant(
+            argument_id=arg.id,
+            person_id=advocate_person.id,
+            raw_speaker_label="MR. ADVOCATE",
+            side=SideEnum.UNKNOWN,
+        )
+        bench_participant = ArgumentParticipant(
+            argument_id=arg.id,
+            person_id=bench_person.id,
+            raw_speaker_label="JUSTICE BENCH",
+            side=SideEnum.UNKNOWN,
+        )
+        db.add_all([advocate_participant, bench_participant])
+        await db.flush()
 
-    job = AdminJob(status=AdminJobStatus.PAUSED, current_step=AdminJobStep.RESOLVE, argument_id=arg.id)
-    db_session.add(job)
-    await db_session.flush()
+        job = AdminJob(status=AdminJobStatus.PAUSED, current_step=AdminJobStep.RESOLVE, argument_id=arg.id)
+        db.add(job)
+        await db.commit()
+
+        advocate_person_id = advocate_person.id
+        bench_person_id = bench_person.id
+        arg_id = arg.id
+        advocate_participant_id = advocate_participant.id
+        bench_participant_id = bench_participant.id
+        job_id = job.id
 
     advocate_body = ResolveRowUpdate(
-        participant_id=advocate_participant.id,
+        participant_id=advocate_participant_id,
         side=SideEnum.RESPONDENT,
         title="Counsel for Respondent",
     )
-    updated_advocate = await update_resolve_row_for_job(db_session, job.id, advocate_body)
-    assert updated_advocate.side == SideEnum.RESPONDENT
-    assert updated_advocate.title == "Counsel for Respondent"
+
+    async with AsyncSessionLocal() as db:
+        updated_advocate = await update_resolve_row_for_job(db, job_id, advocate_body)
+        assert updated_advocate.side == SideEnum.RESPONDENT
+        assert updated_advocate.title == "Counsel for Respondent"
 
     # Bench payload sends a title too — service must force it to null (PJOB-15).
     bench_body = ResolveRowUpdate(
-        participant_id=bench_participant.id,
+        participant_id=bench_participant_id,
         side=SideEnum.BENCH,
         title="Should be discarded",
     )
-    updated_bench = await update_resolve_row_for_job(db_session, job.id, bench_body)
-    assert updated_bench.side == SideEnum.BENCH
-    assert updated_bench.title is None
+
+    async with AsyncSessionLocal() as db:
+        updated_bench = await update_resolve_row_for_job(db, job_id, bench_body)
+        assert updated_bench.side == SideEnum.BENCH
+        assert updated_bench.title is None
+
+    async with AsyncSessionLocal() as db:
+        # cleanup
+        advocate_participant = await db.get(ArgumentParticipant, advocate_participant_id)
+        await db.delete(advocate_participant)
+        bench_participant = await db.get(ArgumentParticipant, bench_participant_id)
+        await db.delete(bench_participant)
+        job = await db.get(AdminJob, job_id)
+        await db.delete(job)
+        arg = await db.get(Argument, arg_id)
+        await db.delete(arg)
+        advocate_person = await db.get(Person, advocate_person_id)
+        await db.delete(advocate_person)
+        bench_person = await db.get(Person, bench_person_id)
+        await db.delete(bench_person)
+        await db.commit()
 
 
 @pytest.mark.asyncio

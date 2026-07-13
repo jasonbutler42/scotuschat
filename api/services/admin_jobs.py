@@ -594,6 +594,15 @@ async def approve_job(db: AsyncSession, job_id: int) -> AdminJob:
         .execution_options(synchronize_session=False)
     )
     await db.commit()
+    # Phase 31 fix: the bulk update() above uses synchronize_session=False, so
+    # the `job` object already loaded into this session's identity map (via
+    # get_job() at the top of this function) is never synced to the new
+    # status. get_job()'s re-select for the same job_id would otherwise
+    # return that same stale in-memory object (status still PAUSED/etc.)
+    # instead of the committed COMPLETED row. Refreshing here fixes it in
+    # place (matches the db.refresh() pattern already used after commit in
+    # create_person_for_job / update_resolve_row_for_job).
+    await db.refresh(job)
 
     updated = await get_job(db, job_id)
     return updated  # type: ignore[return-value]

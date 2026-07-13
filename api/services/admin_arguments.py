@@ -590,6 +590,16 @@ async def publish_argument(db: AsyncSession, argument_id: int) -> dict | None:
     )
     db.add(ArgumentStatusLog(argument_id=argument_id, status=ArgumentStatusEnum.PUBLISHED))
     await db.commit()
+    # Phase 31 fix: the bulk update() above uses synchronize_session=False, so
+    # the `argument` object already loaded into this session's identity map
+    # (via the select() at the top of this function) is never synced to the
+    # new column values. get_argument_detail()'s own select() for the same
+    # argument_id would otherwise return that same stale in-memory object
+    # (status still the pre-publish value) instead of the committed row.
+    # Refreshing here fixes it in place for every subsequent read in this
+    # session (matches the db.refresh() pattern already used after commit in
+    # create_person_for_job / update_resolve_row_for_job).
+    await db.refresh(argument)
     return await get_argument_detail(db, argument_id)
 
 
@@ -698,6 +708,10 @@ async def unpublish_argument(db: AsyncSession, argument_id: int) -> dict | None:
     )
     db.add(ArgumentStatusLog(argument_id=argument_id, status=ArgumentStatusEnum.UNPUBLISHED))
     await db.commit()
+    # Phase 31 fix: same stale-identity-map issue as publish_argument above —
+    # refresh the already-loaded `argument` object so get_argument_detail()'s
+    # re-select in this same session reflects the committed UNPUBLISHED status.
+    await db.refresh(argument)
     return await get_argument_detail(db, argument_id)
 
 

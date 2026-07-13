@@ -138,19 +138,26 @@ Full phase details: `.planning/milestones/v1.5-ROADMAP.md`
 | 30. Corpus Import Resolve Workflow | v1.5 | 4/4 | Complete | 2026-07-10 |
 | 30.1. Close gap AEDIT-04/DASH-02 | v1.5 | 3/3 | Complete | 2026-07-12 |
 
+## Unscheduled Phases (promoted from backlog 2026-07-12, awaiting next milestone)
+
+Promoted via `/gsd-review-backlog`. No active milestone exists yet (v1.5 shipped 2026-07-12) — these are numbered and ready to be picked up by the next `/gsd-new-milestone` or discussed/planned individually.
+
+- [ ] Phase 31: Audit ~28 stale DB-gated test fixtures + fix real data leakage into shared dev DB — escalated, active data-integrity risk
+- [ ] Phase 32: Fix CourtTenure FK bookkeeping gap in merge/delete person service paths
+- [ ] Phase 33: `update_argument_metadata` unique-constraint guard
+- [ ] Phase 34: Blank case_name/docket_number can corrupt slug and dedup-key data
+- [ ] Phase 35: `rerun_job` never spawns ingest for locally-uploaded jobs
+- [ ] Phase 36: Click-to-copy extracted values design pattern
+- [ ] Phase 37: Represent tenure Seat as a Chief/Associate toggle instead of free text
+- [ ] Phase 38: Rethink Full Name vs. name-part fields in the people editor
+- [ ] Phase 39: Bench popover: additional context data for Justices
+- [ ] Phase 40: README: how to start the local stack
+
+Full goal text for each carries over unchanged from its original 999.x backlog capture (see git history of this file for the pre-promotion wording, or the phase directory itself once discussed).
+
 ## Backlog
 
 Standard: all backlog items live here as 999.x entries (`.planning/phases/999.N-slug/`), captured via `/gsd-capture --backlog` and reviewed/promoted via `/gsd-review-backlog`. `.planning/BACKLOG.md` (the flat B-NNN file previously used, 2026-07-01 to 2026-07-09) has been retired and its 14 still-open items migrated below (2026-07-09); 5 items (B-001, B-003, B-004, B-005, B-006) were dropped as already shipped by Phase 24/27, and B-014 was merged into 999.1 as a duplicate capture of the same idea.
-
-### Phase 999.1: Click-to-copy extracted values design pattern (BACKLOG)
-
-**Goal:** Whenever a value has been extracted from a source PDF, use a consistent design pattern that lets the operator click the value to copy it to their clipboard. If a value was not extracted (showing N/A), clicking to copy is disabled. Includes an appropriate icon and tooltip. The pattern must be identical everywhere it appears — pipeline run pages and argument editor pages alike — including extracted docket number(s). Expected to decompose into at least: (1) reusable tooltip component, (2) click-to-copy implementation for extracted hint values, and possibly others.
-**Requirements:** TBD
-**Plans:** 11/11 plans complete
-
-Plans:
-
-- [ ] TBD (promote with /gsd-review-backlog when ready)
 
 ### Phase 999.2: Share specific utterances via social media (BACKLOG)
 
@@ -232,108 +239,4 @@ Plans:
 
 - [ ] TBD (promote with /gsd-review-backlog when ready)
 
-### Phase 999.10: Bulk-import historical justices from CSV (BACKLOG) — SUPERSEDED
-
-**Status:** SUPERSEDED / ABSORBED into Phase 29 (Historical Corpus Import) per CONTEXT.md D-01, 2026-07-09. The bulk justice CSV import is Step Zero of Phase 29 (Plan 29-03, `import-justices` command, requirement CORPUS-01) — it must land as a prerequisite of the corpus import, not as a separate standalone backlog phase. Do not promote this entry; it is closed.
-
-**Goal:** [Captured for future planning] [Migrated from BACKLOG.md B-013, added 2026-07-07] Operator currently has to manually enter every historical Supreme Court justice one at a time in the People admin screen. Jason already has a CSV covering all historical justices. Add an import path (upload + parse + create/update Person rows with is_justice=true, tenure/appointment data) so the full bench roster can be seeded in one operation instead of by hand. Needs a decision on dedup behavior against existing entries and which CSV columns map to which fields. Operator does not need this as a standing feature, just at the beginning of the project — could be a one-off script rather than a UI feature. The database is already seeded with current justices; this would extend that same seeding approach to historical ones.
-**Requirements:** TBD
-**Plans:** 0 plans
-
-Plans:
-
-- [ ] TBD (promote with /gsd-review-backlog when ready)
-
-### Phase 999.11: Bench popover: additional context data for Justices (BACKLOG)
-
-**Goal:** [Captured for future planning] [Migrated from BACKLOG.md B-015, added 2026-07-07] When a visitor clicks a Justice's avatar on the public argument view, the popover should show richer context about them and the case. Persistent data (doesn't change case to case): name, photo, birthdate, death date, and a list of tenures with start/end dates, appointing president, that president's party affiliation, and why they left that tenure (death, retirement, promotion). Case-specific data to explore further: their age at the time of the argument, how long they'd been in their position (possibly a case-heard count, possibly a visual indicator of where the argument falls on their tenure), and how to present all of this in the least biased way possible — this needs explicit exploration before implementation, per the apolitical-framing constraint. Confirmed still open (2026-07-09): SpeakerPopover.svelte currently shows photo, name, role, tenure dates, and appointing president, but no birthdate/death date/age/case-count despite Person.birthdate existing since Phase 27.
-**Requirements:** TBD
-**Plans:** 0 plans
-
-Plans:
-
-- [ ] TBD (promote with /gsd-review-backlog when ready)
-
-### Phase 999.12: `rerun_job` never spawns ingest for locally-uploaded jobs (BACKLOG)
-
-**Goal:** [Captured for future planning] [Migrated from BACKLOG.md B-016, added 2026-07-08, from 26-REVIEW.md CR-01] `create_job`'s upload path stores the PDF at `data/uploads/{job.id}.pdf` and sets neither `spaces_key` nor `pdf_url` when `settings.do_spaces_bucket` is falsy (local/dev mode, no DO Spaces configured). `rerun_job` copies `pdf_url`/`spaces_key`/`original_filename`/`source_dockets` onto the new job, but the rerun endpoint (`api/routers/admin.py:1042-1076`) only branches on `spaces_key` or `pdf_url` — no branch exists for a local-disk-backed original, so no ingest subprocess is ever spawned for the rerun. The endpoint still returns 202 with a fresh PENDING job, giving the operator every indication the rerun started, but the job sits at PENDING/INGEST forever with no error surfaced. Confirmed unresolved across two review passes; not touched by Phase 26. Fix: persist the resolved local file path on AdminJob at creation time and add a third rerun branch that re-spawns ingest with `--local-file`, or at minimum raise a ValueError (422) instead of silently creating a job that can never progress.
-**Requirements:** TBD
-**Plans:** 0 plans
-
-Plans:
-
-- [ ] TBD (promote with /gsd-review-backlog when ready)
-
-### Phase 999.13: Blank case_name/docket_number can corrupt slug and dedup-key data (BACKLOG)
-
-**Goal:** [Captured for future planning] [Migrated from BACKLOG.md B-017, added 2026-07-08, from 26-REVIEW.md CR-02] `ArgumentUpdate.case_name`/`.docket_number` are `Optional[str] = None` with no non-empty validation; `update_argument` treats "not None" as "provided," not "non-empty." The edit form's `?/save` action always sends a trimmed string (never undefined) and the `<input>` elements have no `required` attribute. If an operator clears either field and clicks Save: for a DRAFT argument, `_derive_slug("")` returns `""`, corrupting the case's public URL slug; for any status, `docket_number`/`docket_number_norm` can be wiped to `""`, breaking dedup semantics. The same gap exists in the sibling `update_argument_metadata` (case_name, source_docket). Fix: add a Pydantic field_validator rejecting blank/whitespace-only values on ArgumentUpdate and MetadataUpdate, plus `required` on both `<input>` elements as defense-in-depth.
-**Requirements:** TBD
-**Plans:** 0 plans
-
-Plans:
-
-- [ ] TBD (promote with /gsd-review-backlog when ready)
-
-### Phase 999.14: `update_argument_metadata` has no unique-constraint guard (BACKLOG)
-
-**Goal:** [Captured for future planning] [Migrated from BACKLOG.md B-018, added 2026-07-08, from 26-REVIEW.md CR-03] `update_argument_metadata` writes `source_docket`/`question_number` without first checking whether another Argument row already holds that combination. Introduced in Phase 19, untouched by Phase 26. Saving a metadata edit that collides with an existing row raises an unhandled IntegrityError (500) instead of a clean, user-facing validation error. Fix: add a pre-write existence check (or catch IntegrityError and map it to a 409/422 with a clear message) before committing the update.
-**Requirements:** TBD
-**Plans:** 0 plans
-
-Plans:
-
-- [ ] TBD (promote with /gsd-review-backlog when ready)
-
-### Phase 999.15: Rethink Full Name vs. name-part fields in the people editor (BACKLOG)
-
-**Goal:** [Captured for future planning] [Migrated from BACKLOG.md B-019, added 2026-07-09, from Phase 27 UAT] Jason expected that filling in only the component name fields (first/last/middle/suffix) without Full Name would auto-backfill Full Name on save — instead, Full Name is currently required standalone. Proposed direction: stop making Full Name operator-editable at all, and derive it entirely from the component fields ("We'd have to adjust the way parsing works but that feels like the better way to go"). Needs a design decision on exactly how derivation should work (ordering, suffix placement, punctuation) and what changes on the pipeline/parsing side before this can be scoped. Distinct from the real bug this surfaced alongside (create route silently discarding name-part fields when Full Name is also filled — fixed in Phase 27 gap-closure plan 27-08); this item is the broader "should Full Name exist as a separate editable field at all" question, still open.
-**Requirements:** TBD
-**Plans:** 0 plans
-
-Plans:
-
-- [ ] TBD (promote with /gsd-review-backlog when ready)
-
-### Phase 999.16: Represent tenure Seat as a Chief/Associate toggle instead of free text (BACKLOG)
-
-**Goal:** [Captured for future planning] [Migrated from BACKLOG.md B-020, added 2026-07-09, from Phase 27 UAT] During Phase 27 UAT, Jason asked for the tenure-row Seat field (currently free-text, restored during Phase 27 verification per PEDIT-09) to become the same segmented-toggle component used for the Bench/Advocate choice, since for a Justice it's really just Chief or Associate. Deferred rather than fixed immediately (Jason offered this exit himself) because real historical court_tenures.seat data includes specific numbered seats (e.g. "Associate Justice Seat 3"), not just a binary Chief/Associate split — collapsing to a 2-option toggle is a genuine data-model simplification that needs a decision on whether the numbered-seat detail is dropped, kept as a secondary field, or reconciled some other way, plus a migration/backfill pass over existing rows. Companion to 999.10 (bulk CSV import of historical justices), since both touch how much seat-numbering granularity the system needs to preserve.
-**Requirements:** TBD
-**Plans:** 0 plans
-
-Plans:
-
-- [ ] TBD (promote with /gsd-review-backlog when ready)
-
-### Phase 999.17: Fix FastAPI test lifespan/session-factory failure (BACKLOG) — FIXED 2026-07-10
-
-**Goal:** [Captured for future planning] [Added 2026-07-09, surfaced during Phase 27 execution] **FIXED 2026-07-10, during Phase 30 Wave 1 post-merge gate investigation.** Root cause confirmed: nothing in the suite invoked FastAPI's `lifespan()` (httpx's ASGITransport doesn't fire ASGI lifespan events), so `AsyncSessionLocal` stayed `None` whenever `DATABASE_URL` leaked into the full-suite run via `tests/conftest.py`'s `load_dotenv()`. Fixed with a new `api/tests/conftest.py` autouse fixture that runs `lifespan()` per-test — critically importing `lifespan`/`app` *locally inside the fixture*, not at module level, because `tests/test_admin_router.py::test_api_main_imports_without_error` deletes and re-imports every `api.*` module mid-suite; a module-level import would bind to the pre-reset module object while other fixtures (which import `api.main.app` inside their own function bodies) pick up the post-reset object, silently splitting the process into two disconnected module graphs — this is why the fix didn't work on the first attempt. Also renamed a nonexistent `async_session_factory` import (real name: `AsyncSessionLocal`) in 3 files, and fixed the 3 stale hardcoded assertions in `tests/test_models_import.py` (12→13 tables, add `argument_status_log`; 3→6 SideEnum values, add PETITIONER/RESPONDENT/AMICUS). **Result:** full-suite errors 40→0, failures 59→28. See [[999.19]] for the follow-on issue this fix exposed.
-**Requirements:** TBD
-**Plans:** 0 plans
-
-Plans:
-
-- [x] Fixed inline during Phase 30 execution (no formal plan file) — see commits `1a99f28a`, `f7ad3082`
-
-### Phase 999.18: Fix CourtTenure FK bookkeeping gap in merge/delete person service paths (BACKLOG)
-
-**Goal:** [Captured for future planning] [Added 2026-07-09, from 27-REVIEW.md CR-01, surfaced during Phase 27 gap-closure execution] `CourtTenure.person_id` is `nullable=False` with a plain `ForeignKeyConstraint` and no `ON DELETE CASCADE` in any Alembic migration, but none of `get_merge_preview`, `merge_people`, or `delete_person_if_orphan` (`api/services/admin_people.py`) account for `CourtTenure` rows. Merging or deleting any Bench person with one or more tenure rows raises an unhandled `IntegrityError` (500) instead of the documented graceful response. Predates Phase 27 — `CourtTenure` and the merge/delete service paths were introduced in Phase 22 — but is newly reachable now that Phase 27 added full tenure-row CRUD to the People editor. Fix: count `CourtTenure` in `get_merge_preview`'s counted-tables loop, transfer `CourtTenure` rows to the target person in `merge_people`, and include `CourtTenure` in `delete_person_if_orphan`'s orphan check — mirroring the existing `Utterance`/`SpeakerAlias`/`CaseAppearance`/`ArgumentParticipant` handling.
-**Requirements:** TBD
-**Plans:** 0 plans
-
-Plans:
-
-- [ ] TBD (promote with /gsd-review-backlog when ready)
-
-### Phase 999.19: Audit ~28 stale DB-gated test fixtures + fix real data leakage into the shared dev DB (BACKLOG)
-
-**Goal:** [Captured for future planning] [Added 2026-07-10, surfaced while fixing 999.17 during Phase 30 Wave 1; escalated 2026-07-10 during Phase 30 Wave 3 after leaked test rows actively blocked the 30-04 operator runbook] Fixing the FastAPI lifespan/session-factory bug (999.17) means DB-gated tests across `pipeline/tests/` and `api/tests/` now genuinely execute against the live local dev Postgres (`postgresql+asyncpg://scotus:scotus@localhost:5432/scotus`) instead of silently erroring at session setup. Two distinct consequences:
-
-1. ~28 tests fail on real schema/data-assumption mismatches never actually exercised in a full-suite run before now (e.g. `pipeline/tests/test_pipeline_run.py::test_rerun_creates_new_rows` inserts an `Utterance` without `strategy`, which is `nullable=False` per pre-existing PIPE-04 — a stale fixture, not a regression). Spread across `pipeline/tests/test_ingest.py`, `test_parse.py`, `test_resolve.py`, `test_seed_aliases.py`, `test_pipeline_run.py`, `api/tests/test_admin_arguments_service.py`, `test_admin_jobs_phase25.py`, `test_admin_jobs_service.py`, `test_admin_jobs_stats.py`, `test_arguments.py`.
-2. **Confirmed real data leakage, more serious than originally scoped:** the `db_session` fixture's `session.begin()` + explicit `rollback()` pattern only protects against the test's OWN direct writes — it does NOT protect against writes made by production service functions the test calls (e.g. `create_person_for_job`, `publish_argument`) that commit internally as normal application behavior. Once a service function commits, the fixture's later rollback is a no-op — those rows are permanent. Confirmed 2026-07-10: 3 full-suite pytest runs left 18 leaked `Person` rows (duplicate "Ketanji Brown Jackson" x3 plus 5 fake test names x3 each: "Advocate Example", "Bench Example", "John Smith", "Justice Example", "Status Log Advocate") and 15 fully-synthetic `Argument` rows (no docket, no date, no utterances) in the shared dev DB — one of which actively broke `python -m pipeline import-justices` (`MultipleResultsFound` on the duplicated "Ketanji Brown Jackson" `Person.full_name` lookup in `pipeline/commands/import_justices_csv.py:182`) mid-execution of plan 30-04. Cleaned up manually (scoped DELETE, verified each row was zero-content synthetic test data, keeping the one legitimate `Person` id=116 with a real `court_tenures` row) — this is a stopgap, not a fix. **Needs its own investigation:** likely fix is a dedicated test database (not the shared dev DB) for any test that exercises commit-invoking service code, or an autouse fixture that snapshots/restores affected tables, or savepoint-based nesting that survives inner commits. **Confirmed to also affect `pipeline/tests/`, not just `api/tests/`** (2026-07-10, during Phase 30 final regression check): `pipeline/tests/test_import_convokit_core.py`'s `isolated_session` fixture uses the identical flawed pattern ("test-owned session, rolled back after the test" — but `run_import_convokit` commits internally), so `test_full_name_only_match_backfills_oyez_speaker_id` re-leaks a duplicate "John Smith" `Person` row on every run, which is exactly the kind of duplicate that broke `import-justices` earlier in this same phase. This recurs on every full-suite run with `DATABASE_URL` configured — the manual DELETE cleanup performed earlier in Phase 30 was already stale by the next full-suite run.
-
-**Requirements:** TBD
-**Plans:** 0 plans
-
-Plans:
-
-- [ ] TBD (promote with /gsd-review-backlog when ready)
+**Note:** 999.10 (bulk-import historical justices CSV) was removed 2026-07-12 during backlog review — SUPERSEDED/ABSORBED into Phase 29's `import-justices` command per CONTEXT.md D-01, 2026-07-09. 999.17 (FastAPI test lifespan/session-factory failure) was removed 2026-07-12 — FIXED 2026-07-10 during Phase 30 Wave 1, commits `1a99f28a`/`f7ad3082`. 999.1, 999.9, 999.11, 999.12, 999.13, 999.14, 999.15, 999.16, 999.18, 999.19 were promoted 2026-07-12 to Phases 36, 40, 39, 35, 34, 33, 38, 37, 32, 31 respectively — see the Unscheduled Phases section above for current goal text.

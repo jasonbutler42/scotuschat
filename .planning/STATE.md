@@ -6,14 +6,14 @@ current_phase: 31
 current_phase_name: audit-stale-db-gated-test-fixtures
 status: executing
 stopped_at: Completed 31-05-PLAN.md
-last_updated: "2026-07-13T16:40:42.754Z"
+last_updated: "2026-07-13T17:17:07.560Z"
 last_activity: 2026-07-13
 last_activity_desc: Phase 31 execution started
 progress:
   total_phases: 10
   completed_phases: 0
   total_plans: 8
-  completed_plans: 6
+  completed_plans: 7
   percent: 0
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-07-12 after v1.5 milestone completion)
 ## Current Position
 
 Phase: 31 (audit-stale-db-gated-test-fixtures) — EXECUTING
-Plan: 7 of 8
+Plan: 8 of 8
 Status: Ready to execute
 Last activity: 2026-07-13 — Phase 31 execution started
 
@@ -62,6 +62,8 @@ Two open design questions remain unresolved by design and are intentionally defe
 - [Phase 31, Plan 05]: test_admin_jobs_phase25.py's committing-function tests (create_person_for_job, update_resolve_row_for_job) switched from the shared db_session fixture to per-block AsyncSessionLocal() sessions — commit() inside db_session's outer session.begin() breaks the transaction
 - [Phase 31, Plan 06]: pytest.ini asyncio loop scope set to session (not conftest.py) to fix session-scoped engine fixture vs function-scoped event loop mismatch across pipeline/tests DB-gated tests
 - [Phase 31, Plan 06]: SECTION_HINT_MAP plural regex bug (PETITIONERS/RESPONDENTS) fixed directly in state_machine.py rather than only documented -- self-contained, low-risk, real user-facing impact
+- [Phase 31]: [Phase 31, Plan 07]: test_resolve_interrupt_sets_needs_review's full-suite-only failure root-caused to a module-reimport identity split (tests/test_admin_router.py reimports api.* mid-session; pipeline.commands.resolve keeps stale PipelineRun/PipelineRunStatus references) -- not the event-loop-policy theory in deferred-items.md, which bisection disproved
+- [Phase 31]: [Phase 31, Plan 07]: test_argument_oyez_field.py/test_people.py's hardcoded id=1 assumption is permanently broken (pipeline/tests/test_seed_aliases.py's seeding tests are xfail stubs that never call run_seed_aliases()) -- fixed by making both tests self-contained rather than re-ordering fixtures
 
 ### Roadmap Evolution
 
@@ -157,10 +159,11 @@ Items acknowledged and deferred at v1.5 milestone close on 2026-07-12:
 | Phase 31 P04 | 20min | 2 tasks | 1 files |
 | Phase 31 P05 | 55min | 1 tasks | 9 files |
 | Phase 31 P06 | 40min | 1 tasks | 6 files |
+| Phase 31 P07 | 55min | 2 tasks | 5 files |
 
 ## Session Continuity
 
-Last session: 2026-07-13T16:39:08.255Z
+Last session: 2026-07-13T17:15:44.039Z
 Stopped at: Completed 31-05-PLAN.md
 Resume file: None
 

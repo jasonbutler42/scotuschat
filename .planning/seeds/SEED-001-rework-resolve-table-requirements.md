@@ -3,8 +3,8 @@ id: SEED-001
 status: dormant
 planted: 2026-07-07
 planted_during: 25-pipeline-job-detail-page
-trigger_when: when relevant
-scope: unknown
+trigger_when: next milestone planning (/gsd-new-milestone scan)
+scope: small
 ---
 
 # SEED-001: Rework the Resolve card/table beyond what Phase 25 delivered
@@ -15,13 +15,15 @@ Surfaced during Phase 25 UAT (`.planning/phases/25-pipeline-job-detail-page/25-U
 
 ## When to Surface
 
-**Trigger:** when relevant
+**Trigger:** next milestone planning (`/gsd-new-milestone` scan)
 
-This seed will surface during `/gsd-new-milestone` when the milestone scope matches, or sooner if the user runs `/gsd-capture --seed --enrich SEED-001` once the requirements write-up is ready.
+This seed will surface during the next `/gsd-new-milestone` run, whenever that happens. Enriched 2026-07-12 — the requirements write-up (mockup deltas, open design question) is already detailed enough to plan against once surfaced; no further wait on requirements.
 
 ## Scope Estimate
 
-**Unknown** — run `/gsd-capture --seed --enrich SEED-001` to estimate effort once requirements are written.
+**Small** — frontend-only rework of `ResolveCard.svelte`. Per the seed's own finding (delta #3), the backend is already ready: `SideEnum` already has `PETITIONER`/`RESPONDENT`/`AMICUS`, `ADVOCATE_LABEL_MAP` already maps them to display labels, and `ResolveRowUpdate.side` / `update_resolve_row_for_job` already accept these values. No new schema, service, or endpoint work anticipated — confirm during actual planning.
+
+**Core driver (confirmed 2026-07-12):** the Argument Role column is currently a read-only mirror of the overloaded Bench/Advocate `<select>`, not a real control — operators can't directly set Petitioner's/Respondent's Counsel. That's the primary "why" for this rework (the visual stacked-card issue in the Open Design Question below is a secondary, related concern).
 
 ## Breadcrumbs
 

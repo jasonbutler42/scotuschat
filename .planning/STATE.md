@@ -6,14 +6,14 @@ current_phase: 31
 current_phase_name: audit-stale-db-gated-test-fixtures
 status: executing
 stopped_at: Completed 31-01-PLAN.md
-last_updated: "2026-07-13T14:14:28.827Z"
+last_updated: "2026-07-13T14:23:45.700Z"
 last_activity: 2026-07-13
 last_activity_desc: Phase 31 execution started
 progress:
   total_phases: 10
   completed_phases: 0
   total_plans: 8
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-07-12 after v1.5 milestone completion)
 ## Current Position
 
 Phase: 31 (audit-stale-db-gated-test-fixtures) — EXECUTING
-Plan: 2 of 8
+Plan: 3 of 8
 Status: Ready to execute
 Last activity: 2026-07-13 — Phase 31 execution started
 
@@ -51,6 +51,8 @@ Two open design questions remain unresolved by design and are intentionally defe
 - Phase 38 (Full Name): auto-derive vs. independently editable
 - [Phase 31]: _reset_test_db reads TEST_DATABASE_URL directly rather than depending on test_db_url/engine fixtures, avoiding fallback-to-shared-dev-DB risk (T-31-01)
 - [Phase 31]: Database-name equality via sqlalchemy.engine.make_url used for all dev-DB/scotus_test guard checks instead of raw URL string comparison
+- [Phase 31]: _REAL_DATABASE_URL captured before TEST_DATABASE_URL override so the leak-detection hooks always watch the real dev DB, never the redirected DATABASE_URL
+- [Phase 31]: pytest_sessionstart/pytest_sessionfinish leak guard checks only people/arguments counts, not the full clean_db table list, to keep the failure message unambiguous
 
 ### Roadmap Evolution
 
@@ -140,10 +142,11 @@ Items acknowledged and deferred at v1.5 milestone close on 2026-07-12:
 | Phase 30.1 P02 | 12min | 2 tasks | 2 files |
 | Phase 30.1 P03 | 20min | 2 tasks | 6 files |
 | Phase 31 P01 | 25min | 2 tasks | 3 files |
+| Phase 31 P02 | 20min | 2 tasks | 1 files |
 
 ## Session Continuity
 
-Last session: 2026-07-13T14:14:28.816Z
+Last session: 2026-07-13T14:21:24.284Z
 Stopped at: Completed 31-01-PLAN.md
 Resume file: None
 

@@ -13,6 +13,7 @@ shared-dev-DB test-leak issue (see ROADMAP.md backlog Phase 999.19).
 """
 
 import inspect
+from pathlib import Path
 
 
 def test_case_item_accepts_null_question_number() -> None:
@@ -45,15 +46,35 @@ def test_argument_metadata_response_accepts_null_question_number() -> None:
     assert item.question_number is None
 
 
-def test_admin_router_catches_integrity_error() -> None:
-    """update_argument_metadata must catch sqlalchemy.exc.IntegrityError so any
-    future NOT NULL / constraint violation degrades to a clean 4xx instead of
-    an unhandled 500 (defense-in-depth regression guard).
-    """
-    from api.routers import admin
+def _frontend_source(relative_path: str) -> str:
+    return (Path(__file__).parents[2] / "app" / relative_path).read_text(encoding="utf-8")
 
-    source = inspect.getsource(admin)
-    assert "IntegrityError" in source, (
-        "update_argument_metadata handler must reference IntegrityError "
-        "(sqlalchemy.exc.IntegrityError) to catch constraint violations"
+
+def test_metadata_actions_validate_duplicate_contract_and_preserve_attempted_values() -> None:
+    """Both SvelteKit actions expose the same sanitized duplicate contract."""
+    action_paths = (
+        "src/routes/admin/pipeline/[job_id]/+page.server.ts",
+        "src/routes/admin/arguments/[id]/+page.server.ts",
     )
+
+    for path in action_paths:
+        source = _frontend_source(path)
+        assert "detail.code === 'duplicate_argument'" in source
+        assert "Number.isInteger(detail.conflicting_argument_id)" in source
+        assert "conflict: detail" in source
+        assert "question_number, argued_date" in source
+        assert "saveError: 'Could not save. Try again.'" in source
+
+
+def test_argument_details_card_restores_values_and_focuses_one_safe_alert() -> None:
+    """The shared card owns value recovery, focus order, and safe navigation."""
+    source = _frontend_source("src/lib/components/ArgumentDetailsCard.svelte")
+
+    assert "value={form?.question_number ?? savedValues.question_number}" in source
+    assert "value={form?.argued_date ?? savedValues.argued_date ?? ''}" in source
+    assert source.count('role="alert"') == 1
+    assert 'tabindex="-1"' in source
+    assert source.index("await update();") < source.index("await tick();") < source.index("alertElement?.focus();")
+    assert "`/admin/arguments/${form.conflict.conflicting_argument_id}`" in source
+    assert 'target="_blank"' in source
+    assert 'rel="noopener noreferrer"' in source

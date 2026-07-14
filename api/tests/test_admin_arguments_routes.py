@@ -14,10 +14,44 @@ DB-guarded tests (skipped when DATABASE_URL is not configured):
 
 import os
 from typing import AsyncGenerator
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
+
+
+@pytest.mark.asyncio
+async def test_metadata_duplicate_contract_from_service(monkeypatch) -> None:
+    from fastapi import HTTPException
+    from api.routers import admin
+    from api.schemas.admin_arguments import MetadataUpdate
+    from api.services.admin_arguments import DuplicateArgumentError
+
+    db = AsyncMock()
+    monkeypatch.setattr(admin.arguments_service, "update_argument_metadata", AsyncMock(side_effect=DuplicateArgumentError(42, "24-1", 2)))
+    with pytest.raises(HTTPException) as exc:
+        await admin.update_argument_metadata(7, MetadataUpdate(), db)
+    assert exc.value.status_code == 409
+    assert exc.value.detail == {"code": "duplicate_argument", "message": "An argument already uses docket 24-1, question 2. Open conflicting argument.", "conflicting_argument_id": 42}
+
+
+@pytest.mark.asyncio
+async def test_metadata_non_target_integrity_error_is_sanitized(monkeypatch) -> None:
+    from fastapi import HTTPException
+    from sqlalchemy.exc import IntegrityError
+    from api.routers import admin
+    from api.schemas.admin_arguments import MetadataUpdate
+
+    db = AsyncMock()
+    err = IntegrityError("statement", {}, SimpleNamespace(diag=SimpleNamespace(constraint_name="other_constraint")))
+    monkeypatch.setattr(admin.arguments_service, "update_argument_metadata", AsyncMock(side_effect=err))
+    with pytest.raises(HTTPException) as exc:
+        await admin.update_argument_metadata(7, MetadataUpdate(), db)
+    db.rollback.assert_awaited_once()
+    assert exc.value.status_code == 409
+    assert exc.value.detail == {"code": "constraint_violation", "message": "The update violates a database constraint."}
 
 
 # ---------------------------------------------------------------------------

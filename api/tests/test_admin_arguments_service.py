@@ -12,8 +12,58 @@ These tests do NOT require a live database for the import and schema assertions.
 """
 
 import os
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("body_kwargs", "stored_docket", "stored_question"),
+    [
+        ({"source_docket": "24-1"}, "old", 2),
+        ({"question_number": "2"}, "24-1", 1),
+    ],
+)
+async def test_metadata_update_rejects_final_pair_collision(
+    body_kwargs, stored_docket, stored_question
+) -> None:
+    from api.schemas.admin_arguments import MetadataUpdate
+    from api.services.admin_arguments import DuplicateArgumentError, update_argument_metadata
+
+    db = AsyncMock()
+    argument = SimpleNamespace(id=7, source_docket=stored_docket, question_number=stored_question)
+    db.execute.side_effect = [
+        MagicMock(scalar_one_or_none=lambda: argument),
+        MagicMock(scalar_one_or_none=lambda: 42),
+    ]
+
+    with pytest.raises(DuplicateArgumentError) as exc:
+        await update_argument_metadata(db, 7, MetadataUpdate(**body_kwargs))
+    assert exc.value.conflicting_argument_id == 42
+    assert db.commit.await_count == 0
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("docket", "question"), [(None, 2), ("24-1", None)])
+async def test_metadata_update_null_final_pair_does_not_collide(docket, question) -> None:
+    from api.schemas.admin_arguments import MetadataUpdate
+    from api.services.admin_arguments import update_argument_metadata
+
+    db = AsyncMock()
+    argument = SimpleNamespace(id=7, source_docket=docket, question_number=question)
+    db.execute.side_effect = [MagicMock(scalar_one_or_none=lambda: argument), MagicMock()]
+    assert await update_argument_metadata(db, 7, MetadataUpdate()) is True
+    assert db.execute.await_count == 1
+
+
+def test_target_constraint_classifier_uses_structured_attributes_only() -> None:
+    from api.services.argument_uniqueness import is_argument_pair_violation
+
+    structured = SimpleNamespace(diag=SimpleNamespace(constraint_name="uq_arguments_source_docket_question"))
+    assert is_argument_pair_violation(structured)
+    assert not is_argument_pair_violation(Exception("uq_arguments_source_docket_question"))
 
 
 # ---------------------------------------------------------------------------

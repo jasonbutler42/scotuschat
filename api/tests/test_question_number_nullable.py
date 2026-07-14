@@ -66,6 +66,22 @@ def test_metadata_actions_validate_duplicate_contract_and_preserve_attempted_val
         assert "saveError: 'Could not save. Try again.'" in source
 
 
+def test_argument_actions_parse_required_locations_and_preserve_raw_attempts() -> None:
+    source = _frontend_source("src/routes/admin/arguments/[id]/+page.server.ts")
+
+    assert "function parseRequiredFieldErrors(value: unknown)" in source
+    assert "if (!Array.isArray(detail)) return null" in source
+    assert "if (!Array.isArray(loc)) continue" in source
+    assert "field === 'case_name'" in source
+    assert "field === 'docket_number' || field === 'source_docket' || field === 'source_dockets'" in source
+    assert "const attemptedValues = { case_name, docket_number }" in source
+    assert "const case_name = (formData.get('case_name') as string) ?? ''" in source
+    assert "...required, ...attemptedValues" in source
+    parser = source[source.index("function parseRequiredFieldErrors"):source.index("export const load")]
+    assert ".msg" not in parser
+    assert "message" not in parser
+
+
 def test_argument_details_card_restores_values_and_focuses_one_safe_alert() -> None:
     """The shared card owns value recovery, focus order, and safe navigation."""
     source = _frontend_source("src/lib/components/ArgumentDetailsCard.svelte")

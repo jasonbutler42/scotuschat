@@ -80,6 +80,26 @@ function parseDuplicateConflict(value: unknown): DuplicateArgumentConflict | nul
 	return null;
 }
 
+type RequiredFieldErrors = { caseNameRequired: boolean; docketRequired: boolean };
+
+function parseRequiredFieldErrors(value: unknown): RequiredFieldErrors | null {
+	if (typeof value !== 'object' || value === null) return null;
+	const detail = (value as { detail?: unknown }).detail;
+	if (!Array.isArray(detail)) return null;
+	const errors = { caseNameRequired: false, docketRequired: false };
+	for (const entry of detail) {
+		if (typeof entry !== 'object' || entry === null) continue;
+		const loc = (entry as { loc?: unknown }).loc;
+		if (!Array.isArray(loc)) continue;
+		const field = loc.at(-1);
+		if (field === 'case_name') errors.caseNameRequired = true;
+		if (field === 'docket_number' || field === 'source_docket' || field === 'source_dockets') {
+			errors.docketRequired = true;
+		}
+	}
+	return errors.caseNameRequired || errors.docketRequired ? errors : null;
+}
+
 export const load: PageServerLoad = async ({ fetch, params }) => {
 	const res = await fetch(`${FASTAPI_BASE_URL}/api/admin/arguments/${params.id}`, {
 		headers: { 'X-Admin-Token': ADMIN_TOKEN },
@@ -179,8 +199,9 @@ export const actions: Actions = {
 	save: async ({ request, params, fetch }) => {
 		const formData = await request.formData();
 
-		const case_name = ((formData.get('case_name') as string) ?? '').trim();
-		const docket_number = ((formData.get('docket_number') as string) ?? '').trim();
+		const case_name = (formData.get('case_name') as string) ?? '';
+		const docket_number = (formData.get('docket_number') as string) ?? '';
+		const attemptedValues = { case_name, docket_number };
 
 		let res: Response;
 		try {
@@ -193,14 +214,21 @@ export const actions: Actions = {
 				body: JSON.stringify({ case_name, docket_number }),
 			});
 		} catch {
-			return fail(502, { error: 'Could not save changes. Check your inputs and try again.' });
+			return fail(502, { error: 'Could not save changes. Check your inputs and try again.', ...attemptedValues });
 		}
 
 		if (!res.ok) {
 			let detail = '';
 			try {
-				const body = await res.json();
-				detail = typeof body.detail === 'string' ? body.detail : '';
+				const body: unknown = await res.json();
+				if (res.status === 422) {
+					const required = parseRequiredFieldErrors(body);
+					if (required) return fail(422, { ...required, ...attemptedValues });
+				}
+				detail =
+					typeof body === 'object' && body !== null && typeof (body as { detail?: unknown }).detail === 'string'
+						? String((body as { detail: string }).detail)
+						: '';
 			} catch {
 				// ignore parse error
 			}
@@ -209,16 +237,18 @@ export const actions: Actions = {
 				return fail(422, {
 					error:
 						'This title generates a URL slug that conflicts with an existing case. Choose a different title.',
+					...attemptedValues,
 				});
 			}
 
 			if (res.status === 422 && detail.includes('docket_collision')) {
 				return fail(422, {
 					error: 'That docket number is already used by another case. Choose a different docket.',
+					...attemptedValues,
 				});
 			}
 
-			return fail(422, { error: 'Could not save changes. Check your inputs and try again.' });
+			return fail(422, { error: 'Could not save changes. Check your inputs and try again.', ...attemptedValues });
 		}
 
 		throw redirect(303, '/admin/arguments/' + params.id);
@@ -267,6 +297,14 @@ export const actions: Actions = {
 		}
 
 		if (!res.ok) {
+			if (res.status === 422) {
+				try {
+					const required = parseRequiredFieldErrors(await res.json());
+					if (required) return fail(422, { ...required, ...attemptedValues });
+				} catch {
+					// Malformed backend data is intentionally replaced with generic copy.
+				}
+			}
 			if (res.status === 409) {
 				try {
 					const body: unknown = await res.json();

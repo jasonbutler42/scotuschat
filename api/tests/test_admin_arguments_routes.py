@@ -34,7 +34,7 @@ async def test_metadata_duplicate_contract_from_service(monkeypatch) -> None:
     with pytest.raises(HTTPException) as exc:
         await admin.update_argument_metadata(7, MetadataUpdate(), db)
     assert exc.value.status_code == 409
-    assert exc.value.detail == {"code": "duplicate_argument", "message": "An argument already uses docket 24-1, question 2. Open conflicting argument.", "conflicting_argument_id": 42}
+    assert exc.value.detail == {"code": "duplicate_argument", "message": "An argument already uses docket 24-1, question 2.", "conflicting_argument_id": 42}
 
 
 @pytest.mark.asyncio
@@ -72,8 +72,7 @@ async def test_metadata_target_race_rolls_back_then_returns_winner(monkeypatch) 
         await admin.update_argument_metadata(7, MetadataUpdate(), db)
     db.rollback.assert_awaited_once()
     lookup.assert_awaited_once_with(db, "24-1", 2, exclude_argument_id=7)
-    assert exc.value.detail["code"] == "duplicate_argument"
-    assert exc.value.detail["conflicting_argument_id"] == 42
+    assert exc.value.detail == {"code": "duplicate_argument", "message": "An argument already uses docket 24-1, question 2.", "conflicting_argument_id": 42}
 
 
 # ---------------------------------------------------------------------------

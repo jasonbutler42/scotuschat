@@ -78,3 +78,14 @@ def test_argument_details_card_restores_values_and_focuses_one_safe_alert() -> N
     assert "`/admin/arguments/${form.conflict.conflicting_argument_id}`" in source
     assert 'target="_blank"' in source
     assert 'rel="noopener noreferrer"' in source
+
+
+def test_duplicate_message_and_component_compose_one_recovery_phrase() -> None:
+    """The API owns facts while the shared card owns the recovery-link copy."""
+    api_message = "An argument already uses docket 24-1, question 2."
+    recovery_label = "Open conflicting argument"
+    source = _frontend_source("src/lib/components/ArgumentDetailsCard.svelte")
+
+    assert recovery_label not in api_message
+    assert source.count(recovery_label) == 1
+    assert f"{api_message} {recovery_label}.".count(recovery_label) == 1

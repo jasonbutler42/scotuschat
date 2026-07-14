@@ -1111,7 +1111,7 @@ async def update_argument_metadata(
                 "code": "duplicate_argument",
                 "message": (
                     f"An argument already uses docket {exc.docket}, question "
-                    f"{exc.question}. Open conflicting argument."
+                    f"{exc.question}."
                 ),
                 "conflicting_argument_id": exc.conflicting_argument_id,
             },
@@ -1136,7 +1136,7 @@ async def update_argument_metadata(
                 status_code=409,
                 detail={
                     "code": "duplicate_argument",
-                    "message": f"An argument already uses docket {docket}, question {question}. Open conflicting argument.",
+                    "message": f"An argument already uses docket {docket}, question {question}.",
                     "conflicting_argument_id": conflicting_id,
                 },
             ) from exc

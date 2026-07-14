@@ -6,14 +6,14 @@ current_phase: 33
 current_phase_name: `update_argument_metadata` unique-constraint guard
 status: executing
 stopped_at: Completed 40-01-PLAN.md
-last_updated: "2026-07-14T13:01:29.124Z"
+last_updated: "2026-07-14T13:07:29.090Z"
 last_activity: 2026-07-13
 last_activity_desc: Phase 32 complete, transitioned to Phase 33
 progress:
   total_phases: 10
   completed_phases: 3
   total_plans: 16
-  completed_plans: 14
+  completed_plans: 15
   percent: 30
 ---
 
@@ -74,6 +74,8 @@ Two open design questions remain unresolved by design and are intentionally defe
 - [Phase 33]: Returned argued_date uses property presence for precedence — An attempted blank date is meaningful state and must override the loaded value
 - [Phase 40]: Keep ADMIN_TOKEN duplicated across runtime env files with an explicit exact-match contract. — The API and SvelteKit server independently load the shared server-to-server credential.
 - [Phase 40]: Keep all five SvelteKit variables server-private and group optional backend settings by operating concern. — This makes runtime ownership clear and avoids exposing credentials through public environment variables.
+- [Phase 40]: Portable PostgreSQL uses dev-start.ps1 as a recurring-start command only; bootstrap prerequisites remain explicit. — The script starts, migrates, and launches but does not initialize dependencies, env files, or the cluster.
+- [Phase 40]: Portable and Windows-service PostgreSQL share the scotus role/database contract and Alembic-only DDL path. — One DATABASE_URL contract keeps both first-class setup branches consistent.
 
 ### Roadmap Evolution
 
@@ -176,10 +178,11 @@ Items acknowledged and deferred at v1.5 milestone close on 2026-07-12:
 | Phase 33 P01 | 12min | 2 tasks | 5 files |
 | Phase 33 P03 | 3min | 2 tasks | 4 files |
 | Phase 40 P01 | 10m | 2 tasks | 3 files |
+| Phase 40 P02 | 2m | 3 tasks | 1 files |
 
 ## Session Continuity
 
-Last session: 2026-07-14T13:01:29.086Z
+Last session: 2026-07-14T13:07:02.139Z
 Stopped at: Completed 40-01-PLAN.md
 Resume file: None
 

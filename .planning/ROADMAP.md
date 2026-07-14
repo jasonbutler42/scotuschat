@@ -289,7 +289,7 @@ Plans:
   2. README covers required environment variables/config for local dev, referencing existing `.env` patterns without exposing secrets.
   3. A contributor (or the operator after time away) can follow the README from a clean checkout to a running local stack without needing to rediscover steps from memory or git history.
 
-**Plans**: 1/3 plans executed
+**Plans**: 2/3 plans executed
 
 ## Progress
 
@@ -335,7 +335,7 @@ Plans:
 | 37. Represent tenure Seat as a Chief/Associate toggle instead of free text | v1.6 | TBD | Not started | - |
 | 38. Rethink Full Name vs. name-part fields in the people editor | v1.6 | TBD | Not started | - |
 | 39. Bench popover — additional context data for Justices | v1.6 | TBD | Not started | - |
-| 40. README — how to start the local stack | v1.6 | 1/3 | In Progress|  |
+| 40. README — how to start the local stack | v1.6 | 2/3 | In Progress|  |
 
 ## Backlog
 
@@ -358,7 +358,7 @@ Standard: all backlog items live here as 999.x entries (`.planning/phases/999.N-
 Plans:
 
 - [x] 40-01-PLAN.md
-- [ ] 40-02-PLAN.md
+- [x] 40-02-PLAN.md
 - [ ] 40-03-PLAN.md
 
 - [ ] TBD (promote with /gsd-review-backlog when ready)

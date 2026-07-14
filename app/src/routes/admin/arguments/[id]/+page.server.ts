@@ -59,6 +59,27 @@ type ArgumentDetail = {
 	question_number: number | null;
 };
 
+type DuplicateArgumentConflict = {
+	code: 'duplicate_argument';
+	message: string;
+	conflicting_argument_id: number;
+};
+
+function parseDuplicateConflict(value: unknown): DuplicateArgumentConflict | null {
+	if (typeof value !== 'object' || value === null) return null;
+	const detail = value as Record<string, unknown>;
+	if (
+		detail.code === 'duplicate_argument' &&
+		typeof detail.message === 'string' &&
+		detail.message.trim().length > 0 &&
+		Number.isInteger(detail.conflicting_argument_id) &&
+		Number(detail.conflicting_argument_id) > 0
+	) {
+		return detail as unknown as DuplicateArgumentConflict;
+	}
+	return null;
+}
+
 export const load: PageServerLoad = async ({ fetch, params }) => {
 	const res = await fetch(`${FASTAPI_BASE_URL}/api/admin/arguments/${params.id}`, {
 		headers: { 'X-Admin-Token': ADMIN_TOKEN },
@@ -225,6 +246,7 @@ export const actions: Actions = {
 		const dockets = (data.getAll('docket[]') as string[]).map((v) => v.trim()).filter(Boolean);
 		const question_number = ((data.get('question_number') as string) ?? '').trim();
 		const argued_date = ((data.get('argued_date') as string) ?? '').trim() || null;
+		const attemptedValues = { dockets, question_number, argued_date };
 
 		let res: Response;
 		try {
@@ -241,11 +263,22 @@ export const actions: Actions = {
 				}),
 			});
 		} catch {
-			return fail(502, { saveError: 'Could not save. Try again.', dockets });
+			return fail(502, { saveError: 'Could not save. Try again.', ...attemptedValues });
 		}
 
 		if (!res.ok) {
-			return fail(422, { saveError: 'Could not save. Try again.', dockets });
+			if (res.status === 409) {
+				try {
+					const body: unknown = await res.json();
+					const detail = parseDuplicateConflict(
+						typeof body === 'object' && body !== null ? (body as { detail?: unknown }).detail : null,
+					);
+					if (detail) return fail(409, { conflict: detail, ...attemptedValues });
+				} catch {
+					// Malformed backend data is intentionally replaced with generic copy.
+				}
+			}
+			return fail(422, { saveError: 'Could not save. Try again.', ...attemptedValues });
 		}
 
 		return { saved: true };

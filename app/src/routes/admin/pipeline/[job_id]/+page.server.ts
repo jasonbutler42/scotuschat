@@ -24,6 +24,27 @@ interface ArgumentPreview {
 	question_number: number | null;
 }
 
+interface DuplicateArgumentConflict {
+	code: 'duplicate_argument';
+	message: string;
+	conflicting_argument_id: number;
+}
+
+function parseDuplicateConflict(value: unknown): DuplicateArgumentConflict | null {
+	if (typeof value !== 'object' || value === null) return null;
+	const detail = value as Record<string, unknown>;
+	if (
+		detail.code === 'duplicate_argument' &&
+		typeof detail.message === 'string' &&
+		detail.message.trim().length > 0 &&
+		Number.isInteger(detail.conflicting_argument_id) &&
+		Number(detail.conflicting_argument_id) > 0
+	) {
+		return detail as unknown as DuplicateArgumentConflict;
+	}
+	return null;
+}
+
 // Phase 25 backend-derived card contracts (api/schemas/admin_jobs.py, api/schemas/admin_people.py).
 
 interface ReadinessBlocker {
@@ -524,6 +545,7 @@ export const actions: Actions = {
 			.filter(Boolean);
 		const question_number = ((data.get('question_number') as string) ?? '').trim();
 		const argued_date = ((data.get('argued_date') as string) ?? '').trim() || null;
+		const attemptedValues = { dockets, question_number, argued_date };
 
 		// Fetch the job to get argument_id server-side (T-23-03-01: never accept from form)
 		let argumentId: number | null = null;
@@ -535,17 +557,17 @@ export const actions: Actions = {
 				const job = await jobRes.json();
 				argumentId = job.argument_id ?? null;
 			} else {
-				return fail(502, { saveError: 'Could not save. Try again.', dockets });
+				return fail(502, { saveError: 'Could not save. Try again.', ...attemptedValues });
 			}
 		} catch {
-			return fail(502, { saveError: 'Could not save. Try again.', dockets });
+			return fail(502, { saveError: 'Could not save. Try again.', ...attemptedValues });
 		}
 
 		// PJOB-07: never create an argument — guard argument_id null
 		if (argumentId === null) {
 			return fail(400, {
 				saveError: 'No argument linked to this run yet.',
-				dockets,
+				...attemptedValues,
 			});
 		}
 
@@ -573,11 +595,22 @@ export const actions: Actions = {
 				},
 			);
 		} catch {
-			return fail(502, { saveError: 'Could not save. Try again.', dockets });
+			return fail(502, { saveError: 'Could not save. Try again.', ...attemptedValues });
 		}
 
 		if (!res.ok) {
-			return fail(422, { saveError: 'Could not save. Try again.', dockets });
+			if (res.status === 409) {
+				try {
+					const body: unknown = await res.json();
+					const detail = parseDuplicateConflict(
+						typeof body === 'object' && body !== null ? (body as { detail?: unknown }).detail : null,
+					);
+					if (detail) return fail(409, { conflict: detail, ...attemptedValues });
+				} catch {
+					// Malformed backend data is intentionally replaced with generic copy.
+				}
+			}
+			return fail(422, { saveError: 'Could not save. Try again.', ...attemptedValues });
 		}
 
 		return { saved: true, refreshResolveRows: true };

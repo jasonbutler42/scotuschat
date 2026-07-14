@@ -90,6 +90,87 @@ secrets. The comments in `.env.example` and `app/.env.example` group all
 optional test, LLM, object-storage, and deployment settings by operating
 concern, so consult those files instead of copying optional settings blindly.
 
+### PostgreSQL option A: portable installation
+
+Use the binary archive reached through the official
+[PostgreSQL Windows download page](https://www.postgresql.org/download/windows/).
+Treat unexpected download instructions or archive contents as a reason to stop
+and re-check the official page. Extract the archive beneath `data/pgsql` and
+normalize any extra top-level version directory so
+`data/pgsql/bin/initdb.exe` exists at this exact repository-relative path:
+
+```powershell
+Test-Path .\data\pgsql\bin\initdb.exe
+# Expected: True. Stop here if it is False.
+```
+
+The repository ignores `data/pgsql/` and `data/pgdata/`. Initialize an isolated
+cluster with password authentication for both local and TCP connections. The
+command prompts for a PostgreSQL superuser password; choose a strong local
+value and keep it outside the repository.
+
+```powershell
+New-Item -ItemType Directory -Force .\data\pgdata | Out-Null
+.\data\pgsql\bin\initdb.exe -D .\data\pgdata -U postgres -W `
+  --auth-local=scram-sha-256 --auth-host=scram-sha-256
+.\data\pgsql\bin\pg_ctl.exe start -D .\data\pgdata -l .\data\pgdata\logfile
+```
+
+Create the application role and database. When `createuser` prompts, enter the
+same operator-chosen database password used in the root `DATABASE_URL` shown
+above. The `-W` prompts first for the `postgres` connection password; `-P`
+then prompts for the new `scotus` role password.
+
+```powershell
+.\data\pgsql\bin\createuser.exe -h localhost -p 5432 -U postgres -W -P scotus
+.\data\pgsql\bin\createdb.exe -h localhost -p 5432 -U postgres -W -O scotus scotus
+```
+
+With `.venv` activated and `.env` configured, let Alembic create the schema:
+
+```powershell
+python -m alembic upgrade head
+```
+
+Do not run `Base.metadata.create_all` or hand-create application tables.
+Alembic is the sole DDL authority. At this point the empty database is usable.
+
+### PostgreSQL option B: Windows service
+
+Install PostgreSQL 16 using the installer linked from the same official
+[PostgreSQL Windows download page](https://www.postgresql.org/download/windows/).
+Ensure its `bin` directory is on `PATH`, open a new PowerShell window, and
+locate the installed service:
+
+```powershell
+psql --version
+$PostgresService = Get-Service | Where-Object Name -Like 'postgresql*' |
+  Select-Object -First 1
+$PostgresService | Format-Table Name, Status
+if ($PostgresService.Status -ne 'Running') {
+    Start-Service -Name $PostgresService.Name
+}
+```
+
+If no service is returned, stop and repair the PostgreSQL installation rather
+than guessing a service name. Use the PATH-resolved client tools to create the
+same password-protected role and owned database. Enter the installer-selected
+`postgres` password for `-W`, and the same operator-chosen application database
+password used in `DATABASE_URL` when `-P` prompts for the new role.
+
+```powershell
+createuser -h localhost -p 5432 -U postgres -W -P scotus
+createdb -h localhost -p 5432 -U postgres -W -O scotus scotus
+```
+
+Finally, activate `.venv` from the repository root and apply the sole schema
+authority to produce an empty usable database:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+python -m alembic upgrade head
+```
+
 ## Attribution / Credits
 
 Some oral arguments on this site come from a historical bulk import rather

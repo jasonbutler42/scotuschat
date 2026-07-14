@@ -5,16 +5,16 @@ milestone_name: Backlog Cleanup
 current_phase: 34
 current_phase_name: blank-case-name-docket-validation
 status: executing
-stopped_at: Completed 34-01-PLAN.md
-last_updated: "2026-07-14T18:14:44.110Z"
+stopped_at: Completed 34-02-PLAN.md
+last_updated: "2026-07-14T18:22:57.219Z"
 last_activity: 2026-07-14
-last_activity_desc: Completed backend validation contract (Plan 34-01)
+last_activity_desc: Completed structured action recovery (Plan 34-02)
 progress:
   total_phases: 10
   completed_phases: 4
   total_plans: 22
-  completed_plans: 18
-  percent: 82
+  completed_plans: 19
+  percent: 86
 ---
 
 # Project State
@@ -29,9 +29,9 @@ See: .planning/PROJECT.md (updated 2026-07-12 after v1.5 milestone completion)
 ## Current Position
 
 Phase: 34 (blank-case-name-docket-validation)
-Plan: 1 of 3
+Plan: 2 of 3
 Status: In progress
-Last activity: 2026-07-14 — Completed backend validation contract (Plan 34-01)
+Last activity: 2026-07-14 — Completed structured action recovery (Plan 34-02)
 
 ## Performance Metrics
 
@@ -78,6 +78,8 @@ Two open design questions remain unresolved by design and are intentionally defe
 - [Phase 40]: Portable and Windows-service PostgreSQL share the scotus role/database contract and Alembic-only DDL path. — One DATABASE_URL contract keeps both first-class setup branches consistent.
 - [Phase 34]: source_dockets is authoritative when supplied and its first normalized entry is canonical
 - [Phase 34]: Required PATCH fields retain Optional defaults so omission remains distinct from explicit null
+- [Phase 34]: Required action errors are identified only from terminal Pydantic detail loc fields
+- [Phase 34]: Failure payloads preserve raw Case strings and metadata empty-array presence
 
 ### Roadmap Evolution
 
@@ -185,11 +187,12 @@ Items acknowledged and deferred at v1.5 milestone close on 2026-07-12:
 | Phase 40 P02 | 2m | 3 tasks | 1 files |
 | Phase 33 P04 | 4 min | 1 tasks | 3 files |
 | Phase 34 P01 | 10m | 2 tasks | 4 files |
+| Phase 34 P02 | 8m | 2 tasks | 3 files |
 
 ## Session Continuity
 
 Last session: 2026-07-14T18:14:44.098Z
-Stopped at: Completed 34-01-PLAN.md
+Stopped at: Completed 34-02-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

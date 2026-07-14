@@ -205,7 +205,7 @@ Plans:
   3. Argument slug and `docket_number`/`docket_number_norm` can never be corrupted to an empty string through either save path.
   4. Both affected `<input>` elements carry a `required` attribute as UI-level defense-in-depth.
 
-**Plans**: 1/3 plans executed
+**Plans**: 2/3 plans executed
 
 **Wave 1**
 
@@ -213,7 +213,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 34-02-PLAN.md — Structured 422 location parsing and attempted-value preservation across both SvelteKit action owners
+- [x] 34-02-PLAN.md — Structured 422 location parsing and attempted-value preservation across both SvelteKit action owners
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -354,7 +354,7 @@ Plans:
 | 31. Audit ~28 stale DB-gated test fixtures + fix real data leakage into shared dev DB | v1.6 | 8/8 | Complete    | 2026-07-13 |
 | 32. Fix CourtTenure FK bookkeeping gap in merge/delete person service paths | v1.6 | 2/2 | Complete    | 2026-07-13 |
 | 33. `update_argument_metadata` unique-constraint guard | v1.6 | 4/4 | Complete   | 2026-07-14 |
-| 34. Blank case_name/docket_number validation | v1.6 | 1/3 | In Progress|  |
+| 34. Blank case_name/docket_number validation | v1.6 | 2/3 | In Progress|  |
 | 35. `rerun_job` never spawns ingest for locally-uploaded jobs | v1.6 | TBD | Not started | - |
 | 36. Click-to-copy extracted values design pattern | v1.6 | TBD | Not started | - |
 | 37. Represent tenure Seat as a Chief/Associate toggle instead of free text | v1.6 | TBD | Not started | - |

@@ -12,6 +12,8 @@ Anyone can open a SCOTUS oral argument and immediately follow the conversation �
 
 **v1.5 Admin Screens Cleanup — SHIPPED 2026-07-12.** All 7 admin screens (`/admin/`, `/admin/pipeline/`, `/admin/pipeline/[id]`, `/admin/arguments/`, `/admin/arguments/[id]`, `/admin/people/`, `/admin/people/[id]`) audited and refined: three-state argument lifecycle with status log, shared Argument Details component, redesigned pipeline list/detail pages, People admin with Bench/Advocate tabs and per-tenure appointment data, and a real dashboard. Also absorbed an out-of-band addition mid-milestone: bulk historical corpus import (~7,800 arguments, 1955–2019, from Cornell ConvoKit) routed through the same resolve/publish workflow as PDF ingest. Full details: `.planning/milestones/v1.5-ROADMAP.md`, `.planning/milestones/v1.5-REQUIREMENTS.md`.
 
+**v1.6 Backlog Cleanup — 4/10 phases complete.** Phases 31, 32, 33, and 40 are verified. Phase 40 adds a clean-checkout local-stack guide for PostgreSQL, FastAPI, and SvelteKit, including a disposable Windows portable-PostgreSQL walkthrough with real admin-session validation.
+
 ## Current Milestone: v1.6 Backlog Cleanup
 
 **Goal:** Close out the 10 promoted backlog phases (31–40) — data-integrity fixes, small operator UX improvements, and two open design questions — before starting anything new.
@@ -104,6 +106,7 @@ Deployment (DEPLOY-01, DEPLOY-03) and the remaining 999.x backlog (999.2–999.8
 - ✓ Corpus import resolve workflow: corpus-imported arguments now land at `status=PIPELINE` paired with a PAUSED/RESOLVE `AdminJob` (previously stuck permanently at `status=DRAFT`, unpublishable) — reuses the existing PDF-ingest resolve/approve/publish machinery unchanged; `source: "pdf"|"corpus"` tag on the Pipeline list distinguishes job origin; the pre-existing term-1955 batch (163 arguments, imported before this feature existed) was brought into the corrected state via a scoped wipe-and-rerun operator runbook (no committed migration) — v1.5 (PJOB-01/02/14/15/18/19/20/21, reused family), validated in Phase 30
 - ✓ `/admin/arguments/[id]` reuses the shared `ArgumentDetailsCard` component instead of a hand-rolled duplicate form (Case card + ArgumentDetailsCard card, `saveArgumentDetails` action reusing `PATCH /metadata`); dashboard Draft/Published/Unpublished status CTAs actually filter `/admin/arguments` via a threaded `?status=` param + segmented control + active-filter indicator; `arguments.question_number` migrated nullable (migration 0019, parity with `argued_date`), closing a UAT-found gap where blanking it threw an unhandled 500 instead of persisting NULL — v1.5 (AEDIT-04, DASH-02), gap-closure Phase 30.1, milestone-audit-found
 - ✓ Dedicated `scotus_test` Postgres DB + session-boundary auto-reset isolates the full pytest suite from the shared dev DB; a `pytest_sessionfinish` hook fails any run that changes shared-dev-DB `Person`/`Argument` row counts, closing the gap where production service functions that commit internally (`create_person_for_job`, `publish_argument`, `run_import_convokit`) could leak synthetic rows past a test's own rollback; ~28 previously-stale DB-gated fixtures across `pipeline/tests`/`api/tests` repaired against the current schema; one-time reviewed cleanup script removed 81 already-leaked rows (25 duplicate `Person`, 56 orphaned `Argument`) from the shared dev DB under explicit operator authorization — v1.6 (TEST-01, TEST-02), validated in Phase 31
+- ✓ Clean-checkout local-stack README covers PostgreSQL, FastAPI, and SvelteKit end to end with split private environment contracts, cross-platform commands, safe troubleshooting, optional integrations, and a verified Windows portable-PostgreSQL admin-session walkthrough — v1.6 (DOCS-01), validated in Phase 40
 
 ### Active
 
@@ -220,4 +223,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-13 after Phase 31 (Audit stale DB-gated test fixtures + fix real data leakage) completed — first of the 10 v1.6 backlog phases; 9 remain (32–40).*
+*Last updated: 2026-07-14 after Phase 40 (README local-stack setup) completed — 4 of 10 v1.6 backlog phases are verified; 6 remain.*

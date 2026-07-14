@@ -1,5 +1,95 @@
 # SCOTUS Chat
 
+SCOTUS Chat presents Supreme Court oral arguments as a chat-style web app. The
+local development stack consists of a FastAPI API on `http://localhost:8000`, a
+SvelteKit frontend on `http://localhost:5173`, and PostgreSQL on
+`localhost:5432`.
+
+## Local development on Windows (verified)
+
+Windows 10/11 with PowerShell is the verified, first-class development path.
+The instructions below start from a clean checkout. PostgreSQL can either live
+inside the repository as a portable installation or run as a normal Windows
+service; both arrangements are covered below.
+
+### Prerequisites
+
+Install Git, Python 3.12, Node.js with npm, and PostgreSQL 16. The portable
+PostgreSQL path does not require PostgreSQL on `PATH`, but the Windows-service
+path does. Open PowerShell and verify the tools you plan to use:
+
+```powershell
+git --version
+python --version        # Must report Python 3.12.x
+node --version
+npm --version
+psql --version          # Required for the Windows-service path
+```
+
+### Shared clean-checkout setup
+
+Clone the repository (or open your existing clean checkout), then run the
+shared setup from its root:
+
+```powershell
+git clone <repository-url> scotuschat
+Set-Location scotuschat
+
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+python -m pip install -r requirements-dev.txt
+
+Push-Location app
+npm ci
+Pop-Location
+```
+
+If PowerShell blocks virtual-environment activation, allow locally created
+scripts for your user and then retry it:
+
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+.\.venv\Scripts\Activate.ps1
+```
+
+Create the two runtime environment files from their tracked examples:
+
+```powershell
+Copy-Item .env.example .env
+Copy-Item app\.env.example app\.env
+```
+
+The root `.env` belongs to FastAPI and PostgreSQL-facing Python processes.
+`app/.env` belongs to the SvelteKit server. Both processes authenticate
+server-to-server admin requests, so `ADMIN_TOKEN` must contain the exact same
+value in both files. All five SvelteKit values are server-private; do not give
+them `PUBLIC_` prefixes.
+
+Generate independent secrets with the operating system's secure random source:
+
+```powershell
+$AdminToken = python -c "import secrets; print(secrets.token_urlsafe(48))"
+$SessionSecret = python -c "import secrets; print(secrets.token_urlsafe(48))"
+```
+
+Put `$AdminToken` in `ADMIN_TOKEN` in both `.env` files. Put
+`$SessionSecret` in `SESSION_SECRET` in `app/.env`. Choose your own local
+`ADMIN_USERNAME` and strong `ADMIN_PASSWORD`; do not reuse either generated
+token as a login credential. Set `FASTAPI_BASE_URL=http://localhost:8000`.
+Then set the root `DATABASE_URL` for the role and database created in the next
+section:
+
+```dotenv
+DATABASE_URL=postgresql+asyncpg://scotus:<operator-chosen-database-password>@localhost:5432/scotus
+```
+
+Replace placeholders directly in the ignored `.env` files; do not commit
+secrets. The comments in `.env.example` and `app/.env.example` group all
+optional test, LLM, object-storage, and deployment settings by operating
+concern, so consult those files instead of copying optional settings blindly.
+
 ## Attribution / Credits
 
 Some oral arguments on this site come from a historical bulk import rather

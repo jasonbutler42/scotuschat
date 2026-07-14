@@ -205,7 +205,19 @@ Plans:
   3. Argument slug and `docket_number`/`docket_number_norm` can never be corrupted to an empty string through either save path.
   4. Both affected `<input>` elements carry a `required` attribute as UI-level defense-in-depth.
 
-**Plans**: TBD
+**Plans**: 3 plans
+
+**Wave 1**
+
+- [ ] 34-01-PLAN.md — Authoritative Pydantic normalization, deterministic docket precedence, safe service writes, and backend regression tests
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 34-02-PLAN.md — Structured 422 location parsing and attempted-value preservation across both SvelteKit action owners
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 34-03-PLAN.md — Exact native/pill validation feedback, required defenses, ARIA wiring, and first-invalid focus
 **UI hint**: yes
 
 ### Phase 35: Remove pipeline job rerun capability

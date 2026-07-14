@@ -109,7 +109,7 @@ Full phase details: `.planning/milestones/v1.5-ROADMAP.md`
 
 - [x] **Phase 31: Audit ~28 stale DB-gated test fixtures + fix real data leakage into shared dev DB** - Escalated data-integrity risk; fix test isolation so service-function commits can't leak synthetic Person/Argument rows (completed 2026-07-13)
 - [x] **Phase 32: Fix CourtTenure FK bookkeeping gap in merge/delete person service paths** - Merge/delete on a Justice with tenure rows no longer 500s (completed 2026-07-13)
-- [ ] **Phase 33: `update_argument_metadata` unique-constraint guard** - Colliding (source_docket, question_number) returns 409/422 instead of 500
+- [x] **Phase 33: `update_argument_metadata` unique-constraint guard** - Colliding (source_docket, question_number) returns 409/422 instead of 500 (completed 2026-07-14)
 - [ ] **Phase 34: Blank case_name/docket_number validation** - Prevents slug/dedup corruption from cleared fields
 - [ ] **Phase 35: `rerun_job` never spawns ingest for locally-uploaded jobs** - Local-upload reruns actually progress instead of sitting at PENDING forever
 - [ ] **Phase 36: Click-to-copy extracted values design pattern** - Consistent click-to-copy affordance across pipeline run pages and argument editor
@@ -183,12 +183,12 @@ Plans:
   2. Saving argument metadata with a unique combination continues to succeed exactly as before.
   3. The fix is applied consistently to every code path that writes `source_docket`/`question_number`, not just the primary save action.
 
-**Plans**: 2/3 plans executed
+**Plans**: 3/3 plans complete
 
 Plans:
 
 - [x] 33-01-PLAN.md — Backend final-pair pre-check and race-safe HTTP conflict recovery
-- [ ] 33-02-PLAN.md
+- [x] 33-02-PLAN.md
 - [x] 33-03-PLAN.md
 
 ### Phase 34: Blank case_name/docket_number validation
@@ -289,7 +289,7 @@ Plans:
   2. README covers required environment variables/config for local dev, referencing existing `.env` patterns without exposing secrets.
   3. A contributor (or the operator after time away) can follow the README from a clean checkout to a running local stack without needing to rediscover steps from memory or git history.
 
-**Plans**: TBD
+**Plans**: 1/3 plans executed
 
 ## Progress
 
@@ -328,14 +328,14 @@ Plans:
 | 30.1. Close gap AEDIT-04/DASH-02 | v1.5 | 3/3 | Complete | 2026-07-12 |
 | 31. Audit ~28 stale DB-gated test fixtures + fix real data leakage into shared dev DB | v1.6 | 8/8 | Complete    | 2026-07-13 |
 | 32. Fix CourtTenure FK bookkeeping gap in merge/delete person service paths | v1.6 | 2/2 | Complete    | 2026-07-13 |
-| 33. `update_argument_metadata` unique-constraint guard | v1.6 | 2/3 | In Progress|  |
+| 33. `update_argument_metadata` unique-constraint guard | v1.6 | 3/3 | Complete   | 2026-07-14 |
 | 34. Blank case_name/docket_number validation | v1.6 | TBD | Not started | - |
 | 35. `rerun_job` never spawns ingest for locally-uploaded jobs | v1.6 | TBD | Not started | - |
 | 36. Click-to-copy extracted values design pattern | v1.6 | TBD | Not started | - |
 | 37. Represent tenure Seat as a Chief/Associate toggle instead of free text | v1.6 | TBD | Not started | - |
 | 38. Rethink Full Name vs. name-part fields in the people editor | v1.6 | TBD | Not started | - |
 | 39. Bench popover — additional context data for Justices | v1.6 | TBD | Not started | - |
-| 40. README — how to start the local stack | v1.6 | TBD | Not started | - |
+| 40. README — how to start the local stack | v1.6 | 1/3 | In Progress|  |
 
 ## Backlog
 
@@ -356,6 +356,10 @@ Standard: all backlog items live here as 999.x entries (`.planning/phases/999.N-
 **Plans:** 0 plans
 
 Plans:
+
+- [x] 40-01-PLAN.md
+- [ ] 40-02-PLAN.md
+- [ ] 40-03-PLAN.md
 
 - [ ] TBD (promote with /gsd-review-backlog when ready)
 

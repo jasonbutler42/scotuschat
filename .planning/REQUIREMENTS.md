@@ -37,7 +37,7 @@ Requirements for the v1.6 Backlog Cleanup milestone. Each maps to a roadmap phas
 
 ### Documentation
 
-- [ ] **DOCS-01**: A README documents how to start the full local stack (SvelteKit, FastAPI, Postgres) end to end
+- [x] **DOCS-01**: A README documents how to start the full local stack (SvelteKit, FastAPI, Postgres) end to end
 
 ## Future Requirements
 
@@ -83,7 +83,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PEOPLE-08 | Phase 37 | Pending |
 | PEOPLE-09 | Phase 38 | Pending |
 | PUB-04 | Phase 39 | Pending |
-| DOCS-01 | Phase 40 | Pending |
+| DOCS-01 | Phase 40 | Complete |
 
 **Coverage:**
 

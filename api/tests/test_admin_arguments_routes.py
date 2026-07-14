@@ -141,6 +141,31 @@ def _admin_headers() -> dict:
     return {"X-Admin-Token": settings.admin_token}
 
 
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("path", "payload", "field", "service_name"),
+    [
+        ("/api/admin/arguments/7", {"case_name": None}, "case_name", "update_argument"),
+        ("/api/admin/arguments/7", {"docket_number": " \t"}, "docket_number", "update_argument"),
+        ("/api/admin/arguments/7/metadata", {"case_name": "\u2003"}, "case_name", "update_argument_metadata"),
+        ("/api/admin/arguments/7/metadata", {"source_docket": None}, "source_docket", "update_argument_metadata"),
+        ("/api/admin/arguments/7/metadata", {"source_dockets": []}, "source_dockets", "update_argument_metadata"),
+    ],
+)
+async def test_required_patch_validation_returns_loc_422_before_service(
+    client_no_db: AsyncClient, monkeypatch, path, payload, field, service_name
+) -> None:
+    from api.routers import admin
+
+    service = AsyncMock()
+    monkeypatch.setattr(admin.arguments_service, service_name, service)
+    response = await client_no_db.patch(path, json=payload, headers=_admin_headers())
+
+    assert response.status_code == 422
+    assert any(error["loc"][-1] == field for error in response.json()["detail"])
+    service.assert_not_awaited()
+
+
 # ---------------------------------------------------------------------------
 # Auth tests — no DB required (T-11-AC, ASVS V4)
 # Each new path must return 401 when called with a wrong X-Admin-Token header.

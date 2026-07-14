@@ -113,6 +113,30 @@ async def test_metadata_update_null_final_pair_does_not_collide(docket, question
     assert db.execute.await_count == 1
 
 
+@pytest.mark.asyncio
+async def test_metadata_array_writes_normalized_list_and_canonical_first_value() -> None:
+    from api.schemas.admin_arguments import MetadataUpdate
+    from api.services.admin_arguments import update_argument_metadata
+
+    db = AsyncMock()
+    argument = SimpleNamespace(id=7, source_docket="old", question_number=None)
+    db.execute.side_effect = [
+        MagicMock(scalar_one_or_none=lambda: argument),
+        MagicMock(scalar_one_or_none=lambda: None),
+        MagicMock(),
+    ]
+    body = MetadataUpdate(
+        source_docket="ignored",
+        source_dockets=[" 24-2 ", "", "24-1", "24-2"],
+    )
+
+    assert await update_argument_metadata(db, 7, body) is True
+    update_stmt = db.execute.await_args_list[-1].args[0]
+    params = update_stmt.compile().params
+    assert params["source_dockets"] == ["24-2", "24-1"]
+    assert params["source_docket"] == "24-2"
+
+
 def test_target_constraint_classifier_uses_structured_attributes_only() -> None:
     from api.services.argument_uniqueness import is_argument_pair_violation
 

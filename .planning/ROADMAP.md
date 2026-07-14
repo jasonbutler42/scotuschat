@@ -116,7 +116,7 @@ Full phase details: `.planning/milestones/v1.5-ROADMAP.md`
 - [ ] **Phase 37: Represent tenure Seat as a Chief/Associate toggle instead of free text** - Open design question (numbered-seat data vs. binary toggle) resolved during discuss-phase
 - [ ] **Phase 38: Rethink Full Name vs. name-part fields in the people editor** - Open design question (auto-derive vs. independently editable) resolved during discuss-phase
 - [ ] **Phase 39: Bench popover — additional context data for Justices** - Birthdate, death date, and per-tenure appointment context, presented apolitically
-- [ ] **Phase 40: README — how to start the local stack** - Documents SvelteKit + FastAPI + Postgres local setup end to end
+- [x] **Phase 40: README — how to start the local stack** - Documents SvelteKit + FastAPI + Postgres local setup end to end (completed 2026-07-14)
 
 ## Phase Details
 
@@ -335,7 +335,7 @@ Plans:
 | 37. Represent tenure Seat as a Chief/Associate toggle instead of free text | v1.6 | TBD | Not started | - |
 | 38. Rethink Full Name vs. name-part fields in the people editor | v1.6 | TBD | Not started | - |
 | 39. Bench popover — additional context data for Justices | v1.6 | TBD | Not started | - |
-| 40. README — how to start the local stack | v1.6 | 2/3 | In Progress|  |
+| 40. README — how to start the local stack | v1.6 | 3/3 | Complete    | 2026-07-14 |
 
 ## Backlog
 
@@ -359,7 +359,7 @@ Plans:
 
 - [x] 40-01-PLAN.md
 - [x] 40-02-PLAN.md
-- [ ] 40-03-PLAN.md
+- [x] 40-03-PLAN.md
 
 - [ ] TBD (promote with /gsd-review-backlog when ready)
 

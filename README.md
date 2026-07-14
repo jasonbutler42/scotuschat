@@ -220,6 +220,74 @@ Open `http://localhost:5173` for SvelteKit and
 `http://localhost:8000` for FastAPI. Press Ctrl+C in each terminal to stop its
 development server; manage the PostgreSQL Windows service separately.
 
+## Equivalent setup on macOS and Linux
+
+These commands are the project equivalent of the Windows path; unlike the
+portable Windows walkthrough, they have not been runtime-verified by this
+project. Install and manage PostgreSQL 16 outside this repository using the
+method appropriate to your system. The commands below assume its standard CLI
+tools are already on `PATH` and a PostgreSQL server is listening on port 5432.
+
+From a clean checkout, run:
+
+```bash
+git clone <repository-url> scotuschat
+cd scotuschat
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+python -m pip install -r requirements-dev.txt
+(cd app && npm ci)
+cp .env.example .env
+cp app/.env.example app/.env
+```
+
+Generate two independent secrets. Put `ADMIN_TOKEN` in both `.env` and
+`app/.env`; put `SESSION_SECRET` only in `app/.env`. Also choose distinct local
+`ADMIN_USERNAME` and strong `ADMIN_PASSWORD` values in `app/.env`.
+
+```bash
+python -c "import secrets; print(secrets.token_urlsafe(32))" # ADMIN_TOKEN
+python -c "import secrets; print(secrets.token_urlsafe(32))" # SESSION_SECRET
+```
+
+Using a PostgreSQL administrator account, create the same application role and
+database used by the Windows guide. These commands prompt for passwords rather
+than putting them in shell history:
+
+```bash
+createuser -h localhost -p 5432 -U postgres -W -P scotus
+createdb -h localhost -p 5432 -U postgres -W -O scotus scotus
+```
+
+Set the root `DATABASE_URL` to the local role/database, set
+`FASTAPI_BASE_URL=http://localhost:8000` in `app/.env`, and apply migrations:
+
+```bash
+source .venv/bin/activate
+python -m alembic upgrade head
+```
+
+Start the two application processes in separate terminals. In terminal 1,
+from the repository root:
+
+```bash
+source .venv/bin/activate
+python -m uvicorn api.main:app --reload --port 8000
+```
+
+In terminal 2:
+
+```bash
+cd app
+npm run dev
+```
+
+The root `.env` remains owned by Python processes and `app/.env` by SvelteKit;
+the ports and exact-match `ADMIN_TOKEN` contract are identical on every
+platform.
+
 ## Attribution / Credits
 
 Some oral arguments on this site come from a historical bulk import rather

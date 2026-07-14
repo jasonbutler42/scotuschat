@@ -183,9 +183,11 @@ Plans:
   2. Saving argument metadata with a unique combination continues to succeed exactly as before.
   3. The fix is applied consistently to every code path that writes `source_docket`/`question_number`, not just the primary save action.
 
-**Plans**: 3/3 plans complete
+**Plans**: 4/4 plans complete
 
 Plans:
+
+- [x] 33-04-PLAN.md
 
 - [x] 33-01-PLAN.md — Backend final-pair pre-check and race-safe HTTP conflict recovery
 - [x] 33-02-PLAN.md
@@ -206,16 +208,17 @@ Plans:
 **Plans**: TBD
 **UI hint**: yes
 
-### Phase 35: `rerun_job` never spawns ingest for locally-uploaded jobs
+### Phase 35: Remove pipeline job rerun capability
 
-**Goal**: `create_job`'s upload path stores the PDF at `data/uploads/{job.id}.pdf` and sets neither `spaces_key` nor `pdf_url` when `settings.do_spaces_bucket` is falsy (local/dev mode, no DO Spaces configured). `rerun_job` copies `pdf_url`/`spaces_key`/`original_filename`/`source_dockets` onto the new job, but the rerun endpoint (`api/routers/admin.py`) only branches on `spaces_key` or `pdf_url` — no branch exists for a local-disk-backed original, so no ingest subprocess is ever spawned for the rerun. The endpoint still returns 202 with a fresh PENDING job, giving the operator every indication the rerun started, but the job sits at PENDING/INGEST forever with no error surfaced. Fix: persist the resolved local file path on `AdminJob` at creation time and add a third rerun branch that re-spawns ingest with `--local-file`, or at minimum raise a `ValueError` (422) instead of silently creating a job that can never progress.
-**Depends on**: Nothing (independent bug fix)
+**Goal**: Remove pipeline-job reruns because recreating a job with the same source and inputs no longer provides meaningful operator value. Remove the rerun action from the admin UI, delete the rerun API endpoint and service function, and remove rerun-specific tests and references. Preserve ordinary job creation, failed-step recovery, source-PDF access, and existing job data.
+**Depends on**: Nothing (independent cleanup)
 **Requirements**: PIPE-29
 **Success Criteria** (what must be TRUE):
 
-  1. Rerunning a locally-uploaded (non-Spaces) pipeline job actually spawns an ingest subprocess and progresses past PENDING.
-  2. `AdminJob` persists the resolved local file path at creation time so a later rerun can locate the original upload.
-  3. If the local file is missing or unavailable at rerun time, the endpoint raises a clear 422 error instead of silently creating a job that can never progress.
+  1. The admin UI no longer offers an action to rerun a pipeline job.
+  2. The rerun API endpoint and service function are removed.
+  3. Rerun-specific tests and stale code references are removed or rewritten.
+  4. Creating jobs, recovering failed steps, viewing source PDFs, and viewing existing jobs continue to work unchanged.
 
 **Plans**: TBD
 
@@ -328,7 +331,7 @@ Plans:
 | 30.1. Close gap AEDIT-04/DASH-02 | v1.5 | 3/3 | Complete | 2026-07-12 |
 | 31. Audit ~28 stale DB-gated test fixtures + fix real data leakage into shared dev DB | v1.6 | 8/8 | Complete    | 2026-07-13 |
 | 32. Fix CourtTenure FK bookkeeping gap in merge/delete person service paths | v1.6 | 2/2 | Complete    | 2026-07-13 |
-| 33. `update_argument_metadata` unique-constraint guard | v1.6 | 3/3 | Complete   | 2026-07-14 |
+| 33. `update_argument_metadata` unique-constraint guard | v1.6 | 4/4 | Complete   | 2026-07-14 |
 | 34. Blank case_name/docket_number validation | v1.6 | TBD | Not started | - |
 | 35. `rerun_job` never spawns ingest for locally-uploaded jobs | v1.6 | TBD | Not started | - |
 | 36. Click-to-copy extracted values design pattern | v1.6 | TBD | Not started | - |

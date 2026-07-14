@@ -153,8 +153,8 @@ def test_derive_failed_step_recovery_unknown_step_default_guidance() -> None:
     assert "new run" in recovery.guidance.lower()
 
 
-def test_derive_failed_step_recovery_never_recommends_same_source_rerun() -> None:
-    """D-05/PJOB-22 supersession: no guidance string may mention rerun-with-same-source."""
+def test_ordinary_new_run_recovery_never_recommends_same_source_recreation() -> None:
+    """Recovery remains step-specific and never recommends recreating the same source."""
     from api.models.models import AdminJobStep
     from api.services.admin_jobs import derive_failed_step_recovery
 

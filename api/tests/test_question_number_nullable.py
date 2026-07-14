@@ -130,6 +130,16 @@ def test_case_form_required_contract_preserves_attempts_and_focus_order() -> Non
     assert source.index("caseNameInput?.focus()") < source.index("docketNumberInput?.focus()")
 
 
+def test_case_form_clears_native_required_state_before_enhanced_save() -> None:
+    source = _frontend_source("src/routes/admin/arguments/[id]/+page.svelte")
+
+    case_reset = source.index("nativeCaseNameRequired = false;", source.index('action="?/save"'))
+    docket_reset = source.index("nativeDocketRequired = false;", case_reset)
+    saving = source.index("savingState = true;", docket_reset)
+
+    assert case_reset < docket_reset < saving
+
+
 def test_duplicate_message_and_component_compose_one_recovery_phrase() -> None:
     """The API owns facts while the shared card owns the recovery-link copy."""
     api_message = "An argument already uses docket 24-1, question 2."

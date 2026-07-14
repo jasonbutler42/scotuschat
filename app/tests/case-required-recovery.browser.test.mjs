@@ -242,7 +242,10 @@ test('native required state clears before later enhanced failures', { timeout: 6
 			await cdp.evaluate(`(() => {
 				const values = { case_name: 'Corrected Case', docket_number: '24-2' };
 				for (const [id, value] of Object.entries(values)) { const input = document.getElementById(id); input.value = value; input.dispatchEvent(new Event('input', { bubbles: true })); }
-				document.getElementById('case_name').closest('form').requestSubmit();
+				const form = document.getElementById('case_name').closest('form');
+				const submitter = form.querySelector('button[type=submit]');
+				submitter.focus();
+				form.requestSubmit(submitter);
 			})()`);
 			const deadline = Date.now() + 10_000;
 			while (patchCount < expectedPatchCount && Date.now() < deadline) await delay(25);

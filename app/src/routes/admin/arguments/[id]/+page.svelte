@@ -147,6 +147,8 @@
 				method="POST"
 				action="?/save"
 				use:enhance={() => {
+					nativeCaseNameRequired = false;
+					nativeDocketRequired = false;
 					savingState = true;
 					return async ({ update }) => {
 						savingState = false;

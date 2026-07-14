@@ -71,7 +71,7 @@ def test_argument_details_card_restores_values_and_focuses_one_safe_alert() -> N
     source = _frontend_source("src/lib/components/ArgumentDetailsCard.svelte")
 
     assert "value={form?.question_number ?? savedValues.question_number}" in source
-    assert "value={form?.argued_date ?? savedValues.argued_date ?? ''}" in source
+    assert "form && 'argued_date' in form" in source
     assert source.count('role="alert"') == 1
     assert 'tabindex="-1"' in source
     assert source.index("await update();") < source.index("await tick();") < source.index("alertElement?.focus();")

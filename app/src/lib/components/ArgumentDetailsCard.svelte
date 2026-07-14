@@ -1,6 +1,13 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { tick } from 'svelte';
 	import DocketPillInput from '$lib/components/DocketPillInput.svelte';
+
+	type DuplicateArgumentConflict = {
+		code: 'duplicate_argument';
+		message: string;
+		conflicting_argument_id: number;
+	};
 
 	interface ArgumentDetailsCardProps {
 		savedValues: {
@@ -16,7 +23,14 @@
 		};
 		action: string;
 		readonly?: boolean;
-		form?: { dockets?: string[]; saveError?: string; saved?: boolean } | null;
+		form?: {
+			dockets?: string[];
+			question_number?: string;
+			argued_date?: string | null;
+			conflict?: DuplicateArgumentConflict;
+			saveError?: string;
+			saved?: boolean;
+		} | null;
 	}
 
 	let {
@@ -30,6 +44,7 @@
 	// D-04/D-05: docket initial-value source for DocketPillInput, seeded from savedValues.dockets
 	let effectiveDockets = $state<string[]>(savedValues.dockets ?? []);
 	let saving = $state(false);
+	let alertElement: HTMLParagraphElement | null = $state(null);
 
 	// D-06: on failed save, re-seed DocketPillInput from form.dockets (not from savedValues)
 	$effect(() => {
@@ -70,6 +85,8 @@
 				if (result.type === 'failure') {
 					// Pitfall 4 guard: reset:true would wipe pill $state — use default update() on failure
 					await update();
+					await tick();
+					alertElement?.focus();
 				} else {
 					// Pitfall 4 guard: reset:false is mandatory — reset:true wipes pill $state on success
 					await update({ reset: false });
@@ -138,7 +155,7 @@
 				id="question-number-input"
 				type="text"
 				name="question_number"
-				value={savedValues.question_number}
+				value={form?.question_number ?? savedValues.question_number}
 				disabled={readonly}
 				style="
 					width: 100%;
@@ -179,7 +196,7 @@
 				id="argued-date-input"
 				type="date"
 				name="argued_date"
-				value={savedValues.argued_date ?? ''}
+				value={form && 'argued_date' in form ? (form.argued_date ?? '') : (savedValues.argued_date ?? '')}
 				disabled={readonly}
 				style="
 					width: 100%;
@@ -220,16 +237,27 @@
 				Saved.
 			</p>
 		{/if}
-		{#if form?.saveError}
+		{#if form?.saveError || form?.conflict}
 			<p
+				bind:this={alertElement}
 				role="alert"
+				tabindex="-1"
 				style="
 					font-size: 14px;
 					color: #ef4444;
 					margin-bottom: 16px;
 				"
 			>
-				{form.saveError}
+				{#if form.conflict}
+					{form.conflict.message}
+					<a
+						href={`/admin/arguments/${form.conflict.conflicting_argument_id}`}
+						target="_blank"
+						rel="noopener noreferrer"
+					>Open conflicting argument</a>.
+				{:else}
+					{form.saveError}
+				{/if}
 			</p>
 		{/if}
 

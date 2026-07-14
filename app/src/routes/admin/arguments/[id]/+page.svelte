@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { tick } from 'svelte';
 	import ArgumentDetailsCard from '$lib/components/ArgumentDetailsCard.svelte';
 
 	let { data, form } = $props();
@@ -8,6 +9,26 @@
 	let savingState = $state(false);
 	let publishingState = $state(false);
 	let unpublishingState = $state(false);
+	let caseNameInput: HTMLInputElement | null = $state(null);
+	let docketNumberInput: HTMLInputElement | null = $state(null);
+	let nativeCaseNameRequired = $state(false);
+	let nativeDocketRequired = $state(false);
+	let caseNameRequired = $derived(nativeCaseNameRequired || form?.caseNameRequired === true);
+	let docketRequired = $derived(nativeDocketRequired || form?.docketRequired === true);
+
+	async function focusFirstRequired() {
+		await tick();
+		if (caseNameRequired) caseNameInput?.focus();
+		else if (docketRequired) docketNumberInput?.focus();
+	}
+
+	function handleCaseInvalid(event: Event) {
+		event.preventDefault();
+		const formElement = (event.currentTarget as HTMLInputElement).form;
+		nativeCaseNameRequired = !(formElement?.elements.namedItem('case_name') as HTMLInputElement)?.validity.valid;
+		nativeDocketRequired = !(formElement?.elements.namedItem('docket_number') as HTMLInputElement)?.validity.valid;
+		void focusFirstRequired();
+	}
 
 	// Format ISO date string for display — identical to list page formatDate.
 	function formatDate(iso: string): string {
@@ -130,6 +151,8 @@
 					return async ({ update }) => {
 						savingState = false;
 						await update();
+						await tick();
+						if (form?.caseNameRequired || form?.docketRequired) await focusFirstRequired();
 					};
 				}}
 			>
@@ -140,15 +163,20 @@
 						style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
 					>Case title</label>
 					<input
+						bind:this={caseNameInput}
 						type="text"
 						id="case_name"
 						name="case_name"
-						value={data.argument.case_name}
+						value={form && 'case_name' in form ? form.case_name : data.argument.case_name}
+						required
+						oninvalid={handleCaseInvalid}
+						aria-invalid={caseNameRequired ? 'true' : undefined}
+						aria-describedby={caseNameRequired ? 'case-form-alert' : undefined}
 						style="
 							display: block;
 							width: 100%;
 							background-color: #0f1117;
-							border: 1px solid #334155;
+							border: 1px solid {caseNameRequired ? '#ef4444' : '#334155'};
 							border-radius: 6px;
 							padding: 8px 12px;
 							font-size: 16px;
@@ -167,15 +195,20 @@
 						style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
 					>Case docket number</label>
 					<input
+						bind:this={docketNumberInput}
 						type="text"
 						id="docket_number"
 						name="docket_number"
-						value={data.argument.docket_number}
+						value={form && 'docket_number' in form ? form.docket_number : data.argument.docket_number}
+						required
+						oninvalid={handleCaseInvalid}
+						aria-invalid={docketRequired ? 'true' : undefined}
+						aria-describedby={docketRequired ? 'case-form-alert' : undefined}
 						style="
 							display: block;
 							width: 100%;
 							background-color: #0f1117;
-							border: 1px solid #334155;
+							border: 1px solid {docketRequired ? '#ef4444' : '#334155'};
 							border-radius: 6px;
 							padding: 8px 12px;
 							font-size: 16px;
@@ -202,8 +235,9 @@
 				{/if}
 
 				<!-- Form-level error slot — role=alert for screen reader announcement (WCAG) -->
-				{#if form?.error}
+				{#if caseNameRequired || docketRequired || form?.error}
 					<p
+						id="case-form-alert"
 						role="alert"
 						style="
 							color: #ef4444;
@@ -212,7 +246,11 @@
 							line-height: 1.5;
 							margin: 16px 0 0 0;
 						"
-					>{form.error}</p>
+					>
+						{#if caseNameRequired}<span style="display: block;">Case name is required.</span>{/if}
+						{#if docketRequired}<span style="display: block;">Add at least one docket.</span>{/if}
+						{#if form?.error}<span style="display: block;">{form.error}</span>{/if}
+					</p>
 				{/if}
 
 				<!-- Save changes button — full-width, accent border, 44px min-height -->

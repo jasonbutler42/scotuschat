@@ -113,6 +113,23 @@ def test_argument_details_card_restores_values_and_focuses_one_safe_alert() -> N
     assert 'rel="noopener noreferrer"' in source
 
 
+def test_case_form_required_contract_preserves_attempts_and_focus_order() -> None:
+    source = _frontend_source("src/routes/admin/arguments/[id]/+page.svelte")
+
+    assert source.count("\n\t\t\t\t\t\trequired") >= 2
+    assert "event.preventDefault()" in source
+    assert "elements.namedItem('case_name')" in source
+    assert "elements.namedItem('docket_number')" in source
+    assert source.index("elements.namedItem('case_name')") < source.index("elements.namedItem('docket_number')")
+    assert "form && 'case_name' in form ? form.case_name" in source
+    assert "form && 'docket_number' in form ? form.docket_number" in source
+    assert "Case name is required." in source
+    assert "Add at least one docket." in source
+    assert "aria-invalid={caseNameRequired ? 'true' : undefined}" in source
+    assert "aria-describedby={docketRequired ? 'case-form-alert' : undefined}" in source
+    assert source.index("caseNameInput?.focus()") < source.index("docketNumberInput?.focus()")
+
+
 def test_duplicate_message_and_component_compose_one_recovery_phrase() -> None:
     """The API owns facts while the shared card owns the recovery-link copy."""
     api_message = "An argument already uses docket 24-1, question 2."

@@ -1121,9 +1121,14 @@ async def update_argument_metadata(
     except IntegrityError as exc:
         await db.rollback()
         if arguments_service.is_argument_pair_violation(exc):
-            argument = await db.get(Argument, argument_id)
-            docket = argument.source_docket if argument is not None else None
-            question = argument.question_number if argument is not None else None
+            pair = getattr(exc, "argument_pair", None)
+            if pair is None:
+                argument = await db.get(Argument, argument_id)
+                pair = (
+                    argument.source_docket if argument is not None else None,
+                    argument.question_number if argument is not None else None,
+                )
+            docket, question = pair
             conflicting_id = await arguments_service.find_argument_by_pair(
                 db, docket, question, exclude_argument_id=argument_id
             )

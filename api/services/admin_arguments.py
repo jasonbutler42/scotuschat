@@ -20,6 +20,7 @@ import datetime
 
 from sqlalchemy import and_, delete, exists, func as sqlfunc, not_, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import IntegrityError
 
 from api.models.models import (
     AdminJob,
@@ -917,5 +918,11 @@ async def update_argument_metadata(
                 .execution_options(synchronize_session=False)
             )
 
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError as exc:
+        # Preserve the submitted final pair across the router's required rollback;
+        # the rolled-back row contains the old values and cannot reconstruct it.
+        exc.argument_pair = (final_docket, final_question)
+        raise
     return True

@@ -54,6 +54,28 @@ async def test_metadata_non_target_integrity_error_is_sanitized(monkeypatch) -> 
     assert exc.value.detail == {"code": "constraint_violation", "message": "The update violates a database constraint."}
 
 
+@pytest.mark.asyncio
+async def test_metadata_target_race_rolls_back_then_returns_winner(monkeypatch) -> None:
+    from fastapi import HTTPException
+    from sqlalchemy.exc import IntegrityError
+    from api.routers import admin
+    from api.schemas.admin_arguments import MetadataUpdate
+
+    db = AsyncMock()
+    orig = SimpleNamespace(diag=SimpleNamespace(constraint_name="uq_arguments_source_docket_question"))
+    err = IntegrityError("statement", {}, orig)
+    err.argument_pair = ("24-1", 2)
+    monkeypatch.setattr(admin.arguments_service, "update_argument_metadata", AsyncMock(side_effect=err))
+    lookup = AsyncMock(return_value=42)
+    monkeypatch.setattr(admin.arguments_service, "find_argument_by_pair", lookup)
+    with pytest.raises(HTTPException) as exc:
+        await admin.update_argument_metadata(7, MetadataUpdate(), db)
+    db.rollback.assert_awaited_once()
+    lookup.assert_awaited_once_with(db, "24-1", 2, exclude_argument_id=7)
+    assert exc.value.detail["code"] == "duplicate_argument"
+    assert exc.value.detail["conflicting_argument_id"] == 42
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------

@@ -205,7 +205,7 @@ Plans:
   3. Argument slug and `docket_number`/`docket_number_norm` can never be corrupted to an empty string through either save path.
   4. Both affected `<input>` elements carry a `required` attribute as UI-level defense-in-depth.
 
-**Plans**: 3/3 plans complete
+**Plans**: 4/4 plans complete
 
 **Wave 1**
 
@@ -354,7 +354,7 @@ Plans:
 | 31. Audit ~28 stale DB-gated test fixtures + fix real data leakage into shared dev DB | v1.6 | 8/8 | Complete    | 2026-07-13 |
 | 32. Fix CourtTenure FK bookkeeping gap in merge/delete person service paths | v1.6 | 2/2 | Complete    | 2026-07-13 |
 | 33. `update_argument_metadata` unique-constraint guard | v1.6 | 4/4 | Complete   | 2026-07-14 |
-| 34. Blank case_name/docket_number validation | v1.6 | 3/3 | Complete   | 2026-07-14 |
+| 34. Blank case_name/docket_number validation | v1.6 | 4/4 | Complete   | 2026-07-14 |
 | 35. `rerun_job` never spawns ingest for locally-uploaded jobs | v1.6 | TBD | Not started | - |
 | 36. Click-to-copy extracted values design pattern | v1.6 | TBD | Not started | - |
 | 37. Represent tenure Seat as a Chief/Associate toggle instead of free text | v1.6 | TBD | Not started | - |
@@ -381,6 +381,8 @@ Standard: all backlog items live here as 999.x entries (`.planning/phases/999.N-
 **Plans:** 0 plans
 
 Plans:
+
+- [x] 34-04-PLAN.md
 
 - [x] 40-01-PLAN.md
 - [x] 40-02-PLAN.md

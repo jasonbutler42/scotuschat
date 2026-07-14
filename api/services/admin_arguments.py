@@ -37,8 +37,19 @@ from api.models.models import (
 )
 from api.schemas.admin_arguments import ArgumentUpdate, MetadataUpdate
 from api.services.admin_people import _bench_role_and_missing_tenure
+from api.services.argument_uniqueness import find_argument_by_pair, is_argument_pair_violation
 from api.services.speakers import ADVOCATE_LABEL_MAP
 from pipeline.commands.ingest import _derive_slug  # noqa: F401 — re-exported for tests
+
+
+class DuplicateArgumentError(ValueError):
+    """A concrete final metadata pair belongs to another Argument."""
+
+    def __init__(self, conflicting_argument_id: int, docket: str, question: int):
+        super().__init__("duplicate_argument")
+        self.conflicting_argument_id = conflicting_argument_id
+        self.docket = docket
+        self.question = question
 
 
 # ---------------------------------------------------------------------------
@@ -724,13 +735,7 @@ async def check_duplicate_argument(db: AsyncSession, docket: str, question: int)
     No 404 — absence of a match is a valid 200 response.
     Uses parameterized query (T-19-03-03: no string interpolation, SQLAlchemy bind params).
     """
-    result = await db.execute(
-        select(Argument.id).where(
-            Argument.source_docket == docket,
-            Argument.question_number == question,
-        )
-    )
-    row = result.scalar_one_or_none()
+    row = await find_argument_by_pair(db, docket, question)
     return {"exists": row is not None, "argument_id": row}
 
 
@@ -880,6 +885,13 @@ async def update_argument_metadata(
                 pass  # Non-numeric value — skip silently per T-23-02
         else:
             values_to_set["question_number"] = None
+    final_docket = values_to_set.get("source_docket", argument.source_docket)
+    final_question = values_to_set.get("question_number", argument.question_number)
+    conflicting_id = await find_argument_by_pair(
+        db, final_docket, final_question, exclude_argument_id=argument_id
+    )
+    if conflicting_id is not None:
+        raise DuplicateArgumentError(conflicting_id, final_docket, final_question)
     if values_to_set:
         await db.execute(
             update(Argument)

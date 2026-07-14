@@ -31,7 +31,7 @@ Security notes:
 import datetime
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from api.models.models import ArgumentStatusEnum, SideEnum
 
@@ -222,6 +222,16 @@ class ArgumentUpdate(BaseModel):
     docket_number: Optional[str] = None
     argued_date: Optional[str] = None  # ISO date string "YYYY-MM-DD"
 
+    @field_validator("case_name", "docket_number", mode="before")
+    @classmethod
+    def validate_required_text(cls, value: object) -> str:
+        if value is None or not isinstance(value, str):
+            raise ValueError("required value must be a non-blank string")
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("required value must be a non-blank string")
+        return normalized
+
 
 class MetadataUpdate(BaseModel):
     """PATCH body for argument metadata from job detail page (D-15, Phase 19).
@@ -247,3 +257,31 @@ class MetadataUpdate(BaseModel):
     source_dockets: Optional[list[str]] = None  # Phase 23 D-MULTI-DOCKET
     argued_date: Optional[str] = None   # ISO date string "YYYY-MM-DD"
     question_number: Optional[str] = None  # free text; parsed to int in service (PJOB-06)
+
+    @field_validator("case_name", "source_docket", mode="before")
+    @classmethod
+    def validate_required_text(cls, value: object) -> str:
+        if value is None or not isinstance(value, str):
+            raise ValueError("required value must be a non-blank string")
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("required value must be a non-blank string")
+        return normalized
+
+    @field_validator("source_dockets", mode="before")
+    @classmethod
+    def normalize_required_dockets(cls, value: object) -> list[str]:
+        if value is None or not isinstance(value, list):
+            raise ValueError("at least one docket is required")
+        normalized: list[str] = []
+        seen: set[str] = set()
+        for docket in value:
+            if not isinstance(docket, str):
+                raise ValueError("docket values must be strings")
+            docket = docket.strip()
+            if docket and docket not in seen:
+                seen.add(docket)
+                normalized.append(docket)
+        if not normalized:
+            raise ValueError("at least one docket is required")
+        return normalized

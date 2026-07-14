@@ -16,6 +16,61 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from pydantic import ValidationError
+
+
+@pytest.mark.parametrize("schema_name,field", [
+    ("argument", "case_name"), ("argument", "docket_number"),
+    ("metadata", "case_name"), ("metadata", "source_docket"),
+])
+@pytest.mark.parametrize("invalid", [None, "", " \t\n", "\u2003\u00a0"])
+def test_required_patch_scalars_reject_explicit_empty_values(schema_name, field, invalid):
+    from api.schemas.admin_arguments import ArgumentUpdate, MetadataUpdate
+
+    schema = ArgumentUpdate if schema_name == "argument" else MetadataUpdate
+    with pytest.raises(ValidationError) as exc:
+        schema(**{field: invalid})
+    assert exc.value.errors()[0]["loc"] == (field,)
+
+
+@pytest.mark.parametrize("schema_name,field", [
+    ("argument", "case_name"), ("argument", "docket_number"),
+    ("metadata", "case_name"), ("metadata", "source_docket"),
+])
+def test_required_patch_scalars_trim_outer_whitespace_only(schema_name, field):
+    from api.schemas.admin_arguments import ArgumentUpdate, MetadataUpdate
+
+    schema = ArgumentUpdate if schema_name == "argument" else MetadataUpdate
+    model = schema(**{field: "\u2003 Alpha  Beta \t"})
+    assert getattr(model, field) == "Alpha  Beta"
+    assert field in model.model_fields_set
+
+
+def test_required_patch_fields_can_be_omitted():
+    from api.schemas.admin_arguments import ArgumentUpdate, MetadataUpdate
+
+    assert ArgumentUpdate().model_fields_set == set()
+    assert MetadataUpdate().model_fields_set == set()
+
+
+@pytest.mark.parametrize("invalid", [None, [], [""], [" \t", "\u2003"]])
+def test_source_dockets_rejects_empty_normalized_collection(invalid):
+    from api.schemas.admin_arguments import MetadataUpdate
+
+    with pytest.raises(ValidationError) as exc:
+        MetadataUpdate(source_dockets=invalid)
+    assert exc.value.errors()[0]["loc"] == ("source_dockets",)
+
+
+def test_source_dockets_normalizes_once_in_first_seen_order_and_wins():
+    from api.schemas.admin_arguments import MetadataUpdate
+
+    body = MetadataUpdate(
+        source_docket="legacy-1",
+        source_dockets=[" ", " 24-1 ", "24-2", "24-1", "\t24-3\n"],
+    )
+    assert body.source_dockets == ["24-1", "24-2", "24-3"]
+    assert body.source_docket == "legacy-1"
 
 
 @pytest.mark.asyncio

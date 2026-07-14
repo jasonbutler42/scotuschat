@@ -6,14 +6,14 @@ current_phase: 35
 current_phase_name: Remove pipeline job rerun capability
 status: executing
 stopped_at: Phase 37 UI-SPEC approved
-last_updated: "2026-07-14T21:14:19.534Z"
+last_updated: "2026-07-14T21:23:15.630Z"
 last_activity: 2026-07-14
 last_activity_desc: Phase 34 complete, transitioned to Phase 35
 progress:
   total_phases: 10
   completed_phases: 5
   total_plans: 26
-  completed_plans: 21
+  completed_plans: 23
   percent: 50
 ---
 
@@ -83,6 +83,7 @@ Two open design questions remain unresolved by design and are intentionally defe
 - [Phase 34]: Native invalid events are suppressed and Case constraints accumulate before first-invalid focus
 - [Phase 34]: Empty editable pill submissions are canceled client-side while readonly behavior is unchanged
 - [Phase 34]: Clear only native-owned required flags at the constraint-valid enhanced-submit boundary; later server-required state remains authoritative
+- [Phase ?]: [Phase 35, Plan 02]: Removal is represented by complete absence of the rerun action and error payload; no compatibility UI was added.
 
 ### Roadmap Evolution
 
@@ -193,10 +194,11 @@ Items acknowledged and deferred at v1.5 milestone close on 2026-07-12:
 | Phase 34 P02 | 8m | 2 tasks | 3 files |
 | Phase 34 P03 | 10m | 2 tasks | 4 files |
 | Phase 34 P04 | 35min | 1 tasks | 3 files |
+| Phase 35 P02 | 10min | 2 tasks | 2 files |
 
 ## Session Continuity
 
-Last session: 2026-07-14T21:11:32.408Z
+Last session: 2026-07-14T21:23:15.618Z
 Stopped at: Phase 37 UI-SPEC approved
 Resume file: .planning/phases/37-tenure-seat-as-chief-associate-toggle/37-UI-SPEC.md
 

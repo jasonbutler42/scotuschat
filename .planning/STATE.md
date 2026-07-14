@@ -4,17 +4,17 @@ milestone: v1.6
 milestone_name: Backlog Cleanup
 current_phase: 35
 current_phase_name: Remove pipeline job rerun capability
-status: executing
+status: complete
 stopped_at: Phase 37 UI-SPEC approved
-last_updated: "2026-07-14T21:23:52.797Z"
+last_updated: "2026-07-14T21:33:58.279Z"
 last_activity: 2026-07-14
-last_activity_desc: Phase 34 complete, transitioned to Phase 35
+last_activity_desc: Phase 35 complete - removal contracts verified
 progress:
   total_phases: 10
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 26
-  completed_plans: 23
-  percent: 50
+  completed_plans: 24
+  percent: 60
 ---
 
 # Project State
@@ -29,9 +29,9 @@ See: .planning/PROJECT.md (updated 2026-07-14 after Phase 34 verification)
 ## Current Position
 
 Phase: 35 — Remove pipeline job rerun capability
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-07-14 — Phase 34 complete, transitioned to Phase 35
+Plan: 3 of 3 complete
+Status: Complete
+Last activity: 2026-07-14 — Phase 35 complete; all removal and neighboring contracts verified
 
 ## Performance Metrics
 
@@ -86,6 +86,8 @@ Two open design questions remain unresolved by design and are intentionally defe
 - [Phase ?]: [Phase 35, Plan 02]: Removal is represented by complete absence of the rerun action and error payload; no compatibility UI was added.
 - [Phase 35]: Retire same-source recreation by deleting the route and service function, leaving ordinary creation and durable history unchanged.
 - [Phase 35]: Retain broad rerun wording only where it describes legitimate PipelineRun history rather than an operator capability.
+- [Phase 35]: Exact retired-symbol matches are allowed only in deliberate negative regressions; broad rerun language remains for legitimate run history and re-execution semantics.
+- [Phase 35]: Commit-owning public-boundary tests use the configured isolated database with explicit cleanup.
 
 ### Roadmap Evolution
 
@@ -198,13 +200,14 @@ Items acknowledged and deferred at v1.5 milestone close on 2026-07-12:
 | Phase 34 P04 | 35min | 1 tasks | 3 files |
 | Phase 35 P02 | 10min | 2 tasks | 2 files |
 | Phase 35 P01 | 12min | 2 tasks | 3 files |
+| Phase 35 P03 | 20min | 2 tasks | 2 files |
 
 ## Session Continuity
 
-Last session: 2026-07-14T21:23:15.618Z
+Last session: 2026-07-14T21:33:38.751Z
 Stopped at: Phase 37 UI-SPEC approved
 Resume file: .planning/phases/37-tenure-seat-as-chief-associate-toggle/37-UI-SPEC.md
 
 ## Operator Next Steps
 
-- Run $gsd-discuss-phase 35 to gather context for removing pipeline job rerun capability, or $gsd-plan-phase 35 to plan directly.
+- Run $gsd-verify-work 35 to validate the completed capability removal, or continue the already-prepared Phase 37 design work.

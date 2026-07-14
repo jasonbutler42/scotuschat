@@ -111,7 +111,7 @@ Full phase details: `.planning/milestones/v1.5-ROADMAP.md`
 - [x] **Phase 32: Fix CourtTenure FK bookkeeping gap in merge/delete person service paths** - Merge/delete on a Justice with tenure rows no longer 500s (completed 2026-07-13)
 - [x] **Phase 33: `update_argument_metadata` unique-constraint guard** - Colliding (source_docket, question_number) returns 409/422 instead of 500 (completed 2026-07-14)
 - [x] **Phase 34: Blank case_name/docket_number validation** - Prevents slug/dedup corruption from cleared fields (completed 2026-07-14)
-- [ ] **Phase 35: `rerun_job` never spawns ingest for locally-uploaded jobs** - Local-upload reruns actually progress instead of sitting at PENDING forever
+- [x] **Phase 35: `rerun_job` never spawns ingest for locally-uploaded jobs** - Local-upload reruns actually progress instead of sitting at PENDING forever (completed 2026-07-14)
 - [ ] **Phase 36: Click-to-copy extracted values design pattern** - Consistent click-to-copy affordance across pipeline run pages and argument editor
 - [ ] **Phase 37: Represent tenure Seat as a Chief/Associate toggle instead of free text** - Open design question (numbered-seat data vs. binary toggle) resolved during discuss-phase
 - [ ] **Phase 38: Rethink Full Name vs. name-part fields in the people editor** - Open design question (auto-derive vs. independently editable) resolved during discuss-phase
@@ -233,7 +233,7 @@ Plans:
   3. Rerun-specific tests and stale code references are removed or rewritten.
   4. Creating jobs, recovering failed steps, viewing source PDFs, and viewing existing jobs continue to work unchanged.
 
-**Plans**: 2/3 plans executed
+**Plans**: 3/3 plans complete
 
 Plans:
 **Wave 1**
@@ -243,7 +243,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 35-03-PLAN.md — Add focused removal regressions and run the complete backend/frontend verification matrix
+- [x] 35-03-PLAN.md — Add focused removal regressions and run the complete backend/frontend verification matrix
 
 ### Phase 36: Click-to-copy extracted values design pattern
 
@@ -365,7 +365,7 @@ Plans:
 | 32. Fix CourtTenure FK bookkeeping gap in merge/delete person service paths | v1.6 | 2/2 | Complete    | 2026-07-13 |
 | 33. `update_argument_metadata` unique-constraint guard | v1.6 | 4/4 | Complete   | 2026-07-14 |
 | 34. Blank case_name/docket_number validation | v1.6 | 4/4 | Complete    | 2026-07-14 |
-| 35. `rerun_job` never spawns ingest for locally-uploaded jobs | v1.6 | 2/3 | In Progress|  |
+| 35. `rerun_job` never spawns ingest for locally-uploaded jobs | v1.6 | 3/3 | Complete   | 2026-07-14 |
 | 36. Click-to-copy extracted values design pattern | v1.6 | TBD | Not started | - |
 | 37. Represent tenure Seat as a Chief/Associate toggle instead of free text | v1.6 | TBD | Not started | - |
 | 38. Rethink Full Name vs. name-part fields in the people editor | v1.6 | TBD | Not started | - |

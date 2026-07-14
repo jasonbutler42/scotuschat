@@ -44,6 +44,8 @@ import httpx
 from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 
+from api.services.argument_uniqueness import is_argument_pair_violation
+
 from api.models.models import (
     AdminJob,
     AdminJobStatus,
@@ -408,10 +410,12 @@ async def _run_ingest_inner(args) -> None:
         session.add(argument)
         try:
             await session.flush()  # get argument.id; raises IntegrityError on duplicate
-        except IntegrityError:
-            raise ValueError(
-                f"Duplicate argument: docket {primary_docket!r} Q{args.question} already exists."
-            )
+        except IntegrityError as exc:
+            if is_argument_pair_violation(exc):
+                raise ValueError(
+                    f"Duplicate argument: docket {primary_docket!r} Q{args.question} already exists."
+                ) from None
+            raise
 
         # ---- c. CaseArgument rows (idempotent) ----
         for case in cases:

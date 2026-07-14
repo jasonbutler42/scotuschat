@@ -12,12 +12,20 @@ DB-dependent tests skip gracefully when DATABASE_URL is not configured
 """
 
 import argparse
+import inspect
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from pipeline.commands.ingest import _validate_url, run_ingest
+from pipeline.commands.ingest import _run_ingest_inner, _validate_url, run_ingest
+
+
+def test_ingest_duplicate_path_uses_named_constraint_classifier():
+    source = inspect.getsource(_run_ingest_inner)
+    assert "is_argument_pair_violation(exc)" in source
+    assert "except IntegrityError as exc" in source
+    assert "raise\n" in source
 
 
 # ===========================================================================

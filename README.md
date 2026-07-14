@@ -288,6 +288,44 @@ The root `.env` remains owned by Python processes and `app/.env` by SvelteKit;
 the ports and exact-match `ADMIN_TOKEN` contract are identical on every
 platform.
 
+## Verify the local stack
+
+Use this checklist after either platform's startup steps:
+
+1. Confirm PostgreSQL accepts an authenticated connection on port `5432`
+   (`psql` or the migration command above is sufficient proof).
+2. Open `http://localhost:8000/health`. It must return HTTP 200 with
+   `{"status":"ok"}`.
+3. Open `http://localhost:5173`; the public SCOTUS Chat application must load.
+4. Visit `http://localhost:5173/admin/login` and sign in with the
+   `ADMIN_USERNAME` and `ADMIN_PASSWORD` configured in `app/.env`. A successful
+   login reaches an authenticated admin page and remains signed in when that
+   page is refreshed.
+
+An empty database at Alembic head with these checks passing is a fully usable
+local stack. Imported arguments, justices, transcripts, and other content are
+not required for setup success. Likewise, LLM providers, object storage,
+deployment configuration, and a separate test database are optional and are
+grouped by purpose in the environment example files; none is required by the
+health endpoint.
+
+### Optional next steps
+
+To provision the guarded test database, first set `TEST_DATABASE_URL` to a
+dedicated local database as described in `.env.example`, then run:
+
+```bash
+python scripts/provision_test_db.py
+```
+
+The script intentionally refuses unsafe database targets. Do not point it at
+the development or production database. To import the first optional public
+content after the base stack is healthy, run:
+
+```bash
+python -m pipeline import-justices
+```
+
 ## Attribution / Credits
 
 Some oral arguments on this site come from a historical bulk import rather

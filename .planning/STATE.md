@@ -5,15 +5,15 @@ milestone_name: Backlog Cleanup
 current_phase: 33
 current_phase_name: `update_argument_metadata` unique-constraint guard
 status: executing
-stopped_at: Completed 33-01-PLAN.md
-last_updated: "2026-07-14T12:47:09.589Z"
+stopped_at: Completed 33-03-PLAN.md
+last_updated: "2026-07-14T12:53:16.019Z"
 last_activity: 2026-07-13
 last_activity_desc: Phase 32 complete, transitioned to Phase 33
 progress:
   total_phases: 10
   completed_phases: 2
   total_plans: 16
-  completed_plans: 11
+  completed_plans: 12
   percent: 20
 ---
 
@@ -70,6 +70,8 @@ Two open design questions remain unresolved by design and are intentionally defe
 - [Phase 32]: tenures joins the blocking tier (utterances/appearances/argument_participants) in the client-side can_delete/delete_block_count check, not the aliases bucket (D-01/D-05)
 - [Phase 33]: Only concrete docket/question pairs participate in uniqueness checks — Matches PostgreSQL NULL uniqueness semantics
 - [Phase 33]: Preserve submitted final pair structurally across rollback — Winner lookup must not use restored pre-update values
+- [Phase 33]: Only validated duplicate_argument data with a positive integer conflict id crosses into form state — Prevents backend text and unsafe navigation ids from crossing the trust boundary
+- [Phase 33]: Returned argued_date uses property presence for precedence — An attempted blank date is meaningful state and must override the loaded value
 
 ### Roadmap Evolution
 
@@ -170,11 +172,12 @@ Items acknowledged and deferred at v1.5 milestone close on 2026-07-12:
 | Phase 32 P01 | 15min | 2 tasks | 3 files |
 | Phase 32 P02 | 10min | 2 tasks | 2 files |
 | Phase 33 P01 | 12min | 2 tasks | 5 files |
+| Phase 33 P03 | 3min | 2 tasks | 4 files |
 
 ## Session Continuity
 
-Last session: 2026-07-14T12:47:09.576Z
-Stopped at: Completed 33-01-PLAN.md
+Last session: 2026-07-14T12:53:16.007Z
+Stopped at: Completed 33-03-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

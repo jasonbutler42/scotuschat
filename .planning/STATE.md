@@ -5,14 +5,14 @@ milestone_name: Backlog Cleanup
 current_phase: 33
 current_phase_name: metadata-update-unique-constraint-guard
 status: executing
-stopped_at: Completed 33-04-PLAN.md
-last_updated: "2026-07-14T16:13:44.757Z"
+stopped_at: Phase 35 context gathered
+last_updated: "2026-07-14T16:30:50.783Z"
 last_activity: 2026-07-14
 last_activity_desc: Phase 33 gap closure complete
 progress:
   total_phases: 10
   completed_phases: 4
-  total_plans: 17
+  total_plans: 22
   completed_plans: 17
   percent: 40
 ---
@@ -185,9 +185,9 @@ Items acknowledged and deferred at v1.5 milestone close on 2026-07-12:
 
 ## Session Continuity
 
-Last session: 2026-07-14T15:51:36.057Z
-Stopped at: Completed 33-04-PLAN.md
-Resume file: None
+Last session: 2026-07-14T16:30:50.159Z
+Stopped at: Phase 35 context gathered
+Resume file: .planning/phases/35-rerun-job-local-upload-no-ingest/35-CONTEXT.md
 
 ## Operator Next Steps
 

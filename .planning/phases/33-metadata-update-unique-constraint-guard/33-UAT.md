@@ -1,32 +1,40 @@
 ---
-status: testing
+status: complete
 phase: 33-metadata-update-unique-constraint-guard
 source: [33-VERIFICATION.md]
 started: 2026-07-14T13:06:00Z
-updated: 2026-07-14T13:06:00Z
+updated: 2026-07-14T13:30:00Z
 ---
 
 ## Current Test
 
-number: 1
-name: Duplicate recovery through both admin routes
-expected: |
-  From both the pipeline job page and direct argument page, a colliding save preserves dockets, question number, and argued date. Focus lands on the single inline alert; its link is keyboard reachable, opens the numeric conflicting argument in a new tab, and isolates the opener.
-awaiting: user response
+[testing complete]
 
 ## Tests
 
 ### 1. Duplicate recovery through both admin routes
 expected: From both the pipeline job page and direct argument page, a colliding save preserves dockets, question number, and argued date. Focus lands on the single inline alert; its link is keyboard reachable, opens the numeric conflicting argument in a new tab, and isolates the opener.
-result: [pending]
+result: issue
+reported: "Everything works as expected including the window.opener check with one exception: the error message lists \"Open conflicting argument\" twice like this \"An argument already uses docket blobby, question 1. Open conflicting argument. Open conflicting argument.\""
+severity: major
 
 ## Summary
 
 total: 1
 passed: 0
-issues: 0
-pending: 1
+issues: 1
+pending: 0
 skipped: 0
 blocked: 0
 
 ## Gaps
+
+- truth: "From both admin routes, duplicate recovery appears as one inline alert with one recovery link while preserving attempted metadata, moving focus to the alert, and opening the numeric conflict safely in a new tab."
+  status: failed
+  reason: "User reported: Everything works as expected including the window.opener check with one exception: the error message lists 'Open conflicting argument' twice: 'An argument already uses docket blobby, question 1. Open conflicting argument. Open conflicting argument.'"
+  severity: major
+  test: 1
+  root_cause: ""
+  artifacts: []
+  missing: []
+  debug_session: ""

@@ -369,41 +369,6 @@ export const actions: Actions = {
 	},
 
 	/**
-	 * rerun — POST to /api/admin/jobs/{job_id}/rerun to start a fresh pipeline run using
-	 * the same source PDF. On success: redirect to the new job's detail page.
-	 * On failure: return fail with rerunError key.
-	 */
-	rerun: async ({ params }) => {
-		let res: Response;
-		try {
-			res = await fetch(`${FASTAPI_BASE_URL}/api/admin/jobs/${params.job_id}/rerun`, {
-				method: 'POST',
-				headers: { 'X-Admin-Token': ADMIN_TOKEN },
-			});
-		} catch {
-			return fail(502, { rerunError: 'Could not start re-run. Try again.' });
-		}
-
-		if (!res.ok) {
-			return fail(422, { rerunError: 'Could not start re-run. Try again.' });
-		}
-
-		let newJobId: number | null = null;
-		try {
-			const body = await res.json();
-			newJobId = body.id ?? null;
-		} catch {
-			// fallback — stay on current page if we can't parse the new job id
-		}
-
-		if (newJobId == null) {
-			return fail(502, { rerunError: 'Re-run started but could not navigate to the new run.' });
-		}
-
-		throw redirect(303, `/admin/pipeline/${newJobId}`);
-	},
-
-	/**
 	 * addPerson — create a new person inline during discrepancy review (D-13).
 	 *
 	 * Accepts full_name and (optional) role_name from formData for the older

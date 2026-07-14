@@ -71,6 +71,8 @@ from dateutil import parser as dateutil_parser
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 
+from api.services.argument_uniqueness import is_argument_pair_violation
+
 from api.models.models import (
     AdminJob,
     AdminJobStatus,
@@ -445,7 +447,9 @@ async def _import_conversation(
     session.add(argument)
     try:
         await session.flush()
-    except IntegrityError:
+    except IntegrityError as exc:
+        if not is_argument_pair_violation(exc):
+            raise
         # Defense-in-depth safety net: any residual (source_docket,
         # question_number) collision that _next_question_number could not
         # prevent (e.g. a concurrent writer) is caught here, rolled back,

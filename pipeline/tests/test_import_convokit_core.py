@@ -18,6 +18,7 @@ synthetic corpus_dir trees written to tmp_path (D-18/RESEARCH.md convention).
 """
 
 import argparse
+import inspect
 import json
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -25,6 +26,17 @@ from unittest.mock import patch
 
 import pytest
 from sqlalchemy import select
+
+from pipeline.commands.import_convokit import _import_conversation
+
+
+def test_collision_counter_only_handles_named_pair_constraint():
+    source = inspect.getsource(_import_conversation)
+    assert "if not is_argument_pair_violation(exc):" in source
+    assert "docket_question_conflict" in source
+    assert source.index("if not is_argument_pair_violation(exc):") < source.index(
+        'counters["docket_question_conflict"]'
+    )
 
 from api.models.models import (
     Argument,

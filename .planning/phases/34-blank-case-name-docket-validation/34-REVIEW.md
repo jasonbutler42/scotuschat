@@ -1,73 +1,52 @@
 ---
 phase: 34-blank-case-name-docket-validation
-reviewed: 2026-07-14T18:34:00Z
+reviewed: 2026-07-14T19:07:24Z
 depth: standard
-files_reviewed: 10
+files_reviewed: 3
 files_reviewed_list:
-  - api/schemas/admin_arguments.py
-  - api/services/admin_arguments.py
-  - api/tests/test_admin_arguments_service.py
-  - api/tests/test_admin_arguments_routes.py
-  - app/src/routes/admin/arguments/[id]/+page.server.ts
-  - app/src/routes/admin/pipeline/[job_id]/+page.server.ts
-  - api/tests/test_question_number_nullable.py
+  - app/tests/case-required-recovery.browser.test.mjs
   - app/src/routes/admin/arguments/[id]/+page.svelte
-  - app/src/lib/components/ArgumentDetailsCard.svelte
-  - app/src/lib/components/DocketPillInput.svelte
+  - api/tests/test_question_number_nullable.py
 findings:
-  critical: 1
+  critical: 0
   warning: 1
   info: 0
-  total: 2
+  total: 1
 status: issues_found
 ---
 
 # Phase 34: Code Review Report
 
-**Reviewed:** 2026-07-14T18:34:00Z
+**Reviewed:** 2026-07-14T19:07:24Z
 **Depth:** standard
-**Files Reviewed:** 10
+**Files Reviewed:** 3
 **Status:** issues_found
 
 ## Summary
 
-The API-boundary validation and structured location parsing are coherent, but the native Case form keeps client validation flags after the inputs become valid. That stale state produces false required feedback after a later non-required failure. The source-contract tests do not exercise this state transition and therefore allow the defect to pass.
+Plan 34-04 resolves the previous CR-01: the constraint-valid `use:enhance` callback now clears both native-only flags synchronously before saving, while the later `update()` result remains the owner of structured server-required state. The authenticated Edge/CDP regression exercises the actual invalid-event, correction, server-required, collision, and generic-failure lifecycle, so the previous WR-01 source-only coverage concern is also resolved. Exact copy/order, attempted values, ARIA state, borders, and established collision/generic rendering remain intact.
+
+One test-harness robustness warning remains. The spawned Vite and browser processes are cleaned up on ordinary assertion failures, but their startup errors and premature exits are not observed directly, weakening the fail-closed cleanup guarantee under damaged or permission-blocked installations.
 
 ## Narrative Findings (AI reviewer)
 
-## Critical Issues
-
-### CR-01: Corrected Case fields retain stale required state across later submissions
-
-**File:** `app/src/routes/admin/arguments/[id]/+page.svelte:14-17,25-30,149-157`
-
-**Issue:** `nativeCaseNameRequired` and `nativeDocketRequired` are set only by `invalid` events. Once either becomes `true`, correcting the field means the browser no longer emits an `invalid` event, and the enhanced submission path never clears or recomputes the native flags. If that corrected submission then fails for a slug collision, docket collision, network error, or another generic server error, `caseNameRequired`/`docketRequired` remain true, so the UI continues to show a false required message, red border, and invalid ARIA state. The required branch also visually takes precedence over the actual server error. This violates the phase requirement that corrected attempts expose the applicable failure and can misdirect the operator indefinitely until a successful redirect.
-
-**Fix:** Recompute or clear the native flags at the start of every enhanced submission, which only runs after native constraint validation has passed. For example:
-
-```svelte
-use:enhance={() => {
-  nativeCaseNameRequired = false;
-  nativeDocketRequired = false;
-  savingState = true;
-  // existing callback
-}}
-```
-
-Alternatively, clear each flag on input when its control becomes valid, while preserving the ordered scan in `handleCaseInvalid`.
-
 ## Warnings
 
-### WR-01: Source-text assertions do not cover validation-state recovery
+### WR-01: Subprocess startup failures are not observed and can bypass deterministic cleanup
 
-**File:** `api/tests/test_question_number_nullable.py:69-84`
+**File:** `app/tests/case-required-recovery.browser.test.mjs:180-211`
 
-**Issue:** The Case form regression test checks only that selected source fragments exist and appear in a particular order. It never executes the state sequence “invalid submit → correct field → non-required action failure,” so it passes while CR-01 is present. These assertions also cannot prove that Svelte reactivity updates the rendered alert, ARIA attributes, or focus target.
+**Issue:** Both `spawn(...)` calls are created without an `error` listener or an early-exit promise. `browserExecutable()` verifies only that a path exists, not that the executable can launch. If Edge exists but is blocked, corrupt, or denied by policy, Node emits an `error` event on the child process; without a listener this becomes an uncaught asynchronous error rather than a controlled test failure. Likewise, if Vite or Edge exits before becoming ready, the harness waits for the full HTTP/CDP timeout instead of reporting the subprocess failure. Depending on how the test runner handles that uncaught event, the callback's `finally` cleanup may be delayed or obscured, contrary to the plan's explicit fail-closed process-cleanup requirement.
 
-**Fix:** Add a component/browser test that submits with both Case fields blank, corrects them, forces a generic or collision failure, and verifies that required copy and invalid ARIA state are cleared while the actual failure remains visible. Retain the source checks only for contracts that cannot yet be exercised by the available runner.
+**Fix:** Attach `error` and `exit` observers immediately after each spawn, race readiness against a startup-failure promise, and include the executable/process exit details in the rejection. Keep the existing `finally` block as the single cleanup owner. For example, use a helper that returns `{ child, failed }`, where `failed` rejects on `error` or on `exit` before readiness, then `await Promise.race([waitFor(...), failed])` for Vite and Edge/CDP startup.
+
+## Resolved Prior Findings
+
+- **Prior CR-01 resolved:** `app/src/routes/admin/arguments/[id]/+page.svelte:150-151` clears both native-only flags before `savingState`, preventing corrected submissions from inheriting stale required copy, borders, ARIA state, or focus behavior.
+- **Prior WR-01 resolved:** `app/tests/case-required-recovery.browser.test.mjs` now drives the actual authenticated Svelte component lifecycle in a real browser; `api/tests/test_question_number_nullable.py` is appropriately supplemental rather than the sole evidence.
 
 ---
 
-_Reviewed: 2026-07-14T18:34:00Z_
-_Reviewer: the agent (gsd-code-reviewer)_
+_Reviewed: 2026-07-14T19:07:24Z_
+_Reviewer: Codex (gsd-code-reviewer)_
 _Depth: standard_

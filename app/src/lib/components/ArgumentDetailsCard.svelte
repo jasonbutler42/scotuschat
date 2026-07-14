@@ -29,6 +29,7 @@
 			argued_date?: string | null;
 			conflict?: DuplicateArgumentConflict;
 			saveError?: string;
+			docketRequired?: boolean;
 			saved?: boolean;
 		} | null;
 	}
@@ -45,11 +46,14 @@
 	let effectiveDockets = $state<string[]>(savedValues.dockets ?? []);
 	let saving = $state(false);
 	let alertElement: HTMLParagraphElement | null = $state(null);
+	let docketControl: { focus: () => void; hasPills: () => boolean } | null = $state(null);
+	let clientDocketRequired = $state(false);
+	let docketRequired = $derived(clientDocketRequired || form?.docketRequired === true);
 
 	// D-06: on failed save, re-seed DocketPillInput from form.dockets (not from savedValues)
 	$effect(() => {
-		if (form?.dockets) {
-			effectiveDockets = form.dockets;
+		if (form && 'dockets' in form) {
+			effectiveDockets = form.dockets ?? [];
 		}
 	});
 </script>
@@ -78,7 +82,14 @@
 	<form
 		method="POST"
 		{action}
-		use:enhance={() => {
+		use:enhance={({ cancel }) => {
+			if (!readonly && !docketControl?.hasPills()) {
+				cancel();
+				clientDocketRequired = true;
+				void tick().then(() => docketControl?.focus());
+				return;
+			}
+			clientDocketRequired = false;
 			saving = true;
 			return async ({ result, update }) => {
 				saving = false;
@@ -86,7 +97,8 @@
 					// Pitfall 4 guard: reset:true would wipe pill $state — use default update() on failure
 					await update();
 					await tick();
-					alertElement?.focus();
+					if (form?.docketRequired) docketControl?.focus();
+					else alertElement?.focus();
 				} else {
 					// Pitfall 4 guard: reset:false is mandatory — reset:true wipes pill $state on success
 					await update({ reset: false });
@@ -105,10 +117,13 @@
 
 			{#key effectiveDockets.join('')}
 				<DocketPillInput
+					bind:this={docketControl}
 					initialValues={effectiveDockets}
 					name="docket[]"
 					id="docket-input"
 					{readonly}
+					invalid={docketRequired}
+					descriptionId="argument-details-alert"
 				/>
 			{/key}
 			<!-- Docket hint row: always visible (D-07/PJOB-04); read-only pills (D-09) -->
@@ -237,8 +252,9 @@
 				Saved.
 			</p>
 		{/if}
-		{#if form?.saveError || form?.conflict}
+		{#if docketRequired || form?.saveError || form?.conflict}
 			<p
+				id="argument-details-alert"
 				bind:this={alertElement}
 				role="alert"
 				tabindex="-1"
@@ -248,7 +264,9 @@
 					margin-bottom: 16px;
 				"
 			>
-				{#if form.conflict}
+				{#if docketRequired}
+					Add at least one docket.
+				{:else if form?.conflict}
 					{form.conflict.message}
 					<a
 						href={`/admin/arguments/${form.conflict.conflicting_argument_id}`}
@@ -256,7 +274,7 @@
 						rel="noopener noreferrer"
 					>Open conflicting argument</a>.
 				{:else}
-					{form.saveError}
+					{form?.saveError}
 				{/if}
 			</p>
 		{/if}

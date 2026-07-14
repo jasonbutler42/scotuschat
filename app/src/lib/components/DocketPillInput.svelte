@@ -4,17 +4,30 @@
 		name?: string;
 		readonly?: boolean;
 		id?: string;
+		invalid?: boolean;
+		descriptionId?: string;
 	}
 
 	let {
 		initialValues = [],
 		name = 'docket[]',
 		readonly = false,
-		id = 'docket-input'
+		id = 'docket-input',
+		invalid = false,
+		descriptionId
 	}: DocketPillInputProps = $props();
 
 	let pills = $state<string[]>(initialValues);
 	let docketInput = $state('');
+	let inputElement: HTMLInputElement | null = $state(null);
+
+	export function focus() {
+		inputElement?.focus();
+	}
+
+	export function hasPills() {
+		return pills.length > 0;
+	}
 
 	function addPill() {
 		const v = docketInput.trim();
@@ -100,10 +113,13 @@
 	Type a docket number and press Enter to add it.
 </p>
 <input
+	bind:this={inputElement}
 	{id}
 	type="text"
 	bind:value={docketInput}
 	disabled={readonly}
+	aria-invalid={!readonly && invalid ? 'true' : undefined}
+	aria-describedby={!readonly && invalid ? descriptionId : undefined}
 	onkeydown={(e) => {
 		if (e.key === 'Enter') {
 			e.preventDefault();
@@ -113,7 +129,7 @@
 	style="
 		width: 100%;
 		background-color: #0f1117;
-		border: 1px solid #334155;
+		border: 1px solid {!readonly && invalid ? '#ef4444' : '#334155'};
 		border-radius: 6px;
 		padding: 8px 12px;
 		font-size: 16px;

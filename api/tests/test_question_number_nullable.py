@@ -139,3 +139,20 @@ def test_duplicate_message_and_component_compose_one_recovery_phrase() -> None:
     assert recovery_label not in api_message
     assert source.count(recovery_label) == 1
     assert f"{api_message} {recovery_label}.".count(recovery_label) == 1
+
+
+def test_docket_pill_required_contract_blocks_empty_and_exposes_focus() -> None:
+    card = _frontend_source("src/lib/components/ArgumentDetailsCard.svelte")
+    pill = _frontend_source("src/lib/components/DocketPillInput.svelte")
+
+    assert "form && 'dockets' in form" in card
+    assert "!docketControl?.hasPills()" in card
+    assert "cancel();" in card
+    assert "Add at least one docket." in card
+    assert "if (form?.docketRequired) docketControl?.focus()" in card
+    assert 'descriptionId="argument-details-alert"' in card
+    assert "export function focus()" in pill
+    assert "export function hasPills()" in pill
+    assert "aria-invalid={!readonly && invalid ? 'true' : undefined}" in pill
+    assert "aria-describedby={!readonly && invalid ? descriptionId : undefined}" in pill
+    assert "e.preventDefault();" in pill

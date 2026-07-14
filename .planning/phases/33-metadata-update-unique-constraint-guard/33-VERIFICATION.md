@@ -1,76 +1,88 @@
 ---
 phase: 33-metadata-update-unique-constraint-guard
-verified: 2026-07-14T13:04:31Z
-status: human_needed
-score: 9/9 automated must-haves verified
-behavior_unverified: 1
+verified: 2026-07-14T16:15:00Z
+status: gaps_found
+score: 9/10
 overrides_applied: 0
-human_verification:
-  - "Exercise duplicate metadata saves through both admin routes and confirm value retention, alert focus, and safe new-tab navigation."
+gaps:
+  - id: CR-01
+    severity: blocker
+    truth: "Parse pre-checks only a docket fill that can actually occur, preserves an existing operator docket, excludes self, permits NULL question, and remains race-safe."
+    reason: "pipeline/commands/parse.py performs find_argument_by_pair for every extracted primary docket before testing whether the current argument already has source_docket. A conflict can therefore fail parsing even though the subsequent source_docket IS NULL update would be a no-op."
+    artifacts:
+      - path: "pipeline/commands/parse.py"
+        issue: "The pre-check at lines 374-387 is not conditional on argument_row.source_docket being None."
+      - path: "pipeline/tests/test_parse.py"
+        issue: "The Phase 33 test only inspects source text and does not execute the existing-operator-docket control flow."
+    missing:
+      - "Gate both the pair pre-check and conditional write on the current source_docket being NULL."
+      - "Add a behavioral regression proving an extracted conflicting docket does not fail or replace an existing operator docket."
 ---
 
 # Phase 33: Metadata Update Unique-Constraint Guard Verification
 
 **Phase goal:** Guard metadata updates against the `(source_docket, question_number)` unique constraint across the admin service and every offline writer, returning exact sanitized recovery instead of an unhandled 500.
 
-**Status:** `human_needed` — implementation and automated behavior pass; one planned browser accessibility check remains.
+**Status:** `gaps_found` — Plan 33-04 closes the duplicate-copy UAT defect, but the parse offline writer still rejects a harmless extracted conflict when its guarded docket write cannot occur.
 
 ## Observable Truths
 
 | # | Truth | Status | Evidence |
 |---|---|---|---|
-| 1 | A colliding admin metadata save returns a structured 409 rather than an unhandled 500. | VERIFIED | `api/services/admin_arguments.py` computes the final pair with self-exclusion and raises `DuplicateArgumentError`; `api/routers/admin.py` maps both the pre-check and exact named-constraint race to `duplicate_argument` 409 payloads. Route tests cover both paths and sanitization. |
-| 2 | A unique metadata save continues to succeed. | VERIFIED | The existing update path remains intact after the pre-check and commits normally; `test_admin_arguments_service.py` exercises non-colliding/NULL/self cases and the focused suite passes. |
-| 3 | The canonical predicate matches PostgreSQL NULL semantics and excludes the row being edited. | VERIFIED | `api/services/argument_uniqueness.py::find_argument_by_pair` returns early for either NULL and adds `Argument.id != exclude_argument_id` when supplied. |
-| 4 | Only the exact named database constraint enters duplicate recovery. | VERIFIED | `is_argument_pair_violation` walks structured `constraint_name`/`diag.constraint_name` data and exception chains cycle-safely; raw message text is not classified. Tests prove message-only and unrelated constraints do not match. |
-| 5 | Ingest handles only the named pair violation as a duplicate. | VERIFIED | `pipeline/commands/ingest.py` classifies `IntegrityError` with the shared helper and re-raises unrelated failures. |
-| 6 | ConvoKit handles only the named race through its conflict counter/channel. | VERIFIED | `pipeline/commands/import_convokit.py` uses the shared classifier, rolls back and increments `docket_question_conflict` only for the named constraint, and re-raises unrelated failures. |
-| 7 | Parse guards its conditional docket write with final-pair/self semantics and exact race classification. | VERIFIED | `pipeline/commands/parse.py` combines extracted docket with stored question, excludes the current id, flushes the conditional update, and maps only the named race to sanitized `ValueError`. |
-| 8 | Both SvelteKit actions accept only the validated duplicate shape and preserve all attempted metadata on every failure. | VERIFIED | Both `+page.server.ts` actions require `duplicate_argument`, a non-empty message, and a positive integer conflict id; all failure branches return docket/question/date attempted values. Focused source-contract tests pass. |
-| 9 | The shared card renders one accessible recovery alert and a locally constructed safe conflict link. | VERIFIED | `ArgumentDetailsCard.svelte` uses one `role=alert` with `tabindex=-1`, runs `update()` then `tick()` then focus, and builds `/admin/arguments/{numeric id}` with `_blank` plus `noopener noreferrer`. `svelte-check` reports 0 errors. |
+| 1 | A colliding admin metadata save returns a structured, sanitized 409 rather than an unhandled 500. | VERIFIED | `admin_arguments.py` checks the final pair with self-exclusion; `admin.py` maps pre-check and exact named-constraint races to the same structured response. |
+| 2 | A unique, partial, unchanged, self, or NULL-pair metadata save continues to follow PostgreSQL uniqueness semantics. | VERIFIED | Service tests cover final-pair construction, self-exclusion, unchanged values, and NULL short-circuit behavior. |
+| 3 | Only the exact named database constraint enters duplicate recovery. | VERIFIED | `argument_uniqueness.py` reads structured constraint metadata and tests reject message-only and unrelated failures. |
+| 4 | Ingest handles only the named pair violation as a duplicate. | VERIFIED | The shared classifier controls the duplicate channel; unrelated integrity errors are re-raised and behaviorally tested. |
+| 5 | ConvoKit preserves its counter/rollback behavior only for the named collision. | VERIFIED | Named and non-target paths are separated and behaviorally tested. |
+| 6 | Parse pre-checks only a docket fill that can occur and preserves an existing operator docket. | **FAILED (BLOCKER)** | At `pipeline/commands/parse.py:374-387`, the lookup runs whenever an extracted docket exists. It does not first require `argument_row.source_docket is None`; the SQL update at lines 389-393 does require NULL and would otherwise be a no-op. |
+| 7 | Parse excludes self, permits NULL question, and classifies a raced named violation narrowly. | VERIFIED, subject to Truth 6 | The shared lookup receives `exclude_argument_id`; NULL is handled by the helper; the flush catch uses the exact classifier. |
+| 8 | Both SvelteKit actions validate the duplicate shape and preserve attempted metadata on failures. | VERIFIED | Both actions validate code/message/positive numeric id and return docket/question/date values through failure branches. |
+| 9 | The shared alert preserves focus and safe numeric new-tab recovery behavior. | VERIFIED | Source contracts pass, and UAT confirmed both routes, keyboard focus/navigation, retained values, and `window.opener === null`. |
+| 10 | Duplicate recovery copy appears exactly once with identical factual pre-check/race messages. | VERIFIED | Plan 33-04 removed link wording from both API builders; exact route and composed-copy regressions pass. |
 
-## Artifact and Wiring Verification
+## CR-01 Validation
 
-- `api/services/argument_uniqueness.py` is substantive and imported by the admin service and all three offline commands.
-- `api/services/admin_arguments.py` wires final-pair calculation to the shared lookup and preserves the raced pair on `IntegrityError` for post-rollback recovery.
-- `api/routers/admin.py` performs rollback before winner lookup and never exposes raw database text.
-- Both admin form actions consume the FastAPI contract and feed the same `ArgumentDetailsCard.svelte` recovery surface.
-- A repository-wide writer scan found the production pair writers in ingest, ConvoKit, parse, and the admin metadata service; each is covered by this implementation. Other matches are models, reads, or tests.
+CR-01 is **confirmed**, not refuted. The current order is:
 
-The automated artifact parser could not interpret the plans' free-form artifact strings (`No must_haves.artifacts found in frontmatter`), so artifact existence, substance, and wiring were verified directly from source.
+1. Load the argument and its question number.
+2. Look up the extracted `(docket, question)` pair and raise on conflict.
+3. Attempt an update guarded by `Argument.source_docket.is_(None)`.
 
-## Verification Runs
+For an argument whose operator docket is already non-NULL, step 3 cannot write anything. Nevertheless, step 2 can raise because another argument owns the *extracted* pair. This violates the plan truth that parse performs a conditional docket fill while preserving operator-entered data and means the all-writers portion of the phase goal is not achieved.
 
-| Command | Result |
+`pipeline/tests/test_parse.py::test_parse_docket_fill_uses_pair_precheck_and_named_race_classification` only checks that strings occur in `_run_parse_inner`; it does not prove the necessary ordering or execute this state transition. Passing suites therefore do not override the observable control-flow defect.
+
+## Artifact and Wiring Check
+
+- The shared uniqueness helper exists, is substantive, and is wired into the admin service plus ingest, ConvoKit, and parse.
+- Admin pre-check/race recovery is wired through both SvelteKit actions to the shared card.
+- Plan 33-04 is substantive and correctly gives the component sole ownership of `Open conflicting argument`.
+- Parse is wired to the helper, but its wiring is semantically too broad because the lookup is outside the existing-docket guard.
+
+## Verification Evidence
+
+| Check | Result |
 |---|---|
-| `.\.venv\Scripts\python.exe -m pytest api/tests/test_admin_arguments_service.py api/tests/test_admin_arguments_routes.py pipeline/tests/test_ingest.py pipeline/tests/test_import_convokit_core.py pipeline/tests/test_parse.py api/tests/test_question_number_nullable.py -q` | `99 passed in 38.83s` |
-| `npm --prefix app run check` | `0 errors, 16 warnings`; warnings are outside the Phase 33 behavior and include pre-existing reactive-state/a11y warnings. |
+| Focused Plan 33-04 checks | 14 passed, 8 skipped; Svelte check 0 errors |
+| Full configured regression suite | 445 passed, 5 xfailed |
+| Two-route browser UAT before 33-04 | Value retention, focus, keyboard navigation, numeric new tab, and opener isolation passed; duplicated copy was reported and then fixed by 33-04 |
+| Adversarial source review | CR-01 reproduced by direct control-flow inspection; no behavioral regression covers it |
 
 ## Requirements Coverage
 
 | Requirement | Status | Evidence |
 |---|---|---|
-| PIPE-27 | SATISFIED, pending human UI check | All three roadmap success criteria and all plan truths are implemented and covered by the passing focused suites. |
+| PIPE-27 | **BLOCKED** | The primary admin requirement is handled, but the phase contract and roadmap success criterion require consistency across every pair-writing path. Parse can still reject a no-op metadata fill. |
 
-## Human Verification Required
+## Required Next Action
 
-### Duplicate recovery through both admin routes
-
-**Test:** In a running admin UI, submit the same colliding docket/question pair once from the pipeline job page and once from the direct argument page.
-
-**Expected:** Both routes preserve dockets, question number, and argued date; focus lands on the single inline alert; its link is keyboard reachable, opens the numeric conflicting argument in a new tab, and the opener is isolated.
-
-**Why human:** The source contract and type-check prove the wiring, but browser focus movement, value presentation, and new-tab behavior require an actual browser interaction.
+Create and execute a gap-closure plan that moves the parse pre-check and update inside an `argument_row.source_docket is None` guard, retains the named-constraint race catch, and adds a behavioral test for an existing operator docket plus a conflicting extracted docket. Re-run Phase 33 verification afterward.
 
 ## Disconfirmation Pass
 
-- Partial requirement sought: no production pair writer was found outside the four guarded paths; global assignment/constructor scanning found only those paths plus models/tests.
-- Misleading test sought: the frontend tests are source-contract assertions rather than browser behavior, so they are not used to claim the remaining focus/new-tab behavior is fully proven.
-- Uncovered error path sought: unrelated `IntegrityError` paths are explicitly tested for the backend and offline writers; malformed/non-OK/network frontend responses are sanitized and retain attempted values, but final browser presentation remains the human item above.
-
-## Gaps Summary
-
-No implementation gaps found. Phase 33 is automated-verification complete, with one non-blocking human UAT item required before a fully `passed` verdict.
+- **Partially met requirement:** all writers import the shared helper, but parse invokes it when no write is eligible.
+- **Misleading passing test:** `test_parse_docket_fill_uses_pair_precheck_and_named_race_classification` verifies tokens, not control flow.
+- **Uncovered error path:** existing non-NULL operator docket + extracted docket owned by another argument.
 
 ---
 *Verifier: Codex generic-agent workaround for gsd-verifier*

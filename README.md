@@ -191,7 +191,7 @@ needed, applies Alembic migrations, and launches FastAPI and SvelteKit. It does
 not create the virtual environment, install dependencies, copy or edit env
 files, initialize PostgreSQL, or create the role and database.
 
-Open `http://localhost:5173` for the app; FastAPI is available at
+Open `http://localhost:5173/cases` for the public app; FastAPI is available at
 `http://localhost:8000`. Press Ctrl+C in the script window to stop the FastAPI
 and SvelteKit background jobs. The portable PostgreSQL server remains running
 and will be reused on the next start.
@@ -216,7 +216,7 @@ Set-Location app
 npm run dev
 ```
 
-Open `http://localhost:5173` for SvelteKit and
+Open `http://localhost:5173/cases` for the public SvelteKit app and
 `http://localhost:8000` for FastAPI. Press Ctrl+C in each terminal to stop its
 development server; manage the PostgreSQL Windows service separately.
 
@@ -296,7 +296,7 @@ Use this checklist after either platform's startup steps:
    (`psql` or the migration command above is sufficient proof).
 2. Open `http://localhost:8000/health`. It must return HTTP 200 with
    `{"status":"ok"}`.
-3. Open `http://localhost:5173`; the public SCOTUS Chat application must load.
+3. Open `http://localhost:5173/cases`; the public SCOTUS Chat application must load on port `5173`.
 4. Visit `http://localhost:5173/admin/login` and sign in with the
    `ADMIN_USERNAME` and `ADMIN_PASSWORD` configured in `app/.env`. A successful
    login reaches an authenticated admin page and remains signed in when that
@@ -325,6 +325,46 @@ content after the base stack is healthy, run:
 ```bash
 python -m pipeline import-justices
 ```
+
+## Troubleshooting
+
+- **Portable command is missing:** confirm
+  `Test-Path .\data\pgsql\bin\initdb.exe` is true. Re-extract the official
+  archive if `data/pgsql/bin` is incomplete; do not run similarly named files
+  downloaded from an unverified source.
+- **Portable cluster is uninitialized or stale:** inspect
+  `data/pgdata/logfile` and confirm the directory belongs to this checkout.
+  Initialize only a new, known-empty path. Never delete an unknown cluster to
+  make startup succeed.
+- **Port 5432, 8000, or 5173 is occupied:** diagnose first with
+  `Get-NetTCPConnection -State Listen | Where-Object LocalPort -In 5432,8000,5173`
+  and inspect each `OwningProcess` with `Get-Process -Id <pid>`. Stop only a
+  process you recognize and own; otherwise change the conflicting service's
+  configuration or ask its operator.
+- **Database authentication or connection fails:** verify host, port, role,
+  database, and password in `DATABASE_URL`, then test the same target with
+  `psql`. Do not weaken PostgreSQL authentication as a shortcut.
+- **Admin requests fail:** `ADMIN_TOKEN` must exist and match exactly in the
+  root `.env` and `app/.env`. Restart both application processes after changing
+  it. Never substitute production credentials.
+- **Admin login or session fails:** confirm `ADMIN_USERNAME` and
+  `ADMIN_PASSWORD` in `app/.env`, and generate a new independent
+  `SESSION_SECRET` of at least 32 characters. Restart SvelteKit after edits;
+  rotating the secret invalidates existing sessions.
+- **Python commands use the wrong interpreter:** activate `.venv` and confirm
+  `python -c "import sys; print(sys.executable)"` points inside the checkout.
+- **Alembic migration fails:** stop the API, re-check `DATABASE_URL`, then run
+  `python -m alembic current` and `python -m alembic upgrade head`. Read the
+  first database error rather than hand-creating tables.
+- **Frontend dependency or startup errors:** from `app`, run `npm ci` to restore
+  the lockfile-defined dependencies, then retry `npm run dev`. Do not delete or
+  rewrite `package-lock.json` as a troubleshooting shortcut.
+
+For safe restarts, use Ctrl+C in application terminals (or the portable
+script's terminal), confirm their PIDs have exited, and then run the documented
+startup command again. Manage a Windows PostgreSQL service separately. Stop a
+portable cluster only when its data directory and process are known to belong
+to this checkout, for example with its matching `pg_ctl -D <known-path> stop`.
 
 ## Attribution / Credits
 

@@ -72,17 +72,21 @@ Generate independent secrets with the operating system's secure random source:
 ```powershell
 $AdminToken = python -c "import secrets; print(secrets.token_urlsafe(48))"
 $SessionSecret = python -c "import secrets; print(secrets.token_urlsafe(48))"
+$DatabasePassword = python -c "import secrets; print(secrets.token_urlsafe(32))"
 ```
 
 Put `$AdminToken` in `ADMIN_TOKEN` in both `.env` files. Put
 `$SessionSecret` in `SESSION_SECRET` in `app/.env`. Choose your own local
 `ADMIN_USERNAME` and strong `ADMIN_PASSWORD`; do not reuse either generated
 token as a login credential. Set `FASTAPI_BASE_URL=http://localhost:8000`.
-Then set the root `DATABASE_URL` for the role and database created in the next
-section:
+Use the URL-safe `$DatabasePassword` value when PostgreSQL prompts for the
+`scotus` role password, then put that same value in the root `DATABASE_URL` for
+the role and database created in the next section. If you choose a password
+containing URI-reserved characters instead, percent-encode it in
+`DATABASE_URL` while entering the original value at PostgreSQL prompts.
 
 ```dotenv
-DATABASE_URL=postgresql+asyncpg://scotus:<operator-chosen-database-password>@localhost:5432/scotus
+DATABASE_URL=postgresql+asyncpg://scotus:<url-safe-database-password>@localhost:5432/scotus
 ```
 
 Replace placeholders directly in the ignored `.env` files; do not commit
@@ -117,7 +121,7 @@ New-Item -ItemType Directory -Force .\data\pgdata | Out-Null
 ```
 
 Create the application role and database. When `createuser` prompts, enter the
-same operator-chosen database password used in the root `DATABASE_URL` shown
+same URL-safe `$DatabasePassword` value used in the root `DATABASE_URL` shown
 above. The `-W` prompts first for the `postgres` connection password; `-P`
 then prompts for the new `scotus` role password.
 
@@ -135,7 +139,12 @@ python -m alembic upgrade head
 Do not run `Base.metadata.create_all` or hand-create application tables.
 Alembic is the sole DDL authority. At this point the empty database is usable.
 
-### PostgreSQL option B: Windows service
+### PostgreSQL option B: Windows service (equivalent, not runtime-verified)
+
+The portable PostgreSQL option above is the Windows path verified by this
+project's recorded walkthrough. This service-managed equivalent was not
+runtime-verified because no PostgreSQL Windows service was available on the
+validation host.
 
 Install PostgreSQL 16 using the installer linked from the same official
 [PostgreSQL Windows download page](https://www.postgresql.org/download/windows/).
@@ -155,8 +164,8 @@ if ($PostgresService.Status -ne 'Running') {
 If no service is returned, stop and repair the PostgreSQL installation rather
 than guessing a service name. Use the PATH-resolved client tools to create the
 same password-protected role and owned database. Enter the installer-selected
-`postgres` password for `-W`, and the same operator-chosen application database
-password used in `DATABASE_URL` when `-P` prompts for the new role.
+`postgres` password for `-W`, and the same URL-safe application database password used in `DATABASE_URL`
+when `-P` prompts for the new role.
 
 ```powershell
 createuser -h localhost -p 5432 -U postgres -W -P scotus
@@ -196,7 +205,7 @@ Open `http://localhost:5173/cases` for the public app; FastAPI is available at
 and SvelteKit background jobs. The portable PostgreSQL server remains running
 and will be reused on the next start.
 
-### Windows-service PostgreSQL (two visible terminals)
+### Windows-service PostgreSQL (unverified equivalent; two visible terminals)
 
 First confirm the Windows service is running with the service check above.
 Then use two visible PowerShell terminals so each development server keeps its
@@ -250,11 +259,13 @@ Generate two independent secrets. Put `ADMIN_TOKEN` in both `.env` and
 ```bash
 python -c "import secrets; print(secrets.token_urlsafe(32))" # ADMIN_TOKEN
 python -c "import secrets; print(secrets.token_urlsafe(32))" # SESSION_SECRET
+python -c "import secrets; print(secrets.token_urlsafe(32))" # database role password
 ```
 
 Using a PostgreSQL administrator account, create the same application role and
-database used by the Windows guide. These commands prompt for passwords rather
-than putting them in shell history:
+database used by the Windows guide. Use the URL-safe database role password
+generated above in both `DATABASE_URL` and the `createuser -P` prompt. These commands prompt for
+passwords rather than putting them in shell history:
 
 ```bash
 createuser -h localhost -p 5432 -U postgres -W -P scotus

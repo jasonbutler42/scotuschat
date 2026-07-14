@@ -5,8 +5,8 @@ milestone_name: Backlog Cleanup
 current_phase: 33
 current_phase_name: `update_argument_metadata` unique-constraint guard
 status: executing
-stopped_at: Phase 34 context gathered
-last_updated: "2026-07-14T14:18:22.436Z"
+stopped_at: Phase 36 context gathered
+last_updated: "2026-07-14T15:21:34.841Z"
 last_activity: 2026-07-13
 last_activity_desc: Phase 32 complete, transitioned to Phase 33
 progress:
@@ -82,6 +82,8 @@ Two open design questions remain unresolved by design and are intentionally defe
 v1.5's roadmap evolution (Phase 29 added, Phase 30.1 inserted) is archived in `.planning/milestones/v1.5-ROADMAP.md`. Cleared here at milestone close.
 
 2026-07-13: Phases 31–40 moved from ROADMAP.md's "Unscheduled Phases" section into the active "## Phases" / "## Phase Details" sections for v1.6 — no renumbering, no new phases created; requirement coverage 11/11 confirmed.
+
+- Phase 35 edited: edited fields: title, goal, depends_on, requirements, success_criteria
 
 ### Pending Todos
 
@@ -182,9 +184,9 @@ Items acknowledged and deferred at v1.5 milestone close on 2026-07-12:
 
 ## Session Continuity
 
-Last session: 2026-07-14T14:18:22.415Z
-Stopped at: Phase 34 context gathered
-Resume file: .planning/phases/34-blank-case-name-docket-validation/34-CONTEXT.md
+Last session: 2026-07-14T15:21:34.815Z
+Stopped at: Phase 36 context gathered
+Resume file: .planning/phases/36-click-to-copy-extracted-values-design-pattern/36-CONTEXT.md
 
 ## Operator Next Steps
 

@@ -2,19 +2,19 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Backlog Cleanup
-current_phase: 33
-current_phase_name: metadata-update-unique-constraint-guard
+current_phase: 34
+current_phase_name: blank-case-name-docket-validation
 status: executing
-stopped_at: Phase 35 context gathered
-last_updated: "2026-07-14T16:30:50.783Z"
+stopped_at: Completed 34-01-PLAN.md
+last_updated: "2026-07-14T18:14:44.110Z"
 last_activity: 2026-07-14
-last_activity_desc: Phase 33 gap closure complete
+last_activity_desc: Completed backend validation contract (Plan 34-01)
 progress:
   total_phases: 10
   completed_phases: 4
   total_plans: 22
-  completed_plans: 17
-  percent: 40
+  completed_plans: 18
+  percent: 82
 ---
 
 # Project State
@@ -28,10 +28,10 @@ See: .planning/PROJECT.md (updated 2026-07-12 after v1.5 milestone completion)
 
 ## Current Position
 
-Phase: 33 (metadata-update-unique-constraint-guard) — COMPLETE
-Plan: 4 of 4
-Status: Ready to execute
-Last activity: 2026-07-14 — Phase 33 gap closure complete
+Phase: 34 (blank-case-name-docket-validation)
+Plan: 1 of 3
+Status: In progress
+Last activity: 2026-07-14 — Completed backend validation contract (Plan 34-01)
 
 ## Performance Metrics
 
@@ -76,6 +76,8 @@ Two open design questions remain unresolved by design and are intentionally defe
 - [Phase 40]: Keep all five SvelteKit variables server-private and group optional backend settings by operating concern. — This makes runtime ownership clear and avoids exposing credentials through public environment variables.
 - [Phase 40]: Portable PostgreSQL uses dev-start.ps1 as a recurring-start command only; bootstrap prerequisites remain explicit. — The script starts, migrates, and launches but does not initialize dependencies, env files, or the cluster.
 - [Phase 40]: Portable and Windows-service PostgreSQL share the scotus role/database contract and Alembic-only DDL path. — One DATABASE_URL contract keeps both first-class setup branches consistent.
+- [Phase 34]: source_dockets is authoritative when supplied and its first normalized entry is canonical
+- [Phase 34]: Required PATCH fields retain Optional defaults so omission remains distinct from explicit null
 
 ### Roadmap Evolution
 
@@ -182,12 +184,13 @@ Items acknowledged and deferred at v1.5 milestone close on 2026-07-12:
 | Phase 40 P01 | 10m | 2 tasks | 3 files |
 | Phase 40 P02 | 2m | 3 tasks | 1 files |
 | Phase 33 P04 | 4 min | 1 tasks | 3 files |
+| Phase 34 P01 | 10m | 2 tasks | 4 files |
 
 ## Session Continuity
 
-Last session: 2026-07-14T16:30:50.159Z
-Stopped at: Phase 35 context gathered
-Resume file: .planning/phases/35-rerun-job-local-upload-no-ingest/35-CONTEXT.md
+Last session: 2026-07-14T18:14:44.098Z
+Stopped at: Completed 34-01-PLAN.md
+Resume file: None
 
 ## Operator Next Steps
 

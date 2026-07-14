@@ -19,7 +19,7 @@ Requirements for the v1.6 Backlog Cleanup milestone. Each maps to a roadmap phas
 ### Pipeline Reliability
 
 - [x] **PIPE-27**: Saving argument metadata that collides with an existing `(source_docket, question_number)` returns a clean 409/422 instead of an unhandled 500
-- [ ] **PIPE-28**: Clearing `case_name` or `docket_number` to blank is rejected with a validation error instead of corrupting the slug or dedup key
+- [x] **PIPE-28**: Clearing `case_name` or `docket_number` to blank is rejected with a validation error instead of corrupting the slug or dedup key
 - [ ] **PIPE-29**: Rerunning a locally-uploaded (non-Spaces) pipeline job actually spawns ingest instead of sitting at PENDING forever
 
 ### Operator UX
@@ -77,7 +77,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TEST-02 | Phase 31 | Complete |
 | PADM-05 | Phase 32 | Complete |
 | PIPE-27 | Phase 33 | Complete |
-| PIPE-28 | Phase 34 | Pending |
+| PIPE-28 | Phase 34 | Complete |
 | PIPE-29 | Phase 35 | Pending |
 | UX-01 | Phase 36 | Pending |
 | PEOPLE-08 | Phase 37 | Pending |

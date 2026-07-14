@@ -205,11 +205,11 @@ Plans:
   3. Argument slug and `docket_number`/`docket_number_norm` can never be corrupted to an empty string through either save path.
   4. Both affected `<input>` elements carry a `required` attribute as UI-level defense-in-depth.
 
-**Plans**: 3 plans
+**Plans**: 1/3 plans executed
 
 **Wave 1**
 
-- [ ] 34-01-PLAN.md — Authoritative Pydantic normalization, deterministic docket precedence, safe service writes, and backend regression tests
+- [x] 34-01-PLAN.md — Authoritative Pydantic normalization, deterministic docket precedence, safe service writes, and backend regression tests
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -218,6 +218,7 @@ Plans:
 **Wave 3** *(blocked on Wave 2 completion)*
 
 - [ ] 34-03-PLAN.md — Exact native/pill validation feedback, required defenses, ARIA wiring, and first-invalid focus
+
 **UI hint**: yes
 
 ### Phase 35: Remove pipeline job rerun capability
@@ -255,6 +256,7 @@ Plans:
 **Wave 2** *(blocked on Wave 1 completion)*
 
 - [ ] 36-02-PLAN.md — Remaining pipeline and argument-editor extracted-value surfaces plus durable D-13 guidance
+
 **UI hint**: yes
 
 ### Phase 37: Represent tenure Seat as a Chief/Associate toggle instead of free text
@@ -352,7 +354,7 @@ Plans:
 | 31. Audit ~28 stale DB-gated test fixtures + fix real data leakage into shared dev DB | v1.6 | 8/8 | Complete    | 2026-07-13 |
 | 32. Fix CourtTenure FK bookkeeping gap in merge/delete person service paths | v1.6 | 2/2 | Complete    | 2026-07-13 |
 | 33. `update_argument_metadata` unique-constraint guard | v1.6 | 4/4 | Complete   | 2026-07-14 |
-| 34. Blank case_name/docket_number validation | v1.6 | TBD | Not started | - |
+| 34. Blank case_name/docket_number validation | v1.6 | 1/3 | In Progress|  |
 | 35. `rerun_job` never spawns ingest for locally-uploaded jobs | v1.6 | TBD | Not started | - |
 | 36. Click-to-copy extracted values design pattern | v1.6 | TBD | Not started | - |
 | 37. Represent tenure Seat as a Chief/Associate toggle instead of free text | v1.6 | TBD | Not started | - |

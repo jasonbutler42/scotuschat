@@ -354,7 +354,7 @@ Plans:
 | 31. Audit ~28 stale DB-gated test fixtures + fix real data leakage into shared dev DB | v1.6 | 8/8 | Complete    | 2026-07-13 |
 | 32. Fix CourtTenure FK bookkeeping gap in merge/delete person service paths | v1.6 | 2/2 | Complete    | 2026-07-13 |
 | 33. `update_argument_metadata` unique-constraint guard | v1.6 | 4/4 | Complete   | 2026-07-14 |
-| 34. Blank case_name/docket_number validation | v1.6 | 4/4 | Complete   | 2026-07-14 |
+| 34. Blank case_name/docket_number validation | v1.6 | 4/4 | Complete    | 2026-07-14 |
 | 35. `rerun_job` never spawns ingest for locally-uploaded jobs | v1.6 | TBD | Not started | - |
 | 36. Click-to-copy extracted values design pattern | v1.6 | TBD | Not started | - |
 | 37. Represent tenure Seat as a Chief/Associate toggle instead of free text | v1.6 | TBD | Not started | - |
@@ -370,7 +370,7 @@ Standard: all backlog items live here as 999.x entries (`.planning/phases/999.N-
 
 **Goal:** [Captured for future planning] Let visitors share a specific utterance (a single speaker turn) from an oral argument to social media, to increase site exposure and utilization. Needs discussion on: what gets shared (permalink to the utterance vs. a rendered card/image), which platforms, and how this interacts with the apolitical-framing hard constraint — an isolated utterance shared out of the argument's full context could read as editorializing even though the underlying transcript content is unchanged.
 **Requirements:** TBD
-**Plans:** TBD
+**Plans:** 4/4 plans complete
 
 - [ ] TBD (promote with /gsd-review-backlog when ready)
 

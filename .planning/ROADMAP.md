@@ -110,7 +110,7 @@ Full phase details: `.planning/milestones/v1.5-ROADMAP.md`
 - [x] **Phase 31: Audit ~28 stale DB-gated test fixtures + fix real data leakage into shared dev DB** - Escalated data-integrity risk; fix test isolation so service-function commits can't leak synthetic Person/Argument rows (completed 2026-07-13)
 - [x] **Phase 32: Fix CourtTenure FK bookkeeping gap in merge/delete person service paths** - Merge/delete on a Justice with tenure rows no longer 500s (completed 2026-07-13)
 - [x] **Phase 33: `update_argument_metadata` unique-constraint guard** - Colliding (source_docket, question_number) returns 409/422 instead of 500 (completed 2026-07-14)
-- [ ] **Phase 34: Blank case_name/docket_number validation** - Prevents slug/dedup corruption from cleared fields
+- [x] **Phase 34: Blank case_name/docket_number validation** - Prevents slug/dedup corruption from cleared fields (completed 2026-07-14)
 - [ ] **Phase 35: `rerun_job` never spawns ingest for locally-uploaded jobs** - Local-upload reruns actually progress instead of sitting at PENDING forever
 - [ ] **Phase 36: Click-to-copy extracted values design pattern** - Consistent click-to-copy affordance across pipeline run pages and argument editor
 - [ ] **Phase 37: Represent tenure Seat as a Chief/Associate toggle instead of free text** - Open design question (numbered-seat data vs. binary toggle) resolved during discuss-phase
@@ -205,7 +205,7 @@ Plans:
   3. Argument slug and `docket_number`/`docket_number_norm` can never be corrupted to an empty string through either save path.
   4. Both affected `<input>` elements carry a `required` attribute as UI-level defense-in-depth.
 
-**Plans**: 2/3 plans executed
+**Plans**: 3/3 plans complete
 
 **Wave 1**
 
@@ -217,7 +217,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 34-03-PLAN.md — Exact native/pill validation feedback, required defenses, ARIA wiring, and first-invalid focus
+- [x] 34-03-PLAN.md — Exact native/pill validation feedback, required defenses, ARIA wiring, and first-invalid focus
 
 **UI hint**: yes
 
@@ -354,7 +354,7 @@ Plans:
 | 31. Audit ~28 stale DB-gated test fixtures + fix real data leakage into shared dev DB | v1.6 | 8/8 | Complete    | 2026-07-13 |
 | 32. Fix CourtTenure FK bookkeeping gap in merge/delete person service paths | v1.6 | 2/2 | Complete    | 2026-07-13 |
 | 33. `update_argument_metadata` unique-constraint guard | v1.6 | 4/4 | Complete   | 2026-07-14 |
-| 34. Blank case_name/docket_number validation | v1.6 | 2/3 | In Progress|  |
+| 34. Blank case_name/docket_number validation | v1.6 | 3/3 | Complete   | 2026-07-14 |
 | 35. `rerun_job` never spawns ingest for locally-uploaded jobs | v1.6 | TBD | Not started | - |
 | 36. Click-to-copy extracted values design pattern | v1.6 | TBD | Not started | - |
 | 37. Represent tenure Seat as a Chief/Associate toggle instead of free text | v1.6 | TBD | Not started | - |

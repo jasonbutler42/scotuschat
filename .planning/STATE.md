@@ -4,17 +4,17 @@ milestone: v1.6
 milestone_name: Backlog Cleanup
 current_phase: 34
 current_phase_name: blank-case-name-docket-validation
-status: executing
-stopped_at: Completed 34-02-PLAN.md
-last_updated: "2026-07-14T18:22:57.219Z"
+status: verifying
+stopped_at: Completed 34-03-PLAN.md
+last_updated: "2026-07-14T18:27:55.598Z"
 last_activity: 2026-07-14
-last_activity_desc: Completed structured action recovery (Plan 34-02)
+last_activity_desc: Completed accessible required recovery (Plan 34-03)
 progress:
   total_phases: 10
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 22
-  completed_plans: 19
-  percent: 86
+  completed_plans: 20
+  percent: 91
 ---
 
 # Project State
@@ -29,9 +29,9 @@ See: .planning/PROJECT.md (updated 2026-07-12 after v1.5 milestone completion)
 ## Current Position
 
 Phase: 34 (blank-case-name-docket-validation)
-Plan: 2 of 3
-Status: In progress
-Last activity: 2026-07-14 — Completed structured action recovery (Plan 34-02)
+Plan: 3 of 3
+Status: Phase complete — ready for verification
+Last activity: 2026-07-14 — Completed accessible required recovery (Plan 34-03)
 
 ## Performance Metrics
 
@@ -80,6 +80,8 @@ Two open design questions remain unresolved by design and are intentionally defe
 - [Phase 34]: Required PATCH fields retain Optional defaults so omission remains distinct from explicit null
 - [Phase 34]: Required action errors are identified only from terminal Pydantic detail loc fields
 - [Phase 34]: Failure payloads preserve raw Case strings and metadata empty-array presence
+- [Phase 34]: Native invalid events are suppressed and Case constraints accumulate before first-invalid focus
+- [Phase 34]: Empty editable pill submissions are canceled client-side while readonly behavior is unchanged
 
 ### Roadmap Evolution
 
@@ -188,11 +190,12 @@ Items acknowledged and deferred at v1.5 milestone close on 2026-07-12:
 | Phase 33 P04 | 4 min | 1 tasks | 3 files |
 | Phase 34 P01 | 10m | 2 tasks | 4 files |
 | Phase 34 P02 | 8m | 2 tasks | 3 files |
+| Phase 34 P03 | 10m | 2 tasks | 4 files |
 
 ## Session Continuity
 
 Last session: 2026-07-14T18:14:44.098Z
-Stopped at: Completed 34-02-PLAN.md
+Stopped at: Completed 34-03-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

@@ -233,7 +233,17 @@ Plans:
   3. Rerun-specific tests and stale code references are removed or rewritten.
   4. Creating jobs, recovering failed steps, viewing source PDFs, and viewing existing jobs continue to work unchanged.
 
-**Plans**: TBD
+**Plans**: 0/3 plans complete
+
+Plans:
+**Wave 1**
+
+- [ ] 35-01-PLAN.md — Remove backend rerun route/service ownership and align surviving recovery wording
+- [ ] 35-02-PLAN.md — Remove the hidden frontend rerun action and guard historical detail composition
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 35-03-PLAN.md — Add focused removal regressions and run the complete backend/frontend verification matrix
 
 ### Phase 36: Click-to-copy extracted values design pattern
 

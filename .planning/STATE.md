@@ -4,15 +4,15 @@ milestone: v1.6
 milestone_name: Backlog Cleanup
 current_phase: 35
 current_phase_name: Remove pipeline job rerun capability
-status: ready_to_plan
-stopped_at: Phase 34 complete, ready to plan Phase 35
-last_updated: "2026-07-14T20:34:14.402Z"
+status: executing
+stopped_at: Phase 37 UI-SPEC approved
+last_updated: "2026-07-14T21:14:19.534Z"
 last_activity: 2026-07-14
 last_activity_desc: Phase 34 complete, transitioned to Phase 35
 progress:
   total_phases: 10
   completed_phases: 5
-  total_plans: 23
+  total_plans: 26
   completed_plans: 21
   percent: 50
 ---
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-07-14 after Phase 34 verification)
 
 Phase: 35 — Remove pipeline job rerun capability
 Plan: Not started
-Status: Ready to plan
+Status: Ready to execute
 Last activity: 2026-07-14 — Phase 34 complete, transitioned to Phase 35
 
 ## Performance Metrics
@@ -196,9 +196,9 @@ Items acknowledged and deferred at v1.5 milestone close on 2026-07-12:
 
 ## Session Continuity
 
-Last session: 2026-07-14T20:34:56.646Z
-Stopped at: Phase 34 complete, ready to plan Phase 35
-Resume file: None
+Last session: 2026-07-14T21:11:32.408Z
+Stopped at: Phase 37 UI-SPEC approved
+Resume file: .planning/phases/37-tenure-seat-as-chief-associate-toggle/37-UI-SPEC.md
 
 ## Operator Next Steps
 

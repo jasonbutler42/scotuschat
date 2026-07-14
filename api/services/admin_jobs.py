@@ -538,7 +538,7 @@ async def resolve_job(
 
 
 # ---------------------------------------------------------------------------
-# Phase 15: Approve and re-run pipeline transitions (D-09, D-10)
+# Phase 15: Approve pipeline transition (D-09)
 # ---------------------------------------------------------------------------
 
 
@@ -637,8 +637,8 @@ def derive_failed_step_recovery(
     Guidance is returned separately from raw_error so the UI can show human
     guidance first and put the raw technical error in an expandable details
     block (T-25-03). href always points at the pipeline list page — this
-    function never recommends a same-source rerun as the primary recovery
-    action (D-05); 25-UI-SPEC.md supersedes the older PJOB-22 rerun wording.
+    function directs the operator to ordinary new-run creation as the primary
+    recovery action (D-05); 25-UI-SPEC.md supersedes the older PJOB-22 wording.
     """
     guidance = (
         _FAILED_STEP_GUIDANCE.get(current_step, _DEFAULT_FAILED_GUIDANCE)
@@ -671,7 +671,7 @@ async def get_job_readiness(db: AsyncSession, job_id: int) -> RunReadiness:
     status is no longer PIPELINE, the run is reported already_created regardless
     of any other blocker state — the argument already exists and the page
     becomes read-only provenance (D-18, D-20). argument_edit_href points at the
-    argument editor, never at a rerun action (D-04).
+    argument editor, never at a pipeline recovery action (D-04).
 
     Otherwise, strict blockers are derived (D-02):
       - linked argument exists

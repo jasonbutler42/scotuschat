@@ -141,7 +141,7 @@ class RunReadiness(BaseModel):
                          the page becomes read-only provenance (D-04, D-18, D-20).
 
     argument_edit_href is only set for the already_created state (D-04) — it links
-    to the argument editor, never to a rerun action.
+    to the argument editor, never to a pipeline recovery action.
     """
 
     state: Literal["not_ready", "ready", "already_created"]
@@ -156,8 +156,8 @@ class FailedStepRecovery(BaseModel):
     raw_error is the unedited AdminJob.error_message, meant for an expandable
     technical details block — never merged into guidance (T-25-03).
     href always points at the pipeline list page so the operator starts a
-    corrected new run rather than retrying the same source (D-05, D-06, PJOB-22
-    superseded by 25-UI-SPEC.md — no same-source rerun is offered here).
+    corrected new run through ordinary creation (D-05, D-06, PJOB-22
+    superseded by 25-UI-SPEC.md).
     """
 
     step: Optional[str] = None

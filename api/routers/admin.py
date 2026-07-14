@@ -443,7 +443,7 @@ async def get_job_failed_recovery_endpoint(
     """
     Step-specific failed-run guidance for the failed step card, kept separate
     from the raw technical error (Phase 25, D-05 through D-08, PJOB-08,
-    PJOB-22 supersession — never recommends same-source rerun).
+    PJOB-22 supersession — directs operators to ordinary new-run creation).
 
     Wraps admin_jobs.get_failed_step_recovery. Maps the service's ValueError
     (missing job) to a 422, matching the sibling Phase 25 endpoints above.
@@ -1224,7 +1224,7 @@ async def list_participants(
 
 
 # ---------------------------------------------------------------------------
-# Phase 15: Approve, Re-run, and Participant-Side endpoints
+# Phase 15: Approve and Participant-Side endpoints
 # ---------------------------------------------------------------------------
 
 
@@ -1272,7 +1272,7 @@ async def delete_job(
     job_id is typed int — FastAPI validates path param (T-21-02-IDOR).
 
     ORDERING NOTE: This route is placed after all literal-path /jobs/{job_id}/* sub-routes
-    (pdf, resolve, people, approve, rerun) so parameterized sub-routes are resolved before
+    (pdf, resolve, people, approve) so parameterized sub-routes are resolved before
     this DELETE handler.
     """
     deleted = await jobs_service.delete_job(db, job_id)

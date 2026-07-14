@@ -1104,11 +1104,44 @@ async def update_argument_metadata(
     """
     try:
         result = await arguments_service.update_argument_metadata(db, argument_id, body)
+    except arguments_service.DuplicateArgumentError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "duplicate_argument",
+                "message": (
+                    f"An argument already uses docket {exc.docket}, question "
+                    f"{exc.question}. Open conflicting argument."
+                ),
+                "conflicting_argument_id": exc.conflicting_argument_id,
+            },
+        ) from exc
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except IntegrityError as exc:
         await db.rollback()
-        raise HTTPException(status_code=409, detail="constraint_violation") from exc
+        if arguments_service.is_argument_pair_violation(exc):
+            argument = await db.get(Argument, argument_id)
+            docket = argument.source_docket if argument is not None else None
+            question = argument.question_number if argument is not None else None
+            conflicting_id = await arguments_service.find_argument_by_pair(
+                db, docket, question, exclude_argument_id=argument_id
+            )
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "code": "duplicate_argument",
+                    "message": f"An argument already uses docket {docket}, question {question}. Open conflicting argument.",
+                    "conflicting_argument_id": conflicting_id,
+                },
+            ) from exc
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "constraint_violation",
+                "message": "The update violates a database constraint.",
+            },
+        ) from exc
     if result is False:
         raise HTTPException(status_code=404, detail="Argument not found")
     return {"success": True}

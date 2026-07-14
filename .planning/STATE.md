@@ -5,15 +5,15 @@ milestone_name: Backlog Cleanup
 current_phase: 33
 current_phase_name: `update_argument_metadata` unique-constraint guard
 status: executing
-stopped_at: Phase 40 context gathered
-last_updated: "2026-07-14T12:35:38.664Z"
+stopped_at: Completed 33-01-PLAN.md
+last_updated: "2026-07-14T12:47:09.589Z"
 last_activity: 2026-07-13
 last_activity_desc: Phase 32 complete, transitioned to Phase 33
 progress:
   total_phases: 10
   completed_phases: 2
-  total_plans: 10
-  completed_plans: 10
+  total_plans: 16
+  completed_plans: 11
   percent: 20
 ---
 
@@ -68,6 +68,8 @@ Two open design questions remain unresolved by design and are intentionally defe
 - [Phase 32]: CourtTenure joins the blocking tier (Utterance/CaseAppearance/ArgumentParticipant), not the SpeakerAlias intrinsic-unconditional-delete tier (D-01)
 - [Phase 32]: New field/key name is 'tenures' (matches existing tenure_coverage/tenure_gaps naming convention), not 'court_tenure'
 - [Phase 32]: tenures joins the blocking tier (utterances/appearances/argument_participants) in the client-side can_delete/delete_block_count check, not the aliases bucket (D-01/D-05)
+- [Phase 33]: Only concrete docket/question pairs participate in uniqueness checks — Matches PostgreSQL NULL uniqueness semantics
+- [Phase 33]: Preserve submitted final pair structurally across rollback — Winner lookup must not use restored pre-update values
 
 ### Roadmap Evolution
 
@@ -167,12 +169,13 @@ Items acknowledged and deferred at v1.5 milestone close on 2026-07-12:
 | Phase 31 P08 | 25min | 2 tasks | 1 files |
 | Phase 32 P01 | 15min | 2 tasks | 3 files |
 | Phase 32 P02 | 10min | 2 tasks | 2 files |
+| Phase 33 P01 | 12min | 2 tasks | 5 files |
 
 ## Session Continuity
 
-Last session: 2026-07-13T21:50:02.116Z
-Stopped at: Phase 40 context gathered
-Resume file: .planning/phases/40-readme-local-stack-setup/40-CONTEXT.md
+Last session: 2026-07-14T12:47:09.576Z
+Stopped at: Completed 33-01-PLAN.md
+Resume file: None
 
 ## Operator Next Steps
 

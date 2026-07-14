@@ -280,7 +280,27 @@ Plans:
   2. Existing `court_tenures.seat` data (including numbered-seat rows) is preserved or migrated according to the resolved design decision — no silent data loss.
   3. Operator can set or change a person's tenure Seat through the new control, and the value round-trips correctly through save and reload.
 
-**Plans**: TBD
+**Plans**: 0/5 plans complete
+
+**Wave 1**
+
+- [ ] 37-01-PLAN.md — Wave 0 regression harnesses for migration safety and accessible Office editing
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 37-02-PLAN.md — Staged rename, immutable dry-run report, atomic normalization, and final database constraint
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 37-03-PLAN.md — Strict canonical Office contracts across ORM, API, services, and CSV import
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 37-04-PLAN.md — Office read projections, formal Justice titles, and public rendering regression coverage
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
+- [ ] 37-05-PLAN.md — Accessible Office editor, migration/application gate, and final Nyquist verification
 **UI hint**: yes
 
 ### Phase 38: Rethink Full Name vs. name-part fields in the people editor

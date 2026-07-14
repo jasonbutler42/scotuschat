@@ -45,6 +45,26 @@ function parseDuplicateConflict(value: unknown): DuplicateArgumentConflict | nul
 	return null;
 }
 
+type RequiredFieldErrors = { caseNameRequired: boolean; docketRequired: boolean };
+
+function parseRequiredFieldErrors(value: unknown): RequiredFieldErrors | null {
+	if (typeof value !== 'object' || value === null) return null;
+	const detail = (value as { detail?: unknown }).detail;
+	if (!Array.isArray(detail)) return null;
+	const errors = { caseNameRequired: false, docketRequired: false };
+	for (const entry of detail) {
+		if (typeof entry !== 'object' || entry === null) continue;
+		const loc = (entry as { loc?: unknown }).loc;
+		if (!Array.isArray(loc)) continue;
+		const field = loc.at(-1);
+		if (field === 'case_name') errors.caseNameRequired = true;
+		if (field === 'docket_number' || field === 'source_docket' || field === 'source_dockets') {
+			errors.docketRequired = true;
+		}
+	}
+	return errors.caseNameRequired || errors.docketRequired ? errors : null;
+}
+
 // Phase 25 backend-derived card contracts (api/schemas/admin_jobs.py, api/schemas/admin_people.py).
 
 interface ReadinessBlocker {
@@ -599,6 +619,14 @@ export const actions: Actions = {
 		}
 
 		if (!res.ok) {
+			if (res.status === 422) {
+				try {
+					const required = parseRequiredFieldErrors(await res.json());
+					if (required) return fail(422, { ...required, ...attemptedValues });
+				} catch {
+					// Malformed backend data is intentionally replaced with generic copy.
+				}
+			}
 			if (res.status === 409) {
 				try {
 					const body: unknown = await res.json();

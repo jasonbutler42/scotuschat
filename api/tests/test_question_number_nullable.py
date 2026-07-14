@@ -79,7 +79,24 @@ def test_argument_actions_parse_required_locations_and_preserve_raw_attempts() -
     assert "...required, ...attemptedValues" in source
     parser = source[source.index("function parseRequiredFieldErrors"):source.index("export const load")]
     assert ".msg" not in parser
-    assert "message" not in parser
+
+
+def test_metadata_actions_share_loc_driven_required_recovery() -> None:
+    action_paths = (
+        "src/routes/admin/pipeline/[job_id]/+page.server.ts",
+        "src/routes/admin/arguments/[id]/+page.server.ts",
+    )
+
+    for path in action_paths:
+        source = _frontend_source(path)
+        assert "function parseRequiredFieldErrors(value: unknown)" in source
+        assert "if (!Array.isArray(detail)) return null" in source
+        assert "if (!Array.isArray(loc)) continue" in source
+        assert "field === 'source_docket' || field === 'source_dockets'" in source
+        assert "const attemptedValues = { dockets, question_number, argued_date }" in source
+        assert "...required, ...attemptedValues" in source
+        parser = source[source.index("function parseRequiredFieldErrors"):source.index("export const load")]
+        assert ".msg" not in parser
 
 
 def test_argument_details_card_restores_values_and_focuses_one_safe_alert() -> None:

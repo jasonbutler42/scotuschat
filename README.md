@@ -171,6 +171,55 @@ authority to produce an empty usable database:
 python -m alembic upgrade head
 ```
 
+## Every time you develop
+
+### Portable PostgreSQL (recommended recurring command)
+
+From the repository root, activate `.venv`, then run the portable startup
+script:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+./scripts/dev-start.ps1
+```
+
+This is a recurring-start command, not a bootstrap command. It assumes `.venv`,
+`.env`, and `app/.env` already exist; Python and npm dependencies are already
+installed; and the portable PostgreSQL binaries and `data/pgdata` cluster are
+already initialized. The script starts the portable PostgreSQL server if
+needed, applies Alembic migrations, and launches FastAPI and SvelteKit. It does
+not create the virtual environment, install dependencies, copy or edit env
+files, initialize PostgreSQL, or create the role and database.
+
+Open `http://localhost:5173` for the app; FastAPI is available at
+`http://localhost:8000`. Press Ctrl+C in the script window to stop the FastAPI
+and SvelteKit background jobs. The portable PostgreSQL server remains running
+and will be reused on the next start.
+
+### Windows-service PostgreSQL (two visible terminals)
+
+First confirm the Windows service is running with the service check above.
+Then use two visible PowerShell terminals so each development server keeps its
+own logs and Ctrl+C lifecycle.
+
+Terminal 1, from the repository root:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+python -m uvicorn api.main:app --reload --port 8000
+```
+
+Terminal 2:
+
+```powershell
+Set-Location app
+npm run dev
+```
+
+Open `http://localhost:5173` for SvelteKit and
+`http://localhost:8000` for FastAPI. Press Ctrl+C in each terminal to stop its
+development server; manage the PostgreSQL Windows service separately.
+
 ## Attribution / Credits
 
 Some oral arguments on this site come from a historical bulk import rather

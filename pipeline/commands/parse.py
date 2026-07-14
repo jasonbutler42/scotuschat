@@ -26,6 +26,7 @@ from pathlib import Path
 from typing import Optional
 
 from sqlalchemy import select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.models.models import (
@@ -40,6 +41,10 @@ from api.models.models import (
     PipelineRunStatus,
     SideEnum,
     Utterance,
+)
+from api.services.argument_uniqueness import (
+    find_argument_by_pair,
+    is_argument_pair_violation,
 )
 from pipeline.db import get_session
 from pipeline.parser.cover_extractor import extract_cover_metadata, extract_toc_data
@@ -367,12 +372,35 @@ async def _run_parse_inner(args) -> None:
         # Block D: source_docket conditional write — only if Argument.source_docket IS NULL (D-09b, Phase 19).
         # Operator-entered values are never overwritten.
         if cover_meta.get("primary_docket") is not None:
-            await session.execute(
-                update(Argument)
-                .where(Argument.id == source_run.argument_id, Argument.source_docket.is_(None))
-                .values(source_docket=cover_meta["primary_docket"])
-                .execution_options(synchronize_session=False)
+            argument_row = await session.get(Argument, source_run.argument_id)
+            question_number = argument_row.question_number if argument_row else None
+            conflict_id = await find_argument_by_pair(
+                session,
+                cover_meta["primary_docket"],
+                question_number,
+                exclude_argument_id=source_run.argument_id,
             )
+            if conflict_id is not None:
+                raise ValueError(
+                    "Parse metadata conflict: another argument already uses "
+                    "the extracted docket and stored question number."
+                )
+            try:
+                await session.execute(
+                    update(Argument)
+                    .where(Argument.id == source_run.argument_id, Argument.source_docket.is_(None))
+                    .values(source_docket=cover_meta["primary_docket"])
+                    .execution_options(synchronize_session=False)
+                )
+                await session.flush()
+            except IntegrityError as exc:
+                await session.rollback()
+                if is_argument_pair_violation(exc):
+                    raise ValueError(
+                        "Parse metadata conflict: another argument already uses "
+                        "the extracted docket and stored question number."
+                    ) from None
+                raise
             print(f"source_docket written from cover: {cover_meta['primary_docket']!r}")
 
         # -------------------------------------------------------------------

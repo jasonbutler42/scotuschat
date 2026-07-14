@@ -15,7 +15,20 @@ Regression tests:
   - test_on_behalf_of_not_appended_to_prior_speaker: F04 regression (ON BEHALF OF fix)
 """
 
+import inspect
+
 import pytest
+
+from pipeline.commands.parse import _run_parse_inner
+
+
+def test_parse_docket_fill_uses_pair_precheck_and_named_race_classification():
+    source = inspect.getsource(_run_parse_inner)
+    assert "find_argument_by_pair(" in source
+    assert "exclude_argument_id=source_run.argument_id" in source
+    assert "question_number = argument_row.question_number" in source
+    assert "is_argument_pair_violation(exc)" in source
+    assert "await session.rollback()" in source
 
 
 # ---------------------------------------------------------------------------

@@ -6,7 +6,7 @@ current_phase: 35
 current_phase_name: Remove pipeline job rerun capability
 status: executing
 stopped_at: Phase 37 UI-SPEC approved
-last_updated: "2026-07-14T21:23:15.630Z"
+last_updated: "2026-07-14T21:23:52.797Z"
 last_activity: 2026-07-14
 last_activity_desc: Phase 34 complete, transitioned to Phase 35
 progress:
@@ -84,6 +84,8 @@ Two open design questions remain unresolved by design and are intentionally defe
 - [Phase 34]: Empty editable pill submissions are canceled client-side while readonly behavior is unchanged
 - [Phase 34]: Clear only native-owned required flags at the constraint-valid enhanced-submit boundary; later server-required state remains authoritative
 - [Phase ?]: [Phase 35, Plan 02]: Removal is represented by complete absence of the rerun action and error payload; no compatibility UI was added.
+- [Phase 35]: Retire same-source recreation by deleting the route and service function, leaving ordinary creation and durable history unchanged.
+- [Phase 35]: Retain broad rerun wording only where it describes legitimate PipelineRun history rather than an operator capability.
 
 ### Roadmap Evolution
 
@@ -195,6 +197,7 @@ Items acknowledged and deferred at v1.5 milestone close on 2026-07-12:
 | Phase 34 P03 | 10m | 2 tasks | 4 files |
 | Phase 34 P04 | 35min | 1 tasks | 3 files |
 | Phase 35 P02 | 10min | 2 tasks | 2 files |
+| Phase 35 P01 | 12min | 2 tasks | 3 files |
 
 ## Session Continuity
 

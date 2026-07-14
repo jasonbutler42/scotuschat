@@ -234,7 +234,15 @@ Plans:
   3. Click-to-copy is visibly disabled when the underlying value is N/A (not extracted).
   4. The pattern is implemented as one reusable component, not duplicated per page.
 
-**Plans**: TBD
+**Plans**: 0/2 plans complete
+
+**Wave 1**
+
+- [ ] 36-01-PLAN.md — Reusable CopyableExtractedValue primitive and ArgumentDetailsCard adoption
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 36-02-PLAN.md — Remaining pipeline and argument-editor extracted-value surfaces plus durable D-13 guidance
 **UI hint**: yes
 
 ### Phase 37: Represent tenure Seat as a Chief/Associate toggle instead of free text

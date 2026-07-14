@@ -608,32 +608,6 @@ async def approve_job(db: AsyncSession, job_id: int) -> AdminJob:
     return updated  # type: ignore[return-value]
 
 
-async def rerun_job(db: AsyncSession, job_id: int) -> AdminJob:
-    """Create a new pipeline job re-using the PDF source from an existing job (D-10).
-
-    Raises ValueError if the original job is not found.
-
-    The caller (router) is responsible for spawning the ingest subprocess
-    for the NEW job after this returns — same pattern as POST /api/admin/jobs.
-
-    Also copies original.source_dockets onto the new job (Phase 24 Plan 04) so
-    a rerun preserves the originally submitted docket list; the router uses
-    new_job.source_dockets to rebuild --primary-docket/--dockets for the
-    re-spawned ingest subprocess.
-    """
-    original = await get_job(db, job_id)
-    if original is None:
-        raise ValueError(f"AdminJob {job_id} not found")
-
-    new_job = await create_job(
-        db,
-        pdf_url=original.pdf_url,
-        spaces_key=original.spaces_key,
-        original_filename=original.original_filename,
-        source_dockets=original.source_dockets,
-    )
-    return new_job
-
 
 # ---------------------------------------------------------------------------
 # Phase 25: Run readiness and failed-step recovery (D-01 through D-08, D-18, D-20)

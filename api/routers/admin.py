@@ -1253,42 +1253,6 @@ async def approve_job(
     return result  # type: ignore[return-value]
 
 
-@router.post("/jobs/{job_id}/rerun", status_code=202, response_model=AdminJobResponse)
-async def rerun_job(
-    job_id: int,
-    db: AsyncSession = Depends(get_db),
-) -> AdminJobResponse:
-    """
-    Re-run an existing pipeline job using the same PDF source (D-10).
-
-    Creates a NEW AdminJob and immediately spawns the ingest subprocess for the
-    new job.  The existing draft/published argument is unaffected — the new run
-    goes through the pipeline state independently.
-
-    Returns 202 + new AdminJobResponse so the caller can redirect to the new job.
-    Returns 422 if the original job is not found.
-
-    Docket persistence (Phase 24 Plan 04): rerun_job copies original.source_dockets
-    onto the new job; this route rebuilds --primary-docket/--dockets from that list
-    so the re-ingested Argument receives the same full docket list as the original run.
-
-    Auth inherited from router-level verify_admin_token dependency (T-15-02-AUTH).
-    """
-    try:
-        new_job = await jobs_service.rerun_job(db, job_id)
-    except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-
-    docket_args = _dockets_to_ingest_args(new_job.source_dockets or [])
-
-    # Spawn ingest for the new job — same pattern as POST /api/admin/jobs
-    if new_job.spaces_key:
-        spawn_pipeline_step("ingest", new_job.id, ["--spaces-key", new_job.spaces_key] + docket_args)
-    elif new_job.pdf_url:
-        spawn_pipeline_step("ingest", new_job.id, ["--url", new_job.pdf_url] + docket_args)
-
-    return new_job  # type: ignore[return-value]
-
 
 @router.delete("/jobs/{job_id}", status_code=200)
 async def delete_job(

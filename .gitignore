@@ -2,6 +2,7 @@
 .env
 
 # Postgres data directory (lives inside repo, gitignored — easy to nuke and recreate)
+data/pgsql/
 data/pgdata/
 
 # Raw PDF files — immutable source documents, not tracked in git

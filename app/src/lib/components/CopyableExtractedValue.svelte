@@ -1,6 +1,4 @@
 <script lang="ts">
-	import { onDestroy } from 'svelte';
-
 	type CopyState = 'idle' | 'copied' | 'error';
 	type CopyableExtractedValueProps = {
 		value: string | null | undefined;
@@ -11,33 +9,48 @@
 	let { value, copyLabel, variant = 'text' }: CopyableExtractedValueProps = $props();
 	let state = $state<CopyState>('idle');
 	let resetTimer: ReturnType<typeof setTimeout> | undefined;
+	let generation = 0;
 	let isEmpty = $derived(value === null || value === undefined || value === '');
 	let displayValue = $derived(isEmpty ? 'N/A' : value);
 
-	async function copyValue() {
-		if (isEmpty || value === null || value === undefined) return;
-
+	function invalidateFeedback() {
+		generation += 1;
 		if (resetTimer !== undefined) {
 			clearTimeout(resetTimer);
 			resetTimer = undefined;
 		}
+		state = 'idle';
+	}
+
+	$effect(() => {
+		// Reading both props makes the feedback lifecycle belong to this payload.
+		value;
+		copyLabel;
+		invalidateFeedback();
+		return invalidateFeedback;
+	});
+
+	async function copyValue() {
+		if (isEmpty || value === null || value === undefined) return;
+
+		invalidateFeedback();
+		const attemptGeneration = generation;
 
 		try {
 			if (!navigator.clipboard) throw new Error('Clipboard unavailable');
 			await navigator.clipboard.writeText(value);
+			if (attemptGeneration !== generation) return;
 			state = 'copied';
 			resetTimer = setTimeout(() => {
+				if (attemptGeneration !== generation) return;
 				state = 'idle';
 				resetTimer = undefined;
 			}, 1500);
 		} catch {
+			if (attemptGeneration !== generation) return;
 			state = 'error';
 		}
 	}
-
-	onDestroy(() => {
-		if (resetTimer !== undefined) clearTimeout(resetTimer);
-	});
 </script>
 
 <span class="copyable-value" class:pill={variant === 'pill'}>

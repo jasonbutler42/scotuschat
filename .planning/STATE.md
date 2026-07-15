@@ -4,16 +4,16 @@ milestone: v1.6
 milestone_name: Backlog Cleanup
 current_phase: 36
 current_phase_name: Click-to-copy extracted values design pattern
-status: executing
-stopped_at: Completed 36-02-PLAN.md
-last_updated: "2026-07-15T16:33:48.685Z"
+status: verifying
+stopped_at: Completed 36-03-PLAN.md
+last_updated: "2026-07-15T17:20:29.219Z"
 last_activity: 2026-07-15
 last_activity_desc: Completed Phase 36 Plan 01 shared copy control and ArgumentDetailsCard adoption
 progress:
   total_phases: 10
   completed_phases: 7
-  total_plans: 31
-  completed_plans: 26
+  total_plans: 32
+  completed_plans: 27
   percent: 70
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-07-14 after Phase 34 verification)
 
 Phase: 36 — Click-to-copy extracted values design pattern
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-07-15 — Completed Phase 36 Plan 01 shared copy control and ArgumentDetailsCard adoption
 
 ## Performance Metrics
@@ -91,6 +91,7 @@ Two open design questions remain unresolved by design and are intentionally defe
 - [Phase 36]: Phase 36 owns the click-to-copy interaction contract while Phase 38 may evolve its visual presentation.
 - [Phase 36]: Disabled N/A values retain disabled semantics and tooltip behavior but omit the copy icon.
 - [Phase 36]: Use extracted fills the native date input without autosave while preserving manual entry.
+- [Phase 36]: Copy feedback ownership follows a generation invalidated by activation, payload change, and destruction. — Prevents stale clipboard promises and timers from mutating feedback for the current payload.
 
 ### Roadmap Evolution
 
@@ -206,11 +207,12 @@ Items acknowledged and deferred at v1.5 milestone close on 2026-07-12:
 | Phase 35 P03 | 20min | 2 tasks | 2 files |
 | Phase 36 P01 | 16min | 2 tasks | 2 files |
 | Phase 36 P02 | 2h | 3 tasks | 6 files |
+| Phase 36 P03 | 18m | 2 tasks | 5 files |
 
 ## Session Continuity
 
-Last session: 2026-07-15T16:33:48.673Z
-Stopped at: Completed 36-02-PLAN.md
+Last session: 2026-07-15T17:20:29.206Z
+Stopped at: Completed 36-03-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

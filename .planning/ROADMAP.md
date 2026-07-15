@@ -257,7 +257,7 @@ Plans:
   3. Click-to-copy is visibly disabled when the underlying value is N/A (not extracted).
   4. The pattern is implemented as one reusable component, not duplicated per page.
 
-**Plans**: 2/2 plans complete
+**Plans**: 3/3 plans complete
 
 **Wave 1**
 
@@ -387,7 +387,7 @@ Plans:
 | 33. `update_argument_metadata` unique-constraint guard | v1.6 | 4/4 | Complete   | 2026-07-14 |
 | 34. Blank case_name/docket_number validation | v1.6 | 4/4 | Complete    | 2026-07-14 |
 | 35. `rerun_job` never spawns ingest for locally-uploaded jobs | v1.6 | 3/3 | Complete    | 2026-07-14 |
-| 36. Click-to-copy extracted values design pattern | v1.6 | 2/2 | Complete   | 2026-07-15 |
+| 36. Click-to-copy extracted values design pattern | v1.6 | 3/3 | Complete   | 2026-07-15 |
 | 37. Represent tenure Seat as a Chief/Associate toggle instead of free text | v1.6 | TBD | Not started | - |
 | 38. Rethink Full Name vs. name-part fields in the people editor | v1.6 | TBD | Not started | - |
 | 39. Bench popover — additional context data for Justices | v1.6 | TBD | Not started | - |
@@ -412,6 +412,8 @@ Standard: all backlog items live here as 999.x entries (`.planning/phases/999.N-
 **Plans:** 0 plans
 
 Plans:
+
+- [x] 36-03-PLAN.md
 
 - [x] 34-04-PLAN.md
 

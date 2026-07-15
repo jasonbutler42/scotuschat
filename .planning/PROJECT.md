@@ -12,7 +12,7 @@ Anyone can open a SCOTUS oral argument and immediately follow the conversation �
 
 **v1.5 Admin Screens Cleanup — SHIPPED 2026-07-12.** All 7 admin screens (`/admin/`, `/admin/pipeline/`, `/admin/pipeline/[id]`, `/admin/arguments/`, `/admin/arguments/[id]`, `/admin/people/`, `/admin/people/[id]`) audited and refined: three-state argument lifecycle with status log, shared Argument Details component, redesigned pipeline list/detail pages, People admin with Bench/Advocate tabs and per-tenure appointment data, and a real dashboard. Also absorbed an out-of-band addition mid-milestone: bulk historical corpus import (~7,800 arguments, 1955–2019, from Cornell ConvoKit) routed through the same resolve/publish workflow as PDF ingest. Full details: `.planning/milestones/v1.5-ROADMAP.md`, `.planning/milestones/v1.5-REQUIREMENTS.md`.
 
-**v1.6 Backlog Cleanup — 6/10 phases complete.** Phases 31, 32, 33, 34, 35, and 40 are verified. Phase 40 adds a clean-checkout local-stack guide for PostgreSQL, FastAPI, and SvelteKit, including a disposable Windows portable-PostgreSQL walkthrough with real admin-session validation.
+**v1.6 Backlog Cleanup — 7/10 phases complete.** Phases 31, 32, 33, 34, 35, 36, and 40 are verified. Phase 36 adds one reusable click-to-copy pattern for eligible extracted values, including exact individual-docket copying, disabled N/A behavior, accessible feedback, and race-safe clipboard lifecycle handling.
 
 ## Current Milestone: v1.6 Backlog Cleanup
 
@@ -223,4 +223,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-14 after Phase 35 verification — 6 of 10 v1.6 backlog phases are verified; 4 remain.*
+*Last updated: 2026-07-15 after Phase 36 verification — 7 of 10 v1.6 backlog phases are verified; 3 remain.*

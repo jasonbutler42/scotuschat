@@ -280,7 +280,7 @@ Plans:
   2. Existing `court_tenures.seat` data (including numbered-seat rows) is preserved or migrated according to the resolved design decision — no silent data loss.
   3. Operator can set or change a person's tenure Seat through the new control, and the value round-trips correctly through save and reload.
 
-**Plans**: 1/5 plans executed
+**Plans**: 2/5 plans executed
 
 **Wave 1**
 
@@ -288,7 +288,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 37-02-PLAN.md — Staged rename, immutable dry-run report, atomic normalization, and final database constraint
+- [x] 37-02-PLAN.md — Staged rename, immutable dry-run report, atomic normalization, and final database constraint
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -388,7 +388,7 @@ Plans:
 | 34. Blank case_name/docket_number validation | v1.6 | 4/4 | Complete    | 2026-07-14 |
 | 35. `rerun_job` never spawns ingest for locally-uploaded jobs | v1.6 | 3/3 | Complete    | 2026-07-14 |
 | 36. Click-to-copy extracted values design pattern | v1.6 | 3/3 | Complete    | 2026-07-15 |
-| 37. Represent tenure Seat as a Chief/Associate toggle instead of free text | v1.6 | 1/5 | In Progress|  |
+| 37. Represent tenure Seat as a Chief/Associate toggle instead of free text | v1.6 | 2/5 | In Progress|  |
 | 38. Rethink Full Name vs. name-part fields in the people editor | v1.6 | TBD | Not started | - |
 | 39. Bench popover — additional context data for Justices | v1.6 | TBD | Not started | - |
 | 40. README — how to start the local stack | v1.6 | 3/3 | Complete    | 2026-07-14 |

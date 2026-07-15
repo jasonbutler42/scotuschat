@@ -6,14 +6,14 @@ current_phase: 37
 current_phase_name: Represent tenure Seat as a Chief/Associate toggle instead of free text
 status: executing
 stopped_at: Completed 37-01-PLAN.md
-last_updated: "2026-07-15T18:53:44.492Z"
+last_updated: "2026-07-15T19:02:00.140Z"
 last_activity: 2026-07-15
 last_activity_desc: Phase 37 Plan 01 complete; Plan 02 ready to execute
 progress:
   total_phases: 10
   completed_phases: 7
   total_plans: 32
-  completed_plans: 28
+  completed_plans: 29
   percent: 70
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-07-14 after Phase 34 verification)
 ## Current Position
 
 Phase: 37 — Represent tenure Seat as a Chief/Associate toggle instead of free text
-Plan: 2 of 5
+Plan: 3 of 5
 Status: Ready to execute
 Last activity: 2026-07-15 - Phase 37 Plan 01 complete; Plan 02 ready to execute
 
@@ -94,6 +94,8 @@ Two open design questions remain unresolved by design and are intentionally defe
 - [Phase 36]: Copy feedback ownership follows a generation invalidated by activation, payload change, and destruction. — Prevents stale clipboard promises and timers from mutating feedback for the current payload.
 - [Phase 37]: Wave 0 tests fail at execution rather than collection when Phase 37 production artifacts are absent.
 - [Phase 37]: Native same-name radio semantics are the executable accessibility baseline for Office selection.
+- [Phase 37]: Execution consumes an immutable database-bound report as the sole audited row set. — Prevents report regeneration, tampering, and cross-database execution.
+- [Phase 37]: The database constraint is installed only after a preflight proves every office canonical. — Keeps legacy values readable until explicit normalization is complete.
 
 ### Roadmap Evolution
 
@@ -211,10 +213,11 @@ Items acknowledged and deferred at v1.5 milestone close on 2026-07-12:
 | Phase 36 P02 | 2h | 3 tasks | 6 files |
 | Phase 36 P03 | 18m | 2 tasks | 5 files |
 | Phase 37 P01 | 20min | 2 tasks | 2 files |
+| Phase 37 P02 | 18min | 3 tasks | 3 files |
 
 ## Session Continuity
 
-Last session: 2026-07-15T18:52:32.295Z
+Last session: 2026-07-15T19:01:39.649Z
 Stopped at: Completed 37-01-PLAN.md
 Resume file: None
 

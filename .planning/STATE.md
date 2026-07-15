@@ -4,16 +4,16 @@ milestone: v1.6
 milestone_name: Backlog Cleanup
 current_phase: 37
 current_phase_name: Represent tenure Seat as a Chief/Associate toggle instead of free text
-status: verifying
-stopped_at: Completed 36-03-PLAN.md
-last_updated: "2026-07-15T17:26:23.056Z"
+status: executing
+stopped_at: Completed 37-01-PLAN.md
+last_updated: "2026-07-15T18:53:44.492Z"
 last_activity: 2026-07-15
-last_activity_desc: Phase 36 complete, transitioned to Phase 37
+last_activity_desc: Phase 37 Plan 01 complete; Plan 02 ready to execute
 progress:
   total_phases: 10
   completed_phases: 7
   total_plans: 32
-  completed_plans: 27
+  completed_plans: 28
   percent: 70
 ---
 
@@ -24,14 +24,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-14 after Phase 34 verification)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** Phase 36 — Click-to-copy extracted values design pattern
+**Current focus:** Phase 37 - Tenure Office migration and editor contract
 
 ## Current Position
 
 Phase: 37 — Represent tenure Seat as a Chief/Associate toggle instead of free text
-Plan: Not started
-Status: Phase complete — ready for verification
-Last activity: 2026-07-15 — Phase 36 complete, transitioned to Phase 37
+Plan: 2 of 5
+Status: Ready to execute
+Last activity: 2026-07-15 - Phase 37 Plan 01 complete; Plan 02 ready to execute
 
 ## Performance Metrics
 
@@ -92,6 +92,8 @@ Two open design questions remain unresolved by design and are intentionally defe
 - [Phase 36]: Disabled N/A values retain disabled semantics and tooltip behavior but omit the copy icon.
 - [Phase 36]: Use extracted fills the native date input without autosave while preserving manual entry.
 - [Phase 36]: Copy feedback ownership follows a generation invalidated by activation, payload change, and destruction. — Prevents stale clipboard promises and timers from mutating feedback for the current payload.
+- [Phase 37]: Wave 0 tests fail at execution rather than collection when Phase 37 production artifacts are absent.
+- [Phase 37]: Native same-name radio semantics are the executable accessibility baseline for Office selection.
 
 ### Roadmap Evolution
 
@@ -208,11 +210,12 @@ Items acknowledged and deferred at v1.5 milestone close on 2026-07-12:
 | Phase 36 P01 | 16min | 2 tasks | 2 files |
 | Phase 36 P02 | 2h | 3 tasks | 6 files |
 | Phase 36 P03 | 18m | 2 tasks | 5 files |
+| Phase 37 P01 | 20min | 2 tasks | 2 files |
 
 ## Session Continuity
 
-Last session: 2026-07-15T17:20:29.206Z
-Stopped at: Completed 36-03-PLAN.md
+Last session: 2026-07-15T18:52:32.295Z
+Stopped at: Completed 37-01-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

@@ -28,7 +28,7 @@ Requirements for the v1.6 Backlog Cleanup milestone. Each maps to a roadmap phas
 
 ### People Data Model
 
-- [ ] **PEOPLE-08**: Tenure Seat is captured via a decision-backed UI control instead of unconstrained free text
+- [x] **PEOPLE-08**: Tenure Seat is captured via a decision-backed UI control instead of unconstrained free text
 - [ ] **PEOPLE-09**: Full Name field behavior is resolved per a locked design decision (auto-derived vs. independently editable)
 
 ### Public UI
@@ -80,7 +80,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PIPE-28 | Phase 34 | Complete |
 | PIPE-29 | Phase 35 | Complete |
 | UX-01 | Phase 36 | Complete |
-| PEOPLE-08 | Phase 37 | Pending |
+| PEOPLE-08 | Phase 37 | Complete |
 | PEOPLE-09 | Phase 38 | Pending |
 | PUB-04 | Phase 39 | Pending |
 | DOCS-01 | Phase 40 | Complete |

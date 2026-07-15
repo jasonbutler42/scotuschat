@@ -43,6 +43,12 @@
 		form = null
 	}: ArgumentDetailsCardProps = $props();
 
+	function formatExtractedDate(iso: string | null | undefined): string | null {
+		if (!iso) return null;
+		const match = iso.match(/^(\d{4})-(\d{2})-(\d{2})/);
+		if (!match) return iso;
+		return match[2] + '/' + match[3] + '/' + match[1];
+	}
 	// D-04/D-05: docket initial-value source for DocketPillInput, seeded from savedValues.dockets
 	let effectiveDockets = $state<string[]>(savedValues.dockets ?? []);
 	let saving = $state(false);
@@ -204,7 +210,7 @@
 			<!-- Argued date hint row: always visible (D-07/D-08/PJOB-04) -->
 			<div style="font-size: 14px; font-weight: 400; color: #94a3b8; margin-top: 4px; margin-bottom: 0; display: flex; align-items: center; flex-wrap: wrap;">
 				<span>Extracted:</span>
-				<CopyableExtractedValue value={hints.argued_date} copyLabel="Copy argued date" />
+				<CopyableExtractedValue value={formatExtractedDate(hints.argued_date)} copyLabel="Copy argued date" />
 			</div>
 		</div>
 

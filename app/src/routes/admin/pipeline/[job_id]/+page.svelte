@@ -57,8 +57,9 @@
 	// scoped inside {#if data.argument} (Pitfall 5 — that one is not accessible here).
 	function formatDate(iso: string | null | undefined): string {
 		if (!iso) return '—';
-		const [y, m, d] = iso.slice(0, 10).split('-').map(Number);
-		return new Date(y, m - 1, d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+		const match = iso.match(/^(\d{4})-(\d{2})-(\d{2})/);
+		if (!match) return iso;
+		return match[2] + '/' + match[3] + '/' + match[1];
 	}
 
 	// ──────────────────────────────────────────────────────────────────────────

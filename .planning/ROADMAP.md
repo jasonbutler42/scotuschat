@@ -257,11 +257,11 @@ Plans:
   3. Click-to-copy is visibly disabled when the underlying value is N/A (not extracted).
   4. The pattern is implemented as one reusable component, not duplicated per page.
 
-**Plans**: 0/2 plans complete
+**Plans**: 1/2 plans executed
 
 **Wave 1**
 
-- [ ] 36-01-PLAN.md — Reusable CopyableExtractedValue primitive and ArgumentDetailsCard adoption
+- [x] 36-01-PLAN.md — Reusable CopyableExtractedValue primitive and ArgumentDetailsCard adoption
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -301,6 +301,7 @@ Plans:
 **Wave 5** *(blocked on Wave 4 completion)*
 
 - [ ] 37-05-PLAN.md — Accessible Office editor, migration/application gate, and final Nyquist verification
+
 **UI hint**: yes
 
 ### Phase 38: Rethink Full Name vs. name-part fields in the people editor
@@ -386,7 +387,7 @@ Plans:
 | 33. `update_argument_metadata` unique-constraint guard | v1.6 | 4/4 | Complete   | 2026-07-14 |
 | 34. Blank case_name/docket_number validation | v1.6 | 4/4 | Complete    | 2026-07-14 |
 | 35. `rerun_job` never spawns ingest for locally-uploaded jobs | v1.6 | 3/3 | Complete    | 2026-07-14 |
-| 36. Click-to-copy extracted values design pattern | v1.6 | TBD | Not started | - |
+| 36. Click-to-copy extracted values design pattern | v1.6 | 1/2 | In Progress|  |
 | 37. Represent tenure Seat as a Chief/Associate toggle instead of free text | v1.6 | TBD | Not started | - |
 | 38. Rethink Full Name vs. name-part fields in the people editor | v1.6 | TBD | Not started | - |
 | 39. Bench popover — additional context data for Justices | v1.6 | TBD | Not started | - |

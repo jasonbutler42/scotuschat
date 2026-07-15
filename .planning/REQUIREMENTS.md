@@ -24,7 +24,7 @@ Requirements for the v1.6 Backlog Cleanup milestone. Each maps to a roadmap phas
 
 ### Operator UX
 
-- [ ] **UX-01**: Every extracted-value display (pipeline run pages, argument editor) offers a consistent click-to-copy affordance, disabled when the value is N/A
+- [x] **UX-01**: Every extracted-value display (pipeline run pages, argument editor) offers a consistent click-to-copy affordance, disabled when the value is N/A
 
 ### People Data Model
 
@@ -79,7 +79,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PIPE-27 | Phase 33 | Complete |
 | PIPE-28 | Phase 34 | Complete |
 | PIPE-29 | Phase 35 | Complete |
-| UX-01 | Phase 36 | Pending |
+| UX-01 | Phase 36 | Complete |
 | PEOPLE-08 | Phase 37 | Pending |
 | PEOPLE-09 | Phase 38 | Pending |
 | PUB-04 | Phase 39 | Pending |

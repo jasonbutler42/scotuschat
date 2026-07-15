@@ -5,16 +5,16 @@ milestone_name: Backlog Cleanup
 current_phase: 36
 current_phase_name: Click-to-copy extracted values design pattern
 status: executing
-stopped_at: Phase 37 UI-SPEC approved
-last_updated: "2026-07-14T22:07:39.986Z"
+stopped_at: Completed 36-01-PLAN.md
+last_updated: "2026-07-15T14:24:53.307Z"
 last_activity: 2026-07-14
 last_activity_desc: Phase 35 complete, transitioned to Phase 36
 progress:
   total_phases: 10
   completed_phases: 6
-  total_plans: 26
-  completed_plans: 24
-  percent: 60
+  total_plans: 31
+  completed_plans: 25
+  percent: 81
 ---
 
 # Project State
@@ -24,14 +24,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-14 after Phase 34 verification)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** Phase 35 — Remove pipeline job rerun capability
+**Current focus:** Phase 36 — Click-to-copy extracted values design pattern
 
 ## Current Position
 
 Phase: 36 — Click-to-copy extracted values design pattern
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-07-14 — Phase 35 complete, transitioned to Phase 36
+Plan: 1 of 2
+Status: In progress
+Last activity: 2026-07-15 — Completed Phase 36 Plan 01 shared copy control and ArgumentDetailsCard adoption
 
 ## Performance Metrics
 
@@ -201,12 +201,13 @@ Items acknowledged and deferred at v1.5 milestone close on 2026-07-12:
 | Phase 35 P02 | 10min | 2 tasks | 2 files |
 | Phase 35 P01 | 12min | 2 tasks | 3 files |
 | Phase 35 P03 | 20min | 2 tasks | 2 files |
+| Phase 36 P01 | 16min | 2 tasks | 2 files |
 
 ## Session Continuity
 
-Last session: 2026-07-14T21:33:38.751Z
-Stopped at: Phase 37 UI-SPEC approved
-Resume file: .planning/phases/37-tenure-seat-as-chief-associate-toggle/37-UI-SPEC.md
+Last session: 2026-07-15T14:24:53.294Z
+Stopped at: Completed 36-01-PLAN.md
+Resume file: None
 
 ## Operator Next Steps
 

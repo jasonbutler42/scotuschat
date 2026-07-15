@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { tick } from 'svelte';
+	import CopyableExtractedValue from '$lib/components/CopyableExtractedValue.svelte';
 	import DocketPillInput from '$lib/components/DocketPillInput.svelte';
 
 	type DuplicateArgumentConflict = {
@@ -133,27 +134,10 @@
 				>Extracted:</span>
 				{#if hints.dockets.length > 0}
 					{#each hints.dockets as hintDocket}
-						<span
-							style="
-								display: inline-flex;
-								align-items: center;
-								background-color: #0f1117;
-								border: 1px solid #334155;
-								border-radius: 4px;
-								padding: 2px 8px;
-								font-size: 12px;
-								font-weight: 400;
-								color: #94a3b8;
-								height: 24px;
-							"
-						>
-							{hintDocket}
-						</span>
+						<CopyableExtractedValue value={hintDocket} copyLabel="Copy docket" variant="pill" />
 					{/each}
 				{:else}
-					<span
-						style="font-size: 14px; font-weight: 400; color: #94a3b8; font-style: italic;"
-					>N/A</span>
+					<CopyableExtractedValue value={null} copyLabel="Copy docket" variant="pill" />
 				{/if}
 			</div>
 		</div>
@@ -185,18 +169,10 @@
 				"
 			/>
 			<!-- Question number hint row: always visible (D-07/D-08/PJOB-04) -->
-			<p
-				style="
-					font-size: 14px;
-					font-weight: 400;
-					color: #94a3b8;
-					margin-top: 4px;
-					margin-bottom: 0;
-					{!hints.question_number ? 'font-style: italic;' : ''}
-				"
-			>
-				Extracted: {hints.question_number ?? 'N/A'}
-			</p>
+			<div style="font-size: 14px; font-weight: 400; color: #94a3b8; margin-top: 4px; margin-bottom: 0; display: flex; align-items: center; flex-wrap: wrap;">
+				<span>Extracted:</span>
+				<CopyableExtractedValue value={hints.question_number} copyLabel="Copy question number" />
+			</div>
 		</div>
 
 		<!-- Argued date field -->
@@ -226,18 +202,10 @@
 				"
 			/>
 			<!-- Argued date hint row: always visible (D-07/D-08/PJOB-04) -->
-			<p
-				style="
-					font-size: 14px;
-					font-weight: 400;
-					color: #94a3b8;
-					margin-top: 4px;
-					margin-bottom: 0;
-					{!hints.argued_date ? 'font-style: italic;' : ''}
-				"
-			>
-				Extracted: {hints.argued_date ?? 'N/A'}
-			</p>
+			<div style="font-size: 14px; font-weight: 400; color: #94a3b8; margin-top: 4px; margin-bottom: 0; display: flex; align-items: center; flex-wrap: wrap;">
+				<span>Extracted:</span>
+				<CopyableExtractedValue value={hints.argued_date} copyLabel="Copy argued date" />
+			</div>
 		</div>
 
 		<!-- Success / error messages -->

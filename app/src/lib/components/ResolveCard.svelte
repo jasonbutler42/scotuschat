@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import CopyableExtractedValue from '$lib/components/CopyableExtractedValue.svelte';
 	import CreatePersonPopover from '$lib/components/CreatePersonPopover.svelte';
 
 	// Phase 25 — Restructured Resolve card (D-10 through D-19, D-21, PJOB-14 through PJOB-19, PJOB-21).
@@ -636,8 +637,8 @@
 											min-height: 36px;
 										"
 									/>
-									<p style="margin: 4px 0 0 0; font-size: 13px; color: #94a3b8; {!row.title_hint ? 'font-style: italic;' : ''}">
-										Extracted: {row.title_hint ?? 'N/A'}
+									<p style="margin: 4px 0 0 0; font-size: 13px; color: #94a3b8;">
+										Extracted: <CopyableExtractedValue value={row.title_hint} copyLabel="Copy title" />
 									</p>
 								{:else}
 									<span>{row.title ?? '—'}</span>

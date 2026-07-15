@@ -2,6 +2,7 @@
 	import { enhance } from '$app/forms';
 	import { tick } from 'svelte';
 	import ArgumentDetailsCard from '$lib/components/ArgumentDetailsCard.svelte';
+	import CopyableExtractedValue from '$lib/components/CopyableExtractedValue.svelte';
 
 	let { data, form } = $props();
 
@@ -523,10 +524,9 @@
 														font-weight: 400;
 														color: #94a3b8;
 														margin: 4px 0 0 0;
-														{!speaker.title_hint ? 'font-style: italic;' : ''}
 													"
 												>
-													Extracted: {speaker.title_hint ?? 'N/A'}
+													Extracted: <CopyableExtractedValue value={speaker.title_hint} copyLabel="Copy title" />
 												</p>
 											</div>
 											<div style="white-space: nowrap; padding-top: 6px; font-size: 14px; color: #94a3b8;">

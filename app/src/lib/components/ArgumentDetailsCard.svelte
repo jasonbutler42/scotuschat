@@ -49,13 +49,37 @@
 		if (!match) return iso;
 		return match[2] + '/' + match[3] + '/' + match[1];
 	}
+
+	function extractedIsoDate(value: string | null | undefined): string | null {
+		if (!value) return null;
+		const match = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+		if (!match) return null;
+		const year = Number(match[1]);
+		const month = Number(match[2]);
+		const day = Number(match[3]);
+		const parsed = new Date(Date.UTC(year, month - 1, day));
+		if (
+			parsed.getUTCFullYear() !== year ||
+			parsed.getUTCMonth() !== month - 1 ||
+			parsed.getUTCDate() !== day
+		) return null;
+		return match[1] + '-' + match[2] + '-' + match[3];
+	}
 	// D-04/D-05: docket initial-value source for DocketPillInput, seeded from savedValues.dockets
 	let effectiveDockets = $state<string[]>(savedValues.dockets ?? []);
 	let saving = $state(false);
 	let alertElement: HTMLParagraphElement | null = $state(null);
+	let arguedDateInput: HTMLInputElement | null = $state(null);
 	let docketControl: { focus: () => void; hasPills: () => boolean } | null = $state(null);
 	let clientDocketRequired = $state(false);
 	let docketRequired = $derived(clientDocketRequired || form?.docketRequired === true);
+	let validExtractedArguedDate = $derived(extractedIsoDate(hints.argued_date));
+
+	function useExtractedArguedDate() {
+		if (readonly || !validExtractedArguedDate || !arguedDateInput) return;
+		arguedDateInput.value = validExtractedArguedDate;
+		arguedDateInput.dispatchEvent(new Event('input', { bubbles: true }));
+	}
 
 	// D-06: on failed save, re-seed DocketPillInput from form.dockets (not from savedValues)
 	$effect(() => {
@@ -190,6 +214,7 @@
 				Argued date
 			</label>
 			<input
+				bind:this={arguedDateInput}
 				id="argued-date-input"
 				type="date"
 				name="argued_date"
@@ -208,9 +233,26 @@
 				"
 			/>
 			<!-- Argued date hint row: always visible (D-07/D-08/PJOB-04) -->
-			<div style="font-size: 14px; font-weight: 400; color: #94a3b8; margin-top: 4px; margin-bottom: 0; display: flex; align-items: center; flex-wrap: wrap;">
+			<div style="font-size: 14px; font-weight: 400; color: #94a3b8; margin-top: 4px; margin-bottom: 0; display: flex; align-items: center; flex-wrap: wrap; gap: 4px;">
 				<span>Extracted:</span>
 				<CopyableExtractedValue value={formatExtractedDate(hints.argued_date)} copyLabel="Copy argued date" />
+				{#if !readonly && validExtractedArguedDate}
+					<button
+						type="button"
+						onclick={useExtractedArguedDate}
+						title="Fill argued date with the extracted value"
+						style="
+							min-height: 36px;
+							background: transparent;
+							border: 1px solid #334155;
+							border-radius: 4px;
+							padding: 4px 8px;
+							color: #93c5fd;
+							font: inherit;
+							cursor: pointer;
+						"
+					>Use extracted</button>
+				{/if}
 			</div>
 		</div>
 

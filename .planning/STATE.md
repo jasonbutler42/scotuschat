@@ -5,16 +5,16 @@ milestone_name: Backlog Cleanup
 current_phase: 36
 current_phase_name: Click-to-copy extracted values design pattern
 status: executing
-stopped_at: Completed 36-01-PLAN.md
-last_updated: "2026-07-15T14:24:53.307Z"
-last_activity: 2026-07-14
-last_activity_desc: Phase 35 complete, transitioned to Phase 36
+stopped_at: Phase 38 context gathered
+last_updated: "2026-07-15T15:14:31.018Z"
+last_activity: 2026-07-15
+last_activity_desc: Completed Phase 36 Plan 01 shared copy control and ArgumentDetailsCard adoption
 progress:
   total_phases: 10
   completed_phases: 6
   total_plans: 31
   completed_plans: 25
-  percent: 81
+  percent: 60
 ---
 
 # Project State
@@ -205,9 +205,9 @@ Items acknowledged and deferred at v1.5 milestone close on 2026-07-12:
 
 ## Session Continuity
 
-Last session: 2026-07-15T14:24:53.294Z
-Stopped at: Completed 36-01-PLAN.md
-Resume file: None
+Last session: 2026-07-15T15:14:31.005Z
+Stopped at: Phase 38 context gathered
+Resume file: .planning/phases/38-full-name-vs-name-parts-rethink/38-CONTEXT.md
 
 ## Operator Next Steps
 

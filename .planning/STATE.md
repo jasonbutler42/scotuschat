@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Backlog Cleanup
-current_phase: 36
-current_phase_name: Click-to-copy extracted values design pattern
+current_phase: 37
+current_phase_name: Represent tenure Seat as a Chief/Associate toggle instead of free text
 status: verifying
 stopped_at: Completed 36-03-PLAN.md
-last_updated: "2026-07-15T17:20:29.219Z"
+last_updated: "2026-07-15T17:26:23.056Z"
 last_activity: 2026-07-15
-last_activity_desc: Completed Phase 36 Plan 01 shared copy control and ArgumentDetailsCard adoption
+last_activity_desc: Phase 36 complete, transitioned to Phase 37
 progress:
   total_phases: 10
   completed_phases: 7
@@ -28,10 +28,10 @@ See: .planning/PROJECT.md (updated 2026-07-14 after Phase 34 verification)
 
 ## Current Position
 
-Phase: 36 — Click-to-copy extracted values design pattern
-Plan: 2 of 2
+Phase: 37 — Represent tenure Seat as a Chief/Associate toggle instead of free text
+Plan: Not started
 Status: Phase complete — ready for verification
-Last activity: 2026-07-15 — Completed Phase 36 Plan 01 shared copy control and ArgumentDetailsCard adoption
+Last activity: 2026-07-15 — Phase 36 complete, transitioned to Phase 37
 
 ## Performance Metrics
 

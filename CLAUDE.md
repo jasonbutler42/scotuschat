@@ -57,3 +57,4 @@ This project uses the Get Shit Done (GSD) workflow. Always follow the phase-gate
 1. FastAPI is read-only — the pipeline writes directly to PostgreSQL; the API never triggers pipeline steps
 2. All FastAPI calls from SvelteKit go through `+page.server.ts` server load functions — `FASTAPI_BASE_URL` is a server-only env var, never `PUBLIC_`
 3. Re-running a pipeline step produces new rows under a new `pipeline_run_id` — prior rows are not deleted until the new run is promoted
+4. An extracted field with an operator-editable destination uses `CopyableExtractedValue` by default unless its phase explicitly opts out; a read-only extracted value without an operator-editable destination remains plain.

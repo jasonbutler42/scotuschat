@@ -2,6 +2,7 @@
 	import { invalidateAll } from '$app/navigation';
 	import { enhance } from '$app/forms';
 	import ArgumentDetailsCard from '$lib/components/ArgumentDetailsCard.svelte';
+	import CopyableExtractedValue from '$lib/components/CopyableExtractedValue.svelte';
 	import RunStatusCard from '$lib/components/RunStatusCard.svelte';
 	import ResolveCard from '$lib/components/ResolveCard.svelte';
 	import FailedStepGuidance from '$lib/components/FailedStepGuidance.svelte';
@@ -323,51 +324,22 @@
 							<!-- Case name from cover_metadata (PJOB-10/12) — NOT data.argument.case_name (Pitfall 7) -->
 							<div style="margin-bottom: 12px;">
 								<span style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 4px;">Case name</span>
-								{#if ps.case_name}
-									<span style="font-size: 16px; color: #e2e8f0;">{ps.case_name}</span>
-								{:else}
-									<span style="font-size: 16px; color: #94a3b8; font-style: italic;">N/A</span>
-								{/if}
+								<CopyableExtractedValue value={ps.case_name} copyLabel="Copy case name" />
 							</div>
 							<!-- Argued date from cover_metadata (PJOB-10/12) — formatted via formatDate -->
 							<div style="margin-bottom: 12px;">
 								<span style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 4px;">Argued</span>
-								{#if ps.argued_date}
-									<span style="font-size: 16px; color: #e2e8f0;">{formatDate(ps.argued_date)}</span>
-								{:else}
-									<span style="font-size: 16px; color: #94a3b8; font-style: italic;">N/A</span>
-								{/if}
+								<CopyableExtractedValue value={ps.argued_date ? formatDate(ps.argued_date) : null} copyLabel="Copy argued date" />
 							</div>
 							<!-- Docket(s) from cover_metadata (PJOB-10/12) — read-only pill or N/A -->
 							<div style="margin-bottom: 12px;">
 								<span style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 4px;">Docket(s)</span>
-								{#if ps.primary_docket}
-									<span
-										style="
-											display: inline-flex;
-											align-items: center;
-											background-color: #0f1117;
-											border: 1px solid #334155;
-											border-radius: 4px;
-											padding: 2px 8px;
-											font-size: 14px;
-											font-weight: 400;
-											color: #94a3b8;
-											height: 24px;
-										"
-									>{ps.primary_docket}</span>
-								{:else}
-									<span style="font-size: 16px; color: #94a3b8; font-style: italic;">N/A</span>
-								{/if}
+								<CopyableExtractedValue value={ps.primary_docket} copyLabel="Copy docket" variant="pill" />
 							</div>
 							<!-- Question number from Argument.question_number (PJOB-10/12) — N/A when null -->
 							<div style="margin-bottom: 12px;">
 								<span style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 4px;">Question number</span>
-								{#if ps.question_number != null}
-									<span style="font-size: 16px; color: #e2e8f0;">{ps.question_number}</span>
-								{:else}
-									<span style="font-size: 16px; color: #94a3b8; font-style: italic;">N/A</span>
-								{/if}
+								<CopyableExtractedValue value={ps.question_number != null ? String(ps.question_number) : null} copyLabel="Copy question number" />
 							</div>
 						</div>
 					{/if}

@@ -5,16 +5,16 @@ milestone_name: Backlog Cleanup
 current_phase: 36
 current_phase_name: Click-to-copy extracted values design pattern
 status: executing
-stopped_at: Phase 38 context gathered
-last_updated: "2026-07-15T15:14:31.018Z"
+stopped_at: Completed 36-02-PLAN.md
+last_updated: "2026-07-15T16:33:48.685Z"
 last_activity: 2026-07-15
 last_activity_desc: Completed Phase 36 Plan 01 shared copy control and ArgumentDetailsCard adoption
 progress:
   total_phases: 10
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 31
-  completed_plans: 25
-  percent: 60
+  completed_plans: 26
+  percent: 70
 ---
 
 # Project State
@@ -29,8 +29,8 @@ See: .planning/PROJECT.md (updated 2026-07-14 after Phase 34 verification)
 ## Current Position
 
 Phase: 36 — Click-to-copy extracted values design pattern
-Plan: 1 of 2
-Status: In progress
+Plan: 2 of 2
+Status: Ready to execute
 Last activity: 2026-07-15 — Completed Phase 36 Plan 01 shared copy control and ArgumentDetailsCard adoption
 
 ## Performance Metrics
@@ -88,6 +88,9 @@ Two open design questions remain unresolved by design and are intentionally defe
 - [Phase 35]: Retain broad rerun wording only where it describes legitimate PipelineRun history rather than an operator capability.
 - [Phase 35]: Exact retired-symbol matches are allowed only in deliberate negative regressions; broad rerun language remains for legitimate run history and re-execution semantics.
 - [Phase 35]: Commit-owning public-boundary tests use the configured isolated database with explicit cleanup.
+- [Phase 36]: Phase 36 owns the click-to-copy interaction contract while Phase 38 may evolve its visual presentation.
+- [Phase 36]: Disabled N/A values retain disabled semantics and tooltip behavior but omit the copy icon.
+- [Phase 36]: Use extracted fills the native date input without autosave while preserving manual entry.
 
 ### Roadmap Evolution
 
@@ -202,12 +205,13 @@ Items acknowledged and deferred at v1.5 milestone close on 2026-07-12:
 | Phase 35 P01 | 12min | 2 tasks | 3 files |
 | Phase 35 P03 | 20min | 2 tasks | 2 files |
 | Phase 36 P01 | 16min | 2 tasks | 2 files |
+| Phase 36 P02 | 2h | 3 tasks | 6 files |
 
 ## Session Continuity
 
-Last session: 2026-07-15T15:14:31.005Z
-Stopped at: Phase 38 context gathered
-Resume file: .planning/phases/38-full-name-vs-name-parts-rethink/38-CONTEXT.md
+Last session: 2026-07-15T16:33:48.673Z
+Stopped at: Completed 36-02-PLAN.md
+Resume file: None
 
 ## Operator Next Steps
 

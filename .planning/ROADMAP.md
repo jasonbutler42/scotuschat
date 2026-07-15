@@ -112,7 +112,7 @@ Full phase details: `.planning/milestones/v1.5-ROADMAP.md`
 - [x] **Phase 33: `update_argument_metadata` unique-constraint guard** - Colliding (source_docket, question_number) returns 409/422 instead of 500 (completed 2026-07-14)
 - [x] **Phase 34: Blank case_name/docket_number validation** - Prevents slug/dedup corruption from cleared fields (completed 2026-07-14)
 - [x] **Phase 35: `rerun_job` never spawns ingest for locally-uploaded jobs** - Local-upload reruns actually progress instead of sitting at PENDING forever (completed 2026-07-14)
-- [ ] **Phase 36: Click-to-copy extracted values design pattern** - Consistent click-to-copy affordance across pipeline run pages and argument editor
+- [x] **Phase 36: Click-to-copy extracted values design pattern** - Consistent click-to-copy affordance across pipeline run pages and argument editor (completed 2026-07-15)
 - [ ] **Phase 37: Represent tenure Seat as a Chief/Associate toggle instead of free text** - Open design question (numbered-seat data vs. binary toggle) resolved during discuss-phase
 - [ ] **Phase 38: Rethink Full Name vs. name-part fields in the people editor** - Open design question (auto-derive vs. independently editable) resolved during discuss-phase
 - [ ] **Phase 39: Bench popover — additional context data for Justices** - Birthdate, death date, and per-tenure appointment context, presented apolitically
@@ -257,7 +257,7 @@ Plans:
   3. Click-to-copy is visibly disabled when the underlying value is N/A (not extracted).
   4. The pattern is implemented as one reusable component, not duplicated per page.
 
-**Plans**: 1/2 plans executed
+**Plans**: 2/2 plans complete
 
 **Wave 1**
 
@@ -265,7 +265,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 36-02-PLAN.md — Remaining extracted-value surfaces, durable D-13 guidance, and blocking browser UAT
+- [x] 36-02-PLAN.md — Remaining extracted-value surfaces, durable D-13 guidance, and blocking browser UAT
 
 **UI hint**: yes
 
@@ -387,7 +387,7 @@ Plans:
 | 33. `update_argument_metadata` unique-constraint guard | v1.6 | 4/4 | Complete   | 2026-07-14 |
 | 34. Blank case_name/docket_number validation | v1.6 | 4/4 | Complete    | 2026-07-14 |
 | 35. `rerun_job` never spawns ingest for locally-uploaded jobs | v1.6 | 3/3 | Complete    | 2026-07-14 |
-| 36. Click-to-copy extracted values design pattern | v1.6 | 1/2 | In Progress|  |
+| 36. Click-to-copy extracted values design pattern | v1.6 | 2/2 | Complete   | 2026-07-15 |
 | 37. Represent tenure Seat as a Chief/Associate toggle instead of free text | v1.6 | TBD | Not started | - |
 | 38. Rethink Full Name vs. name-part fields in the people editor | v1.6 | TBD | Not started | - |
 | 39. Bench popover — additional context data for Justices | v1.6 | TBD | Not started | - |

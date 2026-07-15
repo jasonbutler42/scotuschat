@@ -1,8 +1,8 @@
 # Phase 36: Click-to-copy extracted values design pattern - Pattern Map
 
 **Mapped:** 2026-07-14
-**Files analyzed:** 5 new/modified files
-**Analogs found:** 4 / 5
+**Files analyzed:** 6 new/modified files
+**Analogs found:** 5 / 6
 
 ## File Classification
 
@@ -13,6 +13,7 @@
 | `app/src/lib/components/ResolveCard.svelte` | component | row-oriented form / event-driven copy | Existing editable title hint branch in the same file | exact integration seam |
 | `app/src/routes/admin/arguments/[id]/+page.svelte` | route component | form request-response / event-driven copy | Existing speaker title hint in the same file | exact integration seam |
 | `app/src/routes/admin/pipeline/[job_id]/+page.svelte` | route component | server-loaded readout / event-driven copy | Existing parsed-output values and docket pill in the same file | exact integration seam |
+| `CLAUDE.md` | project guide | durable implementation convention | Existing Svelte/frontend constraints in the same guide | exact guide-insertion analog |
 
 No server load file, API route, database file, or package manifest needs modification. All values are already supplied to the four consumers.
 
@@ -137,6 +138,12 @@ Import the shared component beside the other `$lib/components` imports. Adopt it
 
 Leave utterance, bench, advocate, and total speaker counts plain. They have no operator-editable destination. Preserve the existing `ArgumentDetailsCard` and `ResolveCard` consumers, which gain their behavior through their own integrations.
 
+### `CLAUDE.md` (project guide, durable convention)
+
+**Analog/integration seam:** the existing frontend architecture bullets that require SvelteKit 2.x, Svelte 5 runes, server-load data flow, and preservation of global project constraints.
+
+Add the D-13 convention adjacent to those frontend/Svelte rules rather than creating a disconnected phase-history section. State both halves together: extracted fields with an operator-editable destination receive the shared click-to-copy control by default unless a phase explicitly opts out; read-only extracted values without an operator-editable destination remain excluded. Name `CopyableExtractedValue` as the reuse target. Insert only this concise convention and preserve every unrelated guide rule verbatim.
+
 ## Shared Patterns
 
 ### Imports and component ownership
@@ -175,7 +182,7 @@ Then browser-UAT exact copied payloads, individual dockets, repeated-click timer
 
 ## Metadata
 
-**Analog search scope:** `app/src/lib/components`, `app/src/routes/admin`, `app/src/app.css`, `app/package.json`
-**Files scanned deeply:** 6
+**Analog search scope:** `app/src/lib/components`, `app/src/routes/admin`, `app/src/app.css`, `app/package.json`, `CLAUDE.md`
+**Files scanned deeply:** 7
 **Pattern extraction date:** 2026-07-14
 

@@ -265,7 +265,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 36-02-PLAN.md — Remaining pipeline and argument-editor extracted-value surfaces plus durable D-13 guidance
+- [ ] 36-02-PLAN.md — Remaining extracted-value surfaces, durable D-13 guidance, and blocking browser UAT
 
 **UI hint**: yes
 

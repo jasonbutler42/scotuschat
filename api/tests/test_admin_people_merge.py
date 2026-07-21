@@ -322,8 +322,8 @@ async def test_get_merge_preview_counts_tenures() -> None:
             assert result["tenures"] == 0
 
             await db.execute(
-                text("INSERT INTO court_tenures (person_id) VALUES (:pid)"),
-                {"pid": person_id},
+                text("INSERT INTO court_tenures (person_id, office) VALUES (:pid, :office)"),
+                {"pid": person_id, "office": "associate"},
             )
 
             result = await get_merge_preview(db, source_id=person_id)
@@ -364,8 +364,8 @@ async def test_delete_person_if_orphan_blocked_by_tenure() -> None:
         person_id = row[0]
 
         await db.execute(
-            text("INSERT INTO court_tenures (person_id) VALUES (:pid)"),
-            {"pid": person_id},
+            text("INSERT INTO court_tenures (person_id, office) VALUES (:pid, :office)"),
+            {"pid": person_id, "office": "associate"},
         )
         await db.commit()
 
@@ -418,8 +418,8 @@ async def test_merge_people_transfers_tenures() -> None:
         tgt_id = tgt_row[0]
 
         await db.execute(
-            text("INSERT INTO court_tenures (person_id) VALUES (:pid)"),
-            {"pid": src_id},
+            text("INSERT INTO court_tenures (person_id, office) VALUES (:pid, :office)"),
+            {"pid": src_id, "office": "associate"},
         )
         await db.commit()
 

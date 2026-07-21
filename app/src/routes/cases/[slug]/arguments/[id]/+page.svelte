@@ -7,7 +7,9 @@
 	import SpeakerPopover from '$lib/components/SpeakerPopover.svelte';
 
 	interface TenureRow {
-		seat: string | null;
+		// Canonical "chief"/"associate" storage value (Phase 37 D-15/D-17) — formal
+		// title projection happens in SpeakerPopover.svelte, not here.
+		office: string | null;
 		start_date: string | null;
 		end_date: string | null;
 	}

@@ -1,8 +1,23 @@
 <script lang="ts">
 	interface TenureRow {
-		seat: string | null;
+		// Canonical "chief"/"associate" storage value (Phase 37 D-15/D-17).
+		office: string | null;
 		start_date: string | null;
 		end_date: string | null;
+	}
+
+	// Single formal-title mapping (mirrors api/models/models.py's OFFICE_TITLES /
+	// office_title(), D-15). Exhaustive over the two canonical values only — an
+	// unrecognized/blank office renders no title rather than a generic "Justice"
+	// fallback or the raw canonical string, since the DB CHECK + NOT NULL
+	// constraint (migrations 0020/0021) guarantees every stored office is valid.
+	const OFFICE_TITLES: Record<string, string> = {
+		chief: 'Chief Justice',
+		associate: 'Associate Justice'
+	};
+
+	function officeTitle(office: string | null): string {
+		return office ? (OFFICE_TITLES[office] ?? '') : '';
 	}
 
 	interface SpeakerDetail {
@@ -63,7 +78,7 @@
 			<div style="border-top:1px solid #334155;margin-top:8px;padding-top:8px;">
 				{#each speaker.tenure as t}
 					<p style="font-size:13px;color:#94a3b8;margin:0 0 4px 0;">
-						{t.seat ?? 'Justice'} — {t.start_date ? t.start_date.slice(0, 4) : '?'}–{t.end_date ? t.end_date.slice(0, 4) : 'present'}
+						{officeTitle(t.office)} — {t.start_date ? t.start_date.slice(0, 4) : '?'}–{t.end_date ? t.end_date.slice(0, 4) : 'present'}
 					</p>
 				{/each}
 				{#if speaker.appointing_president}

@@ -4,7 +4,9 @@ import type { PageServerLoad } from './$types';
 
 interface RawSpeaker {
 	photo_url?: string | null;
-	tenure?: Array<{ seat?: string | null; start_date?: string | null; end_date?: string | null }>;
+	// office carries the canonical "chief"/"associate" storage value (Phase 37
+	// D-15/D-17) — formal title projection happens in SpeakerPopover.svelte, not here.
+	tenure?: Array<{ office?: string | null; start_date?: string | null; end_date?: string | null }>;
 	[key: string]: unknown;
 }
 

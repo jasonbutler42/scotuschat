@@ -5,7 +5,12 @@ import type { Actions, PageServerLoad } from './$types';
 interface TenureRowClient {
 	_key: number;
 	id?: number;
-	seat: string;
+	// office (D-01..D-17, Phase 37) replaces the old free-text seat field.
+	// Typed as a plain string here (not the canonical Literal) because this is
+	// the client-submitted shape before this action's own allowlisted
+	// validation runs below — an invalid/blank client value must be rejected
+	// with fail(400), never coerced or silently dropped (D-11).
+	office: string;
 	start_date: string;
 	end_date: string;
 	appointed_by: string;
@@ -20,7 +25,7 @@ interface PersonDetail {
 	photo_url_full: string | null;
 	birthdate: string | null;
 	tenures: Array<{
-		seat: string | null;
+		office: string | null;
 		start_date: string | null;
 		end_date: string | null;
 		appointed_by: string | null;
@@ -147,27 +152,52 @@ export const actions: Actions = {
 		const is_justice = formData.get('is_justice') === 'true';
 		const tenuresRaw = (formData.get('tenures') as string) ?? '[]';
 
-		if (!full_name) {
-			return fail(400, { error: 'Full name is required.' });
-		}
-
 		let tenuresParsed: TenureRowClient[];
 		try {
 			tenuresParsed = JSON.parse(tenuresRaw);
 		} catch {
-			return fail(422, { error: 'Invalid tenure data. Please try again.' });
+			// Every fail() below restores the full submitted profile state
+			// (D-12, D-16) so a failed save never silently erases unsaved
+			// edits elsewhere on the form.
+			return fail(422, {
+				error: 'Invalid tenure data. Please try again.',
+				full_name, first_name, last_name, middle_name, name_suffix, birthdate, is_justice,
+				tenures: [] as { office: string; start_date: string; end_date: string; appointed_by: string; appointing_president_party: string }[],
+			});
 		}
 
 		// Strip the client-only _key field before sending to FastAPI. Reason Left
 		// is not part of TenureRowClient's state (D-19 — disabled input, no value
 		// submitted), so it is never part of this mapping.
-		const tenures = tenuresParsed.map(({ seat, start_date, end_date, appointed_by, appointing_president_party }) => ({
-			seat,
+		const tenures = tenuresParsed.map(({ office, start_date, end_date, appointed_by, appointing_president_party }) => ({
+			office,
 			start_date,
 			end_date,
 			appointed_by,
 			appointing_president_party,
 		}));
+
+		if (!full_name) {
+			return fail(400, {
+				error: 'Full name is required.',
+				full_name, first_name, last_name, middle_name, name_suffix, birthdate, is_justice,
+				tenures,
+			});
+		}
+
+		// Every row must carry a canonical office before this action ever calls
+		// FastAPI — an unresolved/invalid Office selection blocks the entire
+		// profile save atomically; never a partial request (T-37-10, D-11).
+		const firstInvalidIndex = tenures.findIndex(
+			(t) => t.office !== 'chief' && t.office !== 'associate'
+		);
+		if (firstInvalidIndex !== -1) {
+			return fail(400, {
+				error: 'Select Chief or Associate for every tenure period before saving.',
+				full_name, first_name, last_name, middle_name, name_suffix, birthdate, is_justice,
+				tenures,
+			});
+		}
 
 		let res: Response;
 		try {
@@ -186,11 +216,19 @@ export const actions: Actions = {
 				}),
 			});
 		} catch {
-			return fail(502, { error: 'Could not save changes. Check the form and try again.' });
+			return fail(502, {
+				error: 'Could not save changes. Check the form and try again.',
+				full_name, first_name, last_name, middle_name, name_suffix, birthdate, is_justice,
+				tenures,
+			});
 		}
 
 		if (!res.ok) {
-			return fail(422, { error: 'Could not save changes. Check the form and try again.' });
+			return fail(422, {
+				error: 'Could not save changes. Check the form and try again.',
+				full_name, first_name, last_name, middle_name, name_suffix, birthdate, is_justice,
+				tenures,
+			});
 		}
 
 		// Redirect re-runs the load function, returning fresh data (no stale state)

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { slide } from 'svelte/transition';
+	import { tick } from 'svelte';
 
 	let { data, form } = $props();
 
@@ -29,11 +30,55 @@
 	interface TenureRow {
 		_key: number;
 		id?: number;
-		seat: string;
+		// The office field (D-01..D-17, Phase 37) replaces the old free-text
+		// seat field. A valid row always holds exactly one canonical value;
+		// `null` means the row is either new (see addTenureRow) or its
+		// original stored value did not resolve to a canonical office and has
+		// NOT been coerced (D-11).
+		office: 'chief' | 'associate' | null;
+		// The original stored office value ('' for blank/null) when office is
+		// null, so the operator sees exactly what was recorded (D-11).
+		// Cleared once a valid selection is made.
+		invalidOfficeOriginal?: string | null;
 		start_date: string;
 		end_date: string;
 		appointed_by: string;
 		appointing_president_party: string;
+	}
+
+	interface RawTenure {
+		office: string | null;
+		start_date: string | null;
+		end_date: string | null;
+		appointed_by: string | null;
+		appointing_president_party: string | null;
+	}
+
+	// Converts a server-provided tenure row (canonical, legacy-invalid, or
+	// blank office) into local editable form state. Never guesses/coerces an
+	// invalid or blank original value into a canonical default (D-11) — only
+	// exactly 'chief'/'associate' is accepted as valid.
+	function toTenureRow(t: RawTenure, key: number): TenureRow {
+		if (t.office === 'chief' || t.office === 'associate') {
+			return {
+				_key: key,
+				office: t.office,
+				invalidOfficeOriginal: null,
+				start_date: t.start_date ?? '',
+				end_date: t.end_date ?? '',
+				appointed_by: t.appointed_by ?? '',
+				appointing_president_party: t.appointing_president_party ?? '',
+			};
+		}
+		return {
+			_key: key,
+			office: null,
+			invalidOfficeOriginal: t.office ?? '',
+			start_date: t.start_date ?? '',
+			end_date: t.end_date ?? '',
+			appointed_by: t.appointed_by ?? '',
+			appointing_president_party: t.appointing_president_party ?? '',
+		};
 	}
 
 	// ──────────────────────────────────────────────────────────────────────────
@@ -43,8 +88,8 @@
 	// fully removed per D-10 — none of it is carried forward into this card.
 	// ──────────────────────────────────────────────────────────────────────────
 
-	let isJustice = $state<boolean>(data.person.is_justice ?? false);
-	let birthdate = $state<string>(data.person.birthdate ?? '');
+	let isJustice = $state<boolean>(form?.is_justice ?? data.person.is_justice ?? false);
+	let birthdate = $state<string>(form?.birthdate ?? data.person.birthdate ?? '');
 
 	// ──────────────────────────────────────────────────────────────────────────
 	// Tenure rows state (Pattern 1 — $state<TenureRow[]>, in-place mutation)
@@ -53,29 +98,24 @@
 
 	let nextKey = $state(1);
 
-	let tenureRows = $state<TenureRow[]>(
-		(data.person.tenures ?? []).map(
-			(t: {
-				seat: string | null;
-				start_date: string | null;
-				end_date: string | null;
-				appointed_by: string | null;
-				appointing_president_party: string | null;
-			}) => ({
-				_key: nextKey++,
-				seat: t.seat ?? '',
-				start_date: t.start_date ?? '',
-				end_date: t.end_date ?? '',
-				appointed_by: t.appointed_by ?? '',
-				appointing_president_party: t.appointing_president_party ?? '',
-			})
-		)
-	);
+	// A prior failed save (form?.tenures present) always takes priority over
+	// the loaded person record — the operator's unsaved edits (including any
+	// still-invalid office selections) must be restored, never silently
+	// dropped in favor of stale server data (D-12, D-16, D-17).
+	let tenureRows = $state<TenureRow[]>(buildTenureRows(form?.tenures ?? data.person.tenures));
+
+	function buildTenureRows(source: RawTenure[] | undefined | null): TenureRow[] {
+		let key = 1;
+		const rows = (source ?? []).map((t) => toTenureRow(t, key++));
+		nextKey = key;
+		return rows;
+	}
 
 	function addTenureRow() {
 		tenureRows.push({
 			_key: nextKey++,
-			seat: '',
+			office: 'associate',
+			invalidOfficeOriginal: null,
 			start_date: '',
 			end_date: '',
 			appointed_by: '',
@@ -86,6 +126,63 @@
 	function removeTenureRow(index: number) {
 		tenureRows.splice(index, 1);
 	}
+
+	// ──────────────────────────────────────────────────────────────────────────
+	// office validation — client-side preflight only (T-37-10/T-37-11). The
+	// server action and API/DB layers independently re-validate every row;
+	// this is operator feedback, not the source of truth.
+	// ──────────────────────────────────────────────────────────────────────────
+
+	let officeSaveFormError = $state<string | null>(null);
+
+	function firstInvalidOfficeIndex(): number {
+		return tenureRows.findIndex((r) => r.office === null);
+	}
+
+	async function focusFirstInvalidOffice(index: number) {
+		if (index < 0 || index >= tenureRows.length) return;
+		await tick();
+		const key = tenureRows[index]._key;
+		const el = document.getElementById(`office-chief-${key}`);
+		el?.focus();
+	}
+
+	// Guards the shared Save Person submit button (form="save-form", Gap E
+	// idiom). Calling preventDefault() in a submit button's click handler
+	// cancels the browser's implicit form-submission activation behavior —
+	// no `submit` event ever reaches the form's use:enhance action, so an
+	// unresolved office group blocks the request atomically (D-12/D-13/D-16).
+	function handleSaveClick(event: MouseEvent) {
+		const invalidIndex = firstInvalidOfficeIndex();
+		if (invalidIndex !== -1) {
+			event.preventDefault();
+			officeSaveFormError = 'Select Chief or Associate for every tenure period before saving.';
+			focusFirstInvalidOffice(invalidIndex);
+			return;
+		}
+		officeSaveFormError = null;
+	}
+
+	// Rehydrates every submitted tenure row (including any still-unresolved
+	// office selection) from a failed save action's returned form state, then
+	// focuses the first unresolved office group (UI-SPEC "Server error").
+	// Unrelated in-progress edits on this page are untouched (D-16).
+	$effect(() => {
+		if (form?.tenures) {
+			tenureRows = buildTenureRows(form.tenures);
+			const invalidIndex = firstInvalidOfficeIndex();
+			if (invalidIndex !== -1) {
+				officeSaveFormError = 'Select Chief or Associate for every tenure period before saving.';
+				focusFirstInvalidOffice(invalidIndex);
+			}
+		}
+		if (form?.birthdate !== undefined) {
+			birthdate = form.birthdate ?? '';
+		}
+		if (form?.is_justice !== undefined) {
+			isJustice = form.is_justice;
+		}
+	});
 
 	// ──────────────────────────────────────────────────────────────────────────
 	// Save button submitting state
@@ -131,24 +228,8 @@
 		mergeLoading = false;
 		isJustice = data.person.is_justice ?? false;
 		birthdate = data.person.birthdate ?? '';
-		let resetKey = 1;
-		tenureRows = (data.person.tenures ?? []).map(
-			(t: {
-				seat: string | null;
-				start_date: string | null;
-				end_date: string | null;
-				appointed_by: string | null;
-				appointing_president_party: string | null;
-			}) => ({
-				_key: resetKey++,
-				seat: t.seat ?? '',
-				start_date: t.start_date ?? '',
-				end_date: t.end_date ?? '',
-				appointed_by: t.appointed_by ?? '',
-				appointing_president_party: t.appointing_president_party ?? '',
-			})
-		);
-		nextKey = resetKey;
+		officeSaveFormError = null;
+		tenureRows = buildTenureRows(data.person.tenures);
 	});
 
 	async function fetchMergePreview(targetId: string) {
@@ -236,7 +317,7 @@
 						id="full_name"
 						name="full_name"
 						type="text"
-						value={data.person.full_name}
+						value={form?.full_name ?? data.person.full_name}
 						style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
 					/>
 				</div>
@@ -255,7 +336,7 @@
 								id="first_name"
 								name="first_name"
 								type="text"
-								value={data.person.first_name ?? ''}
+								value={form?.first_name ?? data.person.first_name ?? ''}
 								style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
 							/>
 						</div>
@@ -270,7 +351,7 @@
 								id="middle_name"
 								name="middle_name"
 								type="text"
-								value={data.person.middle_name ?? ''}
+								value={form?.middle_name ?? data.person.middle_name ?? ''}
 								style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
 							/>
 						</div>
@@ -285,7 +366,7 @@
 								id="last_name"
 								name="last_name"
 								type="text"
-								value={data.person.last_name ?? ''}
+								value={form?.last_name ?? data.person.last_name ?? ''}
 								style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
 							/>
 						</div>
@@ -300,7 +381,7 @@
 								id="name_suffix"
 								name="name_suffix"
 								type="text"
-								value={data.person.name_suffix ?? ''}
+								value={form?.name_suffix ?? data.person.name_suffix ?? ''}
 								style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
 							/>
 						</div>
@@ -545,24 +626,104 @@
 					<div
 						style="background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 24px; margin-bottom: 16px;"
 					>
-						<!-- Seat (PEDIT-09) — carried through state since Plan 27-05 but never
-						     rendered; D-18's mockup-derived field list omitted it with no stated
-						     reason, silently narrowing the locked PEDIT-09 wording. Restored per
-						     phase 27 verification gap closure. -->
-						<div style="margin-bottom: 16px;">
-							<label
-								for="tenure-seat-{row._key}"
-								style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
+						<!-- office (D-01..D-17, Phase 37) — segmented native-radio control
+						     replacing the free-text seat field. Exactly one of the two
+						     canonical values may be selected; an invalid/blank legacy
+						     original is never coerced and stays visible until the operator
+						     explicitly corrects it (D-11). Native same-name radios provide
+						     idempotent one-of-two selection and standard arrow/space/tab
+						     keyboard semantics; aria-invalid/aria-describedby live on the
+						     radiogroup (role="radiogroup" is the only role in this markup
+						     that ARIA permits aria-invalid on — not the fieldset's implicit
+						     "group" role, and not the individual radios' "radio" role). -->
+						<fieldset style="border: none; margin: 0 0 16px 0; padding: 0;">
+							<legend style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px; padding: 0;">Office</legend>
+							<div
+								role="radiogroup"
+								aria-describedby={row.office === null ? `office-error-${row._key}` : undefined}
+								aria-invalid={row.office === null ? 'true' : 'false'}
+								style="display: flex; gap: 0;"
 							>
-								Seat
-							</label>
-							<input
-								id="tenure-seat-{row._key}"
-								type="text"
-								bind:value={row.seat}
-								style="display: block; width: 100%; background-color: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
-							/>
-						</div>
+								<label
+									for="office-chief-{row._key}"
+									class="office-segment"
+									style="
+										position: relative;
+										flex: 1;
+										min-height: 44px;
+										padding: 8px 16px;
+										display: flex;
+										align-items: center;
+										justify-content: center;
+										box-sizing: border-box;
+										border: 1px solid {row.office === 'chief' ? '#93c5fd' : '#334155'};
+										border-radius: 6px 0 0 6px;
+										background-color: {row.office === 'chief' ? '#93c5fd' : '#1e293b'};
+										color: {row.office === 'chief' ? '#0f1117' : '#e2e8f0'};
+										font-size: 16px;
+										font-weight: 600;
+										cursor: pointer;
+									"
+								>
+									<input
+										id="office-chief-{row._key}"
+										class="office-radio-input"
+										type="radio"
+										name="office-{row._key}"
+										value="chief"
+										bind:group={row.office}
+										onchange={() => (row.invalidOfficeOriginal = null)}
+									/>
+									Chief
+								</label>
+								<label
+									for="office-associate-{row._key}"
+									class="office-segment"
+									style="
+										position: relative;
+										flex: 1;
+										min-height: 44px;
+										padding: 8px 16px;
+										display: flex;
+										align-items: center;
+										justify-content: center;
+										box-sizing: border-box;
+										border: 1px solid {row.office === 'associate' ? '#93c5fd' : '#334155'};
+										border-left: none;
+										border-radius: 0 6px 6px 0;
+										background-color: {row.office === 'associate' ? '#93c5fd' : '#1e293b'};
+										color: {row.office === 'associate' ? '#0f1117' : '#e2e8f0'};
+										font-size: 16px;
+										font-weight: 600;
+										cursor: pointer;
+									"
+								>
+									<input
+										id="office-associate-{row._key}"
+										class="office-radio-input"
+										type="radio"
+										name="office-{row._key}"
+										value="associate"
+										bind:group={row.office}
+										onchange={() => (row.invalidOfficeOriginal = null)}
+									/>
+									Associate
+								</label>
+							</div>
+							{#if row.office === null}
+								<p
+									id="office-error-{row._key}"
+									role="alert"
+									style="color: #ef4444; font-size: 14px; font-weight: 400; line-height: 1.4; margin: 8px 0 0 0;"
+								>
+									{#if row.invalidOfficeOriginal === ''}
+										No office was recorded. Select Chief or Associate before saving.
+									{:else}
+										Unrecognized office: "{row.invalidOfficeOriginal}". Select Chief or Associate before saving.
+									{/if}
+								</p>
+							{/if}
+						</fieldset>
 
 						<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
 							<div>
@@ -676,10 +837,15 @@
 			{/if}
 		</div>
 
-		<!-- Form-level error (from save action) -->
+		<!-- Form-level error (from save action, or client-side office preflight) -->
 		{#if form?.error}
 			<p role="alert" style="color: #ef4444; font-size: 14px; margin: 0 0 8px 0;">
 				{form.error}
+			</p>
+		{/if}
+		{#if officeSaveFormError}
+			<p role="alert" style="color: #ef4444; font-size: 14px; margin: 0 0 8px 0;">
+				{officeSaveFormError}
 			</p>
 		{/if}
 
@@ -834,6 +1000,7 @@
 				type="submit"
 				form="save-form"
 				disabled={saveSubmitting}
+				onclick={handleSaveClick}
 				style="flex: 1; min-height: 44px; background: transparent; border: 1px solid #93c5fd; border-radius: 6px; font-size: 16px; font-weight: 600; color: #e2e8f0; cursor: pointer; opacity: {saveSubmitting ? 0.7 : 1};"
 			>
 				{saveSubmitting ? 'Saving…' : 'Save Person'}
@@ -853,5 +1020,26 @@
 		.name-parts-grid {
 			grid-template-columns: 1fr 1fr !important;
 		}
+	}
+
+	/* office segmented control (Phase 37) — the native radio input itself is
+	   visually hidden (but remains in the tab order and focusable) so its
+	   wrapping label can render the segmented pill; the label shows a clearly
+	   visible focus ring whenever its radio has keyboard focus. */
+	.office-radio-input {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		padding: 0;
+		margin: -1px;
+		overflow: hidden;
+		clip: rect(0, 0, 0, 0);
+		white-space: nowrap;
+		border: 0;
+	}
+
+	.office-segment:has(.office-radio-input:focus-visible) {
+		outline: 2px solid #93c5fd;
+		outline-offset: 2px;
 	}
 </style>

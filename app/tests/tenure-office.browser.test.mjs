@@ -10,7 +10,14 @@ const page = readFileSync(pagePath, 'utf8');
 const server = readFileSync(serverPath, 'utf8');
 
 function officeMarkup(source = page) {
-	const start = source.indexOf('Office');
+	// Anchor on the actual Office fieldset/radiogroup element rather than the
+	// bare word "Office" — a naive substring search would match the very
+	// first mention of "office" anywhere in the file (e.g. a TypeScript type
+	// comment or an "invalidOfficeOriginal" identifier declared earlier in
+	// <script>), landing the extraction window nowhere near the real markup.
+	const start = /<fieldset|role=["']radiogroup["']/.test(source)
+		? source.search(/<fieldset|role=["']radiogroup["']/)
+		: -1;
 	assert.notEqual(start, -1, 'people editor must render an Office field');
 	return source.slice(Math.max(0, start - 1000), start + 7000);
 }

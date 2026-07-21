@@ -253,7 +253,7 @@ async def test_upgrades_existing_person_in_place(isolated_session, tmp_path):
     )
     tenures = tenure_result.scalars().all()
     assert len(tenures) == 1
-    assert tenures[0].seat == "Associate Justice"
+    assert tenures[0].office == "associate"
     assert tenures[0].end_date is not None
 
     alias_result = await isolated_session.execute(
@@ -321,7 +321,7 @@ async def test_elevated_justice_gets_two_tenures(isolated_session, tmp_path):
     )
     tenures = tenure_result.scalars().all()
     assert len(tenures) == 2
-    assert {t.seat for t in tenures} == {"Chief Justice", "Associate Justice"}
+    assert {t.office for t in tenures} == {"chief", "associate"}
     assert {t.start_date.isoformat() for t in tenures} == {
         "1986-09-26",
         "1972-01-07",

@@ -28,7 +28,7 @@ from pathlib import Path
 from dateutil import parser as dateutil_parser
 from sqlalchemy import select
 
-from api.models.models import CourtTenure, Person
+from api.models.models import CourtTenure, OFFICE_ASSOCIATE, OFFICE_CHIEF, Person
 from pipeline.db import get_session
 
 # ---------------------------------------------------------------------------
@@ -42,13 +42,12 @@ DEFAULT_CSV_PATH = Path("data/corpus/supreme_court_justices_sections.csv")
 _CHIEF_SECTION_HEADER = "Supreme Court Chief Justices"
 _ASSOCIATE_SECTION_HEADER = "Supreme Court Associate Justices"
 
-# Section header text -> the court_tenures.seat value used for every row in
-# that section (RESEARCH.md Open Question 2: no numbered-seat data exists
-# for historical justices in this CSV, so the section header itself is the
-# natural seat value).
-_SECTION_SEAT_NAMES = {
-    _CHIEF_SECTION_HEADER: "Chief Justice",
-    _ASSOCIATE_SECTION_HEADER: "Associate Justice",
+# Section header text -> the canonical court_tenures.office value used for
+# every row in that section (D-01, D-04, D-17 — binary chief/associate, no
+# numbered-seat distinctions in the active model).
+_SECTION_OFFICE_VALUES = {
+    _CHIEF_SECTION_HEADER: OFFICE_CHIEF,
+    _ASSOCIATE_SECTION_HEADER: OFFICE_ASSOCIATE,
 }
 
 # ---------------------------------------------------------------------------
@@ -109,13 +108,13 @@ def _parse_optional_date(value: str):
 
 def _iter_csv_rows(csv_path: Path):
     """
-    Yield (seat, row_dict) tuples for every justice data row in the CSV.
+    Yield (office, row_dict) tuples for every justice data row in the CSV.
 
     The CSV has two sections (Chief Justices, then Associate Justices), each
     introduced by a single-cell section-header line followed by its own
     column-header row. Blank lines between/around sections are skipped.
     """
-    current_seat = None
+    current_office = None
     header: list[str] | None = None
 
     with csv_path.open("r", encoding="utf-8", newline="") as f:
@@ -125,8 +124,8 @@ def _iter_csv_rows(csv_path: Path):
                 continue  # blank line
 
             first_cell = raw_row[0].strip()
-            if first_cell in _SECTION_SEAT_NAMES:
-                current_seat = _SECTION_SEAT_NAMES[first_cell]
+            if first_cell in _SECTION_OFFICE_VALUES:
+                current_office = _SECTION_OFFICE_VALUES[first_cell]
                 header = None  # next non-blank row is this section's column header
                 continue
 
@@ -135,7 +134,7 @@ def _iter_csv_rows(csv_path: Path):
                 continue
 
             row_dict = dict(zip(header, raw_row))
-            yield current_seat, row_dict
+            yield current_office, row_dict
 
 
 async def run_import_justices_csv(args) -> None:
@@ -148,7 +147,7 @@ async def run_import_justices_csv(args) -> None:
     court_tenures rows for justices elevated from Associate to Chief (D-04).
 
     Idempotent — dedups people by exact Person.full_name (D-02) and tenures
-    by (person_id, seat, start_date); safe to re-run any number of times.
+    by (person_id, office, start_date); safe to re-run any number of times.
 
     Args:
         args: argparse.Namespace with an optional `csv` attribute (path to
@@ -164,7 +163,7 @@ async def run_import_justices_csv(args) -> None:
     rows_skipped = 0
 
     async with get_session() as session:
-        for seat, row in _iter_csv_rows(csv_path):
+        for office, row in _iter_csv_rows(csv_path):
             first = row.get("First Name", "").strip()
             middle = row.get("Middle Name or Initial", "").strip()
             last = row.get("Last Name", "").strip()
@@ -210,7 +209,7 @@ async def run_import_justices_csv(args) -> None:
             tenure_result = await session.execute(
                 select(CourtTenure).where(
                     CourtTenure.person_id == person.id,
-                    CourtTenure.seat == seat,
+                    CourtTenure.office == office,
                     CourtTenure.start_date == start_date,
                 )
             )
@@ -219,7 +218,7 @@ async def run_import_justices_csv(args) -> None:
             if existing_tenure is None:
                 tenure = CourtTenure(
                     person_id=person.id,
-                    seat=seat,
+                    office=office,
                     start_date=start_date,
                     end_date=end_date,
                     appointed_by=appointed_by,

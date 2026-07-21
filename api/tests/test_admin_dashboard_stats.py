@@ -431,7 +431,7 @@ async def _seed_tenure_gap_justice(db_session: AsyncSession, *, full_name: str):
     db_session.add(
         CourtTenure(
             person_id=person.id,
-            seat="Associate Justice",
+            office="associate",
             start_date=date(2000, 1, 1),
             end_date=date(2010, 1, 1),
         )
@@ -494,7 +494,7 @@ async def test_get_tenure_gap_justices_no_marker_when_tenure_covers_argued_date(
     db_session.add(
         CourtTenure(
             person_id=person.id,
-            seat="Associate Justice",
+            office="associate",
             start_date=date(2000, 1, 1),
             end_date=None,  # currently active — covers any argued_date after 2000
         )

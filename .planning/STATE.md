@@ -4,17 +4,17 @@ milestone: v1.6
 milestone_name: Backlog Cleanup
 current_phase: 37
 current_phase_name: tenure-seat-as-chief-associate-toggle
-status: executing
-stopped_at: Phase 39 context gathered
-last_updated: "2026-07-21T22:06:27.578Z"
+status: verifying
+stopped_at: Completed 37-05-PLAN.md (final plan in Phase 37)
+last_updated: "2026-07-21T22:27:52.381Z"
 last_activity: 2026-07-21
 last_activity_desc: Phase 37 execution started
 progress:
   total_phases: 10
-  completed_phases: 7
+  completed_phases: 8
   total_plans: 38
-  completed_plans: 31
-  percent: 70
+  completed_plans: 32
+  percent: 80
 ---
 
 # Project State
@@ -29,8 +29,8 @@ See: .planning/PROJECT.md (updated 2026-07-14 after Phase 34 verification)
 ## Current Position
 
 Phase: 37 (tenure-seat-as-chief-associate-toggle) — EXECUTING
-Plan: 1 of 5
-Status: Executing Phase 37
+Plan: 5 of 5
+Status: Phase complete — ready for verification
 Last activity: 2026-07-21 — Phase 37 execution started
 
 ## Performance Metrics
@@ -44,6 +44,7 @@ v1.5: 10 phases, 55 plans, 10 days (2026-07-02 → 2026-07-12).
 |------|----------|-------|-------|
 | Phase 37 P03 | 25min | 3 tasks | 7 files |
 | Phase 37 P04 | 50min | 2 tasks | 8 files |
+| Phase 37 P05 | 90min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -108,6 +109,9 @@ Two open design questions remain unresolved by design and are intentionally defe
 - [Phase ?]: [Phase 37, Plan 04]: api/services/admin_arguments.py required zero source changes -- it never accesses CourtTenure.seat/office directly, only the already-converted _bench_role_and_missing_tenure() helper; only its DB fixture test needed office=.
 - [Phase ?]: [Phase 37, Plan 04]: SpeakerPopover.svelte defines its own small exhaustive OFFICE_TITLES/officeTitle() map rather than a shared Python/TS module -- intentional duplication for a two-entry map, not a new cross-layer dependency.
 - [Phase ?]: [Phase 37, Plan 04]: TenureEntry and both frontend TenureRow types carry the raw canonical office value end to end; only SpeakerPopover.svelte's officeTitle() projects to the formal display title at the final render boundary.
+- [Phase ?]: [Phase 37-05] aria-invalid/aria-describedby placed on a nested role="radiogroup" div, not the fieldset (implicit "group" role) or individual radios ("radio" role) — the only role in this markup ARIA permits aria-invalid on
+- [Phase ?]: [Phase 37-05] Submit-button onclick preventDefault() used as the client-side Office preflight gate instead of threading validation through use:enhance's cancel() callback
+- [Phase ?]: [Phase 37-05] scripts/audit_tenure_seat_identifiers.py uses an exact (path,line,text) allowlist rather than fuzzy pattern exceptions, and fails on stale (no-longer-matching) allowlist entries too
 
 ### Roadmap Evolution
 
@@ -229,9 +233,9 @@ Items acknowledged and deferred at v1.5 milestone close on 2026-07-12:
 
 ## Session Continuity
 
-Last session: 2026-07-21T22:06:27.506Z
-Stopped at: Phase 39 context gathered
-Resume file: .planning/phases/39-bench-popover-additional-context-data/39-CONTEXT.md
+Last session: 2026-07-21T22:27:52.203Z
+Stopped at: Completed 37-05-PLAN.md (final plan in Phase 37)
+Resume file: None
 
 ## Operator Next Steps
 

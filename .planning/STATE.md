@@ -5,15 +5,15 @@ milestone_name: Backlog Cleanup
 current_phase: 37
 current_phase_name: tenure-seat-as-chief-associate-toggle
 status: executing
-stopped_at: Completed 37-03-PLAN.md
-last_updated: "2026-07-21T17:13:36.392Z"
+stopped_at: Completed 37-04-PLAN.md
+last_updated: "2026-07-21T20:46:56.048Z"
 last_activity: 2026-07-21
-last_activity_desc: Phase 37 execution started
+last_activity_desc: Completed 37-04-PLAN.md
 progress:
   total_phases: 10
   completed_phases: 7
   total_plans: 38
-  completed_plans: 30
+  completed_plans: 31
   percent: 70
 ---
 
@@ -29,9 +29,9 @@ See: .planning/PROJECT.md (updated 2026-07-14 after Phase 34 verification)
 ## Current Position
 
 Phase: 37 (tenure-seat-as-chief-associate-toggle) — EXECUTING
-Plan: 3 of 5
+Plan: 5 of 5
 Status: Ready to execute
-Last activity: 2026-07-21 — Phase 37 execution started
+Last activity: 2026-07-21 — Completed 37-04-PLAN.md
 
 ## Performance Metrics
 
@@ -43,6 +43,7 @@ v1.5: 10 phases, 55 plans, 10 days (2026-07-02 → 2026-07-12).
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
 | Phase 37 P03 | 25min | 3 tasks | 7 files |
+| Phase 37 P04 | 50min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -104,6 +105,9 @@ Two open design questions remain unresolved by design and are intentionally defe
 - [Phase ?]: [Phase 37]: CourtTenure.office declares its own named CheckConstraint (ck_court_tenures_office) mirroring migration 0021's DB constraint, purely for ORM self-documentation — Alembic remains sole DDL authority.
 - [Phase ?]: [Phase 37]: TenureWrite (strict Literal office) and TenureRow (tolerant Optional office) are two separate schemas so writes can never accidentally reuse read-response tolerance (D-03/D-04 and D-11 coexist).
 - [Phase ?]: [Phase 37]: _bench_role_and_missing_tenure returns office_title(t.office) (formal display title) rather than the raw chief/associate storage value.
+- [Phase ?]: [Phase 37, Plan 04]: api/services/admin_arguments.py required zero source changes -- it never accesses CourtTenure.seat/office directly, only the already-converted _bench_role_and_missing_tenure() helper; only its DB fixture test needed office=.
+- [Phase ?]: [Phase 37, Plan 04]: SpeakerPopover.svelte defines its own small exhaustive OFFICE_TITLES/officeTitle() map rather than a shared Python/TS module -- intentional duplication for a two-entry map, not a new cross-layer dependency.
+- [Phase ?]: [Phase 37, Plan 04]: TenureEntry and both frontend TenureRow types carry the raw canonical office value end to end; only SpeakerPopover.svelte's officeTitle() projects to the formal display title at the final render boundary.
 
 ### Roadmap Evolution
 
@@ -225,8 +229,8 @@ Items acknowledged and deferred at v1.5 milestone close on 2026-07-12:
 
 ## Session Continuity
 
-Last session: 2026-07-21T17:13:35.775Z
-Stopped at: Completed 37-03-PLAN.md
+Last session: 2026-07-21T20:46:04.994Z
+Stopped at: Completed 37-04-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

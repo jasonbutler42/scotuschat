@@ -35,6 +35,7 @@ def test_schemas_import() -> None:
         RoleCreate,
         RoleResponse,
         TenureRow,
+        TenureWrite,
     )
 
 
@@ -191,22 +192,81 @@ def test_person_update_accepts_optional_fields() -> None:
 
 def test_person_update_with_all_fields() -> None:
     """PersonUpdate can carry all fields including a tenure list."""
-    from api.schemas.admin_people import PersonUpdate, TenureRow
+    from api.schemas.admin_people import PersonUpdate, TenureWrite
 
     body = PersonUpdate(
         full_name="John Roberts",
         bio_text="Chief Justice",
         photo_url="https://example.com/roberts.jpg",
-        tenures=[TenureRow(seat="Chief Justice", start_date="2005-09-29", end_date=None)],
+        tenures=[TenureWrite(office="chief", start_date="2005-09-29", end_date=None)],
     )
     assert body.full_name == "John Roberts"
     assert body.tenures is not None
     assert len(body.tenures) == 1
-    assert body.tenures[0].seat == "Chief Justice"
+    assert body.tenures[0].office == "chief"
 
 
 # ---------------------------------------------------------------------------
-# TenureRow schema
+# TenureWrite schema (strict submitted-tenure contract, D-01/D-03/D-04/D-17)
+# ---------------------------------------------------------------------------
+
+
+def test_tenure_write_requires_canonical_office() -> None:
+    """TenureWrite.office is a required Literal["chief", "associate"]."""
+    from api.schemas.admin_people import TenureWrite
+
+    row = TenureWrite(office="chief", start_date="2005-09-29", end_date="2009-08-08")
+    assert row.office == "chief"
+    assert row.start_date == "2005-09-29"
+    assert row.end_date == "2009-08-08"
+
+    row2 = TenureWrite(office="associate")
+    assert row2.office == "associate"
+    assert row2.start_date is None
+    assert row2.end_date is None
+
+
+def test_tenure_write_rejects_blank_office() -> None:
+    """A blank/empty string office fails validation (D-03)."""
+    import pydantic
+
+    from api.schemas.admin_people import TenureWrite
+
+    with pytest.raises(pydantic.ValidationError):
+        TenureWrite(office="")
+
+
+def test_tenure_write_rejects_missing_office() -> None:
+    """office is required — omitting it entirely fails validation (D-03)."""
+    import pydantic
+
+    from api.schemas.admin_people import TenureWrite
+
+    with pytest.raises(pydantic.ValidationError):
+        TenureWrite()
+
+
+def test_tenure_write_rejects_unknown_office_values() -> None:
+    """Legacy numbered-seat strings and formal titles are rejected on write
+    (D-03, D-04, D-17) — only the two canonical values are accepted."""
+    import pydantic
+
+    from api.schemas.admin_people import TenureWrite
+
+    for invalid_office in (
+        "Associate Justice Seat 3",
+        "Chief Justice",
+        "Associate Justice",
+        "Unknown",
+        "CHIEF",
+        "Chief",
+    ):
+        with pytest.raises(pydantic.ValidationError):
+            TenureWrite(office=invalid_office)
+
+
+# ---------------------------------------------------------------------------
+# TenureRow schema (legacy-tolerant read-response contract, D-11)
 # ---------------------------------------------------------------------------
 
 
@@ -215,19 +275,29 @@ def test_tenure_row_all_optional() -> None:
     from api.schemas.admin_people import TenureRow
 
     row = TenureRow()
-    assert row.seat is None
+    assert row.office is None
     assert row.start_date is None
     assert row.end_date is None
 
 
-def test_tenure_row_with_values() -> None:
-    """TenureRow accepts string ISO dates."""
+def test_tenure_row_with_canonical_office() -> None:
+    """TenureRow accepts a canonical office and string ISO dates."""
     from api.schemas.admin_people import TenureRow
 
-    row = TenureRow(seat="Associate Justice Seat 3", start_date="2006-01-31", end_date="2009-08-08")
-    assert row.seat == "Associate Justice Seat 3"
+    row = TenureRow(office="associate", start_date="2006-01-31", end_date="2009-08-08")
+    assert row.office == "associate"
     assert row.start_date == "2006-01-31"
     assert row.end_date == "2009-08-08"
+
+
+def test_tenure_row_tolerates_invalid_legacy_office() -> None:
+    """TenureRow (read response) can still carry an invalid/original value
+    for operator correction (D-11) — it must NOT reject arbitrary strings
+    the way TenureWrite does."""
+    from api.schemas.admin_people import TenureRow
+
+    row = TenureRow(office="Associate Justice Seat 3", start_date="2006-01-31")
+    assert row.office == "Associate Justice Seat 3"
 
 
 # ---------------------------------------------------------------------------
@@ -281,7 +351,7 @@ def test_person_detail_shape() -> None:
         full_name="John Roberts",
         bio_text=None,
         photo_url=None,
-        tenures=[TenureRow(seat="Chief Justice", start_date="2005-09-29")],
+        tenures=[TenureRow(office="chief", start_date="2005-09-29")],
     )
     assert len(detail.tenures) == 1
     assert "role_id" not in PersonDetail.model_fields

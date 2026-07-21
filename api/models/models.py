@@ -11,6 +11,7 @@ import enum
 from sqlalchemy import (
     BigInteger,
     Boolean,
+    CheckConstraint,
     Column,
     Date,
     DateTime,
@@ -123,16 +124,53 @@ class Person(Base):
 
 # ---------------------------------------------------------------------------
 # Table 3: court_tenures
-# Service periods for Justices (seat, start date, end date)
+# Service periods for Justices (office, start date, end date)
+#
+# Phase 37 (D-01, D-17): office is a binary Chief/Associate value — the
+# legacy free-text `seat` column (e.g. "Associate Justice Seat 3") was
+# renamed to `office` by migration 0020 and constrained to exactly the two
+# canonical values below by migration 0021's named CHECK constraint
+# (ck_court_tenures_office) + NOT NULL. There is no `seat` compatibility
+# alias anywhere in the active model (D-17).
 # ---------------------------------------------------------------------------
+
+OFFICE_CHIEF = "chief"
+OFFICE_ASSOCIATE = "associate"
+VALID_OFFICES = (OFFICE_CHIEF, OFFICE_ASSOCIATE)
+
+# Canonical -> formal display title (D-15). Editor labels stay compact
+# ("Chief"/"Associate", D-14) — this mapping is only for read-only summaries
+# and popovers that must render the formal "Chief Justice"/"Associate
+# Justice" wording.
+OFFICE_TITLES = {
+    OFFICE_CHIEF: "Chief Justice",
+    OFFICE_ASSOCIATE: "Associate Justice",
+}
+
+
+def office_title(office: str) -> str:
+    """Return the formal display title for a canonical office value (D-15).
+
+    Exhaustive over VALID_OFFICES — raises KeyError for any other input.
+    An office value outside VALID_OFFICES reaching this helper indicates a
+    data-integrity bug the DB CHECK constraint (ck_court_tenures_office)
+    should already have prevented; it must not be silently coerced.
+    """
+    return OFFICE_TITLES[office]
 
 
 class CourtTenure(Base):
     __tablename__ = "court_tenures"
+    __table_args__ = (
+        CheckConstraint(
+            "office IN ('chief', 'associate')",
+            name="ck_court_tenures_office",
+        ),
+    )
 
     id = Column(Integer, primary_key=True)
     person_id = Column(Integer, ForeignKey("people.id"), nullable=False)
-    seat = Column(String(100))  # e.g. "Associate Justice Seat 3"
+    office = Column(String(100), nullable=False)
     start_date = Column(Date)
     end_date = Column(Date, nullable=True)  # null = currently active
     # Phase 22 — migration 0013: moved from people table (PEDIT-10)

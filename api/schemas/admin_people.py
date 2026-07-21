@@ -5,28 +5,42 @@ Improvements routes, and the Phase 25 Resolve card contract:
   - PersonListItem  — directory listing row with missing-fields derivation
   - PersonDetail    — full person data for the edit form (includes tenures)
   - PersonUpdate    — PATCH body (all fields optional; tenures=None means keep existing)
-  - TenureRow       — a single court tenure entry (seat, start_date, end_date as ISO strings)
+  - TenureWrite     — a single SUBMITTED court tenure entry (strict office contract)
+  - TenureRow       — a single READ-response court tenure entry (legacy-tolerant office)
   - RoleCreate      — request body for POST /api/admin/roles
   - RoleResponse    — response from POST /api/admin/roles
   - ParticipantItem — one resolved participant for GET /api/admin/jobs/{id}/participants
   - MergeRequest    — POST body for POST /api/admin/people/{id}/merge (PADM-03)
   - MergePreview    — response from GET /api/admin/people/{id}/merge-preview (PADM-04)
   - ResolveRow      — one Resolve card row for GET /api/admin/jobs/{id}/resolve-rows (Phase 25)
+
+Phase 37 (D-01 through D-04, D-11, D-17): court_tenures.office replaces the
+free-text `seat` column end to end — there is no `seat` compatibility alias.
+TenureWrite and TenureRow are intentionally split: TenureWrite is the STRICT
+write contract accepted on PersonUpdate.tenures (office is a required
+Literal["chief", "associate"] — blank/null/arbitrary strings fail validation
+before reaching the service or the database). TenureRow remains the
+legacy-tolerant READ shape returned on PersonDetail.tenures so an invalid
+original value can still be displayed for operator correction (D-11) without
+the response schema itself rejecting it. TenureRow is never used to accept a
+write.
 """
 
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel
 
 from api.models.models import SideEnum
 
 
-class TenureRow(BaseModel):
-    """A single court tenure entry.
+class TenureWrite(BaseModel):
+    """A single SUBMITTED court tenure entry — the strict write contract.
 
-    Dates are ISO 8601 strings ("YYYY-MM-DD") or None.
-    All fields are Optional so the frontend can send partially-filled rows;
-    the service filters out rows where both seat and start_date are falsy.
+    office is REQUIRED and constrained to exactly the two canonical values
+    (D-01, D-03, D-04, D-17) — Pydantic rejects blank strings, null, and any
+    other free-text value (legacy numbered seats, formal titles like
+    "Chief Justice") before this row ever reaches _replace_tenures or the
+    database. Dates are ISO 8601 strings ("YYYY-MM-DD") or None.
     Phase 27 additions: appointed_by and appointing_president_party are
     per-row appointment fields — each tenure row carries its own appointing
     president/party rather than a single person-level value. appointed_by
@@ -37,7 +51,25 @@ class TenureRow(BaseModel):
     API accepts any string, no type/enum constraint is added here.
     """
 
-    seat: Optional[str] = None
+    office: Literal["chief", "associate"]
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    appointed_by: Optional[str] = None
+    appointing_president_party: Optional[str] = None
+
+
+class TenureRow(BaseModel):
+    """A single READ-response court tenure entry — legacy-tolerant shape.
+
+    Returned by GET/PATCH /api/admin/people/{id} (PersonDetail.tenures).
+    Unlike TenureWrite, office here is an unconstrained Optional[str] so a
+    response can still carry an invalid/original value for operator
+    correction (D-11) without the response schema itself rejecting it. This
+    schema must NEVER be used to accept a write — see TenureWrite above.
+    Dates are ISO 8601 strings ("YYYY-MM-DD") or None.
+    """
+
+    office: Optional[str] = None
     start_date: Optional[str] = None
     end_date: Optional[str] = None
     appointed_by: Optional[str] = None
@@ -121,7 +153,7 @@ class PersonUpdate(BaseModel):
     full_name: Optional[str] = None
     bio_text: Optional[str] = None
     photo_url: Optional[str] = None
-    tenures: Optional[list[TenureRow]] = None
+    tenures: Optional[list[TenureWrite]] = None
     # Phase 9 additions — mass-assignment allow-list extension (T-09-01)
     first_name: Optional[str] = None
     last_name: Optional[str] = None
@@ -240,8 +272,9 @@ class ResolveRow(BaseModel):
     (advocate-only), then the frontend Action column derives from the fields
     above (no separate schema field needed).
 
-    Bench rows (side == BENCH): argument_role/bench_role carry the tenure seat
-    covering Argument.argued_date when one exists; when none covers the date,
+    Bench rows (side == BENCH): argument_role/bench_role carry the formal
+    office title (Chief Justice/Associate Justice) for the tenure covering
+    Argument.argued_date when one exists; when none covers the date,
     both are null, missing_tenure is true, and person_edit_href points at the
     person editor (D-15, D-16, PJOB-16). title/title_hint are always null —
     the Title column is advocate-only (PJOB-15).

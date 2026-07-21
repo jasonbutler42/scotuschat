@@ -253,18 +253,37 @@ test('public argument view renders formal Chief/Associate Justice titles, never 
 		await waitForExpression(cdp, `document.querySelector('h1')?.textContent === 'Fixture v. Example'`);
 
 		// Neither avatar's aria-label nor page text ever exposes the raw
-		// canonical office string before any popover has been opened.
-		const preOpen = await cdp.evaluate(`document.body.textContent`);
+		// canonical office string before any popover has been opened. innerText
+		// (not textContent) so SvelteKit's inline hydration <script> JSON —
+		// which legitimately carries the raw "chief"/"associate" values for
+		// client-side reactivity — isn't mistaken for rendered page text.
+		const preOpen = await cdp.evaluate(`document.body.innerText`);
 		assert.doesNotMatch(preOpen, /\bchief\b/);
 		assert.doesNotMatch(preOpen, /\bassociate\b/);
 
 		async function openPopoverAndReadTenureLine(ariaLabel) {
-			await cdp.evaluate(`(() => {
-				const button = [...document.querySelectorAll('button[aria-label]')]
+			// SSR markup (including the h1 waited on above) is present before Svelte's
+			// client-side hydration attaches event listeners, and a cold vite dev
+			// server's first module transform can take longer than any fixed pause
+			// would predict. Retry the click until the popover actually appears
+			// (bounded below) instead of guessing a delay.
+			const clickExpression = `(() => {
+				const button = [...document.querySelectorAll('[role="article"] button[aria-label]')]
 					.find((el) => el.getAttribute('aria-label') === ${JSON.stringify(ariaLabel)});
-				button.click();
-			})()`);
-			await waitForExpression(cdp, `!!document.querySelector('.popover-card')`);
+				button?.click();
+				return !!button;
+			})()`;
+			const deadline = Date.now() + 15_000;
+			let opened = false;
+			while (Date.now() < deadline) {
+				await cdp.evaluate(clickExpression);
+				if (await cdp.evaluate(`!!document.querySelector('.popover-card')`)) {
+					opened = true;
+					break;
+				}
+				await delay(150);
+			}
+			assert.ok(opened, `popover never opened for ${ariaLabel} after retried clicks`);
 			return cdp.evaluate(`(() => {
 				const paragraphs = [...document.querySelectorAll('.popover-card p')];
 				return paragraphs.map((p) => p.textContent.trim());

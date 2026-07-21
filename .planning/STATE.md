@@ -3,17 +3,17 @@ gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Backlog Cleanup
 current_phase: 37
-current_phase_name: Represent tenure Seat as a Chief/Associate toggle instead of free text
+current_phase_name: tenure-seat-as-chief-associate-toggle
 status: executing
-stopped_at: Completed 37-01-PLAN.md
-last_updated: "2026-07-15T19:02:00.140Z"
-last_activity: 2026-07-15
-last_activity_desc: Phase 37 Plan 01 complete; Plan 02 ready to execute
+stopped_at: Completed 37-03-PLAN.md
+last_updated: "2026-07-21T17:13:36.392Z"
+last_activity: 2026-07-21
+last_activity_desc: Phase 37 execution started
 progress:
   total_phases: 10
   completed_phases: 7
-  total_plans: 32
-  completed_plans: 29
+  total_plans: 38
+  completed_plans: 30
   percent: 70
 ---
 
@@ -24,20 +24,25 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-14 after Phase 34 verification)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** Phase 37 - Tenure Office migration and editor contract
+**Current focus:** Phase 37 — tenure-seat-as-chief-associate-toggle
 
 ## Current Position
 
-Phase: 37 — Represent tenure Seat as a Chief/Associate toggle instead of free text
+Phase: 37 (tenure-seat-as-chief-associate-toggle) — EXECUTING
 Plan: 3 of 5
 Status: Ready to execute
-Last activity: 2026-07-15 - Phase 37 Plan 01 complete; Plan 02 ready to execute
+Last activity: 2026-07-21 — Phase 37 execution started
 
 ## Performance Metrics
 
 v1.5: 10 phases, 55 plans, 10 days (2026-07-02 → 2026-07-12).
 
 *Updated after each plan completion*
+**Per-Plan Metrics:**
+
+| Plan | Duration | Tasks | Files |
+|------|----------|-------|-------|
+| Phase 37 P03 | 25min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -96,6 +101,9 @@ Two open design questions remain unresolved by design and are intentionally defe
 - [Phase 37]: Native same-name radio semantics are the executable accessibility baseline for Office selection.
 - [Phase 37]: Execution consumes an immutable database-bound report as the sole audited row set. — Prevents report regeneration, tampering, and cross-database execution.
 - [Phase 37]: The database constraint is installed only after a preflight proves every office canonical. — Keeps legacy values readable until explicit normalization is complete.
+- [Phase ?]: [Phase 37]: CourtTenure.office declares its own named CheckConstraint (ck_court_tenures_office) mirroring migration 0021's DB constraint, purely for ORM self-documentation — Alembic remains sole DDL authority.
+- [Phase ?]: [Phase 37]: TenureWrite (strict Literal office) and TenureRow (tolerant Optional office) are two separate schemas so writes can never accidentally reuse read-response tolerance (D-03/D-04 and D-11 coexist).
+- [Phase ?]: [Phase 37]: _bench_role_and_missing_tenure returns office_title(t.office) (formal display title) rather than the raw chief/associate storage value.
 
 ### Roadmap Evolution
 
@@ -217,8 +225,8 @@ Items acknowledged and deferred at v1.5 milestone close on 2026-07-12:
 
 ## Session Continuity
 
-Last session: 2026-07-15T19:01:39.649Z
-Stopped at: Completed 37-01-PLAN.md
+Last session: 2026-07-21T17:13:35.775Z
+Stopped at: Completed 37-03-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

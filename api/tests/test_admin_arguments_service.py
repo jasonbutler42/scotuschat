@@ -907,7 +907,7 @@ async def test_list_argument_speakers_bench_advocate_and_utterance_counts() -> N
         db.add(
             CourtTenure(
                 person_id=covered_justice.id,
-                seat="Associate Justice Seat 3",
+                office="associate",
                 start_date=datetime.date(2010, 1, 1),
                 end_date=None,
             )
@@ -985,8 +985,8 @@ async def test_list_argument_speakers_bench_advocate_and_utterance_counts() -> N
 
     covered_row = by_id[bench_covered_id]
     assert covered_row["is_bench"] is True
-    assert covered_row["bench_role"] == "Associate Justice Seat 3"
-    assert covered_row["argument_role"] == "Associate Justice Seat 3"
+    assert covered_row["bench_role"] == "Associate Justice"
+    assert covered_row["argument_role"] == "Associate Justice"
     assert covered_row["missing_tenure"] is False
     assert covered_row["person_edit_href"] is None
     assert covered_row["title"] is None

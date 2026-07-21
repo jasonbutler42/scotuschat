@@ -12,9 +12,15 @@ from pydantic import BaseModel, ConfigDict
 
 
 class TenureEntry(BaseModel):
-    """One continuous service period on the Court."""
+    """One continuous service period on the Court.
 
-    seat: Optional[str] = None
+    office carries the canonical storage value ("chief"/"associate", Phase 37
+    D-15/D-17) — projection to the formal "Chief Justice"/"Associate Justice"
+    display title happens at the render boundary (SpeakerPopover.svelte), not
+    here. There is no `seat` compatibility alias.
+    """
+
+    office: Optional[str] = None
     start_date: Optional[str] = None  # DB Date serialized as "YYYY-MM-DD"
     end_date: Optional[str] = None    # None = currently active Justice
 

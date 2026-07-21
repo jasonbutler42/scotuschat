@@ -23,6 +23,7 @@ from api.models.models import (
     Role,
     SideEnum,
     Utterance,
+    office_title,
 )
 
 
@@ -44,11 +45,15 @@ def _tenure_role_name(
     tenures: list[dict],
     argued_date: datetime.date | None,
 ) -> str | None:
-    """Return the seat name for the tenure covering argued_date (D-13),
-    or the most-recent tenure's seat as D-14 fallback.
+    """Return the formal title for the tenure covering argued_date (D-13),
+    or the most-recent tenure's formal title as D-14 fallback.
 
     Args:
-        tenures: List of dicts with keys ``seat``, ``start_date``, ``end_date``.
+        tenures: List of dicts with keys ``office``, ``start_date``, ``end_date``.
+                 ``office`` is the canonical storage value ("chief"/"associate");
+                 this helper projects it to the formal display title via
+                 ``office_title()`` (D-15) — valid records never fall back to a
+                 generic "Justice" label.
                  ``start_date`` and ``end_date`` must be ``datetime.date`` objects
                  (not strings) so direct date comparison works without parsing.
                  ``end_date=None`` means the tenure is open-ended (currently active).
@@ -57,7 +62,8 @@ def _tenure_role_name(
                      (Pitfall 5 — argument may not have an argued_date yet).
 
     Returns:
-        The ``seat`` string from the matching tenure, or None if tenures is empty.
+        The formal title (e.g. "Chief Justice") for the matching tenure, or
+        None if tenures is empty.
     """
     if not tenures:
         return None
@@ -68,7 +74,7 @@ def _tenure_role_name(
             end = t["end_date"]
             if start is not None and argued_date >= start:
                 if end is None or argued_date <= end:
-                    return t["seat"]
+                    return office_title(t["office"])
 
     # D-14 fallback: argued_date is None OR outside all windows — use most-recent
     # tenure by start_date.  start_date=None is treated as datetime.date.min so a
@@ -77,7 +83,7 @@ def _tenure_role_name(
         tenures,
         key=lambda t: t["start_date"] or datetime.date.min,
     )
-    return most_recent["seat"]
+    return office_title(most_recent["office"])
 
 
 # ---------------------------------------------------------------------------
@@ -148,14 +154,14 @@ async def get_argument_speakers(
     for t in tenure_rows:
         date_tenures_by_person[t.person_id].append(
             {
-                "seat": t.seat,
+                "office": t.office,
                 "start_date": t.start_date,        # datetime.date for comparison
                 "end_date": t.end_date,             # datetime.date or None
             }
         )
         str_tenures_by_person[t.person_id].append(
             {
-                "seat": t.seat,
+                "office": t.office,
                 "start_date": str(t.start_date) if t.start_date else None,
                 "end_date": str(t.end_date) if t.end_date else None,
             }

@@ -39,8 +39,10 @@ from api.models.models import (
     SideEnum,
     SpeakerAlias,
     Utterance,
+    VALID_OFFICES,
+    office_title,
 )
-from api.schemas.admin_people import PersonCreateRequest, PersonUpdate, TenureRow
+from api.schemas.admin_people import PersonCreateRequest, PersonUpdate, TenureWrite
 from api.services.speakers import ADVOCATE_LABEL_MAP
 
 
@@ -120,27 +122,41 @@ def _tenure_coverage(tenures: list[CourtTenure]) -> str | None:
 
 
 async def _replace_tenures(
-    db: AsyncSession, person_id: int, tenures: list[TenureRow]
+    db: AsyncSession, person_id: int, tenures: list[TenureWrite]
 ) -> None:
     """Delete all existing CourtTenure rows for person_id and insert the submitted rows.
 
     This implements the delete-and-reinsert strategy (D-09, Pattern 5).
-    Only rows with a truthy seat or start_date are inserted — empty rows from
-    the "Add tenure" button that were never filled in are silently discarded.
+    Every submitted row is inserted — there is no blank-row skip. TenureWrite
+    already requires a canonical office (Literal["chief", "associate"]), so a
+    caller that wants zero tenures submits an empty list; that is a
+    deliberate "no tenures" state, not something this function infers from a
+    row's other fields (D-03, D-04).
+
+    All rows' office values are validated up front, before the delete
+    executes (T-37-06/T-37-05) — this is defense-in-depth alongside the
+    TenureWrite Pydantic schema and the DB CHECK constraint
+    (ck_court_tenures_office): no row is deleted or inserted until every
+    row in the list is confirmed canonical.
 
     Date strings are parsed with datetime.date.fromisoformat() (Pitfall 6).
-    Raises ValueError on malformed date strings so the router can return 422.
+    Raises ValueError on malformed date strings or an invalid office so the
+    router can return 422 before any DB write completes.
 
     Does NOT commit — the caller (update_person) commits the full transaction.
     """
+    for t in tenures:
+        if t.office not in VALID_OFFICES:
+            raise ValueError(
+                f"Invalid tenure office: {t.office!r} — must be 'chief' or 'associate'."
+            )
+
     await db.execute(
         delete(CourtTenure)
         .where(CourtTenure.person_id == person_id)
         .execution_options(synchronize_session=False)
     )
     for t in tenures:
-        if not (t.seat or t.start_date):
-            continue
         # Parse date strings — raises ValueError on malformed input (Pitfall 6)
         start_date: Optional[datetime.date] = None
         end_date: Optional[datetime.date] = None
@@ -151,7 +167,7 @@ async def _replace_tenures(
         db.add(
             CourtTenure(
                 person_id=person_id,
-                seat=t.seat or None,
+                office=t.office,
                 start_date=start_date,
                 end_date=end_date,
                 appointed_by=t.appointed_by or None,
@@ -383,7 +399,7 @@ async def get_person_detail(db: AsyncSession, person_id: int) -> dict | None:
         "photo_url": person.photo_url,
         "tenures": [
             {
-                "seat": t.seat,
+                "office": t.office,
                 "start_date": t.start_date.isoformat() if t.start_date else None,
                 "end_date": t.end_date.isoformat() if t.end_date else None,
                 "appointed_by": t.appointed_by,
@@ -798,6 +814,10 @@ def _bench_role_and_missing_tenure(
     fallback is applied here (D-15). This intentionally diverges from the
     speaker-popover helper's behavior; do not reuse it for this purpose.
 
+    bench_role is the formal office title (office_title(t.office) — "Chief
+    Justice"/"Associate Justice", D-15), not the canonical "chief"/"associate"
+    storage value.
+
     missing_tenure is also true when argued_date is None or tenures is empty,
     since coverage cannot be determined without both.
     """
@@ -805,7 +825,7 @@ def _bench_role_and_missing_tenure(
         for t in tenures:
             if t.start_date is not None and argued_date >= t.start_date:
                 if t.end_date is None or argued_date <= t.end_date:
-                    return t.seat, False
+                    return office_title(t.office), False
     return None, True
 
 

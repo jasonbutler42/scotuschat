@@ -255,24 +255,40 @@ async def test_list_resolve_rows_raises_for_unlinked_job(db_session) -> None:
 
 
 class _FakeTenure:
-    """Minimal stand-in for a CourtTenure ORM row (seat, start_date, end_date)."""
+    """Minimal stand-in for a CourtTenure ORM row (office, start_date, end_date)."""
 
-    def __init__(self, seat, start_date, end_date=None):
-        self.seat = seat
+    def __init__(self, office, start_date, end_date=None):
+        self.office = office
         self.start_date = start_date
         self.end_date = end_date
 
 
 def test_bench_role_and_missing_tenure_covers_argued_date() -> None:
+    """bench_role is the formal office title, not the canonical storage
+    value (D-15)."""
     from api.services.admin_people import _bench_role_and_missing_tenure
 
     tenures = [
-        _FakeTenure("Associate Justice Seat 3", datetime.date(2010, 1, 1), None),
+        _FakeTenure("associate", datetime.date(2010, 1, 1), None),
     ]
     bench_role, missing_tenure = _bench_role_and_missing_tenure(
         tenures, datetime.date(2024, 1, 10)
     )
-    assert bench_role == "Associate Justice Seat 3"
+    assert bench_role == "Associate Justice"
+    assert missing_tenure is False
+
+
+def test_bench_role_and_missing_tenure_covers_argued_date_chief() -> None:
+    """Chief office maps to the formal 'Chief Justice' title (D-15)."""
+    from api.services.admin_people import _bench_role_and_missing_tenure
+
+    tenures = [
+        _FakeTenure("chief", datetime.date(2010, 1, 1), None),
+    ]
+    bench_role, missing_tenure = _bench_role_and_missing_tenure(
+        tenures, datetime.date(2024, 1, 10)
+    )
+    assert bench_role == "Chief Justice"
     assert missing_tenure is False
 
 
@@ -281,7 +297,7 @@ def test_bench_role_and_missing_tenure_no_covering_tenure() -> None:
     from api.services.admin_people import _bench_role_and_missing_tenure
 
     tenures = [
-        _FakeTenure("Associate Justice Seat 3", datetime.date(2010, 1, 1), datetime.date(2015, 12, 31)),
+        _FakeTenure("associate", datetime.date(2010, 1, 1), datetime.date(2015, 12, 31)),
     ]
     bench_role, missing_tenure = _bench_role_and_missing_tenure(
         tenures, datetime.date(2024, 1, 10)
@@ -294,7 +310,7 @@ def test_bench_role_and_missing_tenure_no_argued_date() -> None:
     from api.services.admin_people import _bench_role_and_missing_tenure
 
     tenures = [
-        _FakeTenure("Associate Justice Seat 3", datetime.date(2010, 1, 1), None),
+        _FakeTenure("associate", datetime.date(2010, 1, 1), None),
     ]
     bench_role, missing_tenure = _bench_role_and_missing_tenure(tenures, None)
     assert bench_role is None
@@ -318,7 +334,8 @@ def test_bench_role_and_missing_tenure_empty_tenures() -> None:
 @pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
 async def test_bench_row_with_covering_tenure_returns_role(db_session) -> None:
     """Test 1: a BENCH participant with a CourtTenure covering Argument.argued_date
-    returns bench_role from the tenure seat and missing_tenure false."""
+    returns bench_role from the tenure's formal office title and missing_tenure
+    false."""
     from api.models.models import (
         AdminJob,
         AdminJobStatus,
@@ -338,7 +355,7 @@ async def test_bench_row_with_covering_tenure_returns_role(db_session) -> None:
 
     tenure = CourtTenure(
         person_id=person.id,
-        seat="Associate Justice Seat 3",
+        office="associate",
         start_date=datetime.date(2010, 1, 1),
         end_date=None,
     )
@@ -369,7 +386,7 @@ async def test_bench_row_with_covering_tenure_returns_role(db_session) -> None:
     rows = await list_resolve_rows_for_job(db_session, job.id)
 
     assert len(rows) == 1
-    assert rows[0]["bench_role"] == "Associate Justice Seat 3"
+    assert rows[0]["bench_role"] == "Associate Justice"
     assert rows[0]["missing_tenure"] is False
     assert rows[0]["person_edit_href"] is None
 

@@ -12,7 +12,7 @@ Anyone can open a SCOTUS oral argument and immediately follow the conversation �
 
 **v1.5 Admin Screens Cleanup — SHIPPED 2026-07-12.** All 7 admin screens (`/admin/`, `/admin/pipeline/`, `/admin/pipeline/[id]`, `/admin/arguments/`, `/admin/arguments/[id]`, `/admin/people/`, `/admin/people/[id]`) audited and refined: three-state argument lifecycle with status log, shared Argument Details component, redesigned pipeline list/detail pages, People admin with Bench/Advocate tabs and per-tenure appointment data, and a real dashboard. Also absorbed an out-of-band addition mid-milestone: bulk historical corpus import (~7,800 arguments, 1955–2019, from Cornell ConvoKit) routed through the same resolve/publish workflow as PDF ingest. Full details: `.planning/milestones/v1.5-ROADMAP.md`, `.planning/milestones/v1.5-REQUIREMENTS.md`.
 
-**v1.6 Backlog Cleanup — 7/10 phases complete.** Phases 31, 32, 33, 34, 35, 36, and 40 are verified. Phase 36 adds one reusable click-to-copy pattern for eligible extracted values, including exact individual-docket copying, disabled N/A behavior, accessible feedback, and race-safe clipboard lifecycle handling.
+**v1.6 Backlog Cleanup — 8/10 phases complete.** Phases 31, 32, 33, 34, 35, 36, 37, and 40 are verified. Phase 37 replaces the free-text tenure Seat with a canonical Chief/Associate office contract across the full stack (migration, API, import, editor, display).
 
 ## Current Milestone: v1.6 Backlog Cleanup
 
@@ -107,6 +107,7 @@ Deployment (DEPLOY-01, DEPLOY-03) and the remaining 999.x backlog (999.2–999.8
 - ✓ `/admin/arguments/[id]` reuses the shared `ArgumentDetailsCard` component instead of a hand-rolled duplicate form (Case card + ArgumentDetailsCard card, `saveArgumentDetails` action reusing `PATCH /metadata`); dashboard Draft/Published/Unpublished status CTAs actually filter `/admin/arguments` via a threaded `?status=` param + segmented control + active-filter indicator; `arguments.question_number` migrated nullable (migration 0019, parity with `argued_date`), closing a UAT-found gap where blanking it threw an unhandled 500 instead of persisting NULL — v1.5 (AEDIT-04, DASH-02), gap-closure Phase 30.1, milestone-audit-found
 - ✓ Dedicated `scotus_test` Postgres DB + session-boundary auto-reset isolates the full pytest suite from the shared dev DB; a `pytest_sessionfinish` hook fails any run that changes shared-dev-DB `Person`/`Argument` row counts, closing the gap where production service functions that commit internally (`create_person_for_job`, `publish_argument`, `run_import_convokit`) could leak synthetic rows past a test's own rollback; ~28 previously-stale DB-gated fixtures across `pipeline/tests`/`api/tests` repaired against the current schema; one-time reviewed cleanup script removed 81 already-leaked rows (25 duplicate `Person`, 56 orphaned `Argument`) from the shared dev DB under explicit operator authorization — v1.6 (TEST-01, TEST-02), validated in Phase 31
 - ✓ Clean-checkout local-stack README covers PostgreSQL, FastAPI, and SvelteKit end to end with split private environment contracts, cross-platform commands, safe troubleshooting, optional integrations, and a verified Windows portable-PostgreSQL admin-session walkthrough — v1.6 (DOCS-01), validated in Phase 40
+- ✓ `court_tenures.seat` (unconstrained free text) renamed to canonical `office` and DB-constrained to exactly `chief`/`associate` via a staged rename-then-audit-then-constrain migration sequence (numbered-seat detail dropped per discuss-phase decision, with a reviewed audit/execute script normalizing all pre-existing legacy values first, zero silent data loss); ORM, admin API, CSV import, read projections (formal "Chief Justice"/"Associate Justice" titles), and the admin people editor (accessible segmented radio control, atomic save) all updated to the canonical contract — v1.6 (PEOPLE-08), validated in Phase 37
 
 ### Active
 
@@ -223,4 +224,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-15 after Phase 36 verification — 7 of 10 v1.6 backlog phases are verified; 3 remain.*
+*Last updated: 2026-07-21 after Phase 37 verification — 8 of 10 v1.6 backlog phases are verified; 2 remain.*

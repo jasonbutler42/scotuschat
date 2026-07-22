@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Backlog Cleanup
-current_phase: 37
-current_phase_name: tenure-seat-as-chief-associate-toggle
-status: verifying
+current_phase: 38
+current_phase_name: Rethink Full Name vs. name-part fields in the people editor
+status: planning
 stopped_at: Completed 37-05-PLAN.md (final plan in Phase 37)
-last_updated: "2026-07-21T22:27:52.381Z"
+last_updated: "2026-07-22T02:48:05.544Z"
 last_activity: 2026-07-21
-last_activity_desc: Phase 37 execution started
+last_activity_desc: Phase 37 complete, transitioned to Phase 38
 progress:
   total_phases: 10
   completed_phases: 8
@@ -28,10 +28,10 @@ See: .planning/PROJECT.md (updated 2026-07-14 after Phase 34 verification)
 
 ## Current Position
 
-Phase: 37 (tenure-seat-as-chief-associate-toggle) — EXECUTING
-Plan: 5 of 5
-Status: Phase complete — ready for verification
-Last activity: 2026-07-21 — Phase 37 execution started
+Phase: 38 — Rethink Full Name vs. name-part fields in the people editor
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-07-21 — Phase 37 complete, transitioned to Phase 38
 
 ## Performance Metrics
 

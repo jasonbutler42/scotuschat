@@ -114,3 +114,44 @@ def test_feedback_generation_invalidates_on_confidence_and_raw_change() -> None:
     assert "raw;" in effect_block
     assert "invalidateFeedback();" in effect_block
     assert "return invalidateFeedback;" in effect_block
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Task 2: DocketPillInput.svelte — approved Docket Pill provenance states
+# (38-FIGMA.md component set 3:140 / review sheet 3:2)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_docket_pill_input_accepts_backward_compatible_string_entries() -> None:
+    source = _source(DOCKET_PILL_PATH)
+    assert "type ConfidenceBand = 'High' | 'Medium' | 'Low';" in source
+    assert "type DocketPillValue = string | DocketProvenance;" in source
+    assert "initialValues?: DocketPillValue[];" in source
+
+
+def test_docket_pill_input_normalizes_and_builds_provenance_map_once() -> None:
+    source = _source(DOCKET_PILL_PATH)
+    assert "function normalizeEntry(entry: DocketPillValue): DocketProvenance {" in source
+    assert "const provenanceMap = new Map<string, DocketProvenance>(" in source
+
+
+def test_docket_pill_input_uses_shared_copy_primitive_for_provenance_pills() -> None:
+    source = _source(DOCKET_PILL_PATH)
+    assert "import CopyableExtractedValue from '$lib/components/CopyableExtractedValue.svelte';" in source
+    assert "<CopyableExtractedValue" in source
+    assert 'copyLabel="Copy docket"' in source
+    assert "confidence={provenance.confidence}" in source
+    assert "raw={provenance.raw}" in source
+
+
+def test_docket_pill_input_remove_is_editable_mode_only() -> None:
+    source = _source(DOCKET_PILL_PATH)
+    assert source.count("{#if !readonly}") >= 2
+
+
+def test_docket_pill_input_preserves_form_serialization_and_public_api() -> None:
+    """Preserve existing form serialization/removal behavior (Task 2 action)."""
+    source = _source(DOCKET_PILL_PATH)
+    assert '<input type="hidden" {name} value={pill} />' in source
+    assert "export function hasPills() {" in source
+    assert "export function focus() {" in source

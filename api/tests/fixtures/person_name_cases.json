@@ -1,0 +1,205 @@
+{
+  "metadata": {
+    "description": "Shared Python/TypeScript parity fixtures for the Phase 38 person-name authority contract (D-01, D-03, D-05-D-12, D-18, D-22). Canonical format_cases are derived from real repository justice names (pipeline/commands/seed_aliases.py) plus the two examples locked in 38-CONTEXT.md. Consumed directly by api/tests/test_person_names.py; a future app/src/lib/personNames.ts test suite mirrors this same file.",
+    "column_bounds": {
+      "first_name": 150,
+      "middle_name": 150,
+      "last_name": 150,
+      "name_suffix": 50,
+      "full_name": 300
+    }
+  },
+  "format_cases": [
+    {
+      "name": "canonical_three_part",
+      "first": "Amy",
+      "middle": "Coney",
+      "last": "Barrett",
+      "suffix": null,
+      "expected_full_name": "Amy Coney Barrett"
+    },
+    {
+      "name": "canonical_with_suffix",
+      "first": "John",
+      "middle": "G.",
+      "last": "Roberts",
+      "suffix": "Jr.",
+      "expected_full_name": "John G. Roberts, Jr."
+    },
+    {
+      "name": "two_part_no_middle",
+      "first": "Clarence",
+      "middle": null,
+      "last": "Thomas",
+      "suffix": null,
+      "expected_full_name": "Clarence Thomas"
+    },
+    {
+      "name": "suffix_without_middle",
+      "first": "Samuel",
+      "middle": null,
+      "last": "Alito",
+      "suffix": "Jr.",
+      "expected_full_name": "Samuel Alito, Jr."
+    },
+    {
+      "name": "first_only",
+      "first": "Cher",
+      "middle": null,
+      "last": null,
+      "suffix": null,
+      "expected_full_name": "Cher"
+    },
+    {
+      "name": "last_only",
+      "first": null,
+      "middle": null,
+      "last": "Voltaire",
+      "suffix": null,
+      "expected_full_name": "Voltaire"
+    },
+    {
+      "name": "preserves_initial_period",
+      "first": "Neil",
+      "middle": "M.",
+      "last": "Gorsuch",
+      "suffix": null,
+      "expected_full_name": "Neil M. Gorsuch"
+    },
+    {
+      "name": "preserves_hyphenated_last_name",
+      "first": "Mary",
+      "middle": null,
+      "last": "Smith-Jones",
+      "suffix": null,
+      "expected_full_name": "Mary Smith-Jones"
+    },
+    {
+      "name": "preserves_apostrophe",
+      "first": "Sandra",
+      "middle": null,
+      "last": "O'Connor",
+      "suffix": null,
+      "expected_full_name": "Sandra O'Connor"
+    },
+    {
+      "name": "preserves_particle_authored_as_single_field",
+      "first": "Charles",
+      "middle": null,
+      "last": "de la Cruz",
+      "suffix": null,
+      "expected_full_name": "Charles de la Cruz"
+    },
+    {
+      "name": "preserves_lowercase_authored_capitalization",
+      "first": "kd",
+      "middle": null,
+      "last": "lang",
+      "suffix": null,
+      "expected_full_name": "kd lang"
+    },
+    {
+      "name": "suffix_roman_numeral",
+      "first": "Thurston",
+      "middle": null,
+      "last": "Howell",
+      "suffix": "III",
+      "expected_full_name": "Thurston Howell, III"
+    }
+  ],
+  "normalization_cases": [
+    {
+      "name": "trims_and_collapses_whitespace",
+      "field": "first_name",
+      "raw": "  Mary   Jane  ",
+      "expected": "Mary Jane"
+    },
+    {
+      "name": "blank_maps_to_null",
+      "field": "middle_name",
+      "raw": "   ",
+      "expected": null
+    },
+    {
+      "name": "preserves_authored_suffix_punctuation",
+      "field": "name_suffix",
+      "raw": " Jr. ",
+      "expected": "Jr."
+    },
+    {
+      "name": "preserves_hyphen_and_apostrophe",
+      "field": "last_name",
+      "raw": "  O'Brien-Smith  ",
+      "expected": "O'Brien-Smith"
+    },
+    {
+      "name": "null_input_stays_null",
+      "field": "first_name",
+      "raw": null,
+      "expected": null
+    }
+  ],
+  "invalid_cases": [
+    {
+      "name": "blank_first_and_last_rejected",
+      "parts": {
+        "first": "   ",
+        "middle": null,
+        "last": "",
+        "suffix": null
+      },
+      "expected_error_code": "at_least_one_required"
+    },
+    {
+      "name": "first_name_exceeds_column_bound",
+      "parts": {
+        "first": { "repeat_char": "A", "length": 151 },
+        "middle": null,
+        "last": "Smith",
+        "suffix": null
+      },
+      "expected_error_code": "length_exceeded"
+    },
+    {
+      "name": "middle_name_exceeds_column_bound",
+      "parts": {
+        "first": "John",
+        "middle": { "repeat_char": "B", "length": 151 },
+        "last": "Smith",
+        "suffix": null
+      },
+      "expected_error_code": "length_exceeded"
+    },
+    {
+      "name": "last_name_exceeds_column_bound",
+      "parts": {
+        "first": "John",
+        "middle": null,
+        "last": { "repeat_char": "C", "length": 151 },
+        "suffix": null
+      },
+      "expected_error_code": "length_exceeded"
+    },
+    {
+      "name": "name_suffix_exceeds_column_bound",
+      "parts": {
+        "first": "John",
+        "middle": null,
+        "last": "Smith",
+        "suffix": { "repeat_char": "D", "length": 51 }
+      },
+      "expected_error_code": "length_exceeded"
+    },
+    {
+      "name": "derived_full_name_exceeds_compatibility_bound",
+      "parts": {
+        "first": { "repeat_char": "A", "length": 100 },
+        "middle": { "repeat_char": "B", "length": 100 },
+        "last": { "repeat_char": "C", "length": 100 },
+        "suffix": null
+      },
+      "expected_error_code": "full_name_length_exceeded"
+    }
+  ],
+  "legacy_split_cases": []
+}

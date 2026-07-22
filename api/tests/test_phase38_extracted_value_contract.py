@@ -155,3 +155,66 @@ def test_docket_pill_input_preserves_form_serialization_and_public_api() -> None
     assert '<input type="hidden" {name} value={pill} />' in source
     assert "export function hasPills() {" in source
     assert "export function focus() {" in source
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Task 3: every current editable-destination consumer adopts the stacked
+# contract (D-19/D-20). Legacy metadata with no independently stored
+# confidence/raw is adapted at the caller boundary with an explicit
+# qualitative fallback ("Medium") and the original field as the raw text —
+# never a fabricated percentage.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_resolve_card_title_hint_uses_stacked_provenance() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    assert 'copyLabel="Copy title"' in source
+    assert 'confidence="Medium"' in source
+    assert "raw={row.title_hint}" in source
+    # The component now owns the "Extracted:" prefix in stacked mode — no
+    # leftover caller-owned duplicate prefix.
+    assert "Extracted: <CopyableExtractedValue" not in source
+
+
+def test_argument_editor_title_hint_uses_stacked_provenance() -> None:
+    source = _source(ARGUMENT_EDIT_PATH)
+    assert 'copyLabel="Copy title"' in source
+    assert 'confidence="Medium"' in source
+    assert "raw={speaker.title_hint}" in source
+    assert "Extracted: <CopyableExtractedValue" not in source
+
+
+def test_pipeline_job_detail_parsed_readouts_use_stacked_provenance() -> None:
+    source = _source(PIPELINE_JOB_PATH)
+    assert 'copyLabel="Copy case name" confidence="Medium" raw={ps.case_name}' in source
+    assert 'copyLabel="Copy argued date" confidence="Medium" raw={ps.argued_date}' in source
+    assert 'copyLabel="Copy docket" variant="pill" confidence="Medium" raw={ps.primary_docket}' in source
+    assert 'copyLabel="Copy question number" confidence="Medium"' in source
+
+
+def test_pipeline_job_detail_argued_date_raw_is_exact_iso_not_formatted() -> None:
+    """D-20/D-21: raw must be the exact source text, which genuinely differs
+    from the displayed interpretation for argued date (ISO vs. formatted)."""
+    source = _source(PIPELINE_JOB_PATH)
+    assert "raw={ps.argued_date}" in source
+    assert "raw={formatDate(ps.argued_date)}" not in source
+
+
+def test_no_fabricated_confidence_percentages_in_any_converted_consumer() -> None:
+    for path in (RESOLVE_CARD_PATH, ARGUMENT_EDIT_PATH, PIPELINE_JOB_PATH):
+        source = _source(path)
+        assert "% confidence" not in source
+        assert "Confidence:" not in source  # locked copy is "{Band} confidence", not "Confidence:"
+
+
+def test_every_known_editable_destination_consumer_supplies_confidence_and_raw() -> None:
+    """Enumerates every current CopyableExtractedValue call site across the
+    Phase 38 Plan 05 consumer files. A future usage added to one of these
+    files without confidence/raw fails this test loudly (Task 3 action)."""
+    for path in (RESOLVE_CARD_PATH, ARGUMENT_EDIT_PATH, PIPELINE_JOB_PATH):
+        source = _source(path)
+        calls = re.findall(r"<CopyableExtractedValue\b.*?/>", source, flags=re.DOTALL)
+        assert calls, f"expected at least one CopyableExtractedValue usage in {path}"
+        for call in calls:
+            assert "confidence=" in call, f"missing confidence in {path}: {call}"
+            assert "raw=" in call, f"missing raw in {path}: {call}"

@@ -637,9 +637,18 @@
 											min-height: 36px;
 										"
 									/>
-									<p style="margin: 4px 0 0 0; font-size: 13px; color: #94a3b8;">
-										Extracted: <CopyableExtractedValue value={row.title_hint} copyLabel="Copy title" />
-									</p>
+									<div style="margin: 4px 0 0 0;">
+										<!-- Phase 38 (D-19/D-20): title_hint has no independently stored raw/confidence
+										     (admin_arguments.py D-06 — title and title_hint source the same column), so
+										     the exact extracted text itself is the raw source and confidence uses an
+										     explicit qualitative fallback rather than a fabricated figure. -->
+										<CopyableExtractedValue
+											value={row.title_hint}
+											copyLabel="Copy title"
+											confidence="Medium"
+											raw={row.title_hint}
+										/>
+									</div>
 								{:else}
 									<span>{row.title ?? '—'}</span>
 								{/if}

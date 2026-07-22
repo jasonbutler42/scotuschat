@@ -518,16 +518,23 @@
 														min-height: 36px;
 													"
 												/>
-												<p
+												<div
 													style="
-														font-size: 14px;
-														font-weight: 400;
-														color: #94a3b8;
 														margin: 4px 0 0 0;
 													"
 												>
-													Extracted: <CopyableExtractedValue value={speaker.title_hint} copyLabel="Copy title" />
-												</p>
+													<!-- Phase 38 (D-19/D-20): title_hint has no independently stored
+													     raw/confidence (admin_arguments.py D-06 — title and title_hint
+													     source the same column), so the exact extracted text itself is
+													     the raw source and confidence uses an explicit qualitative
+													     fallback rather than a fabricated figure. -->
+													<CopyableExtractedValue
+														value={speaker.title_hint}
+														copyLabel="Copy title"
+														confidence="Medium"
+														raw={speaker.title_hint}
+													/>
+												</div>
 											</div>
 											<div style="white-space: nowrap; padding-top: 6px; font-size: 14px; color: #94a3b8;">
 												{speaker.utterance_count}

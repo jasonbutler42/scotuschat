@@ -322,25 +322,34 @@
 									<span style="font-size: 16px; color: #94a3b8; font-style: italic;">N/A</span>
 								{/if}
 							</div>
+							<!--
+								Phase 38 (D-19/D-20/D-21): these four readouts have no independently
+								stored raw/confidence — cover_metadata pass-through and the
+								Argument.question_number column carry only the interpreted value
+								(PJOB-10/12). Confidence uses an explicit "Medium" qualitative
+								fallback (never a fabricated figure) and raw uses the exact
+								underlying source text, which genuinely differs from the displayed
+								interpretation for argued date (raw ISO string vs. formatted date).
+							-->
 							<!-- Case name from cover_metadata (PJOB-10/12) — NOT data.argument.case_name (Pitfall 7) -->
 							<div style="margin-bottom: 12px;">
 								<span style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 4px;">Case name</span>
-								<CopyableExtractedValue value={ps.case_name} copyLabel="Copy case name" />
+								<CopyableExtractedValue value={ps.case_name} copyLabel="Copy case name" confidence="Medium" raw={ps.case_name} />
 							</div>
-							<!-- Argued date from cover_metadata (PJOB-10/12) — formatted via formatDate -->
+							<!-- Argued date from cover_metadata (PJOB-10/12) — formatted via formatDate; raw is the exact ISO source -->
 							<div style="margin-bottom: 12px;">
 								<span style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 4px;">Argued</span>
-								<CopyableExtractedValue value={ps.argued_date ? formatDate(ps.argued_date) : null} copyLabel="Copy argued date" />
+								<CopyableExtractedValue value={ps.argued_date ? formatDate(ps.argued_date) : null} copyLabel="Copy argued date" confidence="Medium" raw={ps.argued_date} />
 							</div>
 							<!-- Docket(s) from cover_metadata (PJOB-10/12) — read-only pill or N/A -->
 							<div style="margin-bottom: 12px;">
 								<span style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 4px;">Docket(s)</span>
-								<CopyableExtractedValue value={ps.primary_docket} copyLabel="Copy docket" variant="pill" />
+								<CopyableExtractedValue value={ps.primary_docket} copyLabel="Copy docket" variant="pill" confidence="Medium" raw={ps.primary_docket} />
 							</div>
 							<!-- Question number from Argument.question_number (PJOB-10/12) — N/A when null -->
 							<div style="margin-bottom: 12px;">
 								<span style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 4px;">Question number</span>
-								<CopyableExtractedValue value={ps.question_number != null ? String(ps.question_number) : null} copyLabel="Copy question number" />
+								<CopyableExtractedValue value={ps.question_number != null ? String(ps.question_number) : null} copyLabel="Copy question number" confidence="Medium" raw={ps.question_number != null ? String(ps.question_number) : null} />
 							</div>
 						</div>
 					{/if}

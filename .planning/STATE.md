@@ -5,15 +5,15 @@ milestone_name: Backlog Cleanup
 current_phase: 38
 current_phase_name: full-name-vs-name-parts-rethink
 status: executing
-stopped_at: Completed 38-01-PLAN.md (1 of 6 in Phase 38)
-last_updated: "2026-07-22T15:36:01.117Z"
+stopped_at: Completed 38-05-PLAN.md
+last_updated: "2026-07-22T16:19:51.451Z"
 last_activity: 2026-07-22
 last_activity_desc: Phase 38 execution started
 progress:
   total_phases: 10
   completed_phases: 8
   total_plans: 38
-  completed_plans: 33
+  completed_plans: 34
   percent: 80
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-07-14 after Phase 34 verification)
 ## Current Position
 
 Phase: 38 (full-name-vs-name-parts-rethink) — EXECUTING
-Plan: 2 of 6
+Plan: 3 of 6
 Status: Ready to execute
 Last activity: 2026-07-22 — Phase 38 execution started
 
@@ -46,6 +46,7 @@ v1.5: 10 phases, 55 plans, 10 days (2026-07-02 → 2026-07-12).
 | Phase 37 P04 | 50min | 2 tasks | 8 files |
 | Phase 37 P05 | 90min | 3 tasks | 6 files |
 | Phase 38 P01 | 17min | 3 tasks | 4 files |
+| Phase 38 P05 | 40min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -116,6 +117,9 @@ Two open design questions remain unresolved by design and are intentionally defe
 - [Phase ?]: [Phase 38, Plan 01]: PersonNameError carries a stable .code attribute (at_least_one_required, length_exceeded, full_name_length_exceeded, invalid_confidence, provenance_value_length_exceeded, provenance_raw_length_exceeded) for deterministic branching instead of message-text matching
 - [Phase ?]: [Phase 38, Plan 01]: split_legacy_full_name distinguishes Medium (round-trip near-miss, e.g. irregular whitespace) from Low (structurally ambiguous: single-part, particle, >3 tokens, inverted punctuation order, suffix without a leading comma); auto_apply is true only for High confidence
 - [Phase ?]: [Phase 38, Plan 01]: A suffix token (Jr./Sr./II/III/IV) is only recognized as a suffix when it follows a comma -- the same literal without a comma is an order/punctuation ambiguity, never guessed
+- [Phase ?]: [Phase 38, Plan 05]: Stacked provenance mode on CopyableExtractedValue activates only when a caller passes confidence and/or raw (even null) -- every existing value-only/pill consumer stays byte-for-byte unchanged
+- [Phase ?]: [Phase 38, Plan 05]: Legacy metadata fields with no independently stored raw/confidence (title_hint, case_name, argued_date, primary_docket, question_number) use an explicit Medium confidence fallback and the field's own extracted text as raw at the Svelte call-site boundary, never a fabricated percentage
+- [Phase ?]: [Phase 38, Plan 05]: DocketPillInput Docket Pill provenance states are additive -- only pills whose entry carries confidence/raw route through CopyableExtractedValue; all current plain-string callers (ArgumentDetailsCard.svelte, pipeline create-job page) keep exact legacy markup and remain untouched/out of scope for this plan
 
 ### Roadmap Evolution
 
@@ -137,6 +141,7 @@ Deployment blockers (v1.4, unresolved — not in v1.6 scope):
 - `ORIGIN`, `PROTOCOL_HEADER`, `HOST_HEADER` env vars required on DO
 - `admin.scotuschat.com` DNS entry must be created before smoke test
 - admin_arguments.py::delete_argument omits argument_status_log from its FK cascade (found during 31-04) -- likely ForeignKeyViolation on deleting a DRAFT argument with a status log row; see deferred-items.md for suggested fix
+- [Phase 38, Plan 05] Discovered pre-existing working-tree anomaly (not caused by this plan's commands): .planning/REQUIREMENTS.md and every .planning/phases/<NN>-* directory except 38-full-name-vs-name-parts-rethink/ are missing from disk (REQUIREMENTS.md and phase 31-40 tracked files show as git 'D'; untracked Phase 38 PLAN/RESEARCH/PATTERNS/UI-SPEC/FIGMA/VALIDATION files are gone with no git trace since they were never committed). This caused roadmap.update-plan-progress to report 'No plans found' (skipped, no ROADMAP.md changes made) and state.advance-plan/update-progress to zero out STATE.md's progress counters as a side effect (manually restored to the pre-corruption values: completed_phases 8, total_plans 38, completed_plans 34, percent 80, before committing). Needs investigation/recovery -- likely git checkout of tracked 'D' paths from HEAD for phases 31-40, and regeneration or recovery of untracked Phase 38 planning docs and REQUIREMENTS.md from another agent/session if available. Not remediated here: out of this plan's scope and risks colliding with concurrent wave agents (38-02/03/04) sharing this same non-worktree-isolated working tree.
 
 ## Deferred Items
 
@@ -237,8 +242,8 @@ Items acknowledged and deferred at v1.5 milestone close on 2026-07-12:
 
 ## Session Continuity
 
-Last session: 2026-07-22T15:36:00.523Z
-Stopped at: Completed 38-01-PLAN.md (1 of 6 in Phase 38)
+Last session: 2026-07-22T16:16:15.864Z
+Stopped at: Completed 38-05-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

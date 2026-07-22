@@ -820,12 +820,21 @@ def _bench_role_and_missing_tenure(
 
     missing_tenure is also true when argued_date is None or tenures is empty,
     since coverage cannot be determined without both.
+
+    A covering tenure whose office value isn't one of the two canonical
+    values (see office_title()'s KeyError note — this can only happen
+    mid-rollout, before migration 0021's CHECK constraint is applied) is
+    treated as missing_tenure=True rather than raising, so one bad row
+    doesn't 500 the whole Resolve card.
     """
     if argued_date is not None:
         for t in tenures:
             if t.start_date is not None and argued_date >= t.start_date:
                 if t.end_date is None or argued_date <= t.end_date:
-                    return office_title(t.office), False
+                    try:
+                        return office_title(t.office), False
+                    except KeyError:
+                        return None, True
     return None, True
 
 

@@ -63,7 +63,11 @@ def _tenure_role_name(
 
     Returns:
         The formal title (e.g. "Chief Justice") for the matching tenure, or
-        None if tenures is empty.
+        None if tenures is empty or the matching tenure's office value isn't
+        one of the two canonical values (see office_title()'s KeyError note —
+        this can only happen mid-rollout, before migration 0021's CHECK
+        constraint is applied; degrading to None here keeps one bad row from
+        500ing every other speaker on the page).
     """
     if not tenures:
         return None
@@ -74,7 +78,10 @@ def _tenure_role_name(
             end = t["end_date"]
             if start is not None and argued_date >= start:
                 if end is None or argued_date <= end:
-                    return office_title(t["office"])
+                    try:
+                        return office_title(t["office"])
+                    except KeyError:
+                        return None
 
     # D-14 fallback: argued_date is None OR outside all windows — use most-recent
     # tenure by start_date.  start_date=None is treated as datetime.date.min so a
@@ -83,7 +90,10 @@ def _tenure_role_name(
         tenures,
         key=lambda t: t["start_date"] or datetime.date.min,
     )
-    return office_title(most_recent["office"])
+    try:
+        return office_title(most_recent["office"])
+    except KeyError:
+        return None
 
 
 # ---------------------------------------------------------------------------

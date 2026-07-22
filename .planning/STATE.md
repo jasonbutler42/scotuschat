@@ -3,17 +3,17 @@ gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Backlog Cleanup
 current_phase: 38
-current_phase_name: Rethink Full Name vs. name-part fields in the people editor
-status: planning
-stopped_at: Completed 37-05-PLAN.md (final plan in Phase 37)
-last_updated: "2026-07-22T02:48:05.544Z"
-last_activity: 2026-07-21
-last_activity_desc: Phase 37 complete, transitioned to Phase 38
+current_phase_name: full-name-vs-name-parts-rethink
+status: executing
+stopped_at: Completed 38-01-PLAN.md (1 of 6 in Phase 38)
+last_updated: "2026-07-22T15:36:01.117Z"
+last_activity: 2026-07-22
+last_activity_desc: Phase 38 execution started
 progress:
   total_phases: 10
   completed_phases: 8
   total_plans: 38
-  completed_plans: 32
+  completed_plans: 33
   percent: 80
 ---
 
@@ -24,14 +24,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-14 after Phase 34 verification)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** Phase 37 — tenure-seat-as-chief-associate-toggle
+**Current focus:** Phase 38 — full-name-vs-name-parts-rethink
 
 ## Current Position
 
-Phase: 38 — Rethink Full Name vs. name-part fields in the people editor
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-07-21 — Phase 37 complete, transitioned to Phase 38
+Phase: 38 (full-name-vs-name-parts-rethink) — EXECUTING
+Plan: 2 of 6
+Status: Ready to execute
+Last activity: 2026-07-22 — Phase 38 execution started
 
 ## Performance Metrics
 
@@ -45,6 +45,7 @@ v1.5: 10 phases, 55 plans, 10 days (2026-07-02 → 2026-07-12).
 | Phase 37 P03 | 25min | 3 tasks | 7 files |
 | Phase 37 P04 | 50min | 2 tasks | 8 files |
 | Phase 37 P05 | 90min | 3 tasks | 6 files |
+| Phase 38 P01 | 17min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -112,6 +113,9 @@ Two open design questions remain unresolved by design and are intentionally defe
 - [Phase ?]: [Phase 37-05] aria-invalid/aria-describedby placed on a nested role="radiogroup" div, not the fieldset (implicit "group" role) or individual radios ("radio" role) — the only role in this markup ARIA permits aria-invalid on
 - [Phase ?]: [Phase 37-05] Submit-button onclick preventDefault() used as the client-side Office preflight gate instead of threading validation through use:enhance's cancel() callback
 - [Phase ?]: [Phase 37-05] scripts/audit_tenure_seat_identifiers.py uses an exact (path,line,text) allowlist rather than fuzzy pattern exceptions, and fails on stale (no-longer-matching) allowlist entries too
+- [Phase ?]: [Phase 38, Plan 01]: PersonNameError carries a stable .code attribute (at_least_one_required, length_exceeded, full_name_length_exceeded, invalid_confidence, provenance_value_length_exceeded, provenance_raw_length_exceeded) for deterministic branching instead of message-text matching
+- [Phase ?]: [Phase 38, Plan 01]: split_legacy_full_name distinguishes Medium (round-trip near-miss, e.g. irregular whitespace) from Low (structurally ambiguous: single-part, particle, >3 tokens, inverted punctuation order, suffix without a leading comma); auto_apply is true only for High confidence
+- [Phase ?]: [Phase 38, Plan 01]: A suffix token (Jr./Sr./II/III/IV) is only recognized as a suffix when it follows a comma -- the same literal without a comma is an order/punctuation ambiguity, never guessed
 
 ### Roadmap Evolution
 
@@ -233,8 +237,8 @@ Items acknowledged and deferred at v1.5 milestone close on 2026-07-12:
 
 ## Session Continuity
 
-Last session: 2026-07-21T22:27:52.203Z
-Stopped at: Completed 37-05-PLAN.md (final plan in Phase 37)
+Last session: 2026-07-22T15:36:00.523Z
+Stopped at: Completed 38-01-PLAN.md (1 of 6 in Phase 38)
 Resume file: None
 
 ## Operator Next Steps

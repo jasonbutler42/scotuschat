@@ -316,7 +316,15 @@ Plans:
   3. Existing Full Name values for already-created people are not corrupted or silently overwritten by the new behavior.
   4. Any pipeline/parsing-side changes needed to support the decision are identified and applied consistently with the admin editor's behavior.
 
-**Plans**: TBD
+**Plans**: 1/6 plans executed
+
+- [x] 38-01-PLAN.md
+- [ ] 38-02-PLAN.md
+- [ ] 38-03-PLAN.md
+- [ ] 38-04-PLAN.md
+- [ ] 38-05-PLAN.md
+- [ ] 38-06-PLAN.md
+
 **UI hint**: yes
 
 ### Phase 39: Bench popover — additional context data for Justices
@@ -389,7 +397,7 @@ Plans:
 | 35. `rerun_job` never spawns ingest for locally-uploaded jobs | v1.6 | 3/3 | Complete    | 2026-07-14 |
 | 36. Click-to-copy extracted values design pattern | v1.6 | 3/3 | Complete    | 2026-07-15 |
 | 37. Represent tenure Seat as a Chief/Associate toggle instead of free text | v1.6 | 5/5 | Complete    | 2026-07-21 |
-| 38. Rethink Full Name vs. name-part fields in the people editor | v1.6 | TBD | Not started | - |
+| 38. Rethink Full Name vs. name-part fields in the people editor | v1.6 | 1/6 | In Progress|  |
 | 39. Bench popover — additional context data for Justices | v1.6 | TBD | Not started | - |
 | 40. README — how to start the local stack | v1.6 | 3/3 | Complete    | 2026-07-14 |
 

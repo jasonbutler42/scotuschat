@@ -201,5 +201,127 @@
       "expected_error_code": "full_name_length_exceeded"
     }
   ],
-  "legacy_split_cases": []
+  "legacy_split_cases": [
+    {
+      "name": "high_confidence_three_part_with_suffix",
+      "full_name": "John G. Roberts, Jr.",
+      "expected_first_name": "John",
+      "expected_middle_name": "G.",
+      "expected_last_name": "Roberts",
+      "expected_name_suffix": "Jr.",
+      "expected_confidence": "High",
+      "expected_auto_apply": true,
+      "expected_reason_contains": "round-trip"
+    },
+    {
+      "name": "high_confidence_two_part",
+      "full_name": "Clarence Thomas",
+      "expected_first_name": "Clarence",
+      "expected_middle_name": null,
+      "expected_last_name": "Thomas",
+      "expected_name_suffix": null,
+      "expected_confidence": "High",
+      "expected_auto_apply": true,
+      "expected_reason_contains": "round-trip"
+    },
+    {
+      "name": "high_confidence_three_part_initial_with_suffix",
+      "full_name": "Samuel A. Alito, Jr.",
+      "expected_first_name": "Samuel",
+      "expected_middle_name": "A.",
+      "expected_last_name": "Alito",
+      "expected_name_suffix": "Jr.",
+      "expected_confidence": "High",
+      "expected_auto_apply": true,
+      "expected_reason_contains": "round-trip"
+    },
+    {
+      "name": "high_confidence_three_part_no_suffix",
+      "full_name": "Amy Coney Barrett",
+      "expected_first_name": "Amy",
+      "expected_middle_name": "Coney",
+      "expected_last_name": "Barrett",
+      "expected_name_suffix": null,
+      "expected_confidence": "High",
+      "expected_auto_apply": true,
+      "expected_reason_contains": "round-trip"
+    },
+    {
+      "name": "high_confidence_three_part_no_suffix_2",
+      "full_name": "Ruth Bader Ginsburg",
+      "expected_first_name": "Ruth",
+      "expected_middle_name": "Bader",
+      "expected_last_name": "Ginsburg",
+      "expected_name_suffix": null,
+      "expected_confidence": "High",
+      "expected_auto_apply": true,
+      "expected_reason_contains": "round-trip"
+    },
+    {
+      "name": "ambiguous_single_part",
+      "full_name": "Cher",
+      "expected_first_name": null,
+      "expected_middle_name": null,
+      "expected_last_name": null,
+      "expected_name_suffix": null,
+      "expected_confidence": "Low",
+      "expected_auto_apply": false,
+      "expected_reason_contains": "single-part"
+    },
+    {
+      "name": "ambiguous_particle",
+      "full_name": "Charles de la Cruz",
+      "expected_first_name": null,
+      "expected_middle_name": null,
+      "expected_last_name": null,
+      "expected_name_suffix": null,
+      "expected_confidence": "Low",
+      "expected_auto_apply": false,
+      "expected_reason_contains": "particle"
+    },
+    {
+      "name": "ambiguous_compound_more_than_three_tokens",
+      "full_name": "Mary Jane Watson Smith",
+      "expected_first_name": null,
+      "expected_middle_name": null,
+      "expected_last_name": null,
+      "expected_name_suffix": null,
+      "expected_confidence": "Low",
+      "expected_auto_apply": false,
+      "expected_reason_contains": "more than three"
+    },
+    {
+      "name": "ambiguous_inverted_punctuation_order",
+      "full_name": "Roberts, John",
+      "expected_first_name": null,
+      "expected_middle_name": null,
+      "expected_last_name": null,
+      "expected_name_suffix": null,
+      "expected_confidence": "Low",
+      "expected_auto_apply": false,
+      "expected_reason_contains": "unrecognized punctuation/order"
+    },
+    {
+      "name": "ambiguous_suffix_without_comma",
+      "full_name": "John Roberts Jr.",
+      "expected_first_name": null,
+      "expected_middle_name": null,
+      "expected_last_name": null,
+      "expected_name_suffix": null,
+      "expected_confidence": "Low",
+      "expected_auto_apply": false,
+      "expected_reason_contains": "ambiguous order/punctuation"
+    },
+    {
+      "name": "medium_confidence_whitespace_round_trip_mismatch",
+      "full_name": "John  Roberts",
+      "expected_first_name": null,
+      "expected_middle_name": null,
+      "expected_last_name": null,
+      "expected_name_suffix": null,
+      "expected_confidence": "Medium",
+      "expected_auto_apply": false,
+      "expected_reason_contains": "does not round-trip exactly"
+    }
+  ]
 }

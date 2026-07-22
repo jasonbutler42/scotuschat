@@ -220,3 +220,148 @@ def prepare_name_provenance(
     return NameProvenance(
         value=value, raw=raw, confidence=_CONFIDENCE_CANONICAL[confidence_key]
     )
+
+
+# ---------------------------------------------------------------------------
+# Conservative legacy Full Name splitter (D-10-D-12)
+# ---------------------------------------------------------------------------
+
+# Recognized suffix tokens, derived from repository data (seed_aliases.py /
+# import_justices_csv.py) plus common Roman-numeral generational suffixes.
+# A suffix is only ever split off when it follows a comma (the canonical
+# D-05 format); the same literal appearing without a leading comma is
+# treated as an order/punctuation ambiguity, not silently reinterpreted.
+_KNOWN_SUFFIXES = {"Jr.", "Sr.", "II", "III", "IV"}
+
+# Common name particles. Any token matching one of these (case-insensitively)
+# makes the first/middle/last split location ambiguous -- D-07 requires
+# preserving particles as authored, and this module must never guess which
+# side of a particle the surname boundary falls on.
+_PARTICLES = {
+    "de", "del", "la", "le", "van", "von", "der", "den", "du", "di", "da",
+    "dos", "das", "st", "st.", "mac", "bin", "ibn", "al",
+}
+
+
+@dataclass(frozen=True)
+class SplitResult:
+    first_name: Optional[str]
+    middle_name: Optional[str]
+    last_name: Optional[str]
+    name_suffix: Optional[str]
+    confidence: ConfidenceBand
+    reason: str
+    auto_apply: bool
+
+
+def _ambiguous(confidence: ConfidenceBand, reason: str) -> SplitResult:
+    return SplitResult(
+        first_name=None,
+        middle_name=None,
+        last_name=None,
+        name_suffix=None,
+        confidence=confidence,
+        reason=reason,
+        auto_apply=False,
+    )
+
+
+def split_legacy_full_name(full_name: str) -> SplitResult:
+    """
+    Conservatively split a legacy `full_name` string into structured parts.
+
+    Pure and deterministic (T-38-02) — repeated calls on the same input
+    always return an identical SplitResult. Only ever returns
+    auto_apply=True for a High-confidence, round-trip-exact split of a
+    structurally unambiguous shape (D-10/D-11): two or three
+    whitespace-separated tokens, with an optional recognized suffix
+    following a comma, and no recognized name particle among the tokens.
+
+    Every other shape — blank/single-part names, particles, more than three
+    tokens (ambiguous compound surnames), a suffix-like token without a
+    leading comma (order/punctuation ambiguity), unrecognized comma usage,
+    or a split that does not reformat back to the exact original string —
+    is returned unapplied with a reason, preserving the original full_name
+    for the caller to keep unchanged and flag for review (D-11/D-12). This
+    function never guesses; it does not synthesize punctuation or reorder
+    tokens (D-06/D-07).
+    """
+    stripped = full_name.strip()
+    if not stripped:
+        return _ambiguous("Low", "blank full_name cannot be split")
+
+    core = stripped
+    suffix: Optional[str] = None
+
+    if "," in stripped:
+        head, _, tail = stripped.rpartition(",")
+        head_stripped = head.strip()
+        tail_stripped = tail.strip()
+        if (
+            tail_stripped in _KNOWN_SUFFIXES
+            and head_stripped
+            and "," not in head_stripped
+        ):
+            core = head_stripped
+            suffix = tail_stripped
+        else:
+            return _ambiguous(
+                "Low",
+                f"unrecognized punctuation/order around comma near {tail_stripped!r}",
+            )
+
+    tokens = core.split()
+
+    if any(tok in _KNOWN_SUFFIXES for tok in tokens):
+        return _ambiguous(
+            "Low",
+            "suffix-like token present without a leading comma is an "
+            "ambiguous order/punctuation shape",
+        )
+
+    if any(tok.lower() in _PARTICLES for tok in tokens):
+        return _ambiguous(
+            "Low", "particle token makes the split location ambiguous"
+        )
+
+    if len(tokens) == 1:
+        return _ambiguous(
+            "Low", "single-part name is ambiguous between first and last"
+        )
+
+    if len(tokens) == 2:
+        first, middle, last = tokens[0], None, tokens[1]
+    elif len(tokens) == 3:
+        first, middle, last = tokens[0], tokens[1], tokens[2]
+    else:
+        return _ambiguous(
+            "Low",
+            "more than three name tokens is an ambiguous compound/multi-part name",
+        )
+
+    candidate_full_name = format_full_name(first, middle, last, suffix)
+    if candidate_full_name != stripped:
+        return SplitResult(
+            first_name=None,
+            middle_name=None,
+            last_name=None,
+            name_suffix=None,
+            confidence="Medium",
+            reason=(
+                "split does not round-trip exactly to the original full_name"
+            ),
+            auto_apply=False,
+        )
+
+    return SplitResult(
+        first_name=first,
+        middle_name=middle,
+        last_name=last,
+        name_suffix=suffix,
+        confidence="High",
+        reason=(
+            "unambiguous space-separated tokens with optional recognized "
+            "suffix, exact round-trip"
+        ),
+        auto_apply=True,
+    )

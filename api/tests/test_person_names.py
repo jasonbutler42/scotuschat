@@ -23,6 +23,7 @@ from api.domain.person_names import (
     normalize_name_part,
     prepare_name_provenance,
     prepare_person_name,
+    split_legacy_full_name,
 )
 
 FIXTURES_PATH = Path(__file__).parent / "fixtures" / "person_name_cases.json"
@@ -162,3 +163,60 @@ def test_provenance_preserves_raw_text_exactly_apart_from_length():
     raw_text = "  WILLIAM   H.  TAFT  "
     envelope = prepare_name_provenance(value="William", raw=raw_text, confidence="medium")
     assert envelope.raw == raw_text
+
+
+# ---------------------------------------------------------------------------
+# Task 3: conservative legacy Full Name splitting (D-10-D-12)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "case",
+    FIXTURES["legacy_split_cases"],
+    ids=[c["name"] for c in FIXTURES["legacy_split_cases"]],
+)
+def test_legacy_split_cases(case):
+    result = split_legacy_full_name(case["full_name"])
+    assert result.first_name == case["expected_first_name"]
+    assert result.middle_name == case["expected_middle_name"]
+    assert result.last_name == case["expected_last_name"]
+    assert result.name_suffix == case["expected_name_suffix"]
+    assert result.confidence == case["expected_confidence"]
+    assert result.auto_apply == case["expected_auto_apply"]
+    assert case["expected_reason_contains"] in result.reason
+
+
+@pytest.mark.parametrize(
+    "full_name",
+    [
+        "John G. Roberts, Jr.",
+        "Clarence Thomas",
+        "Cher",
+        "Charles de la Cruz",
+        "Roberts, John",
+    ],
+)
+def test_legacy_split_is_idempotent(full_name):
+    """Repeated runs return identical parts, confidence, reason, and auto_apply."""
+    first_run = split_legacy_full_name(full_name)
+    second_run = split_legacy_full_name(full_name)
+    assert first_run == second_run
+
+
+def test_legacy_split_auto_apply_only_true_for_high_confidence():
+    high = split_legacy_full_name("Clarence Thomas")
+    assert high.confidence == "High"
+    assert high.auto_apply is True
+
+    low = split_legacy_full_name("Cher")
+    assert low.confidence != "High"
+    assert low.auto_apply is False
+
+
+def test_legacy_split_preserves_original_full_name_available_to_caller():
+    """The splitter never mutates or consumes the caller's original string."""
+    original = "Roberts, John"
+    result = split_legacy_full_name(original)
+    assert result.auto_apply is False
+    # Caller-side contract: original remains exactly what was passed in.
+    assert original == "Roberts, John"

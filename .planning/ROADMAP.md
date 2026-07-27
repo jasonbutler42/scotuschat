@@ -316,7 +316,7 @@ Plans:
   3. Existing Full Name values for already-created people are not corrupted or silently overwritten by the new behavior.
   4. Any pipeline/parsing-side changes needed to support the decision are identified and applied consistently with the admin editor's behavior.
 
-**Plans**: 6/6 plans executed
+**Plans**: 6/10 plans executed (plans 07–10 are UAT gap closure for G-38-6)
 
 - [x] 38-01-PLAN.md
 - [x] 38-02-PLAN.md
@@ -324,6 +324,10 @@ Plans:
 - [x] 38-04-PLAN.md
 - [x] 38-05-PLAN.md
 - [x] 38-06-PLAN.md
+- [ ] 38-07-PLAN.md — canonical docket-value rule + 422 guard at the create_job boundary (G-38-6)
+- [ ] 38-08-PLAN.md — independent pipeline-side ingest path/slug hardening + write containment (G-38-6)
+- [ ] 38-09-PLAN.md — parity-locked client mirror, inline docket error, SvelteKit re-check (G-38-6)
+- [ ] 38-10-PLAN.md — consolidated regression gate + operator re-verification of UAT Test 6 (G-38-6)
 
 **UI hint**: yes
 

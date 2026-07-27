@@ -1,23 +1,28 @@
 ---
 phase: 38-full-name-vs-name-parts-rethink
 verified: 2026-07-27T17:40:23Z
-status: human_needed
+status: passed
 score: 4/4 must-haves verified
 behavior_unverified: 0
 overrides_applied: 0
 human_verification:
+
   - test: "Open the standalone create form and the person edit form; type into First/Middle/Last/Suffix and confirm the read-only Full Name <output> updates live, shows 'Generated from name parts.', and cannot be typed into directly."
     expected: "Full Name preview matches the canonical First Middle Last, Suffix format live as parts are typed; no input control exists for it."
     why_human: "Live-typing/render behavior and visual layout require a browser; static source checks only confirm the markup is a read-only <output> bound to a $derived preview function, not that it renders/updates correctly on screen."
+
   - test: "Submit the create/edit form with only a First Name (no Last), then only a Last Name (no First); confirm save succeeds and no 'Enter at least a first or last name.' error appears; then submit with both blank and confirm the error appears, attempted values are preserved, and focus moves to First Name."
     expected: "First-only and last-only saves succeed; blank-both shows the exact locked error copy with focus on First Name and no attempted data lost."
     why_human: "Focus-management and preserved-form-state-after-error are runtime DOM behaviors that cannot be confirmed by static grep of the server action/component source."
+
   - test: "Open an ambiguous legacy person record (one migration 0022 flagged name_needs_review=true) in the edit form; confirm each of First/Middle/Last/Suffix shows the stacked 'Extracted: {value} / {Band} confidence · Raw: {raw}' hint (or the disabled N/A state for a still-blank field) at both wide and narrow viewport widths, and that clicking the copy affordance copies only the interpreted value."
     expected: "Per-part provenance stack renders correctly and remains usable/readable at narrow widths per 38-FIGMA.md; copy button copies only the displayed value, never the raw/confidence text."
     why_human: "Visual layout/wrapping at responsive widths and the interactive clipboard behavior require a browser; no browser tool is available in this execution environment (flagged by 38-05-SUMMARY.md and 38-06-SUMMARY.md's own human_judgment coverage entries)."
+
   - test: "On the People directory, click the 'Name review' pill/indicator; confirm it filters to only name_needs_review=true rows while preserving the active tab in the URL, and that the empty state (when no rows match) shows the exact locked copy 'No people need name review' / 'Ambiguous legacy names will appear here for review.'"
     expected: "Filter applies correctly, tab/URL round-trips, and the empty state is distinct from the generic missing-field empty state."
     why_human: "Selected-pill visual state, URL round-trip behavior in a real browser session, and empty-state layout require browser confirmation, consistent with prior phases' precedent for this same click-to-filter mechanism."
+
   - test: "Exercise DocketPillInput's approved provenance states (editable/read-only, single/multiple pills, mixed confidence within a group, long raw text wrapping, remove-in-edit-mode-only) against the Figma component (38-FIGMA.md node 3:140 / review sheet 3:2) at narrow and wide widths."
     expected: "All approved visual states match the Figma reference; remove control only appears in editable mode; long raw text wraps without truncation or overflow."
     why_human: "Visual/interactive state comparison against an external Figma design reference cannot be done via source-code inspection alone (flagged as human_judgment in 38-05-SUMMARY.md)."

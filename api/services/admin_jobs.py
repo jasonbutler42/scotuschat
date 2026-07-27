@@ -17,6 +17,7 @@ Critical guards (mirroring pipeline/commands/resolve.py):
 """
 
 import datetime
+from typing import Optional
 
 from sqlalchemy import delete, exists, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -926,6 +927,14 @@ async def create_person_for_job(
             )
 
     role_id = body.role_id
+    # WR-01/WR-03: PersonResponse.role_name has no backing attribute on
+    # Person (no column, no hybrid property) — from_attributes=True
+    # serialization would otherwise either raise AttributeError or (once
+    # merely defaulted) always report None instead of the resolved Role's
+    # name. Track the resolved name here and inject it via __dict__ before
+    # returning, matching the parse_stats/is_archived/source precedent
+    # elsewhere in this file.
+    role_name_value: Optional[str] = None
 
     if body.role_name and role_id is None:
         # Find-or-create role by name
@@ -938,6 +947,11 @@ async def create_person_for_job(
             db.add(role)
             await db.flush()
         role_id = role.id
+        role_name_value = role.name
+    elif role_id is not None:
+        role_result = await db.execute(select(Role).where(Role.id == role_id))
+        existing_role = role_result.scalar_one_or_none()
+        role_name_value = existing_role.name if existing_role is not None else None
 
     is_justice = body.side == SideEnum.BENCH if body.side is not None else False
     person = Person(
@@ -965,4 +979,9 @@ async def create_person_for_job(
 
     await db.commit()
     await db.refresh(person)
+    # WR-01/WR-03: PersonResponse declares role_name, which Person has no
+    # matching attribute for — inject it explicitly (never left unset) so
+    # from_attributes=True serialization neither raises AttributeError nor
+    # silently reports None when a role was actually resolved above.
+    person.__dict__["role_name"] = role_name_value
     return person

@@ -143,6 +143,28 @@ def _baseline_at_0021(engine, alembic_config):
     yield
 
 
+@pytest.fixture(scope="module", autouse=True)
+def _leave_database_at_head():
+    """
+    Other DB-gated test modules in this suite assume `alembic upgrade head`
+    has already been applied (pipeline/tests/conftest.py's own documented
+    convention) — this module's own tests intentionally downgrade to 0021
+    mid-run, so restore the shared test database to head once after every
+    test in this module has finished, regardless of pass/fail/skip.
+    """
+    yield
+    if TEST_DATABASE_URL is None:
+        return
+    eng = create_engine(_sync_url(TEST_DATABASE_URL), future=True)
+    try:
+        if _current_revision(eng) != TARGET_REVISION:
+            cfg = Config(str(ALEMBIC_INI))
+            cfg.set_main_option("script_location", str(ALEMBIC_SCRIPT_LOCATION))
+            command.upgrade(cfg, TARGET_REVISION)
+    finally:
+        eng.dispose()
+
+
 def _seed_people(engine, rows: list) -> None:
     """
     TRUNCATE `people` (CASCADE, matching the project's clean_db convention)
@@ -157,6 +179,14 @@ def _seed_people(engine, rows: list) -> None:
                 text("INSERT INTO people (full_name, is_justice) VALUES (:full_name, false)"),
                 {"full_name": row["full_name"]},
             )
+
+
+def _fetch_full_names(engine) -> dict:
+    """Pre-upgrade snapshot helper — selects only columns that exist at the
+    0021 baseline (no Phase 38 columns yet)."""
+    with engine.connect() as conn:
+        result = conn.execute(text("SELECT id, full_name FROM people ORDER BY id"))
+        return {row.full_name: dict(row._mapping) for row in result}
 
 
 def _fetch_people(engine) -> dict:
@@ -211,7 +241,7 @@ def test_upgrade_backfills_confident_rows_and_flags_ambiguous_rows(engine, alemb
     deterministic reviewed/applied outcomes.
     """
     _seed_people(engine, LEGACY_CASES)
-    pre_snapshot = _fetch_people(engine)
+    pre_snapshot = _fetch_full_names(engine)
     assert set(pre_snapshot) == {c["full_name"] for c in LEGACY_CASES}
 
     command.upgrade(alembic_config, TARGET_REVISION)

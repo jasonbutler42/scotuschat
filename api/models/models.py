@@ -120,6 +120,17 @@ class Person(Base):
     birthdate = Column(Date, nullable=True)
     # Phase 29 — migration 0017: Oyez/ConvoKit external speaker ID (historical corpus import)
     oyez_speaker_id = Column(String(100), nullable=True)
+    # Phase 38 — migration 0022: durable review flag + independently-persisted
+    # extraction provenance for the Full Name vs. name-parts authority rework
+    # (D-04, D-10-D-12, D-14-D-18). name_needs_review surfaces the People
+    # directory's `Name review` attention filter for any full_name this
+    # migration (or later pipeline/import extraction) could not confidently
+    # split into structured parts. name_extraction_metadata persists
+    # independently of operator-edited name parts — an operator edit never
+    # clears or rewrites it, and it is never used to overwrite an existing
+    # operator value.
+    name_needs_review = Column(Boolean, nullable=False, server_default=false())
+    name_extraction_metadata = Column(JSONB, nullable=True)
 
 
 # ---------------------------------------------------------------------------

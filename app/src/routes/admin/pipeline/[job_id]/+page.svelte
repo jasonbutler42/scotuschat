@@ -413,7 +413,7 @@
 					{data.participants.length} resolved participant{data.participants.length === 1 ? '' : 's'}
 				</h2>
 				<a
-					href="/admin/people?incomplete=1"
+					href="/admin/people?tab=bench&missing=name%20review"
 					style="
 						display: inline-block;
 						font-size: 14px;

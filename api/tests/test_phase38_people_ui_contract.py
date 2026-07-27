@@ -35,6 +35,8 @@ NEW_PAGE_SERVER_PATH = ROOT / "app" / "src" / "routes" / "admin" / "people" / "n
 NEW_PAGE_SVELTE_PATH = ROOT / "app" / "src" / "routes" / "admin" / "people" / "new" / "+page.svelte"
 ID_PAGE_SERVER_PATH = ROOT / "app" / "src" / "routes" / "admin" / "people" / "[id]" / "+page.server.ts"
 ID_PAGE_SVELTE_PATH = ROOT / "app" / "src" / "routes" / "admin" / "people" / "[id]" / "+page.svelte"
+LIST_PAGE_SVELTE_PATH = ROOT / "app" / "src" / "routes" / "admin" / "people" / "+page.svelte"
+LIST_PAGE_SERVER_PATH = ROOT / "app" / "src" / "routes" / "admin" / "people" / "+page.server.ts"
 
 NODE_BIN = shutil.which("node")
 
@@ -285,3 +287,57 @@ def test_id_page_svelte_provenance_never_overwrites_operator_value_on_edit() -> 
     source = _source(ID_PAGE_SVELTE_PATH)
     assert "firstName = data.person.name_extraction_metadata" not in source
     assert "onclick={() => (firstName" not in source
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Task 3: People directory "Name review" filter/indicator (D-12, D-13) —
+# reuses the existing click-to-filter pill mechanism (URL/tab-preserving,
+# single-select) rather than a new dashboard queue or rerun control.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_list_page_server_threads_name_needs_review_field() -> None:
+    source = _source(LIST_PAGE_SERVER_PATH)
+    assert "name_needs_review: boolean;" in source
+
+
+def test_list_page_svelte_declares_pill_label_helper_for_name_review() -> None:
+    source = _source(LIST_PAGE_SVELTE_PATH)
+    assert "function pillLabel(field: string): string {" in source
+    assert "field === 'name review' ? 'Name review' : field" in source
+
+
+def test_list_page_svelte_pill_rendering_uses_pill_label_and_preserves_filter_mechanism() -> None:
+    """Same togglePillFilter/data.missing/data.tab mechanism as every other
+    missing-field pill — Name review is additive, not a parallel code path."""
+    source = _source(LIST_PAGE_SVELTE_PATH)
+    assert "onclick={() => togglePillFilter(field)}" in source
+    assert ">{pillLabel(field)}</button>" in source
+    assert 'aria-label="Filter by {pillLabel(field)}"' in source
+    assert "class:pill-active={data.missing === field}" in source
+
+
+def test_list_page_svelte_exact_name_review_empty_state_copy() -> None:
+    source = _source(LIST_PAGE_SVELTE_PATH)
+    assert "{:else if data.missing === 'name review'}" in source
+    assert "No people need name review" in source
+    assert "Ambiguous legacy names will appear here for review." in source
+
+
+def test_list_page_svelte_togglepillfilter_preserves_tab_in_url() -> None:
+    """Selecting/clearing any pill (including Name review) round-trips through
+    the same `?tab=...&missing=...` URL, preserving the active tab."""
+    source = _source(LIST_PAGE_SVELTE_PATH)
+    fn = source.split("function togglePillFilter(field: string) {", 1)[1].split("\n\t}", 1)[0]
+    assert "goto('/admin/people?tab=' + data.tab)" in fn
+    assert "goto('/admin/people?tab=' + data.tab + '&missing=' + encodeURIComponent(field))" in fn
+
+
+def test_no_dashboard_queue_or_rerun_control_introduced() -> None:
+    """D-13: the focused People directory filter is deliberately NOT paired
+    with a general-purpose Admin Dashboard attention queue, and this plan
+    must not resurrect the Phase 35-removed job-rerun control."""
+    for path in (LIST_PAGE_SVELTE_PATH, LIST_PAGE_SERVER_PATH, ID_PAGE_SVELTE_PATH, ID_PAGE_SERVER_PATH):
+        source = _source(path)
+        assert "rerun" not in source.lower()
+    assert not (ROOT / "app" / "src" / "routes" / "admin" / "dashboard").exists()

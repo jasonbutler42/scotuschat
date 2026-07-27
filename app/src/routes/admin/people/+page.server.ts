@@ -9,6 +9,13 @@ type PersonListItem = {
 	argument_count: number | null;
 	tenure_coverage: string | null;
 	has_tenure_gap: boolean;
+	// Phase 38 (D-12) — threaded through unchanged from the API response;
+	// the directory's "Name review" pill/filter is driven by `missing`
+	// already containing "name review" (see admin_people.py's
+	// missing_filters allow-list), so this typed field is available to any
+	// consumer that prefers an explicit boolean over array membership, but
+	// is not itself required by the pill rendering below.
+	name_needs_review: boolean;
 };
 
 export const load: PageServerLoad = async ({ fetch, url }) => {

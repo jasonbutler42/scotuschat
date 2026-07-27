@@ -33,6 +33,18 @@
 	function clearFilter() {
 		goto('/admin/people?tab=' + data.tab);
 	}
+
+	// Phase 38 (D-12, D-13): "Name review" reuses the exact same click-to-filter
+	// pill/indicator mechanism as every other missing-field pill above — the
+	// underlying filter value stays the lowercase "name review" vocabulary
+	// admin_people.py's missing_filters allow-list expects (togglePillFilter,
+	// data.missing comparisons), but the visible/accessible text is the
+	// locked Title Case copy from 38-UI-SPEC.md's copywriting contract. No
+	// new UI surface (dashboard queue, job re-execution control) is introduced — this is
+	// strictly additive to the existing People-directory attention pattern.
+	function pillLabel(field: string): string {
+		return field === 'name review' ? 'Name review' : field;
+	}
 </script>
 
 <main style="background-color: #0f1117; min-height: 100vh;">
@@ -158,7 +170,7 @@
 		<!-- Filtering by / Clear filter (UI-SPEC Interaction Contract) -->
 		{#if data.missing || tenureGaps}
 			<p style="font-size: 14px; font-weight: 400; color: #94a3b8; margin: 0 0 16px 0;">
-				Filtering by: {data.missing ?? 'Justices with tenure gaps'} ·
+				Filtering by: {data.missing ? pillLabel(data.missing) : 'Justices with tenure gaps'} ·
 				<button
 					type="button"
 					onclick={clearFilter}
@@ -307,9 +319,11 @@
 								"
 							>
 								{#if person.missing.length > 0}
-									<!-- MissingFieldChip group — aria-label summarises all chips for screen readers -->
+									<!-- MissingFieldChip group — aria-label summarises all chips for screen readers.
+									     "name review" (Phase 38, D-12) reuses this exact mechanism; only its
+									     display/accessible text is the locked Title Case "Name review" copy. -->
 									<span
-										aria-label="Missing: {person.missing.join(', ')}"
+										aria-label="Missing: {person.missing.map(pillLabel).join(', ')}"
 										style="display: flex; gap: 4px; flex-wrap: wrap;"
 									>
 										{#each person.missing as field}
@@ -318,9 +332,9 @@
 												class="pill"
 												class:pill-active={data.missing === field}
 												aria-pressed={data.missing === field}
-												aria-label="Filter by {field}"
+												aria-label="Filter by {pillLabel(field)}"
 												onclick={() => togglePillFilter(field)}
-											>{field}</button>
+											>{pillLabel(field)}</button>
 										{/each}
 									</span>
 								{/if}
@@ -356,6 +370,16 @@
 				{#if tenureGaps}
 					<p style="font-size: 14px; font-weight: 400; color: #94a3b8; margin: 0;">
 						No Justices with tenure gaps found.
+					</p>
+				{:else if data.missing === 'name review'}
+					<!-- Phase 38 (D-12, D-13) — exact locked UI-SPEC empty-state copy for
+					     the Name review filter, distinct from the generic missing-field
+					     empty state below. -->
+					<p style="font-size: 16px; font-weight: 600; color: #e2e8f0; margin: 0 0 8px 0;">
+						No people need name review
+					</p>
+					<p style="font-size: 16px; color: #94a3b8; margin: 0;">
+						Ambiguous legacy names will appear here for review.
 					</p>
 				{:else if data.missing}
 					<p style="font-size: 16px; font-weight: 600; color: #e2e8f0; margin: 0 0 8px 0;">

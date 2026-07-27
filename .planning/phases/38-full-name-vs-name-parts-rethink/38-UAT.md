@@ -1,5 +1,5 @@
 ---
-status: complete
+status: diagnosed
 phase: 38-full-name-vs-name-parts-rethink
 source: [38-VERIFICATION.md]
 started: 2026-07-27T17:45:00Z
@@ -81,5 +81,18 @@ blocked: 0
   reason: "User reported: docket value containing a double-quote character crashed pipeline ingest with [Errno 22] Invalid argument when used raw as a PDF filename component in pipeline/commands/ingest.py:291 (f\"{primary_docket}-q{args.question}.pdf\")"
   severity: blocker
   test: 6
-  artifacts: []
-  missing: []
+  root_cause: "No validation/sanitization exists at any hop from DocketPillInput.svelte through +page.server.ts through api/routers/admin.py's _normalize_dockets/create_job through to pipeline/commands/ingest.py:291's f-string path construction. _normalize_dockets only rejects values starting with '-' (an argv-flag-injection guard for T-24-08, unrelated to filesystem safety). Confirmed exploitable beyond a crash: a docket value containing '../' segments or an absolute path/drive letter causes Path('data/pdfs') / docket to resolve outside the intended directory (verified via direct pathlib test) -- an authenticated-admin arbitrary-file-write primitive, not just an illegal-character crash."
+  artifacts:
+    - path: "pipeline/commands/ingest.py:291,299-301"
+      issue: "pdf_filename built via unsanitized f-string interpolation of primary_docket; first and only point where the value touches a filesystem path"
+    - path: "api/routers/admin.py:126-164,214"
+      issue: "_normalize_dockets/create_job's only existing guard (leading '-' rejection) is scoped to argv-injection, not path-safety; primary_docket/source_dockets has no Pydantic length/pattern constraint"
+    - path: "app/src/lib/components/DocketPillInput.svelte:61-68"
+      issue: "addPill only trims and dedupes; no length cap or character allow-list at the original entry point"
+    - path: "app/src/routes/admin/pipeline/+page.server.ts:40-51"
+      issue: "passthrough with trim/dedupe only, no validation"
+  missing:
+    - "Docket-shape allow-list/length cap at the API boundary (Pydantic validator on create_job's primary_docket/source_dockets, or added to _normalize_dockets), matching the existing 422-validation-error pattern used elsewhere (cf. ResolveRowUpdate.title's Field(max_length=500))"
+    - "Independent hardening of ingest.py's filename construction itself so a docket value can never produce a path component containing '/', '\\', '..', or resolve as absolute -- defense in depth, mirroring the existing two-layer _validate_pdf_url (API) + _validate_url (pipeline) SSRF pattern"
+    - "Client-side UX feedback in DocketPillInput for immediate operator feedback (secondary to the two backend fixes above)"
+  debug_session: .planning/debug/docket-filename-injection.md

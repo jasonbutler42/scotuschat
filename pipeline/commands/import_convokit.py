@@ -71,6 +71,7 @@ from dateutil import parser as dateutil_parser
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 
+from api.domain.person_names import prepare_name_provenance, split_legacy_full_name
 from api.services.argument_uniqueness import is_argument_pair_violation
 
 from api.models.models import (
@@ -121,6 +122,13 @@ _ADVOCATE_SIDE_MAP: dict[int, SideEnum] = {
 # (RESEARCH.md Open Question 3: type is authoritative, never a name-pattern
 # guess like a "j__" id prefix).
 _JUSTICE_TYPE_VALUES = {"justice", "j", "bench"}
+
+# Phase 38 (D-14-D-18): source tag stamped on every Person.name_extraction_
+# metadata envelope this command writes, matching the same
+# {source, raw, confidence, reason, auto_applied} shape
+# alembic/versions/0022_person_name_authority.py's legacy backfill and
+# import_justices_csv.py already use.
+_EXTRACTION_SOURCE = "import_convokit"
 
 # speakers.json speaker `type` value "U" marks ConvoKit's own "could not
 # identify a speaker for this turn" placeholders (e.g. "<INAUDIBLE>",
@@ -583,6 +591,57 @@ def _is_unattributed_speaker_type(speaker_meta: dict) -> bool:
     return str(speaker_type).strip().lower() in _UNATTRIBUTED_TYPE_VALUES
 
 
+def _apply_extracted_name_provenance(person: Person, full_name: str) -> None:
+    """
+    Persist a conservative interpreted-parts + provenance extraction for
+    `person` from its `full_name` (D-14-D-18), reusing the same pure
+    `api.domain.person_names.split_legacy_full_name` splitter and
+    envelope shape (`{source, raw, confidence, reason, auto_applied}`)
+    alembic/versions/0022_person_name_authority.py's legacy backfill
+    already established.
+
+    Every call refreshes `name_extraction_metadata` unconditionally (D-17 --
+    "if extraction/reprocessing occurs later, replace the extracted
+    reference with the latest result"). Structured parts are only ever
+    written when the row currently carries NO structured part at all
+    (mirrors migration 0022's own guard exactly -- a row that already has
+    any operator/import-authored part is left completely untouched, never
+    partially clobbered) and only for a High-confidence, round-trip-exact
+    split (`auto_apply=True`, D-11) -- an ambiguous/uncertain interpretation
+    (Low/Medium) is still recorded in the provenance envelope so the
+    operator can see what the extractor thought it saw (D-18), but is never
+    silently written into the authoritative saved columns, and the row is
+    flagged `name_needs_review` for the People directory's Name review
+    filter (D-12).
+    """
+    split = split_legacy_full_name(full_name)
+    provenance = prepare_name_provenance(None, full_name, split.confidence)
+    person.name_extraction_metadata = {
+        "source": _EXTRACTION_SOURCE,
+        "raw": provenance.raw,
+        "confidence": provenance.confidence,
+        "reason": split.reason,
+        "auto_applied": split.auto_apply,
+    }
+
+    has_any_part = bool(
+        person.first_name or person.middle_name or person.last_name or person.name_suffix
+    )
+    if has_any_part:
+        # D-16: never overwrite a row that already carries any saved part --
+        # whether authored by an operator or a prior confident extraction.
+        return
+
+    if split.auto_apply:
+        person.first_name = split.first_name
+        person.middle_name = split.middle_name
+        person.last_name = split.last_name
+        person.name_suffix = split.name_suffix
+        person.name_needs_review = False
+    else:
+        person.name_needs_review = True
+
+
 async def _resolve_person(
     session, speaker_id: str, full_name: str, is_justice: bool, counters: dict
 ) -> Person:
@@ -593,6 +652,14 @@ async def _resolve_person(
     found with no oyez_speaker_id yet, backfill it (D-11) so the next run
     matches by the stable ID.
 
+    Phase 38 (D-14-D-18, T-38-10/T-38-11): every resolution path -- brand
+    new, oyez_speaker_id match, or full_name-only match -- also runs
+    `_apply_extracted_name_provenance` so name_extraction_metadata is always
+    refreshed and blank rows get a conservative interpreted-parts prefill.
+    `full_name` itself is never touched by this function on any matched
+    path -- only `_get_or_create_case`-style ID matching decides identity,
+    exactly as before (D-13 dedup precedent).
+
     Increments counters["people_matched"] on either reuse path, or
     counters["people_created"] when a brand-new Person row is created
     (D-14 per-batch summary).
@@ -602,6 +669,7 @@ async def _resolve_person(
     )
     person = result.scalar_one_or_none()
     if person is not None:
+        _apply_extracted_name_provenance(person, person.full_name)
         counters["people_matched"] = counters.get("people_matched", 0) + 1
         return person
 
@@ -610,6 +678,7 @@ async def _resolve_person(
     if person is not None:
         if person.oyez_speaker_id is None:
             person.oyez_speaker_id = speaker_id  # D-11 backfill
+        _apply_extracted_name_provenance(person, person.full_name)
         counters["people_matched"] = counters.get("people_matched", 0) + 1
         return person
 
@@ -618,6 +687,7 @@ async def _resolve_person(
         oyez_speaker_id=speaker_id,
         is_justice=is_justice,
     )
+    _apply_extracted_name_provenance(person, full_name)
     session.add(person)
     await session.flush()
     counters["people_created"] = counters.get("people_created", 0) + 1

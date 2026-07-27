@@ -51,6 +51,7 @@ from api.models.models import (
 from pipeline.commands.import_convokit import (
     _parse_term_range,
     _resolve_and_link_participant,
+    _resolve_person,
     run_import_convokit,
 )
 
@@ -912,3 +913,158 @@ async def test_recycled_docket_number_across_terms_creates_two_distinct_cases(
     assert cases[1].term_year == 9999
     assert cases[1].case_name == "Test Case A"
     assert cases[1].oyez_case_id == "9999_TEST-71"
+
+
+# ===========================================================================
+# Phase 38 (D-14-D-18, T-38-10/T-38-11): conservative name-part extraction
+# + persistent provenance in _resolve_person
+# ===========================================================================
+
+
+@pytest.mark.asyncio
+async def test_brand_new_speaker_confident_split_gets_parts_and_high_provenance(
+    isolated_session,
+):
+    """
+    A brand-new speaker whose corpus full_name is an unambiguous two-token
+    name gets its structured parts populated directly (High confidence,
+    round-trip-exact split, D-11) plus a matching provenance envelope, and
+    is never flagged for review.
+    """
+    counters = {}
+    person = await _resolve_person(
+        isolated_session, "adv__jane_roe", "Jane Roe", False, counters
+    )
+    await isolated_session.flush()
+
+    assert person.first_name == "Jane"
+    assert person.last_name == "Roe"
+    assert person.middle_name is None
+    assert person.name_suffix is None
+    assert person.name_needs_review is False
+    assert person.name_extraction_metadata is not None
+    assert person.name_extraction_metadata["source"] == "import_convokit"
+    assert person.name_extraction_metadata["confidence"] == "High"
+    assert person.name_extraction_metadata["auto_applied"] is True
+    assert person.name_extraction_metadata["raw"] == "Jane Roe"
+
+
+@pytest.mark.asyncio
+async def test_brand_new_speaker_ambiguous_name_gets_provenance_without_parts(
+    isolated_session,
+):
+    """
+    A brand-new speaker whose corpus full_name is structurally ambiguous
+    (single-part -- D-11/D-18) never gets a guessed structured part, but its
+    Low-confidence interpretation is still persisted as provenance so an
+    operator can see what the extractor thought it saw, and the row is
+    flagged name_needs_review (D-12) for the People directory's Name review
+    filter.
+    """
+    counters = {}
+    person = await _resolve_person(
+        isolated_session, "adv__cher", "Cher", False, counters
+    )
+    await isolated_session.flush()
+
+    assert person.first_name is None
+    assert person.last_name is None
+    assert person.name_needs_review is True
+    assert person.name_extraction_metadata is not None
+    assert person.name_extraction_metadata["source"] == "import_convokit"
+    assert person.name_extraction_metadata["confidence"] == "Low"
+    assert person.name_extraction_metadata["auto_applied"] is False
+    assert person.name_extraction_metadata["raw"] == "Cher"
+
+
+@pytest.mark.asyncio
+async def test_matched_person_with_operator_edited_parts_never_overwritten(
+    isolated_session,
+):
+    """
+    T-38-11 (tampering mitigation): a Person row an operator has already
+    given structured parts (that don't even agree with what the splitter
+    would derive from full_name) is matched by full_name and never has
+    those parts overwritten on reimport -- only name_extraction_metadata is
+    refreshed (D-17), demonstrating the operator-edit-then-reimport
+    regression this task requires.
+    """
+    existing = Person(
+        full_name="Jane Roe",
+        oyez_speaker_id=None,
+        is_justice=False,
+        first_name="OperatorFirst",
+        last_name="OperatorLast",
+    )
+    isolated_session.add(existing)
+    await isolated_session.flush()
+    existing_id = existing.id
+
+    counters = {}
+    person = await _resolve_person(
+        isolated_session, "adv__jane_roe", "Jane Roe", False, counters
+    )
+    await isolated_session.flush()
+
+    assert person.id == existing_id
+    assert person.first_name == "OperatorFirst"
+    assert person.last_name == "OperatorLast"
+    assert person.oyez_speaker_id == "adv__jane_roe"  # D-11 backfill still happens
+    # Metadata still refreshes even though no saved part was eligible to change.
+    assert person.name_extraction_metadata is not None
+    assert person.name_extraction_metadata["source"] == "import_convokit"
+
+
+@pytest.mark.asyncio
+async def test_matched_person_with_blank_parts_gets_confident_prefill_on_reimport(
+    isolated_session,
+):
+    """
+    A Person row matched by full_name that has NO structured parts at all
+    yet (e.g. a pre-Phase-38 corpus-imported row) gets a confident
+    interpretation's parts prefilled on this run -- distinct from the
+    already-has-parts case above, which is never touched (D-16).
+    """
+    existing = Person(full_name="Jane Roe", oyez_speaker_id=None, is_justice=False)
+    isolated_session.add(existing)
+    await isolated_session.flush()
+    existing_id = existing.id
+
+    counters = {}
+    person = await _resolve_person(
+        isolated_session, "adv__jane_roe", "Jane Roe", False, counters
+    )
+    await isolated_session.flush()
+
+    assert person.id == existing_id
+    assert person.first_name == "Jane"
+    assert person.last_name == "Roe"
+    assert person.name_needs_review is False
+
+
+@pytest.mark.asyncio
+async def test_oyez_id_matched_person_metadata_refreshes_full_name_never_touched(
+    isolated_session,
+):
+    """
+    D-11/D-13 parity: a Person matched by oyez_speaker_id (not full_name) —
+    even one whose stored full_name differs from this run's corpus label —
+    still gets its provenance envelope refreshed from its OWN stored
+    full_name, and that full_name itself is never rewritten.
+    """
+    existing = Person(
+        full_name="Some Other Name", oyez_speaker_id="adv__jane_roe", is_justice=False
+    )
+    isolated_session.add(existing)
+    await isolated_session.flush()
+    existing_id = existing.id
+
+    counters = {}
+    person = await _resolve_person(
+        isolated_session, "adv__jane_roe", "Jane Roe", False, counters
+    )
+    await isolated_session.flush()
+
+    assert person.id == existing_id
+    assert person.full_name == "Some Other Name"  # never touched
+    assert person.name_extraction_metadata["raw"] == "Some Other Name"

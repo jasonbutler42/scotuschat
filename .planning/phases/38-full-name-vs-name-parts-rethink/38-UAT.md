@@ -1,27 +1,20 @@
 ---
-status: testing
+status: complete
 phase: 38-full-name-vs-name-parts-rethink
 source: [38-VERIFICATION.md]
 started: 2026-07-27T17:45:00Z
-updated: 2026-07-27T17:45:00Z
+updated: 2026-07-27T18:50:00Z
 ---
 
 ## Current Test
 
-number: 1
-name: Live-updating generated Full Name preview
-expected: |
-  Open the standalone create form and the person edit form; type into First/Middle/Last/Suffix
-  and confirm the read-only Full Name <output> updates live, shows "Generated from name parts.",
-  and cannot be typed into directly. Full Name preview matches the canonical
-  First Middle Last, Suffix format live as parts are typed; no input control exists for it.
-awaiting: user response
+[testing complete]
 
 ## Tests
 
 ### 1. Live-updating generated Full Name preview
 expected: Full Name preview matches the canonical First Middle Last, Suffix format live as parts are typed; no input control exists for it.
-result: [pending]
+result: pass
 
 ### 2. First-only/last-only save success, blank-both error copy + preserved attempted values + focus-on-error
 expected: |
@@ -29,7 +22,7 @@ expected: |
   confirm save succeeds and no "Enter at least a first or last name." error appears; then submit
   with both blank and confirm the error appears, attempted values are preserved, and focus moves
   to First Name.
-result: [pending]
+result: pass
 
 ### 3. Per-part stacked provenance rendering and copy-only-interpreted-value behavior
 expected: |
@@ -39,7 +32,7 @@ expected: |
   still-blank field) at both wide and narrow viewport widths, and that clicking the copy
   affordance copies only the interpreted value. Layout remains usable/readable at narrow widths
   per 38-FIGMA.md.
-result: [pending]
+result: pass
 
 ### 4. People directory "Name review" pill filter/tab-URL preservation and empty state
 expected: |
@@ -47,7 +40,7 @@ expected: |
   name_needs_review=true rows while preserving the active tab in the URL, and that the empty
   state (when no rows match) shows the exact locked copy "No people need name review" /
   "Ambiguous legacy names will appear here for review."
-result: [pending]
+result: pass
 
 ### 5. Docket Pill provenance states against Figma reference
 expected: |
@@ -56,14 +49,14 @@ expected: |
   against the Figma component (38-FIGMA.md node 3:140 / review sheet 3:2) at narrow and wide
   widths. All approved visual states match the Figma reference; remove control only appears in
   editable mode; long raw text wraps without truncation or overflow.
-result: [pending]
+result: pass
 
 ## Summary
 
 total: 5
-passed: 0
+passed: 5
 issues: 0
-pending: 5
+pending: 0
 skipped: 0
 blocked: 0
 

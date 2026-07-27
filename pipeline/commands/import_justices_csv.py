@@ -28,8 +28,15 @@ from pathlib import Path
 from dateutil import parser as dateutil_parser
 from sqlalchemy import select
 
+from api.domain.person_names import prepare_name_provenance, prepare_person_name
 from api.models.models import CourtTenure, OFFICE_ASSOCIATE, OFFICE_CHIEF, Person
 from pipeline.db import get_session
+
+# Phase 38 (D-14-D-18): every Person row this command creates or upgrades
+# gets a Person.name_extraction_metadata envelope stamped with this source
+# tag, matching the shape alembic/versions/0022_person_name_authority.py
+# already established: {source, raw, confidence, reason, auto_applied}.
+_EXTRACTION_SOURCE = "import_justices_csv"
 
 # ---------------------------------------------------------------------------
 # Defaults
@@ -70,16 +77,17 @@ def reconstruct_full_name(first: str, middle: str, last: str, suffix: str) -> st
     """
     Reconstruct a Person.full_name string from CSV-shaped name parts.
 
-    Rule (derived empirically by reconciling all 13 existing seed_aliases.py
-    literals against the real justices tenure CSV data — see 29-RESEARCH.md
-    Pitfall 1 / Open Question 1): plain concatenation —
-    "{first} {middle} {last}" (middle omitted entirely, no extra space, when
-    blank), followed by ", {suffix}" only when a suffix is present.
-
-    The CSV's "Middle Name or Initial" column already embeds the trailing
-    period for single-initial values (e.g. "G.", "M.", "A.", "H."), so no
-    punctuation synthesis is needed here — this is intentionally a plain
-    string join, not a name-formatting heuristic.
+    Phase 38 (D-03/D-05): delegates to the shared
+    `api.domain.person_names.prepare_person_name` derivation rule instead of
+    an independent local join — "{first} {middle} {last}" (middle omitted
+    entirely, no extra space, when blank), followed by ", {suffix}" only
+    when a suffix is present. This reproduces the exact same string every
+    one of the 13 existing seed_aliases.py literals already used (see
+    29-RESEARCH.md Pitfall 1 / Open Question 1) because
+    `api.domain.person_names.format_full_name` implements the identical
+    join rule; the CSV's "Middle Name or Initial" column already embeds the
+    trailing period for single-initial values (e.g. "G.", "M.", "A.", "H."),
+    so no additional punctuation synthesis happens here.
 
     Any CSV name that does not reconstruct correctly under this rule must be
     added to MANUAL_NAME_OVERRIDES rather than allowed to silently mismatch.
@@ -88,14 +96,32 @@ def reconstruct_full_name(first: str, middle: str, last: str, suffix: str) -> st
     if override_key in MANUAL_NAME_OVERRIDES:
         return MANUAL_NAME_OVERRIDES[override_key]
 
-    parts = [first]
-    if middle:
-        parts.append(middle)
-    parts.append(last)
-    full_name = " ".join(parts)
-    if suffix:
-        full_name = f"{full_name}, {suffix}"
-    return full_name
+    prepared = prepare_person_name(first or None, middle or None, last or None, suffix or None)
+    return prepared.full_name
+
+
+def _build_extraction_metadata(full_name: str) -> dict:
+    """
+    Build a `Person.name_extraction_metadata` envelope for a CSV-derived
+    justice row (D-14, D-18), matching the exact shape
+    alembic/versions/0022_person_name_authority.py's legacy backfill already
+    persists — {source, raw, confidence, reason, auto_applied} — so both the
+    migration and this import path write one consistent, mergeable audit
+    trail. `value` is intentionally validated as None here (whole-record
+    envelope, not a per-part value — see api/schemas/admin_people.py's
+    NameExtractionMetadata docstring); `raw` is the exact reconstructed
+    full_name text CSV columns produced. Every CSV row is structured,
+    per-column ground truth (not an inferred split), so confidence is always
+    "High" and auto_applied is always True.
+    """
+    provenance = prepare_name_provenance(None, full_name, "high")
+    return {
+        "source": _EXTRACTION_SOURCE,
+        "raw": provenance.raw,
+        "confidence": provenance.confidence,
+        "reason": "structured CSV columns (First/Middle/Last/Suffix)",
+        "auto_applied": True,
+    }
 
 
 def _parse_optional_date(value: str):
@@ -174,6 +200,14 @@ async def run_import_justices_csv(args) -> None:
                 continue
 
             full_name = reconstruct_full_name(first, middle, last, suffix)
+            # Phase 38 (D-03): the row's structured parts, normalized through
+            # the same shared helper `reconstruct_full_name` now delegates
+            # to — used below for both the brand-new-row assignment and the
+            # existing-row blank-only prefill.
+            prepared = prepare_person_name(
+                first or None, middle or None, last or None, suffix or None
+            )
+            extraction_metadata = _build_extraction_metadata(full_name)
 
             result = await session.execute(
                 select(Person).where(Person.full_name == full_name)
@@ -186,14 +220,38 @@ async def run_import_justices_csv(args) -> None:
                 if not person.is_justice:
                     person.is_justice = True
                     people_upgraded += 1
+                # Phase 38 (D-16/T-38-11): blank-only prefill — never
+                # overwrite a part an operator has already saved. Each part
+                # is checked independently so a partially-completed row
+                # (e.g. an operator-added middle initial) still gets its
+                # remaining blank parts filled from this authoritative CSV
+                # row.
+                if person.first_name is None and prepared.first_name is not None:
+                    person.first_name = prepared.first_name
+                if person.middle_name is None and prepared.middle_name is not None:
+                    person.middle_name = prepared.middle_name
+                if person.last_name is None and prepared.last_name is not None:
+                    person.last_name = prepared.last_name
+                if person.name_suffix is None and prepared.name_suffix is not None:
+                    person.name_suffix = prepared.name_suffix
+                # Phase 38 (D-17): every rerun refreshes the extraction
+                # provenance envelope, regardless of whether any part was
+                # actually blank this time — the reference metadata always
+                # reflects the latest extraction pass.
+                person.name_extraction_metadata = extraction_metadata
+                # This row is now backed by confident, structured CSV data —
+                # clear whatever ambiguity a prior legacy-migration/import
+                # pass may have flagged it with (D-12).
+                person.name_needs_review = False
             else:
                 person = Person(
                     full_name=full_name,
-                    first_name=first or None,
-                    middle_name=middle or None,
-                    last_name=last or None,
-                    name_suffix=suffix or None,
+                    first_name=prepared.first_name,
+                    middle_name=prepared.middle_name,
+                    last_name=prepared.last_name,
+                    name_suffix=prepared.name_suffix,
                     is_justice=True,
+                    name_extraction_metadata=extraction_metadata,
                     # oyez_speaker_id intentionally left NULL — the corpus
                     # importer backfills it later (D-11).
                 )

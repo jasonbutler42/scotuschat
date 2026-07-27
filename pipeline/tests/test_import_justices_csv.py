@@ -452,6 +452,176 @@ async def test_blank_end_date_yields_none(isolated_session, tmp_path):
 
 
 @pytest.mark.asyncio
+async def test_new_person_gets_structured_parts_and_provenance(
+    isolated_session, tmp_path
+):
+    """
+    Phase 38 (D-14, D-18): a brand-new justice created by this command gets
+    its structured parts populated directly from the CSV row (not left
+    blank), plus a name_extraction_metadata envelope stamped
+    source="import_justices_csv", confidence="High", auto_applied=True — and
+    is never left flagged for review, since CSV columns are authoritative
+    per-column ground truth, not an inferred split.
+    """
+    csv_path = _write_justices_csv(
+        tmp_path,
+        chief_rows=[],
+        associate_rows=[
+            [
+                "Testcase",
+                "P.",
+                "Provenance",
+                "Jr.",
+                "Fictional President",
+                "Democratic",
+                "1990-01-01",
+                "",
+                "Still in Office",
+                "1940-01-01",
+                "",
+            ],
+        ],
+    )
+    args = argparse.Namespace(csv=str(csv_path))
+
+    with patch(
+        "pipeline.commands.import_justices_csv.get_session",
+        new=_make_session_cm(isolated_session),
+    ):
+        await run_import_justices_csv(args)
+
+    result = await isolated_session.execute(
+        select(Person).where(Person.full_name == "Testcase P. Provenance, Jr.")
+    )
+    person = result.scalar_one()
+
+    assert person.first_name == "Testcase"
+    assert person.middle_name == "P."
+    assert person.last_name == "Provenance"
+    assert person.name_suffix == "Jr."
+    assert person.name_needs_review is False
+    assert person.name_extraction_metadata is not None
+    assert person.name_extraction_metadata["source"] == "import_justices_csv"
+    assert person.name_extraction_metadata["confidence"] == "High"
+    assert person.name_extraction_metadata["auto_applied"] is True
+    assert (
+        person.name_extraction_metadata["raw"] == "Testcase P. Provenance, Jr."
+    )
+
+
+@pytest.mark.asyncio
+async def test_rerun_preserves_operator_edited_parts_blank_only_prefill(
+    isolated_session, tmp_path
+):
+    """
+    Phase 38 (D-16/T-38-11): a rerun of this import must never overwrite a
+    part an operator has already saved on the matched row — even though the
+    CSV row's own reconstructed full_name string is what located the row —
+    but any part still blank on that row gets prefilled from the CSV.
+    """
+    existing = Person(
+        full_name="Testcase Q. Preserve",
+        is_justice=False,
+        first_name="OperatorEdited",  # deliberately differs from CSV's "Testcase"
+        # middle_name/last_name/name_suffix intentionally left blank —
+        # eligible for CSV blank-only prefill.
+    )
+    isolated_session.add(existing)
+    await isolated_session.flush()
+    existing_id = existing.id
+
+    csv_path = _write_justices_csv(
+        tmp_path,
+        chief_rows=[],
+        associate_rows=[
+            [
+                "Testcase",
+                "Q.",
+                "Preserve",
+                "",
+                "Fictional President",
+                "Republican",
+                "1980-01-01",
+                "",
+                "Still in Office",
+                "1930-01-01",
+                "",
+            ],
+        ],
+    )
+    args = argparse.Namespace(csv=str(csv_path))
+
+    with patch(
+        "pipeline.commands.import_justices_csv.get_session",
+        new=_make_session_cm(isolated_session),
+    ):
+        await run_import_justices_csv(args)
+
+    result = await isolated_session.execute(
+        select(Person).where(Person.id == existing_id)
+    )
+    person = result.scalar_one()
+
+    # Operator-edited first_name is preserved byte-for-byte, never overwritten.
+    assert person.first_name == "OperatorEdited"
+    # middle_name/last_name were blank — prefilled from the CSV row.
+    assert person.middle_name == "Q."
+    assert person.last_name == "Preserve"
+    assert person.is_justice is True
+    # Provenance still refreshed even though no CSV-authoritative part won.
+    assert person.name_extraction_metadata["source"] == "import_justices_csv"
+    assert person.name_needs_review is False
+
+
+@pytest.mark.asyncio
+async def test_rerun_refreshes_provenance_metadata_on_second_run(
+    isolated_session, tmp_path
+):
+    """
+    Phase 38 (D-17): a second run against an already-imported justice row
+    still replaces name_extraction_metadata with a fresh envelope (never
+    leaves the first run's envelope stale), even though no new part is
+    written the second time.
+    """
+    csv_path = _write_justices_csv(
+        tmp_path,
+        chief_rows=[],
+        associate_rows=[
+            [
+                "Testcase",
+                "R.",
+                "Refresh",
+                "",
+                "Fictional President",
+                "Republican",
+                "1988-01-01",
+                "",
+                "Still in Office",
+                "1938-01-01",
+                "",
+            ],
+        ],
+    )
+    args = argparse.Namespace(csv=str(csv_path))
+    session_cm = _make_session_cm(isolated_session)
+
+    for _ in range(2):
+        with patch(
+            "pipeline.commands.import_justices_csv.get_session", new=session_cm
+        ):
+            await run_import_justices_csv(args)
+
+    result = await isolated_session.execute(
+        select(Person).where(Person.full_name == "Testcase R. Refresh")
+    )
+    person = result.scalar_one()
+    assert person.name_extraction_metadata is not None
+    assert person.name_extraction_metadata["source"] == "import_justices_csv"
+    assert person.name_extraction_metadata["confidence"] == "High"
+    assert person.name_extraction_metadata["auto_applied"] is True
+
+
+@pytest.mark.asyncio
 async def test_new_person_never_gets_role_id_or_speaker_alias(isolated_session, tmp_path):
     """A brand-new justice created by this command never gets role_id or a
     speaker_alias row — those remain the sole province of seed_aliases.py."""

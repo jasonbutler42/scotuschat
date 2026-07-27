@@ -322,6 +322,17 @@
       "expected_confidence": "Medium",
       "expected_auto_apply": false,
       "expected_reason_contains": "does not round-trip exactly"
+    },
+    {
+      "name": "high_confidence_leading_trailing_whitespace",
+      "full_name": "  Clarence Thomas  ",
+      "expected_first_name": "Clarence",
+      "expected_middle_name": null,
+      "expected_last_name": "Thomas",
+      "expected_name_suffix": null,
+      "expected_confidence": "High",
+      "expected_auto_apply": true,
+      "expected_reason_contains": "round-trip"
     }
   ]
 }

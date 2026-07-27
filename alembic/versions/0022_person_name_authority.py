@@ -112,6 +112,7 @@ def upgrade() -> None:
                 "migration 0022 rather than guessing or silently skipping."
             )
 
+        stripped_full_name = pre_full_name.strip()
         result = split_legacy_full_name(pre_full_name)
 
         metadata = {
@@ -133,10 +134,10 @@ def upgrade() -> None:
                 result.last_name,
                 result.name_suffix,
             )
-            if recomputed != pre_full_name:
+            if recomputed != stripped_full_name:
                 raise RuntimeError(
                     f"people.id={row.id}: split round-trip mismatch "
-                    f"({recomputed!r} != {pre_full_name!r}) — aborting "
+                    f"({recomputed!r} != {stripped_full_name!r}) — aborting "
                     "migration 0022 rather than persist a lossy split."
                 )
             update_result = bind.execute(

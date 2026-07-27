@@ -5,15 +5,15 @@ milestone_name: Backlog Cleanup
 current_phase: 38
 current_phase_name: full-name-vs-name-parts-rethink
 status: executing
-stopped_at: Completed 38-02-PLAN.md
-last_updated: "2026-07-27T14:50:34.633Z"
+stopped_at: Completed 38-03-PLAN.md
+last_updated: "2026-07-27T15:37:07.851Z"
 last_activity: 2026-07-27
 last_activity_desc: Phase 38 execution started
 progress:
   total_phases: 10
   completed_phases: 8
   total_plans: 38
-  completed_plans: 35
+  completed_plans: 36
   percent: 80
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-07-14 after Phase 34 verification)
 ## Current Position
 
 Phase: 38 (full-name-vs-name-parts-rethink) — EXECUTING
-Plan: 2 of 6
+Plan: 3 of 6
 Status: Ready to execute
 Last activity: 2026-07-27 — Phase 38 execution started
 
@@ -48,6 +48,7 @@ v1.5: 10 phases, 55 plans, 10 days (2026-07-02 → 2026-07-12).
 | Phase 38 P01 | 17min | 3 tasks | 4 files |
 | Phase 38 P05 | 40min | 3 tasks | 6 files |
 | Phase 38 P02 | 65min | 2 tasks | 3 files |
+| Phase 38 P03 | ~70min | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -125,6 +126,10 @@ Two open design questions remain unresolved by design and are intentionally defe
 - [Phase ?]: [Phase 38, Plan 02]: name_extraction_metadata is written for every examined legacy row (applied and reviewed alike) as {source, raw, confidence, reason, auto_applied}, validated through prepare_name_provenance, giving reviewed rows a durable audit trail for the future Name review surface
 - [Phase ?]: [Phase 38, Plan 02]: A blank/whitespace-only full_name aborts the entire migration 0022 transaction (Postgres transactional DDL rolls back schema+data together) rather than being silently skipped or guessed
 - [Phase ?]: [Phase 38, Plan 02]: Downgrade drops only name_extraction_metadata then name_needs_review (reverse of add order) and never rewrites full_name or structured columns for applied or reviewed rows
+- [Phase ?]: [Phase 38, Plan 03]: PersonUpdate/PersonCreateRequest/admin_jobs.PersonCreate drop full_name entirely (extra="forbid") -- a client-supplied full_name is a 422, not a silently-ignored write
+- [Phase ?]: [Phase 38, Plan 03]: update_person merges model_fields_set-touched name parts against stored state before one prepare_person_name call -- atomic normalize+validate+derive, omitted vs explicitly-cleared parts distinguished
+- [Phase ?]: [Phase 38, Plan 03]: An authoritative name edit clears Person.name_needs_review but never touches name_extraction_metadata -- independent, permanent audit trail (D-15)
+- [Phase ?]: [Phase 38, Plan 03]: "name review" reuses the existing People-directory missing-field pill/filter mechanism rather than new UI (D-12/D-13), applying to both Bench and Advocate tabs
 
 ### Roadmap Evolution
 
@@ -247,8 +252,8 @@ Items acknowledged and deferred at v1.5 milestone close on 2026-07-12:
 
 ## Session Continuity
 
-Last session: 2026-07-27T14:50:33.794Z
-Stopped at: Completed 38-02-PLAN.md
+Last session: 2026-07-27T15:37:06.977Z
+Stopped at: Completed 38-03-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

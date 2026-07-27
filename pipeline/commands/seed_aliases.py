@@ -18,6 +18,7 @@ Usage:
 
 from sqlalchemy import select
 
+from api.domain.person_names import prepare_person_name
 from api.models.models import Person, Role, SpeakerAlias
 from pipeline.db import get_session
 
@@ -32,70 +33,119 @@ _ROLES = [
     "Respondent's Counsel",
 ]
 
-# Each tuple: (full_name, role_name, [label_variants])
+# Phase 38 (D-03/D-04): each justice is now authored as explicit structured
+# parts (first, middle, last, suffix) rather than a hand-typed full_name
+# literal -- full_name is derived at seed time through the same shared
+# api.domain.person_names.prepare_person_name helper every other
+# create/update/import path uses. These 13 (first, middle, last, suffix)
+# tuples are exactly the values pipeline/tests/test_import_justices_csv.py's
+# _SEEDED_JUSTICE_CASES fixture corpus already establishes and verifies
+# reconstruct byte-identically -- pipeline/tests/test_seed_aliases.py ties
+# this module's derived full_name values back to that same shared corpus.
+#
+# Each tuple: (first, middle, last, suffix, role_name, [label_variants])
 _JUSTICES = [
     (
-        "John G. Roberts, Jr.",
+        "John",
+        "G.",
+        "Roberts",
+        "Jr.",
         "Chief Justice",
         ["CHIEF JUSTICE", "CHIEF JUSTICE ROBERTS"],
     ),
     (
-        "Clarence Thomas",
+        "Clarence",
+        "",
+        "Thomas",
+        "",
         "Associate Justice",
         ["JUSTICE THOMAS"],
     ),
     (
-        "Samuel A. Alito, Jr.",
+        "Samuel",
+        "A.",
+        "Alito",
+        "Jr.",
         "Associate Justice",
         ["JUSTICE ALITO"],
     ),
     (
-        "Sonia Sotomayor",
+        "Sonia",
+        "",
+        "Sotomayor",
+        "",
         "Associate Justice",
         ["JUSTICE SOTOMAYOR"],
     ),
     (
-        "Elena Kagan",
+        "Elena",
+        "",
+        "Kagan",
+        "",
         "Associate Justice",
         ["JUSTICE KAGAN"],
     ),
     (
-        "Neil M. Gorsuch",
+        "Neil",
+        "M.",
+        "Gorsuch",
+        "",
         "Associate Justice",
         ["JUSTICE GORSUCH"],
     ),
     (
-        "Brett M. Kavanaugh",
+        "Brett",
+        "M.",
+        "Kavanaugh",
+        "",
         "Associate Justice",
         ["JUSTICE KAVANAUGH"],
     ),
     (
-        "Amy Coney Barrett",
+        "Amy",
+        "Coney",
+        "Barrett",
+        "",
         "Associate Justice",
         ["JUSTICE BARRETT"],
     ),
     (
-        "Ketanji Brown Jackson",
+        "Ketanji",
+        "Brown",
+        "Jackson",
+        "",
         "Associate Justice",
         ["JUSTICE JACKSON"],
     ),
     (
-        "Antonin Scalia",
+        "Antonin",
+        "",
+        "Scalia",
+        "",
         "Associate Justice",
         ["JUSTICE SCALIA"],
     ),
     (
-        "Anthony M. Kennedy",
+        "Anthony",
+        "M.",
+        "Kennedy",
+        "",
         "Associate Justice",
         ["JUSTICE KENNEDY"],
     ),
     (
-        "Ruth Bader Ginsburg",
+        "Ruth",
+        "Bader",
+        "Ginsburg",
+        "",
         "Associate Justice",
         ["JUSTICE GINSBURG"],
     ),
     (
-        "Stephen G. Breyer",
+        "Stephen",
+        "G.",
+        "Breyer",
+        "",
         "Associate Justice",
         ["JUSTICE BREYER"],
     ),
@@ -139,7 +189,15 @@ async def run_seed_aliases(args) -> None:
         print("Seeding 13 Justices...")
         person_map: dict[str, Person] = {}
 
-        for full_name, role_name, _labels in _JUSTICES:
+        for first, middle, last, suffix, role_name, _labels in _JUSTICES:
+            # Phase 38 (D-03/D-04): full_name is always derived from the
+            # authored structured parts through the one shared helper --
+            # never an independent local formatter.
+            prepared = prepare_person_name(
+                first or None, middle or None, last or None, suffix or None
+            )
+            full_name = prepared.full_name
+
             result = await session.execute(
                 select(Person).where(Person.full_name == full_name)
             )
@@ -152,6 +210,10 @@ async def run_seed_aliases(args) -> None:
                 new_person = Person(
                     full_name=full_name,
                     role_id=role.id,
+                    first_name=prepared.first_name,
+                    middle_name=prepared.middle_name,
+                    last_name=prepared.last_name,
+                    name_suffix=prepared.name_suffix,
                 )
                 session.add(new_person)
                 await session.flush()
@@ -163,7 +225,10 @@ async def run_seed_aliases(args) -> None:
         print("Seeding alias variants...")
         alias_rows_created = 0
 
-        for full_name, _role_name, labels in _JUSTICES:
+        for first, middle, last, suffix, _role_name, labels in _JUSTICES:
+            full_name = prepare_person_name(
+                first or None, middle or None, last or None, suffix or None
+            ).full_name
             person = person_map[full_name]
 
             for label in labels:
@@ -186,7 +251,7 @@ async def run_seed_aliases(args) -> None:
         # -------------------------------------------------------------------
         # Summary
         # -------------------------------------------------------------------
-        total_labels = sum(len(labels) for _name, _role, labels in _JUSTICES)
+        total_labels = sum(len(labels) for *_parts, labels in _JUSTICES)
         print(
             f"Done — {alias_rows_created} alias rows created "
             f"({total_labels - alias_rows_created} already existed / verified)."

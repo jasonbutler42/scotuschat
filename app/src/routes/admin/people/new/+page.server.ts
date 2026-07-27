@@ -10,10 +10,16 @@ import type { Actions, PageServerLoad } from './$types';
  * only apply to a person that already exists — PEDIT-11/PEDIT-12), so
  * `load()` does not return the `people`/`can_delete`/`delete_block_count`
  * fields the [id] route needs for those cards.
+ *
+ * Phase 38 (D-01, D-02): `full_name` is no longer part of this shape at
+ * all — Full Name is a generated, read-only preview computed client-side
+ * from name parts (app/src/lib/personNames.ts) and is never client-owned
+ * data, so there is nothing to preload here. A brand-new person also has
+ * no extraction provenance yet (name_needs_review/name_extraction_metadata
+ * are only meaningful once a person row exists — see the [id] route).
  */
 interface BlankPerson {
 	id: null;
-	full_name: string;
 	bio_text: string | null;
 	photo_url: string | null;
 	photo_url_full: string | null;
@@ -27,7 +33,6 @@ interface BlankPerson {
 export const load: PageServerLoad = async () => {
 	const person: BlankPerson = {
 		id: null,
-		full_name: '',
 		bio_text: null,
 		photo_url: null,
 		photo_url_full: null,
@@ -44,36 +49,50 @@ export const load: PageServerLoad = async () => {
 export const actions: Actions = {
 	/**
 	 * create — POST a new person to the general, unscoped create endpoint
-	 * (D-09, Plan 27-03) after the D-08 minimum-required validation (full
-	 * name + an explicit Bench/Advocate choice), then redirect into the
-	 * freshly-created person's editor (identical redirect-after-create idiom
-	 * to the [id] editor's `merge` action — `redirect(303, '/admin/people/' + id)`).
+	 * (D-09, Plan 27-03) after the D-08/D-09 minimum-required validation (at
+	 * least a first or last name, plus an explicit Bench/Advocate choice),
+	 * then redirect into the freshly-created person's editor (identical
+	 * redirect-after-create idiom to the [id] editor's `merge` action —
+	 * `redirect(303, '/admin/people/' + id)`).
 	 *
-	 * first_name/middle_name/last_name/name_suffix are now read and forwarded
-	 * (Phase 27 UAT gap closure, Gap 3, 2026-07-09) to match the [id] editor's
-	 * `save` action — matching D-08's contract, which only defers bio/photo/
-	 * tenures/birthdate, never named structured name parts as deferred.
+	 * Phase 38 (D-01, D-02, D-09, T-38-16): `full_name` is no longer read
+	 * from the form or sent to FastAPI at all — PersonCreateRequest does not
+	 * even declare that field (`extra="forbid"`, api/schemas/admin_people.py),
+	 * so posting one would now be a 422. Full Name is generated server-side
+	 * from first_name/middle_name/last_name/name_suffix via the shared
+	 * api.domain.person_names.prepare_person_name helper; this action's own
+	 * minimum-data guard (at least one of first_name/last_name) mirrors that
+	 * same D-09 invariant client-side so the operator gets the exact locked
+	 * copy ("Enter at least a first or last name.") with attempted values
+	 * preserved and a focus path, rather than a generic 422 message.
 	 *
-	 * tenures/bio_text/photo_url/birthdate are intentionally NOT sent here
-	 * (D-08) — they are filled in on the editor after redirect via the
-	 * existing `save`/`photo` actions on `/admin/people/[id]`.
+	 * Every fail() below returns the attempted first/middle/last/suffix so
+	 * the +page.svelte template can restore exactly what the operator typed
+	 * (D-16-style preserved-attempt discipline) — this route has no prior
+	 * "data.person" values to fall back to (it is always a blank form), so
+	 * losing attempted input on a failed submit would silently discard it.
 	 */
 	create: async ({ request, fetch }) => {
 		const formData = await request.formData();
 
-		const full_name = ((formData.get('full_name') as string) ?? '').trim();
 		const isJusticeRaw = formData.get('is_justice') as string | null;
 		const first_name = ((formData.get('first_name') as string) ?? '').trim() || null;
 		const middle_name = ((formData.get('middle_name') as string) ?? '').trim() || null;
 		const last_name = ((formData.get('last_name') as string) ?? '').trim() || null;
 		const name_suffix = ((formData.get('name_suffix') as string) ?? '').trim() || null;
 
-		if (!full_name) {
-			return fail(400, { error: 'Full name is required.' });
+		if (!first_name && !last_name) {
+			return fail(400, {
+				error: 'Enter at least a first or last name.',
+				first_name, middle_name, last_name, name_suffix,
+			});
 		}
 
 		if (isJusticeRaw !== 'true' && isJusticeRaw !== 'false') {
-			return fail(400, { error: 'Choose Bench or Advocate to continue.' });
+			return fail(400, {
+				error: 'Choose Bench or Advocate to continue.',
+				first_name, middle_name, last_name, name_suffix,
+			});
 		}
 
 		const is_justice = isJusticeRaw === 'true';
@@ -87,16 +106,22 @@ export const actions: Actions = {
 					'Content-Type': 'application/json',
 				},
 				body: JSON.stringify({
-					full_name, is_justice,
+					is_justice,
 					first_name, middle_name, last_name, name_suffix,
 				}),
 			});
 		} catch {
-			return fail(502, { error: 'Could not create person. Check the form and try again.' });
+			return fail(502, {
+				error: 'Could not create person. Check the form and try again.',
+				first_name, middle_name, last_name, name_suffix,
+			});
 		}
 
 		if (!res.ok) {
-			return fail(422, { error: 'Could not create person. Check the form and try again.' });
+			return fail(422, {
+				error: 'Could not create person. Check the form and try again.',
+				first_name, middle_name, last_name, name_suffix,
+			});
 		}
 
 		const created: { id: number } = await res.json();

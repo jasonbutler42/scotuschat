@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { tick } from 'svelte';
+	import { previewFullName } from '$lib/personNames';
 
 	let { data, form } = $props();
 
@@ -13,6 +15,38 @@
 	// ──────────────────────────────────────────────────────────────────────────
 
 	let isJustice = $state<boolean | null>(data.person.is_justice);
+
+	// ──────────────────────────────────────────────────────────────────────────
+	// Name parts — $state so the generated Full Name preview (D-01, D-02)
+	// updates live as the operator types. This route is always a blank form
+	// (data.person has no name parts), so a failed create's returned `form`
+	// state is the only source of "what the operator already typed" — restore
+	// it below rather than silently discarding it on a validation error.
+	// ──────────────────────────────────────────────────────────────────────────
+
+	let firstName = $state<string>(form?.first_name ?? '');
+	let middleName = $state<string>(form?.middle_name ?? '');
+	let lastName = $state<string>(form?.last_name ?? '');
+	let nameSuffix = $state<string>(form?.name_suffix ?? '');
+
+	let fullNamePreview = $derived(
+		previewFullName({ first: firstName, middle: middleName, last: lastName, suffix: nameSuffix })
+	);
+
+	const MIN_NAME_ERROR = 'Enter at least a first or last name.';
+
+	// Restores attempted name-part values after a failed create submit and
+	// moves focus to First Name when the failure is specifically the shared
+	// minimum-name error (D-12, D-16 — never silently clear unsaved input).
+	$effect(() => {
+		if (form?.first_name !== undefined) firstName = form.first_name ?? '';
+		if (form?.middle_name !== undefined) middleName = form.middle_name ?? '';
+		if (form?.last_name !== undefined) lastName = form.last_name ?? '';
+		if (form?.name_suffix !== undefined) nameSuffix = form.name_suffix ?? '';
+		if (form?.error === MIN_NAME_ERROR) {
+			tick().then(() => document.getElementById('first_name')?.focus());
+		}
+	});
 
 	// ──────────────────────────────────────────────────────────────────────────
 	// Create button submitting state
@@ -70,25 +104,34 @@
 					Identity
 				</h2>
 
-				<!-- Full name -->
+				<!-- Full name — generated, read-only preview (D-01, D-02). Never an
+				     editable input and never submitted as client data; an <output>
+				     is used (not a disabled/readonly input) so it stays a plain
+				     readout programmatically associated with its label/explanation. -->
 				<div style="margin-bottom: 16px;">
-					<label
-						for="full_name"
-						style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
-					>
-						Full name
-					</label>
-					<input
-						id="full_name"
-						name="full_name"
-						type="text"
-						value={data.person.full_name}
-						style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
-					/>
+					<div style="display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; flex-wrap: wrap;">
+						<span id="full_name_label" style="font-size: 14px; font-weight: 400; color: #94a3b8;">
+							Full Name
+						</span>
+						<span id="full_name_explanation" style="font-size: 14px; font-weight: 400; color: #94a3b8;">
+							Generated from name parts.
+						</span>
+					</div>
+					<output
+						id="full_name_preview"
+						aria-labelledby="full_name_label full_name_explanation"
+						aria-live="polite"
+						style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; box-sizing: border-box; color: {fullNamePreview === 'N/A' ? '#94a3b8' : '#e2e8f0'}; font-style: {fullNamePreview === 'N/A' ? 'italic' : 'normal'};"
+					>{fullNamePreview}</output>
 				</div>
 
-				<!-- Name parts — 4-column on desktop, 2-column on mobile -->
+				<!-- Name parts — 4-column on desktop, 2-column on mobile. First-or-last
+				     shared invariant (D-09) communicated once above the group rather
+				     than marking both fields individually required. -->
 				<div>
+					<p style="font-size: 14px; font-weight: 400; color: #94a3b8; margin: 0 0 8px 0;">
+						{MIN_NAME_ERROR}
+					</p>
 					<div class="name-parts-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr 80px; gap: 16px;">
 						<div>
 							<label
@@ -101,7 +144,7 @@
 								id="first_name"
 								name="first_name"
 								type="text"
-								value={data.person.first_name ?? ''}
+								bind:value={firstName}
 								style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
 							/>
 						</div>
@@ -116,7 +159,7 @@
 								id="middle_name"
 								name="middle_name"
 								type="text"
-								value={data.person.middle_name ?? ''}
+								bind:value={middleName}
 								style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
 							/>
 						</div>
@@ -131,7 +174,7 @@
 								id="last_name"
 								name="last_name"
 								type="text"
-								value={data.person.last_name ?? ''}
+								bind:value={lastName}
 								style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
 							/>
 						</div>
@@ -146,7 +189,7 @@
 								id="name_suffix"
 								name="name_suffix"
 								type="text"
-								value={data.person.name_suffix ?? ''}
+								bind:value={nameSuffix}
 								style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
 							/>
 						</div>

@@ -2,6 +2,8 @@
 	import { enhance } from '$app/forms';
 	import { slide } from 'svelte/transition';
 	import { tick } from 'svelte';
+	import { previewFullName } from '$lib/personNames';
+	import CopyableExtractedValue from '$lib/components/CopyableExtractedValue.svelte';
 
 	let { data, form } = $props();
 
@@ -90,6 +92,24 @@
 
 	let isJustice = $state<boolean>(form?.is_justice ?? data.person.is_justice ?? false);
 	let birthdate = $state<string>(form?.birthdate ?? data.person.birthdate ?? '');
+
+	// ──────────────────────────────────────────────────────────────────────────
+	// Name parts — $state so the generated Full Name preview (D-01, D-02)
+	// updates live as the operator types. A prior failed save (form?.first_name
+	// present, etc.) always takes priority over the loaded person record —
+	// mirrors the tenureRows restore precedent below (D-12, D-16, D-17).
+	// ──────────────────────────────────────────────────────────────────────────
+
+	let firstName = $state<string>(form?.first_name ?? data.person.first_name ?? '');
+	let middleName = $state<string>(form?.middle_name ?? data.person.middle_name ?? '');
+	let lastName = $state<string>(form?.last_name ?? data.person.last_name ?? '');
+	let nameSuffix = $state<string>(form?.name_suffix ?? data.person.name_suffix ?? '');
+
+	let fullNamePreview = $derived(
+		previewFullName({ first: firstName, middle: middleName, last: lastName, suffix: nameSuffix })
+	);
+
+	const MIN_NAME_ERROR = 'Enter at least a first or last name.';
 
 	// ──────────────────────────────────────────────────────────────────────────
 	// Tenure rows state (Pattern 1 — $state<TenureRow[]>, in-place mutation)
@@ -182,6 +202,17 @@
 		if (form?.is_justice !== undefined) {
 			isJustice = form.is_justice;
 		}
+		// Phase 38 (D-01, D-02, D-09, D-12, D-16): restore attempted name parts
+		// after a failed save and focus First Name when the failure is
+		// specifically the shared minimum-name error — never silently clear
+		// unsaved name-part edits elsewhere on the form.
+		if (form?.first_name !== undefined) firstName = form.first_name ?? '';
+		if (form?.middle_name !== undefined) middleName = form.middle_name ?? '';
+		if (form?.last_name !== undefined) lastName = form.last_name ?? '';
+		if (form?.name_suffix !== undefined) nameSuffix = form.name_suffix ?? '';
+		if (form?.error === MIN_NAME_ERROR) {
+			tick().then(() => document.getElementById('first_name')?.focus());
+		}
 	});
 
 	// ──────────────────────────────────────────────────────────────────────────
@@ -230,6 +261,10 @@
 		birthdate = data.person.birthdate ?? '';
 		officeSaveFormError = null;
 		tenureRows = buildTenureRows(data.person.tenures);
+		firstName = data.person.first_name ?? '';
+		middleName = data.person.middle_name ?? '';
+		lastName = data.person.last_name ?? '';
+		nameSuffix = data.person.name_suffix ?? '';
 	});
 
 	async function fetchMergePreview(targetId: string) {
@@ -305,25 +340,42 @@
 					Identity
 				</h2>
 
-				<!-- Full name -->
+				<!-- Full name — generated, read-only preview (D-01, D-02). Never an
+				     editable input and never submitted as client data; an <output>
+				     is used (not a disabled/readonly input) so it stays a plain
+				     readout programmatically associated with its label/explanation. -->
 				<div style="margin-bottom: 16px;">
-					<label
-						for="full_name"
-						style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
-					>
-						Full name
-					</label>
-					<input
-						id="full_name"
-						name="full_name"
-						type="text"
-						value={form?.full_name ?? data.person.full_name}
-						style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
-					/>
+					<div style="display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; flex-wrap: wrap;">
+						<span id="full_name_label" style="font-size: 14px; font-weight: 400; color: #94a3b8;">
+							Full Name
+						</span>
+						<span id="full_name_explanation" style="font-size: 14px; font-weight: 400; color: #94a3b8;">
+							Generated from name parts.
+						</span>
+					</div>
+					<output
+						id="full_name_preview"
+						aria-labelledby="full_name_label full_name_explanation"
+						aria-live="polite"
+						style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; box-sizing: border-box; color: {fullNamePreview === 'N/A' ? '#94a3b8' : '#e2e8f0'}; font-style: {fullNamePreview === 'N/A' ? 'italic' : 'normal'};"
+					>{fullNamePreview}</output>
 				</div>
 
-				<!-- Name parts — 4-column on desktop, 2-column on mobile -->
+				<!-- Name parts — 4-column on desktop, 2-column on mobile. First-or-last
+				     shared invariant (D-09) communicated once above the group rather
+				     than marking both fields individually required. Each field's
+				     independent extracted-value stack (D-14, D-15, D-19) renders below
+				     its own input, sharing the person's single name_extraction_metadata
+				     envelope (confidence + raw source text) — the backend persists one
+				     whole-record provenance decision, not a separate guess per part, so
+				     every populated field's own current value is what "was extracted"
+				     for that field; a still-blank field (an ambiguous legacy split that
+				     never applied) shows the disabled N/A state with the shared raw/
+				     confidence per the Phase 36 contract. -->
 				<div>
+					<p style="font-size: 14px; font-weight: 400; color: #94a3b8; margin: 0 0 8px 0;">
+						{MIN_NAME_ERROR}
+					</p>
 					<div class="name-parts-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr 80px; gap: 16px;">
 						<div>
 							<label
@@ -336,9 +388,19 @@
 								id="first_name"
 								name="first_name"
 								type="text"
-								value={form?.first_name ?? data.person.first_name ?? ''}
+								bind:value={firstName}
 								style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
 							/>
+							{#if data.person.name_extraction_metadata}
+								<div style="margin-top: 8px;">
+									<CopyableExtractedValue
+										value={data.person.first_name}
+										copyLabel="Copy extracted first name"
+										confidence={data.person.name_extraction_metadata.confidence}
+										raw={data.person.name_extraction_metadata.raw}
+									/>
+								</div>
+							{/if}
 						</div>
 						<div>
 							<label
@@ -351,9 +413,19 @@
 								id="middle_name"
 								name="middle_name"
 								type="text"
-								value={form?.middle_name ?? data.person.middle_name ?? ''}
+								bind:value={middleName}
 								style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
 							/>
+							{#if data.person.name_extraction_metadata}
+								<div style="margin-top: 8px;">
+									<CopyableExtractedValue
+										value={data.person.middle_name}
+										copyLabel="Copy extracted middle name"
+										confidence={data.person.name_extraction_metadata.confidence}
+										raw={data.person.name_extraction_metadata.raw}
+									/>
+								</div>
+							{/if}
 						</div>
 						<div>
 							<label
@@ -366,9 +438,19 @@
 								id="last_name"
 								name="last_name"
 								type="text"
-								value={form?.last_name ?? data.person.last_name ?? ''}
+								bind:value={lastName}
 								style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
 							/>
+							{#if data.person.name_extraction_metadata}
+								<div style="margin-top: 8px;">
+									<CopyableExtractedValue
+										value={data.person.last_name}
+										copyLabel="Copy extracted last name"
+										confidence={data.person.name_extraction_metadata.confidence}
+										raw={data.person.name_extraction_metadata.raw}
+									/>
+								</div>
+							{/if}
 						</div>
 						<div>
 							<label
@@ -381,9 +463,19 @@
 								id="name_suffix"
 								name="name_suffix"
 								type="text"
-								value={form?.name_suffix ?? data.person.name_suffix ?? ''}
+								bind:value={nameSuffix}
 								style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
 							/>
+							{#if data.person.name_extraction_metadata}
+								<div style="margin-top: 8px;">
+									<CopyableExtractedValue
+										value={data.person.name_suffix}
+										copyLabel="Copy extracted suffix"
+										confidence={data.person.name_extraction_metadata.confidence}
+										raw={data.person.name_extraction_metadata.raw}
+									/>
+								</div>
+							{/if}
 						</div>
 					</div>
 				</div>

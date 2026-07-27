@@ -20,6 +20,7 @@ such dependency.
 """
 
 import json
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -29,6 +30,11 @@ import pytest
 ROOT = Path(__file__).parents[2]
 PERSON_NAMES_TS_PATH = ROOT / "app" / "src" / "lib" / "personNames.ts"
 FIXTURE_PATH = ROOT / "api" / "tests" / "fixtures" / "person_name_cases.json"
+
+NEW_PAGE_SERVER_PATH = ROOT / "app" / "src" / "routes" / "admin" / "people" / "new" / "+page.server.ts"
+NEW_PAGE_SVELTE_PATH = ROOT / "app" / "src" / "routes" / "admin" / "people" / "new" / "+page.svelte"
+ID_PAGE_SERVER_PATH = ROOT / "app" / "src" / "routes" / "admin" / "people" / "[id]" / "+page.server.ts"
+ID_PAGE_SVELTE_PATH = ROOT / "app" / "src" / "routes" / "admin" / "people" / "[id]" / "+page.svelte"
 
 NODE_BIN = shutil.which("node")
 
@@ -170,3 +176,112 @@ def test_personnames_ts_declares_same_column_bounds_as_backend() -> None:
     assert "LAST_NAME_MAX_LENGTH = 150" in source
     assert "NAME_SUFFIX_MAX_LENGTH = 50" in source
     assert "FULL_NAME_MAX_LENGTH = 300" in source
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Task 2: standalone create + person edit forms convert to a generated,
+# read-only Full Name preview; server actions read/forward only name parts
+# (never full_name, T-38-16) and preserve attempted values on a 422/400
+# (D-01, D-02, D-09, D-12, D-14-D-18).
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_new_page_server_never_reads_or_sends_full_name() -> None:
+    """T-38-16: no code path reads a client-posted full_name or forwards one
+    to FastAPI (prose mentioning `full_name` in comments/docstrings is fine —
+    this checks actual identifier usage/JSON keys only)."""
+    source = _source(NEW_PAGE_SERVER_PATH)
+    assert "formData.get('full_name')" not in source
+    assert re.search(r"\bfull_name\s*[:,=]", source) is None
+    assert "const full_name" not in source
+
+
+def test_new_page_server_create_action_enforces_first_or_last_minimum() -> None:
+    source = _source(NEW_PAGE_SERVER_PATH)
+    assert "Enter at least a first or last name." in source
+    assert "if (!first_name && !last_name)" in source
+
+
+def test_new_page_server_preserves_attempted_parts_on_every_failure_branch() -> None:
+    """Every fail() in the create action must return the attempted name parts —
+    this route has no prior person record to fall back to, so a bare fail()
+    without them would silently discard operator input (D-16)."""
+    source = _source(NEW_PAGE_SERVER_PATH)
+    fail_calls = re.findall(r"fail\(\d+,\s*\{.*?\}\s*\)", source, flags=re.DOTALL)
+    assert len(fail_calls) >= 3
+    for call in fail_calls:
+        assert "first_name" in call, f"missing attempted-value preservation: {call}"
+        assert "last_name" in call, f"missing attempted-value preservation: {call}"
+
+
+def test_new_page_svelte_renders_generated_preview_not_editable_input() -> None:
+    source = _source(NEW_PAGE_SVELTE_PATH)
+    assert "id=\"full_name\"" not in source
+    assert 'name="full_name"' not in source
+    assert "<output" in source
+    assert "Generated from name parts." in source
+    assert "previewFullName(" in source
+    assert "bind:value={firstName}" in source
+    assert "bind:value={middleName}" in source
+    assert "bind:value={lastName}" in source
+    assert "bind:value={nameSuffix}" in source
+
+
+def test_new_page_svelte_shared_min_name_hint_not_html_required() -> None:
+    """UI-SPEC: 'Do not mark both fields individually required' — no bare
+    HTML `required` attribute on the name-part inputs (prose like 'is
+    required before create can submit' in an unrelated comment is fine)."""
+    source = _source(NEW_PAGE_SVELTE_PATH)
+    assert "Enter at least a first or last name." in source
+    assert re.search(r"<input\b[^>]*\brequired\b", source) is None
+
+
+def test_id_page_server_never_reads_or_sends_full_name_in_save_action() -> None:
+    source = _source(ID_PAGE_SERVER_PATH)
+    save_action = source.split("save: async", 1)[1].split("photo: async", 1)[0]
+    assert "formData.get('full_name')" not in save_action
+    assert "full_name" not in save_action
+
+
+def test_id_page_server_save_action_enforces_first_or_last_minimum() -> None:
+    source = _source(ID_PAGE_SERVER_PATH)
+    save_action = source.split("save: async", 1)[1].split("photo: async", 1)[0]
+    assert "Enter at least a first or last name." in save_action
+    assert "if (!first_name && !last_name)" in save_action
+
+
+def test_id_page_server_person_detail_exposes_name_review_and_provenance() -> None:
+    source = _source(ID_PAGE_SERVER_PATH)
+    assert "name_needs_review: boolean;" in source
+    assert "name_extraction_metadata:" in source
+
+
+def test_id_page_svelte_renders_generated_preview_not_editable_input() -> None:
+    source = _source(ID_PAGE_SVELTE_PATH)
+    assert "<output" in source
+    assert "Generated from name parts." in source
+    assert "previewFullName(" in source
+    assert "bind:value={firstName}" in source
+    assert "bind:value={middleName}" in source
+    assert "bind:value={lastName}" in source
+    assert "bind:value={nameSuffix}" in source
+
+
+def test_id_page_svelte_renders_independent_provenance_per_name_part() -> None:
+    """Each of First/Middle/Last/Suffix gets its own CopyableExtractedValue
+    instance (D-14/D-15/D-19) gated on the person's provenance envelope."""
+    source = _source(ID_PAGE_SVELTE_PATH)
+    assert source.count("<CopyableExtractedValue") == 4
+    assert 'copyLabel="Copy extracted first name"' in source
+    assert 'copyLabel="Copy extracted middle name"' in source
+    assert 'copyLabel="Copy extracted last name"' in source
+    assert 'copyLabel="Copy extracted suffix"' in source
+    assert source.count("{#if data.person.name_extraction_metadata}") == 4
+
+
+def test_id_page_svelte_provenance_never_overwrites_operator_value_on_edit() -> None:
+    """The stacked hints are read-only reference material — there is no
+    click-to-fill/autofill wiring for name parts in this plan (D-15)."""
+    source = _source(ID_PAGE_SVELTE_PATH)
+    assert "firstName = data.person.name_extraction_metadata" not in source
+    assert "onclick={() => (firstName" not in source

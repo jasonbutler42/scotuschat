@@ -39,6 +39,22 @@ interface PersonDetail {
 	// Phase 22 — migration 0013: appointment fields removed from person (PEDIT-10)
 	// Phase 18 addition
 	is_justice: boolean;
+	// Phase 38 additions (D-12, D-14, D-15, D-18): name_needs_review drives the
+	// People directory's "Name review" attention state (not used on this page
+	// directly, but part of the same PersonDetail response shape);
+	// name_extraction_metadata is the single whole-record provenance envelope
+	// this page's per-part extracted-value hints read from — one shared
+	// {confidence, raw} pair rendered independently beneath each of the four
+	// name-part fields (D-15, D-19), since the backend does not persist a
+	// separate guessed value per part.
+	name_needs_review: boolean;
+	name_extraction_metadata: {
+		source: string | null;
+		raw: string | null;
+		confidence: 'High' | 'Medium' | 'Low' | null;
+		reason: string | null;
+		auto_applied: boolean | null;
+	} | null;
 }
 
 interface PersonListItem {
@@ -132,6 +148,16 @@ export const actions: Actions = {
 	 * machinery were removed entirely (D-10) — there is no `role_id` anywhere
 	 * in this action.
 	 *
+	 * Phase 38 (D-01, D-02, D-09, T-38-16): `full_name` is no longer read from
+	 * the form or sent to FastAPI at all — PersonUpdate does not even declare
+	 * that field (`extra="forbid"`, api/schemas/admin_people.py), so posting
+	 * one would now be a 422. Full Name is generated server-side from the
+	 * submitted name parts via the shared prepare_person_name helper. This
+	 * action's own minimum-data guard (at least one of first_name/last_name)
+	 * mirrors that same D-09 invariant client-side, returning the exact
+	 * locked copy ("Enter at least a first or last name.") with every
+	 * attempted value preserved and a focus path, rather than a generic 422.
+	 *
 	 * NOTE: bio_text and photo_url are intentionally NOT sent in this action's PATCH body
 	 * (Pitfall 7 extended). Both are managed exclusively by the `photo` action. The Bio &
 	 * Photo card is a single form so bio saves together with photo on every photo action submit.
@@ -139,7 +165,6 @@ export const actions: Actions = {
 	save: async ({ request, params, fetch }) => {
 		const formData = await request.formData();
 
-		const full_name = ((formData.get('full_name') as string) ?? '').trim();
 		// bio_text intentionally omitted — managed exclusively by the photo action (Pitfall 7 extended)
 		// photo_url intentionally omitted — managed exclusively by the photo action (Pitfall 7)
 		const first_name = ((formData.get('first_name') as string) ?? '').trim() || null;
@@ -161,7 +186,7 @@ export const actions: Actions = {
 			// edits elsewhere on the form.
 			return fail(422, {
 				error: 'Invalid tenure data. Please try again.',
-				full_name, first_name, last_name, middle_name, name_suffix, birthdate, is_justice,
+				first_name, last_name, middle_name, name_suffix, birthdate, is_justice,
 				tenures: [] as { office: string; start_date: string; end_date: string; appointed_by: string; appointing_president_party: string }[],
 			});
 		}
@@ -177,10 +202,10 @@ export const actions: Actions = {
 			appointing_president_party,
 		}));
 
-		if (!full_name) {
+		if (!first_name && !last_name) {
 			return fail(400, {
-				error: 'Full name is required.',
-				full_name, first_name, last_name, middle_name, name_suffix, birthdate, is_justice,
+				error: 'Enter at least a first or last name.',
+				first_name, last_name, middle_name, name_suffix, birthdate, is_justice,
 				tenures,
 			});
 		}
@@ -194,7 +219,7 @@ export const actions: Actions = {
 		if (firstInvalidIndex !== -1) {
 			return fail(400, {
 				error: 'Select Chief or Associate for every tenure period before saving.',
-				full_name, first_name, last_name, middle_name, name_suffix, birthdate, is_justice,
+				first_name, last_name, middle_name, name_suffix, birthdate, is_justice,
 				tenures,
 			});
 		}
@@ -208,7 +233,7 @@ export const actions: Actions = {
 					'Content-Type': 'application/json',
 				},
 				body: JSON.stringify({
-					full_name, tenures,
+					tenures,
 					first_name, last_name, middle_name, name_suffix,
 					is_justice, birthdate,
 					// bio_text omitted intentionally — managed by photo action (Pitfall 7 extended)
@@ -218,7 +243,7 @@ export const actions: Actions = {
 		} catch {
 			return fail(502, {
 				error: 'Could not save changes. Check the form and try again.',
-				full_name, first_name, last_name, middle_name, name_suffix, birthdate, is_justice,
+				first_name, last_name, middle_name, name_suffix, birthdate, is_justice,
 				tenures,
 			});
 		}
@@ -226,7 +251,7 @@ export const actions: Actions = {
 		if (!res.ok) {
 			return fail(422, {
 				error: 'Could not save changes. Check the form and try again.',
-				full_name, first_name, last_name, middle_name, name_suffix, birthdate, is_justice,
+				first_name, last_name, middle_name, name_suffix, birthdate, is_justice,
 				tenures,
 			});
 		}

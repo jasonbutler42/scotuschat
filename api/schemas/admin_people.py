@@ -28,7 +28,7 @@ write.
 
 from typing import Literal, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from api.models.models import SideEnum
 
@@ -81,13 +81,22 @@ class PersonListItem(BaseModel):
 
     missing: list of field labels that are NULL on this person record.
     Possible values: "first name", "last name", "photo", "bio", "birthdate",
-    "no tenures" — the exact vocabulary _missing_fields produces (see D-04, D-06).
+    "no tenures", "name review" — the exact vocabulary _missing_fields
+    produces (see D-04, D-06). "name review" (Phase 38, D-12) is included
+    for ANY person (bench or advocate) whose `name_needs_review` flag is set
+    — unlike the other labels it does not indicate a NULL field, but an
+    ambiguous legacy `full_name` this row's structured parts could not be
+    confidently derived from; it shares the same click-to-filter allow-list
+    mechanism (T-27-03 vocabulary) rather than introducing a new UI pattern.
     Phase 18 addition: is_justice for directory badge (D-10 — migration 0010).
     Phase 27 (D-10): role_id/role_name removed — the list no longer shows a
     Role column (person-level Role is superseded; role now lives on
     argument_participants). Phase 27 additions: argument_count (Advocate-tab
     column, PDIR-04), tenure_coverage and has_tenure_gap (Bench-tab display
-    string and gap indicator, PDIR-03).
+    string and gap indicator, PDIR-03). Phase 38 addition: name_needs_review
+    (D-12) — a typed boolean indicator mirroring the "name review" entry in
+    `missing`, for a consumer that prefers an explicit field over array
+    membership.
     """
 
     id: int
@@ -99,6 +108,32 @@ class PersonListItem(BaseModel):
     argument_count: Optional[int] = None
     tenure_coverage: Optional[str] = None
     has_tenure_gap: bool = False
+    # Phase 38 addition — migration 0022 (D-12)
+    name_needs_review: bool = False
+
+    model_config = {"from_attributes": True}
+
+
+class NameExtractionMetadata(BaseModel):
+    """Typed provenance envelope for `Person.name_extraction_metadata` (D-14, D-18).
+
+    Mirrors the exact JSONB shape written by migration 0022's legacy backfill
+    (`source`, `raw`, `confidence`, `reason`, `auto_applied` — see
+    alembic/versions/0022_person_name_authority.py) and the same shape later
+    pipeline/import extraction paths (Plan 38-04) persist for freshly-
+    extracted names. This is a whole-record envelope (one decision per
+    Person row, not per name part) describing how the current split/
+    unsplit state of `full_name` came to be. It is intentionally read-only
+    on every request schema — an operator's own edit never rewrites this
+    value; only a fresh extraction/migration pass ever replaces it (D-15,
+    D-17).
+    """
+
+    source: Optional[str] = None
+    raw: Optional[str] = None
+    confidence: Optional[str] = None
+    reason: Optional[str] = None
+    auto_applied: Optional[bool] = None
 
     model_config = {"from_attributes": True}
 
@@ -112,6 +147,14 @@ class PersonDetail(BaseModel):
     Phase 27 (D-10): role_id/role_name removed — the editor no longer surfaces
     a person-level Role field. Phase 27 addition: birthdate (ISO date string,
     PEDIT-02 — migration 0016).
+
+    Phase 38 (D-01, D-04): full_name is a server-derived, read-only
+    compatibility value — it is never accepted on PersonCreateRequest or
+    PersonUpdate (see below), but it is still returned here so existing
+    display/sort/dedup consumers keep working unchanged. Phase 38 additions:
+    name_needs_review (D-12) and name_extraction_metadata (D-14, D-15, D-18)
+    surface the People directory's `Name review` attention state and the
+    typed provenance envelope for the editor's extracted-value hint.
     """
 
     id: int
@@ -129,6 +172,9 @@ class PersonDetail(BaseModel):
     is_justice: bool = False
     # Phase 27 addition — migration 0016
     birthdate: Optional[str] = None
+    # Phase 38 additions — migration 0022 (D-12, D-14, D-15, D-18)
+    name_needs_review: bool = False
+    name_extraction_metadata: Optional[NameExtractionMetadata] = None
 
     model_config = {"from_attributes": True}
 
@@ -139,7 +185,12 @@ class PersonUpdate(BaseModel):
     All fields are optional — but the edit form sends all of them.
     tenures=None means "leave existing tenures unchanged".
     tenures=[] means "delete all tenure rows".
-    Mass-assignment guard: ONLY explicitly-declared fields are writable.
+    Mass-assignment guard: ONLY explicitly-declared fields are writable, and
+    `extra="forbid"` (Phase 38, T-38-07) rejects any field this schema does
+    not declare — including `full_name`, which is intentionally NOT a field
+    here (D-01: Full Name is generated from structured parts and is never
+    independently operator-editable; a client that posts `full_name` gets a
+    422, not a silently-ignored write).
     Phase 9 extends the allow-list with six structured name and appointment
     fields (T-09-01 — prevents writing arbitrary Person attributes).
     Phase 18 addition: is_justice Optional[bool] — None means leave unchanged (D-08, D-11).
@@ -148,9 +199,17 @@ class PersonUpdate(BaseModel):
     addition: birthdate (ISO date string, PEDIT-02) — added to the mass-
     assignment allow-list following the same T-09-01 explicit-field discipline;
     None means leave unchanged.
+
+    Omitted vs. explicitly-cleared name parts (D-04 partial-PATCH contract):
+    a name-part field entirely absent from the request body is left
+    unchanged by the service; a name-part field explicitly sent as `null`/
+    `""` is treated as an authored clear and merged with the person's other
+    stored parts before the first-or-last invariant and full_name derivation
+    run — `model_fields_set` (not `is not None`) is what makes this
+    distinction possible, mirroring the existing bio_text/photo_url/
+    birthdate CR-01 contract in this same schema.
     """
 
-    full_name: Optional[str] = None
     bio_text: Optional[str] = None
     photo_url: Optional[str] = None
     tenures: Optional[list[TenureWrite]] = None
@@ -165,32 +224,40 @@ class PersonUpdate(BaseModel):
     # Phase 27 addition — migration 0016 (T-09-01 allow-list discipline)
     birthdate: Optional[str] = None
 
+    model_config = ConfigDict(extra="forbid")
+
 
 class PersonCreateRequest(BaseModel):
-    """Request body for POST /api/admin/people (D-08, PEDIT-09).
+    """Request body for POST /api/admin/people (D-08, D-09, PEDIT-09).
 
-    The minimum required to create a person is a full name plus a Bench/
-    Advocate choice — both full_name and is_justice are REQUIRED (unlike
-    every field on PersonUpdate, which is Optional). The four structured
-    name-part fields (first_name/middle_name/last_name/name_suffix) are now
-    also accepted (all Optional) at create time to match the [id] editor's
-    save behavior, per Phase 27 UAT gap closure (Gap 3, 2026-07-09) — omitting
-    them still succeeds and leaves those columns NULL. bio, photo, tenures,
-    and birthdate remain deferred to the existing PATCH /api/admin/people/{id}
-    update flow (D-08), not accepted at creation time. Does NOT carry the
-    job-scoped fields (raw_speaker_label, side, role_name) present on
-    admin_jobs.PersonCreate — this is a standalone person-directory create,
-    not a job-linked inline create.
+    Phase 38 (D-01, D-04, D-09): `full_name` is NOT a field on this schema —
+    Full Name is always derived server-side from structured parts, never
+    accepted from the client (`extra="forbid"`, T-38-07, rejects a posted
+    `full_name` with 422 rather than silently dropping it). The minimum
+    required to create a person is at least ONE of first_name/last_name
+    (D-09 — supports incomplete pipeline knowledge and legitimate single-part
+    names) plus a Bench/Advocate choice; is_justice remains REQUIRED (unlike
+    every Optional field on PersonUpdate). The first-or-last invariant itself
+    is enforced by the service layer's shared `prepare_person_name` helper
+    (api.domain.person_names), not by this schema, so the same deterministic
+    PersonNameError -> 422 contract applies to both create and update. bio,
+    photo, tenures, and birthdate remain deferred to the existing PATCH
+    /api/admin/people/{id} update flow (D-08), not accepted at creation
+    time. Does NOT carry the job-scoped fields (raw_speaker_label, side,
+    role_name) present on admin_jobs.PersonCreate — this is a standalone
+    person-directory create, not a job-linked inline create.
     """
 
-    full_name: str
     is_justice: bool
-    # Phase 27 Plan 08 additions (UAT Gap 3 closure) — mirrors PersonUpdate's
-    # allow-list discipline (T-09-01); optional, None/omitted leaves NULL.
+    # Phase 27 Plan 08 additions, still optional at create time (Gap 3
+    # closure); Phase 38 makes at least one of first_name/last_name a hard
+    # requirement, enforced by prepare_person_name (D-09).
     first_name: Optional[str] = None
     middle_name: Optional[str] = None
     last_name: Optional[str] = None
     name_suffix: Optional[str] = None
+
+    model_config = ConfigDict(extra="forbid")
 
 
 # TODO(D-10): orphaned by Phase 27 — person-level roles removed; safe to

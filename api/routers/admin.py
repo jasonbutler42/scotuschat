@@ -642,7 +642,11 @@ async def create_person(
     full PersonDetail so the create page's redirect lands on a fully
     populated editor (D-09).
 
-    Returns 422 if full_name is blank (D-08).
+    Returns 422 (Phase 38, D-09) if the submitted structured parts leave
+    neither first_name nor last_name present after normalization, or (D-01,
+    D-04, T-38-07) if the request body includes a full_name field at all —
+    PersonCreateRequest has no such field; Full Name is always derived
+    server-side from the structured parts.
     """
     try:
         person = await people_service.create_person(db, body)
@@ -751,10 +755,17 @@ async def update_person(
     """
     Update a person's name, role, bio, photo, and tenure rows (PEOPLE-03, D-09).
 
-    Mass-assignment guard: PersonUpdate ONLY exposes full_name, role_id, bio_text,
-    photo_url, tenures — no other Person columns can be set (T-08-MASS).
+    Mass-assignment guard: PersonUpdate ONLY exposes bio_text, photo_url,
+    tenures, first_name, last_name, middle_name, name_suffix, is_justice,
+    birthdate — no other Person columns can be set, and `extra="forbid"`
+    (Phase 38, T-38-07) rejects any undeclared field outright, including
+    full_name (T-08-MASS). full_name itself is never writable here at all —
+    it is always derived server-side from the structured name parts
+    (D-01, D-04).
     Returns 404 if the person does not exist (T-08-IDOR).
-    Returns 422 if a tenure date string is malformed (T-08-DATE).
+    Returns 422 if a tenure date string is malformed (T-08-DATE), or if a
+    name-part edit would leave neither first_name nor last_name present
+    after merging with the person's stored parts (Phase 38, D-09).
     """
     try:
         updated = await people_service.update_person(db, person_id, body)

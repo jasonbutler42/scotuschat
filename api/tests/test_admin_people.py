@@ -219,10 +219,17 @@ async def test_update_person_partial_patch_does_not_wipe_other_fields(
     whatever the other form owns.
     """
     headers = _admin_headers()
+    # Phase 38 (D-01, D-04, T-38-07): PersonCreateRequest has no full_name
+    # field — the "identity" the Identity form now establishes is structured
+    # parts; full_name is always derived server-side.
     create_res = await client.post(
         "/api/admin/people",
         headers=headers,
-        json={"full_name": "CR-01 Regression Test Person", "is_justice": False},
+        json={
+            "is_justice": False,
+            "first_name": "CR-01",
+            "last_name": "RegressionTestPerson",
+        },
     )
     assert create_res.status_code == 201
     person_id = create_res.json()["id"]
@@ -234,7 +241,6 @@ async def test_update_person_partial_patch_does_not_wipe_other_fields(
             f"/api/admin/people/{person_id}",
             headers=headers,
             json={
-                "full_name": "CR-01 Regression Test Person",
                 "first_name": "Regression",
                 "last_name": "Testperson",
                 "birthdate": "1950-01-01",
@@ -243,7 +249,7 @@ async def test_update_person_partial_patch_does_not_wipe_other_fields(
         assert identity_res.status_code == 200
 
         # Simulate the Bio+Photo form ("photo" action): sends only bio_text,
-        # omits full_name/first_name/last_name/birthdate/tenures entirely.
+        # omits first_name/last_name/birthdate/tenures entirely.
         bio_res = await client.patch(
             f"/api/admin/people/{person_id}",
             headers=headers,
@@ -269,7 +275,6 @@ async def test_update_person_partial_patch_does_not_wipe_other_fields(
             f"/api/admin/people/{person_id}",
             headers=headers,
             json={
-                "full_name": "CR-01 Regression Test Person",
                 "first_name": "Regression",
                 "last_name": "Testperson",
                 "birthdate": "1950-01-01",
@@ -278,6 +283,235 @@ async def test_update_person_partial_patch_does_not_wipe_other_fields(
         assert identity_res_2.status_code == 200
         assert identity_res_2.json()["bio_text"] == "A test biography.", (
             "bio_text was wiped by a PATCH that never included it (CR-01)"
+        )
+    finally:
+        await client.delete(f"/api/admin/people/{person_id}", headers=headers)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_create_person_rejects_full_name_field(client: AsyncClient) -> None:
+    """POST /api/admin/people rejects a client-supplied full_name with 422
+    (D-01, D-04, T-38-07) — Full Name is always server-derived from parts."""
+    headers = _admin_headers()
+    response = await client.post(
+        "/api/admin/people",
+        headers=headers,
+        json={
+            "full_name": "Should Be Rejected",
+            "is_justice": False,
+            "last_name": "Rejected",
+        },
+    )
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_create_person_rejects_missing_first_and_last(client: AsyncClient) -> None:
+    """POST /api/admin/people with neither first_name nor last_name is a 422
+    (D-09 minimum-data invariant, enforced by prepare_person_name)."""
+    headers = _admin_headers()
+    response = await client.post(
+        "/api/admin/people",
+        headers=headers,
+        json={"is_justice": False},
+    )
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_update_person_rejects_full_name_field(client: AsyncClient) -> None:
+    """PATCH /api/admin/people/{id} rejects a client-supplied full_name with
+    422 (D-01, D-04, T-38-07) — mirrors the create-side guard above."""
+    headers = _admin_headers()
+    create_res = await client.post(
+        "/api/admin/people",
+        headers=headers,
+        json={"is_justice": False, "last_name": "FullNameRejectTest"},
+    )
+    assert create_res.status_code == 201
+    person_id = create_res.json()["id"]
+
+    try:
+        response = await client.patch(
+            f"/api/admin/people/{person_id}",
+            headers=headers,
+            json={"full_name": "Should Be Rejected"},
+        )
+        assert response.status_code == 422
+    finally:
+        await client.delete(f"/api/admin/people/{person_id}", headers=headers)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_update_person_partial_name_patch_merges_with_stored_parts(
+    client: AsyncClient,
+) -> None:
+    """PATCH with only ONE name-part field (e.g. middle_name) merges against
+    the person's already-stored first/last rather than clearing them and
+    re-derives full_name from the merged result (D-01, D-03, D-04)."""
+    headers = _admin_headers()
+    create_res = await client.post(
+        "/api/admin/people",
+        headers=headers,
+        json={
+            "is_justice": False,
+            "first_name": "Merge",
+            "last_name": "Testperson",
+        },
+    )
+    assert create_res.status_code == 201
+    person_id = create_res.json()["id"]
+    assert create_res.json()["full_name"] == "Merge Testperson"
+
+    try:
+        response = await client.patch(
+            f"/api/admin/people/{person_id}",
+            headers=headers,
+            json={"middle_name": "Middle"},
+        )
+        assert response.status_code == 200
+        detail = response.json()
+        assert detail["first_name"] == "Merge", "omitted first_name was wiped, not merged"
+        assert detail["last_name"] == "Testperson", "omitted last_name was wiped, not merged"
+        assert detail["middle_name"] == "Middle"
+        assert detail["full_name"] == "Merge Middle Testperson"
+    finally:
+        await client.delete(f"/api/admin/people/{person_id}", headers=headers)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_update_person_explicit_null_clears_name_part(client: AsyncClient) -> None:
+    """An explicit null/blank name-part field is a deliberate CLEAR, merged
+    with the person's other stored parts — distinct from omitting the field
+    entirely (D-04 omitted-vs-cleared contract, model_fields_set)."""
+    headers = _admin_headers()
+    create_res = await client.post(
+        "/api/admin/people",
+        headers=headers,
+        json={
+            "is_justice": False,
+            "first_name": "Clear",
+            "middle_name": "MiddleToClear",
+            "last_name": "Testperson",
+        },
+    )
+    assert create_res.status_code == 201
+    person_id = create_res.json()["id"]
+
+    try:
+        response = await client.patch(
+            f"/api/admin/people/{person_id}",
+            headers=headers,
+            json={"middle_name": None},
+        )
+        assert response.status_code == 200
+        detail = response.json()
+        assert detail["middle_name"] is None
+        assert detail["first_name"] == "Clear", "unrelated stored part was wiped"
+        assert detail["last_name"] == "Testperson", "unrelated stored part was wiped"
+        assert detail["full_name"] == "Clear Testperson"
+    finally:
+        await client.delete(f"/api/admin/people/{person_id}", headers=headers)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_update_person_name_edit_rejects_clearing_both_first_and_last(
+    client: AsyncClient,
+) -> None:
+    """A PATCH that would leave the merged result with neither first_name
+    nor last_name is a 422 (D-09) — nothing is written."""
+    headers = _admin_headers()
+    create_res = await client.post(
+        "/api/admin/people",
+        headers=headers,
+        json={"is_justice": False, "last_name": "OnlyLastName"},
+    )
+    assert create_res.status_code == 201
+    person_id = create_res.json()["id"]
+
+    try:
+        response = await client.patch(
+            f"/api/admin/people/{person_id}",
+            headers=headers,
+            json={"last_name": None},
+        )
+        assert response.status_code == 422
+
+        # Confirm nothing was actually written — the row is untouched.
+        detail_res = await client.get(
+            f"/api/admin/people/{person_id}", headers=headers
+        )
+        assert detail_res.json()["last_name"] == "OnlyLastName"
+    finally:
+        await client.delete(f"/api/admin/people/{person_id}", headers=headers)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_update_person_authoritative_name_edit_clears_name_needs_review(
+    client: AsyncClient,
+) -> None:
+    """An authoritative name-part edit clears name_needs_review (D-12) but
+    leaves name_extraction_metadata untouched (D-15 — independent audit
+    trail, never erased by an edit). Directly flips the DB flag/metadata
+    (mirroring migration 0022's own review state) since create_person always
+    creates an unambiguous, never-reviewed row."""
+    import json
+
+    from sqlalchemy import text
+
+    from api.core.database import AsyncSessionLocal
+
+    headers = _admin_headers()
+    create_res = await client.post(
+        "/api/admin/people",
+        headers=headers,
+        json={"is_justice": False, "last_name": "Ambiguous Legacy Name"},
+    )
+    assert create_res.status_code == 201
+    person_id = create_res.json()["id"]
+
+    try:
+        metadata = {
+            "source": "legacy_migration_0022",
+            "raw": "Ambiguous Legacy Name",
+            "confidence": "Low",
+            "reason": "more than three name tokens is ambiguous",
+            "auto_applied": False,
+        }
+        async with AsyncSessionLocal() as db:
+            await db.execute(
+                text(
+                    "UPDATE people SET name_needs_review = true, "
+                    "name_extraction_metadata = CAST(:metadata AS JSONB) "
+                    "WHERE id = :id"
+                ),
+                {"metadata": json.dumps(metadata), "id": person_id},
+            )
+            await db.commit()
+
+        pre_res = await client.get(f"/api/admin/people/{person_id}", headers=headers)
+        assert pre_res.json()["name_needs_review"] is True
+        assert pre_res.json()["name_extraction_metadata"]["confidence"] == "Low"
+
+        response = await client.patch(
+            f"/api/admin/people/{person_id}",
+            headers=headers,
+            json={"first_name": "Resolved", "last_name": "Person"},
+        )
+        assert response.status_code == 200
+        detail = response.json()
+        assert detail["name_needs_review"] is False, (
+            "authoritative name edit did not clear name_needs_review (D-12)"
+        )
+        assert detail["name_extraction_metadata"]["confidence"] == "Low", (
+            "name_extraction_metadata was erased by an operator edit (D-15)"
         )
     finally:
         await client.delete(f"/api/admin/people/{person_id}", headers=headers)

@@ -5,18 +5,35 @@ These tests verify the schema imports and the pure-function logic
 (_missing_fields, empty-string normalization, tenure filtering) without
 requiring a database connection.
 
-DB-dependent service tests live in test_admin_people.py (Task 3).
+DB-dependent service tests live in test_admin_people.py (Task 3, extended by
+Phase 38 Plan 03 for the name-authority enforcement contract — first-only/
+last-only create, partial-PATCH merge, mass-assignment rejection of
+full_name, and name-review-flag clearing all require a real Person row and
+therefore a live DATABASE_URL).
+
+Phase 38 Plan 03 (PEOPLE-09, D-01 through D-04, D-09, D-12): PersonUpdate and
+PersonCreateRequest no longer accept a client-supplied `full_name` at all —
+both are now `extra="forbid"`, so a posted `full_name` is a 422, not a
+silently-ignored write (T-38-07). Full Name is always derived server-side
+through the single shared `api.domain.person_names.prepare_person_name`
+helper (Plan 01). This file's pure/no-DB tests cover the schema-level
+allow-list contract (extra="forbid") and the "name review" directory
+indicator (_missing_fields); the DB-dependent end-to-end create/update
+behavior lives in test_admin_people.py per the split established above.
 
 Phase 27 Plan 08 (UAT Gap 3 closure) adds two DB-guarded tests at the bottom
 of this file proving create_person persists structured name-part fields when
-supplied, and leaves them None when omitted — mirroring the direct-engine +
-manual-cleanup pattern in test_admin_people_merge.py (create_person calls
-db.commit() internally, so the rollback-fixture pattern used elsewhere in
-this file's sibling test modules does not apply here).
+supplied, and leaves them None when only one is supplied (updated for the
+Phase 38 D-09 minimum-data invariant — a bare full_name is no longer a valid
+create_person input at all) — mirroring the direct-engine + manual-cleanup
+pattern in test_admin_people_merge.py (create_person calls db.commit()
+internally, so the rollback-fixture pattern used elsewhere in this file's
+sibling test modules does not apply here).
 """
 
 import os
 
+import pydantic
 import pytest
 
 
@@ -28,7 +45,9 @@ import pytest
 def test_schemas_import() -> None:
     """All required Pydantic schemas must import without error."""
     from api.schemas.admin_people import (  # noqa: F401
+        NameExtractionMetadata,
         ParticipantItem,
+        PersonCreateRequest,
         PersonDetail,
         PersonListItem,
         PersonUpdate,
@@ -47,9 +66,9 @@ def test_schemas_import() -> None:
 def test_service_import() -> None:
     """All required service functions must import without error."""
     from api.services.admin_people import (  # noqa: F401
-        _derive_full_name,
         _missing_fields,
         _replace_tenures,
+        create_person,
         create_role,
         get_person_detail,
         list_participants_for_job,
@@ -74,6 +93,7 @@ class _FakePerson:
         bio_text: str | None,
         is_justice: bool = False,
         birthdate: str | None = None,
+        name_needs_review: bool = False,
     ) -> None:
         self.first_name = first_name
         self.last_name = last_name
@@ -81,6 +101,7 @@ class _FakePerson:
         self.bio_text = bio_text
         self.is_justice = is_justice
         self.birthdate = birthdate
+        self.name_needs_review = name_needs_review
 
 
 def test_missing_fields_advocate_all_missing() -> None:
@@ -175,6 +196,60 @@ def test_missing_fields_bench_birthdate_only() -> None:
 
 
 # ---------------------------------------------------------------------------
+# Phase 38 (D-12): "name review" attention indicator/filter vocabulary
+# ---------------------------------------------------------------------------
+
+
+def test_missing_fields_appends_name_review_when_flagged_advocate() -> None:
+    """An otherwise-complete Advocate flagged name_needs_review=True gets
+    'name review' appended — not a NULL-field label, an ambiguity flag."""
+    from api.services.admin_people import _missing_fields
+
+    person = _FakePerson(
+        first_name="Sarah",
+        last_name="Advocate",
+        photo_url="https://example.com/photo.jpg",
+        bio_text="Some bio",
+        is_justice=False,
+        name_needs_review=True,
+    )
+    result = _missing_fields(person, tenure_count=0)
+    assert result == ["name review"]
+
+
+def test_missing_fields_appends_name_review_when_flagged_bench() -> None:
+    """Bench rows also surface 'name review' — not gated by is_justice (D-12)."""
+    from api.services.admin_people import _missing_fields
+
+    person = _FakePerson(
+        first_name="John",
+        last_name="Roberts",
+        photo_url="https://example.com/roberts.jpg",
+        bio_text="Chief Justice",
+        is_justice=True,
+        birthdate="1955-01-27",
+        name_needs_review=True,
+    )
+    result = _missing_fields(person, tenure_count=1)
+    assert result == ["name review"]
+
+
+def test_missing_fields_omits_name_review_by_default() -> None:
+    """name_needs_review defaults False — 'name review' never appears unasked."""
+    from api.services.admin_people import _missing_fields
+
+    person = _FakePerson(
+        first_name="Sarah",
+        last_name="Advocate",
+        photo_url="https://example.com/photo.jpg",
+        bio_text="Some bio",
+        is_justice=False,
+    )
+    result = _missing_fields(person, tenure_count=0)
+    assert "name review" not in result
+
+
+# ---------------------------------------------------------------------------
 # PersonUpdate empty-string normalization (schema / logic check)
 # ---------------------------------------------------------------------------
 
@@ -184,10 +259,10 @@ def test_person_update_accepts_optional_fields() -> None:
     from api.schemas.admin_people import PersonUpdate
 
     body = PersonUpdate()
-    assert body.full_name is None
     assert body.bio_text is None
     assert body.photo_url is None
     assert body.tenures is None
+    assert "full_name" not in PersonUpdate.model_fields
 
 
 def test_person_update_with_all_fields() -> None:
@@ -195,15 +270,63 @@ def test_person_update_with_all_fields() -> None:
     from api.schemas.admin_people import PersonUpdate, TenureWrite
 
     body = PersonUpdate(
-        full_name="John Roberts",
+        first_name="John",
+        last_name="Roberts",
         bio_text="Chief Justice",
         photo_url="https://example.com/roberts.jpg",
         tenures=[TenureWrite(office="chief", start_date="2005-09-29", end_date=None)],
     )
-    assert body.full_name == "John Roberts"
+    assert body.first_name == "John"
+    assert body.last_name == "Roberts"
     assert body.tenures is not None
     assert len(body.tenures) == 1
     assert body.tenures[0].office == "chief"
+
+
+# ---------------------------------------------------------------------------
+# Phase 38 (T-38-07): writable schemas reject a client-supplied full_name
+# and any other undeclared field (mass-assignment / extra="forbid")
+# ---------------------------------------------------------------------------
+
+
+def test_person_update_rejects_full_name_as_extra_field() -> None:
+    """PersonUpdate has no full_name field; posting one is a 422-worthy
+    ValidationError, not a silently-dropped write (D-01, T-38-07)."""
+    from api.schemas.admin_people import PersonUpdate
+
+    with pytest.raises(pydantic.ValidationError):
+        PersonUpdate(full_name="Should Be Rejected")
+
+
+def test_person_update_rejects_arbitrary_extra_field() -> None:
+    """Any undeclared field (not just full_name) is rejected by the same
+    extra="forbid" mass-assignment guard."""
+    from api.schemas.admin_people import PersonUpdate
+
+    with pytest.raises(pydantic.ValidationError):
+        PersonUpdate(role_id=99)
+
+
+def test_person_create_request_rejects_full_name_as_extra_field() -> None:
+    """PersonCreateRequest has no full_name field; posting one is a
+    ValidationError (D-01, D-04, T-38-07) — Full Name is always derived."""
+    from api.schemas.admin_people import PersonCreateRequest
+
+    with pytest.raises(pydantic.ValidationError):
+        PersonCreateRequest(full_name="Should Be Rejected", is_justice=False)
+
+
+def test_person_create_request_accepts_name_parts_without_full_name() -> None:
+    """PersonCreateRequest accepts only structured parts + is_justice; the
+    first-or-last minimum-data invariant (D-09) is enforced by the service
+    layer's prepare_person_name, not by this schema, so omitting every part
+    still constructs validly here."""
+    from api.schemas.admin_people import PersonCreateRequest
+
+    body = PersonCreateRequest(is_justice=True, last_name="Barrett")
+    assert body.last_name == "Barrett"
+    assert body.first_name is None
+    assert "full_name" not in PersonCreateRequest.model_fields
 
 
 # ---------------------------------------------------------------------------
@@ -338,13 +461,15 @@ def test_person_list_item_shape() -> None:
     )
     assert item.id == 42
     assert item.missing == []
+    assert item.name_needs_review is False
     assert "role_id" not in PersonListItem.model_fields
     assert "role_name" not in PersonListItem.model_fields
 
 
 def test_person_detail_shape() -> None:
-    """PersonDetail has tenures list (no person-level role — D-10)."""
-    from api.schemas.admin_people import PersonDetail, TenureRow
+    """PersonDetail has tenures list (no person-level role — D-10) plus the
+    Phase 38 review/provenance fields (D-12, D-14, D-15, D-18)."""
+    from api.schemas.admin_people import NameExtractionMetadata, PersonDetail, TenureRow
 
     detail = PersonDetail(
         id=1,
@@ -352,8 +477,19 @@ def test_person_detail_shape() -> None:
         bio_text=None,
         photo_url=None,
         tenures=[TenureRow(office="chief", start_date="2005-09-29")],
+        name_needs_review=True,
+        name_extraction_metadata={
+            "source": "legacy_migration_0022",
+            "raw": "John Roberts",
+            "confidence": "Low",
+            "reason": "single-part name is ambiguous",
+            "auto_applied": False,
+        },
     )
     assert len(detail.tenures) == 1
+    assert detail.name_needs_review is True
+    assert isinstance(detail.name_extraction_metadata, NameExtractionMetadata)
+    assert detail.name_extraction_metadata.confidence == "Low"
     assert "role_id" not in PersonDetail.model_fields
     assert "role_name" not in PersonDetail.model_fields
 
@@ -376,40 +512,31 @@ def test_participant_item_shape() -> None:
 
 
 # ---------------------------------------------------------------------------
-# _derive_full_name unit tests (D-04, no DB required)
+# Phase 38 (D-01, D-03): admin_people no longer owns an independent full_name
+# formatter — create_person/update_person both call the single shared
+# api.domain.person_names.prepare_person_name helper (fully fixture-tested
+# in test_person_names.py). These tests confirm the service module itself
+# imports and re-exposes that dependency rather than reintroducing a local
+# derivation (the old _derive_full_name — buggy: no suffix comma, required
+# both first AND last — has been removed entirely).
 # ---------------------------------------------------------------------------
 
 
-def test_derive_full_name_first_middle_last() -> None:
-    """first + middle + last → 'Amy Coney Barrett' (no suffix)."""
-    from api.services.admin_people import _derive_full_name
+def test_service_module_has_no_local_full_name_formatter() -> None:
+    """_derive_full_name must not exist — prepare_person_name is now the only
+    full_name derivation path (D-01, D-03)."""
+    import api.services.admin_people as admin_people_service
 
-    result = _derive_full_name("Amy", "Coney", "Barrett", None)
-    assert result == "Amy Coney Barrett"
-
-
-def test_derive_full_name_first_last_suffix() -> None:
-    """first + last + suffix, no middle → 'John Roberts Jr.'"""
-    from api.services.admin_people import _derive_full_name
-
-    result = _derive_full_name("John", None, "Roberts", "Jr.")
-    assert result == "John Roberts Jr."
+    assert not hasattr(admin_people_service, "_derive_full_name")
 
 
-def test_derive_full_name_blank_suffix_omitted() -> None:
-    """Blank string suffix (empty string) is omitted from the result."""
-    from api.services.admin_people import _derive_full_name
+def test_service_imports_shared_prepare_person_name() -> None:
+    """admin_people imports the Plan 01 shared helper directly, rather than
+    reimplementing formatting locally."""
+    from api.services.admin_people import prepare_person_name
 
-    result = _derive_full_name("Ketanji", "Brown", "Jackson", "")
-    assert result == "Ketanji Brown Jackson"
-
-
-def test_derive_full_name_blank_middle_omitted() -> None:
-    """Blank string middle (empty string) is omitted from the result."""
-    from api.services.admin_people import _derive_full_name
-
-    result = _derive_full_name("Elena", "", "Kagan", None)
-    assert result == "Elena Kagan"
+    result = prepare_person_name("John", None, "Roberts", "Jr.")
+    assert result.full_name == "John Roberts, Jr."
 
 
 # ---------------------------------------------------------------------------
@@ -443,7 +570,8 @@ def test_person_list_item_is_justice() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Phase 27 Plan 08 (UAT Gap 3 closure): create_person persists name parts
+# Phase 27 Plan 08 (UAT Gap 3 closure), updated by Phase 38 Plan 03:
+# create_person persists derived name parts through prepare_person_name
 # ---------------------------------------------------------------------------
 
 
@@ -454,12 +582,26 @@ def _db_configured() -> bool:
 
 
 @pytest.mark.asyncio
+async def test_create_person_rejects_missing_first_and_last() -> None:
+    """create_person rejects a create with neither first_name nor last_name
+    (D-09) — api.domain.person_names.PersonNameError is raised by the shared
+    prepare_person_name helper BEFORE any DB access, so this test needs no
+    DATABASE_URL/live database at all (db=None is never touched)."""
+    from api.domain.person_names import PersonNameError
+    from api.schemas.admin_people import PersonCreateRequest
+    from api.services.admin_people import create_person
+
+    body = PersonCreateRequest(is_justice=False)
+    with pytest.raises(PersonNameError):
+        await create_person(None, body)  # type: ignore[arg-type]
+
+
+@pytest.mark.asyncio
 @pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
 async def test_create_person_persists_name_parts_when_supplied() -> None:
-    """create_person with all four name-part fields persists them onto the new row.
-
-    Matches the [id] editor's save-action behavior (PersonUpdate) — a person
-    created with structured name parts must retain them, not just full_name.
+    """create_person with all four name-part fields persists them onto the
+    new row and derives full_name through prepare_person_name (D-01, D-03) —
+    there is no full_name field on PersonCreateRequest to supply directly.
     """
     from sqlalchemy import text
     from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
@@ -475,7 +617,6 @@ async def test_create_person_persists_name_parts_when_supplied() -> None:
     try:
         async with async_session() as db:
             body = PersonCreateRequest(
-                full_name="Gap Closure Test Person",
                 is_justice=False,
                 first_name="Gap",
                 middle_name="Closure",
@@ -489,6 +630,8 @@ async def test_create_person_persists_name_parts_when_supplied() -> None:
             assert detail["middle_name"] == "Closure"
             assert detail["last_name"] == "Person"
             assert detail["name_suffix"] == "Jr."
+            assert detail["full_name"] == "Gap Closure Person, Jr."
+            assert detail["name_needs_review"] is False
 
         async with async_session() as db:
             refetched = await get_person_detail(db, person_id)
@@ -496,6 +639,7 @@ async def test_create_person_persists_name_parts_when_supplied() -> None:
             assert refetched["middle_name"] == "Closure"
             assert refetched["last_name"] == "Person"
             assert refetched["name_suffix"] == "Jr."
+            assert refetched["full_name"] == "Gap Closure Person, Jr."
     finally:
         if person_id is not None:
             async with async_session() as db:
@@ -506,12 +650,10 @@ async def test_create_person_persists_name_parts_when_supplied() -> None:
 
 @pytest.mark.asyncio
 @pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
-async def test_create_person_leaves_name_parts_none_when_omitted() -> None:
-    """create_person with only full_name + is_justice leaves name parts None.
-
-    Backward-compatible with D-08's minimum-required contract — omitting the
-    name-part fields must still succeed.
-    """
+async def test_create_person_last_name_only_leaves_others_none() -> None:
+    """create_person with ONLY last_name (D-09 last-only minimum) leaves
+    first_name/middle_name/name_suffix None and derives full_name from
+    last_name alone."""
     from sqlalchemy import text
     from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
     from sqlalchemy.orm import sessionmaker
@@ -525,17 +667,51 @@ async def test_create_person_leaves_name_parts_none_when_omitted() -> None:
     person_id = None
     try:
         async with async_session() as db:
-            body = PersonCreateRequest(
-                full_name="Gap Closure Minimal Person",
-                is_justice=True,
-            )
+            body = PersonCreateRequest(is_justice=True, last_name="Souter")
             detail = await create_person(db, body)
             person_id = detail["id"]
 
             assert detail["first_name"] is None
             assert detail["middle_name"] is None
+            assert detail["last_name"] == "Souter"
+            assert detail["name_suffix"] is None
+            assert detail["full_name"] == "Souter"
+    finally:
+        if person_id is not None:
+            async with async_session() as db:
+                await db.execute(text(f"DELETE FROM people WHERE id = {person_id}"))
+                await db.commit()
+        await engine.dispose()
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_create_person_first_name_only_leaves_others_none() -> None:
+    """create_person with ONLY first_name (D-09 first-only minimum) leaves
+    last_name/middle_name/name_suffix None and derives full_name from
+    first_name alone."""
+    from sqlalchemy import text
+    from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+    from sqlalchemy.orm import sessionmaker
+
+    from api.schemas.admin_people import PersonCreateRequest
+    from api.services.admin_people import create_person
+
+    engine = create_async_engine(os.environ["DATABASE_URL"], echo=False)
+    async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+    person_id = None
+    try:
+        async with async_session() as db:
+            body = PersonCreateRequest(is_justice=False, first_name="Solicitor")
+            detail = await create_person(db, body)
+            person_id = detail["id"]
+
+            assert detail["first_name"] == "Solicitor"
+            assert detail["middle_name"] is None
             assert detail["last_name"] is None
             assert detail["name_suffix"] is None
+            assert detail["full_name"] == "Solicitor"
     finally:
         if person_id is not None:
             async with async_session() as db:

@@ -27,6 +27,7 @@ from typing import Optional
 from sqlalchemy import and_, delete, exists, func as sqlfunc, not_, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from api.domain.person_names import prepare_person_name
 from api.models.models import (
     AdminJob,
     Argument,
@@ -51,20 +52,6 @@ from api.services.speakers import ADVOCATE_LABEL_MAP
 # ---------------------------------------------------------------------------
 
 
-def _derive_full_name(
-    first: str, middle: str | None, last: str, suffix: str | None
-) -> str:
-    """Derive full_name from structured name parts (D-04).
-
-    Joins non-blank parts with a single space.
-    Middle and suffix are omitted when blank/None.
-    Examples:
-      first='Amy', middle='Coney', last='Barrett' -> 'Amy Coney Barrett'
-      first='John', middle=None, last='Roberts', suffix='Jr.' -> 'John Roberts Jr.'
-    """
-    return " ".join(p for p in [first, middle or "", last, suffix or ""] if p)
-
-
 def _missing_fields(person: Person, tenure_count: int) -> list[str]:
     """Return list of missing field labels, branched by is_justice (D-05, D-06).
 
@@ -75,6 +62,15 @@ def _missing_fields(person: Person, tenure_count: int) -> list[str]:
     "photo"/"bio" only.
     Bench rows (is_justice is True, D-06): the same four, plus "birthdate"
     when birthdate is None, plus "no tenures" when tenure_count == 0.
+
+    Phase 38 addition (D-12): "name review" is appended for EITHER tab
+    whenever person.name_needs_review is true — unlike every other label
+    here it does not indicate a NULL field, it flags an ambiguous legacy
+    full_name this row's structured parts could not be confidently derived
+    from (migration 0022 or later extraction). Reusing this same list/pill
+    mechanism (rather than a new UI surface) is the explicit Phase 38 D-12/
+    D-13 decision: the existing People-directory attention pattern is tried
+    first instead of a new cross-feature dashboard queue.
 
     tenure_count is a pre-fetched count (built once by the caller across all
     rows in a single query) — this function never issues its own tenure
@@ -98,6 +94,8 @@ def _missing_fields(person: Person, tenure_count: int) -> list[str]:
             missing.append("birthdate")
         if tenure_count == 0:
             missing.append("no tenures")
+    if person.name_needs_review:
+        missing.append("name review")
     return missing
 
 
@@ -239,6 +237,10 @@ async def list_people(
         "bio": Person.bio_text.is_(None),
         "birthdate": Person.birthdate.is_(None),
         "no tenures": not_(exists().where(CourtTenure.person_id == Person.id)),
+        # Phase 38 (D-12) — fixed, non-interpolated predicate for the "Name
+        # review" filter pill; applies to either tab (unlike "birthdate"/
+        # "no tenures", which are bench-only in practice via _missing_fields).
+        "name review": Person.name_needs_review.is_(True),
     }
     if missing in missing_filters:
         q = q.where(missing_filters[missing])
@@ -333,6 +335,8 @@ async def list_people(
                 ),
                 "tenure_coverage": _tenure_coverage(person_tenures),
                 "has_tenure_gap": person.id in gap_person_ids,
+                # Phase 38 addition — migration 0022 (D-12)
+                "name_needs_review": person.name_needs_review,
             }
         )
     return rows
@@ -421,6 +425,14 @@ async def get_person_detail(db: AsyncSession, person_id: int) -> dict | None:
         # foreign key and its display name have been dropped entirely (D-10) —
         # role now lives on argument_participants, not on Person.
         "birthdate": person.birthdate.isoformat() if person.birthdate else None,
+        # Phase 38 additions — migration 0022 (D-12, D-14, D-15, D-18): must be
+        # explicit so PersonDetail(**p) in the router does not silently
+        # default them on reload (same Pitfall 2 discipline as the fields
+        # above). name_extraction_metadata is returned as-is (already a plain
+        # dict from JSONB) — PersonDetail's typed NameExtractionMetadata field
+        # validates/coerces it at the response boundary.
+        "name_needs_review": person.name_needs_review,
+        "name_extraction_metadata": person.name_extraction_metadata,
     }
 
 
@@ -435,16 +447,37 @@ async def update_person(
     If body.tenures is not None, replaces all tenure rows atomically (D-09).
     Returns the refreshed person detail dict after committing.
 
-    Raises ValueError on malformed date strings in tenures (Pitfall 6) — the
+    Raises ValueError (including api.domain.person_names.PersonNameError) on
+    malformed date strings, an invalid tenure office, or a name-part edit
+    that would leave the person with neither first_name nor last_name — the
     router catches this and returns 422 before any DB write completes.
+
+    Phase 38 name-authority contract (D-01, D-03, D-04, D-09, D-12): there is
+    no writable `full_name` field on PersonUpdate at all (T-38-07) — the
+    client can never author it directly. Whenever a name-part field
+    (first_name/middle_name/last_name/name_suffix) is present in the request
+    body — omitted vs. explicitly cleared distinguished via
+    `model_fields_set`, exactly like bio_text/photo_url/birthdate above —
+    the submitted parts are merged with the person's currently stored parts
+    (an omitted part keeps its stored value; an explicitly-null/blank part
+    is cleared) before calling the single shared
+    `api.domain.person_names.prepare_person_name` helper. That helper
+    normalizes every part, rejects a merged result with neither first nor
+    last (PersonNameError -> 422, D-09), and derives the canonical
+    `full_name` — assigned atomically alongside the four structured columns
+    in the same in-memory Person object, committed together with everything
+    else below. A successful authoritative name edit also clears
+    `name_needs_review` (D-12) — the operator has just confirmed/corrected
+    the name, so the legacy ambiguity this flag exists for no longer
+    applies — but `name_extraction_metadata` is deliberately left untouched:
+    it is an independent audit trail of a prior extraction/migration
+    decision (D-15), not something an edit erases.
     """
     result = await db.execute(select(Person).where(Person.id == person_id))
     person = result.scalar_one_or_none()
     if person is None:
         return None
 
-    if body.full_name is not None:
-        person.full_name = body.full_name
     # Phase 27 (D-10): the person-level Role foreign key write has been
     # dropped entirely — role now lives on argument_participants, not on
     # Person.
@@ -465,16 +498,47 @@ async def update_person(
     if "photo_url" in fields_set:
         person.photo_url = body.photo_url or None
 
-    # Phase 9: normalize empty strings to None (same pattern as bio_text/photo_url)
-    # Pitfall 4 — empty string must become NULL to keep IS NULL semantics correct
-    if "first_name" in fields_set:
-        person.first_name = body.first_name or None
-    if "last_name" in fields_set:
-        person.last_name = body.last_name or None
-    if "middle_name" in fields_set:
-        person.middle_name = body.middle_name or None
-    if "name_suffix" in fields_set:
-        person.name_suffix = body.name_suffix or None
+    # Phase 38 (D-01, D-03, D-04, D-09, D-12): merge omitted-vs-cleared name
+    # parts against stored state, then re-derive first/middle/last/suffix +
+    # full_name atomically through the one shared helper. Only touches the
+    # Person row when at least one name-part field was present in the
+    # request — a PATCH that never mentions any of the four fields leaves
+    # the name entirely untouched (same omitted-field discipline as every
+    # other field in this function).
+    name_fields_touched = fields_set & {
+        "first_name",
+        "middle_name",
+        "last_name",
+        "name_suffix",
+    }
+    if name_fields_touched:
+        merged_first = (
+            body.first_name if "first_name" in fields_set else person.first_name
+        )
+        merged_middle = (
+            body.middle_name if "middle_name" in fields_set else person.middle_name
+        )
+        merged_last = (
+            body.last_name if "last_name" in fields_set else person.last_name
+        )
+        merged_suffix = (
+            body.name_suffix if "name_suffix" in fields_set else person.name_suffix
+        )
+        # May raise PersonNameError (a ValueError) — caller/router returns 422
+        # before any DB write completes; nothing has been assigned yet.
+        prepared = prepare_person_name(
+            merged_first, merged_middle, merged_last, merged_suffix
+        )
+        person.first_name = prepared.first_name
+        person.middle_name = prepared.middle_name
+        person.last_name = prepared.last_name
+        person.name_suffix = prepared.name_suffix
+        person.full_name = prepared.full_name
+        # An authoritative edit resolves whatever ambiguity flagged this row
+        # for review (D-12) — but never touches name_extraction_metadata,
+        # which stays as an independent, durable audit trail (D-15).
+        person.name_needs_review = False
+
     # Phase 22 — migration 0013: appointment writes removed from Person (PEDIT-10)
     # Phase 27 addition — migration 0016 (PEDIT-02): normalize empty string to
     # None (Pitfall 5) so the "birthdate" missing-field check stays accurate.
@@ -483,17 +547,6 @@ async def update_person(
     if "birthdate" in fields_set:
         person.birthdate = (
             datetime.date.fromisoformat(body.birthdate) if body.birthdate else None
-        )
-
-    # Derivation: overwrite full_name only when BOTH first_name and last_name are non-empty (D-04/D-05)
-    # Note: D-04 says "when first_name is non-empty" but requiring both first_name AND last_name
-    # prevents overwriting a valid full_name anchor with a single-word partial value (Pitfall 3, D-05)
-    if body.first_name and body.last_name:
-        person.full_name = _derive_full_name(
-            body.first_name,
-            body.middle_name,
-            body.last_name,
-            body.name_suffix,
         )
 
     # Phase 18: write is_justice only when body supplies a non-None value (D-08)
@@ -517,31 +570,40 @@ async def create_person(db: AsyncSession, body: PersonCreateRequest) -> dict:
     "Create person" flow — no pipeline-run lookup, no status-paused guard,
     and no raw_speaker_label / participant-row linkage of any kind.
 
-    Validation (D-08): raises ValueError when body.full_name (stripped) is
-    empty. is_justice is a required bool on PersonCreateRequest, so no
-    additional server-side guard is needed for it.
+    Phase 38 (D-01, D-03, D-09): there is no client-supplied `full_name` on
+    PersonCreateRequest at all — it is always derived from the submitted
+    structured parts through the same shared
+    `api.domain.person_names.prepare_person_name` helper `update_person`
+    uses. `prepare_person_name` normalizes each part and raises
+    PersonNameError (a ValueError, translated to 422 by the router) when
+    neither first_name nor last_name is present after normalization — the
+    minimum-data invariant (D-09) — so a blank/whitespace-only submission is
+    rejected the same deterministic way a bad PATCH is, not via a bespoke
+    `full_name`-blank check. is_justice is a required bool on
+    PersonCreateRequest, so no additional server-side guard is needed for it.
 
-    full_name and is_justice are always set on the new row. The four
-    structured name-part fields (first_name/middle_name/last_name/
-    name_suffix) are now also set from the request when supplied (Phase 27
-    Plan 08, UAT Gap 3 closure) — matching update_person's empty-string-to-
-    None normalization (Pitfall 5) so a blank-string submission stores NULL
-    rather than "". bio_text, photo_url, and birthdate remain unset at create
-    (column defaults / None), and no tenure rows are created — those are
-    filled in later via the existing PATCH /people/{id} update flow (D-08).
+    A freshly operator-created person is never ambiguous by construction —
+    name_needs_review defaults false and name_extraction_metadata defaults
+    None (column defaults), matching every other never-migrated row.
+    bio_text, photo_url, and birthdate remain unset at create (column
+    defaults / None), and no tenure rows are created — those are filled in
+    later via the existing PATCH /people/{id} update flow (D-08).
 
     Returns the full person detail dict via get_person_detail, matching the
     detail-refetch-after-mutation idiom every other mutation in this module
     follows (update_person, merge_people, update_photo_url, upload_photo).
     """
-    if not body.full_name.strip():
-        raise ValueError("Full name is required.")
+    # May raise PersonNameError (a ValueError) — router returns 422 before
+    # any DB write completes.
+    prepared = prepare_person_name(
+        body.first_name, body.middle_name, body.last_name, body.name_suffix
+    )
 
-    person = Person(full_name=body.full_name.strip(), is_justice=body.is_justice)
-    person.first_name = (body.first_name or "").strip() or None
-    person.middle_name = (body.middle_name or "").strip() or None
-    person.last_name = (body.last_name or "").strip() or None
-    person.name_suffix = (body.name_suffix or "").strip() or None
+    person = Person(full_name=prepared.full_name, is_justice=body.is_justice)
+    person.first_name = prepared.first_name
+    person.middle_name = prepared.middle_name
+    person.last_name = prepared.last_name
+    person.name_suffix = prepared.name_suffix
     db.add(person)
     await db.commit()
     await db.refresh(person)

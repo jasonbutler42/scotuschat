@@ -5,16 +5,16 @@ milestone_name: Backlog Cleanup
 current_phase: 38
 current_phase_name: full-name-vs-name-parts-rethink
 status: executing
-stopped_at: Completed 38-04-PLAN.md
-last_updated: "2026-07-27T16:11:46.966Z"
+stopped_at: Completed 38-06-PLAN.md (Phase 38 final plan -- all 6 plans executed)
+last_updated: "2026-07-27T16:51:07.361Z"
 last_activity: 2026-07-27
 last_activity_desc: Phase 38 execution started
 progress:
   total_phases: 10
-  completed_phases: 8
+  completed_phases: 9
   total_plans: 38
-  completed_plans: 37
-  percent: 80
+  completed_plans: 38
+  percent: 90
 ---
 
 # Project State
@@ -28,10 +28,10 @@ See: .planning/PROJECT.md (updated 2026-07-14 after Phase 34 verification)
 
 ## Current Position
 
-Phase: 38 (full-name-vs-name-parts-rethink) — EXECUTING
-Plan: 4 of 6
-Status: Ready to execute
-Last activity: 2026-07-27 — Phase 38 execution started
+Phase: 38 (full-name-vs-name-parts-rethink) — ALL PLANS EXECUTED
+Plan: 6 of 6 (final plan complete)
+Status: Awaiting /gsd-verify-work 38
+Last activity: 2026-07-27 — Completed 38-06-PLAN.md (Phase 38 final plan)
 
 ## Performance Metrics
 
@@ -50,6 +50,7 @@ v1.5: 10 phases, 55 plans, 10 days (2026-07-02 → 2026-07-12).
 | Phase 38 P02 | 65min | 2 tasks | 3 files |
 | Phase 38 P03 | ~70min | 2 tasks | 9 files |
 | Phase 38 P04 | ~50min | 3 tasks | 6 files |
+| Phase 38 P06 | ~50min | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -133,6 +134,9 @@ Two open design questions remain unresolved by design and are intentionally defe
 - [Phase ?]: [Phase 38, Plan 03]: "name review" reuses the existing People-directory missing-field pill/filter mechanism rather than new UI (D-12/D-13), applying to both Bench and Advocate tabs
 - [Phase ?]: [Phase 38, Plan 04]: import_justices_csv.py's blank-only prefill is per-field (CSV columns are independent per-part ground truth); import_convokit.py's blank-only prefill is whole-row, mirroring migration 0022's guard exactly (a derived split's parts are not independently trustworthy the way CSV columns are)
 - [Phase ?]: [Phase 38, Plan 04]: import_convokit.py's provenance raw/confidence is derived from the Person row's own stored full_name, not the corpus label passed into that call -- matters for the oyez_speaker_id-matched path where the corpus label can legitimately differ from what's saved
+- [Phase ?]: [Phase 38, Plan 06]: personNames.ts is a preview-only display mirror with no persistence path -- Node v22.6+/v23.6+ executes it directly for genuine cross-language parity verification against the shared fixture, no ts-node/vitest needed
+- [Phase ?]: [Phase 38, Plan 06]: Per-part extracted-value hints (First/Middle/Last/Suffix) each render independently but share one whole-record name_extraction_metadata envelope -- an unfilled ambiguous field shows the Phase 36 disabled N/A + shared raw/confidence with no extra component logic
+- [Phase ?]: [Phase 38, Plan 06]: 'Name review' reuses the existing click-to-filter pill mechanism verbatim via a pillLabel() display-text helper -- the underlying filter vocabulary stays lowercase (matches the API's missing_filters allow-list); only the visible/accessible text is Title Case
 
 ### Roadmap Evolution
 
@@ -255,8 +259,8 @@ Items acknowledged and deferred at v1.5 milestone close on 2026-07-12:
 
 ## Session Continuity
 
-Last session: 2026-07-27T16:11:45.297Z
-Stopped at: Completed 38-04-PLAN.md
+Last session: 2026-07-27T16:51:06.487Z
+Stopped at: Completed 38-06-PLAN.md (Phase 38 final plan -- all 6 plans executed)
 Resume file: None
 
 ## Operator Next Steps

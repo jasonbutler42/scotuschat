@@ -5,15 +5,15 @@ milestone_name: Backlog Cleanup
 current_phase: 38
 current_phase_name: full-name-vs-name-parts-rethink
 status: executing
-stopped_at: Completed 38-05-PLAN.md
-last_updated: "2026-07-22T16:19:51.451Z"
-last_activity: 2026-07-22
+stopped_at: Completed 38-02-PLAN.md
+last_updated: "2026-07-27T14:50:34.633Z"
+last_activity: 2026-07-27
 last_activity_desc: Phase 38 execution started
 progress:
   total_phases: 10
   completed_phases: 8
   total_plans: 38
-  completed_plans: 34
+  completed_plans: 35
   percent: 80
 ---
 
@@ -29,9 +29,9 @@ See: .planning/PROJECT.md (updated 2026-07-14 after Phase 34 verification)
 ## Current Position
 
 Phase: 38 (full-name-vs-name-parts-rethink) — EXECUTING
-Plan: 3 of 6
+Plan: 2 of 6
 Status: Ready to execute
-Last activity: 2026-07-22 — Phase 38 execution started
+Last activity: 2026-07-27 — Phase 38 execution started
 
 ## Performance Metrics
 
@@ -47,6 +47,7 @@ v1.5: 10 phases, 55 plans, 10 days (2026-07-02 → 2026-07-12).
 | Phase 37 P05 | 90min | 3 tasks | 6 files |
 | Phase 38 P01 | 17min | 3 tasks | 4 files |
 | Phase 38 P05 | 40min | 3 tasks | 6 files |
+| Phase 38 P02 | 65min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -120,6 +121,10 @@ Two open design questions remain unresolved by design and are intentionally defe
 - [Phase ?]: [Phase 38, Plan 05]: Stacked provenance mode on CopyableExtractedValue activates only when a caller passes confidence and/or raw (even null) -- every existing value-only/pill consumer stays byte-for-byte unchanged
 - [Phase ?]: [Phase 38, Plan 05]: Legacy metadata fields with no independently stored raw/confidence (title_hint, case_name, argued_date, primary_docket, question_number) use an explicit Medium confidence fallback and the field's own extracted text as raw at the Svelte call-site boundary, never a fabricated percentage
 - [Phase ?]: [Phase 38, Plan 05]: DocketPillInput Docket Pill provenance states are additive -- only pills whose entry carries confidence/raw route through CopyableExtractedValue; all current plain-string callers (ArgumentDetailsCard.svelte, pipeline create-job page) keep exact legacy markup and remain untouched/out of scope for this plan
+- [Phase ?]: [Phase 38, Plan 02]: Migration 0022 only examines Person rows where first_name/middle_name/last_name/name_suffix are ALL NULL -- any row already carrying a structured part is left completely untouched (never split, never flagged for review)
+- [Phase ?]: [Phase 38, Plan 02]: name_extraction_metadata is written for every examined legacy row (applied and reviewed alike) as {source, raw, confidence, reason, auto_applied}, validated through prepare_name_provenance, giving reviewed rows a durable audit trail for the future Name review surface
+- [Phase ?]: [Phase 38, Plan 02]: A blank/whitespace-only full_name aborts the entire migration 0022 transaction (Postgres transactional DDL rolls back schema+data together) rather than being silently skipped or guessed
+- [Phase ?]: [Phase 38, Plan 02]: Downgrade drops only name_extraction_metadata then name_needs_review (reverse of add order) and never rewrites full_name or structured columns for applied or reviewed rows
 
 ### Roadmap Evolution
 
@@ -242,8 +247,8 @@ Items acknowledged and deferred at v1.5 milestone close on 2026-07-12:
 
 ## Session Continuity
 
-Last session: 2026-07-22T16:16:15.864Z
-Stopped at: Completed 38-05-PLAN.md
+Last session: 2026-07-27T14:50:33.794Z
+Stopped at: Completed 38-02-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

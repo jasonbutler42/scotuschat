@@ -3,7 +3,7 @@ status: complete
 phase: 38-full-name-vs-name-parts-rethink
 source: [38-VERIFICATION.md]
 started: 2026-07-27T17:45:00Z
-updated: 2026-07-27T18:50:00Z
+updated: 2026-07-27T19:00:00Z
 ---
 
 ## Current Test
@@ -51,13 +51,35 @@ expected: |
   editable mode; long raw text wraps without truncation or overflow.
 result: pass
 
+### 6. Docket Pill value with unusual characters/length used as pipeline ingest filename
+expected: |
+  A docket "number" value entered via DocketPillInput should either be constrained to
+  valid-docket-shaped input, or safely sanitized before being used to construct a
+  filesystem path during pipeline ingest — never passed raw into a file path.
+result: issue
+reported: |
+  Entered a free-text string (containing a double-quote character) as a docket "number"
+  on the Pipeline Runner's new-job form, left Question at its default, and ran it. The job
+  errored: [Errno 22] Invalid argument: 'data\pdfs\I wonder if there is a limit to how long
+  the docket "numbers" can be-q1.pdf'
+severity: blocker
+
 ## Summary
 
-total: 5
+total: 6
 passed: 5
-issues: 0
+issues: 1
 pending: 0
 skipped: 0
 blocked: 0
 
 ## Gaps
+
+- gap_id: G-38-6
+  truth: "A docket value entered via DocketPillInput should either be constrained to valid-docket-shaped input, or safely sanitized before being used to construct a filesystem path during pipeline ingest."
+  status: failed
+  reason: "User reported: docket value containing a double-quote character crashed pipeline ingest with [Errno 22] Invalid argument when used raw as a PDF filename component in pipeline/commands/ingest.py:291 (f\"{primary_docket}-q{args.question}.pdf\")"
+  severity: blocker
+  test: 6
+  artifacts: []
+  missing: []

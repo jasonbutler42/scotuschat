@@ -3,7 +3,7 @@
 import datetime
 from typing import Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from api.models.models import AdminJobStatus, AdminJobStep, SideEnum
 
@@ -92,16 +92,32 @@ class PersonCreate(BaseModel):
     create-person request. When both are present, create_person_for_job sets
     Person.is_justice from side == BENCH and updates the matching job-owned
     ArgumentParticipant row (identified by raw_speaker_label) with the new
-    person_id and side in the same transaction (D-12). full_name, role_id, and
-    role_name remain backward-compatible for callers that do not use the mini
-    popover (raw_speaker_label/side omitted).
+    person_id and side in the same transaction (D-12). role_id and role_name
+    remain backward-compatible for callers that do not use the mini popover
+    (raw_speaker_label/side omitted).
+
+    Phase 38 (D-01, D-03, D-09, T-38-07): there is no `full_name` field here
+    at all — mirroring api.schemas.admin_people.PersonCreateRequest, this
+    mini-create request carries only structured name parts (all Optional at
+    the schema level; the first-or-last minimum-data invariant is enforced
+    by the service layer's shared `api.domain.person_names.prepare_person_name`
+    helper, same as the standalone people-directory create). `extra="forbid"`
+    means a client that posts `full_name` gets a 422, not a silently-ignored
+    write — Full Name is always derived server-side from these parts.
     """
 
-    full_name: str
     role_id: Optional[int] = None
     role_name: Optional[str] = None  # create a new Role inline if role_id is None
     raw_speaker_label: Optional[str] = None
     side: Optional[SideEnum] = None
+    # Phase 38 additions — mirrors PersonCreateRequest's allow-list (T-09-01
+    # discipline extended to this job-scoped schema).
+    first_name: Optional[str] = None
+    middle_name: Optional[str] = None
+    last_name: Optional[str] = None
+    name_suffix: Optional[str] = None
+
+    model_config = ConfigDict(extra="forbid")
 
 
 class PersonResponse(BaseModel):

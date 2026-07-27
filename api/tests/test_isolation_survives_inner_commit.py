@@ -80,7 +80,7 @@ async def test_create_person_for_job_inner_commit_is_queryable_after_return() ->
         arg_id = arg.id
         job_id = job.id
 
-    body = PersonCreate(full_name="Isolation Regression Test Person")
+    body = PersonCreate(last_name="Isolation Regression Test Person")
 
     # Act: invoke the production service function that commits internally.
     async with AsyncSessionLocal() as db:
@@ -97,6 +97,7 @@ async def test_create_person_for_job_inner_commit_is_queryable_after_return() ->
             "the Person row — isolation mechanism is not surviving inner "
             "commits (success criterion 3 failed)"
         )
+        assert reloaded.last_name == "Isolation Regression Test Person"
         assert reloaded.full_name == "Isolation Regression Test Person"
 
         # Cleanup — create_person_for_job commits internally, so nothing here

@@ -23,6 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from sqlalchemy import func
 
+from api.domain.person_names import prepare_person_name
 from api.models.models import (
     AdminJob,
     AdminJobStatus,
@@ -869,8 +870,25 @@ async def create_person_for_job(
     update), so this is also rejected with ValueError before any row is
     created.
 
+    Phase 38 (D-01, D-03, D-09, T-38-07): body carries structured name parts,
+    never a client-owned full_name (there is no such field on PersonCreate
+    at all). The submitted parts are normalized and validated through the
+    same shared `api.domain.person_names.prepare_person_name` helper the
+    standalone people-directory create/update paths use — raising
+    PersonNameError (a ValueError, translated to 422 by the router) when
+    neither first_name nor last_name is present (D-09) — BEFORE the job
+    state/participant checks below, so an invalid name never even reaches
+    the participant-scoping IDOR guard. full_name is always derived from
+    the validated parts, never trusted from the request.
+
     Full bio/photo/tenure fields remain Phase 27 scope (D-13 deferred).
     """
+    # Phase 38 (D-09): validate/derive the name FIRST — cheapest possible
+    # rejection, before any job/participant lookup or Person row exists.
+    prepared = prepare_person_name(
+        body.first_name, body.middle_name, body.last_name, body.name_suffix
+    )
+
     job = await get_job(db, job_id)
     if job is None:
         raise ValueError(f"AdminJob {job_id} not found")
@@ -922,7 +940,15 @@ async def create_person_for_job(
         role_id = role.id
 
     is_justice = body.side == SideEnum.BENCH if body.side is not None else False
-    person = Person(full_name=body.full_name, role_id=role_id, is_justice=is_justice)
+    person = Person(
+        full_name=prepared.full_name,
+        role_id=role_id,
+        is_justice=is_justice,
+        first_name=prepared.first_name,
+        middle_name=prepared.middle_name,
+        last_name=prepared.last_name,
+        name_suffix=prepared.name_suffix,
+    )
     db.add(person)
     await db.flush()
 

@@ -379,7 +379,9 @@ def test_person_create_accepts_raw_speaker_label_and_side() -> None:
     from api.schemas.admin_jobs import PersonCreate
 
     body = PersonCreate(
-        full_name="Ketanji Brown Jackson",
+        last_name="Jackson",
+        first_name="Ketanji",
+        middle_name="Brown",
         raw_speaker_label="JUSTICE JACKSON",
         side=SideEnum.BENCH,
     )
@@ -391,9 +393,54 @@ def test_person_create_backward_compatible_without_side() -> None:
     """Legacy callers that omit raw_speaker_label/side must still validate (backward compat)."""
     from api.schemas.admin_jobs import PersonCreate
 
-    body = PersonCreate(full_name="Jane Doe", role_name="Law Clerk")
+    body = PersonCreate(first_name="Jane", last_name="Doe", role_name="Law Clerk")
     assert body.raw_speaker_label is None
     assert body.side is None
+
+
+# ---------------------------------------------------------------------------
+# Phase 38 (T-38-07): PersonCreate rejects a client-supplied full_name and
+# enforces the D-09 first-or-last minimum-data invariant server-side
+# ---------------------------------------------------------------------------
+
+
+def test_person_create_rejects_full_name_as_extra_field() -> None:
+    """PersonCreate has no full_name field; posting one is a ValidationError
+    (D-01, D-04, T-38-07) — Full Name is always derived server-side."""
+    import pydantic
+
+    from api.schemas.admin_jobs import PersonCreate
+
+    with pytest.raises(pydantic.ValidationError):
+        PersonCreate(full_name="Should Be Rejected")
+
+
+def test_person_create_accepts_name_parts_without_full_name() -> None:
+    """PersonCreate accepts only structured parts; the first-or-last
+    minimum-data invariant (D-09) is enforced by create_person_for_job's
+    shared prepare_person_name call, not by this schema."""
+    from api.schemas.admin_jobs import PersonCreate
+
+    body = PersonCreate(last_name="Souter")
+    assert body.last_name == "Souter"
+    assert body.first_name is None
+    assert "full_name" not in PersonCreate.model_fields
+
+
+@pytest.mark.asyncio
+async def test_create_person_for_job_rejects_missing_first_and_last() -> None:
+    """create_person_for_job rejects a request with neither first_name nor
+    last_name (D-09) — api.domain.person_names.PersonNameError is raised by
+    the shared prepare_person_name helper BEFORE any job/DB lookup, so this
+    test needs no DATABASE_URL/live database at all (db=None is never
+    touched)."""
+    from api.domain.person_names import PersonNameError
+    from api.schemas.admin_jobs import PersonCreate
+    from api.services.admin_jobs import create_person_for_job
+
+    body = PersonCreate()
+    with pytest.raises(PersonNameError):
+        await create_person_for_job(None, 999999, body)  # type: ignore[arg-type]
 
 
 # ---------------------------------------------------------------------------
@@ -479,7 +526,9 @@ async def test_create_person_for_job_bench_sets_is_justice_and_participant_side(
         job_id = job.id
 
     body = PersonCreate(
-        full_name="Ketanji Brown Jackson",
+        first_name="Ketanji",
+        middle_name="Brown",
+        last_name="Jackson",
         raw_speaker_label="JUSTICE JACKSON",
         side=SideEnum.BENCH,
     )
@@ -488,6 +537,9 @@ async def test_create_person_for_job_bench_sets_is_justice_and_participant_side(
         person = await create_person_for_job(db, job_id, body)
         person_id = person.id
         assert person.is_justice is True
+        assert person.full_name == "Ketanji Brown Jackson"
+        assert person.first_name == "Ketanji"
+        assert person.last_name == "Jackson"
 
     async with AsyncSessionLocal() as db:
         participant = await db.get(ArgumentParticipant, participant_id)
@@ -554,7 +606,8 @@ async def test_create_person_for_job_advocate_sets_is_justice_false() -> None:
         job_id = job.id
 
     body = PersonCreate(
-        full_name="John Smith",
+        first_name="John",
+        last_name="Smith",
         raw_speaker_label="MR. SMITH",
         side=SideEnum.PETITIONER,
     )
@@ -563,6 +616,7 @@ async def test_create_person_for_job_advocate_sets_is_justice_false() -> None:
         person = await create_person_for_job(db, job_id, body)
         person_id = person.id
         assert person.is_justice is False
+        assert person.full_name == "John Smith"
 
     async with AsyncSessionLocal() as db:
         participant = await db.get(ArgumentParticipant, participant_id)
@@ -592,7 +646,7 @@ async def test_create_person_for_job_rejects_wrong_job_state(db_session) -> None
     db_session.add(job)
     await db_session.flush()
 
-    body = PersonCreate(full_name="Someone", raw_speaker_label="MR. X")
+    body = PersonCreate(last_name="Someone", raw_speaker_label="MR. X")
     with pytest.raises(ValueError):
         await create_person_for_job(db_session, job.id, body)
 
@@ -615,7 +669,7 @@ async def test_create_person_for_job_rejects_unknown_raw_speaker_label(db_sessio
     db_session.add(job)
     await db_session.flush()
 
-    body = PersonCreate(full_name="Nobody", raw_speaker_label="NO SUCH LABEL")
+    body = PersonCreate(last_name="Nobody", raw_speaker_label="NO SUCH LABEL")
     with pytest.raises(ValueError):
         await create_person_for_job(db_session, job.id, body)
 
@@ -660,7 +714,7 @@ async def test_create_person_for_job_rejects_participant_outside_job_argument(db
     db_session.add(job)
     await db_session.flush()
 
-    body = PersonCreate(full_name="Cross Argument", raw_speaker_label="SHARED LABEL", side=SideEnum.BENCH)
+    body = PersonCreate(last_name="Cross Argument", raw_speaker_label="SHARED LABEL", side=SideEnum.BENCH)
     with pytest.raises(ValueError):
         await create_person_for_job(db_session, job.id, body)
 

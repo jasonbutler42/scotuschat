@@ -316,7 +316,7 @@ Plans:
   3. Existing Full Name values for already-created people are not corrupted or silently overwritten by the new behavior.
   4. Any pipeline/parsing-side changes needed to support the decision are identified and applied consistently with the admin editor's behavior.
 
-**Plans**: 6/10 plans executed (plans 07–10 are UAT gap closure for G-38-6)
+**Plans**: 7/10 plans executed
 
 - [x] 38-01-PLAN.md
 - [x] 38-02-PLAN.md
@@ -324,7 +324,7 @@ Plans:
 - [x] 38-04-PLAN.md
 - [x] 38-05-PLAN.md
 - [x] 38-06-PLAN.md
-- [ ] 38-07-PLAN.md — canonical docket-value rule + 422 guard at the create_job boundary (G-38-6)
+- [x] 38-07-PLAN.md — canonical docket-value rule + 422 guard at the create_job boundary (G-38-6)
 - [ ] 38-08-PLAN.md — independent pipeline-side ingest path/slug hardening + write containment (G-38-6)
 - [ ] 38-09-PLAN.md — parity-locked client mirror, inline docket error, SvelteKit re-check (G-38-6)
 - [ ] 38-10-PLAN.md — consolidated regression gate + operator re-verification of UAT Test 6 (G-38-6)
@@ -401,7 +401,7 @@ Plans:
 | 35. `rerun_job` never spawns ingest for locally-uploaded jobs | v1.6 | 3/3 | Complete    | 2026-07-14 |
 | 36. Click-to-copy extracted values design pattern | v1.6 | 3/3 | Complete    | 2026-07-15 |
 | 37. Represent tenure Seat as a Chief/Associate toggle instead of free text | v1.6 | 5/5 | Complete    | 2026-07-21 |
-| 38. Rethink Full Name vs. name-part fields in the people editor | v1.6 | 6/6 | In Progress|  |
+| 38. Rethink Full Name vs. name-part fields in the people editor | v1.6 | 7/10 | In Progress|  |
 | 39. Bench popover — additional context data for Justices | v1.6 | TBD | Not started | - |
 | 40. README — how to start the local stack | v1.6 | 3/3 | Complete    | 2026-07-14 |
 

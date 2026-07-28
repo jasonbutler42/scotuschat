@@ -5,16 +5,16 @@ milestone_name: Backlog Cleanup
 current_phase: 38
 current_phase_name: full-name-vs-name-parts-rethink
 status: executing
-stopped_at: Completed 38-06-PLAN.md (Phase 38 final plan -- all 6 plans executed)
-last_updated: "2026-07-27T16:51:07.361Z"
+stopped_at: Completed 38-07-PLAN.md
+last_updated: "2026-07-28T00:15:21.279Z"
 last_activity: 2026-07-27
 last_activity_desc: Phase 38 execution started
 progress:
   total_phases: 10
-  completed_phases: 9
-  total_plans: 38
-  completed_plans: 38
-  percent: 90
+  completed_phases: 8
+  total_plans: 42
+  completed_plans: 39
+  percent: 80
 ---
 
 # Project State
@@ -28,10 +28,10 @@ See: .planning/PROJECT.md (updated 2026-07-14 after Phase 34 verification)
 
 ## Current Position
 
-Phase: 38 (full-name-vs-name-parts-rethink) — ALL PLANS EXECUTED
-Plan: 6 of 6 (final plan complete)
-Status: Awaiting /gsd-verify-work 38
-Last activity: 2026-07-27 — Completed 38-06-PLAN.md (Phase 38 final plan)
+Phase: 38 (full-name-vs-name-parts-rethink) — EXECUTING
+Plan: 2 of 10
+Status: Ready to execute
+Last activity: 2026-07-27 — Phase 38 execution started
 
 ## Performance Metrics
 
@@ -51,6 +51,7 @@ v1.5: 10 phases, 55 plans, 10 days (2026-07-02 → 2026-07-12).
 | Phase 38 P03 | ~70min | 2 tasks | 9 files |
 | Phase 38 P04 | ~50min | 3 tasks | 6 files |
 | Phase 38 P06 | ~50min | 3 tasks | 8 files |
+| Phase 38 P07 | 20min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -137,6 +138,9 @@ Two open design questions remain unresolved by design and are intentionally defe
 - [Phase ?]: [Phase 38, Plan 06]: personNames.ts is a preview-only display mirror with no persistence path -- Node v22.6+/v23.6+ executes it directly for genuine cross-language parity verification against the shared fixture, no ts-node/vitest needed
 - [Phase ?]: [Phase 38, Plan 06]: Per-part extracted-value hints (First/Middle/Last/Suffix) each render independently but share one whole-record name_extraction_metadata envelope -- an unfilled ambiguous field shows the Phase 36 disabled N/A + shared raw/confidence with no extra component logic
 - [Phase ?]: [Phase 38, Plan 06]: 'Name review' reuses the existing click-to-filter pill mechanism verbatim via a pillLabel() display-text helper -- the underlying filter vocabulary stays lowercase (matches the API's missing_filters allow-list); only the visible/accessible text is Title Case
+- [Phase ?]: [Phase 38, Plan 07]: Character allow-list (^[A-Za-z0-9][A-Za-z0-9_-]*$) plus a 64-char cap chosen over a strict SCOTUS docket-shape regex for normalize_docket_value -- a strict shape regex would reject real accepted shapes (bare numbers, ConvoKit historical shapes, synthetic job-{id} dockets, existing data/pdfs/ files)
+- [Phase ?]: [Phase 38, Plan 07]: normalize_docket_value's check ordering (blank, then length, then pattern) is a hard determinism contract -- the 68-char UAT-reported quoted string resolves to length_exceeded, not invalid_characters, because length is checked first
+- [Phase ?]: [Phase 38, Plan 07]: T-24-08's leading-hyphen argv guard in _normalize_dockets stays unmodified and runs before the new normalize_docket_value check; the domain rule is additive, not a replacement, even though it independently subsumes the same input class
 
 ### Roadmap Evolution
 
@@ -259,8 +263,8 @@ Items acknowledged and deferred at v1.5 milestone close on 2026-07-12:
 
 ## Session Continuity
 
-Last session: 2026-07-27T16:51:06.487Z
-Stopped at: Completed 38-06-PLAN.md (Phase 38 final plan -- all 6 plans executed)
+Last session: 2026-07-28T00:15:20.750Z
+Stopped at: Completed 38-07-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

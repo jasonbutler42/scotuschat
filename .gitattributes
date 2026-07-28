@@ -1,0 +1,22 @@
+# Normalize line endings to LF in the repository regardless of the checking-out
+# OS or editor. This project is developed across a Windows/WSL split (app runs
+# natively on Windows, Claude Code sessions often run from WSL) with no
+# core.autocrlf set, which let editors silently flip tracked files to CRLF in
+# the working tree and made `git status`/`git diff` show large line-ending-only
+# noise unrelated to any real change. `text=auto` still lets git skip binary
+# files via its own content heuristic; the explicit `binary` rules below are a
+# belt-and-suspenders backstop for known binary types so they're never run
+# through EOL conversion.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary

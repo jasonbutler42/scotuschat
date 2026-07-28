@@ -5,15 +5,15 @@ milestone_name: Backlog Cleanup
 current_phase: 39
 current_phase_name: bench-popover-additional-context-data
 status: executing
-stopped_at: Completed 39-01-PLAN.md
-last_updated: "2026-07-28T15:14:53.971Z"
+stopped_at: Completed 39-02-PLAN.md
+last_updated: "2026-07-28T15:34:04.701Z"
 last_activity: 2026-07-28
 last_activity_desc: Phase 39 execution started
 progress:
   total_phases: 10
   completed_phases: 9
   total_plans: 48
-  completed_plans: 43
+  completed_plans: 44
   percent: 90
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-07-14 after Phase 34 verification)
 ## Current Position
 
 Phase: 39 (bench-popover-additional-context-data) — EXECUTING
-Plan: 2 of 6
+Plan: 3 of 6
 Status: Ready to execute
 Last activity: 2026-07-28 — Phase 39 execution started
 
@@ -56,6 +56,7 @@ v1.5: 10 phases, 55 plans, 10 days (2026-07-02 → 2026-07-12).
 | Phase 38 P09 | 20min | 3 tasks | 5 files |
 | Phase 38 P10 | ~15min | 2 tasks | 1 files |
 | Phase 39 P01 | ~70min | 2 tasks | 10 files |
+| Phase 39 P02 | ~55min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -154,6 +155,8 @@ Two open design questions remain unresolved by design and are intentionally defe
 - [Phase ?]: [Phase 38, Plan 10]: 38-UAT.md's pre-existing test_phase38_people_ui_contract.py node-driver failure was left undisturbed and only noted, per plan scope
 - [Phase ?]: [Phase 39, Plan 01]: Bundled migrations 0023+0024 into Task 1's commit (rather than the plan's literal Task 1/Task 2 file split) because 0024's down_revision chains through 0023 -- alembic head is only buildable with both present; Person.death_date's ORM mapping still landed in Task 2
 - [Phase ?]: [Phase 39, Plan 01]: Migrations applied only to an ephemeral pgserver-provisioned PostgreSQL instance this session, never the real dev DB -- Plan 39-06 must still apply 0023/0024 to the real dev DB as an operator step
+- [Phase ?]: [Phase 39, Plan 02]: Membership check (value in map), not .get(), used to resolve CSV Reason Left -- keeps a recognised value that maps to None ('Still in Office') distinguishable from a never-seen value, which increments a reasons_unmatched counter instead
+- [Phase ?]: [Phase 39, Plan 02]: Accidentally applied migrations 0023/0024 to the real dev DB via the Windows .venv (WSL interop does not forward shell env vars into the Windows subprocess) -- additive-only, non-destructive, and functionally completes part of Plan 39-06's job early; all actual test execution for this plan used a separate ephemeral WSL pgserver instance
 
 ### Roadmap Evolution
 
@@ -176,6 +179,7 @@ Deployment blockers (v1.4, unresolved — not in v1.6 scope):
 - `admin.scotuschat.com` DNS entry must be created before smoke test
 - admin_arguments.py::delete_argument omits argument_status_log from its FK cascade (found during 31-04) -- likely ForeignKeyViolation on deleting a DRAFT argument with a status log row; see deferred-items.md for suggested fix
 - [Phase 38, Plan 05] Discovered pre-existing working-tree anomaly (not caused by this plan's commands): .planning/REQUIREMENTS.md and every .planning/phases/<NN>-* directory except 38-full-name-vs-name-parts-rethink/ are missing from disk (REQUIREMENTS.md and phase 31-40 tracked files show as git 'D'; untracked Phase 38 PLAN/RESEARCH/PATTERNS/UI-SPEC/FIGMA/VALIDATION files are gone with no git trace since they were never committed). This caused roadmap.update-plan-progress to report 'No plans found' (skipped, no ROADMAP.md changes made) and state.advance-plan/update-progress to zero out STATE.md's progress counters as a side effect (manually restored to the pre-corruption values: completed_phases 8, total_plans 38, completed_plans 34, percent 80, before committing). Needs investigation/recovery -- likely git checkout of tracked 'D' paths from HEAD for phases 31-40, and regeneration or recovery of untracked Phase 38 planning docs and REQUIREMENTS.md from another agent/session if available. Not remediated here: out of this plan's scope and risks colliding with concurrent wave agents (38-02/03/04) sharing this same non-worktree-isolated working tree.
+- [Phase 39, Plan 02] Real dev DB may already be at alembic head (0024) -- migrations 0023/0024 were applied there accidentally via the Windows .venv during this plan's session (WSL env-var isolation). Plan 39-06 should run 'alembic current' first before assuming it needs to apply them fresh.
 
 ## Deferred Items
 
@@ -276,8 +280,8 @@ Items acknowledged and deferred at v1.5 milestone close on 2026-07-12:
 
 ## Session Continuity
 
-Last session: 2026-07-28T15:14:53.274Z
-Stopped at: Completed 39-01-PLAN.md
+Last session: 2026-07-28T15:33:53.418Z
+Stopped at: Completed 39-02-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

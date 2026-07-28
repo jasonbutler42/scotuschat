@@ -130,3 +130,7 @@ None - no external service configuration required.
 ---
 *Phase: 38-full-name-vs-name-parts-rethink*
 *Completed: 2026-07-28*
+
+## Self-Check: PASSED
+
+All 6 created/modified files found on disk; all 3 task/summary commit hashes (`b4c20657`, `106c2c6f`, `7d8ac543`) found in git log.

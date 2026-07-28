@@ -5,8 +5,16 @@ Assembles the complete speaker data set for a given argument in five async
 queries, avoiding N+1 loops.  Returns a plain list[dict] — the router's
 response_model=list[SpeakerPopoverEntry] validates and serializes the output.
 
-CRITICAL: appointing_president_party is intentionally never included in the
-assembled dict — admin-only field, apolitical framing constraint (T-14-02).
+appointing_president_party IS included in the assembled dict, per tenure.
+Phase 14 (T-14-02) originally kept this admin-only under the apolitical
+framing constraint; Phase 39 (39-CONTEXT.md D-11/D-12) reverses that: the
+value describes the *appointing president's* party — factual historical
+record about a president, not the Justice — and is emitted identically for
+every tenure entry, with no aggregation and no differential framing. The
+Step 5 assembly dict remains an explicit, hand-written allow-list of named
+keys (never an ORM-row spread or a schema-validate-from-object shortcut) so
+this widening does not also leak an adjacent admin-only Person column
+(T-39-13).
 """
 
 import datetime
@@ -176,6 +184,12 @@ async def get_argument_speakers(
                 "end_date": str(t.end_date) if t.end_date else None,
                 # Phase 39 (D-01): raw canonical value, carried end to end.
                 "reason_left": t.reason_left,
+                # Phase 39 (D-13, promote): the per-tenure appointing
+                # president, replacing the retired top-level Step 5 field.
+                "appointed_by": t.appointed_by,
+                # Phase 39 (D-11/D-12, reverses T-14-02): the appointing
+                # president's party, serialised identically for every entry.
+                "appointing_president_party": t.appointing_president_party,
             }
         )
 
@@ -212,10 +226,13 @@ async def get_argument_speakers(
                 "full_name": person.full_name,
                 "role_name": role_name,
                 "photo_url": person.photo_url,
-                # Phase 22 — migration 0013: appointing_president removed from Person (PEDIT-10)
-                # Phase 27 will wire this from court_tenures.appointed_by
-                "appointing_president": None,
-                # appointing_president_party intentionally excluded (T-14-02)
+                # Phase 39 (D-13, promote): the top-level appointing-president
+                # field retired from here since Phase 22 (hardcoded null) is
+                # fully gone — the data now lives per-tenure as
+                # str_tenures_by_person[...]["appointed_by"] above.
+                "birthdate": str(person.birthdate) if person.birthdate else None,
+                "death_date": str(person.death_date) if person.death_date else None,
+                "bio_text": person.bio_text,
                 "tenure": str_tenures_by_person[person.id],
                 "side": side.value if side is not None else None,
             }

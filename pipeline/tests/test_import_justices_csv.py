@@ -18,6 +18,7 @@ set (via conftest.py's async_session fixture -> test_db_url -> pytest.skip).
 import argparse
 import csv
 from contextlib import asynccontextmanager
+from datetime import date
 from pathlib import Path
 from unittest.mock import patch
 
@@ -663,3 +664,436 @@ async def test_new_person_never_gets_role_id_or_speaker_alias(isolated_session, 
         select(SpeakerAlias).where(SpeakerAlias.person_id == person.id)
     )
     assert alias_result.scalars().all() == []
+
+
+# ===========================================================================
+# Phase 39 Plan 02: birthdate / death_date / reason_left backfill contract
+# ===========================================================================
+
+
+@pytest.mark.asyncio
+async def test_new_person_and_tenure_gets_birthdate_death_date_and_reason_left(
+    isolated_session, tmp_path
+):
+    """
+    A brand-new person + new tenure from a CSV row with Birthdate, Death
+    Date and Reason Left=Died gets Person.birthdate, Person.death_date set
+    from the CSV and CourtTenure.reason_left == 'died' (D-04, D-05).
+    """
+    csv_path = _write_justices_csv(
+        tmp_path,
+        chief_rows=[],
+        associate_rows=[
+            [
+                "Testcase",
+                "D.",
+                "Died",
+                "",
+                "Fictional President",
+                "Republican",
+                "1970-01-01",
+                "1990-01-01",
+                "Died",
+                "1920-01-01",
+                "1990-01-01",
+            ],
+        ],
+    )
+    args = argparse.Namespace(csv=str(csv_path))
+
+    with patch(
+        "pipeline.commands.import_justices_csv.get_session",
+        new=_make_session_cm(isolated_session),
+    ):
+        await run_import_justices_csv(args)
+
+    result = await isolated_session.execute(
+        select(Person).where(Person.full_name == "Testcase D. Died")
+    )
+    person = result.scalar_one()
+    assert person.birthdate.isoformat() == "1920-01-01"
+    assert person.death_date.isoformat() == "1990-01-01"
+
+    tenure_result = await isolated_session.execute(
+        select(CourtTenure).where(CourtTenure.person_id == person.id)
+    )
+    tenure = tenure_result.scalar_one()
+    assert tenure.reason_left == "died"
+
+
+@pytest.mark.asyncio
+async def test_backfill_never_overwrites_operator_birthdate_or_death_date(
+    isolated_session, tmp_path
+):
+    """
+    D-06 regression guard: a pre-existing Person with an operator-set
+    birthdate AND an operator-set death_date that differ from the CSV
+    retains BOTH operator values, unchanged, after import.
+    """
+    existing = Person(
+        full_name="Testcase O. Preserved",
+        is_justice=False,
+        birthdate=date(1900, 5, 5),
+        death_date=date(1985, 5, 5),
+    )
+    isolated_session.add(existing)
+    await isolated_session.flush()
+    existing_id = existing.id
+
+    csv_path = _write_justices_csv(
+        tmp_path,
+        chief_rows=[],
+        associate_rows=[
+            [
+                "Testcase",
+                "O.",
+                "Preserved",
+                "",
+                "Fictional President",
+                "Republican",
+                "1970-01-01",
+                "1990-01-01",
+                "Died",
+                "1920-01-01",  # differs from the operator-set birthdate above
+                "1990-01-01",  # differs from the operator-set death_date above
+            ],
+        ],
+    )
+    args = argparse.Namespace(csv=str(csv_path))
+
+    with patch(
+        "pipeline.commands.import_justices_csv.get_session",
+        new=_make_session_cm(isolated_session),
+    ):
+        await run_import_justices_csv(args)
+
+    result = await isolated_session.execute(
+        select(Person).where(Person.id == existing_id)
+    )
+    person = result.scalar_one()
+    assert person.birthdate == date(1900, 5, 5)
+    assert person.death_date == date(1985, 5, 5)
+
+
+@pytest.mark.asyncio
+async def test_backfill_fills_blank_birthdate_and_death_date(
+    isolated_session, tmp_path
+):
+    """
+    A pre-existing Person with birthdate=None, death_date=None gets both
+    filled from the CSV after import.
+    """
+    existing = Person(full_name="Testcase B. Blank", is_justice=False)
+    isolated_session.add(existing)
+    await isolated_session.flush()
+    existing_id = existing.id
+
+    csv_path = _write_justices_csv(
+        tmp_path,
+        chief_rows=[],
+        associate_rows=[
+            [
+                "Testcase",
+                "B.",
+                "Blank",
+                "",
+                "Fictional President",
+                "Republican",
+                "1970-01-01",
+                "1990-01-01",
+                "Died",
+                "1920-01-01",
+                "1990-01-01",
+            ],
+        ],
+    )
+    args = argparse.Namespace(csv=str(csv_path))
+
+    with patch(
+        "pipeline.commands.import_justices_csv.get_session",
+        new=_make_session_cm(isolated_session),
+    ):
+        await run_import_justices_csv(args)
+
+    result = await isolated_session.execute(
+        select(Person).where(Person.id == existing_id)
+    )
+    person = result.scalar_one()
+    assert person.birthdate.isoformat() == "1920-01-01"
+    assert person.death_date.isoformat() == "1990-01-01"
+
+
+@pytest.mark.asyncio
+async def test_backfill_fills_blank_tenure_reason_left(isolated_session, tmp_path):
+    """
+    A pre-existing CourtTenure matching (person_id, office, start_date) with
+    reason_left=None gets filled from the CSV after import.
+    """
+    existing_person = Person(full_name="Testcase T. Blankreason", is_justice=True)
+    isolated_session.add(existing_person)
+    await isolated_session.flush()
+
+    existing_tenure = CourtTenure(
+        person_id=existing_person.id,
+        office="associate",
+        start_date=date(1970, 1, 1),
+        end_date=date(1990, 1, 1),
+        reason_left=None,
+    )
+    isolated_session.add(existing_tenure)
+    await isolated_session.flush()
+    tenure_id = existing_tenure.id
+
+    csv_path = _write_justices_csv(
+        tmp_path,
+        chief_rows=[],
+        associate_rows=[
+            [
+                "Testcase",
+                "T.",
+                "Blankreason",
+                "",
+                "Fictional President",
+                "Republican",
+                "1970-01-01",
+                "1990-01-01",
+                "Died",
+                "1920-01-01",
+                "1990-01-01",
+            ],
+        ],
+    )
+    args = argparse.Namespace(csv=str(csv_path))
+
+    with patch(
+        "pipeline.commands.import_justices_csv.get_session",
+        new=_make_session_cm(isolated_session),
+    ):
+        await run_import_justices_csv(args)
+
+    result = await isolated_session.execute(
+        select(CourtTenure).where(CourtTenure.id == tenure_id)
+    )
+    tenure = result.scalar_one()
+    assert tenure.reason_left == "died"
+
+
+@pytest.mark.asyncio
+async def test_backfill_never_overwrites_operator_reason_left(
+    isolated_session, tmp_path
+):
+    """
+    D-06 regression guard: a pre-existing CourtTenure with an operator-set
+    reason_left='retired' keeps that exact value after import, even though
+    the matching CSV row's Reason Left cell says Died.
+    """
+    existing_person = Person(full_name="Testcase T. Operatorreason", is_justice=True)
+    isolated_session.add(existing_person)
+    await isolated_session.flush()
+
+    existing_tenure = CourtTenure(
+        person_id=existing_person.id,
+        office="associate",
+        start_date=date(1970, 1, 1),
+        end_date=date(1990, 1, 1),
+        reason_left="retired",
+    )
+    isolated_session.add(existing_tenure)
+    await isolated_session.flush()
+    tenure_id = existing_tenure.id
+
+    csv_path = _write_justices_csv(
+        tmp_path,
+        chief_rows=[],
+        associate_rows=[
+            [
+                "Testcase",
+                "T.",
+                "Operatorreason",
+                "",
+                "Fictional President",
+                "Republican",
+                "1970-01-01",
+                "1990-01-01",
+                "Died",  # differs from the operator-set 'retired' above
+                "1920-01-01",
+                "1990-01-01",
+            ],
+        ],
+    )
+    args = argparse.Namespace(csv=str(csv_path))
+
+    with patch(
+        "pipeline.commands.import_justices_csv.get_session",
+        new=_make_session_cm(isolated_session),
+    ):
+        await run_import_justices_csv(args)
+
+    result = await isolated_session.execute(
+        select(CourtTenure).where(CourtTenure.id == tenure_id)
+    )
+    tenure = result.scalar_one()
+    assert tenure.reason_left == "retired"
+
+
+@pytest.mark.asyncio
+async def test_still_in_office_tenure_has_no_reason_left(isolated_session, tmp_path):
+    """
+    D-02: a CSV row with Reason Left=Still in Office creates a tenure with
+    reason_left is None — an open tenure never carries a reason.
+    """
+    csv_path = _write_justices_csv(
+        tmp_path,
+        chief_rows=[],
+        associate_rows=[
+            [
+                "Testcase",
+                "S.",
+                "Open",
+                "",
+                "Fictional President",
+                "Democratic",
+                "2020-01-01",
+                "",
+                "Still in Office",
+                "1970-01-01",
+                "",
+            ],
+        ],
+    )
+    args = argparse.Namespace(csv=str(csv_path))
+
+    with patch(
+        "pipeline.commands.import_justices_csv.get_session",
+        new=_make_session_cm(isolated_session),
+    ):
+        await run_import_justices_csv(args)
+
+    result = await isolated_session.execute(
+        select(Person).where(Person.full_name == "Testcase S. Open")
+    )
+    person = result.scalar_one()
+
+    tenure_result = await isolated_session.execute(
+        select(CourtTenure).where(CourtTenure.person_id == person.id)
+    )
+    tenure = tenure_result.scalar_one()
+    assert tenure.reason_left is None
+
+
+@pytest.mark.asyncio
+async def test_unrecognised_reason_left_is_null_and_reported(
+    isolated_session, tmp_path, capsys
+):
+    """
+    A CSV Reason Left value outside the recognised vocabulary (e.g.
+    'Impeached') stores reason_left=None on the created tenure AND the
+    run's captured stdout names the unrecognised value — an unrecognised
+    value must be surfaced, not only silently coerced.
+    """
+    csv_path = _write_justices_csv(
+        tmp_path,
+        chief_rows=[],
+        associate_rows=[
+            [
+                "Testcase",
+                "I.",
+                "Impeached",
+                "",
+                "Fictional President",
+                "Democratic",
+                "1900-01-01",
+                "1910-01-01",
+                "Impeached",
+                "1860-01-01",
+                "1915-01-01",
+            ],
+        ],
+    )
+    args = argparse.Namespace(csv=str(csv_path))
+
+    with patch(
+        "pipeline.commands.import_justices_csv.get_session",
+        new=_make_session_cm(isolated_session),
+    ):
+        await run_import_justices_csv(args)
+
+    captured = capsys.readouterr()
+    assert "Impeached" in captured.out
+
+    result = await isolated_session.execute(
+        select(Person).where(Person.full_name == "Testcase I. Impeached")
+    )
+    person = result.scalar_one()
+
+    tenure_result = await isolated_session.execute(
+        select(CourtTenure).where(CourtTenure.person_id == person.id)
+    )
+    tenure = tenure_result.scalar_one()
+    assert tenure.reason_left is None
+
+
+@pytest.mark.asyncio
+async def test_second_run_creates_no_duplicates_and_changes_no_field_values(
+    isolated_session, tmp_path
+):
+    """
+    D-07: two consecutive runs over the same CSV create no duplicate people
+    or tenures, and the second run changes no field values from what the
+    first run wrote.
+    """
+    csv_path = _write_justices_csv(
+        tmp_path,
+        chief_rows=[],
+        associate_rows=[
+            [
+                "Testcase",
+                "I.",
+                "Dempotent",
+                "",
+                "Fictional President",
+                "Republican",
+                "1970-01-01",
+                "1990-01-01",
+                "Died",
+                "1920-01-01",
+                "1990-01-01",
+            ],
+        ],
+    )
+    args = argparse.Namespace(csv=str(csv_path))
+    session_cm = _make_session_cm(isolated_session)
+
+    with patch("pipeline.commands.import_justices_csv.get_session", new=session_cm):
+        await run_import_justices_csv(args)
+
+    result = await isolated_session.execute(
+        select(Person).where(Person.full_name == "Testcase I. Dempotent")
+    )
+    person_after_first = result.scalar_one()
+    first_birthdate = person_after_first.birthdate
+    first_death_date = person_after_first.death_date
+
+    tenure_result = await isolated_session.execute(
+        select(CourtTenure).where(CourtTenure.person_id == person_after_first.id)
+    )
+    tenure_after_first = tenure_result.scalar_one()
+    first_reason_left = tenure_after_first.reason_left
+
+    with patch("pipeline.commands.import_justices_csv.get_session", new=session_cm):
+        await run_import_justices_csv(args)
+
+    people_result = await isolated_session.execute(
+        select(Person).where(Person.full_name == "Testcase I. Dempotent")
+    )
+    people = people_result.scalars().all()
+    assert len(people) == 1, "Second run must not create a duplicate Person"
+    assert people[0].birthdate == first_birthdate
+    assert people[0].death_date == first_death_date
+
+    tenures_result = await isolated_session.execute(
+        select(CourtTenure).where(CourtTenure.person_id == people[0].id)
+    )
+    tenures = tenures_result.scalars().all()
+    assert len(tenures) == 1, "Second run must not create a duplicate CourtTenure"
+    assert tenures[0].reason_left == first_reason_left

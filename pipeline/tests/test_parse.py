@@ -26,7 +26,8 @@ def test_parse_docket_fill_uses_pair_precheck_and_named_race_classification():
     source = inspect.getsource(_run_parse_inner)
     assert "find_argument_by_pair(" in source
     assert "exclude_argument_id=source_run.argument_id" in source
-    assert "question_number = argument_row.question_number" in source
+    assert "argument_row.source_docket is None" in source
+    assert "argument_row.question_number," in source
     assert "is_argument_pair_violation(exc)" in source
     assert "await session.rollback()" in source
 
@@ -226,6 +227,96 @@ async def test_run_id_strategy(async_session, monkeypatch):
         os.unlink(tmp_path)
     except OSError:
         pass
+
+
+@pytest.mark.asyncio
+async def test_parse_preserves_operator_docket_when_extracted_pair_conflicts(
+    async_session, monkeypatch
+):
+    """A no-op extracted docket fill must not enter duplicate recovery."""
+    import argparse
+    import datetime
+    import os
+    import tempfile
+    from contextlib import asynccontextmanager
+
+    from api.models.models import (
+        Argument,
+        Case,
+        CaseArgument,
+        PipelineRun,
+        PipelineRunStatus,
+    )
+    from pipeline.commands.parse import run_parse
+
+    case = Case(
+        docket_number="99-OPERATOR",
+        docket_number_norm="99-OPERATOR",
+        case_name="Operator v. Extractor",
+        term_year=2024,
+        slug="operator-v-extractor",
+    )
+    async_session.add(case)
+    await async_session.flush()
+
+    target = Argument(
+        argued_date=datetime.date(2024, 1, 1),
+        source_docket="OPERATOR-DOCKET",
+        question_number=1,
+    )
+    conflict = Argument(
+        argued_date=datetime.date(2024, 1, 2),
+        source_docket="EXTRACTED-DOCKET",
+        question_number=1,
+    )
+    async_session.add_all([target, conflict])
+    await async_session.flush()
+    async_session.add(CaseArgument(case_id=case.id, argument_id=target.id, is_lead=True))
+
+    with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as pdf:
+        pdf_path = pdf.name
+
+    source_run = PipelineRun(
+        argument_id=target.id,
+        step="parse",
+        status=PipelineRunStatus.PENDING,
+        pdf_path=pdf_path,
+    )
+    async_session.add(source_run)
+    await async_session.flush()
+
+    @asynccontextmanager
+    async def mock_get_session():
+        yield async_session
+
+    monkeypatch.setattr("pipeline.commands.parse.get_session", mock_get_session)
+    monkeypatch.setattr(
+        "pipeline.commands.parse.extract_cover_metadata",
+        lambda _path: {"primary_docket": "EXTRACTED-DOCKET"},
+    )
+    monkeypatch.setattr(
+        "pipeline.commands.parse.extract_toc_data",
+        lambda _path: {"sides": {}, "titles": {}},
+    )
+    monkeypatch.setattr(
+        "pipeline.commands.parse.extract_pages",
+        lambda _path: ["CHIEF JUSTICE ROBERTS: We will hear argument now."],
+    )
+
+    async def mock_parse_with_llm(_pages_text):
+        raise RuntimeError("LLM not available in unit tests")
+
+    monkeypatch.setattr("pipeline.commands.parse.parse_with_llm", mock_parse_with_llm)
+
+    try:
+        await run_parse(argparse.Namespace(run_id=source_run.id, dry_run=False, job_id=None))
+        await async_session.refresh(target)
+        assert target.source_docket == "OPERATOR-DOCKET"
+    finally:
+        try:
+            os.unlink(pdf_path)
+        except OSError:
+            pass
 
 
 # ---------------------------------------------------------------------------

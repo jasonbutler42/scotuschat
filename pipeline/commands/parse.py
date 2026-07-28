@@ -373,35 +373,38 @@ async def _run_parse_inner(args) -> None:
         # Operator-entered values are never overwritten.
         if cover_meta.get("primary_docket") is not None:
             argument_row = await session.get(Argument, source_run.argument_id)
-            question_number = argument_row.question_number if argument_row else None
-            conflict_id = await find_argument_by_pair(
-                session,
-                cover_meta["primary_docket"],
-                question_number,
-                exclude_argument_id=source_run.argument_id,
-            )
-            if conflict_id is not None:
-                raise ValueError(
-                    "Parse metadata conflict: another argument already uses "
-                    "the extracted docket and stored question number."
+            if argument_row is not None and argument_row.source_docket is None:
+                conflict_id = await find_argument_by_pair(
+                    session,
+                    cover_meta["primary_docket"],
+                    argument_row.question_number,
+                    exclude_argument_id=source_run.argument_id,
                 )
-            try:
-                await session.execute(
-                    update(Argument)
-                    .where(Argument.id == source_run.argument_id, Argument.source_docket.is_(None))
-                    .values(source_docket=cover_meta["primary_docket"])
-                    .execution_options(synchronize_session=False)
-                )
-                await session.flush()
-            except IntegrityError as exc:
-                await session.rollback()
-                if is_argument_pair_violation(exc):
+                if conflict_id is not None:
                     raise ValueError(
                         "Parse metadata conflict: another argument already uses "
                         "the extracted docket and stored question number."
-                    ) from None
-                raise
-            print(f"source_docket written from cover: {cover_meta['primary_docket']!r}")
+                    )
+                try:
+                    await session.execute(
+                        update(Argument)
+                        .where(
+                            Argument.id == source_run.argument_id,
+                            Argument.source_docket.is_(None),
+                        )
+                        .values(source_docket=cover_meta["primary_docket"])
+                        .execution_options(synchronize_session=False)
+                    )
+                    await session.flush()
+                except IntegrityError as exc:
+                    await session.rollback()
+                    if is_argument_pair_violation(exc):
+                        raise ValueError(
+                            "Parse metadata conflict: another argument already uses "
+                            "the extracted docket and stored question number."
+                        ) from None
+                    raise
+                print(f"source_docket written from cover: {cover_meta['primary_docket']!r}")
 
         # -------------------------------------------------------------------
         # Phase 16 PARSE-02: Update argument_participants.side from TOC mapping

@@ -54,6 +54,7 @@ from starlette.responses import FileResponse, RedirectResponse, Response
 
 from api.core.config import settings
 from api.core.database import get_db
+from api.domain.docket_values import DocketValueError, normalize_docket_value
 from api.models.models import AdminJob, AdminJobStatus, AdminJobStep, PipelineRun
 from api.schemas.admin_jobs import (
     AdminJobResponse,
@@ -134,12 +135,37 @@ def _normalize_dockets(
     at index 0 — this keeps backward compatibility with callers that only send
     primary_docket (legacy single-docket form submissions).
 
-    Any docket value whose stripped form begins with '-' is rejected with a 422
-    (T-24-08: CLI-arg-injection via unsanitized docket argv) — this closes the
-    argv-injection vector at the API boundary, mirroring the _validate_pdf_url
-    precedent, so no flag-like token can ever reach _dockets_to_ingest_args or the
-    spawned ingest subprocess argv. Second layer of defense is the pipeline
-    __main__ startup guard (Phase 24 Plan 05, Task 2).
+    Two independent 422 guards run here, each closing a separate threat class:
+
+    1. T-24-08 (CLI-arg-injection): any docket value whose stripped form begins
+       with '-' is rejected before it can reach _dockets_to_ingest_args or the
+       spawned ingest subprocess argv, mirroring the _validate_pdf_url precedent.
+       Second layer of defense is the pipeline __main__ startup guard (Phase 24
+       Plan 05, Task 2).
+    2. T-38-20 (path-hazard/length, gap closure G-38-6): every stripped docket
+       value is also passed through the canonical
+       api.domain.docket_values.normalize_docket_value allow-list/length-cap
+       rule, so no filesystem-path separator, '..' traversal segment,
+       POSIX-absolute or Windows-drive-letter prefix, quote, whitespace, NUL
+       character, or over-length value can ever reach
+       pipeline/commands/ingest.py's filename construction
+       (f"{primary_docket}-q{n}.pdf"). This is the API-boundary layer of a
+       two-layer defense whose second layer is the pipeline-side guard in
+       pipeline/commands/ingest.py — the same shape as the existing
+       _validate_pdf_url (route) plus _validate_url (pipeline) SSRF pair.
+
+    The T-24-08 leading-hyphen check independently subsumes a slice of the same
+    input space the domain rule also rejects (a leading '-' is not alphanumeric),
+    but it keeps its own identity, its own message, and runs first — it is not
+    removed or refactored, only supplemented.
+
+    Scope note: ArgumentUpdate.docket_number and MetadataUpdate.source_docket
+    (post-ingest metadata edit paths) are intentionally NOT tightened by this
+    rule. Neither ever constructs a filesystem path (confirmed via the
+    docket-filename-injection debug session's call-site grep:
+    pipeline/commands/ingest.py is the sole docket-derived path construction
+    site) — tightening them would start rejecting docket values already
+    persisted by earlier phases and by the historical corpus importer.
     """
     seen: set[str] = set()
     normalized: list[str] = []
@@ -154,8 +180,15 @@ def _normalize_dockets(
                 status_code=422,
                 detail=f"Docket value {stripped!r} cannot start with '-'.",
             )
-        seen.add(stripped)
-        normalized.append(stripped)
+        try:
+            value = normalize_docket_value(stripped)
+        except DocketValueError as exc:
+            # T-38-20/G-38-6: reject path-hazard and over-length docket values
+            # before create_job creates an AdminJob row or spawns the ingest
+            # subprocess. Message text is owned by the domain module.
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        seen.add(value)
+        normalized.append(value)
 
     if primary_docket:
         _add(primary_docket)

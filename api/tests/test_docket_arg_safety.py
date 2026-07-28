@@ -24,6 +24,7 @@ import pathlib
 import pytest
 from fastapi import HTTPException
 
+from api.domain.docket_values import DOCKET_VALUE_MAX_LENGTH
 from api.routers.admin import _normalize_dockets
 
 
@@ -107,4 +108,72 @@ def test_normalize_dockets_source_contains_rejection_guard():
     assert "status_code=422" in content, (
         "Expected a status_code=422 raise in api/routers/admin.py near the "
         "docket rejection guard"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Gap closure G-38-6/T-38-20: path-hazard and over-length docket values are
+# rejected at the _normalize_dockets boundary, before create_job creates an
+# AdminJob row or spawns the ingest subprocess.
+# ---------------------------------------------------------------------------
+
+
+def test_normalize_dockets_rejects_double_quote():
+    """A docket value containing a double quote raises HTTPException 422."""
+    with pytest.raises(HTTPException) as exc_info:
+        _normalize_dockets(None, ['22-915"evil'])
+    assert exc_info.value.status_code == 422
+
+
+def test_normalize_dockets_rejects_posix_absolute_path():
+    """A POSIX absolute path docket value raises HTTPException 422."""
+    with pytest.raises(HTTPException) as exc_info:
+        _normalize_dockets(None, ["/etc/cron.d/evil"])
+    assert exc_info.value.status_code == 422
+
+
+def test_normalize_dockets_rejects_windows_drive_path():
+    """A Windows drive-letter path docket value raises HTTPException 422."""
+    with pytest.raises(HTTPException) as exc_info:
+        _normalize_dockets(None, ["C:\\Windows\\System32\\evil"])
+    assert exc_info.value.status_code == 422
+
+
+def test_normalize_dockets_rejects_traversal_segment():
+    """A '..' path-traversal docket value raises HTTPException 422."""
+    with pytest.raises(HTTPException) as exc_info:
+        _normalize_dockets(None, ["../../../tmp/evil"])
+    assert exc_info.value.status_code == 422
+
+
+def test_normalize_dockets_rejects_over_length_value():
+    """A docket value over DOCKET_VALUE_MAX_LENGTH raises HTTPException 422."""
+    with pytest.raises(HTTPException) as exc_info:
+        _normalize_dockets(None, ["a" * (DOCKET_VALUE_MAX_LENGTH + 1)])
+    assert exc_info.value.status_code == 422
+
+
+def test_normalize_dockets_rejects_uat_reported_string():
+    """The verbatim UAT Test 6 reported string raises HTTPException 422."""
+    with pytest.raises(HTTPException) as exc_info:
+        _normalize_dockets(
+            None,
+            ['I wonder if there is a limit to how long the docket "numbers" can be'],
+        )
+    assert exc_info.value.status_code == 422
+
+
+def test_normalize_dockets_well_formed_multi_docket_unaffected():
+    """Well-formed multi-docket input still returns both values in order."""
+    result = _normalize_dockets("22-915", ["22-916"])
+    assert result == ["22-915", "22-916"]
+
+
+def test_normalize_dockets_source_references_normalize_docket_value():
+    """Static-analysis proof that the domain rule is wired at this boundary."""
+    admin_py = _project_root() / "api" / "routers" / "admin.py"
+    content = admin_py.read_text(encoding="utf-8")
+    assert "normalize_docket_value" in content, (
+        "Expected _normalize_dockets to call normalize_docket_value — the "
+        "boundary must never be silently unwired from the shared rule"
     )

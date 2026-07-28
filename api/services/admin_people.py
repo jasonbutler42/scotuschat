@@ -170,6 +170,7 @@ async def _replace_tenures(
                 end_date=end_date,
                 appointed_by=t.appointed_by or None,
                 appointing_president_party=t.appointing_president_party or None,
+                reason_left=t.reason_left or None,
             )
         )
 
@@ -408,6 +409,7 @@ async def get_person_detail(db: AsyncSession, person_id: int) -> dict | None:
                 "end_date": t.end_date.isoformat() if t.end_date else None,
                 "appointed_by": t.appointed_by,
                 "appointing_president_party": t.appointing_president_party,
+                "reason_left": t.reason_left,
             }
             for t in tenures
         ],
@@ -433,6 +435,9 @@ async def get_person_detail(db: AsyncSession, person_id: int) -> dict | None:
         # validates/coerces it at the response boundary.
         "name_needs_review": person.name_needs_review,
         "name_extraction_metadata": person.name_extraction_metadata,
+        # Phase 39 addition — migration 0023 (PUB-04): must be explicit, same
+        # Pitfall 2 discipline as birthdate above.
+        "death_date": person.death_date.isoformat() if person.death_date else None,
     }
 
 
@@ -547,6 +552,19 @@ async def update_person(
     if "birthdate" in fields_set:
         person.birthdate = (
             datetime.date.fromisoformat(body.birthdate) if body.birthdate else None
+        )
+
+    # Phase 39 addition — migration 0023 (PUB-04): identical model_fields_set
+    # guard as birthdate above, NOT the older `is not None` guard style used
+    # below for is_justice. death_date is submitted only by the save-form
+    # (Identity+Person Type); the separate photo/bio form never includes it
+    # in its request body, so an unconditional write here would silently
+    # wipe a stored death date on every photo/bio save (39-RESEARCH.md
+    # Pitfall 5). ValueError from a malformed date string propagates to the
+    # router → 422 (Pitfall 6), before any DB write completes.
+    if "death_date" in fields_set:
+        person.death_date = (
+            datetime.date.fromisoformat(body.death_date) if body.death_date else None
         )
 
     # Phase 18: write is_justice only when body supplies a non-None value (D-08)

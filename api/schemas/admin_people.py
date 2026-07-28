@@ -49,6 +49,13 @@ class TenureWrite(BaseModel):
     this field only, per Phase 27 UAT, 2026-07-09), but at the schema level
     it remains this same Optional[str] free-text-compatible column — the
     API accepts any string, no type/enum constraint is added here.
+    Phase 39 addition: reason_left is a strict Literal over the same three
+    canonical values as api.models.models.VALID_REASONS_LEFT (D-01) — a
+    hand-crafted tenures JSON carrying an out-of-vocabulary reason is a 422
+    before it reaches _replace_tenures or the database CHECK constraint
+    (ck_court_tenures_reason_left). Unlike office, reason_left is optional
+    on the write side even for an otherwise-valid row — most tenures have
+    no recorded reason at all (D-02: only ended tenures ever have one).
     """
 
     office: Literal["chief", "associate"]
@@ -56,6 +63,7 @@ class TenureWrite(BaseModel):
     end_date: Optional[str] = None
     appointed_by: Optional[str] = None
     appointing_president_party: Optional[str] = None
+    reason_left: Optional[Literal["retired", "died", "promoted"]] = None
 
 
 class TenureRow(BaseModel):
@@ -67,6 +75,9 @@ class TenureRow(BaseModel):
     correction (D-11) without the response schema itself rejecting it. This
     schema must NEVER be used to accept a write — see TenureWrite above.
     Dates are ISO 8601 strings ("YYYY-MM-DD") or None.
+    Phase 39 addition: reason_left stays a tolerant Optional[str] here (not
+    the TenureWrite Literal) so a pre-existing non-canonical stored value
+    remains visible for operator correction, mirroring the office split.
     """
 
     office: Optional[str] = None
@@ -74,6 +85,7 @@ class TenureRow(BaseModel):
     end_date: Optional[str] = None
     appointed_by: Optional[str] = None
     appointing_president_party: Optional[str] = None
+    reason_left: Optional[str] = None
 
 
 class PersonListItem(BaseModel):
@@ -175,6 +187,9 @@ class PersonDetail(BaseModel):
     # Phase 38 additions — migration 0022 (D-12, D-14, D-15, D-18)
     name_needs_review: bool = False
     name_extraction_metadata: Optional[NameExtractionMetadata] = None
+    # Phase 39 addition — migration 0023 (PUB-04); mirrors birthdate's exact
+    # ISO-date-string shape.
+    death_date: Optional[str] = None
 
     model_config = {"from_attributes": True}
 
@@ -208,6 +223,15 @@ class PersonUpdate(BaseModel):
     run — `model_fields_set` (not `is not None`) is what makes this
     distinction possible, mirroring the existing bio_text/photo_url/
     birthdate CR-01 contract in this same schema.
+
+    Phase 39 addition: death_date (ISO date string, migration 0023) follows
+    the identical birthdate contract — omission (not `None`) is what means
+    "leave unchanged." The service distinguishes the two via
+    `model_fields_set`, not a null check, because this field is submitted
+    only by the save-form (Identity+Person Type); the separate photo/bio
+    form's PATCH body never includes it, and writing it unconditionally
+    would silently clear a stored death date on every photo/bio save
+    (39-RESEARCH.md Pitfall 5).
     """
 
     bio_text: Optional[str] = None
@@ -223,6 +247,9 @@ class PersonUpdate(BaseModel):
     is_justice: Optional[bool] = None
     # Phase 27 addition — migration 0016 (T-09-01 allow-list discipline)
     birthdate: Optional[str] = None
+    # Phase 39 addition — migration 0023 (T-09-01 allow-list discipline);
+    # omission means leave unchanged (model_fields_set-guarded in update_person)
+    death_date: Optional[str] = None
 
     model_config = ConfigDict(extra="forbid")
 

@@ -298,6 +298,44 @@ def test_person_update_rejects_full_name_as_extra_field() -> None:
         PersonUpdate(full_name="Should Be Rejected")
 
 
+# ---------------------------------------------------------------------------
+# PersonDetail / PersonUpdate death_date (Phase 39, PUB-04)
+# ---------------------------------------------------------------------------
+
+
+def test_person_detail_and_update_expose_optional_death_date() -> None:
+    """PersonDetail and PersonUpdate both expose an optional death_date
+    string field defaulting to None, mirroring birthdate exactly."""
+    from api.schemas.admin_people import PersonDetail, PersonUpdate
+
+    detail = PersonDetail(id=1, full_name="William H. Rehnquist")
+    assert detail.death_date is None
+
+    detail_with_death_date = PersonDetail(
+        id=1, full_name="William H. Rehnquist", death_date="2005-09-03"
+    )
+    assert detail_with_death_date.death_date == "2005-09-03"
+
+    update = PersonUpdate()
+    assert update.death_date is None
+
+    update_with_death_date = PersonUpdate(death_date="2005-09-03")
+    assert update_with_death_date.death_date == "2005-09-03"
+
+
+def test_person_update_photo_bio_payload_never_touches_death_date() -> None:
+    """Regression guard for the silent-wipe failure mode (39-RESEARCH.md
+    Pitfall 5): a photo/bio-form payload that never mentions death_date
+    must not carry it in model_fields_set, so update_person's
+    `if "death_date" in fields_set:` guard leaves a stored death date
+    untouched on that save."""
+    from api.schemas.admin_people import PersonUpdate
+
+    photo_bio_payload = PersonUpdate(bio_text="x")
+    assert "death_date" not in photo_bio_payload.model_fields_set
+    assert "death_date" not in PersonUpdate(photo_url="https://example.com/p.jpg").model_fields_set
+
+
 def test_person_update_rejects_arbitrary_extra_field() -> None:
     """Any undeclared field (not just full_name) is rejected by the same
     extra="forbid" mass-assignment guard."""
@@ -421,6 +459,60 @@ def test_tenure_row_tolerates_invalid_legacy_office() -> None:
 
     row = TenureRow(office="Associate Justice Seat 3", start_date="2006-01-31")
     assert row.office == "Associate Justice Seat 3"
+
+
+# ---------------------------------------------------------------------------
+# TenureWrite / TenureRow reason_left (Phase 39, D-01, D-02, D-09)
+# ---------------------------------------------------------------------------
+
+
+def test_tenure_write_accepts_canonical_reason_left_and_defaults_to_none() -> None:
+    """TenureWrite.reason_left accepts each canonical value and defaults to
+    None when omitted (D-02: most tenures have no recorded reason)."""
+    from api.schemas.admin_people import TenureWrite
+
+    row = TenureWrite(office="associate", reason_left="died")
+    assert row.reason_left == "died"
+
+    row_omitted = TenureWrite(office="associate")
+    assert row_omitted.reason_left is None
+
+
+def test_tenure_write_rejects_non_canonical_reason_left() -> None:
+    """TenureWrite.reason_left rejects any value outside the three canonical
+    values, including wrong case and blank string (D-01)."""
+    import pydantic
+
+    from api.schemas.admin_people import TenureWrite
+
+    for invalid_reason in ("resigned", "", "Retired", "DIED"):
+        with pytest.raises(pydantic.ValidationError):
+            TenureWrite(office="associate", reason_left=invalid_reason)
+
+
+def test_tenure_write_reason_left_matches_valid_reasons_left_set() -> None:
+    """The set of Literal values on TenureWrite.reason_left must never drift
+    from api.models.models.VALID_REASONS_LEFT — assert programmatically."""
+    from typing import get_args
+
+    from api.models.models import VALID_REASONS_LEFT
+    from api.schemas.admin_people import TenureWrite
+
+    reason_left_field = TenureWrite.model_fields["reason_left"]
+    # annotation is Optional[Literal[...]] -> unwrap to the Literal args
+    literal_type = next(
+        arg for arg in get_args(reason_left_field.annotation) if arg is not type(None)
+    )
+    assert set(get_args(literal_type)) == set(VALID_REASONS_LEFT)
+
+
+def test_tenure_row_tolerates_invalid_legacy_reason_left() -> None:
+    """TenureRow (read response) stays tolerant for reason_left so legacy
+    data remains displayable (mirrors office's D-11 tolerance)."""
+    from api.schemas.admin_people import TenureRow
+
+    row = TenureRow(reason_left="resigned")
+    assert row.reason_left == "resigned"
 
 
 # ---------------------------------------------------------------------------

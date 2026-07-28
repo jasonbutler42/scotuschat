@@ -183,3 +183,12 @@ None - no external service configuration required.
 ---
 *Phase: 39-bench-popover-additional-context-data*
 *Completed: 2026-07-28*
+
+## Self-Check: PASSED
+
+- `app/src/lib/components/SpeakerPopover.svelte` — FOUND
+- `app/src/routes/cases/[slug]/arguments/[id]/+page.svelte` — FOUND
+- `.planning/phases/39-bench-popover-additional-context-data/39-05-SUMMARY.md` — FOUND
+- Commit `3842ba57` — FOUND in `git log --oneline --all`
+- Commit `f8647b81` — FOUND in `git log --oneline --all`
+- Commit `44302f62` — FOUND in `git log --oneline --all`

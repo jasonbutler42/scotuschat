@@ -32,6 +32,33 @@ from api.domain.person_names import prepare_name_provenance, prepare_person_name
 from api.models.models import CourtTenure, OFFICE_ASSOCIATE, OFFICE_CHIEF, Person
 from pipeline.db import get_session
 
+# Phase 39 (D-01 through D-07): CSV "Reason Left" raw cell value -> canonical
+# court_tenures.reason_left value (or None for an open tenure / unrecognised
+# vocabulary). Verified per-value counts against the real
+# data/corpus/supreme_court_justices_sections.csv during planning (39-02-PLAN.md
+# <verified_csv_facts>, re-censused with this file's own _iter_csv_rows()
+# section/header logic, not a naive line-based scan):
+#
+#   Reason Left value            | chief | associate | total
+#   ------------------------------|-------|-----------|------
+#   Retired                      |     7 |        51 |    58
+#   Died                         |     9 |        42 |    51
+#   Still in Office              |     1 |         8 |     9
+#   Promoted to Chief Justice    |     0 |         3 |     3
+#   (blank)                      |     0 |         0 |     0
+#
+# 121 data rows total. There are zero blank Reason Left cells in the real
+# file today — the "" entry below is a defensive default, not a case the
+# current file exercises. "Still in Office" maps to None (D-02: an open
+# tenure never carries a reason), not to a stored value.
+_REASON_LEFT_CSV_MAP: dict[str, str | None] = {
+    "Died": "died",
+    "Retired": "retired",
+    "Promoted to Chief Justice": "promoted",
+    "Still in Office": None,
+    "": None,
+}
+
 # Phase 38 (D-14-D-18): every Person row this command creates or upgrades
 # gets a Person.name_extraction_metadata envelope stamped with this source
 # tag, matching the shape alembic/versions/0022_person_name_authority.py
@@ -187,6 +214,11 @@ async def run_import_justices_csv(args) -> None:
     people_upgraded = 0
     tenures_created = 0
     rows_skipped = 0
+    people_birthdates_backfilled = 0
+    people_death_dates_backfilled = 0
+    tenure_reasons_backfilled = 0
+    reasons_unmatched = 0
+    unmatched_reason_values: set[str] = set()
 
     async with get_session() as session:
         for office, row in _iter_csv_rows(csv_path):
@@ -208,6 +240,23 @@ async def run_import_justices_csv(args) -> None:
                 first or None, middle or None, last or None, suffix or None
             )
             extraction_metadata = _build_extraction_metadata(full_name)
+
+            # Phase 39 (D-04/D-05): read here, per-row, before the person
+            # branch runs — birthdate is consumed by both the upgrade and
+            # create branches below.
+            birthdate = _parse_optional_date(row.get("Birthdate", ""))
+            death_date = _parse_optional_date(row.get("Death Date", ""))
+            reason_left_raw = row.get("Reason Left", "").strip()
+            # Explicit membership check, not `.get()` — a recognised value
+            # that maps to None ("Still in Office", D-02) must stay
+            # distinguishable from a value nobody has ever seen. `.get()`
+            # would silently collapse both to None.
+            if reason_left_raw in _REASON_LEFT_CSV_MAP:
+                resolved_reason_left = _REASON_LEFT_CSV_MAP[reason_left_raw]
+            else:
+                resolved_reason_left = None
+                reasons_unmatched += 1
+                unmatched_reason_values.add(reason_left_raw)
 
             result = await session.execute(
                 select(Person).where(Person.full_name == full_name)
@@ -234,6 +283,15 @@ async def run_import_justices_csv(args) -> None:
                     person.last_name = prepared.last_name
                 if person.name_suffix is None and prepared.name_suffix is not None:
                     person.name_suffix = prepared.name_suffix
+                # Phase 39 (D-06): blank-only prefill for birthdate/death_date,
+                # same shape as the name-part prefills above — never overwrite
+                # a non-None operator-set value.
+                if person.birthdate is None and birthdate is not None:
+                    person.birthdate = birthdate
+                    people_birthdates_backfilled += 1
+                if person.death_date is None and death_date is not None:
+                    person.death_date = death_date
+                    people_death_dates_backfilled += 1
                 # Phase 38 (D-17): every rerun refreshes the extraction
                 # provenance envelope, regardless of whether any part was
                 # actually blank this time — the reference metadata always
@@ -251,6 +309,8 @@ async def run_import_justices_csv(args) -> None:
                     last_name=prepared.last_name,
                     name_suffix=prepared.name_suffix,
                     is_justice=True,
+                    birthdate=birthdate,
+                    death_date=death_date,
                     name_extraction_metadata=extraction_metadata,
                     # oyez_speaker_id intentionally left NULL — the corpus
                     # importer backfills it later (D-11).
@@ -281,13 +341,40 @@ async def run_import_justices_csv(args) -> None:
                     end_date=end_date,
                     appointed_by=appointed_by,
                     appointing_president_party=appointing_party,
+                    reason_left=resolved_reason_left,
                 )
                 session.add(tenure)
                 await session.flush()
                 tenures_created += 1
+            else:
+                # Phase 39 (D-06): the existing-tenure case previously
+                # silently no-op'd on every field. This is the one write it
+                # now performs, blank-only: fill reason_left only when the
+                # stored value is currently None and the resolved CSV value
+                # is not None. end_date/appointed_by/appointing_president_party
+                # are intentionally left untouched here — out of this
+                # phase's scope (Phase 29/27 behaviour for those fields is
+                # unchanged).
+                if (
+                    existing_tenure.reason_left is None
+                    and resolved_reason_left is not None
+                ):
+                    existing_tenure.reason_left = resolved_reason_left
+                    tenure_reasons_backfilled += 1
+
+    unmatched_summary = ""
+    if reasons_unmatched:
+        unmatched_summary = (
+            f"\n{reasons_unmatched} unrecognised Reason Left value(s) found "
+            f"(stored as NULL): {sorted(unmatched_reason_values)}"
+        )
 
     print(
         f"Done — {people_created} people created, {people_upgraded} people "
         f"upgraded to is_justice=True, {tenures_created} court_tenures "
-        f"created ({rows_skipped} rows skipped)."
+        f"created ({rows_skipped} rows skipped). Backfilled "
+        f"{people_birthdates_backfilled} birthdate(s), "
+        f"{people_death_dates_backfilled} death date(s), "
+        f"{tenure_reasons_backfilled} tenure reason(s)."
+        f"{unmatched_summary}"
     )

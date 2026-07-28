@@ -1,10 +1,18 @@
 ---
 phase: 38-full-name-vs-name-parts-rethink
-verified: 2026-07-27T17:40:23Z
+verified: 2026-07-27T22:15:00Z
 status: passed
-score: 4/4 must-haves verified
+score: 8/8 must-haves verified
 behavior_unverified: 0
 overrides_applied: 0
+re_verification:
+  previous_status: passed
+  previous_score: 4/4
+  gaps_closed:
+
+    - "G-38-6: authenticated-admin path-traversal / arbitrary-file-write primitive in docket-value handling, discovered during the original UAT pass on 38-01..38-06 and closed by Plans 38-07 through 38-10"
+  gaps_remaining: []
+  regressions: []
 human_verification:
 
   - test: "Open the standalone create form and the person edit form; type into First/Middle/Last/Suffix and confirm the read-only Full Name <output> updates live, shows 'Generated from name parts.', and cannot be typed into directly."
@@ -17,23 +25,26 @@ human_verification:
 
   - test: "Open an ambiguous legacy person record (one migration 0022 flagged name_needs_review=true) in the edit form; confirm each of First/Middle/Last/Suffix shows the stacked 'Extracted: {value} / {Band} confidence · Raw: {raw}' hint (or the disabled N/A state for a still-blank field) at both wide and narrow viewport widths, and that clicking the copy affordance copies only the interpreted value."
     expected: "Per-part provenance stack renders correctly and remains usable/readable at narrow widths per 38-FIGMA.md; copy button copies only the displayed value, never the raw/confidence text."
-    why_human: "Visual layout/wrapping at responsive widths and the interactive clipboard behavior require a browser; no browser tool is available in this execution environment (flagged by 38-05-SUMMARY.md and 38-06-SUMMARY.md's own human_judgment coverage entries)."
+    why_human: "Visual layout/wrapping at responsive widths and the interactive clipboard behavior require a browser; already exercised once in 38-UAT.md Test 3 (pass) but that is a one-time human session recorded in this phase's own artifacts, not a re-runnable automated check for future regressions."
 
-  - test: "On the People directory, click the 'Name review' pill/indicator; confirm it filters to only name_needs_review=true rows while preserving the active tab in the URL, and that the empty state (when no rows match) shows the exact locked copy 'No people need name review' / 'Ambiguous legacy names will appear here for review.'"
+  - test: "On the People directory, click the 'Name review' pill/indicator; confirm it filters to only name_needs_review=true rows while preserving the active tab in the URL, and that the empty state shows the exact locked copy."
     expected: "Filter applies correctly, tab/URL round-trips, and the empty state is distinct from the generic missing-field empty state."
-    why_human: "Selected-pill visual state, URL round-trip behavior in a real browser session, and empty-state layout require browser confirmation, consistent with prior phases' precedent for this same click-to-filter mechanism."
+    why_human: "Selected-pill visual state and URL round-trip behavior in a real browser session require browser confirmation; already exercised once in 38-UAT.md Test 4 (pass)."
 
-  - test: "Exercise DocketPillInput's approved provenance states (editable/read-only, single/multiple pills, mixed confidence within a group, long raw text wrapping, remove-in-edit-mode-only) against the Figma component (38-FIGMA.md node 3:140 / review sheet 3:2) at narrow and wide widths."
+  - test: "Exercise DocketPillInput's approved provenance states (editable/read-only, single/multiple pills, mixed confidence within a group, long raw text wrapping, remove-in-edit-mode-only) against the Figma component reference at narrow and wide widths."
     expected: "All approved visual states match the Figma reference; remove control only appears in editable mode; long raw text wraps without truncation or overflow."
-    why_human: "Visual/interactive state comparison against an external Figma design reference cannot be done via source-code inspection alone (flagged as human_judgment in 38-05-SUMMARY.md)."
+    why_human: "Visual/interactive state comparison against an external Figma design reference cannot be done via source-code inspection alone; already exercised once in 38-UAT.md Test 5 (pass)."
 ---
 
-# Phase 38: Rethink Full Name vs. name-part fields in the people editor Verification Report
+# Phase 38: Rethink Full Name vs. name-part fields in the people editor — Verification Report (Full Final State, 10/10 Plans)
 
-**Phase Goal:** Jason expected that filling in only the component name fields (first/last/middle/suffix) without Full Name would auto-backfill Full Name on save — instead, Full Name is currently required standalone. This phase resolves that: Full Name is no longer operator-editable at all and is derived entirely from the component fields.
-**Verified:** 2026-07-27T17:40:23Z
+**Phase Goal:** Jason expected that filling in only the component name fields (first/last/middle/suffix) without Full Name would auto-backfill Full Name on save — instead, Full Name was required standalone. Direction locked during discuss-phase: stop making Full Name operator-editable; derive it entirely from the component fields.
+
+**Verified:** 2026-07-27T22:15:00Z
 **Status:** human_needed
-**Re-verification:** No — initial verification
+**Re-verification:** Yes — supersedes the stale `38-VERIFICATION.md` written before gap G-38-6 was discovered. This report covers the full final state of all 10 plans (38-01 through 38-10), including the three-layer G-38-6 security gap closure and its consolidated regression gate.
+
+**Note on this being a re-verification:** The previous VERIFICATION.md (status: `passed`, 4/4) only covered plans 38-01–38-06. It predates the discovery of G-38-6 during UAT and is fully superseded by this report. All 4 original roadmap-success-criteria truths were re-checked here (not merely carried forward) plus 4 new truths added for the gap-closure plans (38-07–38-10).
 
 ## Goal Achievement
 
@@ -41,93 +52,111 @@ human_verification:
 
 | # | Truth | Status | Evidence |
 |---|-------|--------|----------|
-| 1 | Full Name field behavior is resolved per a locked design decision (auto-derived, not independently editable) | ✓ VERIFIED | `38-CONTEXT.md` D-01/D-02 lock "structured name parts are authoritative; Full Name is generated and not independently operator-editable." Backend (`api/schemas/admin_people.py` `PersonUpdate`/`PersonCreateRequest`, `api/schemas/admin_jobs.py` `PersonCreate`) all drop `full_name` as a field and set `ConfigDict(extra="forbid")` — a posted `full_name` is a 422, not silently accepted. Both people-editor Svelte pages render Full Name as a read-only `<output>` (`id="full_name_preview"`), not an `<input>`. |
-| 2 | Operator can save a person record after filling in only the component name fields | ✓ VERIFIED | `api/domain/person_names.py::prepare_person_name` enforces "first or last required" (D-09), not full_name. `api/services/admin_people.py::create_person`/`update_person` and `admin_jobs.py::create_person_for_job` all call this shared helper. Both Svelte forms' server actions (`+page.server.ts`) validate only `!first_name && !last_name` with the exact locked copy `Enter at least a first or last name.`, never referencing `full_name`. |
-| 3 | Existing Full Name values for already-created people are not corrupted or silently overwritten | ✓ VERIFIED | Migration `0022_person_name_authority.py` never issues an `UPDATE ... full_name = ...` — the column is untouched for every row, confident or ambiguous. Ambiguous rows are flagged `name_needs_review=true` and preserved exactly. The CR-01 code-review BLOCKER (round-trip gate compared against the un-stripped string, aborting the whole migration on any legacy name with leading/trailing whitespace) was found and fixed (`46e1c29f`): the gate now compares against `stripped_full_name`, with a new regression fixture (`high_confidence_leading_trailing_whitespace`, `"  Clarence Thomas  "`) added to the shared `legacy_split_cases` array consumed by both `test_person_names.py` and `test_migration_0022_person_name_authority.py`. All write paths (API PATCH merge, pipeline imports) apply blank-only prefill and never overwrite an operator-set part. |
-| 4 | Pipeline/parsing-side changes are identified and applied consistently with the admin editor's behavior | ✓ VERIFIED | `pipeline/commands/import_justices_csv.py`, `import_convokit.py`, and `seed_aliases.py` all import and call `api.domain.person_names.prepare_person_name`/`format_full_name`/`split_legacy_full_name` — the same shared contract the API services and migration use. No independent formatter remains in any batch writer (confirmed by grep across all three files plus `admin_people.py`/`admin_jobs.py`). |
+| 1 | Full Name field behavior is resolved per a locked design decision (auto-derived, not independently editable) | ✓ VERIFIED | `api/schemas/admin_people.py` (`PersonUpdate`/`PersonCreateRequest`) and `api/schemas/admin_jobs.py` (`PersonCreate`) all drop `full_name` as a field and set `ConfigDict(extra="forbid")`. Both people-editor Svelte pages render Full Name as a read-only `<output>`, not an `<input>`. Unchanged since the prior verification; re-confirmed by direct file read. |
+| 2 | Operator can save a person record after filling in only the component name fields | ✓ VERIFIED | `api/domain/person_names.py::prepare_person_name` enforces "first or last required," never `full_name`. `create_person`/`update_person`/`create_person_for_job` all route through it. `api/tests/test_person_names.py` (54 passed) re-run and green. |
+| 3 | Existing Full Name values for already-created people are not corrupted or silently overwritten | ✓ VERIFIED | Migration `0022_person_name_authority.py` never writes `full_name`; round-trip gate (CR-01 fix, commit `46e1c29f`) compares against the stripped value. `api/tests/test_migration_0022_person_name_authority.py` re-run and green (part of the 54-passed/7-skipped run; DB-gated cases skip without `DATABASE_URL`, consistent with this WSL sandbox's documented Postgres-unreachable constraint). |
+| 4 | Pipeline/parsing-side changes are identified and applied consistently with the admin editor's behavior | ✓ VERIFIED | `pipeline/commands/import_justices_csv.py`, `import_convokit.py`, `seed_aliases.py` all import `api.domain.person_names` helpers — grep-confirmed, no independent formatter remains. |
+| 5 (gap closure) | The G-38-6 authenticated-admin path-traversal / arbitrary-file-write primitive is closed at its authoritative boundary | ✓ VERIFIED | `api/domain/docket_values.py::normalize_docket_value` (allow-list `^[A-Za-z0-9][A-Za-z0-9_-]*$` + 64-char cap) is wired into `_normalize_dockets` in `api/routers/admin.py` (grep-confirmed `normalize_docket_value` call at line 184, raising 422 via `HTTPException` before `create_job` ever creates an `AdminJob` row). Read directly; matches the SUMMARY claim exactly. |
+| 6 (gap closure) | A second, independent enforcement layer inside the pipeline itself prevents the write from landing outside `data/pdfs` even if the character rule were bypassed | ✓ VERIFIED | `pipeline/commands/ingest.py::_validate_docket_value` (delegates to the shared rule, then re-asserts structural invariants) plus a resolved-path containment assertion (`resolved_pdf_path.parent != resolved_pdf_dir` → `ValueError`) placed before every read/write branch — read directly at lines 356-382; matches the SUMMARY and REVIEW-GAPCLOSURE claims. |
+| 7 (gap closure) | Operator gets immediate, specific inline feedback at the point of entry, and a forged/bypassed form field is still rejected server-side | ✓ VERIFIED | `app/src/lib/docketValues.ts` is a byte-identical TS mirror (pattern and cap literal-matched); `DocketPillInput.svelte`'s `addPill()` renders a `role="alert"` error on rejection without clearing the input (read directly, lines 78-99); `+page.server.ts`'s default action re-checks every `docket[]` value with `normalizeDocketValue` before the mode split and returns `fail(400, ...)` with docket-specific copy that never echoes the raw value or forwards FastAPI's 422 body (read directly, lines 48-70). |
+| 8 (gap closure) | The gap is proven closed against the original human-reported reproduction, not only unit tests, with a credible consolidated regression gate | ✓ VERIFIED | Re-ran the exact 9-suite gate from 38-10-PLAN.md myself: `119 passed, 0 failures` — identical to the count claimed in `38-10-SUMMARY.md`. `38-UAT.md` records gap `G-38-6` as `status: resolved` with the operator's own reproduction (double-quote string, `../../../tmp/evil`, Windows drive path, real docket `22-915`, metadata-editor non-regression, non-docket generic-error preservation) and an explicit "Approved" sign-off dated 2026-07-27 — not just a status flip; the resolution field documents concrete evidence for every checkpoint step. |
 
-**Score:** 4/4 truths verified (0 present, behavior-unverified)
+**Score:** 8/8 truths verified (0 present, behavior-unverified)
 
 ### Required Artifacts
 
 | Artifact | Expected | Status | Details |
 |----------|----------|--------|---------|
-| `api/domain/person_names.py` | Shared normalization/formatting/provenance/split contract | ✓ VERIFIED | 367 lines; `normalize_name_part`, `format_full_name`, `prepare_person_name`, `prepare_name_provenance`, `split_legacy_full_name` all present, pure, no FastAPI/SQLAlchemy imports. |
-| `api/tests/fixtures/person_name_cases.json` | Shared Python/TS parity + legacy-split fixtures | ✓ VERIFIED | Contains `format_cases`, `normalization_cases`, `invalid_cases`, `legacy_split_cases` (now includes the CR-01 whitespace regression case). |
-| `alembic/versions/0022_person_name_authority.py` | Schema + guarded backfill + rollback | ✓ VERIFIED | Adds `name_needs_review`/`name_extraction_metadata`, backfills via `split_legacy_full_name`, never writes `full_name`, round-trip gate fixed post-review. |
-| `api/models/models.py` | Person review/provenance mappings | ✓ VERIFIED | `name_needs_review` (Boolean, non-null, default false), `name_extraction_metadata` (nullable JSONB) present on `Person`. |
-| `api/schemas/admin_people.py`, `api/services/admin_people.py` | Central people writer enforcement + Name review filter | ✓ VERIFIED | `full_name` removed from writable schemas, `extra="forbid"`; `create_person`/`update_person` route through `prepare_person_name`; `_missing_fields`/`missing_filters` include `"name review"`. |
-| `api/schemas/admin_jobs.py`, `api/services/admin_jobs.py` | Job-scoped writer using shared authority | ✓ VERIFIED | `PersonCreate` drops `full_name`; `create_person_for_job` calls `prepare_person_name` before existing IDOR/state guards; WR-01/WR-03 `role_name` fix applied (`8fb3b163`). |
-| `pipeline/commands/import_justices_csv.py`, `import_convokit.py`, `seed_aliases.py` | Shared-format import/seed adoption | ✓ VERIFIED | All three import `api.domain.person_names` helpers; no independent formatter remains. |
-| `app/src/lib/components/CopyableExtractedValue.svelte` | Stacked provenance rendering | ✓ VERIFIED | Optional `confidence`/`raw` props gate a two-line `Extracted: {value}` / `{Band} confidence · Raw: {raw}` render path; legacy value-only callers unaffected. |
-| `app/src/lib/components/DocketPillInput.svelte` | Docket Pill provenance states | ✓ VERIFIED | Accepts `string | {value, confidence, raw}` union; provenance pills route through the shared primitive. |
-| `app/src/lib/personNames.ts` | Preview-only TS mirror | ✓ VERIFIED | `normalizeNamePart`/`formatFullName`/`previewFullName`; parity-tested against the shared JSON fixture via real Node execution (`api/tests/test_phase38_people_ui_contract.py`); never accepts `full_name` as input, no network call. |
-| `app/src/routes/admin/people/new/+page.svelte`, `+page.server.ts` | Generated preview, parts-only submit | ✓ VERIFIED | Read-only `<output>` preview; server action reads only `first_name`/`middle_name`/`last_name`/`name_suffix`, never `full_name`. |
-| `app/src/routes/admin/people/[id]/+page.svelte`, `+page.server.ts` | Generated preview + per-part provenance editor | ✓ VERIFIED | Same generated-preview pattern; each of First/Middle/Last/Suffix independently renders `CopyableExtractedValue` sourced from `data.person.name_extraction_metadata`. |
-| `app/src/routes/admin/people/+page.svelte`, `+page.server.ts` | Name review indicator/filter + empty state | ✓ VERIFIED | `pillLabel()` renders "Name review" Title Case over the existing lowercase filter vocabulary; locked empty-state copy present. |
+| `api/domain/person_names.py` | Shared normalization/formatting/provenance/split contract | ✓ VERIFIED | Unchanged since prior verification; re-confirmed present and imported by all callers. |
+| `alembic/versions/0022_person_name_authority.py` | Schema + guarded backfill + rollback | ✓ VERIFIED | Never writes `full_name`; round-trip gate fixed (CR-01). |
+| `api/schemas/admin_people.py`, `api/services/admin_people.py` | Central people writer enforcement | ✓ VERIFIED | `full_name` removed, `extra="forbid"`. |
+| `api/schemas/admin_jobs.py`, `api/services/admin_jobs.py` | Job-scoped writer using shared authority | ✓ VERIFIED | `PersonCreate` drops `full_name`. |
+| `pipeline/commands/import_justices_csv.py`, `import_convokit.py`, `seed_aliases.py` | Shared-format import/seed adoption | ✓ VERIFIED | All import shared `person_names` helpers. |
+| `app/src/routes/admin/people/new/+page.svelte`, `[id]/+page.svelte` | Generated preview, parts-only submit | ✓ VERIFIED | Read-only `<output>` preview on both. |
+| `api/domain/docket_values.py` | Canonical docket-value allow-list/length-cap rule (G-38-6) | ✓ VERIFIED | 137 lines; no FastAPI/SQLAlchemy imports (`import re` / `typing` only, grep-confirmed); exports `DOCKET_VALUE_PATTERN`, `DOCKET_VALUE_MAX_LENGTH`, `DocketValueError`, `normalize_docket_value`. |
+| `api/tests/fixtures/docket_value_cases.json` | Shared Python/TS accept/reject fixture | ✓ VERIFIED | Consumed by both `test_docket_values.py` and `test_docket_ui_contract.py`; both pass. |
+| `pipeline/commands/ingest.py` | Docket path-component guard + containment assertion | ✓ VERIFIED | `_validate_docket_value` called at line 356 (before `pdf_filename`) and line 458 (before `case_slug`); containment assertion at lines 372-382, placed before `pdf_path.exists()`. |
+| `app/src/lib/docketValues.ts` | Byte-identical TS mirror | ✓ VERIFIED | `DOCKET_VALUE_PATTERN` string literal identical to Python; `docketValueErrorMessage()` shared by component and server action. |
+| `app/src/lib/components/DocketPillInput.svelte` | Opt-in `enforceShape` inline error | ✓ VERIFIED | `enforceShape` prop defaults `false`; `role="alert"` error element present; attempted value preserved on rejection (input not cleared). |
+| `app/src/routes/admin/pipeline/+page.server.ts` | Server-side re-check, docket-specific `fail(400)` | ✓ VERIFIED | Re-checks every `docket[]` value before the `mode` split; never echoes raw value or forwards FastAPI's 422 detail (T-07-13 posture retained). |
 
 ### Key Link Verification
 
 | From | To | Via | Status | Details |
 |------|-----|-----|--------|---------|
-| `api/tests/test_person_names.py` | `api/domain/person_names.py` | direct import | ✓ WIRED | 54 fixture-driven tests import and exercise every exported function. |
-| `alembic/versions/0022_person_name_authority.py` | `api/domain/person_names.py` | `split_legacy_full_name`, `format_full_name` | ✓ WIRED | Imported at module top; used in the backfill loop and round-trip gate. |
-| `api/services/admin_people.py` | `api/domain/person_names.py` | `prepare_person_name` | ✓ WIRED | `create_person`/`update_person` call it; old local `_derive_full_name` deleted. |
-| `api/services/admin_jobs.py` | `api/domain/person_names.py` | `prepare_person_name` | ✓ WIRED | `create_person_for_job` calls it before job/participant guards. |
-| `pipeline/commands/import_justices_csv.py` / `import_convokit.py` / `seed_aliases.py` | `api/domain/person_names.py` | shared helper imports | ✓ WIRED | Confirmed via grep — all three files import and call the shared contract functions. |
-| `app/src/routes/admin/people/[id]/+page.svelte` | `app/src/lib/components/CopyableExtractedValue.svelte` | per-part stacked extracted reference | ✓ WIRED | Four independent `<CopyableExtractedValue>` instances, one per name part, driven by `data.person.name_extraction_metadata`. |
-| `app/src/lib/personNames.ts` | `api/tests/fixtures/person_name_cases.json` | shared parity fixture, Node-executed | ✓ WIRED | `test_phase38_people_ui_contract.py` shells out to `node` to run the real `.ts` file against the shared fixture (genuine cross-language parity, not a source-text match). |
+| `api/services/admin_people.py` / `admin_jobs.py` | `api/domain/person_names.py` | `prepare_person_name` | ✓ WIRED | Unchanged since prior verification. |
+| `api/routers/admin.py::_normalize_dockets` | `api/domain/docket_values.py` | `normalize_docket_value` import + call | ✓ WIRED | Grep-confirmed import at line 57 and call at line 184; `DocketValueError` caught and translated to `HTTPException(422)`. |
+| `pipeline/commands/ingest.py::_validate_docket_value` | `api/domain/docket_values.py` | `normalize_docket_value` import + delegated call, then independent structural re-assertion | ✓ WIRED | Grep-confirmed import at line 48, call at line 100; structural checks (no `/`/`\`, no `..`, not absolute) verified present in the helper (read directly). |
+| `app/src/lib/components/DocketPillInput.svelte` | `app/src/lib/docketValues.ts` | `normalizeDocketValue`/`DocketValueError`/`docketValueErrorMessage` import | ✓ WIRED | Read directly — imported at line 13, used inside `addPill()`. |
+| `app/src/routes/admin/pipeline/+page.server.ts` | `app/src/lib/docketValues.ts` | same imports | ✓ WIRED | Read directly — imported at line 4, used in the `rawDockets` loop before the mode split. |
+| `app/src/lib/docketValues.ts` | `api/tests/test_docket_ui_contract.py` | source-extraction parity test | ✓ WIRED | Extracts the TS pattern/cap literals via regex and replays the shared fixture through Python's `re` — genuine cross-language parity check, not a source-text match; passes (13 tests). |
+| `pipeline/db.py::get_session` | rollback-on-exception | `except Exception: await session.rollback(); raise` | ✓ WIRED | Read directly at lines 76-78 — confirms the REVIEW-GAPCLOSURE claim that a `ValueError` raised mid-transaction triggers a full rollback, no partial-write window. |
 
 ### Requirements Coverage
 
 | Requirement | Source Plan | Description | Status | Evidence |
 |-------------|------------|-------------|--------|----------|
-| PEOPLE-09 | 38-01 through 38-06 | Full Name field behavior locked (auto-derived) and executed end-to-end | ✓ SATISFIED | `.planning/REQUIREMENTS.md:32,84` marks PEOPLE-09 complete/Phase 38. All 6 plans' `requirements: [PEOPLE-09]` frontmatter accounted for; no orphaned requirement IDs found for Phase 38 in REQUIREMENTS.md. |
+| PEOPLE-09 | 38-01 through 38-10 | Full Name field behavior locked (auto-derived), executed end-to-end, and the security gap discovered during its own UAT closed | ✓ SATISFIED | `.planning/REQUIREMENTS.md` lines 32/84 mark PEOPLE-09 complete/Phase 38. All 10 plans' `requirements: [PEOPLE-09]` frontmatter accounted for (grep-confirmed across all 10 `*-PLAN.md` files). No orphaned requirement IDs found for Phase 38 in REQUIREMENTS.md. |
 
-No other requirement IDs map to Phase 38 in REQUIREMENTS.md — PEOPLE-09 is the only requirement and is fully accounted for across all 6 plans.
+No other requirement IDs map to Phase 38 in REQUIREMENTS.md — PEOPLE-09 is the only requirement and is fully accounted for across all 10 plans, including the gap-closure plans 38-07 through 38-10 (which reuse the same requirement ID rather than declaring a new one, since G-38-6 was discovered while validating this same requirement's UAT).
 
 ### Anti-Patterns Found
 
 | File | Line | Pattern | Severity | Impact |
 |------|------|---------|----------|--------|
-| `api/schemas/admin_people.py` | 263, 273 | `TODO(D-10): orphaned by Phase 27 — ... flagged here rather than deleted` | ℹ️ Info | Pre-existing Phase 27 debt marker (unrelated to this phase's D-10 legacy-split-confidence decision — same label, different phase), references formal follow-up ("Plan 27-05 deletes this... caller"). Not introduced by Phase 38, not a blocker. |
-| `api/services/admin_people.py` | 613 | Same `TODO(D-10)` marker | ℹ️ Info | Same as above. |
+| `api/routers/admin.py` | 1235 | `TODO(D-10): orphaned by Phase 27 — ...` | ℹ️ Info | Pre-existing Phase 27 debt marker, unrelated to Phase 38 (same label, different phase), references formal follow-up. Not introduced by this phase, not a blocker. Confirmed still present and unchanged from the prior verification. |
 
-No debt markers were found in any file this phase created or substantively rewrote (`person_names.py`, migration 0022, `admin_jobs.py`, pipeline commands, or any of the 8 people-editor/directory frontend files). The two pre-existing markers reference formal follow-up work and predate Phase 38.
+No debt markers (`TODO`/`FIXME`/`XXX`/`HACK`/`placeholder`) found in any file created or modified by the gap-closure plans (`api/domain/docket_values.py`, `api/tests/test_docket_values.py`, `api/tests/test_docket_arg_safety.py`, `api/tests/test_docket_ui_contract.py`, `pipeline/commands/ingest.py`, `pipeline/tests/test_ingest.py`, `app/src/lib/docketValues.ts`, `app/src/lib/components/DocketPillInput.svelte`, `app/src/routes/admin/pipeline/+page.server.ts`) — grep-confirmed directly.
 
-### Code Review Findings (already resolved)
+### Code Review Findings
 
-The dispatched code review (`38-REVIEW.md`) found 1 BLOCKER and 3 Warnings; all 4 were fixed and verified against the codebase during this verification pass:
+**Original 01-06 review (`38-REVIEW.md`):** 1 BLOCKER (CR-01) + 3 Warnings (WR-01/02/03), all previously confirmed fixed in the prior verification cycle. Re-confirmed unchanged in this pass (no regression).
 
-| ID | Finding | Fix Commit | Verified |
-|----|---------|-----------|----------|
-| CR-01 | Migration 0022 round-trip gate compared against un-stripped `full_name`, aborting the entire migration on any legacy row with leading/trailing whitespace | `46e1c29f` | ✓ Confirmed: gate now compares `recomputed != stripped_full_name`; new fixture case added to shared `legacy_split_cases`. |
-| WR-01 | `create_person_for_job`'s `PersonResponse.role_name` had no backing attribute, risking `AttributeError` | `8fb3b163` | ✓ Confirmed: `person.__dict__["role_name"] = role_name_value` set unconditionally before return. |
-| WR-02 | Dead `?incomplete=1` link on pipeline job detail page | `bb0dd633` | ✓ Confirmed: link now points to `/admin/people?tab=bench&missing=name%20review`, the working Name review filter. |
-| WR-03 | Resolved Role name never captured for `role_name` response field | `8fb3b163` (combined with WR-01) | ✓ Confirmed: `role_name_value` captured on both the role_name-lookup and role_id-direct branches. |
+**Fresh gap-closure review (`38-REVIEW-GAPCLOSURE.md`, dated 2026-07-27, 13 files, standard depth):** 0 critical, 1 warning, 3 info, `status: issues_found` (no blockers). The reviewer's own adversarial trace concluded **"The vulnerability is closed... I traced the fix adversarially across all three layers and could not construct a bypass."** This verifier independently re-confirmed the three specific claims the review makes:
+
+| ID | Finding | Severity | This Verifier's Independent Check |
+|----|---------|----------|-----------------------------------|
+| WR-01 (gap-closure) | No end-to-end test drives `_run_ingest_inner` through the real call path with a hazardous docket (session-rollback not exercised end-to-end) | Warning | Confirmed as described — `pipeline/tests/test_ingest.py` covers the guard at the unit level plus two static `inspect.getsource` assertions, not a full DB-gated end-to-end run. This is a coverage gap, not a functional gap: the guard's unit behavior, its wiring into the executed code path, and `pipeline/db.py`'s rollback-on-exception behavior (read directly, confirmed generic to any exception) are all independently verified true; only the *combination* of all three in one integration test is missing. Non-blocking per the reviewer's own classification, and reasonable for a security-fix phase to leave as documented residual coverage debt rather than block sign-off on. |
+| IN-01/02/03 (gap-closure) | Copy-only message mismatch on leading-hyphen (no security gap), unreachable `'empty'` branches at two call sites, platform-dependent `PurePath` note | Info | All three confirmed as described by direct reading of `admin.py`, `docketValues.ts`, and `ingest.py`; none reopen the path-traversal class per the reviewer's own analysis, which this verifier's independent read of the domain regex confirms (the `[A-Za-z0-9]` leading-character requirement structurally subsumes the leading-hyphen class either way). |
 
 ### Behavioral Spot-Checks / Probe Execution
 
-Per the dispatch context, a full regression run (`api/tests/` + `pipeline/tests/`, 588 passed, 5 xfailed, 0 failed) was already completed and confirmed clean against this HEAD by the orchestrator immediately before this verification dispatch — this exercises the DB-backed migration integration tests (upgrade/downgrade/round-trip/repeatability), the API/service PATCH-merge and mass-assignment tests, and all three pipeline import/seed integration tests. This verifier additionally spot-checked (via direct file reads and grep, no re-run of the suite):
+This verifier independently re-ran (not merely re-cited) the consolidated regression gate specified in `38-10-PLAN.md` Task 1, from the repository root, in this environment:
 
-- `api/tests/test_migration_0022_person_name_authority.py` generically loads `legacy_split_cases` from the shared fixture (confirmed via `_load_legacy_split_cases()`), so the CR-01 fix's new whitespace regression case is automatically exercised by the already-passing suite without further code changes.
-- No frontend (`npm run check`) re-run was performed in this verification pass; all 6 plan SUMMARYs report `npm run check` passing with 0 errors, and no frontend file was touched by the review-fix pass (only backend/Alembic files and one Svelte href string were changed in `38-REVIEW-FIX.md`).
+```
+./.venv/Scripts/python.exe -m pytest api/tests/test_docket_values.py api/tests/test_docket_arg_safety.py \
+  api/tests/test_docket_ui_contract.py pipeline/tests/test_ingest.py pipeline/tests/test_ingest_startup_guard.py \
+  api/tests/test_admin_jobs_list.py api/tests/test_admin_jobs_phase35.py \
+  api/tests/test_admin_jobs_phase35_frontend.py api/tests/test_admin_dashboard_routes.py -q
+```
+
+Result: **119 passed, 0 failures** — exactly matching the count recorded in `38-10-SUMMARY.md`. This is credible, independently-reproduced evidence, not a re-citation of the SUMMARY's own claim.
+
+Additionally ran the full `api/tests/` + `pipeline/tests/` suite once (not filtered per-truth, per verifier constraints): **655 passed, 5 xfailed, 4 errors**. The 4 errors are all in `api/tests/test_phase38_people_ui_contract.py`'s node-subprocess driver tests — a pre-existing, environment-specific failure (a Windows-path-into-JS-string-literal mangling bug in this WSL/Windows split dev environment) that predates plans 38-07–38-10, is explicitly named and scoped out in `38-09-PLAN.md`'s context section and `38-10-PLAN.md`'s Task 1 action ("Known pre-existing, unrelated failure to expect and NOT to chase here"), and does not touch any docket-guard or Full-Name-behavior code path. Confirmed via direct execution this is a setup-time `ENOENT` on a malformed concatenated path, not an assertion failure in the tested logic itself — not a regression introduced by this phase's work.
+
+Independently re-verified the on-disk `data/pdfs` corpus claim: 56 real PDF filenames (58 total dir entries including `.gitignore`/`.gitkeep`) all satisfy `DOCKET_VALUE_PATTERN` + `DOCKET_VALUE_MAX_LENGTH` when run through the actual imported module — 0 violations among real files, matching the SUMMARY's "58 files, 0 violations" claim (its count included the two non-PDF marker files).
+
+Independently re-ran `api/tests/test_person_names.py` + `api/tests/test_migration_0022_person_name_authority.py` in isolation to confirm the original Full-Name-behavior truths (1-4) have not regressed under the gap-closure changes: **54 passed, 7 skipped** (DB-gated cases skip cleanly with no `DATABASE_URL`, consistent with this project's documented WSL/Postgres-unreachable dev-environment constraint — not a failure).
 
 ### Human Verification Required
 
-5 items require browser confirmation (no browser tool is available in this execution environment; already flagged as `human_judgment: true` in `38-05-SUMMARY.md` and `38-06-SUMMARY.md`) — see frontmatter `human_verification` list above for full detail:
+5 items require browser confirmation. 4 of these were already exercised once by the operator during `38-UAT.md` (Tests 1-5, all recorded `pass`), but that is a one-time human session recorded in this phase's artifacts, not an automated regression check — they remain flagged here per the verifier's standing "no browser tool available" constraint, consistent with how the prior verification handled them:
 
-1. Live-updating generated Full Name preview (create + edit forms)
-2. First-only/last-only save success, blank-both error copy + preserved attempted values + focus-on-error
-3. Per-part stacked provenance rendering (narrow/wide widths) and copy-only-interpreted-value behavior on an ambiguous legacy record
-4. People directory "Name review" pill filter/tab-URL preservation and exact empty-state copy
-5. Docket Pill approved provenance states against the Figma reference
+1. Live-updating generated Full Name preview (create + edit forms) — UAT Test 1 already passed.
+2. First-only/last-only save success, blank-both error copy + preserved attempted values + focus-on-error — UAT Test 2 already passed.
+3. Per-part stacked provenance rendering (narrow/wide widths) and copy-only-interpreted-value behavior — UAT Test 3 already passed.
+4. People directory "Name review" pill filter/tab-URL preservation and exact empty-state copy — UAT Test 4 already passed.
+5. Docket Pill approved provenance states against the Figma reference (editable/read-only, mixed confidence, long raw text wrapping) — UAT Test 5 already passed.
+
+The G-38-6 security-specific human verification (UAT Test 6, the reproduction, traversal, and absolute-path cases) is **not** re-listed here as outstanding — it was already completed by the operator against the live running stack in `38-10-SUMMARY.md`/`38-UAT.md` with an explicit "Approved" sign-off and concrete reported evidence (no `[Errno 22]`, no pill created, nothing written outside `data/pdfs`), which this verifier accepts as genuine resolution, not a status flip: the resolution text names specific observed behavior for each of the 6 checkpoint sub-steps, not merely "resolved."
 
 ### Gaps Summary
 
-No gaps found. All 4 roadmap success criteria and all plan-level must-haves resolve to VERIFIED against the actual codebase (not just SUMMARY.md claims): the domain contract, migration, API/service enforcement, pipeline adoption, and frontend UI all consistently route through one shared `api.domain.person_names` authority, `full_name` is fully removed as a client-writable/operator-editable field, legacy data preservation is intact (including the now-fixed CR-01 round-trip gate), and the one-time code-review BLOCKER plus all 3 Warnings are confirmed fixed in the code. The only open items are UI/visual browser confirmations that this environment cannot perform and that the executing plans themselves already flagged as requiring human judgment — these do not indicate a missing or broken implementation, only unconfirmed visual/interactive polish.
+No gaps found. All 8 truths (4 original Full-Name-behavior truths, re-confirmed unregressed, plus 4 new truths covering the 3-layer G-38-6 defense-in-depth and its consolidated proof) resolve to VERIFIED against the actual codebase — independently re-read and, where testable, independently re-executed by this verifier rather than trusted from SUMMARY.md text. The one Warning from the fresh gap-closure code review (WR-01, missing end-to-end integration test for the pipeline guard) is a documented coverage gap, not a functional gap — the guard's unit behavior, wiring, and the rollback-on-exception contract it depends on are each independently confirmed true in isolation. The pre-existing node-driver test failure in `test_phase38_people_ui_contract.py` is an environment artifact unrelated to this phase's work and was already known before the gap-closure plans began.
+
+The only remaining status driver is `human_needed`, not `gaps_found` — the 5 items above require a browser this verifier does not have, and 4 of the 5 already carry a one-time human "pass" from `38-UAT.md`'s own session (not re-verifiable by grep, only by re-running in a browser).
 
 ---
 
-_Verified: 2026-07-27T17:40:23Z_
+_Verified: 2026-07-27T22:15:00Z_
 _Verifier: Claude (gsd-verifier)_

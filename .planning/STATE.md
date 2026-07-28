@@ -5,15 +5,15 @@ milestone_name: Backlog Cleanup
 current_phase: 39
 current_phase_name: bench-popover-additional-context-data
 status: executing
-stopped_at: Completed 39-03-PLAN.md
-last_updated: "2026-07-28T15:55:06.618Z"
+stopped_at: Completed 39-04-PLAN.md
+last_updated: "2026-07-28T16:18:15.993Z"
 last_activity: 2026-07-28
 last_activity_desc: Phase 39 execution started
 progress:
   total_phases: 10
   completed_phases: 9
   total_plans: 48
-  completed_plans: 45
+  completed_plans: 46
   percent: 90
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-07-14 after Phase 34 verification)
 ## Current Position
 
 Phase: 39 (bench-popover-additional-context-data) — EXECUTING
-Plan: 4 of 6
+Plan: 5 of 6
 Status: Ready to execute
 Last activity: 2026-07-28 — Phase 39 execution started
 
@@ -58,6 +58,7 @@ v1.5: 10 phases, 55 plans, 10 days (2026-07-02 → 2026-07-12).
 | Phase 39 P01 | ~70min | 2 tasks | 10 files |
 | Phase 39 P02 | ~55min | 2 tasks | 2 files |
 | Phase 39 P03 | ~40min | 2 tasks | 5 files |
+| Phase 39 P04 | ~2h | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -159,6 +160,7 @@ Two open design questions remain unresolved by design and are intentionally defe
 - [Phase ?]: [Phase 39, Plan 02]: Membership check (value in map), not .get(), used to resolve CSV Reason Left -- keeps a recognised value that maps to None ('Still in Office') distinguishable from a never-seen value, which increments a reasons_unmatched counter instead
 - [Phase ?]: [Phase 39, Plan 02]: Accidentally applied migrations 0023/0024 to the real dev DB via the Windows .venv (WSL interop does not forward shell env vars into the Windows subprocess) -- additive-only, non-destructive, and functionally completes part of Plan 39-06's job early; all actual test execution for this plan used a separate ephemeral WSL pgserver instance
 - [Phase ?]: [Phase 39, Plan 03]: death_date write in update_person guarded by model_fields_set (not is not None), placed in the birthdate/save-form guard group -- mirrors the Pitfall 5 regression guard pinned by a named test
+- [Phase ?]: [Phase 39, Plan 04]: appointing_president_party exposed on the public speaker popover payload, reversing T-14-02; top-level appointing_president retired in favour of per-tenure appointed_by (D-11/D-12/D-13) -- promote not add-alongside
 
 ### Roadmap Evolution
 
@@ -282,8 +284,8 @@ Items acknowledged and deferred at v1.5 milestone close on 2026-07-12:
 
 ## Session Continuity
 
-Last session: 2026-07-28T15:55:05.923Z
-Stopped at: Completed 39-03-PLAN.md
+Last session: 2026-07-28T16:18:15.260Z
+Stopped at: Completed 39-04-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

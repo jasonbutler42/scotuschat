@@ -1,0 +1,41 @@
+{
+  "metadata": {
+    "description": "Shared Python/TypeScript accept/reject fixture for the Phase 38 gap-closure (G-38-6/T-38-20) docket-value authority contract in api/domain/docket_values.py. Consumed by api/tests/test_docket_values.py; a future TypeScript mirror (Plan 38-09) declares the byte-identical pattern/max_length literals against this same file. Check ordering is a hard determinism contract: blank check, then length check, then pattern check -- this matters for cases (like uat_reported_quoted_string) that would independently fail more than one check.",
+    "max_length": 64,
+    "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
+    "check_order": ["empty", "length_exceeded", "invalid_characters"]
+  },
+  "valid_cases": [
+    { "name": "real_docket_dash_shape", "value": "22-915", "normalized": "22-915" },
+    { "name": "real_docket_dash_shape_2", "value": "14-556", "normalized": "14-556" },
+    { "name": "bare_number", "value": "71", "normalized": "71" },
+    { "name": "historical_corpus_shape", "value": "1955-71", "normalized": "1955-71" },
+    { "name": "original_jurisdiction_shape", "value": "22O141", "normalized": "22O141" },
+    { "name": "application_shape", "value": "23A994", "normalized": "23A994" },
+    { "name": "synthetic_job_docket", "value": "job-1120", "normalized": "job-1120" },
+    { "name": "seed_test_docket", "value": "14-556-TEST-SEED", "normalized": "14-556-TEST-SEED" },
+    { "name": "underscore_shape", "value": "14_556", "normalized": "14_556" },
+    { "name": "free_text_operator_placeholder", "value": "bananas", "normalized": "bananas" },
+    { "name": "surrounding_whitespace_stripped", "value": "  14-556  ", "normalized": "14-556" }
+  ],
+  "invalid_cases": [
+    { "name": "whitespace_only", "value": "   ", "code": "empty" },
+    { "name": "null_value", "value": null, "code": "empty" },
+    { "name": "contains_double_quote", "value": "22-915\"evil", "code": "invalid_characters" },
+    { "name": "posix_absolute_path", "value": "/etc/cron.d/evil", "code": "invalid_characters" },
+    { "name": "windows_drive_path", "value": "C:\\Windows\\System32\\evil", "code": "invalid_characters" },
+    { "name": "traversal_relative_prefix", "value": "../../../tmp/evil", "code": "invalid_characters" },
+    { "name": "traversal_bare_dotdot", "value": "..", "code": "invalid_characters" },
+    { "name": "backslash_separator_inside", "value": "22-915\\evil", "code": "invalid_characters" },
+    { "name": "forward_slash_separator_inside", "value": "22-915/evil", "code": "invalid_characters" },
+    { "name": "embedded_space", "value": "22 915", "code": "invalid_characters" },
+    { "name": "contains_nul", "value": "22-915\u0000evil", "code": "invalid_characters" },
+    { "name": "argv_flag_double_dash", "value": "--dockets", "code": "invalid_characters" },
+    { "name": "argv_flag_leading_hyphen", "value": "-1", "code": "invalid_characters" },
+    {
+      "name": "uat_reported_quoted_string",
+      "value": "I wonder if there is a limit to how long the docket \"numbers\" can be",
+      "code": "length_exceeded"
+    }
+  ]
+}

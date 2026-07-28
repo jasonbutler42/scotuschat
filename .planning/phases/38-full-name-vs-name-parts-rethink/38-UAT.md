@@ -1,9 +1,9 @@
 ---
-status: diagnosed
+status: complete
 phase: 38-full-name-vs-name-parts-rethink
 source: [38-VERIFICATION.md]
 started: 2026-07-27T17:45:00Z
-updated: 2026-07-27T19:00:00Z
+updated: 2026-07-27T21:00:00Z
 ---
 
 ## Current Test
@@ -56,19 +56,34 @@ expected: |
   A docket "number" value entered via DocketPillInput should either be constrained to
   valid-docket-shaped input, or safely sanitized before being used to construct a
   filesystem path during pipeline ingest — never passed raw into a file path.
-result: issue
+result: pass
 reported: |
   Entered a free-text string (containing a double-quote character) as a docket "number"
   on the Pipeline Runner's new-job form, left Question at its default, and ran it. The job
   errored: [Errno 22] Invalid argument: 'data\pdfs\I wonder if there is a limit to how long
   the docket "numbers" can be-q1.pdf'
-severity: blocker
+severity: blocker (resolved)
+resolution: |
+  Closed by Phase 38 Plan 10 (G-38-6). Operator re-ran the exact reported reproduction on the
+  running Pipeline Runner: the string is now rejected inline before a pill or job is created,
+  with the typed text preserved for editing, and no [Errno 22] anywhere. Operator also confirmed
+  the traversal case (../../../tmp/evil) and a Windows drive-path value are both rejected inline
+  with nothing written outside data/pdfs, that a real docket (22-915) still starts a run and
+  produces the expected data/pdfs filename, that the ArgumentDetailsCard metadata editor is
+  unaffected, and that non-docket run failures still show the generic "could not start the run"
+  message. Operator response: "Approved" (2026-07-27).
+  Consolidated regression gate (Plan 10 Task 1): 119 passed, 0 failures across all 9 listed
+  suites (test_docket_values.py, test_docket_arg_safety.py, test_docket_ui_contract.py,
+  pipeline/tests/test_ingest.py, test_ingest_startup_guard.py, test_admin_jobs_list.py,
+  test_admin_jobs_phase35.py, test_admin_jobs_phase35_frontend.py, test_admin_dashboard_routes.py).
+  On-disk data/pdfs corpus check: all 58 existing filenames satisfy the shared docket rule, 0
+  violations. See 38-10-SUMMARY.md.
 
 ## Summary
 
 total: 6
-passed: 5
-issues: 1
+passed: 6
+issues: 0
 pending: 0
 skipped: 0
 blocked: 0
@@ -77,7 +92,9 @@ blocked: 0
 
 - gap_id: G-38-6
   truth: "A docket value entered via DocketPillInput should either be constrained to valid-docket-shaped input, or safely sanitized before being used to construct a filesystem path during pipeline ingest."
-  status: failed
+  status: resolved
+  resolved_by: "Phase 38 Plan 10 (38-10-PLAN.md / 38-10-SUMMARY.md)"
+  resolved_date: 2026-07-27
   reason: "User reported: docket value containing a double-quote character crashed pipeline ingest with [Errno 22] Invalid argument when used raw as a PDF filename component in pipeline/commands/ingest.py:291 (f\"{primary_docket}-q{args.question}.pdf\")"
   severity: blocker
   test: 6

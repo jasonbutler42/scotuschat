@@ -343,7 +343,7 @@ Plans:
   3. All added fields are presented identically for every Justice — no differential framing, omission, or emphasis based on any political consideration.
   4. Case-specific presentation (age at argument, tenure-length indicators, case-heard counts) remains out of scope for this phase.
 
-**Plans**: 2/6 plans executed
+**Plans**: 3/6 plans executed
 **UI hint**: yes
 
 **Wave 1**
@@ -353,7 +353,7 @@ Plans:
 **Wave 2** *(blocked on Wave 1 completion)*
 
 - [x] 39-02-PLAN.md — Justices CSV importer reads Birthdate / Death Date / Reason Left with null-only backfill (D-04–D-07)
-- [ ] 39-03-PLAN.md — Activate the person editor's Death Date input and per-tenure Reason Left dropdown (D-08/D-09/D-10)
+- [x] 39-03-PLAN.md — Activate the person editor's Death Date input and per-tenure Reason Left dropdown (D-08/D-09/D-10)
 - [ ] 39-04-PLAN.md — Public API: T-14-02 party-exposure reversal + promote appointing_president to per-tenure + birthdate/death_date/bio_text (D-11/D-12/D-13/D-14)
 
 **Wave 3** *(blocked on Wave 2 completion)*
@@ -420,7 +420,7 @@ Plans:
 | 36. Click-to-copy extracted values design pattern | v1.6 | 3/3 | Complete    | 2026-07-15 |
 | 37. Represent tenure Seat as a Chief/Associate toggle instead of free text | v1.6 | 5/5 | Complete    | 2026-07-21 |
 | 38. Rethink Full Name vs. name-part fields in the people editor | v1.6 | 10/10 | Complete    | 2026-07-27 |
-| 39. Bench popover — additional context data for Justices | v1.6 | 2/6 | In Progress|  |
+| 39. Bench popover — additional context data for Justices | v1.6 | 3/6 | In Progress|  |
 | 40. README — how to start the local stack | v1.6 | 3/3 | Complete    | 2026-07-14 |
 
 ## Backlog

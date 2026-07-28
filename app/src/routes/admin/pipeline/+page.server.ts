@@ -1,6 +1,7 @@
 import { ADMIN_TOKEN, FASTAPI_BASE_URL } from '$env/static/private';
 import { redirect, fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
+import { normalizeDocketValue, DocketValueError, docketValueErrorMessage } from '$lib/docketValues';
 
 export const load: PageServerLoad = async ({ url }) => {
 	// Read ?incomplete=1 URL param — strict === '1' comparison (T-13-03: any other value → off).
@@ -35,16 +36,36 @@ export const actions: Actions = {
 		// Read docket pills (PLIST-02) and question field — present in both url and upload
 		// branches. Normalize the same way as the FastAPI router (trim, drop blanks, dedupe
 		// preserving order) so the effective primary docket is consistent client- and
-		// server-side. No metadata PATCH is used — the full list is forwarded as repeated
-		// source_dockets and persisted through job creation + ingest (D-07 supersession).
+		// server-side, AND re-check every non-blank value against the shared
+		// $lib/docketValues shape rule (G-38-6 gap closure, item 3). Hidden form inputs are
+		// trivially forgeable, so this is a real server-side enforcement point and not a
+		// duplicate of the browser check; it also guarantees the operator sees docket-specific
+		// copy instead of the catch-all message below. Applied once here, before the
+		// mode === 'url' / upload branch split, so both submission modes are covered by one
+		// code path. No metadata PATCH is used — the full (normalized) list is forwarded as
+		// repeated source_dockets and persisted through job creation + ingest (D-07
+		// supersession).
 		const rawDockets = data.getAll('docket[]') as string[];
 		const seen = new Set<string>();
 		const dockets: string[] = [];
 		for (const d of rawDockets) {
 			const trimmed = (d ?? '').trim();
-			if (trimmed && !seen.has(trimmed)) {
-				seen.add(trimmed);
-				dockets.push(trimmed);
+			if (!trimmed) continue;
+			let normalized: string;
+			try {
+				normalized = normalizeDocketValue(trimmed);
+			} catch (err) {
+				if (!(err instanceof DocketValueError)) throw err;
+				// T-07-13 posture retained: never echo the submitted value and never
+				// forward FastAPI's 422 detail verbatim — only the shared, fixed
+				// docket-specific sentence, prefixed so it reads as a run-start failure.
+				return fail(400, {
+					error: `Could not start the run: ${docketValueErrorMessage(err.code)}`
+				});
+			}
+			if (!seen.has(normalized)) {
+				seen.add(normalized);
+				dockets.push(normalized);
 			}
 		}
 		const primary_docket = dockets.length > 0 ? dockets[0] : null;

@@ -156,3 +156,30 @@ def test_pipeline_page_svelte_passes_enforce_shape_to_docket_pill_input() -> Non
     match = re.search(r"<DocketPillInput\b[^>]*/>", source, flags=re.DOTALL)
     assert match, "Could not find a self-closing <DocketPillInput ... /> usage"
     assert "enforceShape" in match.group(0)
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Task 3: SvelteKit action re-check with accurate operator copy. A forged
+# docket[] value must be rejected server-side before FastAPI is called, and
+# every other failure branch must keep its existing generic copy.
+# ─────────────────────────────────────────────────────────────────────────
+
+
+def test_pipeline_page_server_imports_and_calls_normalize_docket_value() -> None:
+    source = _source(PIPELINE_PAGE_SERVER_PATH)
+    assert "from '$lib/docketValues'" in source
+    assert "normalizeDocketValue(" in source
+
+
+def test_pipeline_page_server_returns_fail_400_for_docket_error_branch() -> None:
+    source = _source(PIPELINE_PAGE_SERVER_PATH)
+    assert re.search(r"return fail\(400,\s*\{\s*error:", source), (
+        "expected a fail(400, { error: ... }) return in the docket-error branch"
+    )
+
+
+def test_pipeline_page_server_keeps_generic_run_start_failure_copy() -> None:
+    """Proves the docket-specific narrowing did not replace the pre-existing
+    generic run-start failure copy used by every other failure branch."""
+    source = _source(PIPELINE_PAGE_SERVER_PATH)
+    assert "Could not start the run. Check the URL and try again." in source

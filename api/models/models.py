@@ -118,6 +118,8 @@ class Person(Base):
     is_justice = Column(Boolean, nullable=False, server_default=false())
     # Phase 27 — migration 0016
     birthdate = Column(Date, nullable=True)
+    # Phase 39 — migration 0023
+    death_date = Column(Date, nullable=True)
     # Phase 29 — migration 0017: Oyez/ConvoKit external speaker ID (historical corpus import)
     oyez_speaker_id = Column(String(100), nullable=True)
     # Phase 38 — migration 0022: durable review flag + independently-persisted

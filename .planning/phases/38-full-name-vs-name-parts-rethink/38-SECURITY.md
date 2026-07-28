@@ -5,6 +5,7 @@ status: verified
 threats_open: 0
 asvs_level: 1
 created: 2026-07-27
+updated: 2026-07-27
 ---
 
 # Phase 38 — Security
@@ -29,6 +30,10 @@ created: 2026-07-27
 | Browser component to clipboard | Only the interpreted value may leave the page through copy | Copy-to-clipboard payload |
 | Browser forms to SvelteKit/FastAPI | Form fields and attempted values are untrusted despite admin authentication | People editor form submissions |
 | API provenance to people editor DOM/clipboard | Exact raw extraction text crosses into rendering and copy UI | Per-part provenance stack |
+| Admin browser → SvelteKit action → FastAPI `create_job` (G-38-6, added by Plans 38-07–38-10) | Operator-typed docket strings are untrusted despite admin-token auth | Docket value strings |
+| FastAPI route → spawned ingest subprocess argv (G-38-6) | Accepted docket values become CLI arguments and later filesystem path components | Docket value → `pdf_filename`/`case_slug` |
+| Direct CLI invocation → ingest (G-38-6) | `python -m pipeline ingest` bypasses FastAPI entirely, so the route-level guard alone does not apply | Docket value |
+| Browser DOM → SvelteKit form action (G-38-6) | Hidden `docket[]` form inputs are trivially forgeable; the browser check is UX, not enforcement | Forged `docket[]` field |
 
 ---
 
@@ -54,6 +59,20 @@ created: 2026-07-27
 | T-38-16 | Tampering | people server actions | high | mitigate | Server actions post only explicit name parts, never `full_name`; X-Admin-Token forwarding and backend validation retained | closed |
 | T-38-17 | Information Disclosure | raw provenance UI | medium | mitigate | Authenticated admin route, normal Svelte interpolation, interpreted-only clipboard payload (same control family as T-38-13/14) | closed |
 | T-38-18 | Elevation of Privilege | Name review query | low | mitigate | `missing_filters` is a fixed Python dict keyed by literal strings (`Person.name_needs_review.is_(True)`); no dynamic SQL/interpolated predicate (grep-verified) | closed |
+| T-38-19 | Tampering | `pipeline/commands/ingest.py` PDF path construction | high | mitigate | Docket path-component guard before `pdf_filename` construction plus a resolved-path containment assertion placed before every read/write branch, so the write cannot escape `data/pdfs` even if the character rule is bypassed (G-38-6) | closed |
+| T-38-20 | Tampering | `api/routers/admin.py::_normalize_dockets` | high | mitigate | Shared `normalize_docket_value` allow-list plus 64-character cap raises 422 before job creation and before `spawn_pipeline_step`, closing the authenticated-admin arbitrary-file-write primitive at its authoritative boundary (G-38-6) | closed |
+| T-38-21 | Denial of Service | over-length docket values | medium | mitigate | 64-character cap enforced at the boundary; error messages bounded to a 32-character echo so a multi-kilobyte value cannot inflate a 422 body or `admin_jobs.error_message` | closed |
+| T-38-22 | Tampering | `Case.slug` construction from docket values | medium | mitigate | The same guard runs on every docket used in `case_slug`, so a separator cannot inject a phantom public URL path segment | closed |
+| T-38-23 | Tampering | forged `docket[]` hidden inputs | medium | mitigate | The SvelteKit action re-checks every raw docket value server-side and the FastAPI boundary remains authoritative, so bypassing the browser gains nothing | closed |
+| T-38-24 | Information Disclosure | 422 detail text | low | accept | The 422 detail echoes a bounded prefix of the operator's own submitted value on an admin-token-gated route; no server-side state, path, or credential is revealed | closed |
+| T-38-25 | Tampering | divergent copies of the docket rule | medium | mitigate | One canonical module (`api/domain/docket_values.py`) plus a fixture that asserts its own declared pattern and cap equal the module constants, so a second enforcement point cannot silently carry a weaker rule | closed |
+| T-38-26 | Repudiation | job-driven ingest failure reporting | medium | mitigate | The guard raises `ValueError` so `run_ingest`'s existing handler records `AdminJobStatus.FAILED` with a readable `error_message` instead of leaking a raw `[Errno 22]` OSError | closed |
+| T-38-27 | Tampering | guard removed by a later refactor | medium | mitigate | `inspect.getsource` static asserts fail if the guard invocation or the containment assertion disappears from the executed code path | closed |
+| T-38-28 | Tampering | TypeScript/Python docket rule divergence | medium | mitigate | `test_docket_ui_contract.py` extracts the client pattern literal and cap and asserts equality with the Python constants, then replays the shared fixture through the extracted rule | closed |
+| T-38-29 | Information Disclosure | SvelteKit failure copy | low | mitigate | The docket failure message is fixed text plus the shared cap; the submitted value is never echoed and FastAPI's 422 detail is never forwarded verbatim | closed |
+| T-38-30 | Denial of Service | regression on the metadata editor | low | mitigate | `enforceShape` defaults to false and only the Pipeline Runner opts in, so `ArgumentDetailsCard`'s already-persisted legacy docket values keep rendering/saving unchanged (contract-test asserted) | closed |
+| T-38-31 | Tampering | end-to-end docket path (G-38-6 reproduction) | high | mitigate | Operator re-ran the original reported reproduction plus traversal and absolute-path variants against the running stack, confirming rejection before job creation and no write outside `data/pdfs` — explicit "Approved" sign-off recorded in 38-UAT.md | closed |
+| T-38-32 | Denial of Service | regression in existing job creation | medium | mitigate | Consolidated regression gate over every suite that exercises `create_job`, `_normalize_dockets`, and ingest — 119 passed, 0 failures, independently re-run by both the executor and the phase verifier | closed |
 
 *Status: open · closed · open — below high threshold (non-blocking)*
 *Severity: critical > high > medium > low — only open threats at or above workflow.security_block_on (high) count toward threats_open*
@@ -74,6 +93,7 @@ created: 2026-07-27
 | Audit Date | Threats Total | Closed | Open | Run By |
 |------------|---------------|--------|------|--------|
 | 2026-07-27 | 18 | 18 | 0 | Claude (orchestrator, L1 grep-depth — register authored at plan time, ASVS level 1, short-circuit per workflow) |
+| 2026-07-27 | 32 | 32 | 0 | Claude (orchestrator) — added T-38-19 through T-38-32 for UAT gap G-38-6 (authenticated-admin path-traversal / arbitrary-file-write in docket-value handling), closed by Plans 38-07–38-10. Independently cross-checked against `38-REVIEW-GAPCLOSURE.md` (adversarial code review, no bypass found) and `38-VERIFICATION.md` (independent re-execution of the 9-suite regression gate: 119 passed, 0 failures) rather than only citing plan-authored dispositions. |
 
 ---
 
@@ -84,4 +104,4 @@ created: 2026-07-27
 - [x] `threats_open: 0` confirmed
 - [x] `status: verified` set in frontmatter
 
-**Approval:** verified 2026-07-27
+**Approval:** verified 2026-07-27 (original scope, plans 38-01–38-06); re-verified 2026-07-27 to cover the full 10-plan final state including G-38-6 gap closure

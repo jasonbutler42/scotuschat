@@ -46,6 +46,11 @@
 		end_date: string;
 		appointed_by: string;
 		appointing_president_party: string;
+		// '' means no reason selected (D-02: most tenures have none). Unlike
+		// office, this is a genuinely constrained enum (TenureWrite.reason_left
+		// is a strict Literal) — see the Reason Left <select>'s escape-hatch
+		// comment below for why a non-canonical stored value is still shown.
+		reason_left: string;
 	}
 
 	interface RawTenure {
@@ -54,6 +59,7 @@
 		end_date: string | null;
 		appointed_by: string | null;
 		appointing_president_party: string | null;
+		reason_left: string | null;
 	}
 
 	// Converts a server-provided tenure row (canonical, legacy-invalid, or
@@ -70,6 +76,7 @@
 				end_date: t.end_date ?? '',
 				appointed_by: t.appointed_by ?? '',
 				appointing_president_party: t.appointing_president_party ?? '',
+				reason_left: t.reason_left ?? '',
 			};
 		}
 		return {
@@ -80,6 +87,7 @@
 			end_date: t.end_date ?? '',
 			appointed_by: t.appointed_by ?? '',
 			appointing_president_party: t.appointing_president_party ?? '',
+			reason_left: t.reason_left ?? '',
 		};
 	}
 
@@ -92,6 +100,7 @@
 
 	let isJustice = $state<boolean>(form?.is_justice ?? data.person.is_justice ?? false);
 	let birthdate = $state<string>(form?.birthdate ?? data.person.birthdate ?? '');
+	let deathDate = $state<string>(form?.death_date ?? data.person.death_date ?? '');
 
 	// ──────────────────────────────────────────────────────────────────────────
 	// Name parts — $state so the generated Full Name preview (D-01, D-02)
@@ -140,6 +149,7 @@
 			end_date: '',
 			appointed_by: '',
 			appointing_president_party: '',
+			reason_left: '',
 		});
 	}
 
@@ -198,6 +208,9 @@
 		}
 		if (form?.birthdate !== undefined) {
 			birthdate = form.birthdate ?? '';
+		}
+		if (form?.death_date !== undefined) {
+			deathDate = form.death_date ?? '';
 		}
 		if (form?.is_justice !== undefined) {
 			isJustice = form.is_justice;
@@ -259,6 +272,7 @@
 		mergeLoading = false;
 		isJustice = data.person.is_justice ?? false;
 		birthdate = data.person.birthdate ?? '';
+		deathDate = data.person.death_date ?? '';
 		officeSaveFormError = null;
 		tenureRows = buildTenureRows(data.person.tenures);
 		firstName = data.person.first_name ?? '';
@@ -671,11 +685,12 @@
 			     birthdate/tenure state, regardless of whether the Bench-only UI below
 			     is currently mounted. -->
 			<input type="hidden" name="birthdate" form="save-form" value={birthdate} />
+			<input type="hidden" name="death_date" form="save-form" value={deathDate} />
 			<input type="hidden" name="tenures" form="save-form" value={JSON.stringify(tenureRows)} />
 
 			{#if isJustice}
 			<div transition:slide>
-				<!-- Birth Date + disabled Death Date (D-15, D-19) -->
+				<!-- Birth Date + Death Date (D-08, D-10) -->
 				<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
 					<div>
 						<label
@@ -691,7 +706,7 @@
 							style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
 						/>
 					</div>
-					<div style="opacity: 0.6;">
+					<div>
 						<label
 							for="death_date"
 							style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
@@ -701,10 +716,8 @@
 						<input
 							id="death_date"
 							type="date"
-							disabled
-							placeholder="Coming soon"
-							title="Tracked in a future update"
-							style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #94a3b8; box-sizing: border-box;"
+							bind:value={deathDate}
+							style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
 						/>
 					</div>
 				</div>
@@ -887,21 +900,34 @@
 									{/if}
 								</select>
 							</div>
-							<div style="opacity: 0.6;">
+							<div>
 								<label
 									for="tenure-reason-{row._key}"
 									style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
 								>
 									Reason Left
 								</label>
-								<input
+								<!-- reason_left (D-01, D-09) is a genuinely constrained enum
+								     (TenureWrite.reason_left is a strict Literal, enforced again
+								     by the DB CHECK constraint) — unlike President's Party above,
+								     this is NOT an open vocabulary. The escape-hatch option below
+								     exists only so a pre-existing non-canonical stored value stays
+								     visible and correctable; it is never a value the operator can
+								     freshly submit, since selecting it just re-submits the same
+								     already-invalid string. -->
+								<select
 									id="tenure-reason-{row._key}"
-									type="text"
-									disabled
-									placeholder="Coming soon"
-									title="Tracked in a future update"
-									style="display: block; width: 100%; background-color: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #94a3b8; box-sizing: border-box;"
-								/>
+									bind:value={row.reason_left}
+									style="display: block; width: 100%; background-color: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
+								>
+									<option value="">— None —</option>
+									<option value="retired">Retired</option>
+									<option value="died">Died in office</option>
+									<option value="promoted">Promoted</option>
+									{#if row.reason_left && !['retired', 'died', 'promoted'].includes(row.reason_left)}
+										<option value={row.reason_left}>{row.reason_left}</option>
+									{/if}
+								</select>
 							</div>
 						</div>
 

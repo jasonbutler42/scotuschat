@@ -15,6 +15,8 @@ interface TenureRowClient {
 	end_date: string;
 	appointed_by: string;
 	appointing_president_party: string;
+	// reason_left (Phase 39, D-01, D-09) — '' means no reason selected/unset.
+	reason_left: string;
 }
 
 interface PersonDetail {
@@ -24,12 +26,15 @@ interface PersonDetail {
 	photo_url: string | null;
 	photo_url_full: string | null;
 	birthdate: string | null;
+	// Phase 39 addition — migration 0023 (PUB-04); mirrors birthdate exactly.
+	death_date: string | null;
 	tenures: Array<{
 		office: string | null;
 		start_date: string | null;
 		end_date: string | null;
 		appointed_by: string | null;
 		appointing_president_party: string | null;
+		reason_left: string | null;
 	}>;
 	// Phase 9 additions
 	first_name: string | null;
@@ -172,6 +177,7 @@ export const actions: Actions = {
 		const middle_name = ((formData.get('middle_name') as string) ?? '').trim() || null;
 		const name_suffix = ((formData.get('name_suffix') as string) ?? '').trim() || null;
 		const birthdate = ((formData.get('birthdate') as string) ?? '').trim() || null;
+		const death_date = ((formData.get('death_date') as string) ?? '').trim() || null;
 		// The Bench/Advocate segmented toggle always submits a hidden 'true'/'false'
 		// value, unlike the old checkbox which was absent from FormData when unchecked.
 		const is_justice = formData.get('is_justice') === 'true';
@@ -186,26 +192,28 @@ export const actions: Actions = {
 			// edits elsewhere on the form.
 			return fail(422, {
 				error: 'Invalid tenure data. Please try again.',
-				first_name, last_name, middle_name, name_suffix, birthdate, is_justice,
-				tenures: [] as { office: string; start_date: string; end_date: string; appointed_by: string; appointing_president_party: string }[],
+				first_name, last_name, middle_name, name_suffix, birthdate, death_date, is_justice,
+				tenures: [] as { office: string; start_date: string; end_date: string; appointed_by: string; appointing_president_party: string; reason_left: string }[],
 			});
 		}
 
-		// Strip the client-only _key field before sending to FastAPI. Reason Left
-		// is not part of TenureRowClient's state (D-19 — disabled input, no value
-		// submitted), so it is never part of this mapping.
-		const tenures = tenuresParsed.map(({ office, start_date, end_date, appointed_by, appointing_president_party }) => ({
+		// Strip the client-only _key field before sending to FastAPI. reason_left
+		// (Phase 39, D-01, D-09) is part of TenureRowClient's state now — a
+		// constrained enum, normalized to null when unselected — and is included
+		// in this mapping like every other tenure field.
+		const tenures = tenuresParsed.map(({ office, start_date, end_date, appointed_by, appointing_president_party, reason_left }) => ({
 			office,
 			start_date,
 			end_date,
 			appointed_by,
 			appointing_president_party,
+			reason_left: reason_left || null,
 		}));
 
 		if (!first_name && !last_name) {
 			return fail(400, {
 				error: 'Enter at least a first or last name.',
-				first_name, last_name, middle_name, name_suffix, birthdate, is_justice,
+				first_name, last_name, middle_name, name_suffix, birthdate, death_date, is_justice,
 				tenures,
 			});
 		}
@@ -219,7 +227,7 @@ export const actions: Actions = {
 		if (firstInvalidIndex !== -1) {
 			return fail(400, {
 				error: 'Select Chief or Associate for every tenure period before saving.',
-				first_name, last_name, middle_name, name_suffix, birthdate, is_justice,
+				first_name, last_name, middle_name, name_suffix, birthdate, death_date, is_justice,
 				tenures,
 			});
 		}
@@ -235,7 +243,7 @@ export const actions: Actions = {
 				body: JSON.stringify({
 					tenures,
 					first_name, last_name, middle_name, name_suffix,
-					is_justice, birthdate,
+					is_justice, birthdate, death_date,
 					// bio_text omitted intentionally — managed by photo action (Pitfall 7 extended)
 					// photo_url omitted intentionally — managed by photo action (Pitfall 7)
 				}),
@@ -243,7 +251,7 @@ export const actions: Actions = {
 		} catch {
 			return fail(502, {
 				error: 'Could not save changes. Check the form and try again.',
-				first_name, last_name, middle_name, name_suffix, birthdate, is_justice,
+				first_name, last_name, middle_name, name_suffix, birthdate, death_date, is_justice,
 				tenures,
 			});
 		}
@@ -251,7 +259,7 @@ export const actions: Actions = {
 		if (!res.ok) {
 			return fail(422, {
 				error: 'Could not save changes. Check the form and try again.',
-				first_name, last_name, middle_name, name_suffix, birthdate, is_justice,
+				first_name, last_name, middle_name, name_suffix, birthdate, death_date, is_justice,
 				tenures,
 			});
 		}

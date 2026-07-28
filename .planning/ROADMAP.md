@@ -114,7 +114,7 @@ Full phase details: `.planning/milestones/v1.5-ROADMAP.md`
 - [x] **Phase 35: `rerun_job` never spawns ingest for locally-uploaded jobs** - Local-upload reruns actually progress instead of sitting at PENDING forever (completed 2026-07-14)
 - [x] **Phase 36: Click-to-copy extracted values design pattern** - Consistent click-to-copy affordance across pipeline run pages and argument editor (completed 2026-07-15)
 - [x] **Phase 37: Represent tenure Seat as a Chief/Associate toggle instead of free text** - Open design question (numbered-seat data vs. binary toggle) resolved during discuss-phase (completed 2026-07-21)
-- [ ] **Phase 38: Rethink Full Name vs. name-part fields in the people editor** - Open design question (auto-derive vs. independently editable) resolved during discuss-phase
+- [x] **Phase 38: Rethink Full Name vs. name-part fields in the people editor** - Open design question (auto-derive vs. independently editable) resolved during discuss-phase; includes G-38-6 security gap closure (completed 2026-07-27)
 - [ ] **Phase 39: Bench popover — additional context data for Justices** - Birthdate, death date, and per-tenure appointment context, presented apolitically
 - [x] **Phase 40: README — how to start the local stack** - Documents SvelteKit + FastAPI + Postgres local setup end to end (completed 2026-07-14)
 
@@ -401,7 +401,7 @@ Plans:
 | 35. `rerun_job` never spawns ingest for locally-uploaded jobs | v1.6 | 3/3 | Complete    | 2026-07-14 |
 | 36. Click-to-copy extracted values design pattern | v1.6 | 3/3 | Complete    | 2026-07-15 |
 | 37. Represent tenure Seat as a Chief/Associate toggle instead of free text | v1.6 | 5/5 | Complete    | 2026-07-21 |
-| 38. Rethink Full Name vs. name-part fields in the people editor | v1.6 | 10/10 | In Progress|  |
+| 38. Rethink Full Name vs. name-part fields in the people editor | v1.6 | 10/10 | Complete    | 2026-07-27 |
 | 39. Bench popover — additional context data for Justices | v1.6 | TBD | Not started | - |
 | 40. README — how to start the local stack | v1.6 | 3/3 | Complete    | 2026-07-14 |
 

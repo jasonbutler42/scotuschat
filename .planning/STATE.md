@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Backlog Cleanup
-current_phase: 38
-current_phase_name: full-name-vs-name-parts-rethink
-status: verifying
-stopped_at: Completed 38-10-PLAN.md
-last_updated: "2026-07-28T02:54:38.079Z"
-last_activity: 2026-07-28
-last_activity_desc: Completed 38-08-PLAN.md
+current_phase: 39
+current_phase_name: bench-popover-additional-context-data
+status: Ready to plan
+stopped_at: Phase 38 complete (10/10 plans, gap G-38-6 closed and operator-verified); ready to plan Phase 39
+last_updated: "2026-07-27T22:20:00.000Z"
+last_activity: 2026-07-27
+last_activity_desc: Completed Phase 38 (full-name-vs-name-parts-rethink) — 10/10 plans, UAT/verification/security/code-review all passed
 progress:
   total_phases: 10
   completed_phases: 9
@@ -24,14 +24,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-14 after Phase 34 verification)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** Phase 38 — full-name-vs-name-parts-rethink
+**Current focus:** Phase 39 — bench-popover-additional-context-data
 
 ## Current Position
 
-Phase: 38 (full-name-vs-name-parts-rethink) — EXECUTING
-Plan: 10 of 10
-Status: Phase complete — ready for verification
-Last activity: 2026-07-28 — Completed 38-08-PLAN.md
+Phase: 39 (bench-popover-additional-context-data) — NOT STARTED
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-07-27 — Phase 38 marked complete (10/10 plans)
 
 ## Performance Metrics
 
@@ -273,8 +273,8 @@ Items acknowledged and deferred at v1.5 milestone close on 2026-07-12:
 
 ## Session Continuity
 
-Last session: 2026-07-28T02:54:37.424Z
-Stopped at: Completed 38-10-PLAN.md
+Last session: 2026-07-27
+Stopped at: Phase 38 complete, ready to plan Phase 39
 Resume file: None
 
 ## Operator Next Steps

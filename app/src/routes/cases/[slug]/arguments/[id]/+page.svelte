@@ -12,6 +12,10 @@
 		office: string | null;
 		start_date: string | null;
 		end_date: string | null;
+		// Canonical "retired"/"died"/"promoted" storage value, or null when the
+		// tenure has no recorded reason (Phase 39 D-01/D-02) — formal title
+		// projection happens in SpeakerPopover.svelte, not here.
+		reason_left: string | null;
 	}
 
 	interface SpeakerDetail {

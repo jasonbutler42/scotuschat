@@ -174,6 +174,8 @@ async def get_argument_speakers(
                 "office": t.office,
                 "start_date": str(t.start_date) if t.start_date else None,
                 "end_date": str(t.end_date) if t.end_date else None,
+                # Phase 39 (D-01): raw canonical value, carried end to end.
+                "reason_left": t.reason_left,
             }
         )
 

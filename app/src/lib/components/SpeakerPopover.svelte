@@ -4,6 +4,10 @@
 		office: string | null;
 		start_date: string | null;
 		end_date: string | null;
+		// Canonical "retired"/"died"/"promoted" storage value, or null when the
+		// tenure has no recorded reason (open tenure, or unknown historical row —
+		// Phase 39 D-01/D-02).
+		reason_left: string | null;
 	}
 
 	// Single formal-title mapping (mirrors api/models/models.py's OFFICE_TITLES /
@@ -18,6 +22,20 @@
 
 	function officeTitle(office: string | null): string {
 		return office ? (OFFICE_TITLES[office] ?? '') : '';
+	}
+
+	// Mirrors api/models/models.py's REASON_LEFT_TITLES / reason_left_title()
+	// (Phase 39 D-01/D-15). The `?? ''` degrade-to-empty is the frontend half
+	// of the Phase 37 CR-01 never-crash-on-a-non-canonical-value convention —
+	// backend stays exhaustive-and-raises; this side never throws.
+	const REASON_LEFT_TITLES: Record<string, string> = {
+		retired: 'Retired',
+		died: 'Died in office',
+		promoted: 'Promoted'
+	};
+
+	function reasonLeftTitle(reason: string | null): string {
+		return reason ? (REASON_LEFT_TITLES[reason] ?? '') : '';
 	}
 
 	interface SpeakerDetail {
@@ -80,6 +98,11 @@
 					<p style="font-size:13px;color:#94a3b8;margin:0 0 4px 0;">
 						{officeTitle(t.office)} — {t.start_date ? t.start_date.slice(0, 4) : '?'}–{t.end_date ? t.end_date.slice(0, 4) : 'present'}
 					</p>
+					{#if t.reason_left}
+						<p style="font-size:13px;font-weight:400;color:#94a3b8;margin:0 0 4px 0;">
+							{reasonLeftTitle(t.reason_left)}
+						</p>
+					{/if}
 				{/each}
 				{#if speaker.appointing_president}
 					<p style="font-size:13px;color:#94a3b8;margin:4px 0 0 0;">

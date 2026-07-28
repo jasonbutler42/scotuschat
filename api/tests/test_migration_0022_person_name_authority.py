@@ -151,16 +151,23 @@ def _leave_database_at_head():
     convention) — this module's own tests intentionally downgrade to 0021
     mid-run, so restore the shared test database to head once after every
     test in this module has finished, regardless of pass/fail/skip.
+
+    Restores to the literal Alembic "head" (not the module's own
+    TARGET_REVISION="0022") — TARGET_REVISION pins the specific revision
+    this module's tests exercise, but the real migration head moves forward
+    as later phases add migrations (e.g. Phase 39's 0023/0024). Hardcoding
+    TARGET_REVISION here would silently leave every later-alphabetical
+    DB-gated test module in the same session running against a stale,
+    pre-head schema.
     """
     yield
     if TEST_DATABASE_URL is None:
         return
     eng = create_engine(_sync_url(TEST_DATABASE_URL), future=True)
     try:
-        if _current_revision(eng) != TARGET_REVISION:
-            cfg = Config(str(ALEMBIC_INI))
-            cfg.set_main_option("script_location", str(ALEMBIC_SCRIPT_LOCATION))
-            command.upgrade(cfg, TARGET_REVISION)
+        cfg = Config(str(ALEMBIC_INI))
+        cfg.set_main_option("script_location", str(ALEMBIC_SCRIPT_LOCATION))
+        command.upgrade(cfg, "head")
     finally:
         eng.dispose()
 

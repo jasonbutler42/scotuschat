@@ -170,12 +170,49 @@ def office_title(office: str) -> str:
     return OFFICE_TITLES[office]
 
 
+# Phase 39 (D-01, D-15): the reason a tenure ended — a constrained enum with
+# exactly three values, nullable PERMANENTLY (D-02: an open/active tenure
+# never has a reason, and a few historical rows have no recorded value).
+# Named reason_left-specific (not a generic REASON_*/VALID_REASONS name) to
+# avoid colliding with any future unrelated "reason X" enum (39-RESEARCH.md
+# Pitfall 7).
+REASON_RETIRED = "retired"
+REASON_DIED = "died"
+REASON_PROMOTED = "promoted"
+VALID_REASONS_LEFT = (REASON_RETIRED, REASON_DIED, REASON_PROMOTED)
+
+# Canonical -> formal display title (D-15), locked by 39-UI-SPEC.md's
+# Copywriting Contract.
+REASON_LEFT_TITLES = {
+    REASON_RETIRED: "Retired",
+    REASON_DIED: "Died in office",
+    REASON_PROMOTED: "Promoted",
+}
+
+
+def reason_left_title(reason: str) -> str:
+    """Return the formal display title for a canonical reason_left value (D-15).
+
+    Exhaustive over VALID_REASONS_LEFT — raises KeyError for any other input,
+    including None. An out-of-vocabulary reason_left value reaching this
+    helper indicates a data-integrity bug the DB CHECK constraint
+    (ck_court_tenures_reason_left) should already have prevented; it must
+    not be silently coerced. Callers render no reason line for a null
+    reason_left (D-02) without calling this helper at all.
+    """
+    return REASON_LEFT_TITLES[reason]
+
+
 class CourtTenure(Base):
     __tablename__ = "court_tenures"
     __table_args__ = (
         CheckConstraint(
             "office IN ('chief', 'associate')",
             name="ck_court_tenures_office",
+        ),
+        CheckConstraint(
+            "reason_left IS NULL OR reason_left IN ('retired', 'died', 'promoted')",
+            name="ck_court_tenures_reason_left",
         ),
     )
 
@@ -187,6 +224,11 @@ class CourtTenure(Base):
     # Phase 22 — migration 0013: moved from people table (PEDIT-10)
     appointed_by = Column(String(200), nullable=True)
     appointing_president_party = Column(String(50), nullable=True)
+    # Phase 39 — migration 0024 (D-01/D-02): permanently nullable — an open
+    # tenure and a tenure with no recorded reason are both storable. The ORM
+    # CheckConstraint above is self-documentation only; Alembic remains the
+    # sole DDL authority (CLAUDE.md).
+    reason_left = Column(String(50), nullable=True)
 
 
 # ---------------------------------------------------------------------------

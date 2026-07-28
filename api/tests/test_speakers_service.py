@@ -16,6 +16,7 @@ These tests do NOT require a live database — pure Python function tests.
 """
 
 import datetime
+import os
 
 import pytest
 
@@ -32,6 +33,12 @@ def _get_helpers():
     from api.services.speakers import ADVOCATE_LABEL_MAP, _tenure_role_name
 
     return _tenure_role_name, ADVOCATE_LABEL_MAP
+
+
+def _db_configured() -> bool:
+    """Same placeholder guard every DB-gated fixture in this suite uses."""
+    url = os.environ.get("DATABASE_URL", "")
+    return bool(url) and "sk-ant" not in url and url != "postgresql+asyncpg://user:pass@host/db"
 
 
 # ---------------------------------------------------------------------------
@@ -226,3 +233,87 @@ class TestAdvocateLabelMap:
         """BENCH is not an advocate — it must NOT appear in ADVOCATE_LABEL_MAP."""
         _, ADVOCATE_LABEL_MAP = _get_helpers()
         assert SideEnum.BENCH not in ADVOCATE_LABEL_MAP
+
+
+# ---------------------------------------------------------------------------
+# get_argument_speakers end-to-end tracer test (Phase 39 Plan 01, Task 1)
+# ---------------------------------------------------------------------------
+
+
+class TestGetArgumentSpeakersReasonLeft:
+    """DB-backed proof that a stored reason_left value travels all the way from
+    the database through the ORM and public service assembly (39-01-PLAN.md
+    Task 1, Step 7) — the tracer slice for the whole Phase 39 data path."""
+
+    @pytest.mark.asyncio
+    @pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+    async def test_tenure_reason_left_reaches_public_service_output(self, db_session) -> None:
+        """A CourtTenure row storing reason_left='died' surfaces as
+        reason_left: "died" inside that tenure's entry of
+        get_argument_speakers() output (D-01, D-13)."""
+        from api.models.models import (
+            Argument,
+            ArgumentParticipant,
+            ArgumentStatusEnum,
+            CourtTenure,
+            Person,
+            PipelineRun,
+            PipelineRunStatus,
+            Role,
+            Utterance,
+        )
+
+        role = Role(name="Associate Justice")
+        db_session.add(role)
+        await db_session.flush()
+
+        person = Person(full_name="Died In Office Justice", role_id=role.id, is_justice=True)
+        db_session.add(person)
+        await db_session.flush()
+
+        arg = Argument(status=ArgumentStatusEnum.PIPELINE, argued_date=datetime.date(2024, 1, 10))
+        db_session.add(arg)
+        await db_session.flush()
+
+        tenure = CourtTenure(
+            person_id=person.id,
+            office=OFFICE_ASSOCIATE,
+            start_date=datetime.date(2010, 1, 1),
+            end_date=datetime.date(2023, 6, 1),
+            reason_left="died",
+        )
+        db_session.add(tenure)
+        await db_session.flush()
+
+        participant = ArgumentParticipant(
+            argument_id=arg.id,
+            person_id=person.id,
+            raw_speaker_label="JUSTICE EXAMPLE",
+            side=SideEnum.BENCH,
+        )
+        db_session.add(participant)
+        await db_session.flush()
+
+        run = PipelineRun(argument_id=arg.id, step="parse", status=PipelineRunStatus.COMPLETED)
+        db_session.add(run)
+        await db_session.flush()
+
+        utterance = Utterance(
+            argument_id=arg.id,
+            pipeline_run_id=run.id,
+            sequence=1,
+            raw_speaker_label="JUSTICE EXAMPLE",
+            text="An example utterance.",
+            side=SideEnum.BENCH,
+            person_id=person.id,
+            strategy="rule_based",
+        )
+        db_session.add(utterance)
+        await db_session.flush()
+
+        from api.services.speakers import get_argument_speakers
+
+        result = await get_argument_speakers(db_session, arg.id)
+
+        assert len(result) == 1
+        assert result[0]["tenure"][0]["reason_left"] == "died"

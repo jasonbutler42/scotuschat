@@ -38,13 +38,14 @@ import io
 import os
 import urllib.parse
 from datetime import date
-from pathlib import Path
+from pathlib import Path, PurePath
 
 import httpx
 from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 
 from api.services.argument_uniqueness import is_argument_pair_violation
+from api.domain.docket_values import DocketValueError, normalize_docket_value
 
 from api.models.models import (
     AdminJob,
@@ -57,6 +58,70 @@ from api.models.models import (
     PipelineRunStatus,
 )
 from pipeline.db import get_session
+
+
+def _validate_docket_value(docket: str, context: str) -> None:
+    """
+    Validate that a docket value is safe to use as a single filesystem path
+    component and as an appended `Case.slug` segment (G-38-6).
+
+    This is the SECOND, independent enforcement point for the canonical
+    docket-value rule — mirrors the existing two-layer SSRF pattern in this
+    module (`_validate_pdf_url` at the FastAPI route in api/routers/admin.py
+    plus `_validate_url` here). The API-side boundary (Phase 38 Plan 07,
+    `_normalize_dockets` in api/routers/admin.py) already rejects hazardous
+    docket values before an AdminJob row or ingest subprocess is created, but
+    a direct CLI invocation (`python -m pipeline ingest`) bypasses FastAPI
+    entirely, so that guard alone does not cover this path.
+
+    Delegates to `normalize_docket_value` for the one shared canonical rule
+    (character allow-list + length cap), then ADDITIONALLY asserts the
+    structural invariant directly rather than trusting the shared pattern
+    alone: the value must not contain a path separator, must not equal `..`
+    or contain a `..` segment, and `PurePath(value)` must not be absolute and
+    must resolve to exactly one path part. The delegation gives one shared
+    rule across the codebase; the structural assertions below are what stays
+    meaningful in this module even if the shared pattern were ever loosened
+    or bypassed.
+
+    Confirmed pathlib behaviors this defends against (see
+    .planning/debug/docket-filename-injection.md): `Path("data/pdfs") / value`
+    honors a `..` segment in `value` at write time (escaping data/pdfs), and
+    silently DISCARDS the left operand entirely when `value` is itself an
+    absolute path (e.g. `/etc/passwd` or `C:\\Windows\\...`) — pathlib's `/`
+    operator does not raise in either case.
+
+    Raises:
+        ValueError: when `docket` is not a safe single path component. The
+            message names `context` so a job-driven failure surfaces a
+            readable admin_jobs.error_message instead of a raw OSError.
+    """
+    try:
+        normalize_docket_value(docket)
+    except DocketValueError as exc:
+        raise ValueError(f"Invalid docket value for {context}: {exc}") from exc
+
+    if "/" in docket or "\\" in docket:
+        raise ValueError(
+            f"Invalid docket value for {context}: {docket!r} contains a path "
+            "separator."
+        )
+
+    # Uses PurePath rather than the module-level Path (Path is patched to a
+    # data/pdfs-specific mock in some tests) — PurePath does no I/O, so this
+    # structural check is unaffected either way.
+    if docket == ".." or ".." in PurePath(docket).parts:
+        raise ValueError(
+            f"Invalid docket value for {context}: {docket!r} contains a "
+            "traversal segment."
+        )
+
+    docket_path = PurePath(docket)
+    if docket_path.is_absolute() or len(docket_path.parts) != 1:
+        raise ValueError(
+            f"Invalid docket value for {context}: {docket!r} does not "
+            "resolve to a single safe path component."
+        )
 
 
 def _validate_url(url: str) -> None:
@@ -288,8 +353,12 @@ async def _run_ingest_inner(args) -> None:
         base_slug = f"job-{args.job_id}" if args.job_id is not None else "unknown"
 
     if primary_docket is not None:
+        _validate_docket_value(primary_docket, "primary docket")
         pdf_filename = f"{primary_docket}-q{args.question}.pdf"
     else:
+        # Server-generated fallbacks (job-{id}/unknown) are not
+        # operator-controlled, but still route through the containment
+        # assertion below so every branch shares one invariant.
         pdf_filename = (
             f"job-{args.job_id}-q{args.question}.pdf"
             if args.job_id is not None
@@ -299,6 +368,19 @@ async def _run_ingest_inner(args) -> None:
     pdf_dir = Path("data/pdfs")
     pdf_dir.mkdir(parents=True, exist_ok=True)
     pdf_path = pdf_dir / pdf_filename
+
+    # G-38-6 containment assertion: even if the character rule were ever
+    # weakened or bypassed, the resolved PDF write path must stay inside
+    # data/pdfs. Placed before pdf_path.exists() so no branch (existing-file
+    # skip, local-file copy, Spaces download, or HTTP download) can read or
+    # write outside data/pdfs.
+    resolved_pdf_dir = pdf_dir.resolve()
+    resolved_pdf_path = pdf_path.resolve()
+    if resolved_pdf_path.parent != resolved_pdf_dir:
+        raise ValueError(
+            f"Resolved PDF path {resolved_pdf_path} is not contained within "
+            f"{resolved_pdf_dir} — refusing to write."
+        )
 
     # ------------------------------------------------------------------
     # Step 4: Download PDF (idempotent — PIPE-02: immutable after ingest)
@@ -366,6 +448,15 @@ async def _run_ingest_inner(args) -> None:
 
         cases: list[Case] = []
         for docket in all_dockets:
+            # G-38-6: Case.slug becomes a public URL segment and _derive_slug
+            # sanitizes only case_name, never an appended consolidated
+            # docket — validate every docket (primary and consolidated)
+            # before it can reach case_slug construction below. The
+            # synthetic job-{id} docket generated above also passes through
+            # here unconditionally rather than being special-cased, since it
+            # already conforms.
+            _validate_docket_value(docket, "consolidated docket")
+
             result = await session.execute(
                 select(Case).where(Case.docket_number == docket)
             )

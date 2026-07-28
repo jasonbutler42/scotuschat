@@ -163,6 +163,13 @@ def test_docket_pill_required_contract_blocks_empty_and_exposes_focus() -> None:
     assert 'descriptionId="argument-details-alert"' in card
     assert "export function focus()" in pill
     assert "export function hasPills()" in pill
-    assert "aria-invalid={!readonly && invalid ? 'true' : undefined}" in pill
-    assert "aria-describedby={!readonly && invalid ? descriptionId : undefined}" in pill
+    # Phase 38 gap closure (G-38-6) composed shapeError into the invalid/
+    # descriptionId contract rather than replacing it — hasError/describedByIds
+    # reduce to the original !readonly && invalid behavior whenever shapeError
+    # is inactive (i.e. for every caller, like ArgumentDetailsCard, that never
+    # sets enforceShape and so never populates shapeError).
+    assert "let hasError = $derived(!readonly && (invalid || Boolean(shapeError)));" in pill
+    assert "aria-invalid={hasError ? 'true' : undefined}" in pill
+    assert "if (!readonly && invalid && descriptionId) ids.push(descriptionId);" in pill
+    assert "aria-describedby={describedByIds}" in pill
     assert "e.preventDefault();" in pill

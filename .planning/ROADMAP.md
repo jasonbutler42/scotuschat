@@ -343,7 +343,7 @@ Plans:
   3. All added fields are presented identically for every Justice — no differential framing, omission, or emphasis based on any political consideration.
   4. Case-specific presentation (age at argument, tenure-length indicators, case-heard counts) remains out of scope for this phase.
 
-**Plans**: 4/6 plans executed
+**Plans**: 5/6 plans executed
 **UI hint**: yes
 
 **Wave 1**
@@ -358,7 +358,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 39-05-PLAN.md — Rebuild the popover card: role pill, birth/death line, bio clamp + expand, 3-line tenure blocks, advocate descriptor slot (D-14/D-15/D-16, D-17 deferred)
+- [x] 39-05-PLAN.md — Rebuild the popover card: role pill, birth/death line, bio clamp + expand, 3-line tenure blocks, advocate descriptor slot (D-14/D-15/D-16, D-17 deferred)
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
@@ -420,7 +420,7 @@ Plans:
 | 36. Click-to-copy extracted values design pattern | v1.6 | 3/3 | Complete    | 2026-07-15 |
 | 37. Represent tenure Seat as a Chief/Associate toggle instead of free text | v1.6 | 5/5 | Complete    | 2026-07-21 |
 | 38. Rethink Full Name vs. name-part fields in the people editor | v1.6 | 10/10 | Complete    | 2026-07-27 |
-| 39. Bench popover — additional context data for Justices | v1.6 | 4/6 | In Progress|  |
+| 39. Bench popover — additional context data for Justices | v1.6 | 5/6 | In Progress|  |
 | 40. README — how to start the local stack | v1.6 | 3/3 | Complete    | 2026-07-14 |
 
 ## Backlog

@@ -1,7 +1,7 @@
 ---
 phase: 32-fix-courttenure-fk-bookkeeping-gap-in-merge-delete-person-se
 verified: 2026-07-13T20:00:00Z
-status: human_needed
+status: passed
 score: 4/4 must-haves verified (present + wired + live-DB behavioral pass confirmed post-verification)
 behavior_unverified: 0
 overrides_applied: 0
@@ -91,6 +91,7 @@ Resolved without human action: re-running via the project's configured full-suit
 ## Gaps Summary
 
 No gaps found. Every observable truth from the ROADMAP.md Success Criteria (1-4) and every must-have from both PLAN frontmatter blocks is present, substantive, and correctly wired, confirmed via:
+
 - Direct reading of all 5 modified files against their final state
 - `git show` diff review of all 4 task commits (3f9d2059, 73f721d9, 67336a4f, 6e25fe04) — each diff is minimal, exact, and matches the plan's `<action>` blocks with no unrelated changes
 - Live execution of the schema validation checks, non-DB pytest suite, test-collection for the 3 new tests, and `npm run check` (svelte-check)

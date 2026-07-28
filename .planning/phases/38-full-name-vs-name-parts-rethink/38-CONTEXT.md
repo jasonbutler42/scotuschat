@@ -73,6 +73,8 @@ The phase does not restore the removed job-rerun control and does not add a gene
 
 ### Canonical visual reference
 - `.planning/phases/38-full-name-vs-name-parts-rethink/mockups/extracted-fields-stacked.png` — user-supplied canonical stacked layout for small and large fields. Replace its example percentage with the locked `High`/`Medium`/`Low` confidence band while preserving the two-line structure and raw-text treatment.
+- `.planning/phases/38-full-name-vs-name-parts-rethink/38-FIGMA.md` — approved Figma manifest for the Docket Pill component, including canonical file/node links, covered states, implementation targets, and the durable fallback snapshot.
+- `.planning/phases/38-full-name-vs-name-parts-rethink/mockups/docket-pill-provenance-approved.png` — approved offline snapshot of the Docket Pill review sheet. The editable Figma component linked from `38-FIGMA.md` remains authoritative.
 
 ### Existing name behavior and ingestion
 - `api/services/admin_people.py` — existing `_derive_full_name`, partial edit-time derivation, create-time Full Name requirement, directory missing-field logic, and people mutations.

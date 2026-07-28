@@ -361,7 +361,7 @@
 					>
 						Docket number
 					</label>
-					<DocketPillInput initialValues={[]} name="docket[]" id="primary_docket" />
+					<DocketPillInput initialValues={[]} name="docket[]" id="primary_docket" enforceShape />
 				</div>
 
 				<!-- Question number free-text field (PLIST-01, D-01/D-02, UI-SPEC Component 1) -->

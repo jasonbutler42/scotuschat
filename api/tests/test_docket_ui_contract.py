@@ -118,3 +118,41 @@ def test_extracted_rule_matches_python_on_every_fixture_case(ts_source: str, fix
         with pytest.raises(DocketValueError) as excinfo:
             normalize_docket_value(case["value"])
         assert excinfo.value.code == case["code"]
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Task 2: Inline shape error in DocketPillInput, opted into by the Pipeline
+# Runner only. ArgumentDetailsCard (the post-ingest metadata editor) must
+# stay untouched.
+# ─────────────────────────────────────────────────────────────────────────
+
+
+def test_docket_pill_input_imports_and_calls_normalize_docket_value() -> None:
+    source = _source(DOCKET_PILL_INPUT_PATH)
+    assert "from '$lib/docketValues'" in source
+    assert "normalizeDocketValue(" in source
+
+
+def test_docket_pill_input_declares_enforce_shape_prop_defaulting_false() -> None:
+    source = _source(DOCKET_PILL_INPUT_PATH)
+    assert "enforceShape?: boolean;" in source
+    assert "enforceShape = false" in source
+
+
+def test_docket_pill_input_renders_role_alert_shape_error() -> None:
+    source = _source(DOCKET_PILL_INPUT_PATH)
+    assert 'role="alert"' in source
+
+
+def test_argument_details_card_does_not_reference_enforce_shape() -> None:
+    source = _source(ARGUMENT_DETAILS_CARD_PATH)
+    assert "enforceShape" not in source
+
+
+def test_pipeline_page_svelte_passes_enforce_shape_to_docket_pill_input() -> None:
+    source = _source(PIPELINE_PAGE_SVELTE_PATH)
+    assert "<DocketPillInput" in source
+    # Find the (single) DocketPillInput usage and confirm enforceShape is on it.
+    match = re.search(r"<DocketPillInput\b[^>]*/>", source, flags=re.DOTALL)
+    assert match, "Could not find a self-closing <DocketPillInput ... /> usage"
+    assert "enforceShape" in match.group(0)

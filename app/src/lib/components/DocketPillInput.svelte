@@ -5,6 +5,12 @@
 	// byte-identical markup/behavior to before this phase — this is an additive,
 	// backward-compatible extension, not a replacement of the editable-input role.
 	import CopyableExtractedValue from '$lib/components/CopyableExtractedValue.svelte';
+	// Phase 38 gap closure (G-38-6, item 3): opt-in client-side shape feedback,
+	// mirroring api/domain/docket_values.py. The backend (plan 38-07 at the
+	// FastAPI boundary, plan 38-08 inside the pipeline) remains the sole
+	// enforcement authority — this only gives the operator immediate,
+	// specific feedback at the control instead of a crashed job later.
+	import { normalizeDocketValue, DocketValueError, docketValueErrorMessage } from '$lib/docketValues';
 
 	type ConfidenceBand = 'High' | 'Medium' | 'Low';
 	interface DocketProvenance {
@@ -21,6 +27,12 @@
 		id?: string;
 		invalid?: boolean;
 		descriptionId?: string;
+		// Opt-in shape validation on newly typed values (never on initialValues
+		// or already-rendered pills). Required on the job-creation path
+		// (Pipeline Runner) because those values become filesystem paths;
+		// the post-ingest metadata editor (ArgumentDetailsCard) has no
+		// equivalent constraint in its API contract and stays opted out.
+		enforceShape?: boolean;
 	}
 
 	let {
@@ -29,7 +41,8 @@
 		readonly = false,
 		id = 'docket-input',
 		invalid = false,
-		descriptionId
+		descriptionId,
+		enforceShape = false
 	}: DocketPillInputProps = $props();
 
 	function normalizeEntry(entry: DocketPillValue): DocketProvenance {
@@ -49,6 +62,10 @@
 	let pills = $state<string[]>(normalizedInitial.map((p) => p.value));
 	let docketInput = $state('');
 	let inputElement: HTMLInputElement | null = $state(null);
+	// Shape-error state (enforceShape only) — cleared on every input change and
+	// on the next successful add; never set for initialValues/existing pills.
+	let shapeError = $state<string | null>(null);
+	const shapeErrorId = `${id}-shape-error`;
 
 	export function focus() {
 		inputElement?.focus();
@@ -60,6 +77,27 @@
 
 	function addPill() {
 		const v = docketInput.trim();
+		if (enforceShape) {
+			// Silently reject empty and duplicate values, same as the D-04
+			// semantics below — the shape check only applies to genuinely new,
+			// non-duplicate values.
+			if (!v || pills.includes(v)) {
+				docketInput = '';
+				return;
+			}
+			try {
+				const normalized = normalizeDocketValue(v);
+				pills = [...pills, normalized];
+				docketInput = '';
+				shapeError = null;
+			} catch (err) {
+				if (!(err instanceof DocketValueError)) throw err;
+				// Leave docketInput (and pills) untouched so the operator can
+				// correct the value in place rather than retype it.
+				shapeError = docketValueErrorMessage(err.code);
+			}
+			return;
+		}
 		// Silently reject empty and duplicate values (D-04)
 		if (v && !pills.includes(v)) {
 			pills = [...pills, v];
@@ -70,6 +108,17 @@
 	function removePill(value: string) {
 		pills = pills.filter((p) => p !== value);
 	}
+
+	// Compose with — do not replace — the existing caller-driven invalid/
+	// descriptionId contract: when both the caller's `invalid` and this
+	// component's own shapeError are active, both ids are referenced.
+	let hasError = $derived(!readonly && (invalid || Boolean(shapeError)));
+	let describedByIds = $derived.by(() => {
+		const ids: string[] = [];
+		if (!readonly && invalid && descriptionId) ids.push(descriptionId);
+		if (!readonly && shapeError) ids.push(shapeErrorId);
+		return ids.length > 0 ? ids.join(' ') : undefined;
+	});
 </script>
 
 <!-- Hidden inputs: one per pill — server reads FormData.getAll(name) -->
@@ -206,8 +255,14 @@
 	type="text"
 	bind:value={docketInput}
 	disabled={readonly}
-	aria-invalid={!readonly && invalid ? 'true' : undefined}
-	aria-describedby={!readonly && invalid ? descriptionId : undefined}
+	aria-invalid={hasError ? 'true' : undefined}
+	aria-describedby={describedByIds}
+	oninput={() => {
+		// Clear the shape error as soon as the operator starts correcting the
+		// value — never clears the caller-driven `invalid` state, which is
+		// owned by the caller.
+		if (shapeError) shapeError = null;
+	}}
 	onkeydown={(e) => {
 		if (e.key === 'Enter') {
 			e.preventDefault();
@@ -217,7 +272,7 @@
 	style="
 		width: 100%;
 		background-color: #0f1117;
-		border: 1px solid {!readonly && invalid ? '#ef4444' : '#334155'};
+		border: 1px solid {hasError ? '#ef4444' : '#334155'};
 		border-radius: 6px;
 		padding: 8px 12px;
 		font-size: 16px;
@@ -226,3 +281,12 @@
 		font-family: inherit;
 	"
 />
+{#if !readonly && shapeError}
+	<p
+		id={shapeErrorId}
+		role="alert"
+		style="font-size: 13px; font-weight: 400; color: #ef4444; margin: 4px 0 0 0;"
+	>
+		{shapeError}
+	</p>
+{/if}

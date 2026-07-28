@@ -317,3 +317,262 @@ class TestGetArgumentSpeakersReasonLeft:
 
         assert len(result) == 1
         assert result[0]["tenure"][0]["reason_left"] == "died"
+
+
+# ---------------------------------------------------------------------------
+# Widened public contract regression guards (Phase 39, Plan 04)
+# ---------------------------------------------------------------------------
+
+
+class TestPartyFieldNotSilentlyReExcluded:
+    """Regression guard against silently re-narrowing the deliberately-widened
+    public speaker payload (39-CONTEXT.md D-11/D-12, reverses T-14-02).
+
+    A future edit that re-adds the old apolitical-exclusion of
+    appointing_president_party must fail this test loudly, not silently
+    narrow the public contract again.
+    """
+
+    def test_appointing_president_party_present_on_tenure_entry(self):
+        from api.schemas.speakers import TenureEntry
+
+        assert "appointing_president_party" in TenureEntry.model_fields
+
+    def test_top_level_appointing_president_field_not_reintroduced(self):
+        """The retired top-level field (D-13 promote) must not come back."""
+        from api.schemas.speakers import SpeakerPopoverEntry
+
+        assert "appointing_president" not in SpeakerPopoverEntry.model_fields
+
+
+class TestGetArgumentSpeakersWidenedContractShape:
+    """DB-backed proof that the widened public contract (Plan 39-04, Task 1)
+    is an exact, closed key set — not merely a superset check — and that
+    every entry is shaped identically regardless of the values it carries
+    (T-39-13's positive allow-list, enforced here as an executable test)."""
+
+    _SPEAKER_KEYS = {
+        "person_id",
+        "full_name",
+        "role_name",
+        "photo_url",
+        "birthdate",
+        "death_date",
+        "bio_text",
+        "tenure",
+        "side",
+    }
+    _TENURE_KEYS = {
+        "office",
+        "start_date",
+        "end_date",
+        "appointed_by",
+        "appointing_president_party",
+        "reason_left",
+    }
+
+    async def _seed_bench_speaker_with_two_tenures(
+        self,
+        db_session,
+        *,
+        full_name: str,
+        birthdate: datetime.date | None,
+        death_date: datetime.date | None,
+        bio_text: str | None,
+    ):
+        """Seed a Role/Person/Argument/two-CourtTenure/ArgumentParticipant/
+        PipelineRun/Utterance set, mirroring
+        TestGetArgumentSpeakersReasonLeft's seeding shape, extended with a
+        second tenure (different office, dates, appointed_by,
+        appointing_president_party and reason_left) and the three new
+        person-level fields.
+
+        Returns the seeded Argument.
+        """
+        from api.models.models import (
+            Argument,
+            ArgumentParticipant,
+            ArgumentStatusEnum,
+            CourtTenure,
+            Person,
+            PipelineRun,
+            PipelineRunStatus,
+            Role,
+            Utterance,
+        )
+
+        role = Role(name="Associate Justice")
+        db_session.add(role)
+        await db_session.flush()
+
+        person = Person(
+            full_name=full_name,
+            role_id=role.id,
+            is_justice=True,
+            birthdate=birthdate,
+            death_date=death_date,
+            bio_text=bio_text,
+        )
+        db_session.add(person)
+        await db_session.flush()
+
+        arg = Argument(status=ArgumentStatusEnum.PIPELINE, argued_date=datetime.date(2024, 1, 10))
+        db_session.add(arg)
+        await db_session.flush()
+
+        tenure_1 = CourtTenure(
+            person_id=person.id,
+            office=OFFICE_ASSOCIATE,
+            start_date=datetime.date(1990, 1, 1),
+            end_date=datetime.date(2005, 6, 1),
+            appointed_by="Example President One",
+            appointing_president_party="Party A",
+            reason_left="promoted",
+        )
+        tenure_2 = CourtTenure(
+            person_id=person.id,
+            office=OFFICE_CHIEF,
+            start_date=datetime.date(2005, 6, 2),
+            end_date=None,
+            appointed_by="Example President Two",
+            appointing_president_party="Party B",
+            reason_left=None,
+        )
+        db_session.add_all([tenure_1, tenure_2])
+        await db_session.flush()
+
+        participant = ArgumentParticipant(
+            argument_id=arg.id,
+            person_id=person.id,
+            raw_speaker_label="JUSTICE EXAMPLE",
+            side=SideEnum.BENCH,
+        )
+        db_session.add(participant)
+        await db_session.flush()
+
+        run = PipelineRun(argument_id=arg.id, step="parse", status=PipelineRunStatus.COMPLETED)
+        db_session.add(run)
+        await db_session.flush()
+
+        utterance = Utterance(
+            argument_id=arg.id,
+            pipeline_run_id=run.id,
+            sequence=1,
+            raw_speaker_label="JUSTICE EXAMPLE",
+            text="An example utterance.",
+            side=SideEnum.BENCH,
+            person_id=person.id,
+            strategy="rule_based",
+        )
+        db_session.add(utterance)
+        await db_session.flush()
+
+        return arg
+
+    @pytest.mark.asyncio
+    @pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+    async def test_speaker_and_tenure_key_sets_are_exact_not_subset(self, db_session) -> None:
+        """The assembled entry's key set equals the closed allow-list exactly
+        (== not <=), so any future leak of an adjacent Person column — for
+        example oyez_speaker_id — fails this test."""
+        from api.services.speakers import get_argument_speakers
+
+        arg = await self._seed_bench_speaker_with_two_tenures(
+            db_session,
+            full_name="Exact Key Set Justice",
+            birthdate=datetime.date(1950, 3, 4),
+            death_date=None,
+            bio_text="A short biography.",
+        )
+
+        result = await get_argument_speakers(db_session, arg.id)
+
+        assert len(result) == 1
+        entry = result[0]
+        assert set(entry.keys()) == self._SPEAKER_KEYS
+        assert len(entry["tenure"]) == 2
+        for tenure_entry in entry["tenure"]:
+            assert set(tenure_entry.keys()) == self._TENURE_KEYS
+
+    @pytest.mark.asyncio
+    @pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+    async def test_person_fields_with_values_produce_iso_strings_and_verbatim_bio(
+        self, db_session
+    ) -> None:
+        """A person with birthdate/death_date/bio_text set produces
+        ISO-format date strings and the verbatim bio string."""
+        from api.services.speakers import get_argument_speakers
+
+        arg = await self._seed_bench_speaker_with_two_tenures(
+            db_session,
+            full_name="Fully Populated Justice",
+            birthdate=datetime.date(1930, 1, 1),
+            death_date=datetime.date(2020, 12, 31),
+            bio_text="Verbatim biography text.",
+        )
+
+        result = await get_argument_speakers(db_session, arg.id)
+
+        assert len(result) == 1
+        entry = result[0]
+        assert entry["birthdate"] == "1930-01-01"
+        assert entry["death_date"] == "2020-12-31"
+        assert entry["bio_text"] == "Verbatim biography text."
+
+    @pytest.mark.asyncio
+    @pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+    async def test_person_fields_all_null_produce_none_with_keys_still_present(
+        self, db_session
+    ) -> None:
+        """A person with birthdate/death_date/bio_text all NULL produces
+        three None values with the keys still present (T-39-16)."""
+        from api.services.speakers import get_argument_speakers
+
+        arg = await self._seed_bench_speaker_with_two_tenures(
+            db_session,
+            full_name="No Person Fields Justice",
+            birthdate=None,
+            death_date=None,
+            bio_text=None,
+        )
+
+        result = await get_argument_speakers(db_session, arg.id)
+
+        assert len(result) == 1
+        entry = result[0]
+        assert "birthdate" in entry and entry["birthdate"] is None
+        assert "death_date" in entry and entry["death_date"] is None
+        assert "bio_text" in entry and entry["bio_text"] is None
+
+    @pytest.mark.asyncio
+    @pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+    async def test_tenures_with_differing_party_values_are_identically_shaped(
+        self, db_session
+    ) -> None:
+        """Two tenures whose appointing_president_party values differ
+        produce byte-identically-shaped dicts — same keys, same ordering of
+        the tenure list as the service's order_by (start_date ascending),
+        no extra or missing key on either."""
+        from api.services.speakers import get_argument_speakers
+
+        arg = await self._seed_bench_speaker_with_two_tenures(
+            db_session,
+            full_name="Two Parties Justice",
+            birthdate=None,
+            death_date=None,
+            bio_text=None,
+        )
+
+        result = await get_argument_speakers(db_session, arg.id)
+
+        assert len(result) == 1
+        tenures = result[0]["tenure"]
+        assert len(tenures) == 2
+
+        first, second = tenures
+        assert list(first.keys()) == list(second.keys())
+        assert first["appointing_president_party"] != second["appointing_president_party"]
+        assert first["appointing_president_party"] == "Party A"
+        assert second["appointing_president_party"] == "Party B"
+        # order_by(CourtTenure.start_date.asc()) — earlier start_date first.
+        assert first["start_date"] < second["start_date"]

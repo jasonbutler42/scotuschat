@@ -33,7 +33,7 @@ Requirements for the v1.6 Backlog Cleanup milestone. Each maps to a roadmap phas
 
 ### Public UI
 
-- [ ] **PUB-04**: Justice bench popover shows richer persistent context (birthdate, death date, per-tenure appointing president + party + reason for leaving), presented apolitically
+- [x] **PUB-04**: Justice bench popover shows richer persistent context (birthdate, death date, per-tenure appointing president + party + reason for leaving), presented apolitically
 
 ### Documentation
 
@@ -82,7 +82,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | UX-01 | Phase 36 | Complete |
 | PEOPLE-08 | Phase 37 | Complete |
 | PEOPLE-09 | Phase 38 | Complete |
-| PUB-04 | Phase 39 | Pending |
+| PUB-04 | Phase 39 | Complete |
 | DOCS-01 | Phase 40 | Complete |
 
 **Coverage:**

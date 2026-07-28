@@ -5,15 +5,15 @@ milestone_name: Backlog Cleanup
 current_phase: 39
 current_phase_name: bench-popover-additional-context-data
 status: executing
-stopped_at: Phase 38 complete (10/10 plans, gap G-38-6 closed and operator-verified); ready to plan Phase 39
-last_updated: "2026-07-28T12:52:10.366Z"
-last_activity: 2026-07-27
-last_activity_desc: Phase 38 marked complete (10/10 plans)
+stopped_at: Completed 39-01-PLAN.md
+last_updated: "2026-07-28T15:14:53.971Z"
+last_activity: 2026-07-28
+last_activity_desc: Phase 39 execution started
 progress:
   total_phases: 10
   completed_phases: 9
   total_plans: 48
-  completed_plans: 42
+  completed_plans: 43
   percent: 90
 ---
 
@@ -28,10 +28,10 @@ See: .planning/PROJECT.md (updated 2026-07-14 after Phase 34 verification)
 
 ## Current Position
 
-Phase: 39 (bench-popover-additional-context-data) — NOT STARTED
-Plan: Not started
+Phase: 39 (bench-popover-additional-context-data) — EXECUTING
+Plan: 2 of 6
 Status: Ready to execute
-Last activity: 2026-07-27 — Phase 38 marked complete (10/10 plans)
+Last activity: 2026-07-28 — Phase 39 execution started
 
 ## Performance Metrics
 
@@ -55,6 +55,7 @@ v1.5: 10 phases, 55 plans, 10 days (2026-07-02 → 2026-07-12).
 | Phase 38 P08 | 20min | 2 tasks | 2 files |
 | Phase 38 P09 | 20min | 3 tasks | 5 files |
 | Phase 38 P10 | ~15min | 2 tasks | 1 files |
+| Phase 39 P01 | ~70min | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -151,6 +152,8 @@ Two open design questions remain unresolved by design and are intentionally defe
 - [Phase ?]: [Phase 38, Plan 09]: On a shape-error rejection, DocketPillInput preserves the attempted input value and does not add a pill; the SvelteKit action's docket-error fail(400) never echoes the value or forwards FastAPI's 422 detail verbatim (T-07-13 posture retained)
 - [Phase ?]: [Phase 38, Plan 10]: G-38-6 closed only after both the automated regression gate and explicit operator re-verification of all 6 checkpoint steps on the live Pipeline Runner, matching the plan's premise that a UI-found gap is closed by a human at the UI
 - [Phase ?]: [Phase 38, Plan 10]: 38-UAT.md's pre-existing test_phase38_people_ui_contract.py node-driver failure was left undisturbed and only noted, per plan scope
+- [Phase ?]: [Phase 39, Plan 01]: Bundled migrations 0023+0024 into Task 1's commit (rather than the plan's literal Task 1/Task 2 file split) because 0024's down_revision chains through 0023 -- alembic head is only buildable with both present; Person.death_date's ORM mapping still landed in Task 2
+- [Phase ?]: [Phase 39, Plan 01]: Migrations applied only to an ephemeral pgserver-provisioned PostgreSQL instance this session, never the real dev DB -- Plan 39-06 must still apply 0023/0024 to the real dev DB as an operator step
 
 ### Roadmap Evolution
 
@@ -273,8 +276,8 @@ Items acknowledged and deferred at v1.5 milestone close on 2026-07-12:
 
 ## Session Continuity
 
-Last session: 2026-07-27
-Stopped at: Phase 38 complete, ready to plan Phase 39
+Last session: 2026-07-28T15:14:53.274Z
+Stopped at: Completed 39-01-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

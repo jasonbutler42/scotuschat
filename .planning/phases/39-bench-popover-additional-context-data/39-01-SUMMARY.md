@@ -178,6 +178,10 @@ No separate plan-metadata commit was made prior to this SUMMARY; the final `docs
 - **Plan 39-06 still needs to apply migrations 0023 and 0024 to the real dev database** — this plan only ran them against an ephemeral test instance, per the plan's own environment note.
 - Full suite (`pytest`, no args): 740 passed, 5 xfailed, 0 failed against the ephemeral instance after this plan's changes.
 
+## Self-Check: PASSED
+
+All 10 created/modified source files and the SUMMARY itself confirmed present on disk; all 3 commits (`7955702c`, `3e6de7a3`, `8dc5ee93`) confirmed present in `git log --oneline --all`.
+
 ---
 *Phase: 39-bench-popover-additional-context-data*
 *Completed: 2026-07-28*

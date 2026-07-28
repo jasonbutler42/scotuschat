@@ -343,12 +343,12 @@ Plans:
   3. All added fields are presented identically for every Justice — no differential framing, omission, or emphasis based on any political consideration.
   4. Case-specific presentation (age at argument, tenure-length indicators, case-heard counts) remains out of scope for this phase.
 
-**Plans**: 6 plans
+**Plans**: 1/6 plans executed
 **UI hint**: yes
 
 **Wave 1**
 
-- [ ] 39-01-PLAN.md — Tracer: reason-left end to end (migration → model → schema → service → popover line) + people.death_date (D-01/D-02/D-03/D-04/D-15)
+- [x] 39-01-PLAN.md — Tracer: reason-left end to end (migration → model → schema → service → popover line) + people.death_date (D-01/D-02/D-03/D-04/D-15)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -420,7 +420,7 @@ Plans:
 | 36. Click-to-copy extracted values design pattern | v1.6 | 3/3 | Complete    | 2026-07-15 |
 | 37. Represent tenure Seat as a Chief/Associate toggle instead of free text | v1.6 | 5/5 | Complete    | 2026-07-21 |
 | 38. Rethink Full Name vs. name-part fields in the people editor | v1.6 | 10/10 | Complete    | 2026-07-27 |
-| 39. Bench popover — additional context data for Justices | v1.6 | TBD | Not started | - |
+| 39. Bench popover — additional context data for Justices | v1.6 | 1/6 | In Progress|  |
 | 40. README — how to start the local stack | v1.6 | 3/3 | Complete    | 2026-07-14 |
 
 ## Backlog

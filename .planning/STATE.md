@@ -4,17 +4,17 @@ milestone: v1.6
 milestone_name: Backlog Cleanup
 current_phase: 38
 current_phase_name: full-name-vs-name-parts-rethink
-status: executing
-stopped_at: Completed 38-09-PLAN.md
-last_updated: "2026-07-28T00:35:02.534Z"
+status: verifying
+stopped_at: Completed 38-10-PLAN.md
+last_updated: "2026-07-28T02:54:38.079Z"
 last_activity: 2026-07-28
 last_activity_desc: Completed 38-08-PLAN.md
 progress:
   total_phases: 10
-  completed_phases: 8
+  completed_phases: 9
   total_plans: 42
-  completed_plans: 41
-  percent: 80
+  completed_plans: 42
+  percent: 90
 ---
 
 # Project State
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-07-14 after Phase 34 verification)
 
 Phase: 38 (full-name-vs-name-parts-rethink) — EXECUTING
 Plan: 10 of 10
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-07-28 — Completed 38-08-PLAN.md
 
 ## Performance Metrics
@@ -54,6 +54,7 @@ v1.5: 10 phases, 55 plans, 10 days (2026-07-02 → 2026-07-12).
 | Phase 38 P07 | 20min | 2 tasks | 5 files |
 | Phase 38 P08 | 20min | 2 tasks | 2 files |
 | Phase 38 P09 | 20min | 3 tasks | 5 files |
+| Phase 38 P10 | ~15min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -148,6 +149,8 @@ Two open design questions remain unresolved by design and are intentionally defe
 - [Phase ?]: [Phase 38, Plan 09]: Docket TS/Python parity locked via source extraction + Python execution of the extracted rule, not a node subprocess -- avoids the known-broken Windows-path node driver pattern in test_phase38_people_ui_contract.py
 - [Phase ?]: [Phase 38, Plan 09]: enforceShape on DocketPillInput defaults to false and is opt-in only for the Pipeline Runner's New Run form; ArgumentDetailsCard.svelte stays untouched (contract-tested at 0 references) since its API contract has no equivalent path-hazard constraint
 - [Phase ?]: [Phase 38, Plan 09]: On a shape-error rejection, DocketPillInput preserves the attempted input value and does not add a pill; the SvelteKit action's docket-error fail(400) never echoes the value or forwards FastAPI's 422 detail verbatim (T-07-13 posture retained)
+- [Phase ?]: [Phase 38, Plan 10]: G-38-6 closed only after both the automated regression gate and explicit operator re-verification of all 6 checkpoint steps on the live Pipeline Runner, matching the plan's premise that a UI-found gap is closed by a human at the UI
+- [Phase ?]: [Phase 38, Plan 10]: 38-UAT.md's pre-existing test_phase38_people_ui_contract.py node-driver failure was left undisturbed and only noted, per plan scope
 
 ### Roadmap Evolution
 
@@ -270,8 +273,8 @@ Items acknowledged and deferred at v1.5 milestone close on 2026-07-12:
 
 ## Session Continuity
 
-Last session: 2026-07-28T00:35:02.042Z
-Stopped at: Completed 38-09-PLAN.md
+Last session: 2026-07-28T02:54:37.424Z
+Stopped at: Completed 38-10-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

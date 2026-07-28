@@ -5,15 +5,15 @@ milestone_name: Backlog Cleanup
 current_phase: 38
 current_phase_name: full-name-vs-name-parts-rethink
 status: executing
-stopped_at: Completed 38-08-PLAN.md
-last_updated: "2026-07-28T00:26:48.627Z"
+stopped_at: Completed 38-09-PLAN.md
+last_updated: "2026-07-28T00:35:02.534Z"
 last_activity: 2026-07-28
 last_activity_desc: Completed 38-08-PLAN.md
 progress:
   total_phases: 10
   completed_phases: 8
   total_plans: 42
-  completed_plans: 40
+  completed_plans: 41
   percent: 80
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-07-14 after Phase 34 verification)
 ## Current Position
 
 Phase: 38 (full-name-vs-name-parts-rethink) — EXECUTING
-Plan: 9 of 10
+Plan: 10 of 10
 Status: Ready to execute
 Last activity: 2026-07-28 — Completed 38-08-PLAN.md
 
@@ -53,6 +53,7 @@ v1.5: 10 phases, 55 plans, 10 days (2026-07-02 → 2026-07-12).
 | Phase 38 P06 | ~50min | 3 tasks | 8 files |
 | Phase 38 P07 | 20min | 2 tasks | 5 files |
 | Phase 38 P08 | 20min | 2 tasks | 2 files |
+| Phase 38 P09 | 20min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -144,6 +145,9 @@ Two open design questions remain unresolved by design and are intentionally defe
 - [Phase ?]: [Phase 38, Plan 07]: T-24-08's leading-hyphen argv guard in _normalize_dockets stays unmodified and runs before the new normalize_docket_value check; the domain rule is additive, not a replacement, even though it independently subsumes the same input class
 - [Phase ?]: [Phase 38, Plan 08]: Used pathlib.PurePath (not the module's Path, which existing DB-dependent tests patch to a mock) for the docket guard's structural is_absolute/parts check, keeping the guard's I/O-free path parsing decoupled from the mocked Path used for file writes
 - [Phase ?]: [Phase 38, Plan 08]: The docket guard runs uniformly on every docket in all_dockets, including the synthetic job-{id} docket, with no special-case exemption
+- [Phase ?]: [Phase 38, Plan 09]: Docket TS/Python parity locked via source extraction + Python execution of the extracted rule, not a node subprocess -- avoids the known-broken Windows-path node driver pattern in test_phase38_people_ui_contract.py
+- [Phase ?]: [Phase 38, Plan 09]: enforceShape on DocketPillInput defaults to false and is opt-in only for the Pipeline Runner's New Run form; ArgumentDetailsCard.svelte stays untouched (contract-tested at 0 references) since its API contract has no equivalent path-hazard constraint
+- [Phase ?]: [Phase 38, Plan 09]: On a shape-error rejection, DocketPillInput preserves the attempted input value and does not add a pill; the SvelteKit action's docket-error fail(400) never echoes the value or forwards FastAPI's 422 detail verbatim (T-07-13 posture retained)
 
 ### Roadmap Evolution
 
@@ -266,8 +270,8 @@ Items acknowledged and deferred at v1.5 milestone close on 2026-07-12:
 
 ## Session Continuity
 
-Last session: 2026-07-28T00:26:47.895Z
-Stopped at: Completed 38-08-PLAN.md
+Last session: 2026-07-28T00:35:02.042Z
+Stopped at: Completed 38-09-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

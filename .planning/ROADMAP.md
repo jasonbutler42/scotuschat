@@ -343,8 +343,26 @@ Plans:
   3. All added fields are presented identically for every Justice — no differential framing, omission, or emphasis based on any political consideration.
   4. Case-specific presentation (age at argument, tenure-length indicators, case-heard counts) remains out of scope for this phase.
 
-**Plans**: TBD
+**Plans**: 6 plans
 **UI hint**: yes
+
+**Wave 1**
+
+- [ ] 39-01-PLAN.md — Tracer: reason-left end to end (migration → model → schema → service → popover line) + people.death_date (D-01/D-02/D-03/D-04/D-15)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 39-02-PLAN.md — Justices CSV importer reads Birthdate / Death Date / Reason Left with null-only backfill (D-04–D-07)
+- [ ] 39-03-PLAN.md — Activate the person editor's Death Date input and per-tenure Reason Left dropdown (D-08/D-09/D-10)
+- [ ] 39-04-PLAN.md — Public API: T-14-02 party-exposure reversal + promote appointing_president to per-tenure + birthdate/death_date/bio_text (D-11/D-12/D-13/D-14)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 39-05-PLAN.md — Rebuild the popover card: role pill, birth/death line, bio clamp + expand, 3-line tenure blocks, advocate descriptor slot (D-14/D-15/D-16, D-17 deferred)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 39-06-PLAN.md — Operator runbook: apply migrations + run import-justices on the real dev DB, then live UAT of both card types
 
 ### Phase 40: README — how to start the local stack
 

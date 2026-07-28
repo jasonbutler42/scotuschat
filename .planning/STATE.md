@@ -5,15 +5,15 @@ milestone_name: Backlog Cleanup
 current_phase: 38
 current_phase_name: full-name-vs-name-parts-rethink
 status: executing
-stopped_at: Completed 38-07-PLAN.md
-last_updated: "2026-07-28T00:15:21.279Z"
-last_activity: 2026-07-27
-last_activity_desc: Phase 38 execution started
+stopped_at: Completed 38-08-PLAN.md
+last_updated: "2026-07-28T00:26:48.627Z"
+last_activity: 2026-07-28
+last_activity_desc: Completed 38-08-PLAN.md
 progress:
   total_phases: 10
   completed_phases: 8
   total_plans: 42
-  completed_plans: 39
+  completed_plans: 40
   percent: 80
 ---
 
@@ -29,9 +29,9 @@ See: .planning/PROJECT.md (updated 2026-07-14 after Phase 34 verification)
 ## Current Position
 
 Phase: 38 (full-name-vs-name-parts-rethink) — EXECUTING
-Plan: 2 of 10
+Plan: 9 of 10
 Status: Ready to execute
-Last activity: 2026-07-27 — Phase 38 execution started
+Last activity: 2026-07-28 — Completed 38-08-PLAN.md
 
 ## Performance Metrics
 
@@ -52,6 +52,7 @@ v1.5: 10 phases, 55 plans, 10 days (2026-07-02 → 2026-07-12).
 | Phase 38 P04 | ~50min | 3 tasks | 6 files |
 | Phase 38 P06 | ~50min | 3 tasks | 8 files |
 | Phase 38 P07 | 20min | 2 tasks | 5 files |
+| Phase 38 P08 | 20min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -141,6 +142,8 @@ Two open design questions remain unresolved by design and are intentionally defe
 - [Phase ?]: [Phase 38, Plan 07]: Character allow-list (^[A-Za-z0-9][A-Za-z0-9_-]*$) plus a 64-char cap chosen over a strict SCOTUS docket-shape regex for normalize_docket_value -- a strict shape regex would reject real accepted shapes (bare numbers, ConvoKit historical shapes, synthetic job-{id} dockets, existing data/pdfs/ files)
 - [Phase ?]: [Phase 38, Plan 07]: normalize_docket_value's check ordering (blank, then length, then pattern) is a hard determinism contract -- the 68-char UAT-reported quoted string resolves to length_exceeded, not invalid_characters, because length is checked first
 - [Phase ?]: [Phase 38, Plan 07]: T-24-08's leading-hyphen argv guard in _normalize_dockets stays unmodified and runs before the new normalize_docket_value check; the domain rule is additive, not a replacement, even though it independently subsumes the same input class
+- [Phase ?]: [Phase 38, Plan 08]: Used pathlib.PurePath (not the module's Path, which existing DB-dependent tests patch to a mock) for the docket guard's structural is_absolute/parts check, keeping the guard's I/O-free path parsing decoupled from the mocked Path used for file writes
+- [Phase ?]: [Phase 38, Plan 08]: The docket guard runs uniformly on every docket in all_dockets, including the synthetic job-{id} docket, with no special-case exemption
 
 ### Roadmap Evolution
 
@@ -263,8 +266,8 @@ Items acknowledged and deferred at v1.5 milestone close on 2026-07-12:
 
 ## Session Continuity
 
-Last session: 2026-07-28T00:15:20.750Z
-Stopped at: Completed 38-07-PLAN.md
+Last session: 2026-07-28T00:26:47.895Z
+Stopped at: Completed 38-08-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

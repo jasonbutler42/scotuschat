@@ -62,7 +62,7 @@ coverage:
         ref: "operator checkpoint response"
         status: fail
     human_judgment: true
-    rationale: "Operator reported the separator dot between birth/death dates and between president/party is rendered too small to be effective, and that overall popover styling does not match the Figma mockups (popover - Bench.png / popover-Advocate.png) — confirmed by direct comparison against the operator-supplied screenshot (bench popover.png). Step 6 (identical treatment across party values) — the single explicitly blocking acceptance criterion in this plan — was not addressed either way in the operator's response and needs explicit confirmation before this item can be closed."
+    rationale: "Operator reported the separator dot between birth/death dates and between president/party is rendered too small to be effective, and that overall popover styling does not match the Figma mockups (popover - Bench.png / popover-Advocate.png) — confirmed by direct comparison against the operator-supplied screenshot (bench popover.png). Step 6 (identical treatment across party values) — the single explicitly blocking acceptance criterion in this plan — was explicitly confirmed by the operator as a pass on follow-up ('yes, all parties render identically'); the fail status on this deliverable reflects the dot-spacing/Figma-mismatch findings only, not a party-neutrality violation."
   - id: D5
     description: "Bio text saves and round-trips through the Bio & Photo card"
     requirement: "PUB-04"
@@ -100,7 +100,7 @@ This plan has no code accomplishments of its own — it is the live-stack verifi
 | 1 | Migrations applied to real dev DB | Not explicitly confirmed — no `alembic current`/`upgrade` output reported |
 | 2 | Importer backfill + idempotency | **Pass** — first run created 1 tenure (expected, pre-existing importer behavior), second run created 0 (idempotency holds) |
 | 4-5 | Popover data display (Rehnquist / living Justice) | Not explicitly confirmed individually — see styling findings below |
-| 6 | Party-neutral treatment (**the one explicitly blocking check**) | **Not addressed in operator's response — needs explicit confirmation** |
+| 6 | Party-neutral treatment (**the one explicitly blocking check**) | **Pass** — operator confirmed on follow-up: "yes, all parties render identically" |
 | 7 | Bio clamp/toggle | Blocked — could not be meaningfully checked because the underlying bio save is broken (see D5 below) |
 | 8-9 | Advocate card / no extra fields | Not explicitly confirmed |
 | 10 | Editor round-trip: Death Date | **Pass** — "death date saves fine" |

@@ -18,7 +18,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from pipeline.commands.ingest import _run_ingest_inner, _validate_url, run_ingest
+from api.domain.docket_values import DOCKET_VALUE_MAX_LENGTH
+from pipeline.commands.ingest import (
+    _run_ingest_inner,
+    _validate_docket_value,
+    _validate_url,
+    run_ingest,
+)
 
 
 def test_ingest_duplicate_path_uses_named_constraint_classifier():
@@ -105,6 +111,109 @@ def test_url_validation_accepts_bare_domain():
 
 
 # ===========================================================================
+# Docket path-component guard tests (G-38-6) — NO database required
+# These tests call _validate_docket_value() directly; the pipeline-side
+# second enforcement point independent of api.routers.admin's boundary check.
+# ===========================================================================
+
+
+@pytest.mark.parametrize(
+    "docket",
+    [
+        pytest.param("/etc/passwd", id="posix-absolute-path"),
+        pytest.param("C:\\Windows\\evil.pdf", id="windows-drive-path"),
+        pytest.param("../../../tmp/evil", id="traversal-path"),
+        pytest.param("..", id="bare-double-dot"),
+        pytest.param("14/556", id="forward-slash"),
+        pytest.param("14\\556", id="backslash"),
+        pytest.param('14-556"', id="double-quote"),
+        pytest.param("x" * (DOCKET_VALUE_MAX_LENGTH + 1), id="over-length"),
+    ],
+)
+def test_docket_guard_rejects_path_hazards(docket):
+    """
+    Every path-hazard docket class must raise ValueError before it ever
+    reaches pdf_filename or case_slug construction.
+
+    No database required.
+    """
+    with pytest.raises(ValueError):
+        _validate_docket_value(docket, "test context")
+
+
+@pytest.mark.parametrize(
+    "docket",
+    ["22-915", "14-556", "1955-71", "22O141", "job-1120", "bananas"],
+)
+def test_docket_guard_accepts_real_shapes(docket):
+    """
+    No-regression coverage: real docket shapes and the server-generated
+    job-{id} fallback must all pass the guard unchanged.
+
+    No database required.
+    """
+    # Must not raise
+    _validate_docket_value(docket, "test context")
+
+
+def test_docket_containment_rejects_traversal_join():
+    """
+    Path("data/pdfs") joined with a traversal filename must resolve outside
+    the base directory — the exact join the module performs before its
+    containment assertion.
+
+    Filesystem-read-only: resolve()/compare only, writes nothing.
+    """
+    pdf_dir = Path("data/pdfs")
+    pdf_path = pdf_dir / "../../../../tmp/evil-q1.pdf"
+
+    resolved_pdf_dir = pdf_dir.resolve()
+    resolved_pdf_path = pdf_path.resolve()
+
+    assert resolved_pdf_path.parent != resolved_pdf_dir
+
+
+def test_docket_containment_rejects_absolute_join():
+    """
+    Path("data/pdfs") joined with an absolute-path filename must resolve
+    outside the base directory — pathlib's `/` operator silently discards
+    the left operand when the right operand is absolute.
+
+    Filesystem-read-only: resolve()/compare only, writes nothing.
+    """
+    pdf_dir = Path("data/pdfs")
+    pdf_path = pdf_dir / "/tmp/evil-q1.pdf"
+
+    resolved_pdf_dir = pdf_dir.resolve()
+    resolved_pdf_path = pdf_path.resolve()
+
+    assert resolved_pdf_path.parent != resolved_pdf_dir
+
+
+def test_docket_guard_invoked_inside_run_ingest_inner():
+    """
+    Static proof that the docket guard helper is actually invoked inside
+    _run_ingest_inner — fails loudly if a future refactor removes the call
+    while leaving the helper defined.
+    """
+    source = inspect.getsource(_run_ingest_inner)
+    assert "_validate_docket_value(" in source
+
+
+def test_containment_assertion_present_inside_run_ingest_inner():
+    """
+    Static proof that the resolved-path containment assertion is present and
+    references the resolved pdf directory — fails loudly if a future
+    refactor removes the containment check while leaving pdf_dir/pdf_path
+    construction intact.
+    """
+    source = inspect.getsource(_run_ingest_inner)
+    assert "resolved_pdf_dir" in source
+    assert "resolved_pdf_path" in source
+    assert "resolved_pdf_path.parent != resolved_pdf_dir" in source
+
+
+# ===========================================================================
 # DB-dependent tests
 # These require DATABASE_URL / TEST_DATABASE_URL configured in .env.
 # They skip gracefully via the async_session fixture → test_db_url → pytest.skip.
@@ -125,14 +234,26 @@ def _make_mock_client(content: bytes = b"%PDF-1.4 fake"):
 
 
 def _make_mock_path(tmp_path: Path, exists: bool = False):
-    """Create a mock Path("data/pdfs") that writes to tmp_path."""
+    """
+    Create a mock Path("data/pdfs") that writes to tmp_path.
+
+    .resolve() is mocked on both the directory and the joined file path so
+    the G-38-6 containment assertion in ingest.py (resolved_pdf_path.parent
+    == resolved_pdf_dir) holds under a mocked Path — without this, both
+    .resolve() calls would return unrelated auto-generated MagicMock objects
+    that never compare equal, breaking every ingest test that patches Path.
+    """
+    resolved_dir = (tmp_path / "data" / "pdfs").resolve()
+
     mock_pdf_dir = MagicMock()
     mock_pdf_dir.mkdir = MagicMock()
+    mock_pdf_dir.resolve = MagicMock(return_value=resolved_dir)
 
     mock_pdf_path = MagicMock()
     mock_pdf_path.exists.return_value = exists
     mock_pdf_path.write_bytes = MagicMock()
     mock_pdf_path.__str__ = MagicMock(return_value=str(tmp_path / "14-556-q1.pdf"))
+    mock_pdf_path.resolve = MagicMock(return_value=resolved_dir / "14-556-q1.pdf")
 
     mock_pdf_dir.__truediv__ = MagicMock(return_value=mock_pdf_path)
     return mock_pdf_dir

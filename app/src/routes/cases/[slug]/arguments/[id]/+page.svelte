@@ -16,6 +16,12 @@
 		// tenure has no recorded reason (Phase 39 D-01/D-02) — formal title
 		// projection happens in SpeakerPopover.svelte, not here.
 		reason_left: string | null;
+		// Phase 39 (D-13, promote not add-alongside): per-tenure appointing
+		// president, replacing the retired top-level appointing_president field.
+		appointed_by: string | null;
+		// Phase 39 (D-11/D-12, reverses T-14-02): factual historical record about
+		// the appointing president, not the Justice.
+		appointing_president_party: string | null;
 	}
 
 	interface SpeakerDetail {
@@ -25,7 +31,11 @@
 		photo_url_full: string | null;
 		is_bench: boolean;
 		tenure: TenureRow[];
-		appointing_president: string | null;
+		// Phase 39 (D-13): the top-level appointing_president field retired here
+		// — the concept moved onto each TenureRow as appointed_by (see above).
+		birthdate: string | null;
+		death_date: string | null;
+		bio_text: string | null;
 	}
 
 	let { data } = $props();
@@ -132,7 +142,7 @@
 				trapFocus={true}
 				escapeKeydownBehavior="close"
 				interactOutsideBehavior="close"
-				style="z-index: 50;"
+				style="z-index: 50; max-height: min(560px, 80vh); overflow-y: auto;"
 			>
 				{#if currentSpeaker}
 					<SpeakerPopover speaker={currentSpeaker} />

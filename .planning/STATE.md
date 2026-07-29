@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Corpus Fidelity & Resolve Rework
-current_phase: 41
-current_phase_name: canonical-corpus-fixture-selection
-status: verifying
+current_phase: 42
+current_phase_name: Corpus Import Fidelity Diff & Fix
+status: planning
 stopped_at: Completed 41-03-PLAN.md
-last_updated: "2026-07-29T23:06:47.840Z"
+last_updated: "2026-07-29T23:17:46.572Z"
 last_activity: 2026-07-29
-last_activity_desc: Phase 41 execution started
+last_activity_desc: Phase 41 complete, transitioned to Phase 42
 progress:
   total_phases: 5
   completed_phases: 1
@@ -28,10 +28,10 @@ See: .planning/PROJECT.md (updated 2026-07-29 after starting v1.7 milestone)
 
 ## Current Position
 
-Phase: 41 (canonical-corpus-fixture-selection) — EXECUTING
-Plan: 3 of 3
-Status: Phase complete — ready for verification
-Last activity: 2026-07-29 — Phase 41 execution started
+Phase: 42 — Corpus Import Fidelity Diff & Fix
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-07-29 — Phase 41 complete, transitioned to Phase 42
 
 **Milestone shape:**
 

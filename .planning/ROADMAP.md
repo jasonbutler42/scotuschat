@@ -129,7 +129,7 @@ Full phase details: `.planning/milestones/v1.6-ROADMAP.md`
 
 **Overview:** Trust the corpus-import data pipeline end to end on one representative case, rework the Resolve table into a real editing tool, and close two known UI bugs — with a dev-only reset harness to make it all iterable. The corpus track is deliberately gated: a 4-fixture set (one structurally-complex argument plus three chosen for publish/pipeline-state variety) is chosen and operator-confirmed (Phase 41) before any diff or importer change happens. Only the complex fixture goes through Phase 42's diff/fix work; the dev reset tool (Phase 43) reseeds the full four-fixture set so the state-variety fixtures are available for Phase 43/45's publish-unpublish testing. The Resolve rework (Phase 44) and the two bug fixes (Phase 45) are independent of the corpus track and can run in parallel with it. Deployment (DEPLOY-01/03) and the remaining 999.x backlog (999.2–999.8) are explicitly out of scope; so is any full-corpus backfill of Phase 42's importer fixes.
 
-- [ ] **Phase 41: Canonical Corpus Fixture Selection** - Analyze the ~7,800-argument ConvoKit dataset and get a 4-fixture set (1 structurally-complex audit fixture + 3 publish-state variants) operator-confirmed for the milestone
+- [x] **Phase 41: Canonical Corpus Fixture Selection** - Analyze the ~7,800-argument ConvoKit dataset and get a 4-fixture set (1 structurally-complex audit fixture + 3 publish-state variants) operator-confirmed for the milestone (completed 2026-07-29)
 - [ ] **Phase 42: Corpus Import Fidelity Diff & Fix** - Field-by-field diff of the fixture's raw ConvoKit source against its imported DB rows, then fix every real gap and re-import clean
 - [ ] **Phase 43: Dev-Only Reset to Fixture** - Admin action that wipes all argument/people data and reseeds exactly the fixture, hard-gated against ever running outside a dev environment
 - [ ] **Phase 44: Resolve Table Rework** - SEED-001's mockup-driven rework: 5 columns, segmented Bench/Advocate toggle, writable Argument Role, always-on Descriptor, consistent extracted hints, bench lock affordance
@@ -272,7 +272,7 @@ Full phase details: `.planning/milestones/v1.6-ROADMAP.md`
 | 39. Bench popover — additional context data for Justices | v1.6 | 9/9 | Complete    | 2026-07-29 |
 | 40. README — how to start the local stack | v1.6 | 3/3 | Complete    | 2026-07-14 |
 | 40.1. Sanitize docket input to close path-traversal/arbitrary-file-write gap (SUPERSEDED) | v1.6 | 0/0 | Complete (reconciliation, no execution) | 2026-07-29 |
-| 41. Canonical Corpus Fixture Selection | v1.7 | 3/3 | In Progress|  |
+| 41. Canonical Corpus Fixture Selection | v1.7 | 3/3 | Complete    | 2026-07-29 |
 | 42. Corpus Import Fidelity Diff & Fix | v1.7 | 0/0 | Not started | - |
 | 43. Dev-Only Reset to Fixture | v1.7 | 0/0 | Not started | - |
 | 44. Resolve Table Rework | v1.7 | 0/0 | Not started | - |

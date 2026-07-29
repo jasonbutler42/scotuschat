@@ -108,6 +108,7 @@
 	}
 </script>
 
+{#snippet separator(pad: number)}<span style="padding:0 {pad}px;">·</span>{/snippet}
 <div class="popover-card">
 	<!-- Header row: avatar + name/pill stack. Stays horizontal at every width —
 	     a 60px avatar never needs to drop below a short name/pill stack. -->
@@ -144,19 +145,19 @@
 	<!-- Birth/death line: bench only, full width. Omitted entirely when both
 	     dates are null; each half omitted independently otherwise. -->
 	{#if isBench && (speaker.birthdate || speaker.death_date)}
-		<p style="font-size:13px;font-weight:400;color:#94a3b8;line-height:1.5;margin:8px 0 0 0;">{#if speaker.birthdate}b. {formatShort(speaker.birthdate)}{/if}{#if speaker.birthdate && speaker.death_date} · {/if}{#if speaker.death_date}d. {formatShort(speaker.death_date)}{/if}</p>
+		<p style="font-size:13px;font-weight:400;color:#94a3b8;line-height:1.5;margin-top:16px;margin-bottom:0;border-top:1px solid #334155;padding-top:16px;">{#if speaker.birthdate}b. {formatShort(speaker.birthdate)}{/if}{#if speaker.birthdate && speaker.death_date}{@render separator(8)}{/if}{#if speaker.death_date}d. {formatShort(speaker.death_date)}{/if}</p>
 	{/if}
 
 	<!-- Advocate descriptor slot (D-16): unconditional placeholder text, no real
 	     per-advocate data exists yet — do not invent plausible-looking data. -->
 	{#if !isBench}
-		<p style="font-size:13px;font-weight:400;font-style:italic;color:#94a3b8;margin:8px 0 0 0;">Coming soon</p>
+		<p style="font-size:13px;font-weight:400;font-style:italic;color:#94a3b8;margin-top:16px;margin-bottom:0;border-top:1px solid #334155;padding-top:16px;">Coming soon</p>
 	{/if}
 
 	<!-- Bio paragraph: bench and advocate alike, full width. Omitted entirely
 	     when there is no bio text on file — no "No bio available" filler. -->
 	{#if speaker.bio_text}
-		<div style="margin-top:8px;">
+		<div style="margin-top:16px;border-top:1px solid #334155;padding-top:16px;">
 			<p
 				bind:this={bioEl}
 				style="font-size:14px;font-weight:400;line-height:1.5;color:#94a3b8;margin:0;{bioExpanded ? '' : 'display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden;'}"
@@ -176,7 +177,7 @@
 	<!-- Tenure list: bench only, full width, below the bio. API order preserved
 	     — no client-side re-sort. One block per tenure, up to 3 lines each. -->
 	{#if isBench && speaker.tenure.length > 0}
-		<div style="border-top:1px solid #334155;margin-top:16px;padding-top:8px;">
+		<div style="border-top:1px solid #334155;margin-top:16px;padding-top:16px;">
 			{#each speaker.tenure as t}
 				<div style="margin-bottom:16px;">
 					<p style="font-size:13px;font-weight:400;line-height:1.5;color:#94a3b8;margin:0;">{officeTitle(t.office)} — {t.start_date ? t.start_date.slice(0, 4) : '?'}–{t.end_date ? t.end_date.slice(0, 4) : 'present'}</p>
@@ -184,7 +185,7 @@
 					     appended only when it is also non-null. Never render a
 					     placeholder for the missing half. -->
 					{#if t.appointed_by}
-						<p style="font-size:13px;font-weight:400;line-height:1.5;color:#94a3b8;margin:0;">{t.appointed_by}{#if t.appointing_president_party} · {t.appointing_president_party}{/if}</p>
+						<p style="font-size:13px;font-weight:400;line-height:1.5;color:#94a3b8;margin:0;">{t.appointed_by}{#if t.appointing_president_party}{@render separator(4)}{t.appointing_president_party}{/if}</p>
 					{/if}
 					{#if t.reason_left}
 						<p style="font-size:13px;font-weight:400;line-height:1.5;color:#94a3b8;margin:0;">{reasonLeftTitle(t.reason_left)}</p>

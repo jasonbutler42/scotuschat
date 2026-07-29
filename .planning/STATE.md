@@ -4,17 +4,17 @@ milestone: v1.7
 milestone_name: Corpus Fidelity & Resolve Rework
 current_phase: 41
 current_phase_name: canonical-corpus-fixture-selection
-status: executing
-stopped_at: Completed 41-02-PLAN.md
-last_updated: "2026-07-29T22:51:13.738Z"
+status: verifying
+stopped_at: Completed 41-03-PLAN.md
+last_updated: "2026-07-29T23:06:47.840Z"
 last_activity: 2026-07-29
 last_activity_desc: Phase 41 execution started
 progress:
   total_phases: 5
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 3
-  completed_plans: 2
-  percent: 0
+  completed_plans: 3
+  percent: 20
 ---
 
 # Project State
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-07-29 after starting v1.7 milestone)
 
 Phase: 41 (canonical-corpus-fixture-selection) — EXECUTING
 Plan: 3 of 3
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-07-29 — Phase 41 execution started
 
 **Milestone shape:**
@@ -79,6 +79,7 @@ Still open from earlier milestones:
 | — | — | — | — |
 | Phase 41 P01 | 2h32m | 2 tasks | 1 files |
 | Phase 41 P02 | 9min | 2 tasks | 1 files |
+| Phase 41 P03 | 12min | 2 tasks | 1 files |
 
 v1.5/v1.6 per-plan metrics cleared at this milestone boundary per the standard STATE.md reset; the underlying per-plan SUMMARY files remain in `.planning/milestones/v1.5-phases/` and `.planning/milestones/v1.6-phases/`.
 
@@ -100,6 +101,7 @@ Full cross-milestone decision log lives in PROJECT.md's Key Decisions table. Per
 - [Phase 41 Plan 01 → affects Phase 41 Plan 02/03]: Full-corpus run supersedes RESEARCH.md's exploratory pick: conversation 15169 (Baltimore & Ohio Railroad Co.) is the real 3/4-coverage top candidate, not 14837 (Permian Basin, 2/4); 14969 (Shapiro v. Thompson) ties 15169 at 3/4 as the named runner-up for Plan 03's operator confirmation.
 - [Phase ?]: Phase 41 Plan 02: Recommendation confirmed as conversation 15169 (Baltimore & Ohio Railroad Co. v. United States) at 3/4 coverage, with 14969 (Shapiro v. Thompson) as the named tied runner-up, superseding RESEARCH.md's earlier 14837 pick.
 - [Phase ?]: Phase 41 Plan 02: FIXTURES.md section order deviates from the plan's literal prose listing (evidence/methodology tables moved before the final Fixture Set table) to satisfy a mechanical conflict between the plan's own gate-2 and gate-3 verify commands; no content or scope change.
+- [Phase ?]: Phase 41 Plan 03: Operator confirmed the four-fixture set as proposed (confirm-as-proposed) — complexity fixture 15169 (Baltimore & Ohio Railroad Co. v. United States) and state-variety targets 13015/18897/22372 — no substitutions made.
 
 ### Roadmap Evolution
 
@@ -133,8 +135,8 @@ v1.6's roadmap evolution is archived in `.planning/milestones/v1.6-ROADMAP.md`. 
 
 ## Session Continuity
 
-Last session: 2026-07-29T22:51:13.628Z
-Stopped at: Completed 41-02-PLAN.md
+Last session: 2026-07-29T23:06:47.472Z
+Stopped at: Completed 41-03-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

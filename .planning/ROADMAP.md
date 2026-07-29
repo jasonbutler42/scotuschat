@@ -150,7 +150,10 @@ Full phase details: `.planning/milestones/v1.6-ROADMAP.md`
   4. The confirmed fixture set is recorded in a durable, referenceable form (ConvoKit conversation id, case name, docket(s), term, argued date, and each fixture's role — complexity fixture vs. which state variant) that Phases 42 and 43 both read instead of re-deriving; Phase 42 reads only the complexity fixture, Phase 43 reads the full set.
   5. No importer code and no database rows are changed by this phase — selection and confirmation only.
 
-**Plans**: TBD
+**Plans**: 3 plans
+- [ ] 41-01-PLAN.md — Build `scripts/select_corpus_fixtures.py`: read-only path-coverage scoring over the ConvoKit corpus, apolitical exclusion enforced structurally and at commit time, deterministic top-5 shortlist with per-candidate flag annotations
+- [ ] 41-02-PLAN.md — Run the full-corpus streaming pass once (persisted aggregate cache), then author `.planning/FIXTURES.md` at status PROPOSED with the four-fixture table plus its ranking evidence
+- [ ] 41-03-PLAN.md — Blocking operator confirmation of the four-fixture set; record the decision in `.planning/FIXTURES.md` at status CONFIRMED and prove no importer code or database rows changed
 
 ### Phase 42: Corpus Import Fidelity Diff & Fix
 

@@ -49,25 +49,36 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CORPUS-12 | TBD | Pending |
-| CORPUS-13 | TBD | Pending |
-| CORPUS-14 | TBD | Pending |
-| DEVTOOL-01 | TBD | Pending |
-| DEVTOOL-02 | TBD | Pending |
-| RESOLVE-01 | TBD | Pending |
-| RESOLVE-02 | TBD | Pending |
-| RESOLVE-03 | TBD | Pending |
-| RESOLVE-04 | TBD | Pending |
-| RESOLVE-05 | TBD | Pending |
-| RESOLVE-06 | TBD | Pending |
-| BUG-01 | TBD | Pending |
-| BUG-02 | TBD | Pending |
+| CORPUS-12 | Phase 41 | Pending |
+| CORPUS-13 | Phase 42 | Pending |
+| CORPUS-14 | Phase 42 | Pending |
+| DEVTOOL-01 | Phase 43 | Pending |
+| DEVTOOL-02 | Phase 43 | Pending |
+| RESOLVE-01 | Phase 44 | Pending |
+| RESOLVE-02 | Phase 44 | Pending |
+| RESOLVE-03 | Phase 44 | Pending |
+| RESOLVE-04 | Phase 44 | Pending |
+| RESOLVE-05 | Phase 44 | Pending |
+| RESOLVE-06 | Phase 44 | Pending |
+| BUG-01 | Phase 45 | Pending |
+| BUG-02 | Phase 45 | Pending |
 
 **Coverage:**
 - v1 requirements: 13 total
-- Mapped to phases: 0 (pending roadmap creation)
-- Unmapped: 13 ⚠️ (expected — roadmapper fills this in next)
+- Mapped to phases: 13 ✓
+- Unmapped: 0 ✓
+- Duplicated across phases: 0 ✓
+
+**Phase distribution:**
+
+| Phase | Requirements | Count |
+|-------|--------------|-------|
+| 41. Canonical Corpus Fixture Selection | CORPUS-12 | 1 |
+| 42. Corpus Import Fidelity Diff & Fix | CORPUS-13, CORPUS-14 | 2 |
+| 43. Dev-Only Reset to Fixture | DEVTOOL-01, DEVTOOL-02 | 2 |
+| 44. Resolve Table Rework | RESOLVE-01–06 | 6 |
+| 45. Deferred UI Bug Fixes | BUG-01, BUG-02 | 2 |
 
 ---
 *Requirements defined: 2026-07-29*
-*Last updated: 2026-07-29 after initial definition*
+*Last updated: 2026-07-29 after roadmap creation (Phases 41–45 mapped, 13/13 coverage)*

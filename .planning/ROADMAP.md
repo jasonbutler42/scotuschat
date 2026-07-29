@@ -9,6 +9,7 @@
 - ✅ **v1.4 Admin Completeness** — Phases 18–21 (shipped 2026-07-02)
 - ✅ **v1.5 Admin Screens Cleanup** — Phases 22–30, 30.1 (shipped 2026-07-12)
 - ✅ **v1.6 Backlog Cleanup** — Phases 31–40, 40.1 (shipped 2026-07-29)
+- 🚧 **v1.7 Corpus Fidelity & Resolve Rework** — Phases 41–45 (in progress, started 2026-07-29)
 
 ## Phases
 
@@ -124,6 +125,96 @@ Full phase details: `.planning/milestones/v1.6-ROADMAP.md`
 
 </details>
 
+### 🚧 v1.7 Corpus Fidelity & Resolve Rework (Phases 41–45) — IN PROGRESS
+
+**Overview:** Trust the corpus-import data pipeline end to end on one representative case, rework the Resolve table into a real editing tool, and close two known UI bugs — with a dev-only reset harness to make it all iterable. The corpus track is deliberately gated: exactly one fixture is chosen and operator-confirmed (Phase 41) before any diff or importer change happens, and the dev reset tool (Phase 43) reseeds that same fixture. The Resolve rework (Phase 44) and the two bug fixes (Phase 45) are independent of the corpus track and can run in parallel with it. Deployment (DEPLOY-01/03) and the remaining 999.x backlog (999.2–999.8) are explicitly out of scope; so is any full-corpus backfill of Phase 42's importer fixes.
+
+- [ ] **Phase 41: Canonical Corpus Fixture Selection** - Analyze the ~7,800-argument ConvoKit dataset and get one structurally-complex argument operator-confirmed as the milestone's audit fixture
+- [ ] **Phase 42: Corpus Import Fidelity Diff & Fix** - Field-by-field diff of the fixture's raw ConvoKit source against its imported DB rows, then fix every real gap and re-import clean
+- [ ] **Phase 43: Dev-Only Reset to Fixture** - Admin action that wipes all argument/people data and reseeds exactly the fixture, hard-gated against ever running outside a dev environment
+- [ ] **Phase 44: Resolve Table Rework** - SEED-001's mockup-driven rework: 5 columns, segmented Bench/Advocate toggle, writable Argument Role, always-on Descriptor, consistent extracted hints, bench lock affordance
+- [ ] **Phase 45: Deferred UI Bug Fixes** - Unpublished arguments no longer leak into `/cases/` or direct URLs; popover scrollbar stays inside the card boundary
+
+## Phase Details
+
+### Phase 41: Canonical Corpus Fixture Selection
+
+**Goal**: The operator has exactly one named, justified ConvoKit argument confirmed as the canonical audit fixture that every later phase in this milestone references. This is a decision gate, not an implementation phase — the ~7,800-argument corpus is analyzed for structural complexity signals (speaker count, advocate count, consolidated multi-docket cases, transcript length, re-argument/question-number shape), a ranked shortlist plus one recommendation is presented, and the operator explicitly confirms before Phase 42's diff work or Phase 43's reseed target is locked in. Choosing badly here means auditing a case that exercises none of the importer's hard paths, so the choice is surfaced rather than silently auto-decided.
+**Depends on**: Nothing (first phase of v1.7)
+**Requirements**: CORPUS-12
+**Success Criteria** (what must be TRUE):
+
+  1. A ranked shortlist of candidate arguments drawn from the full ConvoKit dataset is presented, each with the concrete structural-complexity signals that ranked it (speaker count, advocate count, number of source dockets, utterance count).
+  2. Exactly one argument is recommended as the canonical fixture, with a stated reason why it exercises more of the importer's paths than the runners-up.
+  3. The operator explicitly confirms (or rejects and redirects) the recommendation before any downstream corpus work begins — no phase proceeds on an assumed fixture.
+  4. The confirmed fixture is recorded in a durable, referenceable form (ConvoKit conversation id, case name, docket(s), term, argued date) that Phases 42 and 43 both read instead of re-deriving.
+  5. No importer code and no database rows are changed by this phase — selection and confirmation only.
+
+**Plans**: TBD
+
+### Phase 42: Corpus Import Fidelity Diff & Fix
+
+**Goal**: Everything `import-convokit` drops, mis-maps, or silently defaults for the confirmed fixture is identified, classified, and fixed — so the fixture's rows in `cases`, `arguments`, `utterances`, `people`, `argument_participants`, and `court_tenures` faithfully reflect its raw ConvoKit source. Some current omissions are intentional (the apolitical field allow-list from Phase 29 strips partisan/outcome fields by design, and SCDB data is excluded entirely), so the diff must separate real defects from deliberate exclusions rather than "restoring" fields the apolitical hard constraint forbids. Fixes land on the importer's code path and are proven by re-importing this one fixture; backfilling the other ~7,800 arguments is explicitly out of scope.
+**Depends on**: Phase 41 (needs the confirmed fixture)
+**Requirements**: CORPUS-13, CORPUS-14
+**Success Criteria** (what must be TRUE):
+
+  1. A field-by-field comparison of the fixture's raw ConvoKit source against its imported rows exists for all six affected tables, with every field marked faithful, dropped, mis-mapped, or silently defaulted.
+  2. Each discrepancy is classified as a real importer defect or an intentional exclusion (apolitical allow-list, schema-absent field, upstream-missing data), with the reason recorded next to it.
+  3. Re-importing the fixture after the fixes produces rows where every field flagged as a real defect is now correct, re-verified against the same comparison rather than assumed.
+  4. The re-imported fixture's utterance count, speaker roster, and source-docket set match the raw ConvoKit source exactly — no dropped, duplicated, or merged turns.
+  5. Corpus-import behavior for arguments other than the fixture is unchanged and no full-corpus backfill is triggered.
+
+**Plans**: TBD
+
+### Phase 43: Dev-Only Reset to Fixture
+
+**Goal**: The operator can return a local database to a known one-fixture state from the admin panel in a single action, making the corpus and resolve work iterable instead of requiring hand-built SQL cleanup between attempts. The action is fully destructive by design — it wipes every argument, utterance, person, court tenure, and argument participant, then reseeds exactly the Phase 41 fixture plus its associated people — so an environment gate that makes it impossible to fire against a real/production database is a hard requirement of the feature, not follow-up polish. Reseeding runs through the same `import-convokit` path a normal corpus import uses, so Phase 42's importer fixes flow through automatically rather than being duplicated in a hand-rolled seeder.
+**Depends on**: Phase 41 (needs the confirmed fixture as the reseed target). Not blocked by Phase 42 — it reseeds through whatever the current importer produces.
+**Requirements**: DEVTOOL-01, DEVTOOL-02
+**Success Criteria** (what must be TRUE):
+
+  1. Operator triggers "Reset to Fixture" from the admin panel and, on completion, the database contains exactly the fixture argument plus its associated people — zero other arguments, utterances, people, court tenures, or argument participants.
+  2. With a production-like environment setting active, the action refuses to execute and says why; the refusal is demonstrated by actually attempting it, not asserted from the code.
+  3. The action requires an explicit operator confirmation step that states exactly what will be wiped before anything is deleted.
+  4. After a reset, the fixture argument is immediately usable in the normal resolve → approve → publish workflow (its paired admin job exists) with no manual repair.
+  5. A reset run after Phase 42's importer fixes lands the corrected field values, confirming the reseed shares the real import path rather than a stale copy of it.
+
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 44: Resolve Table Rework
+
+**Goal**: The Resolve table becomes a real editing tool instead of a display with one overloaded control. Today (Phase 25) the Bench/Advocate `<select>` is the only writable field and the Argument Role column is a read-only mirror of it, so the operator cannot directly say "this speaker is Petitioner's Counsel" — they have to work through a single dropdown that conflates the coarse category with the advocate role. SEED-001's mockup splits these into separate controls, drops the redundant Action column into the Resolved As cell, makes Descriptor always-present (the extracted value is genuinely free-form — sometimes a title, sometimes a location — so a single generic field is intentional), gives every column a consistent extracted-value hint, and adds a lock affordance so a system-derived bench role reads as deliberate rather than broken. SEED-001's own finding is that the backend already accepts every value this needs (`SideEnum`, `ADVOCATE_LABEL_MAP`, `ResolveRowUpdate.side`), so this is expected to be a frontend rework of `ResolveCard.svelte` — to be confirmed at plan time, not assumed.
+**Depends on**: Nothing (independent of the corpus track — can run in parallel with Phases 41–43)
+**Requirements**: RESOLVE-01, RESOLVE-02, RESOLVE-03, RESOLVE-04, RESOLVE-05, RESOLVE-06
+**Success Criteria** (what must be TRUE):
+
+  1. The Resolve table renders exactly five columns — Raw Label, Resolved As, Bench/Advocate, Argument Role, Descriptor — and every row action (select person, change person) is reachable from inside the Resolved As cell, with no separate Action column anywhere.
+  2. Operator sets Bench vs. Advocate with a two-button segmented toggle in which exactly one option reads as active at a time, replacing the dropdown.
+  3. For an advocate row, operator can directly pick Petitioner's Counsel or Respondent's Counsel from the Argument Role control and the choice persists across a reload; for a resolved bench row with valid tenure, Argument Role stays non-editable, shows the tenure-derived value, and carries a lock affordance.
+  4. A bench row with missing tenure still shows the existing "Missing tenure" warning and Edit-person path, and reads as visibly distinct from the locked valid-tenure state.
+  5. Resolved As, Bench/Advocate, Argument Role, and Descriptor each show an "Extracted: …" hint of the raw extracted value, and Descriptor renders on bench rows (as "–") instead of the column disappearing.
+
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 45: Deferred UI Bug Fixes
+
+**Goal**: Two operator-reported defects carried out of v1.6 are closed. They are unrelated in cause and are grouped only because both are small and already root-caused. BUG-01 is a real content-exposure gap: an argument that has not been published still appears in the public `/cases/` list and can be opened directly by URL — publish status must gate both listing and direct access, and the intended direct-access response (404 vs. an explicit not-published state) is a decision to settle before implementing. BUG-02 is a styling/boundary mismatch, already diagnosed: `Popover.Content` in the argument page owns `max-height`/`overflow-y`, but the visible rounded card (background, border, radius) lives on an inner element in `SpeakerPopover.svelte`, so the native scrollbar renders at the edge of the invisible scroll box instead of flush inside the card.
+**Depends on**: Nothing (independent of every other phase — can run in parallel)
+**Requirements**: BUG-01, BUG-02
+**Success Criteria** (what must be TRUE):
+
+  1. An argument in Draft or Unpublished status does not appear in the public `/cases/` list.
+  2. Requesting an unpublished argument's URL directly returns the chosen non-content response instead of rendering the transcript, on both in-app navigation and a hard SSR refresh.
+  3. Publishing an argument makes it appear in the list and become directly accessible again, with no restart or cache clear needed.
+  4. When a Justice popover's content overflows (long bio with Read more expanded), the scrollbar renders flush inside the card's visible rounded boundary.
+  5. The popover still shows every field Phase 39 added, with no content truncated or escaping the card.
+
+**Plans**: TBD
+**UI hint**: yes
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -170,6 +261,11 @@ Full phase details: `.planning/milestones/v1.6-ROADMAP.md`
 | 39. Bench popover — additional context data for Justices | v1.6 | 9/9 | Complete    | 2026-07-29 |
 | 40. README — how to start the local stack | v1.6 | 3/3 | Complete    | 2026-07-14 |
 | 40.1. Sanitize docket input to close path-traversal/arbitrary-file-write gap (SUPERSEDED) | v1.6 | 0/0 | Complete (reconciliation, no execution) | 2026-07-29 |
+| 41. Canonical Corpus Fixture Selection | v1.7 | 0/0 | Not started | - |
+| 42. Corpus Import Fidelity Diff & Fix | v1.7 | 0/0 | Not started | - |
+| 43. Dev-Only Reset to Fixture | v1.7 | 0/0 | Not started | - |
+| 44. Resolve Table Rework | v1.7 | 0/0 | Not started | - |
+| 45. Deferred UI Bug Fixes | v1.7 | 0/0 | Not started | - |
 
 ## Backlog
 

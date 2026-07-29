@@ -343,7 +343,7 @@ Plans:
   3. All added fields are presented identically for every Justice — no differential framing, omission, or emphasis based on any political consideration.
   4. Case-specific presentation (age at argument, tenure-length indicators, case-heard counts) remains out of scope for this phase.
 
-**Plans**: 5/9 plans executed
+**Plans**: 7/9 plans executed
 **UI hint**: yes
 
 **Wave 1**
@@ -362,11 +362,11 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 39-06-PLAN.md — Operator runbook: apply migrations + run import-justices on the real dev DB, then live UAT of both card types
+- [x] 39-06-PLAN.md — Operator runbook: apply migrations + run import-justices on the real dev DB, then live UAT of both card types
 
 **Wave 5** *(gap closure — 39-06 checkpoint not approved; see 39-UAT.md ## Gaps)*
 
-- [ ] 39-07-PLAN.md — Gap 1: Bio & Photo save silently fails — move bio_text onto the Save Person path, remove the error-swallowing PATCH, unmask the textarea
+- [x] 39-07-PLAN.md — Gap 1: Bio & Photo save silently fails — move bio_text onto the Save Person path, remove the error-swallowing PATCH, unmask the textarea
 - [ ] 39-08-PLAN.md — Gaps 2+3: separator spacing, per-section dividers, and two-column tenure rows matching the Figma mockups
 
 **Wave 6** *(blocked on Wave 5 completion)*
@@ -429,7 +429,7 @@ Plans:
 | 36. Click-to-copy extracted values design pattern | v1.6 | 3/3 | Complete    | 2026-07-15 |
 | 37. Represent tenure Seat as a Chief/Associate toggle instead of free text | v1.6 | 5/5 | Complete    | 2026-07-21 |
 | 38. Rethink Full Name vs. name-part fields in the people editor | v1.6 | 10/10 | Complete    | 2026-07-27 |
-| 39. Bench popover — additional context data for Justices | v1.6 | 5/6 | In Progress|  |
+| 39. Bench popover — additional context data for Justices | v1.6 | 7/9 | In Progress|  |
 | 40. README — how to start the local stack | v1.6 | 3/3 | Complete    | 2026-07-14 |
 
 ## Backlog

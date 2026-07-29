@@ -4,16 +4,16 @@ milestone: v1.6
 milestone_name: Backlog Cleanup
 current_phase: 39
 current_phase_name: bench-popover-additional-context-data
-status: gaps_found
-stopped_at: 39-06 checkpoint not approved — styling regression + Bio save bug found, gap closure needed
-last_updated: "2026-07-28T23:26:54.000Z"
+status: executing
+stopped_at: Completed 39-07-PLAN.md (bio save gap closure)
+last_updated: "2026-07-29T01:03:27.496Z"
 last_activity: 2026-07-28
-last_activity_desc: Phase 39 waves 1-3 complete (39-01 through 39-05); 39-06 live-stack checkpoint found real defects, gap closure required
+last_activity_desc: Phase 39 execution started
 progress:
   total_phases: 10
   completed_phases: 9
-  total_plans: 48
-  completed_plans: 47
+  total_plans: 51
+  completed_plans: 49
   percent: 90
 ---
 
@@ -28,10 +28,10 @@ See: .planning/PROJECT.md (updated 2026-07-14 after Phase 34 verification)
 
 ## Current Position
 
-Phase: 39 (bench-popover-additional-context-data) — GAPS FOUND
-Plan: 6 of 6 (39-06 checkpoint not approved)
-Status: Awaiting gap-closure plan — see Blockers/Concerns
-Last activity: 2026-07-28 — 39-06 live-stack checkpoint found real defects, gap closure required
+Phase: 39 (bench-popover-additional-context-data) — EXECUTING
+Plan: 2 of 9
+Status: Ready to execute
+Last activity: 2026-07-28 — Phase 39 execution started
 
 ## Performance Metrics
 
@@ -60,6 +60,7 @@ v1.5: 10 phases, 55 plans, 10 days (2026-07-02 → 2026-07-12).
 | Phase 39 P03 | ~40min | 2 tasks | 5 files |
 | Phase 39 P04 | ~2h | 2 tasks | 4 files |
 | Phase 39 P05 | ~30min | 2 tasks | 2 files |
+| Phase 39 P07 | ~50min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -164,6 +165,8 @@ Two open design questions remain unresolved by design and are intentionally defe
 - [Phase ?]: [Phase 39, Plan 04]: appointing_president_party exposed on the public speaker popover payload, reversing T-14-02; top-level appointing_president retired in favour of per-tenure appointed_by (D-11/D-12/D-13) -- promote not add-alongside
 - [Phase ?]: [Phase 39, Plan 05]: Bio-toggle visibility uses scrollHeight/clientHeight measurement (39-UI-SPEC.md's primary option), not the character-length threshold fallback
 - [Phase ?]: [Phase 39, Plan 05]: .popover-card container changed to display:block rather than flex-column since every stacked section already carries its own margin-top
+- [Phase ?]: [Phase 39, Plan 07]: Split combined two-task edit into two atomic per-task commits by temporarily reverting Task 2's additions, verifying/committing Task 1 alone, then reapplying Task 2 -- preserves per-task traceability
+- [Phase ?]: [Phase 39, Plan 07]: Presence-guarded conditional spread (...(bioTextSubmitted ? { bio_text } : {})) used for bio_text instead of an unconditional property like birthdate/death_date -- protects against a future caller posting to save-form without the Biography card in the DOM
 
 ### Roadmap Evolution
 
@@ -189,6 +192,7 @@ Deployment blockers (v1.4, unresolved — not in v1.6 scope):
 - [Phase 38, Plan 05] Discovered pre-existing working-tree anomaly (not caused by this plan's commands): .planning/REQUIREMENTS.md and every .planning/phases/<NN>-* directory except 38-full-name-vs-name-parts-rethink/ are missing from disk (REQUIREMENTS.md and phase 31-40 tracked files show as git 'D'; untracked Phase 38 PLAN/RESEARCH/PATTERNS/UI-SPEC/FIGMA/VALIDATION files are gone with no git trace since they were never committed). This caused roadmap.update-plan-progress to report 'No plans found' (skipped, no ROADMAP.md changes made) and state.advance-plan/update-progress to zero out STATE.md's progress counters as a side effect (manually restored to the pre-corruption values: completed_phases 8, total_plans 38, completed_plans 34, percent 80, before committing). Needs investigation/recovery -- likely git checkout of tracked 'D' paths from HEAD for phases 31-40, and regeneration or recovery of untracked Phase 38 planning docs and REQUIREMENTS.md from another agent/session if available. Not remediated here: out of this plan's scope and risks colliding with concurrent wave agents (38-02/03/04) sharing this same non-worktree-isolated working tree.
 - [Phase 39, Plan 02] Real dev DB may already be at alembic head (0024) -- migrations 0023/0024 were applied there accidentally via the Windows .venv during this plan's session (WSL env-var isolation). Plan 39-06 should run 'alembic current' first before assuming it needs to apply them fresh.
 - [Phase 39, Plan 06] Checkpoint NOT approved -- operator found: (1) the separator dot between birth/death dates and between president/party renders with no visible spacing, hard to read; (2) overall popover styling diverges from the Figma mockups (`popover - Bench.png`/`popover-Advocate.png`) -- tenure rows should be two-column (bold title left, year range right-aligned) but render as a single em-dash line; (3) Bio & Photo save silently fails -- the input retains typed text until refresh, masking that nothing was persisted. Step 6 (identical treatment across party values, the one explicitly blocking acceptance criterion) was separately confirmed by the operator as passing -- no apolitical-constraint violation. See `39-06-SUMMARY.md` for full detail. Needs `/gsd-plan-phase 39 --gaps` before this phase can close.
+- [Phase 39, Plan 07] 39-07-PLAN.md's Task 1 verify gate '! grep -q "Non-critical" +page.server.ts' has one pre-existing, unrelated false-positive match at the load() function's merge-picker fetch (a read, not a write) -- not a regression, documented in 39-07-SUMMARY.md's Issues Encountered. No action needed unless a future plan wants to rename that unrelated comment.
 
 ## Deferred Items
 
@@ -289,8 +293,8 @@ Items acknowledged and deferred at v1.5 milestone close on 2026-07-12:
 
 ## Session Continuity
 
-Last session: 2026-07-28T16:37:10.901Z
-Stopped at: Completed 39-05-PLAN.md
+Last session: 2026-07-29T01:03:03.862Z
+Stopped at: Completed 39-07-PLAN.md (bio save gap closure)
 Resume file: None
 
 ## Operator Next Steps

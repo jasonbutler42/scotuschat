@@ -127,9 +127,9 @@ Full phase details: `.planning/milestones/v1.6-ROADMAP.md`
 
 ### 🚧 v1.7 Corpus Fidelity & Resolve Rework (Phases 41–45) — IN PROGRESS
 
-**Overview:** Trust the corpus-import data pipeline end to end on one representative case, rework the Resolve table into a real editing tool, and close two known UI bugs — with a dev-only reset harness to make it all iterable. The corpus track is deliberately gated: exactly one fixture is chosen and operator-confirmed (Phase 41) before any diff or importer change happens, and the dev reset tool (Phase 43) reseeds that same fixture. The Resolve rework (Phase 44) and the two bug fixes (Phase 45) are independent of the corpus track and can run in parallel with it. Deployment (DEPLOY-01/03) and the remaining 999.x backlog (999.2–999.8) are explicitly out of scope; so is any full-corpus backfill of Phase 42's importer fixes.
+**Overview:** Trust the corpus-import data pipeline end to end on one representative case, rework the Resolve table into a real editing tool, and close two known UI bugs — with a dev-only reset harness to make it all iterable. The corpus track is deliberately gated: a 4-fixture set (one structurally-complex argument plus three chosen for publish/pipeline-state variety) is chosen and operator-confirmed (Phase 41) before any diff or importer change happens. Only the complex fixture goes through Phase 42's diff/fix work; the dev reset tool (Phase 43) reseeds the full four-fixture set so the state-variety fixtures are available for Phase 43/45's publish-unpublish testing. The Resolve rework (Phase 44) and the two bug fixes (Phase 45) are independent of the corpus track and can run in parallel with it. Deployment (DEPLOY-01/03) and the remaining 999.x backlog (999.2–999.8) are explicitly out of scope; so is any full-corpus backfill of Phase 42's importer fixes.
 
-- [ ] **Phase 41: Canonical Corpus Fixture Selection** - Analyze the ~7,800-argument ConvoKit dataset and get one structurally-complex argument operator-confirmed as the milestone's audit fixture
+- [ ] **Phase 41: Canonical Corpus Fixture Selection** - Analyze the ~7,800-argument ConvoKit dataset and get a 4-fixture set (1 structurally-complex audit fixture + 3 publish-state variants) operator-confirmed for the milestone
 - [ ] **Phase 42: Corpus Import Fidelity Diff & Fix** - Field-by-field diff of the fixture's raw ConvoKit source against its imported DB rows, then fix every real gap and re-import clean
 - [ ] **Phase 43: Dev-Only Reset to Fixture** - Admin action that wipes all argument/people data and reseeds exactly the fixture, hard-gated against ever running outside a dev environment
 - [ ] **Phase 44: Resolve Table Rework** - SEED-001's mockup-driven rework: 5 columns, segmented Bench/Advocate toggle, writable Argument Role, always-on Descriptor, consistent extracted hints, bench lock affordance
@@ -139,15 +139,15 @@ Full phase details: `.planning/milestones/v1.6-ROADMAP.md`
 
 ### Phase 41: Canonical Corpus Fixture Selection
 
-**Goal**: The operator has exactly one named, justified ConvoKit argument confirmed as the canonical audit fixture that every later phase in this milestone references. This is a decision gate, not an implementation phase — the ~7,800-argument corpus is analyzed for structural complexity signals (speaker count, advocate count, consolidated multi-docket cases, transcript length, re-argument/question-number shape), a ranked shortlist plus one recommendation is presented, and the operator explicitly confirms before Phase 42's diff work or Phase 43's reseed target is locked in. Choosing badly here means auditing a case that exercises none of the importer's hard paths, so the choice is surfaced rather than silently auto-decided.
+**Goal**: The operator has a named, justified 4-argument fixture set confirmed that every later phase in this milestone references: one structurally-complex argument (the canonical audit fixture Phase 42 diffs against raw ConvoKit source) plus three additional arguments chosen for publish/pipeline-state variety (e.g. unpublished/DRAFT, published, mid-pipeline) so Phase 43's reset tool and Phase 45's publish/unpublish bug work have real states to exercise. This is a decision gate, not an implementation phase — the ~7,800-argument corpus is analyzed for structural complexity signals (speaker count, advocate count, consolidated multi-docket cases, transcript length, re-argument/question-number shape), a ranked shortlist plus one recommendation is presented for the complex fixture, the three state-variety fixtures are proposed separately by state rather than complexity, and the operator explicitly confirms the whole set before Phase 42's diff work or Phase 43's reseed target is locked in. Choosing badly here means auditing a case that exercises none of the importer's hard paths, so the choice is surfaced rather than silently auto-decided.
 **Depends on**: Nothing (first phase of v1.7)
 **Requirements**: CORPUS-12
 **Success Criteria** (what must be TRUE):
 
   1. A ranked shortlist of candidate arguments drawn from the full ConvoKit dataset is presented, each with the concrete structural-complexity signals that ranked it (speaker count, advocate count, number of source dockets, utterance count).
-  2. Exactly one argument is recommended as the canonical fixture, with a stated reason why it exercises more of the importer's paths than the runners-up.
-  3. The operator explicitly confirms (or rejects and redirects) the recommendation before any downstream corpus work begins — no phase proceeds on an assumed fixture.
-  4. The confirmed fixture is recorded in a durable, referenceable form (ConvoKit conversation id, case name, docket(s), term, argued date) that Phases 42 and 43 both read instead of re-deriving.
+  2. Exactly one argument is recommended as the canonical complexity fixture, with a stated reason why it exercises more of the importer's paths than the runners-up, plus three additional arguments recommended for publish/pipeline-state variety.
+  3. The operator explicitly confirms (or rejects and redirects) the full 4-fixture recommendation before any downstream corpus work begins — no phase proceeds on an assumed fixture set.
+  4. The confirmed fixture set is recorded in a durable, referenceable form (ConvoKit conversation id, case name, docket(s), term, argued date, and each fixture's role — complexity fixture vs. which state variant) that Phases 42 and 43 both read instead of re-deriving; Phase 42 reads only the complexity fixture, Phase 43 reads the full set.
   5. No importer code and no database rows are changed by this phase — selection and confirmation only.
 
 **Plans**: TBD
@@ -155,7 +155,7 @@ Full phase details: `.planning/milestones/v1.6-ROADMAP.md`
 ### Phase 42: Corpus Import Fidelity Diff & Fix
 
 **Goal**: Everything `import-convokit` drops, mis-maps, or silently defaults for the confirmed fixture is identified, classified, and fixed — so the fixture's rows in `cases`, `arguments`, `utterances`, `people`, `argument_participants`, and `court_tenures` faithfully reflect its raw ConvoKit source. Some current omissions are intentional (the apolitical field allow-list from Phase 29 strips partisan/outcome fields by design, and SCDB data is excluded entirely), so the diff must separate real defects from deliberate exclusions rather than "restoring" fields the apolitical hard constraint forbids. Fixes land on the importer's code path and are proven by re-importing this one fixture; backfilling the other ~7,800 arguments is explicitly out of scope.
-**Depends on**: Phase 41 (needs the confirmed fixture)
+**Depends on**: Phase 41 (needs the confirmed complexity fixture — the other 3 fixtures in Phase 41's set are not diffed here, they're reserved for Phase 43/45)
 **Requirements**: CORPUS-13, CORPUS-14
 **Success Criteria** (what must be TRUE):
 
@@ -169,16 +169,16 @@ Full phase details: `.planning/milestones/v1.6-ROADMAP.md`
 
 ### Phase 43: Dev-Only Reset to Fixture
 
-**Goal**: The operator can return a local database to a known one-fixture state from the admin panel in a single action, making the corpus and resolve work iterable instead of requiring hand-built SQL cleanup between attempts. The action is fully destructive by design — it wipes every argument, utterance, person, court tenure, and argument participant, then reseeds exactly the Phase 41 fixture plus its associated people — so an environment gate that makes it impossible to fire against a real/production database is a hard requirement of the feature, not follow-up polish. Reseeding runs through the same `import-convokit` path a normal corpus import uses, so Phase 42's importer fixes flow through automatically rather than being duplicated in a hand-rolled seeder.
-**Depends on**: Phase 41 (needs the confirmed fixture as the reseed target). Not blocked by Phase 42 — it reseeds through whatever the current importer produces.
+**Goal**: The operator can return a local database to a known four-fixture state from the admin panel in a single action, making the corpus and resolve work iterable instead of requiring hand-built SQL cleanup between attempts. The action is fully destructive by design — it wipes every argument, utterance, person, court tenure, and argument participant, then reseeds exactly Phase 41's four-fixture set plus their associated people — so an environment gate that makes it impossible to fire against a real/production database is a hard requirement of the feature, not follow-up polish. Reseeding runs through the same `import-convokit` path a normal corpus import uses, so Phase 42's importer fixes flow through automatically rather than being duplicated in a hand-rolled seeder.
+**Depends on**: Phase 41 (needs the confirmed fixture set as the reseed target). Not blocked by Phase 42 — it reseeds through whatever the current importer produces.
 **Requirements**: DEVTOOL-01, DEVTOOL-02
 **Success Criteria** (what must be TRUE):
 
-  1. Operator triggers "Reset to Fixture" from the admin panel and, on completion, the database contains exactly the fixture argument plus its associated people — zero other arguments, utterances, people, court tenures, or argument participants.
+  1. Operator triggers "Reset to Fixture" from the admin panel and, on completion, the database contains exactly the four fixture arguments plus their associated people — zero other arguments, utterances, people, court tenures, or argument participants.
   2. With a production-like environment setting active, the action refuses to execute and says why; the refusal is demonstrated by actually attempting it, not asserted from the code.
   3. The action requires an explicit operator confirmation step that states exactly what will be wiped before anything is deleted.
-  4. After a reset, the fixture argument is immediately usable in the normal resolve → approve → publish workflow (its paired admin job exists) with no manual repair.
-  5. A reset run after Phase 42's importer fixes lands the corrected field values, confirming the reseed shares the real import path rather than a stale copy of it.
+  4. After a reset, each fixture argument is immediately usable in the normal resolve → approve → publish workflow (its paired admin job exists) with no manual repair, and the state-variety fixtures land in their intended publish/pipeline states (not all reset to the same default state).
+  5. A reset run after Phase 42's importer fixes lands the corrected field values on the complexity fixture, confirming the reseed shares the real import path rather than a stale copy of it.
 
 **Plans**: TBD
 **UI hint**: yes

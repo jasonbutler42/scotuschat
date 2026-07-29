@@ -98,6 +98,8 @@ v1.6's roadmap evolution is archived in `.planning/milestones/v1.6-ROADMAP.md`. 
 
 2026-07-29: v1.7 roadmap created — Phases 41–45 derived from the milestone's 13 requirements (CORPUS-12–14, DEVTOOL-01–02, RESOLVE-01–06, BUG-01–02). Numbering continues from v1.6's last phase (40.1). Coverage 13/13, no orphans, no duplicates. CORPUS-12 was given its own gate phase (41) rather than folded into the diff work so fixture selection is an explicit operator confirmation, and so Phase 43 can depend on the fixture without depending on Phase 42's importer fixes.
 
+2026-07-29: During Phase 41 discuss-phase, CORPUS-12 widened from a single canonical fixture to a 4-fixture set: 1 structurally-complex argument (unchanged — still the sole target of Phase 42's diff/fix work) plus 3 additional arguments chosen for publish/pipeline-state variety (unpublished/DRAFT, published, mid-pipeline) so Phase 43's reset tool and Phase 45's publish/unpublish bug work have real states to exercise. ROADMAP.md Phase 41/42/43 goals and success criteria updated; REQUIREMENTS.md CORPUS-12/DEVTOOL-01 updated to match. Also surfaced but explicitly deferred: renaming "Case" to "Argument" across DB schema/routes/frontend — logged in REQUIREMENTS.md Out of Scope, not actioned this milestone.
+
 ### Pending Todos
 
 - None unassigned. Both previously-pending todos (`2026-07-28-unpublished-argument-visible-in-cases-list.md`, `2026-07-29-popover-scrollbar-outside-card.md`) are now covered by Phase 45 (BUG-01 / BUG-02) and should be moved to `todos/completed/` when that phase verifies.

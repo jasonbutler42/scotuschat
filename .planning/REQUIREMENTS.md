@@ -7,13 +7,13 @@
 
 ### Corpus Fidelity Audit
 
-- [ ] **CORPUS-12**: A single argument is identified from the ~7,800-argument ConvoKit dataset as the canonical audit fixture, selected for structural complexity (most advocates/speakers, consolidated multi-docket case, longest transcript, or similar signals), and confirmed with the user before use
+- [ ] **CORPUS-12**: A 4-argument fixture set is identified from the ~7,800-argument ConvoKit dataset: one canonical audit fixture selected for structural complexity (most advocates/speakers, consolidated multi-docket case, longest transcript, or similar signals) that Phase 42 diffs, plus three additional arguments selected for publish/pipeline-state variety (e.g. unpublished/DRAFT, published, mid-pipeline) to support Phase 43's reset tool and Phase 45's bug testing — the full set confirmed with the user before use
 - [ ] **CORPUS-13**: A field-by-field comparison exists between the fixture's raw ConvoKit source data and what actually lands in our DB (cases, arguments, utterances, people, argument_participants, court_tenures) after `import-convokit`, surfacing any fields dropped, mis-mapped, or silently defaulted
 - [ ] **CORPUS-14**: Every gap found in CORPUS-13 for the fixture is fixed in the corpus importer and verified by re-importing the fixture cleanly (fixes apply to this one fixture's import path this milestone; full-corpus backfill is out of scope)
 
 ### Dev Reset Tool
 
-- [ ] **DEVTOOL-01**: Operator can trigger a "Reset to Fixture" action from the admin panel that wipes all arguments, utterances, people, court_tenures, and argument_participants, then reseeds exactly the CORPUS-12 fixture argument plus its associated people
+- [ ] **DEVTOOL-01**: Operator can trigger a "Reset to Fixture" action from the admin panel that wipes all arguments, utterances, people, court_tenures, and argument_participants, then reseeds exactly the CORPUS-12 fixture set (all 4 arguments) plus their associated people
 - [ ] **DEVTOOL-02**: The reset action is hard-gated so it cannot execute against a real/production environment (e.g. explicit environment check), given its fully destructive nature
 
 ### Resolve Table Rework
@@ -39,7 +39,8 @@ _(None deferred from this milestone's scope — all four target features are in 
 | Feature | Reason |
 |---------|--------|
 | Deployment to Digital Ocean App Platform (DEPLOY-01, DEPLOY-03) | Deferred — remains in PROJECT.md Requirements > Active, untouched this milestone; the operator wants pipeline/data confidence before shipping |
-| Full-corpus backfill of any CORPUS-14 fixes across all ~7,800 arguments | Explicitly scoped to a single fixture this milestone; broader rollout is future work once the fixture proves the fix |
+| Full-corpus backfill of any CORPUS-14 fixes across all ~7,800 arguments | Explicitly scoped to the single complexity fixture this milestone (not the other 3 state-variety fixtures); broader rollout is future work once the fixture proves the fix |
+| Renaming "Case" to "Argument" across DB schema, API routes, and frontend | Cross-cutting rename (DB model, `/cases/` routes, corpus-loader naming) surfaced during Phase 41 discuss; genuinely correct observation but out of scope for this milestone — candidate for its own future phase/milestone |
 | 999.x backlog review (999.2–999.8) | Separate `/gsd-review-backlog` concern, not part of this milestone's scope |
 | Reset tool as a permanent operator-facing production feature | Built as a dev-only iteration tool for this milestone; not intended to ship as a real admin feature without further design/safety review |
 
@@ -81,4 +82,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-07-29*
-*Last updated: 2026-07-29 after roadmap creation (Phases 41–45 mapped, 13/13 coverage)*
+*Last updated: 2026-07-29 after roadmap creation (Phases 41–45 mapped, 13/13 coverage); CORPUS-12/DEVTOOL-01 widened to a 4-fixture set during Phase 41 discuss-phase*

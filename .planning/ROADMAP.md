@@ -343,7 +343,7 @@ Plans:
   3. All added fields are presented identically for every Justice — no differential framing, omission, or emphasis based on any political consideration.
   4. Case-specific presentation (age at argument, tenure-length indicators, case-heard counts) remains out of scope for this phase.
 
-**Plans**: 5/6 plans executed
+**Plans**: 5/9 plans executed
 **UI hint**: yes
 
 **Wave 1**
@@ -363,6 +363,15 @@ Plans:
 **Wave 4** *(blocked on Wave 3 completion)*
 
 - [ ] 39-06-PLAN.md — Operator runbook: apply migrations + run import-justices on the real dev DB, then live UAT of both card types
+
+**Wave 5** *(gap closure — 39-06 checkpoint not approved; see 39-UAT.md ## Gaps)*
+
+- [ ] 39-07-PLAN.md — Gap 1: Bio & Photo save silently fails — move bio_text onto the Save Person path, remove the error-swallowing PATCH, unmask the textarea
+- [ ] 39-08-PLAN.md — Gaps 2+3: separator spacing, per-section dividers, and two-column tenure rows matching the Figma mockups
+
+**Wave 6** *(blocked on Wave 5 completion)*
+
+- [ ] 39-09-PLAN.md — Operator re-verification of the three UAT gaps on the live stack (supersedes 39-06's failed steps)
 
 ### Phase 40: README — how to start the local stack
 

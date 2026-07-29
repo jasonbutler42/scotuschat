@@ -12,7 +12,7 @@ Anyone can open a SCOTUS oral argument and immediately follow the conversation �
 
 **v1.5 Admin Screens Cleanup — SHIPPED 2026-07-12.** All 7 admin screens (`/admin/`, `/admin/pipeline/`, `/admin/pipeline/[id]`, `/admin/arguments/`, `/admin/arguments/[id]`, `/admin/people/`, `/admin/people/[id]`) audited and refined: three-state argument lifecycle with status log, shared Argument Details component, redesigned pipeline list/detail pages, People admin with Bench/Advocate tabs and per-tenure appointment data, and a real dashboard. Also absorbed an out-of-band addition mid-milestone: bulk historical corpus import (~7,800 arguments, 1955–2019, from Cornell ConvoKit) routed through the same resolve/publish workflow as PDF ingest. Full details: `.planning/milestones/v1.5-ROADMAP.md`, `.planning/milestones/v1.5-REQUIREMENTS.md`.
 
-**v1.6 Backlog Cleanup — 9/10 phases complete.** Phases 31, 32, 33, 34, 35, 36, 37, 38, and 40 are verified. Phase 37 replaces the free-text tenure Seat with a canonical Chief/Associate office contract across the full stack (migration, API, import, editor, display). Phase 38 locked Full Name as fully auto-derived (no longer independently editable) and, during its own UAT, uncovered and closed G-38-6 — an authenticated-admin path-traversal / arbitrary-file-write vulnerability in docket-value handling — via a three-layer defense-in-depth fix (canonical validation module, independent pipeline-side hardening, operator-facing UI validation).
+**v1.6 Backlog Cleanup — 10/10 phases complete.** All phases 31–40 are verified. Phase 37 replaces the free-text tenure Seat with a canonical Chief/Associate office contract across the full stack (migration, API, import, editor, display). Phase 38 locked Full Name as fully auto-derived (no longer independently editable) and, during its own UAT, uncovered and closed G-38-6 — an authenticated-admin path-traversal / arbitrary-file-write vulnerability in docket-value handling — via a three-layer defense-in-depth fix (canonical validation module, independent pipeline-side hardening, operator-facing UI validation). Phase 39 widened the bench popover with birthdate, death date, and per-tenure appointing president/party/reason-left, presented identically for every Justice; its own operator UAT went through a full gap-closure cycle (39-06 found a bio-save bug plus two styling gaps vs. the Figma mockups, 39-07/39-08 fixed them, 39-09 re-confirmed all three closed and re-verified party-neutral rendering after the restyle).
 
 ## Current Milestone: v1.6 Backlog Cleanup
 
@@ -27,7 +27,7 @@ Anyone can open a SCOTUS oral argument and immediately follow the conversation �
 - Phase 36: Click-to-copy design pattern for extracted values
 - Phase 37: Tenure Seat — Chief/Associate toggle vs. numbered seats (design decision during discuss-phase)
 - Phase 38: Full Name vs. name-parts rethink — resolved: fully auto-derived from name parts (complete; also closed security gap G-38-6)
-- Phase 39: Bench popover — additional context data for Justices
+- Phase 39: Bench popover — additional context data for Justices (complete; gap-closure cycle fixed a bio-save bug and two mockup-fidelity styling gaps)
 - Phase 40: README — how to start the local stack
 
 Deployment (DEPLOY-01, DEPLOY-03) and the remaining 999.x backlog (999.2–999.8) are explicitly out of scope for this milestone.
@@ -226,4 +226,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-27 after Phase 38 verification — 9 of 10 v1.6 backlog phases are verified; 1 remains (Phase 39).*
+*Last updated: 2026-07-29 after Phase 39 verification — 10 of 10 v1.6 backlog phases are verified. Milestone complete.*

@@ -2,9 +2,12 @@
 gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Corpus Fidelity & Resolve Rework
+current_phase: 41
 status: planning
-last_updated: "2026-07-29T00:00:00.000Z"
+stopped_at: Phase 41 context gathered
+last_updated: "2026-07-29T17:59:35.985Z"
 last_activity: 2026-07-29
+last_activity_desc: v1.7 roadmap created
 progress:
   total_phases: 5
   completed_phases: 0
@@ -124,9 +127,9 @@ v1.6's roadmap evolution is archived in `.planning/milestones/v1.6-ROADMAP.md`. 
 
 ## Session Continuity
 
-Last session: 2026-07-29
-Stopped at: v1.7 roadmap created (Phases 41–45), REQUIREMENTS.md traceability filled in
-Resume file: .planning/ROADMAP.md
+Last session: 2026-07-29T17:59:35.797Z
+Stopped at: Phase 41 context gathered
+Resume file: .planning/phases/41-canonical-corpus-fixture-selection/41-CONTEXT.md
 
 ## Operator Next Steps
 

@@ -343,7 +343,7 @@ Plans:
   3. All added fields are presented identically for every Justice — no differential framing, omission, or emphasis based on any political consideration.
   4. Case-specific presentation (age at argument, tenure-length indicators, case-heard counts) remains out of scope for this phase.
 
-**Plans**: 8/9 plans executed
+**Plans**: 9/9 plans executed
 **UI hint**: yes
 
 **Wave 1**
@@ -371,7 +371,7 @@ Plans:
 
 **Wave 6** *(blocked on Wave 5 completion)*
 
-- [ ] 39-09-PLAN.md — Operator re-verification of the three UAT gaps on the live stack (supersedes 39-06's failed steps)
+- [x] 39-09-PLAN.md — Operator re-verification of the three UAT gaps on the live stack (supersedes 39-06's failed steps)
 
 ### Phase 40: README — how to start the local stack
 
@@ -429,7 +429,7 @@ Plans:
 | 36. Click-to-copy extracted values design pattern | v1.6 | 3/3 | Complete    | 2026-07-15 |
 | 37. Represent tenure Seat as a Chief/Associate toggle instead of free text | v1.6 | 5/5 | Complete    | 2026-07-21 |
 | 38. Rethink Full Name vs. name-part fields in the people editor | v1.6 | 10/10 | Complete    | 2026-07-27 |
-| 39. Bench popover — additional context data for Justices | v1.6 | 8/9 | In Progress|  |
+| 39. Bench popover — additional context data for Justices | v1.6 | 9/9 | In Progress|  |
 | 40. README — how to start the local stack | v1.6 | 3/3 | Complete    | 2026-07-14 |
 
 ## Backlog

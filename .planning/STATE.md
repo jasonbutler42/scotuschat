@@ -5,15 +5,15 @@ milestone_name: Backlog Cleanup
 current_phase: 39
 current_phase_name: bench-popover-additional-context-data
 status: executing
-stopped_at: Completed 39-07-PLAN.md (bio save gap closure)
-last_updated: "2026-07-29T01:03:27.496Z"
+stopped_at: Completed 39-08-PLAN.md (bench popover mockup-fidelity gap closure)
+last_updated: "2026-07-29T01:29:18.085Z"
 last_activity: 2026-07-28
 last_activity_desc: Phase 39 execution started
 progress:
   total_phases: 10
   completed_phases: 9
   total_plans: 51
-  completed_plans: 49
+  completed_plans: 50
   percent: 90
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-07-14 after Phase 34 verification)
 ## Current Position
 
 Phase: 39 (bench-popover-additional-context-data) — EXECUTING
-Plan: 2 of 9
+Plan: 3 of 9
 Status: Ready to execute
 Last activity: 2026-07-28 — Phase 39 execution started
 
@@ -61,6 +61,7 @@ v1.5: 10 phases, 55 plans, 10 days (2026-07-02 → 2026-07-12).
 | Phase 39 P04 | ~2h | 2 tasks | 4 files |
 | Phase 39 P05 | ~30min | 2 tasks | 2 files |
 | Phase 39 P07 | ~50min | 2 tasks | 4 files |
+| Phase 39 P08 | 35min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -167,6 +168,9 @@ Two open design questions remain unresolved by design and are intentionally defe
 - [Phase ?]: [Phase 39, Plan 05]: .popover-card container changed to display:block rather than flex-column since every stacked section already carries its own margin-top
 - [Phase ?]: [Phase 39, Plan 07]: Split combined two-task edit into two atomic per-task commits by temporarily reverting Task 2's additions, verifying/committing Task 1 alone, then reapplying Task 2 -- preserves per-task traceability
 - [Phase ?]: [Phase 39, Plan 07]: Presence-guarded conditional spread (...(bioTextSubmitted ? { bio_text } : {})) used for bio_text instead of an unconditional property like birthdate/death_date -- protects against a future caller posting to save-form without the Biography card in the DOM
+- [Phase ?]: [Phase 39, Plan 08]: Wrote the popover UI-contract test module before touching the component (TDD RED first), confirming the RED run failed exactly the 10 tests predicted by the plan's acceptance criteria
+- [Phase ?]: [Phase 39, Plan 08]: Bundled the president/party {@render separator(4)} replacement into Task 1's commit rather than Task 2's, since Task 1's action text calls for replacing both inline separators through the snippet
+- [Phase ?]: [Phase 39, Plan 08]: Used a brace-balanced _function_body() extraction in the test module to check formatMonthYear's body specifically for absence of day:, avoiding a false-fail against formatShort's own legitimate day: 'numeric'
 
 ### Roadmap Evolution
 
@@ -293,8 +297,8 @@ Items acknowledged and deferred at v1.5 milestone close on 2026-07-12:
 
 ## Session Continuity
 
-Last session: 2026-07-29T01:03:03.862Z
-Stopped at: Completed 39-07-PLAN.md (bio save gap closure)
+Last session: 2026-07-29T01:29:16.827Z
+Stopped at: Completed 39-08-PLAN.md (bench popover mockup-fidelity gap closure)
 Resume file: None
 
 ## Operator Next Steps

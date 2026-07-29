@@ -3,18 +3,18 @@ gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Backlog Cleanup
 current_phase: 40.1
-current_phase_name: Sanitize docket input to close path-traversal/arbitrary-file-write gap
-status: planning
-stopped_at: Phase 40.1 context gathered
-last_updated: "2026-07-29T15:24:07.439Z"
+current_phase_name: Sanitize docket input (superseded by Phase 38, reconciled — no execution needed)
+status: ready_to_close
+stopped_at: Phase 40.1 reconciled; pre-close artifact audit clear except 3 acknowledged deferrals
+last_updated: "2026-07-29T15:46:18.232Z"
 last_activity: 2026-07-29
-last_activity_desc: Phase 39 complete, transitioned to Phase 40
+last_activity_desc: Phase 40.1 reconciled (superseded by Phase 38); v1.6 ready for milestone completion
 progress:
   total_phases: 11
-  completed_phases: 10
+  completed_phases: 11
   total_plans: 51
   completed_plans: 51
-  percent: 91
+  percent: 100
 ---
 
 # Project State
@@ -24,14 +24,24 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-14 after Phase 34 verification)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** Phase 39 — bench-popover-additional-context-data
+**Current focus:** v1.6 milestone completion
 
 ## Current Position
 
-Phase: 40.1 — Sanitize docket input to close path-traversal/arbitrary-file-write gap
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-07-29 — Phase 39 complete, transitioned to Phase 40
+Phase: 40.1 — superseded by Phase 38 Plans 07–10 (reconciliation only, no execution needed)
+Plan: N/A — see 40.1-SUMMARY.md
+Status: v1.6 ready for /gsd-complete-milestone 1.6
+Last activity: 2026-07-29 — Phase 40.1 reconciled; pre-close audit clear except 3 acknowledged deferrals (see Deferred Items below)
+
+## Deferred Items
+
+Items acknowledged and deferred at milestone close on 2026-07-29:
+
+| Category | Item | Status |
+|----------|------|--------|
+| todo | 2026-07-28-unpublished-argument-visible-in-cases-list.md (bug) | pending — discovered during Phase 39 UAT, out of v1.6 scope |
+| todo | 2026-07-29-popover-scrollbar-outside-card.md (ui) | pending — discovered during Phase 39 UAT, out of v1.6 scope |
+| seed | SEED-001-rework-resolve-table-requirements | dormant — designed to resurface at next `/gsd-new-milestone` scan |
 
 ## Performance Metrics
 

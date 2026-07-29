@@ -2,7 +2,15 @@
 
 ## Status
 
-Status: PROPOSED (2026-07-29). No downstream phase may treat this four-fixture set as final until Plan 03 records the operator's explicit confirmation (or redirect) and rewrites this status line.
+Status: CONFIRMED (2026-07-29). This four-fixture set is final. Phase 42 reads the Complexity fixture row; Phase 43 reads all four rows.
+
+## Confirmation
+
+Date: 2026-07-29
+
+Operator decision (as given): "Operator selected option 1: confirm-as-proposed. Use all four fixtures exactly as listed — complexity fixture conversation 15169 (Baltimore & Ohio Railroad Co. v. United States), plus the three state-variety targets (13015, 18897, 22372) — no substitutions."
+
+No substitutions were made. The Fixture Set table below is unchanged from the PROPOSED version: complexity fixture conversation 15169 (Baltimore & Ohio Railroad Company v. United States, docket 642, 1966 term), and the three state-variety targets — unpublished/DRAFT target conversation 13015 (Archawski v. Hanioti), Published target conversation 18897 (Anderson v. Liberty Lobby, Inc.), and Mid-pipeline target conversation 22372 (Abbott v. United States). The `## Ranked Shortlist (evidence)` table below is untouched and still reflects the original ordering considered at proposal time.
 
 ## Ranked Shortlist (evidence)
 

@@ -325,12 +325,13 @@
 
 		<!-- ══════════════════════════════════════════════════════════════════════
 		     Main save form — covers Identity + Person Type (is_justice/birthdate/
-		     tenures). Bio & Photo are managed by a separate form below (Pitfall 7
-		     extended). IMPORTANT: no enctype on this form (Pitfall 1). The form
-		     closes right after the Identity card — the Person Type card's inputs
-		     live outside this element but associate via the `form="save-form"`
-		     attribute (same cross-form idiom already used for the standalone
-		     Save Person button, Gap E fix).
+		     tenures) plus the Biography card's bio_text (Phase 39 gap closure,
+		     39-UAT.md gap 1/test 10). Only the Photo card's own upload lives in a
+		     separate form below. IMPORTANT: no enctype on this form (Pitfall 1).
+		     The form closes right after the Identity card — the Person Type and
+		     Biography cards' inputs live outside this element but associate via
+		     the `form="save-form"` attribute (same cross-form idiom already used
+		     for the standalone Save Person button, Gap E fix).
 		     ══════════════════════════════════════════════════════════════════════ -->
 		<form
 			id="save-form"
@@ -496,10 +497,10 @@
 			</div>
 		</form>
 
-		<!-- ── Photo card + Biography card: single form (bio_text + photo widget), SEPARATE
-		     form outside save-form (Pitfall 1). Bio saves together with photo on every
-		     photo action submit (Pitfall 7 extended) — unchanged behavior, just split
-		     into two visually distinct cards per the UI-SPEC card order. ── -->
+		<!-- ── Photo card: its own form, SEPARATE from save-form (Pitfall 1). Forwards
+		     only the photo upload — bio_text moved onto the save-form (Phase 39 gap
+		     closure, 39-UAT.md gap 1/test 10): the operator's primary Save Person
+		     affordance now owns the whole person, including the bio. ── -->
 		<form
 			method="POST"
 			action="?/photo"
@@ -593,34 +594,41 @@
 					{photoSubmitting ? 'Uploading…' : 'Upload photo'}
 				</button>
 			</div>
-
-			<!-- ── Biography card ── -->
-			<div
-				style="background-color: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 24px; margin-bottom: 24px;"
-			>
-				<h2
-					style="font-size: 20px; font-weight: 600; color: #e2e8f0; margin: 0 0 16px 0; line-height: 1.2;"
-				>
-					Biography
-				</h2>
-
-				<!-- bio_text submitted via this form; excluded from the save action (Pitfall 7 extended) -->
-				<div>
-					<label
-						for="bio_text"
-						style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
-					>
-						Bio
-					</label>
-					<textarea
-						id="bio_text"
-						name="bio_text"
-						placeholder="Enter a short biography…"
-						style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box; min-height: 120px; resize: vertical; font-family: inherit;"
-					>{data.person.bio_text ?? ''}</textarea>
-				</div>
-			</div>
 		</form>
+
+		<!-- ── Biography card (Phase 39 gap closure, 39-UAT.md gap 1/test 10) — sits
+		     outside the photo form. Its textarea associates with save-form via the
+		     `form` attribute, the same cross-form idiom the Person Type card's
+		     hidden inputs already use, so the bio saves atomically with the rest of
+		     the person on Save Person, not with the photo upload. ── -->
+		<div
+			style="background-color: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 24px; margin-bottom: 24px;"
+		>
+			<h2
+				style="font-size: 20px; font-weight: 600; color: #e2e8f0; margin: 0 0 16px 0; line-height: 1.2;"
+			>
+				Biography
+			</h2>
+
+			<div>
+				<label
+					for="bio_text"
+					style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
+				>
+					Bio
+				</label>
+				<p style="font-size: 13px; font-weight: 400; color: #94a3b8; margin: 0 0 8px 0;">
+					Saved with Save Person.
+				</p>
+				<textarea
+					id="bio_text"
+					name="bio_text"
+					form="save-form"
+					placeholder="Enter a short biography…"
+					style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box; min-height: 120px; resize: vertical; font-family: inherit;"
+				>{data.person.bio_text ?? ''}</textarea>
+			</div>
+		</div>
 
 		<!-- ── Person Type card (new, D-13) — Bench/Advocate segmented toggle replaces the
 		     old "Is Justice" checkbox; Bench-only fields slide-reveal (D-11). The Role

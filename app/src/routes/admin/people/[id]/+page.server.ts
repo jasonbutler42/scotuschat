@@ -163,15 +163,22 @@ export const actions: Actions = {
 	 * locked copy ("Enter at least a first or last name.") with every
 	 * attempted value preserved and a focus path, rather than a generic 422.
 	 *
-	 * NOTE: bio_text and photo_url are intentionally NOT sent in this action's PATCH body
-	 * (Pitfall 7 extended). Both are managed exclusively by the `photo` action. The Bio &
-	 * Photo card is a single form so bio saves together with photo on every photo action submit.
+	 * Phase 39 gap closure (39-UAT.md gap 1/test 10): bio_text is now owned by
+	 * this action — the Biography card's textarea associates with save-form via
+	 * its `form` attribute, so the operator's primary Save Person affordance
+	 * saves the whole person, bio included, in one atomic PATCH. photo_url
+	 * remains owned exclusively by the `photo` action below.
 	 */
 	save: async ({ request, params, fetch }) => {
 		const formData = await request.formData();
 
-		// bio_text intentionally omitted — managed exclusively by the photo action (Pitfall 7 extended)
-		// photo_url intentionally omitted — managed exclusively by the photo action (Pitfall 7)
+		// bio_text (Phase 39 gap closure) — presence-guarded like every other
+		// field read here, but the presence flag additionally gates whether the
+		// key is placed on the PATCH body at all (see the conditional spread
+		// below): an absent Biography card must never be able to blank a stored
+		// bio. photo_url stays owned exclusively by the `photo` action (Pitfall 7).
+		const bioTextSubmitted = formData.has('bio_text');
+		const bio_text = ((formData.get('bio_text') as string) ?? '').trim() || null;
 		const first_name = ((formData.get('first_name') as string) ?? '').trim() || null;
 		const last_name = ((formData.get('last_name') as string) ?? '').trim() || null;
 		const middle_name = ((formData.get('middle_name') as string) ?? '').trim() || null;
@@ -244,8 +251,12 @@ export const actions: Actions = {
 					tenures,
 					first_name, last_name, middle_name, name_suffix,
 					is_justice, birthdate, death_date,
-					// bio_text omitted intentionally — managed by photo action (Pitfall 7 extended)
-					// photo_url omitted intentionally — managed by photo action (Pitfall 7)
+					// Conditional spread (not an unconditional property): the key is
+					// present only when the Biography card's textarea actually
+					// submitted the field, preserving the model_fields_set contract —
+					// an absent key means "leave unchanged" server-side.
+					...(bioTextSubmitted ? { bio_text } : {}),
+					// photo_url stays owned exclusively by the photo action (Pitfall 7)
 				}),
 			});
 		} catch {
@@ -269,13 +280,11 @@ export const actions: Actions = {
 	},
 
 	/**
-	 * photo — Save bio_text and forward photo to FastAPI POST /api/admin/people/{id}/photo.
-	 *
-	 * This action handles both bio_text and photo because the Bio & Photo section is
-	 * a single card with a single form (Pitfall 7 extended — bio_text excluded from save).
-	 *
-	 * bio_text is saved via a PATCH request before the photo fetch. This is best-effort:
-	 * a failed bio save is not surfaced as an error (consistent with how save action works).
+	 * photo — Forward a photo upload to FastAPI POST /api/admin/people/{id}/photo.
+	 * Forwards a photo and nothing else — bio_text moved onto the `save` action
+	 * (Phase 39 gap closure, 39-UAT.md gap 1/test 10). This action no longer
+	 * PATCHes the person at all; the write that reported success without
+	 * checking its response is exactly the defect that closure fixed.
 	 *
 	 * CRITICAL: Do NOT set Content-Type header on the photo fetch — Node fetch sets the
 	 * multipart boundary automatically when body is FormData (Pitfall 4).
@@ -285,21 +294,8 @@ export const actions: Actions = {
 	 */
 	photo: async ({ request, params, fetch }) => {
 		const formData = await request.formData();
-		const bio_text = (formData.get('bio_text') as string | null)?.trim() ?? null;
 		const photoFile = formData.get('photo_file') as File | null;
 		const photoUrl = (formData.get('photo_url') as string | null)?.trim() || null;
-
-		// Best-effort bio save — always run before photo, ignore response (Pitfall 7 extended)
-		await fetch(`${FASTAPI_BASE_URL}/api/admin/people/${params.id}`, {
-			method: 'PATCH',
-			headers: {
-				'Content-Type': 'application/json',
-				'X-Admin-Token': ADMIN_TOKEN,
-			},
-			body: JSON.stringify({ bio_text: bio_text }),
-		}).catch(() => {
-			// Non-critical — bio save failure does not block photo save
-		});
 
 		const outForm = new FormData();
 		if (photoFile && photoFile.size > 0) {
@@ -309,7 +305,7 @@ export const actions: Actions = {
 			outForm.append('photo_url', photoUrl);
 		}
 
-		// If neither a file nor a URL was provided, bio-only save — skip photo upload
+		// If neither a file nor a URL was provided, there is nothing to upload — no-op redirect.
 		if (!outForm.has('photo_file') && !outForm.has('photo_url')) {
 			throw redirect(303, '/admin/people/' + params.id);
 		}

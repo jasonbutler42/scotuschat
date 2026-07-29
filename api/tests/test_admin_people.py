@@ -212,11 +212,13 @@ async def test_update_person_partial_patch_does_not_wipe_other_fields(
     """
     CR-01 regression: PATCH /api/admin/people/{id} must only write fields the
     request body explicitly includes. The real editor splits edits across two
-    separate forms — Identity+Person Type (full_name/first_name/last_name/
-    middle_name/name_suffix/is_justice/birthdate/tenures) and Bio+Photo
-    (bio_text) — each omitting the other's fields. update_person previously
-    wrote every field unconditionally, so submitting one form silently wiped
-    whatever the other form owns.
+    separate forms — Save Person (full_name/first_name/last_name/middle_name/
+    name_suffix/is_justice/birthdate/tenures/bio_text, Phase 39 gap closure —
+    39-UAT.md gap 1/test 10 moved bio_text here) and Photo (photo_url only) —
+    each omitting the other's fields. update_person previously wrote every
+    field unconditionally, so submitting one form silently wiped whatever the
+    other form owns. This test still exercises that contract directly at the
+    API layer regardless of which SvelteKit form currently owns each field.
     """
     headers = _admin_headers()
     # Phase 38 (D-01, D-04, T-38-07): PersonCreateRequest has no full_name
@@ -235,8 +237,8 @@ async def test_update_person_partial_patch_does_not_wipe_other_fields(
     person_id = create_res.json()["id"]
 
     try:
-        # Simulate the Identity+Person Type form ("save" action): sends name
-        # fields and birthdate, omits bio_text/photo_url entirely.
+        # Simulate an earlier Save Person submit that only touched name
+        # fields and birthdate at that point, omitting bio_text/photo_url.
         identity_res = await client.patch(
             f"/api/admin/people/{person_id}",
             headers=headers,
@@ -248,8 +250,9 @@ async def test_update_person_partial_patch_does_not_wipe_other_fields(
         )
         assert identity_res.status_code == 200
 
-        # Simulate the Bio+Photo form ("photo" action): sends only bio_text,
-        # omits first_name/last_name/birthdate/tenures entirely.
+        # Simulate a PATCH that sends only bio_text (Phase 39 gap closure:
+        # this is now what a Save Person submit sends when only the Biography
+        # card changed), omitting first_name/last_name/birthdate/tenures.
         bio_res = await client.patch(
             f"/api/admin/people/{person_id}",
             headers=headers,

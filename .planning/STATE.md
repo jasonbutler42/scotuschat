@@ -1,20 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.6
-milestone_name: Backlog Cleanup
-status: Awaiting next milestone
-stopped_at: Phase 40.1 context gathered
-last_updated: "2026-07-29T15:56:13.019Z"
+milestone: v1.7
+milestone_name: Corpus Fidelity & Resolve Rework
+status: planning
+last_updated: "2026-07-29T16:46:41.686Z"
 last_activity: 2026-07-29
-last_activity_desc: Milestone v1.6 completed and archived
 progress:
-  total_phases: 11
-  completed_phases: 10
-  total_plans: 51
-  completed_plans: 51
-  percent: 91
-current_phase: 40.1
-current_phase_name: Sanitize docket input (superseded by Phase 38, reconciled — no execution needed)
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -28,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-07-14 after Phase 34 verification)
 
 ## Current Position
 
-Phase: Milestone v1.6 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-07-29 — Milestone v1.6 completed and archived
+Status: Defining requirements
+Last activity: 2026-07-29 — Milestone v1.7 started
 
 ## Deferred Items
 

@@ -14,14 +14,17 @@ Anyone can open a SCOTUS oral argument and immediately follow the conversation �
 
 **v1.5 Admin Screens Cleanup — SHIPPED 2026-07-12.** All 7 admin screens (`/admin/`, `/admin/pipeline/`, `/admin/pipeline/[id]`, `/admin/arguments/`, `/admin/arguments/[id]`, `/admin/people/`, `/admin/people/[id]`) audited and refined: three-state argument lifecycle with status log, shared Argument Details component, redesigned pipeline list/detail pages, People admin with Bench/Advocate tabs and per-tenure appointment data, and a real dashboard. Also absorbed an out-of-band addition mid-milestone: bulk historical corpus import (~7,800 arguments, 1955–2019, from Cornell ConvoKit) routed through the same resolve/publish workflow as PDF ingest. Full details: `.planning/milestones/v1.5-ROADMAP.md`, `.planning/milestones/v1.5-REQUIREMENTS.md`.
 
-## Next Milestone Goals
+## Current Milestone: v1.7 Corpus Fidelity & Resolve Rework
 
-v1.6 closed with no unresolved requirements. Candidates for the next milestone (final scope to be defined via `/gsd-new-milestone`):
+**Goal:** Trust the corpus-import data pipeline end to end on one representative case, rework the Resolve table into a real editing tool, and close two known UI bugs — with a dev-only reset harness to make it all iterable.
 
-- **Deployment** (DEPLOY-01, DEPLOY-03) — the only remaining items in Requirements > Active; deploying to Digital Ocean App Platform is the natural next milestone after two consecutive cleanup/polish milestones (v1.5, v1.6).
-- **SEED-001** (Resolve table rework) — dormant seed explicitly designed to resurface at the next `/gsd-new-milestone` scan; see `.planning/seeds/SEED-001-rework-resolve-table-requirements.md`.
-- **2 deferred bugs/polish items** from Phase 39 UAT, out of v1.6 scope: unpublished arguments visible/directly-accessible in the `/cases/` list (bug), and the bench popover's scrollbar rendering outside the card boundary on long content (UI polish). See `.planning/todos/pending/`.
-- Remaining 999.x backlog (999.2–999.8) — un-reviewed; candidates for `/gsd-review-backlog`.
+**Target features:**
+- Corpus fidelity audit — analyze the ~7,800-argument ConvoKit dataset, propose and confirm the single most structurally complex argument as a canonical test fixture, then diff that case's raw ConvoKit source against what actually lands in our DB to surface fields being dropped, mis-mapped, or silently defaulted during `import-convokit`. Fixes apply to the chosen fixture only this milestone — full-corpus rollout is explicit future scope.
+- Dev-only DB reset tool — admin-panel action, gated so it can never run in a real/production environment, that wipes all arguments/utterances/people/tenures and reseeds exactly the one chosen fixture argument plus its associated People.
+- SEED-001: Resolve table rework — see `.planning/seeds/SEED-001-rework-resolve-table-requirements.md` for the full mockup-driven spec.
+- 2 deferred bug fixes — unpublished arguments visible/directly-accessible via `/cases/`; popover scrollbar rendering outside the card boundary. See `.planning/todos/pending/`.
+
+**Deferred out of this milestone:** Deployment (DEPLOY-01, DEPLOY-03 remain in Requirements > Active, untouched), remaining 999.x backlog (999.2–999.8, candidates for `/gsd-review-backlog`).
 
 ## Requirements
 
@@ -226,4 +229,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-29 after v1.6 milestone completion.*
+*Last updated: 2026-07-29 after starting v1.7 milestone.*

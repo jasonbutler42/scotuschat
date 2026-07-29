@@ -39,6 +39,10 @@ Requirements for the v1.6 Backlog Cleanup milestone. Each maps to a roadmap phas
 
 - [x] **DOCS-01**: A README documents how to start the full local stack (SvelteKit, FastAPI, Postgres) end to end
 
+### Security
+
+- [ ] **SEC-01**: Docket input (`primary_docket` and every `source_dockets` entry) is sanitized against filesystem-dangerous characters and path-traversal sequences at both the FastAPI boundary and the `pipeline/commands/ingest.py` filename-construction site, closing the confirmed path-traversal/arbitrary-file-write vulnerability found in `.planning/debug/docket-filename-injection.md`
+
 ## Future Requirements
 
 Deferred to future release. Tracked but not in current roadmap.
@@ -84,11 +88,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PEOPLE-09 | Phase 38 | Complete |
 | PUB-04 | Phase 39 | Complete |
 | DOCS-01 | Phase 40 | Complete |
+| SEC-01 | Phase 40.1 | Planning |
 
 **Coverage:**
 
-- v1.6 requirements: 11 total
-- Mapped to phases: 11
+- v1.6 requirements: 12 total
+- Mapped to phases: 12
 - Unmapped: 0 ✓
 
 ---

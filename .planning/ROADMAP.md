@@ -436,6 +436,17 @@ Plans:
 
 Standard: all backlog items live here as 999.x entries (`.planning/phases/999.N-slug/`), captured via `/gsd-capture --backlog` and reviewed/promoted via `/gsd-review-backlog`. `.planning/BACKLOG.md` (the flat B-NNN file previously used, 2026-07-01 to 2026-07-09) has been retired and its 14 still-open items migrated below (2026-07-09); 5 items (B-001, B-003, B-004, B-005, B-006) were dropped as already shipped by Phase 24/27, and B-014 was merged into 999.1 as a duplicate capture of the same idea.
 
+### Phase 40.1: Sanitize docket input to close path-traversal/arbitrary-file-write gap (INSERTED)
+
+**Goal:** Close the confirmed path-traversal / arbitrary-file-write vulnerability where an admin-authenticated docket value flows unsanitized from `DocketPillInput` through the new-job form into `pipeline/commands/ingest.py:291`'s filename construction, surfaced by the `docket-filename-injection` debug session during v1.6's pre-close artifact audit.
+**Requirements**: SEC-01 (docket input is sanitized against filesystem-dangerous characters/traversal at both the FastAPI boundary and the ingest.py filename-construction site)
+**Depends on:** Phase 40
+**Plans:** 0 plans
+
+Plans:
+
+- [ ] TBD (run /gsd-plan-phase 40.1 to break down)
+
 ### Phase 999.2: Share specific utterances via social media (BACKLOG)
 
 **Goal:** [Captured for future planning] Let visitors share a specific utterance (a single speaker turn) from an oral argument to social media, to increase site exposure and utilization. Needs discussion on: what gets shared (permalink to the utterance vs. a rendered card/image), which platforms, and how this interacts with the apolitical-framing hard constraint — an isolated utterance shared out of the argument's full context could read as editorializing even though the underlying transcript content is unchanged.

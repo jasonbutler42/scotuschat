@@ -41,7 +41,7 @@ Requirements for the v1.6 Backlog Cleanup milestone. Each maps to a roadmap phas
 
 ### Security
 
-- [ ] **SEC-01**: Docket input (`primary_docket` and every `source_dockets` entry) is sanitized against filesystem-dangerous characters and path-traversal sequences at both the FastAPI boundary and the `pipeline/commands/ingest.py` filename-construction site, closing the confirmed path-traversal/arbitrary-file-write vulnerability found in `.planning/debug/docket-filename-injection.md`
+- [x] **SEC-01**: Docket input (`primary_docket` and every `source_dockets` entry) is sanitized against filesystem-dangerous characters and path-traversal sequences at both the FastAPI boundary and the `pipeline/commands/ingest.py` filename-construction site, closing the confirmed path-traversal/arbitrary-file-write vulnerability found in `.planning/debug/docket-filename-injection.md` — **already satisfied by Phase 38 Plans 07–10** (gap G-38-6, resolved 2026-07-27); Phase 40.1 (inserted from a stale debug-session status) closed via reconciliation, no new code
 
 ## Future Requirements
 
@@ -88,7 +88,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PEOPLE-09 | Phase 38 | Complete |
 | PUB-04 | Phase 39 | Complete |
 | DOCS-01 | Phase 40 | Complete |
-| SEC-01 | Phase 40.1 | Planning |
+| SEC-01 | Phase 38 (Plans 07–10) | Complete — Phase 40.1 superseded, no execution needed |
 
 **Coverage:**
 

@@ -1,9 +1,11 @@
 ---
-status: diagnosed
+status: resolved
 trigger: "UAT Test 6 (Phase 38, 38-UAT.md): docket value with double-quote character entered via DocketPillInput on Pipeline Runner new-job form crashes pipeline ingest with [Errno 22] Invalid argument when interpolated raw into a PDF filename in pipeline/commands/ingest.py:291. goal: find_root_cause_only"
 created: 2026-07-27T00:00:00Z
-updated: 2026-07-27T00:00:00Z
+updated: 2026-07-29T00:00:00Z
 ---
+
+**Stale-record correction (2026-07-29):** This file's `status: diagnosed` was never updated after the fix shipped, because this debug session's own goal was `find_root_cause_only` (no fix expected from this session). The actual fix landed one day later as Phase 38 Plan 10 (gap closure G-38-6), tracked in `38-UAT.md`, not in this file. The v1.6 pre-close artifact audit read this stale `diagnosed` status and inserted Phase 40.1 as a duplicate urgent gap-closure phase; that duplication was caught and reconciled during Phase 40.1's planning step (see `.planning/phases/40.1-sanitize-docket-input-to-close-path-traversal-arbitrary-file/40.1-SUMMARY.md`) before any redundant code was written. Backfilling `fix`/`verification`/`files_changed` below from the real Phase 38 Plan 10 record.
 
 ## Current Focus
 
@@ -170,6 +172,59 @@ root_cause: |
   crash-on-special-character bug -- bounded in severity by the route being
   gated behind admin-token auth (authenticated-operator surface, not
   unauthenticated/external).
-fix:
-verification:
-files_changed: []
+fix: |
+  Phase 38 Plan 07 added `api/domain/docket_values.py::normalize_docket_value()` —
+  a shared, framework-free domain rule (character allow-list
+  `^[A-Za-z0-9][A-Za-z0-9_-]*$`, 64-char length cap, deterministic
+  blank/length/pattern error ordering) chosen over a strict SCOTUS
+  docket-shape regex because post-ingest editing, the ConvoKit historical
+  importer, and existing data/pdfs/ filenames already use non-standard
+  shapes. Wired in at two independent enforcement layers per the original
+  diagnosis's two-layer-defense recommendation:
+  1. `api/routers/admin.py::_normalize_dockets` (Phase 38 Plan 07) — calls
+     the shared rule for `primary_docket` and every `source_dockets` entry,
+     as the first statement of `create_job`, before any AdminJob row or
+     ingest subprocess is created. The existing T-24-08 leading-"-"
+     argv-injection guard is preserved unchanged alongside it.
+  2. `pipeline/commands/ingest.py::_validate_docket_value()` (Phase 38
+     Plan 10) — a second, independent enforcement point covering the direct
+     CLI invocation path that bypasses FastAPI entirely. Delegates to the
+     same shared rule, then adds structural PurePath assertions (no path
+     separator, no ".." segment, not absolute, exactly one path part), plus
+     a post-`.resolve()` containment assertion immediately before the
+     vulnerable filename is used, so the write path is proven to stay
+     inside `data/pdfs/` even if the character rule were ever bypassed.
+  An optional frontend mirror (`app/src/lib/docketValues.ts`,
+  `DocketPillInput.svelte`) gives fast reject-on-type UX feedback using the
+  byte-identical pattern/length constants.
+verification: |
+  Operator UAT (38-UAT.md, gap_id G-38-6, resolved 2026-07-27): re-ran the
+  exact originally reported double-quote string — rejected inline before a
+  pill or job is created, typed text preserved, no [Errno 22]. Additionally
+  re-verified the traversal case (../../../tmp/evil) and a Windows
+  drive-letter path, both rejected inline with nothing written outside
+  data/pdfs/; confirmed a real docket (22-915) still starts a run normally;
+  confirmed the post-ingest metadata editor is unaffected; confirmed
+  non-docket run failures still show the generic error message. Operator
+  response: "Approved" (2026-07-27).
+  Consolidated regression gate (38-10-PLAN.md Task 1): 119 passed, 0
+  failures across 9 suites (test_docket_values.py, test_docket_arg_safety.py,
+  test_docket_ui_contract.py, pipeline/tests/test_ingest.py,
+  test_ingest_startup_guard.py, test_admin_jobs_list.py,
+  test_admin_jobs_phase35.py, test_admin_jobs_phase35_frontend.py,
+  test_admin_dashboard_routes.py). On-disk data/pdfs corpus check: all 58
+  existing filenames satisfy the shared docket rule, 0 violations.
+  Independently re-confirmed 2026-07-29 (Phase 40.1 planning step) by
+  direct source inspection of api/domain/docket_values.py,
+  pipeline/commands/ingest.py's call sites and containment assertion, and
+  api/routers/admin.py's _normalize_dockets wiring — all match this
+  description exactly.
+files_changed:
+  - api/domain/docket_values.py
+  - api/routers/admin.py
+  - pipeline/commands/ingest.py
+  - app/src/lib/docketValues.ts
+  - app/src/lib/components/DocketPillInput.svelte
+  - api/tests/test_docket_values.py
+  - api/tests/test_docket_arg_safety.py
+  - api/tests/test_docket_ui_contract.py

@@ -436,16 +436,16 @@ Plans:
 
 Standard: all backlog items live here as 999.x entries (`.planning/phases/999.N-slug/`), captured via `/gsd-capture --backlog` and reviewed/promoted via `/gsd-review-backlog`. `.planning/BACKLOG.md` (the flat B-NNN file previously used, 2026-07-01 to 2026-07-09) has been retired and its 14 still-open items migrated below (2026-07-09); 5 items (B-001, B-003, B-004, B-005, B-006) were dropped as already shipped by Phase 24/27, and B-014 was merged into 999.1 as a duplicate capture of the same idea.
 
-### Phase 40.1: Sanitize docket input to close path-traversal/arbitrary-file-write gap (INSERTED)
+### Phase 40.1: Sanitize docket input to close path-traversal/arbitrary-file-write gap (INSERTED, SUPERSEDED)
 
-**Goal:** Close the confirmed path-traversal / arbitrary-file-write vulnerability where an admin-authenticated docket value flows unsanitized from `DocketPillInput` through the new-job form into `pipeline/commands/ingest.py:291`'s filename construction, surfaced by the `docket-filename-injection` debug session during v1.6's pre-close artifact audit.
-**Requirements**: SEC-01 (docket input is sanitized against filesystem-dangerous characters/traversal at both the FastAPI boundary and the ingest.py filename-construction site)
+**Goal:** ~~Close the confirmed path-traversal / arbitrary-file-write vulnerability where an admin-authenticated docket value flows unsanitized from `DocketPillInput` through the new-job form into `pipeline/commands/ingest.py:291`'s filename construction~~ — **already done.** This phase was inserted from a stale `.planning/debug/docket-filename-injection.md` record (`status: diagnosed`, never updated). The gsd-planner's source audit found the vulnerability was already fully fixed, tested, and operator-signed-off by **Phase 38 Plans 07–10** (gap `G-38-6`, resolved 2026-07-27 — before this phase existed). Independently re-verified 2026-07-29. No new code written; closed via documentation reconciliation only.
+**Requirements**: SEC-01 — see traceability below (now mapped to Phase 38)
 **Depends on:** Phase 40
-**Plans:** 0 plans
+**Plans:** 0 plans (superseded — see `.planning/phases/40.1-sanitize-docket-input-to-close-path-traversal-arbitrary-file/40.1-SUMMARY.md`)
 
 Plans:
 
-- [ ] TBD (run /gsd-plan-phase 40.1 to break down)
+- [x] Superseded by Phase 38 Plans 07–10 (2026-07-29 reconciliation, no execution needed)
 
 ### Phase 999.2: Share specific utterances via social media (BACKLOG)
 

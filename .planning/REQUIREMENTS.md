@@ -7,7 +7,7 @@
 
 ### Corpus Fidelity Audit
 
-- [ ] **CORPUS-12**: A 4-argument fixture set is identified from the ~7,800-argument ConvoKit dataset: one canonical audit fixture selected for structural complexity (most advocates/speakers, consolidated multi-docket case, longest transcript, or similar signals) that Phase 42 diffs, plus three additional arguments selected for publish/pipeline-state variety (e.g. unpublished/DRAFT, published, mid-pipeline) to support Phase 43's reset tool and Phase 45's bug testing — the full set confirmed with the user before use
+- [x] **CORPUS-12**: A 4-argument fixture set is identified from the ~7,800-argument ConvoKit dataset: one canonical audit fixture selected for structural complexity (most advocates/speakers, consolidated multi-docket case, longest transcript, or similar signals) that Phase 42 diffs, plus three additional arguments selected for publish/pipeline-state variety (e.g. unpublished/DRAFT, published, mid-pipeline) to support Phase 43's reset tool and Phase 45's bug testing — the full set confirmed with the user before use
 - [ ] **CORPUS-13**: A field-by-field comparison exists between the fixture's raw ConvoKit source data and what actually lands in our DB (cases, arguments, utterances, people, argument_participants, court_tenures) after `import-convokit`, surfacing any fields dropped, mis-mapped, or silently defaulted
 - [ ] **CORPUS-14**: Every gap found in CORPUS-13 for the fixture is fixed in the corpus importer and verified by re-importing the fixture cleanly (fixes apply to this one fixture's import path this milestone; full-corpus backfill is out of scope)
 
@@ -50,7 +50,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CORPUS-12 | Phase 41 | Pending |
+| CORPUS-12 | Phase 41 | Complete |
 | CORPUS-13 | Phase 42 | Pending |
 | CORPUS-14 | Phase 42 | Pending |
 | DEVTOOL-01 | Phase 43 | Pending |
@@ -65,6 +65,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | BUG-02 | Phase 45 | Pending |
 
 **Coverage:**
+
 - v1 requirements: 13 total
 - Mapped to phases: 13 ✓
 - Unmapped: 0 ✓

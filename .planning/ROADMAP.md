@@ -150,14 +150,14 @@ Full phase details: `.planning/milestones/v1.6-ROADMAP.md`
   4. The confirmed fixture set is recorded in a durable, referenceable form (ConvoKit conversation id, case name, docket(s), term, argued date, and each fixture's role — complexity fixture vs. which state variant) that Phases 42 and 43 both read instead of re-deriving; Phase 42 reads only the complexity fixture, Phase 43 reads the full set.
   5. No importer code and no database rows are changed by this phase — selection and confirmation only.
 
-**Plans**: 1/3 plans executed
+**Plans**: 2/3 plans executed
 **Wave 1**
 
 - [x] 41-01-PLAN.md — Build `scripts/select_corpus_fixtures.py`: read-only path-coverage scoring over the ConvoKit corpus, apolitical exclusion enforced structurally and at commit time, deterministic top-5 shortlist with per-candidate flag annotations
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 41-02-PLAN.md — Run the full-corpus streaming pass once (persisted aggregate cache), then author `.planning/FIXTURES.md` at status PROPOSED with the four-fixture table plus its ranking evidence
+- [x] 41-02-PLAN.md — Run the full-corpus streaming pass once (persisted aggregate cache), then author `.planning/FIXTURES.md` at status PROPOSED with the four-fixture table plus its ranking evidence
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -272,7 +272,7 @@ Full phase details: `.planning/milestones/v1.6-ROADMAP.md`
 | 39. Bench popover — additional context data for Justices | v1.6 | 9/9 | Complete    | 2026-07-29 |
 | 40. README — how to start the local stack | v1.6 | 3/3 | Complete    | 2026-07-14 |
 | 40.1. Sanitize docket input to close path-traversal/arbitrary-file-write gap (SUPERSEDED) | v1.6 | 0/0 | Complete (reconciliation, no execution) | 2026-07-29 |
-| 41. Canonical Corpus Fixture Selection | v1.7 | 1/3 | In Progress|  |
+| 41. Canonical Corpus Fixture Selection | v1.7 | 2/3 | In Progress|  |
 | 42. Corpus Import Fidelity Diff & Fix | v1.7 | 0/0 | Not started | - |
 | 43. Dev-Only Reset to Fixture | v1.7 | 0/0 | Not started | - |
 | 44. Resolve Table Rework | v1.7 | 0/0 | Not started | - |

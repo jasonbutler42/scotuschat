@@ -5,15 +5,15 @@ milestone_name: Corpus Fidelity & Resolve Rework
 current_phase: 41
 current_phase_name: canonical-corpus-fixture-selection
 status: executing
-stopped_at: Completed 41-01-PLAN.md
-last_updated: "2026-07-29T22:37:48.285Z"
+stopped_at: Completed 41-02-PLAN.md
+last_updated: "2026-07-29T22:51:13.738Z"
 last_activity: 2026-07-29
 last_activity_desc: Phase 41 execution started
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 3
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-07-29 after starting v1.7 milestone)
 ## Current Position
 
 Phase: 41 (canonical-corpus-fixture-selection) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-07-29 — Phase 41 execution started
 
@@ -78,6 +78,7 @@ Still open from earlier milestones:
 |------|----------|-------|-------|
 | — | — | — | — |
 | Phase 41 P01 | 2h32m | 2 tasks | 1 files |
+| Phase 41 P02 | 9min | 2 tasks | 1 files |
 
 v1.5/v1.6 per-plan metrics cleared at this milestone boundary per the standard STATE.md reset; the underlying per-plan SUMMARY files remain in `.planning/milestones/v1.5-phases/` and `.planning/milestones/v1.6-phases/`.
 
@@ -97,6 +98,8 @@ Full cross-milestone decision log lives in PROJECT.md's Key Decisions table. Per
 - [Phase 36 + CLAUDE.md Architecture Rule 4 → affects Phase 44/RESOLVE-05]: Extracted-value hints use the shared `CopyableExtractedValue` component (Phase 38 added its stacked provenance mode) — RESOLVE-05's "Extracted: …" hints should reuse it rather than hand-rolling a fifth variant.
 - [Phase 31 → affects every phase]: The test suite runs against `scotus_test` via `TEST_DATABASE_URL`, and a `pytest_sessionfinish` hook fails any run that changes shared-dev-DB `people`/`arguments` row counts. Phase 43's destructive reset must never be exercised against the shared dev DB from a test.
 - [Phase 41 Plan 01 → affects Phase 41 Plan 02/03]: Full-corpus run supersedes RESEARCH.md's exploratory pick: conversation 15169 (Baltimore & Ohio Railroad Co.) is the real 3/4-coverage top candidate, not 14837 (Permian Basin, 2/4); 14969 (Shapiro v. Thompson) ties 15169 at 3/4 as the named runner-up for Plan 03's operator confirmation.
+- [Phase ?]: Phase 41 Plan 02: Recommendation confirmed as conversation 15169 (Baltimore & Ohio Railroad Co. v. United States) at 3/4 coverage, with 14969 (Shapiro v. Thompson) as the named tied runner-up, superseding RESEARCH.md's earlier 14837 pick.
+- [Phase ?]: Phase 41 Plan 02: FIXTURES.md section order deviates from the plan's literal prose listing (evidence/methodology tables moved before the final Fixture Set table) to satisfy a mechanical conflict between the plan's own gate-2 and gate-3 verify commands; no content or scope change.
 
 ### Roadmap Evolution
 
@@ -130,8 +133,8 @@ v1.6's roadmap evolution is archived in `.planning/milestones/v1.6-ROADMAP.md`. 
 
 ## Session Continuity
 
-Last session: 2026-07-29T22:37:47.696Z
-Stopped at: Completed 41-01-PLAN.md
+Last session: 2026-07-29T22:51:13.628Z
+Stopped at: Completed 41-02-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

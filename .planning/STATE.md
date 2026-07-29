@@ -3,16 +3,17 @@ gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Corpus Fidelity & Resolve Rework
 current_phase: 41
-status: planning
-stopped_at: Phase 41 context gathered
-last_updated: "2026-07-29T19:23:15.142Z"
+current_phase_name: canonical-corpus-fixture-selection
+status: executing
+stopped_at: Completed 41-01-PLAN.md
+last_updated: "2026-07-29T22:37:48.285Z"
 last_activity: 2026-07-29
-last_activity_desc: Phase 41 planning complete (3 plans, 3 waves)
+last_activity_desc: Phase 41 execution started
 progress:
   total_phases: 5
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 3
+  completed_plans: 1
   percent: 0
 ---
 
@@ -23,14 +24,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-29 after starting v1.7 milestone)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** v1.7 — trust the corpus-import pipeline on one representative case, rework the Resolve table into a real editing tool, close two known UI bugs, with a dev-only reset harness to make it iterable.
+**Current focus:** Phase 41 — canonical-corpus-fixture-selection
 
 ## Current Position
 
-Phase: 41 — Canonical Corpus Fixture Selection (planned, ready to execute)
-Plan: — (3 plans ready: 41-01, 41-02, 41-03 across 3 waves; wave 3 has a blocking operator-confirmation checkpoint)
-Status: Ready to execute — Phase 41 planning complete, verified (VERIFICATION PASSED), requirements + decision coverage gates passed
-Last activity: 2026-07-29 — Phase 41 planning complete
+Phase: 41 (canonical-corpus-fixture-selection) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
+Last activity: 2026-07-29 — Phase 41 execution started
 
 **Milestone shape:**
 
@@ -76,6 +77,7 @@ Still open from earlier milestones:
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
 | — | — | — | — |
+| Phase 41 P01 | 2h32m | 2 tasks | 1 files |
 
 v1.5/v1.6 per-plan metrics cleared at this milestone boundary per the standard STATE.md reset; the underlying per-plan SUMMARY files remain in `.planning/milestones/v1.5-phases/` and `.planning/milestones/v1.6-phases/`.
 
@@ -94,6 +96,7 @@ Full cross-milestone decision log lives in PROJECT.md's Key Decisions table. Per
 - [Phase 27 CR-01/CR-02 → affects Phase 44]: Keep data-carrying form inputs always present in the DOM (outside `{#if}` blocks); conditionally-rendered inputs silently don't submit and wipe data on save.
 - [Phase 36 + CLAUDE.md Architecture Rule 4 → affects Phase 44/RESOLVE-05]: Extracted-value hints use the shared `CopyableExtractedValue` component (Phase 38 added its stacked provenance mode) — RESOLVE-05's "Extracted: …" hints should reuse it rather than hand-rolling a fifth variant.
 - [Phase 31 → affects every phase]: The test suite runs against `scotus_test` via `TEST_DATABASE_URL`, and a `pytest_sessionfinish` hook fails any run that changes shared-dev-DB `people`/`arguments` row counts. Phase 43's destructive reset must never be exercised against the shared dev DB from a test.
+- [Phase 41 Plan 01 → affects Phase 41 Plan 02/03]: Full-corpus run supersedes RESEARCH.md's exploratory pick: conversation 15169 (Baltimore & Ohio Railroad Co.) is the real 3/4-coverage top candidate, not 14837 (Permian Basin, 2/4); 14969 (Shapiro v. Thompson) ties 15169 at 3/4 as the named runner-up for Plan 03's operator confirmation.
 
 ### Roadmap Evolution
 
@@ -127,9 +130,9 @@ v1.6's roadmap evolution is archived in `.planning/milestones/v1.6-ROADMAP.md`. 
 
 ## Session Continuity
 
-Last session: 2026-07-29T17:59:35.797Z
-Stopped at: Phase 41 context gathered
-Resume file: .planning/phases/41-canonical-corpus-fixture-selection/41-CONTEXT.md
+Last session: 2026-07-29T22:37:47.696Z
+Stopped at: Completed 41-01-PLAN.md
+Resume file: None
 
 ## Operator Next Steps
 

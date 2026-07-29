@@ -2,19 +2,19 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Backlog Cleanup
-current_phase: 40
-current_phase_name: README — how to start the local stack
+current_phase: 40.1
+current_phase_name: Sanitize docket input to close path-traversal/arbitrary-file-write gap
 status: planning
-stopped_at: Completed 39-08-PLAN.md (bench popover mockup-fidelity gap closure)
-last_updated: "2026-07-29T14:44:33.176Z"
+stopped_at: Phase 40.1 context gathered
+last_updated: "2026-07-29T15:24:07.439Z"
 last_activity: 2026-07-29
 last_activity_desc: Phase 39 complete, transitioned to Phase 40
 progress:
-  total_phases: 10
+  total_phases: 11
   completed_phases: 10
   total_plans: 51
   completed_plans: 51
-  percent: 100
+  percent: 91
 ---
 
 # Project State
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-07-14 after Phase 34 verification)
 
 ## Current Position
 
-Phase: 40 — README — how to start the local stack
+Phase: 40.1 — Sanitize docket input to close path-traversal/arbitrary-file-write gap
 Plan: Not started
 Status: Ready to plan
 Last activity: 2026-07-29 — Phase 39 complete, transitioned to Phase 40
@@ -179,6 +179,7 @@ v1.5's roadmap evolution (Phase 29 added, Phase 30.1 inserted) is archived in `.
 2026-07-13: Phases 31–40 moved from ROADMAP.md's "Unscheduled Phases" section into the active "## Phases" / "## Phase Details" sections for v1.6 — no renumbering, no new phases created; requirement coverage 11/11 confirmed.
 
 - Phase 35 edited: edited fields: title, goal, depends_on, requirements, success_criteria
+- Phase 40.1 inserted after Phase 40: Sanitize docket input to close path-traversal/arbitrary-file-write gap (confirmed root cause via debug session, surfaced by pre-close artifact audit) (URGENT)
 
 ### Pending Todos
 
@@ -300,9 +301,9 @@ Items acknowledged and deferred at v1.5 milestone close on 2026-07-12:
 
 ## Session Continuity
 
-Last session: 2026-07-29T01:29:16.827Z
-Stopped at: Completed 39-08-PLAN.md (bench popover mockup-fidelity gap closure)
-Resume file: None
+Last session: 2026-07-29T15:24:06.490Z
+Stopped at: Phase 40.1 context gathered
+Resume file: .planning/phases/40.1-sanitize-docket-input-to-close-path-traversal-arbitrary-file/40.1-CONTEXT.md
 
 ## Operator Next Steps
 

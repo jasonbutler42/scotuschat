@@ -139,6 +139,13 @@ None - no external service configuration required. This plan only reads the alre
 - Plan 03's operator-confirmation checkpoint has everything it needs: the 3/4-coverage tie between conversation 15169 and 14969, the three state-variety candidates, and the exact regeneration command if the operator wants to re-verify or re-run against an updated corpus snapshot before confirming.
 - No blockers.
 
+## Self-Check: PASSED
+
+- FOUND: `.planning/FIXTURES.md`
+- FOUND: `.planning/phases/41-canonical-corpus-fixture-selection/41-02-SUMMARY.md`
+- FOUND: commit `a9f0551c` (docs(41-02): author FIXTURES.md)
+- FOUND: commit `ae3a4c9e` (docs(41-02): add plan 02 summary)
+
 ---
 *Phase: 41-canonical-corpus-fixture-selection*
 *Completed: 2026-07-29*

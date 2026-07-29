@@ -106,6 +106,31 @@
 			timeZone: 'UTC'
 		}).format(new Date(iso));
 	}
+
+	// Month-and-year formatting for the tenure date range — deliberately no
+	// day component (39-UI-SPEC.md's copywriting row froze year-only as
+	// "unchanged from current code"; this plan follows the mockup instead,
+	// since mockup fidelity is the gap being closed here).
+	// timeZone: 'UTC' is mandatory for the same reason as formatShort(): these
+	// are date-only DB values, and formatting in a negative-offset local zone
+	// would render the previous calendar day, which at a month boundary
+	// changes the rendered month.
+	function formatMonthYear(iso: string): string {
+		return new Intl.DateTimeFormat('en-US', {
+			month: 'short',
+			year: 'numeric',
+			timeZone: 'UTC'
+		}).format(new Date(iso));
+	}
+
+	// Joins the two formatted tenure endpoints with a spaced en dash, keeping
+	// the component's pre-existing fallbacks unchanged: a null start keeps
+	// today's "?" and a null end keeps today's "present".
+	function tenureRange(start: string | null, end: string | null): string {
+		const startLabel = start ? formatMonthYear(start) : '?';
+		const endLabel = end ? formatMonthYear(end) : 'present';
+		return `${startLabel} – ${endLabel}`;
+	}
 </script>
 
 {#snippet separator(pad: number)}<span style="padding:0 {pad}px;">·</span>{/snippet}
@@ -178,17 +203,25 @@
 	     — no client-side re-sort. One block per tenure, up to 3 lines each. -->
 	{#if isBench && speaker.tenure.length > 0}
 		<div style="border-top:1px solid #334155;margin-top:16px;padding-top:16px;">
-			{#each speaker.tenure as t}
-				<div style="margin-bottom:16px;">
-					<p style="font-size:13px;font-weight:400;line-height:1.5;color:#94a3b8;margin:0;">{officeTitle(t.office)} — {t.start_date ? t.start_date.slice(0, 4) : '?'}–{t.end_date ? t.end_date.slice(0, 4) : 'present'}</p>
-					<!-- Only rendered when appointed_by is non-null; the party half is
-					     appended only when it is also non-null. Never render a
-					     placeholder for the missing half. -->
-					{#if t.appointed_by}
-						<p style="font-size:13px;font-weight:400;line-height:1.5;color:#94a3b8;margin:0;">{t.appointed_by}{#if t.appointing_president_party}{@render separator(4)}{t.appointing_president_party}{/if}</p>
-					{/if}
-					{#if t.reason_left}
-						<p style="font-size:13px;font-weight:400;line-height:1.5;color:#94a3b8;margin:0;">{reasonLeftTitle(t.reason_left)}</p>
+			{#each speaker.tenure as t, i}
+				<div style="margin-top:{i === 0 ? '0' : '8px'};">
+					<!-- Row 1, always rendered: office title (left, semibold, the only
+					     promoted element) and its month-and-year range (right-aligned,
+					     never wraps). -->
+					<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">
+						<span style="font-size:13px;font-weight:600;line-height:1.5;color:#e2e8f0;min-width:0;">{officeTitle(t.office)}</span>
+						<span style="font-size:13px;font-weight:400;line-height:1.5;color:#94a3b8;text-align:right;flex-shrink:0;white-space:nowrap;">{tenureRange(t.start_date, t.end_date)}</span>
+					</div>
+					<!-- Row 2, rendered only when appointed_by or reason_left is
+					     non-null. Left cell renders appointed_by alone, or
+					     appointed_by + party when the party is also non-null; right
+					     cell renders reason_left alone. Never a placeholder for the
+					     missing half of either cell. -->
+					{#if t.appointed_by || t.reason_left}
+						<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">
+							<span style="font-size:13px;font-weight:400;line-height:1.5;color:#94a3b8;min-width:0;">{#if t.appointed_by}{t.appointed_by}{#if t.appointing_president_party}{@render separator(4)}{t.appointing_president_party}{/if}{/if}</span>
+							<span style="font-size:13px;font-weight:400;line-height:1.5;color:#94a3b8;text-align:right;flex-shrink:0;">{#if t.reason_left}{reasonLeftTitle(t.reason_left)}{/if}</span>
+						</div>
 					{/if}
 				</div>
 			{/each}

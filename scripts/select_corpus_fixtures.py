@@ -32,8 +32,16 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
+import statistics
 import sys
+from datetime import datetime
 from pathlib import Path
+
+try:
+    from dateutil import parser as dateutil_parser
+except ImportError:  # pragma: no cover - exercised only on a bare interpreter
+    dateutil_parser = None
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
@@ -51,6 +59,21 @@ from pipeline.corpus.loader import (  # noqa: E402
 
 DEFAULT_CORPUS_DIR = ROOT / "data" / "corpus"
 REQUIRED_CORPUS_FILES = ("cases.jsonl", "conversations.json", "speakers.json", "utterances.jsonl")
+CACHE_SCHEMA_VERSION = 1
+DEFAULT_CACHE_PATH = DEFAULT_CORPUS_DIR / "fixture_scan_cache.json"
+
+# RESEARCH Code Examples / A2: three arbitrary, structurally-unremarkable,
+# single-session candidates spread across 3 eras -- proposed for
+# publish/pipeline-state variety (D-02: no complexity floor applies).
+# These are TARGET labels for Phase 43 to realize, not corpus-discovered
+# states (RESEARCH Pitfall 4).
+STATE_VARIETY_PROPOSAL = (
+    ("unpublished/DRAFT target", "13015"),
+    ("published target", "18897"),
+    ("mid-pipeline target", "22372"),
+)
+
+_TRANSCRIPT_NAME_DATE_RE = re.compile(r"([A-Z][a-z]+ \d{1,2}, \d{4})")
 
 # RESEARCH A3: approximate top-1% cutoffs on the observed real-corpus
 # distributions. Tunable -- moving these only shifts where the shortlist
@@ -94,6 +117,38 @@ def _parse_args(argv=None) -> argparse.Namespace:
         "--self-check",
         action="store_true",
         help="Run the corpus-free assertion harness and exit; touches no corpus file",
+    )
+    parser.add_argument(
+        "--cache",
+        default=None,
+        help="Read persisted utterance aggregates from PATH instead of streaming",
+    )
+    parser.add_argument(
+        "--cache-out",
+        default=None,
+        help="Write utterance aggregates to PATH after the streaming pass",
+    )
+    parser.add_argument(
+        "--allow-partial",
+        action="store_true",
+        help="Permit ranking from a --cache file whose streaming pass was bounded",
+    )
+    parser.add_argument(
+        "--top",
+        type=int,
+        default=DEFAULT_TOP,
+        help=f"Shortlist size (default: {DEFAULT_TOP}, per D-05)",
+    )
+    parser.add_argument("--threshold-advocate", type=int, default=THRESH_ADVOCATE)
+    parser.add_argument("--threshold-speaker", type=int, default=THRESH_SPEAKER)
+    parser.add_argument("--threshold-turn", type=int, default=THRESH_TURN)
+    parser.add_argument("--threshold-transcripts", type=int, default=THRESH_TRANSCRIPTS)
+    parser.add_argument(
+        "--describe",
+        nargs="+",
+        default=None,
+        metavar="ID",
+        help="Print the full scored record for each given conversation id and exit",
     )
     return parser.parse_args(argv)
 
@@ -452,38 +507,345 @@ def _self_check() -> int:
     return 0 if ok else 1
 
 
+def _write_cache(cache_path: Path, aggregates: dict, complete: bool, rows_scanned: int) -> None:
+    """
+    Persist one streaming pass's aggregates so re-ranking at a different
+    threshold never requires re-streaming the 900MB utterances file. The
+    default cache path sits under data/corpus/, whose own .gitignore
+    ignores every *.json -- this is the only path this script ever opens
+    for writing; corpus source files are never opened in a write mode.
+    """
+    payload = {
+        "schema_version": CACHE_SCHEMA_VERSION,
+        "complete": complete,
+        "rows_scanned": rows_scanned,
+        "aggregates": aggregates,
+    }
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    with cache_path.open("w", encoding="utf-8") as f:
+        json.dump(payload, f)
+
+
+def _read_cache(cache_path: Path, allow_partial: bool = False) -> dict:
+    """
+    Read a persisted aggregate cache. Raises FileNotFoundError when the
+    path is absent, and ValueError when schema_version doesn't match this
+    script's CACHE_SCHEMA_VERSION or when the cache is incomplete
+    (bounded by --max-utterance-rows at write time) and --allow-partial
+    was not passed -- that message names the --allow-partial escape
+    hatch by name. When --allow-partial is honoured, prints a warning
+    banner to stderr naming rows_scanned.
+    """
+    if not cache_path.is_file():
+        raise FileNotFoundError(f"--cache file not found: {cache_path}")
+    with cache_path.open("r", encoding="utf-8") as f:
+        payload = json.load(f)
+
+    schema_version = payload.get("schema_version")
+    if schema_version != CACHE_SCHEMA_VERSION:
+        raise ValueError(
+            f"--cache file {cache_path} has schema_version {schema_version!r}, "
+            f"expected {CACHE_SCHEMA_VERSION}. Regenerate it with --cache-out."
+        )
+
+    if not payload.get("complete", False):
+        if not allow_partial:
+            raise ValueError(
+                f"--cache file {cache_path} is incomplete (rows_scanned="
+                f"{payload.get('rows_scanned')}) -- pass --allow-partial to rank "
+                "from it anyway, or regenerate a full pass without "
+                "--max-utterance-rows."
+            )
+        print(
+            f"WARNING: ranking from an incomplete cache (--allow-partial); "
+            f"rows_scanned={payload.get('rows_scanned')}",
+            file=sys.stderr,
+        )
+
+    return payload
+
+
+def _selected_transcript(case_fields: dict, conversation_id) -> dict | None:
+    """
+    Reproduce import_convokit.py::_parse_argued_date's transcript-selection
+    rule exactly: the first transcripts entry whose stringified id equals
+    the conversation id, else the first entry, else None.
+    """
+    transcripts = case_fields.get("transcripts") or []
+    if not transcripts:
+        return None
+    matching = next(
+        (
+            t
+            for t in transcripts
+            if isinstance(t, dict) and str(t.get("id")) == str(conversation_id)
+        ),
+        None,
+    )
+    return matching or transcripts[0]
+
+
+def _argued_date(case_fields: dict, conversation_id) -> tuple[str | None, str]:
+    """
+    Return an ISO YYYY-MM-DD argued-date string plus a label naming which
+    parser produced it, reproducing _parse_argued_date's fuzzy-parse
+    behaviour when dateutil is available and falling back to a regex +
+    strptime match on real transcript names like
+    "Oral Argument - December 06, 1967 (Part 1)" when it is not (this
+    script must run under both a project venv and a bare interpreter).
+    """
+    entry = _selected_transcript(case_fields, conversation_id)
+    if not entry or not isinstance(entry, dict):
+        return None, "no transcript entry"
+    name = entry.get("name")
+    if not name:
+        return None, "no transcript name"
+
+    if dateutil_parser is not None:
+        try:
+            parsed = dateutil_parser.parse(name, fuzzy=True)
+            return parsed.date().isoformat(), "dateutil fuzzy parse"
+        except (ValueError, OverflowError):
+            pass
+
+    match = _TRANSCRIPT_NAME_DATE_RE.search(name)
+    if match:
+        try:
+            parsed = datetime.strptime(match.group(1), "%B %d, %Y")
+            return parsed.date().isoformat(), "regex fallback parse"
+        except ValueError:
+            pass
+
+    return None, "unparseable"
+
+
+def _print_distributions(rows: list[dict]) -> None:
+    """
+    Print max / top-10 / mean / median for each raw signal, plus the
+    n_transcripts value-count distribution -- evidence that the module
+    thresholds sit near the top of each real distribution.
+    """
+    print("## Signal Distributions")
+    for field in ("advocate_count", "distinct_speaker_count", "bench_speaker_count", "turn_count"):
+        values = sorted((row[field] for row in rows), reverse=True)
+        if not values:
+            print(f"{field}: no data")
+            continue
+        top10 = values[:10]
+        mean = statistics.mean(values)
+        median = statistics.median(values)
+        print(f"{field}: max={values[0]}, top10={top10}, mean={mean:.1f}, median={median}")
+
+    transcript_counts: dict[int, int] = {}
+    for row in rows:
+        transcript_counts[row["n_transcripts"]] = transcript_counts.get(row["n_transcripts"], 0) + 1
+    dist_str = ", ".join(f"{k}:{v}" for k, v in sorted(transcript_counts.items()))
+    print(f"n_transcripts distribution: {{{dist_str}}}")
+
+
+def _print_recommendation(ranked: list[dict]) -> None:
+    """
+    Name the rank-1 candidate, which flags it hit/missed, and every other
+    candidate tied at the same coverage as a named runner-up (RESEARCH
+    A1) -- a coverage tie is settled by the operator's confirmation, not
+    by this script's own ordering. Justified only by which importer paths
+    the candidate exercises, never by case subject matter or outcome.
+    """
+    print()
+    print("## Recommendation")
+    if not ranked:
+        print("No candidates to recommend -- empty shortlist.")
+        return
+
+    top = ranked[0]
+    hit = [name for name in FLAG_NAMES if top["flags"].get(name)]
+    missed = [name for name in FLAG_NAMES if not top["flags"].get(name)]
+    print(
+        f"Recommended: conversation {top['conversation_id']} ({top['case_name']}), "
+        f"coverage {top['coverage']}/4."
+    )
+    print(f"Flags hit: {', '.join(hit) or '(none)'}")
+    print(f"Flags missed: {', '.join(missed) or '(none)'}")
+
+    tied = [row for row in ranked[1:] if row["coverage"] == top["coverage"]]
+    if tied:
+        named = ", ".join(f"{row['conversation_id']} ({row['case_name']})" for row in tied)
+        print(f"Tied runner-up(s) at the same coverage: {named}")
+
+    print(
+        "A tie among equal-coverage candidates is settled by the operator's "
+        "explicit confirmation, not by this script's ordering."
+    )
+    print(
+        "This recommendation is grounded only in which importer paths the "
+        "candidate exercises -- never in the case's subject matter, "
+        "notability, or outcome."
+    )
+
+
+def _print_state_variety(rows_by_id: dict) -> None:
+    """
+    Print the STATE_VARIETY_PROPOSAL candidates. Asserts each proposed id
+    exists among the scored rows and has exactly 1 transcript entry; on
+    any failure prints a stderr warning naming the id and its actual
+    transcript count rather than silently substituting another.
+    """
+    print()
+    print("## State-Variety Proposals")
+    print(
+        "These three roles are TARGET labels for Phase 43 to realize -- "
+        "cases.jsonl and conversations.json carry no publish or pipeline "
+        "state at all. Selection grounds: structural cleanliness (single "
+        "session, near median) and era spread across the 1955, 1985, and "
+        "2010 terms; per D-02 no complexity floor applies."
+    )
+    # Header deliberately says "Target Role" (not "Role") so this table's
+    # header line is textually distinct from the Fixtures Draft table's
+    # fixed "| Role | Conversation ID | ..." header immediately below --
+    # otherwise a naive "find the '| Role | Conversation ID' line" scan
+    # over the whole report would latch onto this table instead.
+    print(
+        "| Target Role | Conversation ID | Case Name | Docket | Term | Argued Date | "
+        "Advocates | Turns | Transcripts |"
+    )
+    print("|---|---|---|---|---|---|---|---|---|")
+    for role, cid in STATE_VARIETY_PROPOSAL:
+        row = rows_by_id.get(cid)
+        if row is None:
+            print(f"WARNING: state-variety id {cid} not found among scored rows", file=sys.stderr)
+            continue
+        if row["n_transcripts"] != 1:
+            print(
+                f"WARNING: state-variety id {cid} has {row['n_transcripts']} "
+                "transcript entries, expected exactly 1",
+                file=sys.stderr,
+            )
+        case_fields = {"transcripts": row["transcripts"]}
+        argued_date, _label = _argued_date(case_fields, cid)
+        print(
+            f"| {role} | {cid} | {row['case_name']} | {row['docket_no']} | "
+            f"{row['term']} | {argued_date or '(unknown)'} | {row['advocate_count']} | "
+            f"{row['turn_count']} | {row['n_transcripts']} |"
+        )
+
+
+def _print_fixtures_draft(rows_by_id: dict, ranked: list[dict]) -> None:
+    """
+    A four-row markdown table -- one row for the rank-1 candidate labelled
+    "Complexity fixture" and one row per STATE_VARIETY_PROPOSAL entry, in
+    order. This is the uniform-record view Plan 02 pastes into
+    .planning/FIXTURES.md: the four rows differ only in their Role cell
+    and their values, never in shape.
+    """
+    print()
+    print("## Fixtures Draft")
+    print("| Role | Conversation ID | Case Name | Docket(s) | Term | Argued Date |")
+    print("|---|---|---|---|---|---|")
+
+    if ranked:
+        top = ranked[0]
+        case_fields = {"transcripts": top["transcripts"]}
+        argued_date, _label = _argued_date(case_fields, top["conversation_id"])
+        print(
+            f"| Complexity fixture | {top['conversation_id']} | {top['case_name']} | "
+            f"{top['docket_no']} | {top['term']} | {argued_date or '(unknown)'} |"
+        )
+
+    for role, cid in STATE_VARIETY_PROPOSAL:
+        row = rows_by_id.get(cid)
+        if row is None:
+            continue
+        case_fields = {"transcripts": row["transcripts"]}
+        argued_date, _label = _argued_date(case_fields, cid)
+        # A role already carrying meaningful embedded capitalization (e.g.
+        # the "DRAFT" acronym) is printed verbatim rather than force-
+        # capitalized, which would only touch the leading character and
+        # leave the label in a visually inconsistent mixed style.
+        role_label = role if role != role.lower() else role[:1].upper() + role[1:]
+        print(
+            f"| {role_label} | {cid} | {row['case_name']} | {row['docket_no']} | "
+            f"{row['term']} | {argued_date or '(unknown)'} |"
+        )
+
+
+def _describe(rows_by_id: dict, ids: list[str]) -> None:
+    """Print the full scored record plus argued date for each requested id, in order given."""
+    print("## Describe")
+    for cid in ids:
+        row = rows_by_id.get(str(cid))
+        if row is None:
+            print(f"WARNING: id {cid} not found among scored rows", file=sys.stderr)
+            continue
+        case_fields = {"transcripts": row["transcripts"]}
+        argued_date, label = _argued_date(case_fields, cid)
+        print(f"### Conversation {cid}")
+        print(f"case_name: {row['case_name']}")
+        print(f"docket_no: {row['docket_no']}")
+        print(f"term: {row['term']}")
+        print(f"advocate_count: {row['advocate_count']}")
+        print(f"distinct_speaker_count: {row['distinct_speaker_count']}")
+        print(f"bench_speaker_count: {row['bench_speaker_count']}")
+        print(f"turn_count: {row['turn_count']}")
+        print(f"n_transcripts: {row['n_transcripts']}")
+        print(f"argued_date: {argued_date or '(unknown)'} (parser: {label})")
+
+
 def main(argv=None) -> int:
     args = _parse_args(argv)
 
     if args.self_check:
         return _self_check()
 
+    thresholds = {
+        "advocate": args.threshold_advocate,
+        "speaker": args.threshold_speaker,
+        "turn": args.threshold_turn,
+        "transcripts": args.threshold_transcripts,
+    }
+
     try:
         corpus_dir = _resolve_corpus_dir(args)
         paths = _require_corpus_files(corpus_dir)
-    except (FileNotFoundError, OSError) as exc:
+
+        cases_by_id = load_cases(paths["cases.jsonl"])
+        with paths["conversations.json"].open("r", encoding="utf-8") as f:
+            conversations = json.load(f)
+        speakers = load_speakers(paths["speakers.json"])
+        wanted_ids = set(conversations.keys())
+
+        if args.cache:
+            cache_payload = _read_cache(Path(args.cache), args.allow_partial)
+            signals = cache_payload["aggregates"]
+        else:
+            signals = _stream_signals(
+                paths["utterances.jsonl"], wanted_ids, speakers, args.max_utterance_rows
+            )
+            if args.cache_out:
+                rows_scanned = sum(v["turn_count"] for v in signals.values())
+                _write_cache(
+                    Path(args.cache_out),
+                    signals,
+                    complete=(args.max_utterance_rows is None),
+                    rows_scanned=rows_scanned,
+                )
+    except (FileNotFoundError, OSError, ValueError) as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1
 
-    cases_by_id = load_cases(paths["cases.jsonl"])
-    with paths["conversations.json"].open("r", encoding="utf-8") as f:
-        conversations = json.load(f)
-    speakers = load_speakers(paths["speakers.json"])
-
-    wanted_ids = set(conversations.keys())
-    signals = _stream_signals(
-        paths["utterances.jsonl"], wanted_ids, speakers, args.max_utterance_rows
-    )
-
     rows = _conversation_rows(cases_by_id, conversations, signals)
-    thresholds = {
-        "advocate": THRESH_ADVOCATE,
-        "speaker": THRESH_SPEAKER,
-        "turn": THRESH_TURN,
-        "transcripts": THRESH_TRANSCRIPTS,
-    }
-    ranked = _rank_candidates(rows, thresholds, DEFAULT_TOP)
+    rows_by_id = {row["conversation_id"]: row for row in rows}
+
+    if args.describe:
+        _describe(rows_by_id, args.describe)
+        return 0
+
+    ranked = _rank_candidates(rows, thresholds, args.top)
+    _print_distributions(rows)
+    print()
     _print_shortlist(ranked, thresholds)
+    _print_recommendation(ranked)
+    _print_state_variety(rows_by_id)
+    _print_fixtures_draft(rows_by_id, ranked)
     return 0
 
 

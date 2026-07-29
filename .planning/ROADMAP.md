@@ -8,7 +8,7 @@
 - ✅ **v1.3 Speaker Accuracy + Pipeline Confidence** — Phases 15–17 (shipped 2026-06-29)
 - ✅ **v1.4 Admin Completeness** — Phases 18–21 (shipped 2026-07-02)
 - ✅ **v1.5 Admin Screens Cleanup** — Phases 22–30, 30.1 (shipped 2026-07-12)
-- 🚧 **v1.6 Backlog Cleanup** — Phases 31–40 (in progress)
+- ✅ **v1.6 Backlog Cleanup** — Phases 31–40, 40.1 (shipped 2026-07-29)
 
 ## Phases
 
@@ -103,288 +103,26 @@ Full phase details: `.planning/milestones/v1.5-ROADMAP.md`
 
 </details>
 
-### 🚧 v1.6 Backlog Cleanup (Phases 31–40) — IN PROGRESS
-
-**Overview:** Close out the 10 phases promoted from the 999.x backlog on 2026-07-12 before starting anything new — an escalated data-integrity risk (stale test fixtures + real data leakage), four small pipeline/people-admin bug fixes, one operator UX pattern, two open design questions to resolve during discuss-phase, a public-UI enrichment, and a README gap. Deployment (DEPLOY-01/03) and the remaining 999.x backlog (999.2–999.8) are explicitly out of scope.
-
-- [x] **Phase 31: Audit ~28 stale DB-gated test fixtures + fix real data leakage into shared dev DB** - Escalated data-integrity risk; fix test isolation so service-function commits can't leak synthetic Person/Argument rows (completed 2026-07-13)
-- [x] **Phase 32: Fix CourtTenure FK bookkeeping gap in merge/delete person service paths** - Merge/delete on a Justice with tenure rows no longer 500s (completed 2026-07-13)
-- [x] **Phase 33: `update_argument_metadata` unique-constraint guard** - Colliding (source_docket, question_number) returns 409/422 instead of 500 (completed 2026-07-14)
-- [x] **Phase 34: Blank case_name/docket_number validation** - Prevents slug/dedup corruption from cleared fields (completed 2026-07-14)
-- [x] **Phase 35: `rerun_job` never spawns ingest for locally-uploaded jobs** - Local-upload reruns actually progress instead of sitting at PENDING forever (completed 2026-07-14)
-- [x] **Phase 36: Click-to-copy extracted values design pattern** - Consistent click-to-copy affordance across pipeline run pages and argument editor (completed 2026-07-15)
-- [x] **Phase 37: Represent tenure Seat as a Chief/Associate toggle instead of free text** - Open design question (numbered-seat data vs. binary toggle) resolved during discuss-phase (completed 2026-07-21)
-- [x] **Phase 38: Rethink Full Name vs. name-part fields in the people editor** - Open design question (auto-derive vs. independently editable) resolved during discuss-phase; includes G-38-6 security gap closure (completed 2026-07-27)
-- [x] **Phase 39: Bench popover — additional context data for Justices** - Birthdate, death date, and per-tenure appointment context, presented apolitically (completed 2026-07-29)
-- [x] **Phase 40: README — how to start the local stack** - Documents SvelteKit + FastAPI + Postgres local setup end to end (completed 2026-07-14)
-
-## Phase Details
-
-### Phase 31: Audit ~28 stale DB-gated test fixtures + fix real data leakage into shared dev DB
-
-**Goal**: Fixing the FastAPI lifespan/session-factory bug (999.17, resolved 2026-07-10) means DB-gated tests across `pipeline/tests/` and `api/tests/` now genuinely execute against the live local dev Postgres instead of silently erroring at session setup, surfacing two problems: (1) ~28 tests fail on real schema/data-assumption mismatches never actually exercised before now (e.g. `test_rerun_creates_new_rows` inserts an `Utterance` without the NOT NULL `strategy` field) — spread across `test_ingest.py`, `test_parse.py`, `test_resolve.py`, `test_seed_aliases.py`, `test_pipeline_run.py`, `test_admin_arguments_service.py`, `test_admin_jobs_phase25.py`, `test_admin_jobs_service.py`, `test_admin_jobs_stats.py`, `test_arguments.py`; (2) confirmed real data leakage — the `db_session` fixture's rollback pattern only protects against a test's own direct writes, not against production service functions (`create_person_for_job`, `publish_argument`, `run_import_convokit`) that commit internally, so full-suite runs have left leaked `Person` rows (duplicate "Ketanji Brown Jackson" plus synthetic test names) and synthetic `Argument` rows in the shared dev DB — one leaked duplicate actively broke `import-justices` with `MultipleResultsFound` mid-execution of a prior operator runbook. Needs a real fix (dedicated test database, snapshot/restore fixture, or savepoint-based nesting that survives inner commits) — the manual DELETE cleanup performed so far is only a stopgap.
-**Depends on**: Nothing (first phase of v1.6 — escalated data-integrity risk, run first)
-**Requirements**: TEST-01, TEST-02
-**Success Criteria** (what must be TRUE):
-
-  1. Full pytest suite (`pipeline/tests/` and `api/tests/`) runs without leaving any new synthetic Person or Argument rows in the shared dev DB — verified via a before/after row-count check.
-  2. All ~28 previously-failing DB-gated test fixtures pass against the current schema (no NOT NULL/enum mismatches).
-  3. The chosen isolation mechanism (dedicated test DB, snapshot/restore, or savepoint nesting) demonstrably survives an inner commit made by a production service function (e.g. `create_person_for_job` or `run_import_convokit`) during a test.
-  4. Running `import-justices` or `import-convokit` immediately after a full test-suite run does not fail with `MultipleResultsFound` or any other error caused by leaked test data.
-
-**Plans**: 8/8 plans complete
-**Wave 1**
-
-- [x] 31-01-PLAN.md — Provision scotus_test + session auto-reset fixture (D-01/D-02/D-03)
-- [x] 31-02-PLAN.md — Root conftest DATABASE_URL redirect + leak-detection hook (D-01/D-11/D-12/D-13)
-- [x] 31-03-PLAN.md — Consolidate the 7 duplicated db_session fixtures (D-09/D-10)
-- [x] 31-04-PLAN.md — Build leaked-row cleanup script, dry-run default (D-04–D-08)
-
-**Wave 2** *(blocked on Wave 1 completion)*
-
-- [x] 31-05-PLAN.md — Fix stale api/tests DB-gated fixtures (TEST-02)
-- [x] 31-06-PLAN.md — Fix stale pipeline/tests DB-gated fixtures (TEST-02)
-
-**Wave 3** *(blocked on Wave 2 completion)*
-
-- [x] 31-07-PLAN.md — Inner-commit regression test + full-suite green run (criteria 1/2/3)
-
-**Wave 4** *(blocked on Wave 3 completion)*
-
-- [x] 31-08-PLAN.md — Operator-gated cleanup execution + import-justices smoke (criterion 4)
-
-### Phase 32: Fix CourtTenure FK bookkeeping gap in merge/delete person service paths
-
-**Goal**: `CourtTenure.person_id` is `nullable=False` with a plain `ForeignKeyConstraint` and no `ON DELETE CASCADE` in any Alembic migration, but none of `get_merge_preview`, `merge_people`, or `delete_person_if_orphan` (`api/services/admin_people.py`) account for `CourtTenure` rows. Merging or deleting any Bench person with one or more tenure rows raises an unhandled `IntegrityError` (500) instead of the documented graceful response. This predates Phase 27 (`CourtTenure` and the merge/delete paths were introduced in Phase 22) but became newly reachable once Phase 27 added full tenure-row CRUD to the People editor. Fix: count `CourtTenure` in `get_merge_preview`'s counted-tables loop, transfer `CourtTenure` rows to the target person in `merge_people`, and include `CourtTenure` in `delete_person_if_orphan`'s orphan check — mirroring the existing `Utterance`/`SpeakerAlias`/`CaseAppearance`/`ArgumentParticipant` handling.
-**Depends on**: Nothing (independent bug fix)
-**Requirements**: PADM-05
-**Success Criteria** (what must be TRUE):
-
-  1. Merge preview for a Justice with one or more CourtTenure rows shows an accurate count of tenure rows that will be transferred, not silently omitted.
-  2. Merging two Justice person records transfers all CourtTenure rows to the target person without raising an IntegrityError.
-  3. Attempting to delete a Justice with CourtTenure rows returns the documented graceful non-orphan response instead of an unhandled 500.
-  4. Deleting a genuinely orphaned Justice (no CourtTenure rows) still succeeds exactly as before.
-
-**Plans**: 2/2 plans complete
-
-Plans:
-
-- [x] 32-01-PLAN.md — Backend: add CourtTenure to MergePreview schema + all 3 service FK loops (preview/merge/delete) + mirrored tests (D-01–D-04)
-- [x] 32-02-PLAN.md — Frontend: sync merge-preview contract — tenures in server-load can_delete/block-count + component breakdown/all-zero check (D-05)
-
-### Phase 33: `update_argument_metadata` unique-constraint guard
-
-**Goal**: `update_argument_metadata` writes `source_docket`/`question_number` without first checking whether another Argument row already holds that combination. Introduced in Phase 19, untouched by Phase 26. Saving a metadata edit that collides with an existing row raises an unhandled `IntegrityError` (500) instead of a clean, user-facing validation error. Fix: add a pre-write existence check (or catch `IntegrityError` and map it to a 409/422 with a clear message) before committing the update.
-**Depends on**: Nothing (independent bug fix)
-**Requirements**: PIPE-27
-**Success Criteria** (what must be TRUE):
-
-  1. Saving argument metadata with a `(source_docket, question_number)` combination that collides with an existing argument returns a 409/422 with a clear message instead of an unhandled 500.
-  2. Saving argument metadata with a unique combination continues to succeed exactly as before.
-  3. The fix is applied consistently to every code path that writes `source_docket`/`question_number`, not just the primary save action.
-
-**Plans**: 4/4 plans complete
-
-Plans:
-
-- [x] 33-04-PLAN.md
-
-- [x] 33-01-PLAN.md — Backend final-pair pre-check and race-safe HTTP conflict recovery
-- [x] 33-02-PLAN.md
-- [x] 33-03-PLAN.md
-
-### Phase 34: Blank case_name/docket_number validation
-
-**Goal**: `ArgumentUpdate.case_name`/`.docket_number` are `Optional[str] = None` with no non-empty validation; `update_argument` treats "not None" as "provided," not "non-empty." The edit form's `?/save` action always sends a trimmed string (never undefined) and the `<input>` elements have no `required` attribute. If an operator clears either field and saves: for a DRAFT argument, `_derive_slug("")` corrupts the case's public URL slug; for any status, `docket_number`/`docket_number_norm` can be wiped to `""`, breaking dedup semantics. The same gap exists in the sibling `update_argument_metadata` (`case_name`, `source_docket`). Fix: add a Pydantic `field_validator` rejecting blank/whitespace-only values on `ArgumentUpdate` and `MetadataUpdate`, plus `required` on both `<input>` elements as defense-in-depth.
-**Depends on**: Nothing (independent bug fix)
-**Requirements**: PIPE-28
-**Success Criteria** (what must be TRUE):
-
-  1. Clearing `case_name` or `docket_number` to blank/whitespace-only in the argument editor is rejected with a validation error, not silently saved.
-  2. Clearing `case_name` or `source_docket` to blank/whitespace-only via `update_argument_metadata` (pipeline job metadata card) is likewise rejected.
-  3. Argument slug and `docket_number`/`docket_number_norm` can never be corrupted to an empty string through either save path.
-  4. Both affected `<input>` elements carry a `required` attribute as UI-level defense-in-depth.
-
-**Plans**: 4/4 plans complete
-
-**Wave 1**
-
-- [x] 34-01-PLAN.md — Authoritative Pydantic normalization, deterministic docket precedence, safe service writes, and backend regression tests
-
-**Wave 2** *(blocked on Wave 1 completion)*
-
-- [x] 34-02-PLAN.md — Structured 422 location parsing and attempted-value preservation across both SvelteKit action owners
-
-**Wave 3** *(blocked on Wave 2 completion)*
-
-- [x] 34-03-PLAN.md — Exact native/pill validation feedback, required defenses, ARIA wiring, and first-invalid focus
-
-**UI hint**: yes
-
-### Phase 35: Remove pipeline job rerun capability
-
-**Goal**: Remove pipeline-job reruns because recreating a job with the same source and inputs no longer provides meaningful operator value. Remove the rerun action from the admin UI, delete the rerun API endpoint and service function, and remove rerun-specific tests and references. Preserve ordinary job creation, failed-step recovery, source-PDF access, and existing job data.
-**Depends on**: Nothing (independent cleanup)
-**Requirements**: PIPE-29
-**Success Criteria** (what must be TRUE):
-
-  1. The admin UI no longer offers an action to rerun a pipeline job.
-  2. The rerun API endpoint and service function are removed.
-  3. Rerun-specific tests and stale code references are removed or rewritten.
-  4. Creating jobs, recovering failed steps, viewing source PDFs, and viewing existing jobs continue to work unchanged.
-
-**Plans**: 3/3 plans complete
-
-Plans:
-**Wave 1**
-
-- [x] 35-01-PLAN.md — Remove backend rerun route/service ownership and align surviving recovery wording
-- [x] 35-02-PLAN.md — Remove the hidden frontend rerun action and guard historical detail composition
-
-**Wave 2** *(blocked on Wave 1 completion)*
-
-- [x] 35-03-PLAN.md — Add focused removal regressions and run the complete backend/frontend verification matrix
-
-### Phase 36: Click-to-copy extracted values design pattern
-
-**Goal**: Whenever a value has been extracted from a source PDF, use a consistent design pattern that lets the operator click the value to copy it to their clipboard. If a value was not extracted (showing N/A), clicking to copy is disabled. Includes an appropriate icon and tooltip. The pattern must be identical everywhere it appears — pipeline run pages and argument editor pages alike — including extracted docket number(s). Expected to decompose into at least: (1) a reusable tooltip component, and (2) the click-to-copy implementation for extracted hint values.
-**Depends on**: Nothing (independent UX pattern)
-**Requirements**: UX-01
-**Success Criteria** (what must be TRUE):
-
-  1. Every extracted-value display on pipeline run pages offers a click-to-copy affordance with icon and tooltip.
-  2. Every extracted-value display on argument editor pages (including extracted docket number pills) offers the identical click-to-copy affordance.
-  3. Click-to-copy is visibly disabled when the underlying value is N/A (not extracted).
-  4. The pattern is implemented as one reusable component, not duplicated per page.
-
-**Plans**: 3/3 plans complete
-
-**Wave 1**
-
-- [x] 36-01-PLAN.md — Reusable CopyableExtractedValue primitive and ArgumentDetailsCard adoption
-
-**Wave 2** *(blocked on Wave 1 completion)*
-
-- [x] 36-02-PLAN.md — Remaining extracted-value surfaces, durable D-13 guidance, and blocking browser UAT
-
-**UI hint**: yes
-
-### Phase 37: Represent tenure Seat as a Chief/Associate toggle instead of free text
-
-**Goal**: During Phase 27 UAT, Jason asked for the tenure-row Seat field (currently free text) to become the same segmented-toggle component used for the Bench/Advocate choice, since for a Justice it's really just Chief or Associate. This was deferred rather than fixed immediately because real historical `court_tenures.seat` data includes specific numbered seats (e.g. "Associate Justice Seat 3"), not just a binary Chief/Associate split — collapsing to a 2-option toggle is a genuine data-model simplification that needs a decision on whether the numbered-seat detail is dropped, kept as a secondary field, or reconciled some other way, plus a migration/backfill pass over existing rows. **Open design question — resolve during `/gsd-discuss-phase 37`, not during roadmapping:** does numbered-seat detail get dropped, retained as a secondary field, or reconciled some other way?
-**Depends on**: Nothing (independent design decision + implementation; open question resolved at discuss-phase)
-**Requirements**: PEOPLE-08
-**Success Criteria** (what must be TRUE):
-
-  1. Tenure Seat is captured via a decision-backed UI control instead of unconstrained free text — the exact control shape (binary toggle vs. a richer control preserving numbered-seat detail) is resolved during `/gsd-discuss-phase 37`.
-  2. Existing `court_tenures.seat` data (including numbered-seat rows) is preserved or migrated according to the resolved design decision — no silent data loss.
-  3. Operator can set or change a person's tenure Seat through the new control, and the value round-trips correctly through save and reload.
-
-**Plans**: 5/5 plans executed
-
-**Wave 1**
-
-- [x] 37-01-PLAN.md — Wave 0 regression harnesses for migration safety and accessible Office editing
-
-**Wave 2** *(blocked on Wave 1 completion)*
-
-- [x] 37-02-PLAN.md — Staged rename, immutable dry-run report, atomic normalization, and final database constraint
-
-**Wave 3** *(blocked on Wave 2 completion)*
-
-- [x] 37-03-PLAN.md — Strict canonical Office contracts across ORM, API, services, and CSV import
-
-**Wave 4** *(blocked on Wave 3 completion)*
-
-- [x] 37-04-PLAN.md — Office read projections, formal Justice titles, and public rendering regression coverage
-
-**Wave 5** *(blocked on Wave 4 completion)*
-
-- [x] 37-05-PLAN.md — Accessible Office editor, migration/application gate, and final Nyquist verification
-
-**UI hint**: yes
-
-### Phase 38: Rethink Full Name vs. name-part fields in the people editor
-
-**Goal**: Jason expected that filling in only the component name fields (first/last/middle/suffix) without Full Name would auto-backfill Full Name on save — instead, Full Name is currently required standalone. Proposed direction (not yet locked): stop making Full Name operator-editable at all, and derive it entirely from the component fields. **Open design question — resolve during `/gsd-discuss-phase 38`, not during roadmapping:** exactly how derivation should work (ordering, suffix placement, punctuation) and what changes on the pipeline/parsing side are needed before this can be scoped. Distinct from the real bug this surfaced alongside (create route silently discarding name-part fields when Full Name is also filled — already fixed in Phase 27 gap-closure); this item is the broader "should Full Name exist as a separate editable field at all" question, still open.
-**Depends on**: Nothing (independent design decision + implementation; open question resolved at discuss-phase)
-**Requirements**: PEOPLE-09
-**Success Criteria** (what must be TRUE):
-
-  1. Full Name field behavior is resolved per a locked design decision (auto-derived vs. independently editable) — decided during `/gsd-discuss-phase 38`, not here.
-  2. Operator can save a person record after filling in only the component name fields, consistent with whichever direction the locked decision takes (auto-derive removes the standalone Full Name requirement; independently-editable keeps it but the editor clearly explains why).
-  3. Existing Full Name values for already-created people are not corrupted or silently overwritten by the new behavior.
-  4. Any pipeline/parsing-side changes needed to support the decision are identified and applied consistently with the admin editor's behavior.
-
-**Plans**: 10/10 plans executed
-
-- [x] 38-01-PLAN.md
-- [x] 38-02-PLAN.md
-- [x] 38-03-PLAN.md
-- [x] 38-04-PLAN.md
-- [x] 38-05-PLAN.md
-- [x] 38-06-PLAN.md
-- [x] 38-07-PLAN.md — canonical docket-value rule + 422 guard at the create_job boundary (G-38-6)
-- [x] 38-08-PLAN.md — independent pipeline-side ingest path/slug hardening + write containment (G-38-6)
-- [x] 38-09-PLAN.md — parity-locked client mirror, inline docket error, SvelteKit re-check (G-38-6)
-- [x] 38-10-PLAN.md — consolidated regression gate + operator re-verification of UAT Test 6 (G-38-6)
-
-**UI hint**: yes
-
-### Phase 39: Bench popover — additional context data for Justices
-
-**Goal**: When a visitor clicks a Justice's avatar on the public argument view, the popover should show richer persistent context about them: birthdate, death date, and a list of tenures with start/end dates, appointing president, that president's party affiliation, and why they left that tenure (death, retirement, promotion) — presented identically for every Justice per the apolitical-framing constraint. `SpeakerPopover.svelte` currently shows photo, name, role, tenure dates, and appointing president, but no birthdate/death date despite `Person.birthdate` existing since Phase 27. Case-specific presentation (age at argument, tenure length, case-heard count) needs explicit exploration before implementation per the apolitical constraint and is not required for this phase's scope.
-**Depends on**: Nothing (independent public UI feature)
-**Requirements**: PUB-04
-**Success Criteria** (what must be TRUE):
-
-  1. Justice bench popover on the public argument page displays birthdate and death date (when known), in addition to the existing name/photo/role.
-  2. Popover displays each tenure with start/end dates, appointing president, that president's party affiliation, and reason for leaving (death, retirement, promotion) when known.
-  3. All added fields are presented identically for every Justice — no differential framing, omission, or emphasis based on any political consideration.
-  4. Case-specific presentation (age at argument, tenure-length indicators, case-heard counts) remains out of scope for this phase.
-
-**Plans**: 9/9 plans executed
-**UI hint**: yes
-
-**Wave 1**
-
-- [x] 39-01-PLAN.md — Tracer: reason-left end to end (migration → model → schema → service → popover line) + people.death_date (D-01/D-02/D-03/D-04/D-15)
-
-**Wave 2** *(blocked on Wave 1 completion)*
-
-- [x] 39-02-PLAN.md — Justices CSV importer reads Birthdate / Death Date / Reason Left with null-only backfill (D-04–D-07)
-- [x] 39-03-PLAN.md — Activate the person editor's Death Date input and per-tenure Reason Left dropdown (D-08/D-09/D-10)
-- [x] 39-04-PLAN.md — Public API: T-14-02 party-exposure reversal + promote appointing_president to per-tenure + birthdate/death_date/bio_text (D-11/D-12/D-13/D-14)
-
-**Wave 3** *(blocked on Wave 2 completion)*
-
-- [x] 39-05-PLAN.md — Rebuild the popover card: role pill, birth/death line, bio clamp + expand, 3-line tenure blocks, advocate descriptor slot (D-14/D-15/D-16, D-17 deferred)
-
-**Wave 4** *(blocked on Wave 3 completion)*
-
-- [x] 39-06-PLAN.md — Operator runbook: apply migrations + run import-justices on the real dev DB, then live UAT of both card types
-
-**Wave 5** *(gap closure — 39-06 checkpoint not approved; see 39-UAT.md ## Gaps)*
-
-- [x] 39-07-PLAN.md — Gap 1: Bio & Photo save silently fails — move bio_text onto the Save Person path, remove the error-swallowing PATCH, unmask the textarea
-- [x] 39-08-PLAN.md — Gaps 2+3: separator spacing, per-section dividers, and two-column tenure rows matching the Figma mockups
-
-**Wave 6** *(blocked on Wave 5 completion)*
-
-- [x] 39-09-PLAN.md — Operator re-verification of the three UAT gaps on the live stack (supersedes 39-06's failed steps)
-
-### Phase 40: README — how to start the local stack
-
-**Goal**: No README documents how to start the full local stack (SvelteKit dev server, FastAPI backend, Postgres). Add one so setup steps don't have to be rediscovered each session.
-**Depends on**: Nothing (documentation only, no code dependency)
-**Requirements**: DOCS-01
-**Success Criteria** (what must be TRUE):
-
-  1. A README documents step-by-step how to start Postgres, the FastAPI backend, and the SvelteKit frontend locally, end to end.
-  2. README covers required environment variables/config for local dev, referencing existing `.env` patterns without exposing secrets.
-  3. A contributor (or the operator after time away) can follow the README from a clean checkout to a running local stack without needing to rediscover steps from memory or git history.
-
-**Plans**: 3/3 plans complete
+<details>
+<summary>✅ v1.6 Backlog Cleanup (Phases 31–40, 40.1) — SHIPPED 2026-07-29</summary>
+
+**Overview:** Closed out the 10 phases promoted from the 999.x backlog on 2026-07-12 — an escalated data-integrity risk (stale test fixtures + real data leakage), four small pipeline/people-admin bug fixes, one operator UX pattern, two open design questions resolved during discuss-phase (tenure Seat toggle, Full Name auto-derivation), a public-UI enrichment (bench popover context), and a README gap. Phase 38's own UAT uncovered and closed a real security gap (G-38-6, authenticated-admin path-traversal/arbitrary-file-write in docket handling). Phase 40.1 was inserted by the pre-close artifact audit to re-fix that same G-38-6 gap from a stale debug-session record — the planner's source audit found it already fixed and closed the phase via documentation reconciliation instead of duplicate work.
+
+- [x] Phase 31: Audit ~28 stale DB-gated test fixtures + fix real data leakage into shared dev DB (8/8 plans) — completed 2026-07-13
+- [x] Phase 32: Fix CourtTenure FK bookkeeping gap in merge/delete person service paths (2/2 plans) — completed 2026-07-13
+- [x] Phase 33: `update_argument_metadata` unique-constraint guard (4/4 plans) — completed 2026-07-14
+- [x] Phase 34: Blank case_name/docket_number validation (4/4 plans) — completed 2026-07-14
+- [x] Phase 35: Remove pipeline job rerun capability (3/3 plans) — completed 2026-07-14
+- [x] Phase 36: Click-to-copy extracted values design pattern (3/3 plans) — completed 2026-07-15
+- [x] Phase 37: Represent tenure Seat as a Chief/Associate toggle instead of free text (5/5 plans) — completed 2026-07-21
+- [x] Phase 38: Rethink Full Name vs. name-part fields in the people editor (10/10 plans) — completed 2026-07-27
+- [x] Phase 39: Bench popover — additional context data for Justices (9/9 plans) — completed 2026-07-29
+- [x] Phase 40: README — how to start the local stack (3/3 plans) — completed 2026-07-14
+- [x] Phase 40.1: Sanitize docket input to close path-traversal/arbitrary-file-write gap (INSERTED, SUPERSEDED — 0 plans, closed via reconciliation, see `.planning/milestones/v1.6-phases/40.1-sanitize-docket-input-to-close-path-traversal-arbitrary-file/40.1-SUMMARY.md`) — completed 2026-07-29
+
+Full phase details: `.planning/milestones/v1.6-ROADMAP.md`
+
+</details>
 
 ## Progress
 
@@ -431,21 +169,11 @@ Plans:
 | 38. Rethink Full Name vs. name-part fields in the people editor | v1.6 | 10/10 | Complete    | 2026-07-27 |
 | 39. Bench popover — additional context data for Justices | v1.6 | 9/9 | Complete    | 2026-07-29 |
 | 40. README — how to start the local stack | v1.6 | 3/3 | Complete    | 2026-07-14 |
+| 40.1. Sanitize docket input to close path-traversal/arbitrary-file-write gap (SUPERSEDED) | v1.6 | 0/0 | Complete (reconciliation, no execution) | 2026-07-29 |
 
 ## Backlog
 
 Standard: all backlog items live here as 999.x entries (`.planning/phases/999.N-slug/`), captured via `/gsd-capture --backlog` and reviewed/promoted via `/gsd-review-backlog`. `.planning/BACKLOG.md` (the flat B-NNN file previously used, 2026-07-01 to 2026-07-09) has been retired and its 14 still-open items migrated below (2026-07-09); 5 items (B-001, B-003, B-004, B-005, B-006) were dropped as already shipped by Phase 24/27, and B-014 was merged into 999.1 as a duplicate capture of the same idea.
-
-### Phase 40.1: Sanitize docket input to close path-traversal/arbitrary-file-write gap (INSERTED, SUPERSEDED)
-
-**Goal:** ~~Close the confirmed path-traversal / arbitrary-file-write vulnerability where an admin-authenticated docket value flows unsanitized from `DocketPillInput` through the new-job form into `pipeline/commands/ingest.py:291`'s filename construction~~ — **already done.** This phase was inserted from a stale `.planning/debug/docket-filename-injection.md` record (`status: diagnosed`, never updated). The gsd-planner's source audit found the vulnerability was already fully fixed, tested, and operator-signed-off by **Phase 38 Plans 07–10** (gap `G-38-6`, resolved 2026-07-27 — before this phase existed). Independently re-verified 2026-07-29. No new code written; closed via documentation reconciliation only.
-**Requirements**: SEC-01 — see traceability below (now mapped to Phase 38)
-**Depends on:** Phase 40
-**Plans:** 0 plans (superseded — see `.planning/phases/40.1-sanitize-docket-input-to-close-path-traversal-arbitrary-file/40.1-SUMMARY.md`)
-
-Plans:
-
-- [x] Superseded by Phase 38 Plans 07–10 (2026-07-29 reconciliation, no execution needed)
 
 ### Phase 999.2: Share specific utterances via social media (BACKLOG)
 
@@ -462,14 +190,6 @@ Plans:
 **Plans:** 0 plans
 
 Plans:
-
-- [x] 36-03-PLAN.md
-
-- [x] 34-04-PLAN.md
-
-- [x] 40-01-PLAN.md
-- [x] 40-02-PLAN.md
-- [x] 40-03-PLAN.md
 
 - [ ] TBD (promote with /gsd-review-backlog when ready)
 

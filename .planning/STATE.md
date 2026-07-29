@@ -2,19 +2,19 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Backlog Cleanup
-current_phase: 40.1
-current_phase_name: Sanitize docket input (superseded by Phase 38, reconciled — no execution needed)
-status: ready_to_close
-stopped_at: Phase 40.1 reconciled; pre-close artifact audit clear except 3 acknowledged deferrals
-last_updated: "2026-07-29T15:46:18.232Z"
+status: Awaiting next milestone
+stopped_at: Phase 40.1 context gathered
+last_updated: "2026-07-29T15:56:13.019Z"
 last_activity: 2026-07-29
-last_activity_desc: Phase 40.1 reconciled (superseded by Phase 38); v1.6 ready for milestone completion
+last_activity_desc: Milestone v1.6 completed and archived
 progress:
   total_phases: 11
-  completed_phases: 11
+  completed_phases: 10
   total_plans: 51
   completed_plans: 51
-  percent: 100
+  percent: 91
+current_phase: 40.1
+current_phase_name: Sanitize docket input (superseded by Phase 38, reconciled — no execution needed)
 ---
 
 # Project State
@@ -28,10 +28,10 @@ See: .planning/PROJECT.md (updated 2026-07-14 after Phase 34 verification)
 
 ## Current Position
 
-Phase: 40.1 — superseded by Phase 38 Plans 07–10 (reconciliation only, no execution needed)
-Plan: N/A — see 40.1-SUMMARY.md
-Status: v1.6 ready for /gsd-complete-milestone 1.6
-Last activity: 2026-07-29 — Phase 40.1 reconciled; pre-close audit clear except 3 acknowledged deferrals (see Deferred Items below)
+Phase: Milestone v1.6 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-07-29 — Milestone v1.6 completed and archived
 
 ## Deferred Items
 
@@ -317,4 +317,4 @@ Resume file: .planning/phases/40.1-sanitize-docket-input-to-close-path-traversal
 
 ## Operator Next Steps
 
-- Run $gsd-verify-work 35 to validate the completed capability removal, or continue the already-prepared Phase 37 design work.
+- Start the next milestone with /gsd-new-milestone

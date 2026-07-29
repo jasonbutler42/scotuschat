@@ -1,5 +1,68 @@
 # Milestones
 
+## v1.6 Backlog Cleanup (Shipped: 2026-07-29)
+
+**Phases completed:** 11 phases (31–40, 40.1), 51 plans, 99 tasks
+**Timeline:** 2026-07-12 → 2026-07-29 (17 days)
+**Files changed:** 323 (96 code files: +11,960 / -1,221) | **Total incl. docs:** +42,847 / -1,389
+
+**Delivered:** Closed out the 10 phases promoted from the 999.x backlog — an escalated test-isolation/data-leakage fix, four pipeline/people-admin bug fixes, one operator UX pattern, two resolved design questions (tenure Seat toggle, Full Name auto-derivation), a public-UI enrichment (bench popover context), and a README gap — plus Phase 40.1, an inserted phase that turned out to already be satisfied by Phase 38's work and closed via documentation reconciliation instead of duplicate code.
+
+**Known deferred items at close:** 3 (see STATE.md Deferred Items — 2 out-of-scope bugs/polish found during Phase 39 UAT, 1 seed already designed to resurface at next milestone planning)
+
+**Key accomplishments:**
+
+- Idempotent `scripts/provision_test_db.py` (CREATE DATABASE + `alembic upgrade head` via subprocess) plus a `TEST_DATABASE_URL`-gated session-scoped auto-reset fixture in `pipeline/tests/conftest.py`, both guarded to never touch the shared dev DB.
+- Root `tests/conftest.py` now redirects `DATABASE_URL` onto `TEST_DATABASE_URL` for the whole suite when configured, and enforces an automated `pytest_sessionstart`/`pytest_sessionfinish` guard that fails loudly if any session changes `people`/`arguments` row counts on the real shared dev DB.
+- Consolidated 7 verbatim-duplicated `db_session` pytest-asyncio fixtures into a single definition in `api/tests/conftest.py`, eliminating drift risk across api/tests.
+- Standalone `scripts/cleanup_leaked_test_rows.py` — dry-run-by-default script that broadly detects duplicate `Person` rows and orphaned/test-fixture `Argument` rows in the shared dev DB, picks survivors by real tenure/bio data, and gates all deletion behind `--execute` plus an interactive confirmation.
+- Fixed 5 api/tests files' DB-gated tests against scotus_test — including 3 genuine stale-identity-map bugs in publish_argument/unpublish_argument/approve_job that a config.py crash had masked from ever executing.
+- Fixed job_id/argparse drift, an anthropic SDK construction bug, a genuine parser regex bug (plural PETITIONERS/RESPONDENTS never matched), a stale idempotency assumption in test_ingest.py, and a session-scoped-engine/function-scoped-event-loop pytest-asyncio mismatch — all 5 pipeline/tests files now pass (19 passed, 5 documented xfails, 0 failures) against scotus_test.
+- Added the criterion-3 regression test, then root-caused and fixed the 3 remaining full-suite failures — the entire suite now runs 429 passed / 5 xfailed / 0 failed / 0 errored under scotus_test isolation, with the shared-dev-DB leak hook silent across repeated runs.
+- Operator-authorized `scripts/cleanup_leaked_test_rows.py --execute` removed the 81 leaked rows (25 duplicate Person rows across 6 name groups including 6 Ketanji Brown Jackson rows, 56 orphaned Argument rows) from the shared dev DB; `python -m pipeline import-justices` and a full `pytest -q` run both completed cleanly afterward, confirming success criterion 4.
+- Extended MergePreview and all three admin-people service functions (get_merge_preview, merge_people, delete_person_if_orphan) to count, transfer, and block on CourtTenure rows, closing the unhandled-IntegrityError gap on merging/deleting Justices with tenure history.
+- Synced both admin-people frontend surfaces (`+page.server.ts` and `+page.svelte`) to the Plan 01 backend contract, adding `tenures` as a 5th field so the merge breakdown renders the count and the delete button's client-side defense-in-depth check blocks on tenure rows.
+- Metadata saves now combine the final docket/question pair, reject known duplicates before update, and recover named PostgreSQL races through an exact sanitized 409 contract.
+- All offline argument writers now use the shared concrete-pair semantics and reserve duplicate recovery for the exact PostgreSQL constraint.
+- Both admin metadata editors now preserve attempted values and guide keyboard users from a sanitized duplicate response to the conflicting argument.
+- Duplicate conflict responses now state only the colliding pair, leaving the shared component to render the actionable recovery link exactly once.
+- Constraint-valid Case resubmissions now discard stale native required state while preserving authoritative server-required, collision, and generic failure handling.
+- Deleted same-source job recreation ownership from FastAPI and its service layer while preserving ordinary creation, recovery, PDF delivery, and durable PipelineRun history.
+- Removed the hidden job-detail rerun action while preserving authenticated historical loads, failed-run recovery, and local source-PDF navigation.
+- Authenticated removal-by-absence coverage now proves the retired route returns framework 404 while ordinary job creation, recovery, durable source fields, and disk-backed PDF delivery remain operational.
+- A reusable Svelte 5 clipboard affordance now serves every argument-detail docket, question-number, and argued-date hint.
+- One shared extracted-value interaction now covers every eligible pipeline and argument-editor surface, with paste-compatible date presentation and a native-date-safe fill action.
+- 1. [Rule 3 - Blocking] Added an isolated Vite fixture configuration
+- Collectable migration-integrity and Office-control RED contracts covering irreversible normalization, accessibility, and failed-save recovery
+- Reversible rename, integrity-protected audit normalization, and post-normalization binary Office constraint
+- CourtTenure.office replaces free-text seat end to end across the ORM, admin-people schemas/service, and the justice CSV importer, with a strict write / tolerant read schema split and validated atomic tenure replacement
+- Speaker/admin-argument read projections and the public argument view/popover now render `Chief Justice`/`Associate Justice` from canonical `office`, with date-window and D-14 fallback selection algorithms byte-for-byte unchanged
+- Free-text tenure Seat replaced end-to-end by an accessible native-radio Chief/Associate control, with a disposable-database proof that the staged migration and application layers agree, and a fail-closed repository audit confirming zero stray `seat` identifiers remain
+- Pure Python domain module (api/domain/person_names.py) implementing canonical First Middle Last, Suffix formatting, whitespace-only normalization with column-bound validation, provenance envelope validation, and a conservative fixture-driven legacy Full Name splitter — zero new dependencies, zero app/database initialization.
+- Alembic revision 0022 adds `Person.name_needs_review` (durable review flag) and `Person.name_extraction_metadata` (independent JSONB provenance), then guardedly backfills legacy full-name-only rows into structured parts via Plan 01's `split_legacy_full_name` — confident splits applied, every ambiguous shape preserved exactly and flagged for review, `full_name` itself never written.
+- PersonUpdate, PersonCreateRequest, and admin_jobs.PersonCreate all drop `full_name` as a writable field (Pydantic `extra="forbid"`, a 422 not a silent no-op), and every create/update write path — including the job-scoped mini-create — derives `full_name` exclusively through the shared `prepare_person_name` helper, with PATCH correctly merging omitted-vs-cleared name parts and clearing `name_needs_review` (never `name_extraction_metadata`) on an authoritative edit.
+- All three batch person-writers (justice CSV import, ConvoKit corpus import, and alias seeds) now derive `full_name` exclusively through the shared `api.domain.person_names` contract, write a uniform `name_extraction_metadata` provenance envelope, and apply blank-only prefill so no import path can silently overwrite an operator-authored or previously-confident name part.
+- Extended the Phase 36 `CopyableExtractedValue` component with an optional two-line stacked provenance mode (interpreted value / confidence / exact raw source) and wired it into `DocketPillInput`, `ResolveCard`, the pipeline job detail page, and the argument editor's speaker title hint, without regressing any existing value-only/pill consumer.
+- Standalone create and person edit forms now show a live, read-only "Generated from name parts." Full Name preview (a Node-executable TypeScript mirror of the backend's canonical formatter) and submit only structured name parts; each saved part carries its own independent extracted-provenance hint; and the People directory gets a "Name review" click-to-filter pill reusing the existing missing-field pattern verbatim, closing PEOPLE-09 end to end.
+- Closed the authenticated-admin arbitrary-file-write primitive (G-38-6) by adding a single canonical `normalize_docket_value` allow-list/length-cap rule in `api/domain/docket_values.py` and wiring it into `_normalize_dockets` so a hostile or malformed docket value now gets a 422 before any `AdminJob` row or ingest subprocess exists.
+- Second, independent layer of the G-38-6 fix: `pipeline/commands/ingest.py` now validates every docket-derived filename and slug component itself, plus asserts the resolved PDF write path stays inside `data/pdfs`, closing the direct-CLI bypass of the Plan 38-07 API-boundary check.
+- TypeScript mirror of the Phase 38-07 canonical docket rule (`app/src/lib/docketValues.ts`), an opt-in inline `role="alert"` shape error in `DocketPillInput` used only by the Pipeline Runner, and a SvelteKit-server re-check in `+page.server.ts` that rejects a forged `docket[]` value before FastAPI is ever called — closing item 3 of UAT gap G-38-6's `missing` list.
+- Consolidated 119-test regression gate across all docket-guard-touching suites plus operator re-verification of the original UAT Test 6 reproduction (and traversal/absolute-path variants) on the live Pipeline Runner, closing UAT gap G-38-6.
+- One column (`court_tenures.reason_left`) wired end to end — migration through ORM, canonical constants + display-title helper, public schema, service assembly, and popover render — plus `people.death_date`'s DB column and ORM mapping, both proven by a real DB-backed test of `get_argument_speakers()`.
+- `python -m pipeline import-justices` now reads the CSV's Birthdate, Death Date and Reason Left columns and null-only backfills Person.birthdate/death_date and CourtTenure.reason_left, mapping the 5-value CSV vocabulary through an explicit membership check that surfaces (rather than silently drops) anything unrecognised.
+- Both Phase 27 "Coming soon" placeholder inputs — person-level Death Date and per-tenure Reason Left — are now live, strictly validated on write, tolerant on read, and wired end to end through the existing single atomic save form with no new form or action.
+- Reversed Phase 14's T-14-02 party exclusion, promoted the top-level `appointing_president` field to a per-tenure `appointed_by`, and added `birthdate`/`death_date`/`bio_text` to the public speaker popover payload — all pinned by exact-key-set regression tests.
+- Rebuilt `SpeakerPopover.svelte` from a narrow flex-row card into a header-row-plus-stacked-sections layout that renders every field Plan 39-04 added (birth/death line, per-tenure appointed-by/party, clamped bio with toggle, advocate descriptor slot), and widened the argument page's speaker types plus a scroll backstop on the popover wrapper to match.
+- Checkpoint not approved: operator found a real styling regression (separator dot, overall Figma mismatch) and a silent Bio save failure; two items pass, one is unconfirmed either way.
+- Moved bio_text ownership from the photo action to the save action so the primary Save Person button now saves the whole person atomically, including the bio -- closing 39-UAT.md gap 1/test 10.
+- Closed 39-UAT.md gaps 2 and 3 by moving the birth/death and president/party separator's space into a `{#snippet}` span (fixing Svelte's whitespace-trimming at `{#if}` block boundaries), giving all four stacked sections their own hairline divider, and rebuilding each tenure block into the mockup's two-column row pair with month-and-year date granularity — all pinned by a new 17-test DB-free source-contract module.
+- Checkpoint approved: all three 39-06 UAT gaps confirmed closed on the live stack, party-neutral rendering holds after the restyle, one new minor finding filed separately.
+- Windows-first onboarding now covers a clean checkout through an empty migrated stack, with equally runnable portable and service-managed PostgreSQL paths.
+- Cross-platform setup guidance now has a dated Windows portable-stack PASS, including real admin login and authenticated-session preservation.
+- Phase 40.1 was inserted to fix a path-traversal/arbitrary-file-write vulnerability that the v1.6 pre-close artifact audit reported as open — but the gsd-planner agent's source audit, independently re-verified in this session, found the vulnerability had already been fully fixed, tested, and operator-signed-off two days earlier as Phase 38 Plan 10 (gap G-38-6). No new code was written; this phase closes by reconciling the stale tracking documents that caused the duplicate insertion.
+
+---
+
 ## v1.5 Admin Screens Cleanup (Shipped: 2026-07-12)
 
 **Phases completed:** 10 phases, 55 plans, 110 tasks

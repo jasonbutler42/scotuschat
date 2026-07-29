@@ -2,19 +2,19 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Backlog Cleanup
-current_phase: 39
-current_phase_name: bench-popover-additional-context-data
-status: executing
-stopped_at: Completed 39-09-PLAN.md (checkpoint approved, all UAT gaps resolved)
-last_updated: "2026-07-29T14:04:46.000Z"
+current_phase: 40
+current_phase_name: README — how to start the local stack
+status: planning
+stopped_at: Completed 39-08-PLAN.md (bench popover mockup-fidelity gap closure)
+last_updated: "2026-07-29T14:44:33.176Z"
 last_activity: 2026-07-29
-last_activity_desc: Phase 39 gap-closure checkpoint approved (39-09) — 9/9 plans complete, ready for phase verification
+last_activity_desc: Phase 39 complete, transitioned to Phase 40
 progress:
   total_phases: 10
-  completed_phases: 9
+  completed_phases: 10
   total_plans: 51
-  completed_plans: 50
-  percent: 90
+  completed_plans: 51
+  percent: 100
 ---
 
 # Project State
@@ -28,10 +28,10 @@ See: .planning/PROJECT.md (updated 2026-07-14 after Phase 34 verification)
 
 ## Current Position
 
-Phase: 39 (bench-popover-additional-context-data) — GAPS CLOSED
-Plan: 9 of 9
-Status: All plans complete, checkpoint approved — ready for phase verification
-Last activity: 2026-07-29 — Phase 39 gap-closure checkpoint approved (39-09)
+Phase: 40 — README — how to start the local stack
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-07-29 — Phase 39 complete, transitioned to Phase 40
 
 ## Performance Metrics
 

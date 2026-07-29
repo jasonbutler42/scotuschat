@@ -101,6 +101,11 @@
 	let isJustice = $state<boolean>(form?.is_justice ?? data.person.is_justice ?? false);
 	let birthdate = $state<string>(form?.birthdate ?? data.person.birthdate ?? '');
 	let deathDate = $state<string>(form?.death_date ?? data.person.death_date ?? '');
+	// bio_text (Phase 39 gap closure, 39-UAT.md gap 1/test 10) — a failed save's
+	// attempted bio always takes priority over the loaded record, same precedence
+	// as birthdate/deathDate above. Bound (not seeded as child text content) so
+	// the textarea always reflects this state and never keeps a stale dirty value.
+	let bioText = $state<string>(form?.bio_text ?? data.person.bio_text ?? '');
 
 	// ──────────────────────────────────────────────────────────────────────────
 	// Name parts — $state so the generated Full Name preview (D-01, D-02)
@@ -212,6 +217,12 @@
 		if (form?.death_date !== undefined) {
 			deathDate = form.death_date ?? '';
 		}
+		// Phase 39 gap closure (39-UAT.md gap 1/test 10) — !== undefined (not
+		// truthiness) is required: an intentionally cleared bio comes back as
+		// null and must restore as an empty box, not the stale stored text.
+		if (form?.bio_text !== undefined) {
+			bioText = form.bio_text ?? '';
+		}
 		if (form?.is_justice !== undefined) {
 			isJustice = form.is_justice;
 		}
@@ -273,6 +284,7 @@
 		isJustice = data.person.is_justice ?? false;
 		birthdate = data.person.birthdate ?? '';
 		deathDate = data.person.death_date ?? '';
+		bioText = data.person.bio_text ?? '';
 		officeSaveFormError = null;
 		tenureRows = buildTenureRows(data.person.tenures);
 		firstName = data.person.first_name ?? '';
@@ -624,9 +636,10 @@
 					id="bio_text"
 					name="bio_text"
 					form="save-form"
+					bind:value={bioText}
 					placeholder="Enter a short biography…"
 					style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box; min-height: 120px; resize: vertical; font-family: inherit;"
-				>{data.person.bio_text ?? ''}</textarea>
+				></textarea>
 			</div>
 		</div>
 

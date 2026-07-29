@@ -199,7 +199,7 @@ export const actions: Actions = {
 			// edits elsewhere on the form.
 			return fail(422, {
 				error: 'Invalid tenure data. Please try again.',
-				first_name, last_name, middle_name, name_suffix, birthdate, death_date, is_justice,
+				first_name, last_name, middle_name, name_suffix, birthdate, death_date, is_justice, bio_text,
 				tenures: [] as { office: string; start_date: string; end_date: string; appointed_by: string; appointing_president_party: string; reason_left: string }[],
 			});
 		}
@@ -220,7 +220,7 @@ export const actions: Actions = {
 		if (!first_name && !last_name) {
 			return fail(400, {
 				error: 'Enter at least a first or last name.',
-				first_name, last_name, middle_name, name_suffix, birthdate, death_date, is_justice,
+				first_name, last_name, middle_name, name_suffix, birthdate, death_date, is_justice, bio_text,
 				tenures,
 			});
 		}
@@ -234,7 +234,7 @@ export const actions: Actions = {
 		if (firstInvalidIndex !== -1) {
 			return fail(400, {
 				error: 'Select Chief or Associate for every tenure period before saving.',
-				first_name, last_name, middle_name, name_suffix, birthdate, death_date, is_justice,
+				first_name, last_name, middle_name, name_suffix, birthdate, death_date, is_justice, bio_text,
 				tenures,
 			});
 		}
@@ -262,7 +262,7 @@ export const actions: Actions = {
 		} catch {
 			return fail(502, {
 				error: 'Could not save changes. Check the form and try again.',
-				first_name, last_name, middle_name, name_suffix, birthdate, death_date, is_justice,
+				first_name, last_name, middle_name, name_suffix, birthdate, death_date, is_justice, bio_text,
 				tenures,
 			});
 		}
@@ -270,7 +270,7 @@ export const actions: Actions = {
 		if (!res.ok) {
 			return fail(422, {
 				error: 'Could not save changes. Check the form and try again.',
-				first_name, last_name, middle_name, name_suffix, birthdate, death_date, is_justice,
+				first_name, last_name, middle_name, name_suffix, birthdate, death_date, is_justice, bio_text,
 				tenures,
 			});
 		}

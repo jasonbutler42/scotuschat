@@ -114,3 +114,52 @@ def test_no_stale_bio_ownership_language_in_server_file():
     assert "bio_text intentionally omitted" not in server_source
     assert "bio_text omitted intentionally" not in server_source
     assert "Pitfall 7 extended" not in server_source
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Task 2 — the textarea shows persisted state; a failed save never loses a
+# typed bio; switching people never leaks one person's bio into another's box.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_bio_textarea_is_bound_not_seeded():
+    """bioText is a $state, the textarea uses bind:value={bioText}, and the
+    textarea no longer receives the stored value as child text content — a
+    <textarea> whose text content is updated after the user has typed keeps
+    showing the typed string (the browser's dirty-value flag), which is
+    exactly the masking the operator hit."""
+    svelte_source = _source(ID_PAGE_SVELTE_PATH)
+    assert "$state<string>" in svelte_source
+    assert "let bioText" in svelte_source
+    assert "bind:value={bioText}" in svelte_source
+    assert "?? ''}</textarea>" not in svelte_source
+
+
+def test_person_change_reset_covers_the_bio():
+    """The person-id-change reset $effect resyncs bioText from the freshly
+    loaded record, so opening a different person cannot leak the previous
+    person's bio into the box."""
+    svelte_source = _source(ID_PAGE_SVELTE_PATH)
+    assert "data.person.bio_text ?? ''" in svelte_source
+
+
+def test_failed_save_restore_covers_the_bio():
+    """The failed-save restore $effect uses !== undefined (not truthiness),
+    so an intentionally cleared bio (returned as null) restores as an empty
+    box, not the stale stored text."""
+    svelte_source = _source(ID_PAGE_SVELTE_PATH)
+    assert "form?.bio_text !== undefined" in svelte_source
+
+
+def test_every_failed_save_restores_the_bio():
+    """Every fail() in the save action restores bio_text — the number of
+    `is_justice, bio_text,` occurrences in the save-action slice equals the
+    number of `return fail(` occurrences there, so no failure path can drop
+    the field. Scoped to the save-action slice (not the whole file, which
+    has 14 return fail( calls across all five actions)."""
+    server_source = _source(ID_PAGE_SERVER_PATH)
+    save_slice = _save_action_slice(server_source)
+    restore_count = save_slice.count("is_justice, bio_text,")
+    fail_count = save_slice.count("return fail(")
+    assert restore_count == fail_count
+    assert restore_count == 5

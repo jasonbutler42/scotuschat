@@ -19,7 +19,8 @@ Anyone can open a SCOTUS oral argument and immediately follow the conversation �
 **Goal:** Trust the corpus-import data pipeline end to end on one representative case, rework the Resolve table into a real editing tool, and close two known UI bugs — with a dev-only reset harness to make it all iterable.
 
 **Target features:**
-- Corpus fidelity audit — analyze the ~7,800-argument ConvoKit dataset, propose and confirm the single most structurally complex argument as a canonical test fixture, then diff that case's raw ConvoKit source against what actually lands in our DB to surface fields being dropped, mis-mapped, or silently defaulted during `import-convokit`. Fixes apply to the chosen fixture only this milestone — full-corpus rollout is explicit future scope.
+- Corpus fidelity audit — analyze the ~7,800-argument ConvoKit dataset, propose and confirm a four-fixture set (one complexity fixture selected for structural complexity, plus three state-variety fixtures for publish/pipeline-state coverage), then diff the complexity fixture's raw ConvoKit source against what actually lands in our DB to surface fields being dropped, mis-mapped, or silently defaulted during `import-convokit`. Fixes apply to the chosen fixture only this milestone — full-corpus rollout is explicit future scope.
+  - ✓ Fixture set confirmed 2026-07-29 (Phase 41, CORPUS-12): complexity fixture is conversation 15169 (Baltimore & Ohio Railroad Co. v. United States, 1966, docket 642); state-variety fixtures are 13015 (Archawski v. Hanioti, 1955), 18897 (Anderson v. Liberty Lobby, Inc., 1985), and 22372 (Abbott v. United States, 2010). See `.planning/FIXTURES.md`.
 - Dev-only DB reset tool — admin-panel action, gated so it can never run in a real/production environment, that wipes all arguments/utterances/people/tenures and reseeds exactly the one chosen fixture argument plus its associated People.
 - SEED-001: Resolve table rework — see `.planning/seeds/SEED-001-rework-resolve-table-requirements.md` for the full mockup-driven spec.
 - 2 deferred bug fixes — unpublished arguments visible/directly-accessible via `/cases/`; popover scrollbar rendering outside the card boundary. See `.planning/todos/pending/`.
@@ -229,4 +230,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-29 after starting v1.7 milestone.*
+*Last updated: 2026-07-29 after Phase 41 (canonical corpus fixture selection) completed.*

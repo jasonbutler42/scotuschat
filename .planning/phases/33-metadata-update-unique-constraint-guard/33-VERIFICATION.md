@@ -1,8 +1,8 @@
 ---
 phase: 33-metadata-update-unique-constraint-guard
 verified: 2026-07-14T16:15:00Z
-status: resolved
-score: 10/10 (post-fix, see Post-Verification Fix section)
+status: passed
+score: 10/10 (post-fix — see stale-record correction note below)
 overrides_applied: 0
 gaps:
   - id: CR-01

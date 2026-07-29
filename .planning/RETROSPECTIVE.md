@@ -256,6 +256,55 @@
 
 ---
 
+## Milestone: v1.6 — Backlog Cleanup
+
+**Shipped:** 2026-07-29
+**Phases:** 11 (31–40, 40.1) | **Plans:** 51 | **Timeline:** 17 days (2026-07-12 → 2026-07-29)
+**Files changed:** 323 (96 code files: +11,960 / -1,221 lines)
+
+### What Was Built
+
+- Escalated data-integrity fix (Phase 31): dedicated `scotus_test` Postgres DB + session-boundary auto-reset isolates the full pytest suite from the shared dev DB, closing a real leak where production service functions that commit internally (`create_person_for_job`, `publish_argument`, `run_import_convokit`) left synthetic rows in production — 81 already-leaked rows cleaned up under explicit operator authorization
+- Four independent bug fixes: CourtTenure FK bookkeeping on merge/delete (32), unique-constraint guard on metadata saves (33, closed fully 2026-07-28), blank case_name/docket_number validation (34), removal of the no-longer-useful rerun capability (35)
+- One operator UX pattern: consistent click-to-copy affordance for every extracted value across pipeline and argument-editor surfaces (36)
+- Two open design questions resolved during discuss-phase: tenure Seat as a Chief/Associate toggle with a staged rename-then-audit-then-constrain migration (37), and Full Name fully auto-derived with `full_name` removed as a writable field (38)
+- A real security gap (G-38-6, authenticated-admin path-traversal/arbitrary-file-write in docket handling) found during Phase 38's own UAT and closed via three independent defense-in-depth layers, with a 119-test regression gate and operator sign-off
+- Public-UI enrichment: bench popover now shows birthdate, death date, and per-tenure appointing president/party/reason-left, presented identically for every Justice (39), including a full gap-closure cycle after operator UAT found a save bug and two styling mismatches
+- A full local-stack README (40), and Phase 40.1 — an inserted phase that turned out to already be satisfied by Phase 38's work, closed via documentation reconciliation instead of duplicate code
+
+### What Worked
+
+- **The planner's mandatory source audit before writing plans caught a duplicate security fix before any code was written.** Phase 40.1 was inserted specifically to fix G-38-6 (path-traversal/arbitrary-file-write), based on a debug session still reading `status: diagnosed`. Before spawning any implementation work, the gsd-planner agent audited the actual source tree against the phase's requirements and found the vulnerability already fully fixed, tested, and operator-signed-off by Phase 38 — two days before Phase 40.1 was even inserted. Zero redundant code was written. This is the process working as designed: verify against reality before acting on a document's claim about reality.
+- **Independent re-verification of an agent's "already fixed" claim, from primary sources, before accepting it.** Rather than trusting the planner's self-report, this session re-read the actual production module, the actual call sites, the actual test files, and the actual operator-signed UAT record before reconciling any tracking documents — the kind of skepticism that should apply to any agent claim with real consequences (here: whether to write security-relevant code or not).
+- **Staged migration discipline on the tenure Seat rename** (Phase 37): rename-then-audit-then-constrain, with a reviewed audit/execute script normalizing legacy numbered-seat values before the final NOT-NULL-equivalent constraint landed — zero silent data loss on a genuinely irreversible schema change.
+- **Defense-in-depth applied consistently to G-38-6** — a canonical validation module, an independent pipeline-side guard for the direct-CLI bypass path, and a frontend mirror, matching the codebase's existing SSRF-guard pattern (`_validate_pdf_url` / `_validate_url`) rather than inventing a new shape.
+
+### What Was Inefficient
+
+- **The "close debug sessions when the fix lands" lesson recurred for a third time (v1.1, v1.5, now v1.6) — and this time it caused real wasted process, not just stale bookkeeping.** Two separate artifacts stayed stale after their underlying fixes shipped: `docket-filename-injection.md` (fixed by Phase 38 Plan 10, 2026-07-27; still read `diagnosed` at v1.6 close) and `33-VERIFICATION.md`/`phase-33-duplicate-recovery-link.md` (fixed same-day by Plan 33-04, and by a later out-of-sequence commit `b41d6693` on 2026-07-28; still read `gaps_found`/`root_cause_found` at v1.6 close). The first one wasn't just stale bookkeeping this time — it caused a full discuss-phase + planning cycle to run against a phantom vulnerability before the planner's own audit caught it. Two milestones' worth of "watch out for this" evidently isn't sufficient; this needs a structural fix (see Key Lessons).
+- **A fix landing via a commit made outside the formal phase-plan sequence** (`b41d6693`, fixing Phase 33's CR-01 blocker on 2026-07-28, two weeks after Phase 33 itself closed) has no natural place in the GSD workflow to also update the phase's `VERIFICATION.md`/debug-session status — the commit "just happens" and the tracking artifact is orphaned. Both of this milestone's stale-tracking incidents trace back to a fix landing outside the phase that owns the tracking file.
+- **A custom, non-standard `status` value written into `33-VERIFICATION.md` during reconciliation** (`resolved`, instead of the tool's actual recognized vocabulary of `passed`/`gaps_found`/`human_needed`/`stale`) initially caused the phase to still read as incomplete in the milestone-readiness check — caught before it caused a wrong decision, but it's a reminder that these tracking files have a real, narrow, machine-read contract, not just prose.
+
+### Patterns Established
+
+- **Planner-level source audit as a phase-insertion safety net.** Any inserted "urgent fix" phase should have its planner check the current source tree against the phase's own requirements before writing plans — an inserted phase can itself be stale by the time it's actually planned, especially days or weeks after the triggering debug session was created.
+- **Independent re-verification of "already fixed" claims from primary sources** (the actual module, the actual call sites, the actual tests, the actual signed UAT record) before reconciling tracking documents, rather than trusting a single agent's summary.
+
+### Key Lessons
+
+1. **"Close debug sessions when the fix lands" needs a structural fix, not another reminder — this is the third occurrence (v1.1, v1.5, v1.6) and it's getting worse, not better.** Concrete proposal: when a commit's message or diff touches a file also referenced by an open `*-VERIFICATION.md` gap or a debug session's `artifacts:` list, prompt to update that file's `status` in the same commit — or at minimum, have the pre-close artifact audit's output include the age of each stale item and a pointer to `git log -- <artifact path>` so the reconciler can quickly check "did something fix this already?" before assuming the gap is real.
+2. **A debug session with `goal: find_root_cause_only` will never update its own `status` after a fix, by construction** — its job was diagnosis, not remediation, so nothing in the normal workflow ever revisits it. If a later fix (in-phase or out-of-sequence) addresses a `find_root_cause_only` session's root cause, that fix's commit should explicitly flip the debug session's `status`, since no other step in the workflow will.
+3. **Verify a subagent's "no work needed" conclusion against primary sources before accepting it, especially for security-relevant decisions** — the planner's audit here was correct, but its correctness was established by independently re-reading the actual code and tests, not by trusting the report. The cost of independent verification (a few tool calls) is far lower than the cost of either (a) duplicating tested security code or (b) wrongly skipping a real fix on a false "already done" claim.
+4. **Tracking-file `status` fields have a narrow machine-read vocabulary — don't invent new values even when they're semantically accurate.** `passed`/`gaps_found`/`human_needed`/`stale` for VERIFICATION.md, `resolved`/`complete` for debug sessions and UAT files. A descriptive-but-nonstandard value (e.g. `resolved` in a VERIFICATION.md) silently falls through to "unknown"/incomplete in automated readiness checks.
+
+### Cost Observations
+
+- Model mix: balanced profile, Sonnet primary throughout; Opus for the planner agent on the inserted Phase 40.1
+- Sessions: multiple across the 17-day window
+- Notable: Phase 40.1 consumed a full discuss-phase + planner-agent cycle but produced zero implementation code — the planner's source audit is what stopped it from becoming wasted implementation effort too; the cost that couldn't be avoided (discuss-phase running against stale information) is exactly what Key Lesson 1 aims to reduce for next time
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -268,6 +317,7 @@
 | v1.3 Speaker Accuracy + Pipeline Confidence | 3 | 9 | TDD applied to tenure logic; cover extractor module; gap-closure plan (17-03) as named artifact |
 | v1.4 Admin Completeness | 4 | 13 | Shortest milestone (3 days); tri-state delete pattern; unconditional polling fix; stale todos/requirements repeated lesson |
 | v1.5 Admin Screens Cleanup | 10 (incl. inserted 30.1) | 55 | Largest milestone yet; absorbed an unplanned 7,800-argument bulk corpus import mid-milestone; inserted gap-closure phase pattern for milestone-audit findings; recurring "close debug sessions at fix time" lesson |
+| v1.6 Backlog Cleanup | 11 (incl. inserted 40.1) | 51 | A stale debug session caused a duplicate security-fix phase to be inserted and discussed before the planner's own source audit caught it pre-implementation; "close debug sessions at fix time" recurred for a third time and is now flagged for a structural fix, not another reminder |
 
 ### Cumulative Quality
 
@@ -280,4 +330,5 @@
 
 1. Keep requirements checked off in real time — stale checkboxes create reconciliation work at milestone close (v1.0 + v1.1)
 2. Run the milestone audit before the milestone close ceremony — surfaces stale artifacts early
-3. Close debug sessions and update verification status when the fix lands — not at milestone close
+3. Close debug sessions and update verification status when the fix lands — not at milestone close (v1.1, v1.5, and v1.6 — three occurrences now; v1.6's cost a full discuss-phase cycle on a phantom vulnerability, not just stale bookkeeping. Needs a structural fix per v1.6's Key Lessons, not a fourth reminder.)
+4. A planner's (or any agent's) "this is already done" conclusion should be independently re-verified against primary sources before being accepted, especially when the alternative is writing or skipping security-relevant code (v1.6)

@@ -2,6 +2,7 @@
 created: 2026-07-28T23:26:54.000Z
 title: Unpublished argument still visible and directly accessible in /cases/ list
 area: bug
+resolves_phase: 45
 files:
 
   - app/src/routes/cases/+page.server.ts (or equivalent /cases listing loader — not yet investigated)

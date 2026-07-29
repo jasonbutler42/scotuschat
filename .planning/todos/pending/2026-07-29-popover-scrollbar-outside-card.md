@@ -2,6 +2,7 @@
 created: 2026-07-29T14:04:46.000Z
 title: Popover scrollbar renders outside the card's visible boundary on long content
 area: ui
+resolves_phase: 45
 files:
 
   - app/src/routes/cases/[slug]/arguments/[id]/+page.svelte

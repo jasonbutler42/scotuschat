@@ -1,10 +1,13 @@
 ---
-status: root_cause_found
+status: resolved
 phase: 33
 slug: phase-33-duplicate-recovery-link
 created: 2026-07-14
 goal: find_root_cause_only
+resolved_by: "Plan 33-04 (33-04-PLAN.md / 33-04-SUMMARY.md), commit ce6eb651, 2026-07-14 (same day)"
 ---
+
+**Stale-record correction (2026-07-29):** This session's goal was `find_root_cause_only`, so its `status` was never going to flip to reflect a fix even though one landed the same day via Plan 33-04. Reconciled during Phase 40.1's cleanup — see `.planning/phases/40.1-sanitize-docket-input-to-close-path-traversal-arbitrary-file/40.1-SUMMARY.md`. Fix: `api/routers/admin.py`'s duplicate payload builders no longer include link-oriented wording; `ArgumentDetailsCard.svelte` remains sole owner of the actionable link label. Verified via `api/tests/test_question_number_nullable.py::test_duplicate_message_and_component_compose_one_recovery_phrase` and `33-UAT.md` Test 1 (flipped to `pass`).
 
 # Phase 33 Duplicate Recovery Link
 

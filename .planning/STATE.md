@@ -5,9 +5,9 @@ milestone_name: Corpus Fidelity & Resolve Rework
 current_phase: 41
 status: planning
 stopped_at: Phase 41 context gathered
-last_updated: "2026-07-29T17:59:35.985Z"
+last_updated: "2026-07-29T19:23:15.142Z"
 last_activity: 2026-07-29
-last_activity_desc: v1.7 roadmap created
+last_activity_desc: Phase 41 planning complete (3 plans, 3 waves)
 progress:
   total_phases: 5
   completed_phases: 0
@@ -27,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-07-29 after starting v1.7 milestone)
 
 ## Current Position
 
-Phase: 41 — Canonical Corpus Fixture Selection (not started)
-Plan: —
-Status: Roadmap complete (Phases 41–45, 13/13 requirements mapped); no phase plans created yet
-Last activity: 2026-07-29 — v1.7 roadmap created
+Phase: 41 — Canonical Corpus Fixture Selection (planned, ready to execute)
+Plan: — (3 plans ready: 41-01, 41-02, 41-03 across 3 waves; wave 3 has a blocking operator-confirmation checkpoint)
+Status: Ready to execute — Phase 41 planning complete, verified (VERIFICATION PASSED), requirements + decision coverage gates passed
+Last activity: 2026-07-29 — Phase 41 planning complete
 
 **Milestone shape:**
 

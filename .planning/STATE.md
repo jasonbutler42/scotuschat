@@ -5,8 +5,8 @@ milestone_name: Corpus Fidelity & Resolve Rework
 current_phase: 42
 current_phase_name: corpus-import-fidelity-diff-fix
 status: executing
-stopped_at: Completed 42-04-PLAN.md
-last_updated: "2026-07-30T18:32:00.406Z"
+stopped_at: "42-05 Tasks 1/2 complete; Task 3 (checkpoint:human-verify, blocking) awaiting operator confirmation of the transcript page"
+last_updated: "2026-07-30T18:56:05.676Z"
 last_activity: 2026-07-30
 last_activity_desc: Phase 42 execution started
 progress:
@@ -112,6 +112,8 @@ Full cross-milestone decision log lives in PROJECT.md's Key Decisions table. Per
 - [Phase ?]: Phase 42 Plan 03: Added CASES_FILENAME/CONVERSATIONS_FILENAME/SPEAKERS_FILENAME/UTTERANCES_FILENAME constants to pipeline/corpus/loader.py so the new diff script never hand-rolls a second copy of the four raw corpus filenames.
 - [Phase ?]: Phase 42 Plan 03: court_tenures integrity check cross-references every is_justice=True Person by last_name before falling back to Pitfall 2's timing-anomaly explanation, correctly separating a newly-discovered Person-dedup mismatch (White/Black/Clark/Douglas) from Marshall's known timing anomaly.
 - [Phase ?]: Phase 42 Plan 04: Operator disposition (D-05/D-06 batch review) approved section-hint-derive for item 1 and bench-warn-only (not bench-general) for item 2 -- side is never reassigned for Marshall's fixture row; person-identity/classification-merging work explicitly deferred to a later phase, which also governs item 8's flag-only disposition (Person-dedup mismatch: White/Black/Clark/Douglas).
+- [Phase ?]: Phase 42 Plan 05 Task 1/2: Delete-then-reimport round trip re-verified all counts against Plan 01/02's recorded baseline (arguments=166, people=343, court_tenures=123, cases term_year=1966=1, fixture utterances=480) with zero divergence; Utterance.sequence ordering proven stable (0 differences, 480 rows) across the round trip; section_hint now non-null on exactly 1/480 rows because this fixture's only real raw side transition is the single PETITIONER-side turn -- no RESPONDENT-side advocate exists in the raw advocates dict since Marshall (the real SG/respondent advocate) stays BENCH per item 2's approved bench-warn-only disposition, so the transcript page will show exactly one section-jump link, not three.
+- [Phase ?]: Phase 42 Plan 05 Task 2: Exactness cross-check against FIXTURES.md's independently-derived counts for conversation 15169 found zero divergence (9 advocates, 15 distinct speakers, 8 bench speakers, 479 turns, 2 transcripts). Imported ArgumentParticipant roster (17) = 15 raw distinct speakers minus the <INAUDIBLE> unattributed sentinel, plus 2 advocates (Hugh B. Cox, Joseph Auerbach) listed in conversations.json's advocates dict but who never speak a turn -- correct behavior, not a defect. No backfill occurred: 163 pre-existing convokit_import pipeline_runs all date to 2026-07-10, none created during this phase.
 
 ### Roadmap Evolution
 
@@ -145,9 +147,9 @@ v1.6's roadmap evolution is archived in `.planning/milestones/v1.6-ROADMAP.md`. 
 
 ## Session Continuity
 
-Last session: 2026-07-30T18:32:00.212Z
-Stopped at: Completed 42-04-PLAN.md
-Resume file: None
+Last session: 2026-07-30T18:56:05.498Z
+Stopped at: 42-05 Tasks 1/2 complete; Task 3 (checkpoint:human-verify, blocking) awaiting operator confirmation of the transcript page
+Resume file: .planning/phases/42-corpus-import-fidelity-diff-fix/42-05-PLAN.md
 
 ## Operator Next Steps
 

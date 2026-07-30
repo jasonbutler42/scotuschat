@@ -162,6 +162,19 @@ async def _run(conversation_id: str, delete_case: bool, destructive: bool) -> in
             )
             print(f"  {label}: {count_result.scalar_one()}")
 
+        # AdminJob is nullified (step 6), not deleted, so it is reported
+        # separately from DEPENDENT_MODELS' hard-delete tables -- but it
+        # must still appear in the pre-flight inventory (the docstring
+        # promises "identical inventory in both report-only and
+        # destructive mode, printed BEFORE any delete statement runs").
+        admin_job_count_result = await session.execute(
+            select(func.count()).select_from(AdminJob).where(AdminJob.argument_id == argument_id)
+        )
+        print(
+            f"  admin_jobs (argument_id set NULL, not deleted): "
+            f"{admin_job_count_result.scalar_one()}"
+        )
+
         case_ids: list[int] = []
         if delete_case:
             case_id_result = await session.execute(

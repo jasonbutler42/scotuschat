@@ -20,6 +20,16 @@ import json
 from pathlib import Path
 from typing import Iterator
 
+# Canonical ConvoKit source filenames (Phase 42 D-04/T-42-11) -- the single
+# source of truth for these four names. Any caller that needs to build a
+# corpus_dir-relative Path (e.g. scripts/diff_corpus_fixture.py) imports
+# these constants instead of hand-rolling a second copy of the literal
+# filenames, so a future rename can never silently drift between call sites.
+CASES_FILENAME = "cases.jsonl"
+CONVERSATIONS_FILENAME = "conversations.json"
+SPEAKERS_FILENAME = "speakers.json"
+UTTERANCES_FILENAME = "utterances.jsonl"
+
 
 def stream_utterances_for_conversation_ids(
     utterances_path: Path, wanted_ids: set[str]

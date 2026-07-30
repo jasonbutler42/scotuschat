@@ -905,6 +905,22 @@ async def _import_utterances(
     argument's whole utterance import.
     """
     sequence = 0
+    # D-04 (Phase 42 Task 2, section-hint-derive): tracks which side
+    # currently owns the open section, and whether a respondent section
+    # has been seen yet -- both persist across the WHOLE conversation's
+    # turns (a section can span many turns), matching parse.py's
+    # non-cascading section_hint semantics (see
+    # test_section_hint_not_cascade: exactly one utterance per section
+    # carries the hint, every later utterance in that section is null).
+    # The corpus importer has no page-by-page TOC markers to key off of --
+    # instead, a PETITIONER/RESPONDENT/AMICUS-side row whose resolved side
+    # differs from the side that opened the current section starts a new
+    # one; a PETITIONER side arriving after a respondent section has
+    # already started yields "rebuttal" rather than a second "petitioner".
+    # BENCH/UNKNOWN rows and rows with no attributable speaker never
+    # change these locals and never carry a hint.
+    current_section_side: SideEnum | None = None
+    respondent_section_started = False
     for turn in turns:
         if not isinstance(turn, dict) or "conversation_id" not in turn or turn.get("text") is None:
             counters["utterance_rows_errored"] = (
@@ -969,6 +985,8 @@ async def _import_utterances(
                         side=SideEnum.UNKNOWN,
                         person_id=None,
                         strategy=strategy,
+                        section_hint=None,  # D-04: stage directions never
+                        # carry or change a section.
                     )
                 )
                 counters["stage_direction_utterances_created"] = (
@@ -980,6 +998,36 @@ async def _import_utterances(
                 # all) -- the row's spoken text is still preserved verbatim,
                 # just with no speaker attribution, mirroring how a
                 # stage-direction row already carries no participant.
+                resolved_side = participant.side if participant else SideEnum.UNKNOWN
+
+                # D-04: derive section_hint. Only a PETITIONER/RESPONDENT/
+                # AMICUS side can open a section; BENCH, UNKNOWN, and "no
+                # attributable speaker" rows fall through with section_hint
+                # left None and current_section_side/respondent_section_
+                # started untouched (they never change the current
+                # section). A side that matches the side which already
+                # opened the current section also gets None -- this is
+                # what keeps the hint non-cascading (one row per section).
+                section_hint = None
+                if (
+                    resolved_side
+                    in (SideEnum.PETITIONER, SideEnum.RESPONDENT, SideEnum.AMICUS)
+                    and resolved_side != current_section_side
+                ):
+                    if resolved_side == SideEnum.RESPONDENT:
+                        section_hint = "respondent"
+                        respondent_section_started = True
+                    elif resolved_side == SideEnum.PETITIONER:
+                        # A petitioner side returning after a respondent
+                        # section already opened is rebuttal, not a second
+                        # "petitioner" section.
+                        section_hint = (
+                            "rebuttal" if respondent_section_started else "petitioner"
+                        )
+                    else:  # SideEnum.AMICUS
+                        section_hint = "amicus"
+                    current_section_side = resolved_side
+
                 session.add(
                     Utterance(
                         argument_id=argument_id,
@@ -990,9 +1038,10 @@ async def _import_utterances(
                         ),
                         text=row_text,  # D-18: verbatim, \n preserved
                         is_stage_direction=False,
-                        side=participant.side if participant else SideEnum.UNKNOWN,
+                        side=resolved_side,
                         person_id=participant.person_id if participant else None,
                         strategy=strategy,
+                        section_hint=section_hint,
                     )
                 )
                 counters["utterances_created"] = (

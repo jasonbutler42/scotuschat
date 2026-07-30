@@ -153,6 +153,60 @@ The operator reviews every item below in one pass (D-05/D-06) and approves, adju
 
 8. **NEW FINDING -- Person-dedup mismatch between the two justice-import paths, affecting 4 of this fixture's 6 bench participants.** The court_tenures integrity check found that Byron R. White, Hugo L. Black, Tom C. Clark, and William O. Douglas -- all sitting Justices on 1967-01-09 -- each resolve via this fixture's corpus import to a Person row with **zero** `CourtTenure` rows, while a **separate** Person row already exists for each of them (created by `import_justices_csv.py`, with their full first/middle names spelled out, e.g. "Byron Raymond White") that **does** have a `CourtTenure` row covering the argued date. `_resolve_person`'s dedup keys on an exact `Person.full_name` string match; the speaker registry's abbreviated name (e.g. "Byron R. White") never matches the CSV-imported justice's fuller name (e.g. "Byron Raymond White"), so the corpus importer creates a brand-new, duplicate Person row instead of reusing the existing justice. This is **not** the timing anomaly Pitfall 2 anticipated (Marshall's case) -- it is a distinct, more foundational Person-dedup gap that would recur for any justice whose speaker-registry name and CSV name differ this way. Proposed classification: **real defect candidate** (Person dedup should also try a name-normalization/fuzzy match, or a speaker-registry-to-justice cross-reference, before falling back to creating a new row) -- presented neutrally for the operator's review, since a general fix here also protects any future full-corpus backfill.
 
+## Disposition (D-05/D-06 operator review, recorded 2026-07-30)
+
+The operator reviewed all 8 numbered Review Gate items in one batch before any importer
+code was touched. Recorded verbatim below.
+
+1. **`Utterance.section_hint` never populated.** **Approved as real defect.** Option chosen:
+   `section-hint-derive`. Implemented in `_import_utterances` (Plan 04 Task 2) with
+   non-cascading petitioner/respondent/rebuttal/amicus semantics matching `parse.py`'s
+   precedent.
+
+2. **`j__thurgood_marshall` resolves to BENCH nine months before his tenure begins.**
+   **Approved as real defect, option `bench-warn-only`.** The operator's own words: "This
+   won't be common but this is a perfect situation to address. Ideally, someone who has been
+   on both sides of the bench should resolve to the same person but for now, I'm okay with
+   them being two separate entries. Defer resolving them into the same person until a later
+   phase." Applied to item 2: the operator does not want `side` reassigned for this
+   per-appearance mismatch -- that felt adjacent to the person-identity/classification-merging
+   work they explicitly want deferred. Scope is strictly visibility: a tenure-coverage check, a
+   new `bench_tenure_mismatch` summary counter, and a warning naming the speaker id and both
+   dates. `ArgumentParticipant.side` for Marshall's row remains BENCH -- no behavior change.
+   (An earlier round of operator feedback described item 8's duplicate-Person mechanism while
+   discussing this item; once the two findings were distinguished, `bench-warn-only` was
+   confirmed for item 2 specifically.)
+
+3. **`url`/`adv_sides_inferred`/`known_respondent_adv`/per-advocate `role` dropped before the
+   allowlist.** **Approved as proposed** -- schema-absent/low-urgency documentation exclusion
+   for all four. No code change.
+
+4. **ConvoKit's per-turn `id`/`meta.start_times`/`meta.stop_times`/`meta.timestamp`/`reply_to`
+   dropped.** **Approved as proposed** -- schema-absent documentation exclusion. No code
+   change.
+
+5. **`extract_conversation_fields`'s dead `conversation_id` key.** **Approved as proposed** --
+   documentation/cleanup note, not a fidelity defect. No code change.
+
+6. **`is_eq_divided` outcome-adjacent but not in `FORBIDDEN_FIELDS`.** **Approved as
+   proposed** -- documentation-completeness note added to `apolitical.py`'s module docstring
+   (Plan 04 Task 3). `is_eq_divided` is NOT added to `FORBIDDEN_FIELDS`; neither extractor's
+   returned keys changed.
+
+7. **court_tenures integrity findings flagged, not fixed (D-03).** **Approved as proposed** --
+   flag-only policy confirmed, ownership named as `import_justices_csv.py`. No code change
+   (governs items 2 and 8 both).
+
+8. **NEW FINDING -- Person-dedup mismatch (White/Black/Clark/Douglas duplicate Person
+   rows).** **Approved as a real-defect candidate; flagged only, fix deferred to a later
+   phase.** This is a deliberate scope decision, not a downgrade of the finding's severity: a
+   proper fix (name-normalization/fuzzy match, or a speaker-registry-to-justice
+   cross-reference, before creating a new Person row) touches every justice in the corpus and
+   deserves its own research/plan cycle rather than an improvised mid-checkpoint fix. No code
+   change in this plan. The operator's guidance quoted under item 2 applies here directly:
+   they are okay with the duplicate Person rows existing as two separate entries for now, and
+   want the merge deferred to a later phase.
+
 ## Out of Scope
 
 The fixture's opening turn (`15169__0_000`) names six consolidated dockets read aloud by the Chief Justice: 642, 680, 691, 813, 814, and 815. `data/corpus/cases.jsonl` carries **no case records at all** under term 1966 for dockets 680, 813, 814, or 815, and its only docket-691 record belongs to an unrelated 1967-term case ("Rockefeller v. Wells" -- historical docket numbers recycle across October Terms). This is **upstream-missing data**, not a defect in the importer's lead-docket-only design (D-19, an already-settled Phase 29 decision) -- there is no structured companion-case data in the raw corpus for the importer to have dropped. Full-corpus backfill of any approved fix across the other ~7,800 arguments is explicitly out of scope this milestone (REQUIREMENTS.md "Out of Scope").

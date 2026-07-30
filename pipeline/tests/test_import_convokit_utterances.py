@@ -534,6 +534,305 @@ async def test_summary_prints_term_year_and_core_counts(
 
 
 @pytest.mark.asyncio
+async def test_zero_turns_produces_zero_utterances_no_crash(
+    isolated_session, tmp_path
+):
+    """A conversation with zero turns produces zero Utterance rows and
+    raises nothing (the section-derivation locals must not choke on an
+    empty turns list)."""
+    argument = await _run_and_fetch_argument(isolated_session, tmp_path, [])
+
+    rows = (
+        await isolated_session.execute(
+            select(Utterance).where(Utterance.argument_id == argument.id)
+        )
+    ).scalars().all()
+    assert rows == []
+
+
+# ===========================================================================
+# D-04 (Phase 42 Task 2): section_hint derivation, non-cascading semantics
+# ===========================================================================
+
+_CONVERSATION_SECTIONS = {
+    "9999_80": {
+        "conversation_id": "9999_80",
+        "case_id": "9999_80",
+        "advocates": {
+            "adv__pet_one": {"side": 1},
+            "adv__pet_two": {"side": 1},
+            "adv__resp_one": {"side": 0},
+            "adv__amicus_one": {"side": 2},
+        },
+    }
+}
+_CASE_SECTIONS = {
+    "id": "9999_80",
+    "docket_no": "55-80",
+    "title": "Sections v. Test",
+    "petitioner": "Sections",
+    "respondent": "Test",
+    "year": 1955,
+    "transcripts": [{"name": "Oral Argument - March 1, 1955"}],
+}
+_SPEAKERS_SECTIONS = {
+    "adv__pet_one": {"name": "Pet One", "type": "advocate"},
+    "adv__pet_two": {"name": "Pet Two", "type": "advocate"},
+    "adv__resp_one": {"name": "Resp One", "type": "advocate"},
+    "adv__amicus_one": {"name": "Amicus One", "type": "advocate"},
+    "j__bench_doe": {"name": "Bench Doe", "type": "justice"},
+}
+
+
+async def _run_sections_argument(isolated_session, tmp_path, utterances) -> Argument:
+    corpus_dir = _write_corpus_fixture(
+        tmp_path, _CONVERSATION_SECTIONS, [_CASE_SECTIONS], _SPEAKERS_SECTIONS, utterances
+    )
+    args = _args(9999, corpus_dir)
+
+    with patch(
+        "pipeline.commands.import_convokit.get_session",
+        new=_make_session_cm(isolated_session),
+    ):
+        await run_import_convokit(args)
+
+    return (
+        await isolated_session.execute(
+            select(Argument).where(Argument.oyez_transcript_id == "9999_80")
+        )
+    ).scalar_one()
+
+
+@pytest.mark.asyncio
+async def test_section_hint_petitioner_only_gets_exactly_one_hint(
+    isolated_session, tmp_path
+):
+    """A conversation whose only advocate side is PETITIONER produces
+    exactly one non-null section_hint across all its utterances (count
+    assertion, not an eyeball check)."""
+    utterances = [
+        {
+            "id": f"u{i}",
+            "conversation_id": "9999_80",
+            "speaker": "adv__pet_one",
+            "text": f"Petitioner turn {i}.",
+        }
+        for i in range(1, 4)
+    ]
+    argument = await _run_sections_argument(isolated_session, tmp_path, utterances)
+
+    rows = (
+        await isolated_session.execute(
+            select(Utterance)
+            .where(Utterance.argument_id == argument.id)
+            .order_by(Utterance.sequence)
+        )
+    ).scalars().all()
+
+    hinted = [r for r in rows if r.section_hint is not None]
+    assert len(hinted) == 1
+    assert hinted[0].section_hint == "petitioner"
+    assert hinted[0].sequence == rows[0].sequence
+
+
+@pytest.mark.asyncio
+async def test_section_hint_respondent_opens_after_petitioner(
+    isolated_session, tmp_path
+):
+    """The first RESPONDENT-side utterance after a petitioner section
+    carries section_hint="respondent"; the petitioner section's second
+    speaker carries None (still petitioner, no new section)."""
+    utterances = [
+        {
+            "id": "u1",
+            "conversation_id": "9999_80",
+            "speaker": "adv__pet_one",
+            "text": "Petitioner opens.",
+        },
+        {
+            "id": "u2",
+            "conversation_id": "9999_80",
+            "speaker": "adv__pet_two",
+            "text": "Petitioner co-counsel continues.",
+        },
+        {
+            "id": "u3",
+            "conversation_id": "9999_80",
+            "speaker": "adv__resp_one",
+            "text": "Respondent opens.",
+        },
+    ]
+    argument = await _run_sections_argument(isolated_session, tmp_path, utterances)
+
+    rows = (
+        await isolated_session.execute(
+            select(Utterance)
+            .where(Utterance.argument_id == argument.id)
+            .order_by(Utterance.sequence)
+        )
+    ).scalars().all()
+
+    assert rows[0].section_hint == "petitioner"
+    assert rows[1].section_hint is None
+    assert rows[2].section_hint == "respondent"
+
+
+@pytest.mark.asyncio
+async def test_section_hint_rebuttal_not_second_petitioner(
+    isolated_session, tmp_path
+):
+    """A return to the petitioner side after the respondent side has
+    spoken is labeled "rebuttal", not a second "petitioner" section."""
+    utterances = [
+        {
+            "id": "u1",
+            "conversation_id": "9999_80",
+            "speaker": "adv__pet_one",
+            "text": "Petitioner opens.",
+        },
+        {
+            "id": "u2",
+            "conversation_id": "9999_80",
+            "speaker": "adv__resp_one",
+            "text": "Respondent opens.",
+        },
+        {
+            "id": "u3",
+            "conversation_id": "9999_80",
+            "speaker": "adv__pet_one",
+            "text": "Petitioner returns for rebuttal.",
+        },
+    ]
+    argument = await _run_sections_argument(isolated_session, tmp_path, utterances)
+
+    rows = (
+        await isolated_session.execute(
+            select(Utterance)
+            .where(Utterance.argument_id == argument.id)
+            .order_by(Utterance.sequence)
+        )
+    ).scalars().all()
+
+    assert rows[0].section_hint == "petitioner"
+    assert rows[1].section_hint == "respondent"
+    assert rows[2].section_hint == "rebuttal"
+
+
+@pytest.mark.asyncio
+async def test_section_hint_bench_never_carries_hint_or_changes_section(
+    isolated_session, tmp_path
+):
+    """BENCH-side utterances never carry a section_hint and never change
+    the current section -- a bench turn sandwiched between two same-side
+    petitioner turns leaves the section open, so the second petitioner
+    turn still gets None, not a re-opened "petitioner" hint."""
+    utterances = [
+        {
+            "id": "u1",
+            "conversation_id": "9999_80",
+            "speaker": "adv__pet_one",
+            "text": "Petitioner opens.",
+        },
+        {
+            "id": "u2",
+            "conversation_id": "9999_80",
+            "speaker": "j__bench_doe",
+            "text": "A question from the bench.",
+        },
+        {
+            "id": "u3",
+            "conversation_id": "9999_80",
+            "speaker": "adv__pet_one",
+            "text": "Petitioner continues, still the same section.",
+        },
+    ]
+    argument = await _run_sections_argument(isolated_session, tmp_path, utterances)
+
+    rows = (
+        await isolated_session.execute(
+            select(Utterance)
+            .where(Utterance.argument_id == argument.id)
+            .order_by(Utterance.sequence)
+        )
+    ).scalars().all()
+
+    assert rows[0].section_hint == "petitioner"
+    assert rows[1].side == SideEnum.BENCH
+    assert rows[1].section_hint is None
+    assert rows[2].section_hint is None
+
+
+@pytest.mark.asyncio
+async def test_section_hint_amicus_and_full_sequence_exact_count(
+    isolated_session, tmp_path
+):
+    """A full petitioner -> respondent -> bench -> rebuttal -> amicus
+    sequence produces exactly one non-null section_hint per section
+    (count assertion), with a stage direction in the mix never counted or
+    changing the section."""
+    utterances = [
+        {
+            "id": "u1",
+            "conversation_id": "9999_80",
+            "speaker": "adv__pet_one",
+            "text": "Petitioner opens.",
+        },
+        {
+            "id": "u2",
+            "conversation_id": "9999_80",
+            "speaker": "adv__resp_one",
+            "text": "Respondent opens.",
+        },
+        {
+            "id": "u3",
+            "conversation_id": "9999_80",
+            "speaker": None,
+            "text": "(Recess)",
+        },
+        {
+            "id": "u4",
+            "conversation_id": "9999_80",
+            "speaker": "j__bench_doe",
+            "text": "A question from the bench.",
+        },
+        {
+            "id": "u5",
+            "conversation_id": "9999_80",
+            "speaker": "adv__pet_one",
+            "text": "Petitioner returns for rebuttal.",
+        },
+        {
+            "id": "u6",
+            "conversation_id": "9999_80",
+            "speaker": "adv__amicus_one",
+            "text": "Amicus is heard.",
+        },
+    ]
+    argument = await _run_sections_argument(isolated_session, tmp_path, utterances)
+
+    rows = (
+        await isolated_session.execute(
+            select(Utterance)
+            .where(Utterance.argument_id == argument.id)
+            .order_by(Utterance.sequence)
+        )
+    ).scalars().all()
+
+    hinted = [r for r in rows if r.section_hint is not None]
+    assert len(hinted) == 4
+    assert [r.section_hint for r in hinted] == [
+        "petitioner",
+        "respondent",
+        "rebuttal",
+        "amicus",
+    ]
+    # The stage-direction row never carries a hint and never counted above.
+    stage_rows = [r for r in rows if r.is_stage_direction]
+    assert len(stage_rows) == 1
+    assert stage_rows[0].section_hint is None
+
+
+@pytest.mark.asyncio
 async def test_broken_case_join_counted_as_errored_not_crashing_batch(
     isolated_session, tmp_path, capsys
 ):

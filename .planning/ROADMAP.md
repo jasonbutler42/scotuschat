@@ -179,10 +179,24 @@ Full phase details: `.planning/milestones/v1.6-ROADMAP.md`
 **Plans**: 5 plans
 
 Plans:
+**Wave 1**
+
 - [ ] 42-01-PLAN.md — Scoped single-conversation import path (`--conversation-id`), landing conversation 15169 in the dev DB (tracer)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 42-02-PLAN.md — Fixture delete-and-reimport routine, with the round trip proven against the real fixture
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 42-03-PLAN.md — Field-by-field fidelity diff generator and the durable `.planning/CORPUS-FIDELITY-DIFF.md` document (CORPUS-13)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 42-04-PLAN.md — Operator batch classification review gate (D-05/D-06) and the approved importer fixes
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
 - [ ] 42-05-PLAN.md — Post-fix delete, re-import, and re-verification against the same comparison (CORPUS-14)
 
 ### Phase 43: Dev-Only Reset to Fixture

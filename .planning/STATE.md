@@ -4,15 +4,15 @@ milestone: v1.7
 milestone_name: Corpus Fidelity & Resolve Rework
 current_phase: 42
 current_phase_name: Corpus Import Fidelity Diff & Fix
-status: planning
+status: executing
 stopped_at: Phase 42 context gathered
-last_updated: "2026-07-30T02:43:11.448Z"
+last_updated: "2026-07-30T12:33:54.516Z"
 last_activity: 2026-07-29
 last_activity_desc: Phase 41 complete, transitioned to Phase 42
 progress:
   total_phases: 5
   completed_phases: 1
-  total_plans: 3
+  total_plans: 8
   completed_plans: 3
   percent: 20
 ---
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-07-29 after starting v1.7 milestone)
 
 Phase: 42 — Corpus Import Fidelity Diff & Fix
 Plan: Not started
-Status: Ready to plan
+Status: Ready to execute
 Last activity: 2026-07-29 — Phase 41 complete, transitioned to Phase 42
 
 **Milestone shape:**

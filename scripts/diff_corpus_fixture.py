@@ -522,6 +522,7 @@ def _build_cases_rows(raw_case: dict, case_fields: dict) -> list[dict]:
 
 def _build_arguments_rows(
     conversation_id: str,
+    raw_conversation: dict,
     conversation_fields: dict,
     case_fields: dict,
     argument,
@@ -611,12 +612,20 @@ def _build_arguments_rows(
         )
     )
 
-    # win_side / votes_side -- forbidden conversation-level fields.
-    for forbidden_name in sorted(apolitical.FORBIDDEN_FIELDS):
-        if forbidden_name in ("win_side", "votes_side"):
+    # Forbidden conversation-level fields -- a complete, data-driven sweep
+    # over the raw record's own keys (mirroring _build_cases_rows' sweep
+    # over raw_case.keys()), not a hardcoded subset of the six
+    # FORBIDDEN_FIELDS names. Any of the six names actually present on
+    # THIS raw conversation record is redacted and reported here; a name
+    # not present on this particular record has no raw value to redact
+    # and is simply absent from the report, exactly as for the cases
+    # table. REDACTED is a fixed marker, never raw_conversation[raw_key]
+    # itself, so no forbidden field's raw value can leak through.
+    for raw_key in raw_conversation.keys():
+        if raw_key in apolitical.FORBIDDEN_FIELDS:
             rows.append(
                 _row(
-                    f"{forbidden_name} (conversation-level)",
+                    f"{raw_key} (conversation-level)",
                     REDACTED,
                     "(no column -- never extracted)",
                     "Dropped",
@@ -1227,6 +1236,7 @@ def _build_document(args: argparse.Namespace, raw: dict, db: dict) -> str:
 
     arguments_rows, raw_argued_date = _build_arguments_rows(
         args.conversation_id,
+        raw["raw_conversation"],
         raw["conversation_fields"],
         raw["case_fields"],
         db["argument"],

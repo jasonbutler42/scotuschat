@@ -93,6 +93,18 @@ from pipeline.db import get_session  # noqa: E402
 # a non-ASCII character.
 REDACTED = "[REDACTED -- apolitical hard constraint / not extracted]"
 
+# Fixed marker for a raw field that is dropped before it ever reaches an
+# apolitical extractor's returned dict -- i.e. not read by
+# extract_case_fields/extract_conversation_fields at all. Distinct from
+# REDACTED (which is specifically for named FORBIDDEN_FIELDS): this marker
+# covers the defense-in-depth case where a raw field is neither forbidden
+# NOR allowlisted, so its value must never be embedded in the committed
+# document even though nothing has (yet) named it a hard-constraint
+# violation (T-42-10 -- "Raw corpus dicts must NEVER be passed into ORM
+# constructors ... except through the functions defined here" implies the
+# same must-not-leak treatment for their raw values in this report, too).
+NOT_ALLOWLISTED = "[NOT SHOWN -- field not read by any apolitical extractor; not on the allowlist]"
+
 # Prefix for every non-final, operator-review-pending classification
 # (D-05/T-42-13) -- this script never emits a bare "real defect" verdict.
 PROPOSED_PREFIX = "PROPOSED -- awaiting operator review"
@@ -202,7 +214,7 @@ def _emit_table(title: str, rows: list[dict]) -> list[str]:
     return lines
 
 
-def _proposed_dropped_row(raw_field, raw_value) -> dict:
+def _proposed_dropped_row(raw_field, raw_value=None) -> dict:
     """
     A raw field that is neither in FORBIDDEN_FIELDS nor read by the
     relevant apolitical extractor -- dropped before the allowlist, with no
@@ -210,10 +222,18 @@ def _proposed_dropped_row(raw_field, raw_value) -> dict:
     section (Task 3) carries the specific proposed category for each named
     field; this script's own classification stays generic and honest about
     what it does and doesn't know.
+
+    The raw VALUE is deliberately never embedded here, regardless of
+    whether the field name happens to be forbidden today: this field was
+    dropped before it ever reached an apolitical extractor's returned
+    dict, so it is not yet known to be safe. ``raw_value`` is accepted
+    (and ignored) only so existing call sites that still pass it through
+    for context/logging keep working without a signature-shape change.
     """
+    del raw_value  # never rendered -- see docstring
     return _row(
         raw_field,
-        raw_value,
+        NOT_ALLOWLISTED,
         "(no column)",
         "Dropped",
         f"{PROPOSED_PREFIX} -- dropped before the allowlist (not in FORBIDDEN_FIELDS, "

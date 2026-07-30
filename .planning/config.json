@@ -11,7 +11,7 @@
     "nyquist_validation": true,
     "auto_advance": false,
     "_auto_chain_active": false,
-    "test_command": ".\\\\.venv\\\\Scripts\\\\python.exe -m pytest",
+    "test_command": "./.venv/Scripts/python.exe -m pytest",
     "ai_integration_phase": true,
     "pattern_mapper": true,
     "ui_phase": true,

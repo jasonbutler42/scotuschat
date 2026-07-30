@@ -423,8 +423,11 @@ _CASE_DESTINATIONS: dict[str, tuple[str, str]] = {
         "Faithful",
     ),
     "advocates": (
-        "(not persisted verbatim -- consumed transiently by the advocate-resolution loop)",
-        "Faithful",
+        "(no column -- case-level `advocates` dict is extracted by "
+        "extract_case_fields but never read anywhere; only the "
+        "CONVERSATION-level `advocates` dict, from extract_conversation_fields, "
+        "is consumed by the advocate-resolution loop)",
+        "Dropped",
     ),
     "decided_date": ("(no Case column exists)", "Dropped"),
     "citation": ("(no Case column exists)", "Dropped"),
@@ -432,6 +435,12 @@ _CASE_DESTINATIONS: dict[str, tuple[str, str]] = {
 }
 
 _CASE_SCHEMA_ABSENT = {"decided_date", "citation", "court"}
+
+# Extractor keys that are provably dead -- extracted from the raw record but
+# never consumed by any downstream code path (distinct from schema-absent,
+# where there simply is no Case column). Mirrors how the conversation-level
+# "conversation_id" dead key is already documented in _build_arguments_rows.
+_CASE_DEAD_KEYS = {"advocates"}
 
 
 def _build_cases_rows(raw_case: dict, case_fields: dict) -> list[dict]:
@@ -456,14 +465,19 @@ def _build_cases_rows(raw_case: dict, case_fields: dict) -> list[dict]:
             destination, verdict = _CASE_DESTINATIONS.get(
                 extractor_key, ("(no column)", "Dropped")
             )
-            classification = (
-                "schema-absent field" if extractor_key in _CASE_SCHEMA_ABSENT else ""
-            )
-            reason = (
-                "No Case column exists for this allowlisted field."
-                if classification
-                else ""
-            )
+            if extractor_key in _CASE_SCHEMA_ABSENT:
+                classification = "schema-absent field"
+                reason = "No Case column exists for this allowlisted field."
+            elif extractor_key in _CASE_DEAD_KEYS:
+                classification = "dead key"
+                reason = (
+                    "extract_case_fields() reads this key into its returned dict, "
+                    "but no downstream code path (import_convokit.py) ever reads "
+                    f"case_fields[{extractor_key!r}]; it is extracted and then discarded."
+                )
+            else:
+                classification = ""
+                reason = ""
             rows.append(
                 _row(
                     raw_key,

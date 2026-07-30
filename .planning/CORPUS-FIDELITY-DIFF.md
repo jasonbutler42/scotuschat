@@ -35,7 +35,7 @@ tables were generated.**
 | transcripts | [{'name': 'Oral Argument - January 09, 1967', 'url': 'https://apps.oyez.org/player/#/warren13/oral_argument_audio/15169', 'id': 15169, 'case_id': '1966_642'}... | (not persisted verbatim -- consumed transiently by Argument.argued_date via _parse_argued_date) | Faithful |  |  |
 | adv_sides_inferred | True | (no column) | Dropped | PROPOSED -- awaiting operator review -- dropped before the allowlist (not in FORBIDDEN_FIELDS, not read by the extractor); see the Review Gate section for th... | Present in the raw source but never reaches an ORM column via any code path. |
 | known_respondent_adv | False | (no column) | Dropped | PROPOSED -- awaiting operator review -- dropped before the allowlist (not in FORBIDDEN_FIELDS, not read by the extractor); see the Review Gate section for th... | Present in the raw source but never reaches an ORM column via any code path. |
-| advocates | {'Howard J. Trienens': {'id': 'howard_j_trienens', 'name': 'Howard J. Trienens', 'side': 1}, 'Lloyd N. Cutler': {'id': 'lloyd_n_cutler', 'name': 'Lloyd N. Cu... | (not persisted verbatim -- consumed transiently by the advocate-resolution loop) | Faithful |  |  |
+| advocates | {'Howard J. Trienens': {'id': 'howard_j_trienens', 'name': 'Howard J. Trienens', 'side': 1}, 'Lloyd N. Cutler': {'id': 'lloyd_n_cutler', 'name': 'Lloyd N. Cu... | (no column -- case-level `advocates` dict is extracted by extract_case_fields but never read anywhere; only the CONVERSATION-level `advocates` dict, from extract_conversation_fields, is consumed by the advocate-resolution loop) | Dropped | dead key (corrected post-review, see below) | extract_case_fields() reads this key into its returned dict, but no downstream code path (import_convokit.py) ever reads case_fields['advocates']; it is extracted and immediately discarded. |
 | win_side | [REDACTED -- apolitical hard constraint / not extracted] | (no column -- never extracted) | Dropped | apolitical allow-list exclusion | Present in apolitical.FORBIDDEN_FIELDS; value never extracted or persisted. |
 | win_side_detail | [REDACTED -- apolitical hard constraint / not extracted] | (no column -- never extracted) | Dropped | apolitical allow-list exclusion | Present in apolitical.FORBIDDEN_FIELDS; value never extracted or persisted. |
 | scdb_docket_id | [REDACTED -- apolitical hard constraint / not extracted] | (no column -- never extracted) | Dropped | apolitical allow-list exclusion | Present in apolitical.FORBIDDEN_FIELDS; value never extracted or persisted. |
@@ -153,7 +153,7 @@ fixes landed in `pipeline/commands/import_convokit.py`.
 | transcripts | [{'name': 'Oral Argument - January 09, 1967', 'url': 'https://apps.oyez.org/player/#/warren13/oral_argument_audio/15169', 'id': 15169, 'case_id': '1966_642'}... | (not persisted verbatim -- consumed transiently by Argument.argued_date via _parse_argued_date) | Faithful |  |  |
 | adv_sides_inferred | True | (no column) | Dropped | PROPOSED -- awaiting operator review -- dropped before the allowlist (not in FORBIDDEN_FIELDS, not read by the extractor); see the Review Gate section for th... | Present in the raw source but never reaches an ORM column via any code path. |
 | known_respondent_adv | False | (no column) | Dropped | PROPOSED -- awaiting operator review -- dropped before the allowlist (not in FORBIDDEN_FIELDS, not read by the extractor); see the Review Gate section for th... | Present in the raw source but never reaches an ORM column via any code path. |
-| advocates | {'Howard J. Trienens': {'id': 'howard_j_trienens', 'name': 'Howard J. Trienens', 'side': 1}, 'Lloyd N. Cutler': {'id': 'lloyd_n_cutler', 'name': 'Lloyd N. Cu... | (not persisted verbatim -- consumed transiently by the advocate-resolution loop) | Faithful |  |  |
+| advocates | {'Howard J. Trienens': {'id': 'howard_j_trienens', 'name': 'Howard J. Trienens', 'side': 1}, 'Lloyd N. Cutler': {'id': 'lloyd_n_cutler', 'name': 'Lloyd N. Cu... | (no column -- case-level `advocates` dict is extracted by extract_case_fields but never read anywhere; only the CONVERSATION-level `advocates` dict, from extract_conversation_fields, is consumed by the advocate-resolution loop) | Dropped | dead key (corrected post-review, see below) | extract_case_fields() reads this key into its returned dict, but no downstream code path (import_convokit.py) ever reads case_fields['advocates']; it is extracted and immediately discarded. |
 | win_side | [REDACTED -- apolitical hard constraint / not extracted] | (no column -- never extracted) | Dropped | apolitical allow-list exclusion | Present in apolitical.FORBIDDEN_FIELDS; value never extracted or persisted. |
 | win_side_detail | [REDACTED -- apolitical hard constraint / not extracted] | (no column -- never extracted) | Dropped | apolitical allow-list exclusion | Present in apolitical.FORBIDDEN_FIELDS; value never extracted or persisted. |
 | scdb_docket_id | [REDACTED -- apolitical hard constraint / not extracted] | (no column -- never extracted) | Dropped | apolitical allow-list exclusion | Present in apolitical.FORBIDDEN_FIELDS; value never extracted or persisted. |
@@ -482,6 +482,33 @@ Review Gate item number it closes.
 
 - **Item 8 (Person-dedup mismatch).** No code change -- flagged only, fix deferred to a later
   phase per the operator's explicit scope decision recorded in the Disposition section above.
+
+## Post-Review Correction (found by code review, after the D-05/D-06 batch review)
+
+**Item 9 (NEW, not covered by the operator's 2026-07-30 batch review above): case-level
+`advocates` was misreported as "Faithful."** `scripts/diff_corpus_fixture.py`'s
+`_CASE_DESTINATIONS["advocates"]` hardcoded a "Faithful" verdict for the raw case-level
+`advocates` field. This was factually wrong: `pipeline.corpus.apolitical.extract_case_fields`
+does extract a case-level `advocates` key, but `pipeline/commands/import_convokit.py` never
+reads it anywhere -- the advocate-resolution loop reads only the separate
+**conversation-level** `advocates` dict (a different dict, from
+`extract_conversation_fields`). The case-level `advocates` value is extracted and immediately
+discarded -- a dead key, structurally identical to item 5's conversation-level
+`conversation_id` dead key.
+
+Found and fixed at the code-review stage (`42-REVIEW.md` CR-01, commit `3b00419c`) -- **after**
+the operator's Review Gate batch review had already happened, so it was never presented as a
+numbered item and never received a disposition. The tables above (both Pre-Fix and Post-Fix)
+have been corrected in place to the accurate `Dropped`/`dead key` verdict; the raw case-level
+`advocates` dict's actual conversation-level counterpart (the one that IS consumed) is
+unaffected and still correctly shown as `Faithful` in the `arguments` section.
+
+This does not change any prior disposition -- items 1-8's dispositions and the fixes already
+applied for them are unaffected. It is presented here for the operator's awareness and,
+consistent with how item 5's structurally identical dead-key finding was disposed, is proposed
+as **documentation/cleanup note, not a fidelity defect** -- but per D-05/D-06, that
+classification is a proposal awaiting explicit operator confirmation, not something this
+correction may decide on its own.
 
 ## Out of Scope
 

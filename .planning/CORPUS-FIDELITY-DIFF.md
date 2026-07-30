@@ -326,7 +326,60 @@ trip, as CORPUS-14 requires.
 
 ## Regression Checks
 
-_(Filled in by Plan 05 Task 2 -- exactness cross-check against `.planning/FIXTURES.md`, no-backfill confirmation, and full suite health.)_
+Plan 05 Task 2 -- exactness cross-check against `.planning/FIXTURES.md`, no-backfill
+confirmation, and full suite health. All numbers recorded exactly as observed against
+the post-fix fixture (Argument id 1864) and the real dev database; none were adjusted.
+
+### Exactness (ROADMAP success criterion 4)
+
+| Check | Value | Source |
+|---|---|---|
+| Raw source turns for conversation 15169 | **479** | Volume and Roster Exactness (post-fix), streamed via `pipeline.corpus.loader` |
+| Raw turns represented by at least one Utterance row | **479** (100%) | Volume and Roster Exactness (post-fix), via `import_convokit._split_turn_into_rows` |
+| Errored utterance rows | **0** | Re-import summary line: `0 utterance rows errored` |
+| Imported Utterance row count | **480** (467 spoken + 13 stage-direction rows -- one raw turn split into 2 rows by stage-direction detection, hence 480 rows from 479 turns) | Direct query: `select count(*) from utterances where argument_id = 1864` |
+| Imported `Argument.source_docket` set | **{'642'}**, exactly the lead docket | Volume and Roster Exactness (post-fix): "Docket sets match: **True**" |
+
+**Imported participant roster, with the unattributed sentinel and the two silent-advocate exceptions named explicitly:**
+
+- Raw distinct speaker roster (turns' `speaker` field), 16 entries: `<INAUDIBLE>`, `edward_w_bourne`, `gordon_p_macdougall`, `harry_g_silleck_jr`, `howard_j_trienens`, `j__byron_r_white`, `j__earl_warren`, `j__hugo_l_black`, `j__potter_stewart`, `j__thurgood_marshall`, `j__tom_c_clark`, `j__william_j_brennan_jr`, `j__william_o_douglas`, `leon_keyserling`, `lloyd_n_cutler`, `robert_w_ginnane`.
+- **Excluded sentinel:** `<INAUDIBLE>` -- `data/corpus/speakers.json` types it `"U"`, matching `_is_unattributed_speaker_type`'s `_UNATTRIBUTED_TYPE_VALUES = {"u", "unattributed", "unknown"}` (verified directly against the raw speakers file). This is ConvoKit's own "no identifiable speaker" placeholder and correctly never produces a Person/ArgumentParticipant row (D-12 gap-closure). Removing it leaves **15** real raw distinct speakers.
+- The imported `ArgumentParticipant` roster has **17** rows, not 15 -- the two extra rows are **Hugh B. Cox** and **Joseph Auerbach**, both present in `conversations.json`'s conversation-level `advocates` dict (side code 3 -> `UNKNOWN`) as attorneys of record for this argument, but **neither ever speaks a turn** in this transcript's raw `utterances.jsonl` (they do not appear in the 16-entry raw speaker roster above). `_import_conversation`'s advocate-resolution loop iterates the `advocates` dict directly and creates an `ArgumentParticipant` row for every listed advocate regardless of whether that advocate personally spoke -- correct, intentional behavior (counsel of record who did not personally argue is a normal real-world occurrence), not an importer defect. So the precise relationship is: **imported roster (17) = raw distinct speakers minus the unattributed sentinel (15) + 2 listed-but-silent advocates (Cox, Auerbach)**, not a strict equality with the raw speaker roster alone. This is unchanged from the pre-fix document (same 17 names, same two silent advocates) -- neither approved fix touches advocate resolution.
+
+**Cross-check against `.planning/FIXTURES.md`'s independently-derived row for conversation 15169** (line 19: 9 advocates, 15 distinct speakers, 8 bench speakers, 479 turns, 2 transcripts):
+
+| Metric | FIXTURES.md (independent, full-corpus scan) | This diff (post-fix) | Divergence |
+|---|---|---|---|
+| Advocates | 9 | 9 (raw `advocates` dict entry count) | **None** |
+| Distinct speakers | 15 | 15 (16 raw speakers minus the 1 unattributed sentinel) | **None** |
+| Bench speakers | 8 | 8 (Earl Warren, Potter Stewart, Byron R. White, William J. Brennan Jr., Hugo L. Black, Tom C. Clark, Thurgood Marshall, William O. Douglas -- all BENCH-side `ArgumentParticipant` rows) | **None** |
+| Turns | 479 | 479 (raw source turns, Volume and Roster Exactness) | **None** |
+| Transcripts | 2 | 2 (`case_fields["transcripts"]` entry count, both consumed by `_parse_argued_date`) | **None** |
+
+**No divergence found** -- all five independently-derived figures agree exactly.
+
+### No backfill (ROADMAP success criterion 5)
+
+| Query | Result |
+|---|---|
+| `select count(*) from cases where term_year = 1966` | **1** |
+| `select count(*) from arguments` (total) | **166** (matches Plan 01's recorded post-import baseline) |
+| `select count(*) from pipeline_runs where strategy = 'convokit_import'` | **164** total; **163** belong to arguments other than the fixture, and every one of those 163 rows has `created_at.date() = 2026-07-10` -- all pre-existing from before this phase started (2026-07-29/30), none created during Plan 05. Only the fixture's own row (`argument_id = 1864`) was created today. |
+| Post-delete `select count(*) from arguments where oyez_transcript_id = '15169'` | **0** (confirmed immediately after the delete, before re-import) |
+
+No conversation other than 15169 was imported, and no full-term or full-corpus backfill ran during this plan.
+
+### Suite health
+
+- `./.venv/Scripts/python.exe -m pytest -q` (full suite, matching this task's own verify command): **823 passed, 5 xfailed, 4 errors** in 63.91s.
+- The 4 errors are all in `api/tests/test_phase38_people_ui_contract.py` (`test_personnames_ts_*`) -- the same pre-existing WSL/Windows Node.js path-mangling bug (`ENOENT` on `C:\workspace\scotuschat\project\workspacescotuschatprojectapi\tests\fixtures...`, a concatenated-not-joined path) first logged in `.planning/phases/42-corpus-import-fidelity-diff-fix/deferred-items.md` during Plan 02's Task 2 sanity check, and observed again during Plan 04's Task 3. `git status --porcelain pipeline api app scripts` (run immediately before this check) confirms this task modified none of those directories, so these errors predate and are unrelated to Plan 05's changes. **Not fixed here** -- out of scope per the scope-boundary rule (pre-existing, unrelated-file failures), consistent with how Plans 02 and 04 handled the identical failure.
+- Run in isolation, `api/tests -q` alone additionally shows 5 failures in `api/tests/test_speakers_service.py` (`roles.name` UniqueViolation on `"Associate Justice"`) that do **not** reproduce when the full suite runs together (`pytest -q` from the repo root) -- consistent with the order-dependent test-pollution root-cause hypothesis Plan 04 already recorded in `deferred-items.md` (a stray `Role` row surviving `api/tests/conftest.py::db_session`'s rollback depending on execution order). This task's own required gate is the full-suite `pytest -q` invocation, which does not exhibit this failure mode.
+- `pipeline/tests/ -q` alone: **226 passed, 5 xfailed** -- fully green, no code in this task's scope.
+- The suite's synthetic-fixture design (small, hand-built corpus trees in `pipeline/tests/`) cannot prove the 479-turn exactness claim against the real 15169 fixture -- that is exactly why the direct database queries and the `.planning/FIXTURES.md` cross-check above exist as this plan's actual proof.
+
+### No code changed by this task
+
+`git status --porcelain pipeline api app scripts` was run before and after this task's checks; both show no modifications from this task (only `.planning/CORPUS-FIDELITY-DIFF.md` changed, via this document edit).
 
 ## Disposition (D-05/D-06 operator review, recorded 2026-07-30)
 

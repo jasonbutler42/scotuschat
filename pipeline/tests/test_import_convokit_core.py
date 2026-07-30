@@ -25,7 +25,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from pipeline.commands.import_convokit import _import_conversation
 
@@ -47,11 +47,13 @@ from api.models.models import (
     Person,
     PipelineRun,
     SideEnum,
+    Utterance,
 )
 from pipeline.commands.import_convokit import (
     _parse_term_range,
     _resolve_and_link_participant,
     _resolve_person,
+    _resolve_scoped_conversation,
     run_import_convokit,
 )
 
@@ -202,6 +204,20 @@ _SPEAKERS = {
 
 def _args(term, corpus_dir: Path) -> argparse.Namespace:
     return argparse.Namespace(term=term, term_range=None, corpus_dir=str(corpus_dir))
+
+
+def _scoped_args(conversation_id, corpus_dir: Path) -> argparse.Namespace:
+    """
+    Phase 42 D-01: the scoped-import Namespace shape -- term/term_range
+    stay unset (None) since _resolve_scoped_conversation's caller must
+    never call _resolve_terms in scoped mode.
+    """
+    return argparse.Namespace(
+        term=None,
+        term_range=None,
+        corpus_dir=str(corpus_dir),
+        conversation_id=conversation_id,
+    )
 
 
 # ===========================================================================
@@ -1068,3 +1084,241 @@ async def test_oyez_id_matched_person_metadata_refreshes_full_name_never_touched
     assert person.id == existing_id
     assert person.full_name == "Some Other Name"  # never touched
     assert person.name_extraction_metadata["raw"] == "Some Other Name"
+
+
+# ===========================================================================
+# Phase 42 D-01: scoped single-conversation import path
+# ===========================================================================
+
+
+class TestResolveScopedConversation:
+    """_resolve_scoped_conversation -- no DB required (pure function over a
+    synthetic conversations.json path)."""
+
+    def test_returns_none_when_conversation_id_is_none(self, tmp_path):
+        path = tmp_path / "conversations.json"
+        path.write_text(json.dumps({}), encoding="utf-8")
+        args = argparse.Namespace(conversation_id=None)
+
+        assert _resolve_scoped_conversation(args, path) is None
+
+    def test_returns_none_when_namespace_lacks_attribute_entirely(self, tmp_path):
+        """The existing --term/--term-range Namespace shape (no
+        conversation_id key at all) must not raise AttributeError."""
+        path = tmp_path / "conversations.json"
+        path.write_text(json.dumps({}), encoding="utf-8")
+        args = argparse.Namespace(term=1966, term_range=None)
+
+        assert _resolve_scoped_conversation(args, path) is None
+
+    def test_raises_argument_type_error_naming_rejected_id_when_absent(self, tmp_path):
+        path = tmp_path / "conversations.json"
+        path.write_text(
+            json.dumps({"15169": {"case_id": "1966_642"}}), encoding="utf-8"
+        )
+        args = argparse.Namespace(conversation_id="99999999")
+
+        with pytest.raises(argparse.ArgumentTypeError, match="99999999"):
+            _resolve_scoped_conversation(args, path)
+
+    def test_derives_term_from_case_id_prefix(self, tmp_path):
+        path = tmp_path / "conversations.json"
+        path.write_text(
+            json.dumps({"15169": {"case_id": "1966_642"}}), encoding="utf-8"
+        )
+        args = argparse.Namespace(conversation_id="15169")
+
+        assert _resolve_scoped_conversation(args, path) == ("15169", 1966)
+
+    def test_raises_when_case_id_is_missing(self, tmp_path):
+        path = tmp_path / "conversations.json"
+        path.write_text(json.dumps({"15169": {}}), encoding="utf-8")
+        args = argparse.Namespace(conversation_id="15169")
+
+        with pytest.raises(argparse.ArgumentTypeError, match="15169"):
+            _resolve_scoped_conversation(args, path)
+
+    def test_raises_when_case_id_has_no_parseable_term_prefix(self, tmp_path):
+        path = tmp_path / "conversations.json"
+        path.write_text(
+            json.dumps({"15169": {"case_id": "not-a-term_642"}}), encoding="utf-8"
+        )
+        args = argparse.Namespace(conversation_id="15169")
+
+        with pytest.raises(argparse.ArgumentTypeError, match="15169"):
+            _resolve_scoped_conversation(args, path)
+
+
+_CONVERSATIONS_SCOPED_PAIR = {
+    "30001": {
+        "conversation_id": "30001",
+        "case_id": "9997_301",
+        "advocates": {"adv__john_smith": {"side": 1}},
+    },
+    "30002": {
+        "conversation_id": "30002",
+        "case_id": "9997_302",
+        "advocates": {"adv__jane_roe": {"side": 1}},
+    },
+}
+_CASES_SCOPED_PAIR = [
+    {
+        "id": "9997_301",
+        "docket_no": "97-301",
+        "title": "Smith v. State",
+        "petitioner": "Smith",
+        "respondent": "State",
+        "year": 9997,
+        "transcripts": [{"name": "Oral Argument - November 15, 1997"}],
+    },
+    {
+        "id": "9997_302",
+        "docket_no": "97-302",
+        "title": "Roe v. State",
+        "petitioner": "Roe",
+        "respondent": "State",
+        "year": 9997,
+        "transcripts": [{"name": "Oral Argument - November 20, 1997"}],
+    },
+]
+_SPEAKERS_SCOPED_PAIR = {
+    "adv__john_smith": {"name": "John Smith", "type": "advocate"},
+    "adv__jane_roe": {"name": "Jane Roe", "type": "advocate"},
+}
+
+
+@pytest.mark.asyncio
+async def test_scoped_import_creates_only_the_scoped_conversation(
+    isolated_session, tmp_path
+):
+    """Given two conversations in the same term, scoping to one creates
+    exactly one Argument (that one's oyez_transcript_id) -- the sibling
+    conversation produces no Argument row at all."""
+    corpus_dir = _write_corpus_fixture(
+        tmp_path, _CONVERSATIONS_SCOPED_PAIR, _CASES_SCOPED_PAIR, _SPEAKERS_SCOPED_PAIR
+    )
+    args = _scoped_args("30001", corpus_dir)
+
+    with patch(
+        "pipeline.commands.import_convokit.get_session",
+        new=_make_session_cm(isolated_session),
+    ):
+        await run_import_convokit(args)
+
+    scoped_argument = (
+        await isolated_session.execute(
+            select(Argument).where(Argument.oyez_transcript_id == "30001")
+        )
+    ).scalar_one()
+    assert scoped_argument.source_docket == "97-301"
+
+    sibling_argument = (
+        await isolated_session.execute(
+            select(Argument).where(Argument.oyez_transcript_id == "30002")
+        )
+    ).scalar_one_or_none()
+    assert sibling_argument is None
+
+
+@pytest.mark.asyncio
+async def test_scoped_import_zero_turn_conversation_creates_argument_zero_utterances(
+    isolated_session, tmp_path
+):
+    """A scoped conversation whose utterances.jsonl yields zero matching
+    turns still creates its Argument and PipelineRun rows, creates zero
+    Utterance rows, and raises nothing (empty-input edge item)."""
+    conversations = {
+        "30003": {
+            "conversation_id": "30003",
+            "case_id": "9996_400",
+            "advocates": {"adv__john_smith": {"side": 1}},
+        }
+    }
+    cases = [
+        {
+            "id": "9996_400",
+            "docket_no": "96-400",
+            "title": "Doe v. State",
+            "petitioner": "Doe",
+            "respondent": "State",
+            "year": 9996,
+            "transcripts": [{"name": "Oral Argument - November 15, 1996"}],
+        }
+    ]
+    speakers = {"adv__john_smith": {"name": "John Smith", "type": "advocate"}}
+    # _write_corpus_fixture writes an empty utterances.jsonl by default --
+    # exactly the zero-turn case this test wants.
+    corpus_dir = _write_corpus_fixture(tmp_path, conversations, cases, speakers)
+    args = _scoped_args("30003", corpus_dir)
+
+    with patch(
+        "pipeline.commands.import_convokit.get_session",
+        new=_make_session_cm(isolated_session),
+    ):
+        await run_import_convokit(args)  # must not raise
+
+    argument = (
+        await isolated_session.execute(
+            select(Argument).where(Argument.oyez_transcript_id == "30003")
+        )
+    ).scalar_one()
+
+    run = (
+        await isolated_session.execute(
+            select(PipelineRun).where(PipelineRun.argument_id == argument.id)
+        )
+    ).scalar_one()
+    assert run.strategy == "convokit_import"
+
+    utterance_count = (
+        await isolated_session.execute(
+            select(func.count())
+            .select_from(Utterance)
+            .where(Utterance.argument_id == argument.id)
+        )
+    ).scalar()
+    assert utterance_count == 0
+
+
+@pytest.mark.asyncio
+async def test_scoped_import_derives_question_number_via_next_question_number(
+    isolated_session, tmp_path
+):
+    """A docket already occupying question_number=1 (as if from the PDF
+    pipeline) does not collide with a scoped corpus import for the same
+    docket -- the scoped import lands at question_number=2, derived via
+    _next_question_number, never a hardcoded 1 (Phase 29 CR-01)."""
+    pdf_case = Case(
+        docket_number="97-301",
+        docket_number_norm="97301",
+        case_name="Smith v. State (PDF ingest)",
+        term_year=9997,
+        slug="smith-v-state-pdf-ingest",
+    )
+    isolated_session.add(pdf_case)
+    await isolated_session.flush()
+    pdf_argument = Argument(
+        source_docket="97-301",
+        question_number=1,
+        status=ArgumentStatusEnum.DRAFT,
+    )
+    isolated_session.add(pdf_argument)
+    await isolated_session.flush()
+
+    corpus_dir = _write_corpus_fixture(
+        tmp_path, _CONVERSATIONS_SCOPED_PAIR, _CASES_SCOPED_PAIR, _SPEAKERS_SCOPED_PAIR
+    )
+    args = _scoped_args("30001", corpus_dir)
+
+    with patch(
+        "pipeline.commands.import_convokit.get_session",
+        new=_make_session_cm(isolated_session),
+    ):
+        await run_import_convokit(args)
+
+    scoped_argument = (
+        await isolated_session.execute(
+            select(Argument).where(Argument.oyez_transcript_id == "30001")
+        )
+    ).scalar_one()
+    assert scoped_argument.question_number == 2

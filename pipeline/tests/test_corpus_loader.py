@@ -8,6 +8,7 @@ import json
 
 from pipeline.corpus.loader import (
     load_cases,
+    load_conversation_by_id,
     load_conversations_for_term,
     load_speakers,
     stream_utterances_for_conversation_ids,
@@ -77,6 +78,35 @@ class TestLoadConversationsForTerm:
         result = load_conversations_for_term(fixture, 1955)
 
         assert set(result.keys()) == {"1955_71", "1955_99"}
+
+
+class TestLoadConversationById:
+    def test_returns_the_record_for_a_present_id(self, tmp_path):
+        fixture = tmp_path / "conversations.json"
+        fixture.write_text(
+            json.dumps(
+                {
+                    "15169": {"case_id": "1966_642", "advocates": {}},
+                    "1955_99": {"case_id": "1955_99", "advocates": {}},
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        result = load_conversation_by_id(fixture, "15169")
+
+        assert result == {"case_id": "1966_642", "advocates": {}}
+
+    def test_returns_none_for_an_absent_id(self, tmp_path):
+        fixture = tmp_path / "conversations.json"
+        fixture.write_text(
+            json.dumps({"15169": {"case_id": "1966_642", "advocates": {}}}),
+            encoding="utf-8",
+        )
+
+        result = load_conversation_by_id(fixture, "99999999")
+
+        assert result is None
 
 
 class TestLoadSpeakers:

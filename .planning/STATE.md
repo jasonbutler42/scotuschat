@@ -3,17 +3,17 @@ gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Corpus Fidelity & Resolve Rework
 current_phase: 42
-current_phase_name: Corpus Import Fidelity Diff & Fix
+current_phase_name: corpus-import-fidelity-diff-fix
 status: executing
-stopped_at: Phase 42 context gathered
-last_updated: "2026-07-30T12:33:54.516Z"
-last_activity: 2026-07-29
-last_activity_desc: Phase 41 complete, transitioned to Phase 42
+stopped_at: Completed 42-01-PLAN.md
+last_updated: "2026-07-30T16:23:15.891Z"
+last_activity: 2026-07-30
+last_activity_desc: Phase 42 execution started
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 8
-  completed_plans: 3
+  completed_plans: 4
   percent: 20
 ---
 
@@ -24,14 +24,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-29 after starting v1.7 milestone)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** Phase 41 — canonical-corpus-fixture-selection
+**Current focus:** Phase 42 — corpus-import-fidelity-diff-fix
 
 ## Current Position
 
-Phase: 42 — Corpus Import Fidelity Diff & Fix
-Plan: Not started
+Phase: 42 (corpus-import-fidelity-diff-fix) — EXECUTING
+Plan: 2 of 5
 Status: Ready to execute
-Last activity: 2026-07-29 — Phase 41 complete, transitioned to Phase 42
+Last activity: 2026-07-30 — Phase 42 execution started
 
 **Milestone shape:**
 
@@ -80,6 +80,7 @@ Still open from earlier milestones:
 | Phase 41 P01 | 2h32m | 2 tasks | 1 files |
 | Phase 41 P02 | 9min | 2 tasks | 1 files |
 | Phase 41 P03 | 12min | 2 tasks | 1 files |
+| Phase 42 P01 | 25min | 2 tasks | 5 files |
 
 v1.5/v1.6 per-plan metrics cleared at this milestone boundary per the standard STATE.md reset; the underlying per-plan SUMMARY files remain in `.planning/milestones/v1.5-phases/` and `.planning/milestones/v1.6-phases/`.
 
@@ -102,6 +103,7 @@ Full cross-milestone decision log lives in PROJECT.md's Key Decisions table. Per
 - [Phase ?]: Phase 41 Plan 02: Recommendation confirmed as conversation 15169 (Baltimore & Ohio Railroad Co. v. United States) at 3/4 coverage, with 14969 (Shapiro v. Thompson) as the named tied runner-up, superseding RESEARCH.md's earlier 14837 pick.
 - [Phase ?]: Phase 41 Plan 02: FIXTURES.md section order deviates from the plan's literal prose listing (evidence/methodology tables moved before the final Fixture Set table) to satisfy a mechanical conflict between the plan's own gate-2 and gate-3 verify commands; no content or scope change.
 - [Phase ?]: Phase 41 Plan 03: Operator confirmed the four-fixture set as proposed (confirm-as-proposed) — complexity fixture 15169 (Baltimore & Ohio Railroad Co. v. United States) and state-variety targets 13015/18897/22372 — no substitutions made.
+- [Phase ?]: Phase 42 Plan 01: --conversation-id joins the existing --term/--term-range mutually-exclusive group rather than a bolt-on flag, so argparse enforces exactly one of the three; the scoped path derives its own October Term from the conversation's case_id and never calls _resolve_terms.
 
 ### Roadmap Evolution
 
@@ -135,9 +137,9 @@ v1.6's roadmap evolution is archived in `.planning/milestones/v1.6-ROADMAP.md`. 
 
 ## Session Continuity
 
-Last session: 2026-07-30T02:43:11.241Z
-Stopped at: Phase 42 context gathered
-Resume file: .planning/phases/42-corpus-import-fidelity-diff-fix/42-CONTEXT.md
+Last session: 2026-07-30T16:23:06.014Z
+Stopped at: Completed 42-01-PLAN.md
+Resume file: None
 
 ## Operator Next Steps
 

@@ -5,15 +5,15 @@ milestone_name: Corpus Fidelity & Resolve Rework
 current_phase: 42
 current_phase_name: corpus-import-fidelity-diff-fix
 status: executing
-stopped_at: Completed 42-03-PLAN.md
-last_updated: "2026-07-30T17:24:24.754Z"
+stopped_at: Completed 42-04-PLAN.md
+last_updated: "2026-07-30T18:32:00.406Z"
 last_activity: 2026-07-30
 last_activity_desc: Phase 42 execution started
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 8
-  completed_plans: 6
+  completed_plans: 7
   percent: 20
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-07-29 after starting v1.7 milestone)
 ## Current Position
 
 Phase: 42 (corpus-import-fidelity-diff-fix) — EXECUTING
-Plan: 4 of 5
+Plan: 5 of 5
 Status: Ready to execute
 Last activity: 2026-07-30 — Phase 42 execution started
 
@@ -83,6 +83,7 @@ Still open from earlier milestones:
 | Phase 42 P01 | 25min | 2 tasks | 5 files |
 | Phase 42 P02 | 26min | 3 tasks | 3 files |
 | Phase 42 P03 | 29min | 3 tasks | 4 files |
+| Phase 42 P04 | 38min | 3 tasks | 6 files |
 
 v1.5/v1.6 per-plan metrics cleared at this milestone boundary per the standard STATE.md reset; the underlying per-plan SUMMARY files remain in `.planning/milestones/v1.5-phases/` and `.planning/milestones/v1.6-phases/`.
 
@@ -110,6 +111,7 @@ Full cross-milestone decision log lives in PROJECT.md's Key Decisions table. Per
 - [Phase ?]: Phase 42 Plan 02: --delete-case's other-argument-link check runs strictly after the fixture's own case_arguments row is deleted, so the guard correctly counts only rows belonging to a different argument before deciding to retain or delete the case row.
 - [Phase ?]: Phase 42 Plan 03: Added CASES_FILENAME/CONVERSATIONS_FILENAME/SPEAKERS_FILENAME/UTTERANCES_FILENAME constants to pipeline/corpus/loader.py so the new diff script never hand-rolls a second copy of the four raw corpus filenames.
 - [Phase ?]: Phase 42 Plan 03: court_tenures integrity check cross-references every is_justice=True Person by last_name before falling back to Pitfall 2's timing-anomaly explanation, correctly separating a newly-discovered Person-dedup mismatch (White/Black/Clark/Douglas) from Marshall's known timing anomaly.
+- [Phase ?]: Phase 42 Plan 04: Operator disposition (D-05/D-06 batch review) approved section-hint-derive for item 1 and bench-warn-only (not bench-general) for item 2 -- side is never reassigned for Marshall's fixture row; person-identity/classification-merging work explicitly deferred to a later phase, which also governs item 8's flag-only disposition (Person-dedup mismatch: White/Black/Clark/Douglas).
 
 ### Roadmap Evolution
 
@@ -143,8 +145,8 @@ v1.6's roadmap evolution is archived in `.planning/milestones/v1.6-ROADMAP.md`. 
 
 ## Session Continuity
 
-Last session: 2026-07-30T17:24:24.529Z
-Stopped at: Completed 42-03-PLAN.md
+Last session: 2026-07-30T18:32:00.212Z
+Stopped at: Completed 42-04-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

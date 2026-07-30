@@ -176,7 +176,7 @@ Full phase details: `.planning/milestones/v1.6-ROADMAP.md`
   4. The re-imported fixture's utterance count, speaker roster, and source-docket set match the raw ConvoKit source exactly — no dropped, duplicated, or merged turns.
   5. Corpus-import behavior for arguments other than the fixture is unchanged and no full-corpus backfill is triggered.
 
-**Plans**: 3/5 plans executed
+**Plans**: 4/5 plans executed
 
 Plans:
 **Wave 1**
@@ -193,7 +193,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 42-04-PLAN.md — Operator batch classification review gate (D-05/D-06) and the approved importer fixes
+- [x] 42-04-PLAN.md — Operator batch classification review gate (D-05/D-06) and the approved importer fixes
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
@@ -294,7 +294,7 @@ Plans:
 | 40. README — how to start the local stack | v1.6 | 3/3 | Complete    | 2026-07-14 |
 | 40.1. Sanitize docket input to close path-traversal/arbitrary-file-write gap (SUPERSEDED) | v1.6 | 0/0 | Complete (reconciliation, no execution) | 2026-07-29 |
 | 41. Canonical Corpus Fixture Selection | v1.7 | 3/3 | Complete    | 2026-07-29 |
-| 42. Corpus Import Fidelity Diff & Fix | v1.7 | 3/5 | In Progress|  |
+| 42. Corpus Import Fidelity Diff & Fix | v1.7 | 4/5 | In Progress|  |
 | 43. Dev-Only Reset to Fixture | v1.7 | 0/0 | Not started | - |
 | 44. Resolve Table Rework | v1.7 | 0/0 | Not started | - |
 | 45. Deferred UI Bug Fixes | v1.7 | 0/0 | Not started | - |

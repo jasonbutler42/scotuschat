@@ -64,6 +64,22 @@ def load_conversations_for_term(conversations_path: Path, term: int) -> dict:
     }
 
 
+def load_conversation_by_id(conversations_path: Path, conversation_id: str) -> dict | None:
+    """
+    Load ``conversations_path`` (conversations.json, ~3.8MB -- safe to
+    load whole, same as ``load_conversations_for_term``) and return the raw
+    record for ``conversation_id``, or ``None`` when that key is absent.
+
+    Never raises an argparse error and never imports argparse -- CLI-flag
+    validation (e.g. turning a miss into a fail-fast error) belongs to the
+    command layer, not this loader (Phase 42 D-01).
+    """
+    with conversations_path.open("r", encoding="utf-8") as f:
+        all_conversations = json.load(f)
+
+    return all_conversations.get(conversation_id)
+
+
 def load_speakers(speakers_path: Path) -> dict:
     """
     Load ``speakers_path`` (speakers.json, ~0.6MB) fully. Keyed by

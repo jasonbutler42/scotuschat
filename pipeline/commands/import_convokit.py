@@ -58,6 +58,12 @@ Usage:
     python -m pipeline import-convokit --term 1955
     python -m pipeline import-convokit --term-range 1955-1960
     python -m pipeline import-convokit --term 1955 --corpus-dir data/corpus
+    python -m pipeline import-convokit --conversation-id 15169
+
+Phase 42 (D-01) added --conversation-id: a scoped single-conversation import
+path that derives its own October Term from the conversation's own case_id
+field (never operator-supplied), for landing exactly one conversation
+without pulling in the rest of its term as a side effect.
 """
 
 from __future__ import annotations
@@ -94,6 +100,7 @@ from pipeline.commands.resolve import normalize_label
 from pipeline.corpus import apolitical, stage_directions
 from pipeline.corpus.loader import (
     load_cases,
+    load_conversation_by_id,
     load_conversations_for_term,
     load_speakers,
     stream_utterances_for_conversation_ids,
@@ -185,6 +192,53 @@ def _resolve_terms(args) -> list[int]:
         start, end = _parse_term_range(term_range)
         return list(range(start, end + 1))
     raise argparse.ArgumentTypeError("Either --term or --term-range is required.")
+
+
+def _resolve_scoped_conversation(
+    args, conversations_path: Path
+) -> tuple[str, int] | None:
+    """
+    Resolve the optional --conversation-id flag (Phase 42 D-01) into a
+    (conversation_id, term) pair, or None when the flag is unset -- in
+    which case the caller keeps its existing --term/--term-range flow
+    untouched.
+
+    Reads the flag via getattr(args, "conversation_id", None) rather than
+    args.conversation_id so every pre-existing test Namespace (which has no
+    such attribute at all) continues to hit the None branch without an
+    AttributeError.
+
+    When --conversation-id IS set: loads the single raw conversation record
+    via load_conversation_by_id and fails fast (argparse.ArgumentTypeError,
+    naming the rejected id, mirroring _resolve_terms/_resolve_corpus_dir's
+    V5 style) when it is absent from conversations.json. Otherwise derives
+    the October Term from the record's own "case_id" field (the integer
+    before the first underscore, e.g. "1966_642" -> 1966) -- never supplied
+    by the operator -- and fails fast the same way when case_id is missing
+    or has no parseable term prefix.
+    """
+    conversation_id = getattr(args, "conversation_id", None)
+    if conversation_id is None:
+        return None
+
+    raw_conversation = load_conversation_by_id(conversations_path, conversation_id)
+    if raw_conversation is None:
+        raise argparse.ArgumentTypeError(
+            f"--conversation-id {conversation_id!r} was not found in "
+            f"{conversations_path}."
+        )
+
+    case_id = raw_conversation.get("case_id")
+    term_prefix = str(case_id).split("_", 1)[0] if case_id else ""
+    try:
+        term = int(term_prefix)
+    except ValueError:
+        raise argparse.ArgumentTypeError(
+            f"--conversation-id {conversation_id!r} has an unparseable "
+            f"case_id {case_id!r} -- cannot derive its October Term."
+        )
+
+    return conversation_id, term
 
 
 def _resolve_corpus_dir(args) -> Path:
@@ -1024,18 +1078,24 @@ async def run_import_convokit(args) -> None:
     """
     Entry point for `python -m pipeline import-convokit`.
 
-    Resolves --term/--term-range into a sorted list of October Terms,
-    validates --corpus-dir exists, loads speakers.json/cases.jsonl once
-    (global directories, not term-scoped), then for each term: loads
-    conversations.json filtered to that term, streams utterances.jsonl
-    ONCE per term (never the whole 900MB file, T-29-03) filtered to that
-    term's conversation_id set and grouped into an in-memory
-    conversation_id -> [turn, ...] index, then delegates each conversation
-    to _import_conversation (entity creation, speaker resolution, and
-    utterance import). Prints a per-term summary (D-14); a --term-range
-    spanning more than one term also prints a final rollup block.
+    Resolves --term/--term-range into a sorted list of October Terms, OR --
+    when --conversation-id is set (Phase 42 D-01) -- resolves that single
+    conversation's own derived term instead and skips _resolve_terms
+    entirely (which would otherwise raise, since neither term flag is
+    present in scoped mode). Validates --corpus-dir exists, loads
+    speakers.json/cases.jsonl once (global directories, not term-scoped),
+    then for each term: loads conversations.json filtered to that term --
+    narrowed further to just the scoped conversation id when scoped mode is
+    active, so the streaming pass below only ever touches one conversation
+    instead of the whole term -- streams utterances.jsonl ONCE per term
+    (never the whole 900MB file, T-29-03) filtered to that term's (or that
+    one scoped conversation's) conversation_id set and grouped into an
+    in-memory conversation_id -> [turn, ...] index, then delegates each
+    conversation to _import_conversation (entity creation, speaker
+    resolution, and utterance import). Prints a per-term summary (D-14); a
+    --term-range spanning more than one term also prints a final rollup
+    block.
     """
-    terms = _resolve_terms(args)
     corpus_dir = _resolve_corpus_dir(args)
 
     conversations_path = corpus_dir / "conversations.json"
@@ -1045,6 +1105,14 @@ async def run_import_convokit(args) -> None:
     for required in (conversations_path, cases_path, speakers_path, utterances_path):
         if not required.exists():
             raise FileNotFoundError(f"Required corpus file not found: {required}")
+
+    scoped = _resolve_scoped_conversation(args, conversations_path)
+    if scoped is not None:
+        scoped_conversation_id, scoped_term = scoped
+        terms = [scoped_term]
+    else:
+        scoped_conversation_id = None
+        terms = _resolve_terms(args)
 
     speakers_index = load_speakers(speakers_path)
     # load_cases already indexes by "id" (cases.jsonl's own globally-unique
@@ -1057,6 +1125,23 @@ async def run_import_convokit(args) -> None:
 
     for term in terms:
         conversations = load_conversations_for_term(conversations_path, term)
+
+        if scoped_conversation_id is not None:
+            # D-01: narrow to exactly the one scoped conversation BEFORE
+            # wanted_ids is built below, so the streaming pass over the
+            # 900MB utterances.jsonl file filters to one conversation
+            # instead of the whole term.
+            conversations = {
+                cid: conv
+                for cid, conv in conversations.items()
+                if cid == scoped_conversation_id
+            }
+            if not conversations:
+                raise argparse.ArgumentTypeError(
+                    f"--conversation-id {scoped_conversation_id!r} was not "
+                    f"found among term {term}'s conversations after "
+                    "narrowing."
+                )
 
         # ---- 29-05 Task 1: one streaming pass over utterances.jsonl per
         # term, filtered to this term's conversation_id set (Pattern 3

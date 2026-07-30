@@ -285,12 +285,14 @@ def main() -> None:
         "import-convokit",
         help="Bulk-import historical arguments from the ConvoKit supreme-corpus",
         description=(
-            "Import oral arguments for one October Term or a term range from "
-            "the Cornell ConvoKit supreme-corpus dataset, bypassing PDF/LLM "
-            "parsing. Scaffolds Case/Argument/CaseArgument/PipelineRun rows "
-            "and resolves bench/advocate speakers into Person/"
-            "ArgumentParticipant rows. Arguments land at status=draft. "
-            "Idempotent -- safe to re-run any term."
+            "Import oral arguments for one October Term, a term range, or "
+            "exactly one conversation from the Cornell ConvoKit supreme-"
+            "corpus dataset, bypassing PDF/LLM parsing. Scaffolds Case/"
+            "Argument/CaseArgument/PipelineRun rows and resolves bench/"
+            "advocate speakers into Person/ArgumentParticipant rows. "
+            "Arguments land at status=pipeline, paired with a paused "
+            "resolve admin job. Idempotent -- safe to re-run any term or "
+            "conversation."
         ),
     )
     import_convokit_term_group = import_convokit_p.add_mutually_exclusive_group(
@@ -303,6 +305,15 @@ def main() -> None:
         "--term-range",
         type=str,
         help="Inclusive October Term range, e.g. 1955-1960",
+    )
+    import_convokit_term_group.add_argument(
+        "--conversation-id",
+        type=str,
+        help=(
+            "Import exactly one ConvoKit conversation by its id (e.g. "
+            "15169). Its October Term is derived automatically from the "
+            "conversation's own case_id -- never supplied by the operator."
+        ),
     )
     import_convokit_p.add_argument(
         "--corpus-dir",

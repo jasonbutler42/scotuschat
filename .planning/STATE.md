@@ -4,17 +4,17 @@ milestone: v1.7
 milestone_name: Corpus Fidelity & Resolve Rework
 current_phase: 42
 current_phase_name: corpus-import-fidelity-diff-fix
-status: executing
-stopped_at: "42-05 Tasks 1/2 complete; Task 3 (checkpoint:human-verify, blocking) awaiting operator confirmation of the transcript page"
-last_updated: "2026-07-30T18:56:05.676Z"
+status: verifying
+stopped_at: Completed 42-05-PLAN.md (CORPUS-14 closed; operator approved Task 3 transcript-page checkpoint)
+last_updated: "2026-07-30T20:13:45.981Z"
 last_activity: 2026-07-30
 last_activity_desc: Phase 42 execution started
 progress:
   total_phases: 5
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 8
-  completed_plans: 7
-  percent: 20
+  completed_plans: 8
+  percent: 40
 ---
 
 # Project State
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-07-29 after starting v1.7 milestone)
 
 Phase: 42 (corpus-import-fidelity-diff-fix) — EXECUTING
 Plan: 5 of 5
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-07-30 — Phase 42 execution started
 
 **Milestone shape:**
@@ -84,6 +84,7 @@ Still open from earlier milestones:
 | Phase 42 P02 | 26min | 3 tasks | 3 files |
 | Phase 42 P03 | 29min | 3 tasks | 4 files |
 | Phase 42 P04 | 38min | 3 tasks | 6 files |
+| Phase 42 P05 | 35min | 3 tasks | 2 files |
 
 v1.5/v1.6 per-plan metrics cleared at this milestone boundary per the standard STATE.md reset; the underlying per-plan SUMMARY files remain in `.planning/milestones/v1.5-phases/` and `.planning/milestones/v1.6-phases/`.
 
@@ -147,9 +148,9 @@ v1.6's roadmap evolution is archived in `.planning/milestones/v1.6-ROADMAP.md`. 
 
 ## Session Continuity
 
-Last session: 2026-07-30T18:56:05.498Z
-Stopped at: 42-05 Tasks 1/2 complete; Task 3 (checkpoint:human-verify, blocking) awaiting operator confirmation of the transcript page
-Resume file: .planning/phases/42-corpus-import-fidelity-diff-fix/42-05-PLAN.md
+Last session: 2026-07-30T20:13:45.788Z
+Stopped at: Completed 42-05-PLAN.md (CORPUS-14 closed; operator approved Task 3 transcript-page checkpoint)
+Resume file: None
 
 ## Operator Next Steps
 

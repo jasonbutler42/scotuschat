@@ -74,7 +74,7 @@ from datetime import date
 from pathlib import Path
 
 from dateutil import parser as dateutil_parser
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 
 from api.domain.person_names import prepare_name_provenance, split_legacy_full_name
@@ -89,6 +89,7 @@ from api.models.models import (
     ArgumentStatusEnum,
     Case,
     CaseArgument,
+    CourtTenure,
     Person,
     PipelineRun,
     PipelineRunStatus,
@@ -578,6 +579,7 @@ async def _import_conversation(
             speakers_index=speakers_index,
             side_code=side_code,
             counters=counters,
+            argued_date=argued_date,
         )
 
     # ---- 29-05 Task 1: stream this conversation's turns into Utterance rows ----
@@ -590,6 +592,7 @@ async def _import_conversation(
         speakers_index=speakers_index,
         resolved_participants=resolved_participants,
         counters=counters,
+        argued_date=argued_date,
     )
 
     # ---- Phase 30: pause every corpus-imported argument for operator
@@ -748,6 +751,26 @@ async def _resolve_person(
     return person
 
 
+async def _check_bench_tenure_mismatch(session, person_id: int, argued_date) -> bool:
+    """
+    Phase 42 Task 3 (item 2, `bench-warn-only`): True when `person_id` has
+    NO `CourtTenure` row covering `argued_date` -- inclusive start
+    boundary (`start_date <= argued_date`), open-ended `end_date` treated
+    as still active (`end_date IS NULL OR end_date >= argued_date`).
+    Read-only: issues a single `select(CourtTenure)`, never creates,
+    updates, or deletes a `CourtTenure` row (D-03) and never touches
+    `Person.is_justice`.
+    """
+    result = await session.execute(
+        select(CourtTenure).where(
+            CourtTenure.person_id == person_id,
+            CourtTenure.start_date <= argued_date,
+            or_(CourtTenure.end_date.is_(None), CourtTenure.end_date >= argued_date),
+        )
+    )
+    return result.first() is None
+
+
 async def _resolve_and_link_participant(
     session,
     argument_id: int,
@@ -755,6 +778,7 @@ async def _resolve_and_link_participant(
     speakers_index: dict,
     side_code,
     counters: dict,
+    argued_date=None,
 ) -> ArgumentParticipant | None:
     """
     Resolve `speaker_id` to a Person and idempotently create its
@@ -772,6 +796,19 @@ async def _resolve_and_link_participant(
     identity matching (D-12) -- ambiguous/missing types are imported and
     counted in counters["speakers_flagged"] for the batch summary, never
     silently skipped.
+
+    `argued_date` (Phase 42 Task 3, Review Gate item 2, option
+    `bench-warn-only`, operator-approved 2026-07-30): when the resolved
+    speaker is typed a Justice AND `argued_date` is not None, cross-checks
+    `CourtTenure` coverage of that date via `_check_bench_tenure_mismatch`.
+    A mismatch increments `counters["bench_tenure_mismatch"]` and prints a
+    warning naming the speaker id, `argued_date`, and the earliest
+    `CourtTenure.start_date` on record for that person -- `side` is left
+    UNCHANGED (still BENCH) per the operator's warn-and-count-only
+    decision; no `ArgumentParticipant.side` reassignment happens here.
+    When `argued_date` is None (nullable column, no parseable transcript
+    date), no tenure check runs and today's behavior is unchanged --
+    trusting speakers.json's `type` outright.
     """
     speaker_meta = speakers_index.get(speaker_id)
     if speaker_meta is None:
@@ -802,6 +839,26 @@ async def _resolve_and_link_participant(
     raw_speaker_label = full_name
 
     person = await _resolve_person(session, speaker_id, full_name, is_justice, counters)
+
+    if is_justice and argued_date is not None:
+        mismatch = await _check_bench_tenure_mismatch(session, person.id, argued_date)
+        if mismatch:
+            counters["bench_tenure_mismatch"] = (
+                counters.get("bench_tenure_mismatch", 0) + 1
+            )
+            earliest_start_result = await session.execute(
+                select(func.min(CourtTenure.start_date)).where(
+                    CourtTenure.person_id == person.id
+                )
+            )
+            earliest_start = earliest_start_result.scalar()
+            print(
+                f"WARNING: speaker {speaker_id!r} (person_id={person.id}) is "
+                "typed a Justice in speakers.json but no CourtTenure row "
+                f"covers argued_date {argued_date} -- earliest CourtTenure "
+                f"start_date on record for this person is {earliest_start} "
+                "(bench_tenure_mismatch, D-03 flag-only, side unchanged)."
+            )
 
     side = SideEnum.BENCH if is_justice else _ADVOCATE_SIDE_MAP.get(side_code, SideEnum.UNKNOWN)
 
@@ -876,6 +933,7 @@ async def _import_utterances(
     speakers_index: dict,
     resolved_participants: dict[str, ArgumentParticipant],
     counters: dict,
+    argued_date=None,
 ) -> None:
     """
     Write one Utterance row per ConvoKit turn (D-18), or per split-out
@@ -884,6 +942,12 @@ async def _import_utterances(
     (transcript) order the turns were encountered (T-29-03 -- `turns` is
     already a small, term-scoped in-memory list; never the full 900MB
     file).
+
+    `argued_date` (Phase 42 Task 3, item 2) is threaded through to every
+    fresh `_resolve_and_link_participant` call this function makes below
+    (a speaker first discovered while streaming utterances, not already
+    present in `resolved_participants` from the advocates loop), so the
+    bench-tenure mismatch check runs for those speakers too.
 
     `resolved_participants` is a per-conversation speaker_id ->
     ArgumentParticipant cache shared with the caller's advocates-loop
@@ -968,6 +1032,7 @@ async def _import_utterances(
                     # inside _resolve_and_link_participant, not a side
                     # code utterance rows carry -- see _is_justice_type.
                     counters=counters,
+                    argued_date=argued_date,
                 )
             participant = resolved_participants[speaker_id]
 
@@ -1071,6 +1136,11 @@ _SUMMARY_COUNTER_KEYS: tuple[str, ...] = (
     "utterance_rows_errored",
     "docket_question_conflict",
     "unattributed_speakers_skipped",
+    # Phase 42 Task 3 (item 2, bench-warn-only, operator-approved
+    # 2026-07-30): a speaker typed a Justice in speakers.json with no
+    # CourtTenure row covering the argument's argued_date. Flag-only --
+    # side is never reassigned for this counter (D-03).
+    "bench_tenure_mismatch",
 )
 
 
@@ -1096,8 +1166,11 @@ def _print_summary(label: str, counters: dict) -> None:
     docket/question conflicts -- a distinct, clearly-labeled count of any
     residual (source_docket, question_number) collision caught at flush
     (CR-01, 29-VERIFICATION.md), never folded into conversations_errored --
-    and unattributed speakers skipped (ConvoKit's own "<INAUDIBLE>"/
-    "<UNKNOWN>" sentinels, never turned into a Person row).
+    unattributed speakers skipped (ConvoKit's own "<INAUDIBLE>"/
+    "<UNKNOWN>" sentinels, never turned into a Person row), and
+    bench-tenure mismatches (Phase 42 Task 3, item 2: a Justice-typed
+    speaker with no CourtTenure row covering argued_date -- flag-only,
+    side never reassigned).
     """
     c = counters
     print(
@@ -1114,7 +1187,8 @@ def _print_summary(label: str, counters: dict) -> None:
         f"{c.get('conversations_errored', 0)} conversations errored, "
         f"{c.get('utterance_rows_errored', 0)} utterance rows errored, "
         f"{c.get('docket_question_conflict', 0)} docket/question conflicts, "
-        f"{c.get('unattributed_speakers_skipped', 0)} unattributed speakers skipped."
+        f"{c.get('unattributed_speakers_skipped', 0)} unattributed speakers skipped, "
+        f"{c.get('bench_tenure_mismatch', 0)} bench tenure mismatches."
     )
 
 

@@ -207,6 +207,54 @@ code was touched. Recorded verbatim below.
    they are okay with the duplicate Person rows existing as two separate entries for now, and
    want the merge deferred to a later phase.
 
+## Fixes Applied (Plan 04, Tasks 2/3)
+
+Every approved code change made in response to the Disposition section above, tied to the
+Review Gate item number it closes.
+
+- **Item 1 (`section_hint`, option `section-hint-derive`).** `pipeline/commands/import_convokit.py::_import_utterances`
+  now derives `section_hint` for every spoken `Utterance` row: two locals
+  (`current_section_side`, `respondent_section_started`) are tracked across the whole
+  conversation's turns. A `PETITIONER`/`RESPONDENT`/`AMICUS`-side row whose resolved side
+  differs from the side that opened the current section starts a new one (`"petitioner"`,
+  `"respondent"`, or `"amicus"`), except that a petitioner side returning after a respondent
+  section already opened yields `"rebuttal"` instead of a second `"petitioner"`. BENCH/UNKNOWN
+  rows and rows with no attributable speaker never carry a hint and never change the section.
+  The stage-direction `Utterance(...)` constructor now passes `section_hint=None` explicitly.
+  Test coverage: `pipeline/tests/test_import_convokit_utterances.py` (6 new tests, including
+  a zero-turns case and an exact-count assertion for a full
+  petitioner/respondent/bench/rebuttal/amicus sequence).
+
+- **Item 2 (bench-versus-advocate classification, option `bench-warn-only`).**
+  `pipeline/commands/import_convokit.py::_resolve_and_link_participant` gained an `argued_date`
+  keyword parameter (default `None`), threaded from `_import_conversation`'s local
+  `argued_date` at both call sites (the advocates loop, and `_import_utterances`'s own
+  resolution call, which needed `argued_date` threaded through its own signature too). When
+  the resolved speaker is typed a Justice and `argued_date` is not null, a new read-only helper
+  `_check_bench_tenure_mismatch` runs one `select(CourtTenure)` (inclusive start boundary,
+  open-ended `end_date` treated as active) to check coverage. A mismatch increments the new
+  `bench_tenure_mismatch` counter (added to `_SUMMARY_COUNTER_KEYS` and to `_print_summary`'s
+  printed line) and prints a warning naming the speaker id, `argued_date`, and the earliest
+  `CourtTenure.start_date` on record for that person. Per the operator's warn-only choice,
+  `side` is NEVER reassigned -- Marshall's `ArgumentParticipant` row for this fixture remains
+  BENCH, unchanged from before this plan. No `Person.is_justice` write and no `CourtTenure`
+  write were added (verified by the plan's own grep acceptance criteria). Test coverage:
+  `pipeline/tests/test_import_convokit_bench_tenure.py` (4 new tests: the exact-start-date
+  inclusive-boundary case, the one-day-later mismatch case with warning/counter assertions, a
+  no-write-to-CourtTenure/is_justice assertion, and the null-`argued_date` fallback case).
+
+- **Item 3, 4, 5, 7 (schema-absent / dead-key / flag-only documentation items).** No code
+  change -- approved as proposed, recorded in the Disposition section above.
+
+- **Item 6 (`is_eq_divided` documentation-completeness).** `pipeline/corpus/apolitical.py`'s
+  module docstring gained a paragraph documenting that outcome-adjacent fields not listed in
+  `FORBIDDEN_FIELDS` (e.g. `is_eq_divided`) are still safe because both extractors are
+  positive allow-lists. `is_eq_divided` was NOT added to `FORBIDDEN_FIELDS`; neither
+  extractor's returned keys changed.
+
+- **Item 8 (Person-dedup mismatch).** No code change -- flagged only, fix deferred to a later
+  phase per the operator's explicit scope decision recorded in the Disposition section above.
+
 ## Out of Scope
 
 The fixture's opening turn (`15169__0_000`) names six consolidated dockets read aloud by the Chief Justice: 642, 680, 691, 813, 814, and 815. `data/corpus/cases.jsonl` carries **no case records at all** under term 1966 for dockets 680, 813, 814, or 815, and its only docket-691 record belongs to an unrelated 1967-term case ("Rockefeller v. Wells" -- historical docket numbers recycle across October Terms). This is **upstream-missing data**, not a defect in the importer's lead-docket-only design (D-19, an already-settled Phase 29 decision) -- there is no structured companion-case data in the raw corpus for the importer to have dropped. Full-corpus backfill of any approved fix across the other ~7,800 arguments is explicitly out of scope this milestone (REQUIREMENTS.md "Out of Scope").

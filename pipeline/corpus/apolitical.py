@@ -15,6 +15,20 @@ exceptions). Each extractor below builds an explicit, positive
 allowlisted dict by pulling named keys off the raw dict -- never
 ``dict(raw)``/``{**raw}``/a blocklist filter -- so a future field added
 to the source data can never silently pass through.
+
+Documentation-completeness note (Phase 42, Review Gate item 6,
+operator-approved 2026-07-30): ``FORBIDDEN_FIELDS`` above is not the
+only thing keeping an outcome-adjacent raw field out of the database.
+Other outcome-adjacent fields the raw corpus carries -- e.g.
+``is_eq_divided`` (whether a case was decided by an equally divided
+Court) -- are not listed in ``FORBIDDEN_FIELDS`` and are still safe,
+because ``extract_case_fields``/``extract_conversation_fields`` are
+positive allow-lists: a field is only ever read into the returned dict
+if it is named explicitly on the right-hand side of one of the
+``.get(...)`` calls below. Omission from ``FORBIDDEN_FIELDS`` is not an
+oversight for any such field -- it is inert unless and until it is also
+added to one of these extractors' returned keys, which this module's own
+docstring above already forbids doing for any outcome/vote-shaped field.
 """
 
 from __future__ import annotations

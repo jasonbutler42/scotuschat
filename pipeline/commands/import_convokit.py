@@ -230,7 +230,13 @@ def _resolve_scoped_conversation(
         )
 
     case_id = raw_conversation.get("case_id")
-    term_prefix = str(case_id).split("_", 1)[0] if case_id else ""
+    case_id_str = str(case_id) if case_id else ""
+    if "_" not in case_id_str:
+        raise argparse.ArgumentTypeError(
+            f"--conversation-id {conversation_id!r} has a case_id {case_id!r} "
+            "with no '<term>_<docket>' prefix -- cannot derive its October Term."
+        )
+    term_prefix = case_id_str.split("_", 1)[0]
     try:
         term = int(term_prefix)
     except ValueError:

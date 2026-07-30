@@ -12,6 +12,7 @@
     "auto_advance": false,
     "_auto_chain_active": false,
     "test_command": "./.venv/Scripts/python.exe -m pytest",
+    "build_command": "python3 -m compileall -q pipeline api scripts tests alembic",
     "ai_integration_phase": true,
     "pattern_mapper": true,
     "ui_phase": true,

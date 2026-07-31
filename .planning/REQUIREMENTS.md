@@ -13,8 +13,8 @@
 
 ### Dev Reset Tool
 
-- [ ] **DEVTOOL-01**: Operator can trigger a "Reset to Fixture" action from the admin panel that wipes all arguments, utterances, people, court_tenures, and argument_participants, then reseeds exactly the CORPUS-12 fixture set (all 4 arguments) plus their associated people
-- [ ] **DEVTOOL-02**: The reset action is hard-gated so it cannot execute against a real/production environment (e.g. explicit environment check), given its fully destructive nature
+- [x] **DEVTOOL-01**: Operator can trigger a "Reset to Fixture" action from the admin panel that wipes all arguments, utterances, people, court_tenures, and argument_participants, then reseeds exactly the CORPUS-12 fixture set (all 4 arguments) plus their associated people
+- [x] **DEVTOOL-02**: The reset action is hard-gated so it cannot execute against a real/production environment (e.g. explicit environment check), given its fully destructive nature
 
 ### Resolve Table Rework
 
@@ -53,8 +53,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CORPUS-12 | Phase 41 | Complete |
 | CORPUS-13 | Phase 42 | Complete |
 | CORPUS-14 | Phase 42 | Complete |
-| DEVTOOL-01 | Phase 43 | Pending |
-| DEVTOOL-02 | Phase 43 | Pending |
+| DEVTOOL-01 | Phase 43 | Complete |
+| DEVTOOL-02 | Phase 43 | Complete |
 | RESOLVE-01 | Phase 44 | Pending |
 | RESOLVE-02 | Phase 44 | Pending |
 | RESOLVE-03 | Phase 44 | Pending |

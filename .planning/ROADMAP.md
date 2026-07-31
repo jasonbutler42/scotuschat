@@ -212,7 +212,7 @@ Plans:
   4. After a reset, each fixture argument is immediately usable in the normal resolve → approve → publish workflow (its paired admin job exists) with no manual repair, and the state-variety fixtures land in their intended publish/pipeline states (not all reset to the same default state).
   5. A reset run after Phase 42's importer fixes lands the corrected field values on the complexity fixture, confirming the reseed shares the real import path rather than a stale copy of it.
 
-**Plans**: 3/4 plans executed
+**Plans**: 4/4 plans executed
 
 Plans:
 **Wave 1**
@@ -226,7 +226,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 43-04-PLAN.md — Blocking operator UAT: real-corpus reset against the dev database, and the production refusal demonstrated by actually attempting it (DEVTOOL-01, DEVTOOL-02)
+- [x] 43-04-PLAN.md — Blocking operator UAT: real-corpus reset against the dev database, and the production refusal demonstrated by actually attempting it (DEVTOOL-01, DEVTOOL-02)
 
 **UI hint**: yes
 
@@ -310,7 +310,7 @@ Plans:
 | 40.1. Sanitize docket input to close path-traversal/arbitrary-file-write gap (SUPERSEDED) | v1.6 | 0/0 | Complete (reconciliation, no execution) | 2026-07-29 |
 | 41. Canonical Corpus Fixture Selection | v1.7 | 3/3 | Complete    | 2026-07-29 |
 | 42. Corpus Import Fidelity Diff & Fix | v1.7 | 5/5 | Complete    | 2026-07-30 |
-| 43. Dev-Only Reset to Fixture | v1.7 | 3/4 | In Progress|  |
+| 43. Dev-Only Reset to Fixture | v1.7 | 4/4 | In Progress|  |
 | 44. Resolve Table Rework | v1.7 | 0/0 | Not started | - |
 | 45. Deferred UI Bug Fixes | v1.7 | 0/0 | Not started | - |
 

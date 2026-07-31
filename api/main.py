@@ -12,8 +12,10 @@ import os
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
+from api.core.config import settings
 from api.core.database import lifespan
 from api.routers import admin as admin_router
+from api.routers import admin_dev as admin_dev_router
 from api.routers import arguments as arguments_router
 from api.routers import cases as cases_router
 from api.routers import people as people_router
@@ -29,6 +31,15 @@ app.include_router(arguments_router.router)
 app.include_router(cases_router.router)
 app.include_router(people_router.router)
 app.include_router(admin_router.router)
+
+# Dev-only "Reset to Fixture" router (Phase 43, D-02/D-07): mounted ONLY when
+# settings.environment == "development" (allow-list comparison). In every
+# other environment this route is genuinely unregistered — a request to it
+# 404s because FastAPI never learned the route exists, not because a
+# handler-level check returned 403. A handler-body 403 is deliberately NOT
+# used here: a 403 would confirm to a prober that the endpoint exists at all.
+if settings.environment == "development":
+    app.include_router(admin_dev_router.router)
 
 # Serve locally-stored photos at /uploads/people/{file}.
 # The mount is added after router includes so API routes take precedence.

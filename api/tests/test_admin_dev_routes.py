@@ -1,6 +1,6 @@
 """
 End-to-end test for the dev-only "Reset to Fixture" endpoint (Phase 43,
-Plan 43-01, DEVTOOL-01).
+DEVTOOL-01).
 
 DB-dependent tests are gated by _require_test_db(): they skip the whole
 module unless TEST_DATABASE_URL is set AND the effective DATABASE_URL
@@ -11,12 +11,16 @@ database (carry-forward constraint from Phase 31).
 
 The synthetic corpus fixture mirrors
 pipeline/tests/test_import_convokit_adminjob.py's `_write_corpus_fixture`
-shape, scoped to conversation 15169 only (this plan's single fixture) rather
-than the real 900MB corpus.
+shape, extended (Plan 43-02) to all four of FIXTURE_SET's conversations —
+15169, 13015, 18897, 22372 — each with its own October-Term-prefixed
+`case_id` (matching .planning/FIXTURES.md's Term column) and distinct
+docket, so the reseed exercises the real (source_docket, question_number)
+uniqueness contract across four different dockets/terms, never the real
+900MB corpus.
 
 `corpus_dir` is a Python-level keyword argument used only by tests — the HTTP
 client's request carries no body, query parameter, or header naming a
-corpus directory at all. The corpus-dependent test reaches the synthetic
+corpus directory at all. Every corpus-dependent test reaches its synthetic
 corpus dir by patching api.routers.admin_dev.admin_dev_service.reset_to_fixture
 with a thin wrapper that forwards corpus_dir to the real service function —
 same module object as api.services.admin_dev, so this is not a redefinition
@@ -39,10 +43,65 @@ from api.models.models import (
     AdminJobStep,
     Argument,
     ArgumentStatusEnum,
+    ArgumentStatusLog,
+    CourtTenure,
     Person,
+    PipelineRun,
     Role,
     Utterance,
 )
+
+# ===========================================================================
+# Shared fixture data — the four FIXTURE_SET conversations, transcribed from
+# .planning/FIXTURES.md's Fixture Set table (case_join_id carries the real
+# October Term as its "<term>_" prefix, matching that table's Term column;
+# docket_no matches that table's Docket(s) column). Titles/speaker
+# ids/utterance text are synthetic — the reset response's case_name always
+# comes from api.services.admin_dev.FIXTURE_SET, never from these corpus
+# files, so assertions below check against FIXTURES.md's names regardless
+# of what these synthetic titles say.
+# ===========================================================================
+
+FIXTURE_CONVERSATIONS: dict[str, dict] = {
+    "15169": {
+        "case_join_id": "1966_642",
+        "docket_no": "642",
+        "title": "Baltimore & Ohio Railroad Company v. United States",
+        "petitioner": "Baltimore & Ohio Railroad Company",
+        "respondent": "United States",
+        "year": 1966,
+        "transcript_name": "Oral Argument - January 9, 1967",
+    },
+    "13015": {
+        "case_join_id": "1955_351",
+        "docket_no": "351",
+        "title": "Archawski v. Hanioti",
+        "petitioner": "Archawski",
+        "respondent": "Hanioti",
+        "year": 1955,
+        "transcript_name": "Oral Argument - March 5, 1956",
+    },
+    "18897": {
+        "case_join_id": "1985_84-1602",
+        "docket_no": "84-1602",
+        "title": "Anderson v. Liberty Lobby, Inc.",
+        "petitioner": "Anderson",
+        "respondent": "Liberty Lobby, Inc.",
+        "year": 1985,
+        "transcript_name": "Oral Argument - December 3, 1985",
+    },
+    "22372": {
+        "case_join_id": "2010_09-479",
+        "docket_no": "09-479",
+        "title": "Abbott v. United States",
+        "petitioner": "Abbott",
+        "respondent": "United States",
+        "year": 2010,
+        "transcript_name": "Oral Argument - October 4, 2010",
+    },
+}
+
+FIXTURE_ORDER = ["15169", "13015", "18897", "22372"]
 
 
 def _require_test_db() -> None:
@@ -58,58 +117,72 @@ def _require_test_db() -> None:
         )
 
 
-def _write_corpus_fixture(tmp_path: Path) -> Path:
-    """Write a small synthetic corpus_dir tree containing ONLY conversation
-    15169 (this plan's single fixture) — never the real 900MB corpus.
+def _write_corpus_fixture(tmp_path: Path, *, omit_conversation_id: str | None = None) -> Path:
+    """Write a synthetic corpus_dir tree containing all four FIXTURE_SET
+    conversations (15169, 13015, 18897, 22372) — one advocate turn and one
+    bench turn each, with per-conversation-unique speaker ids to avoid
+    unintended cross-conversation Person dedup.
 
-    conversation_id "15169" is the conversations.json dict KEY (an opaque
-    ConvoKit id, unrelated to term/docket numbering) and becomes
-    Argument.oyez_transcript_id verbatim (import_convokit.py line ~514).
-    The term-prefixed join key "1966_642" lives in the conversation's own
-    "case_id" field and joins to cases.jsonl's "id" field — NOT the same
-    string as the conversation_id (see import_convokit.py's module
-    docstring "Join key note").
+    `omit_conversation_id`, when set, drops exactly that one conversation
+    from conversations.json (its case/speakers/utterances rows are still
+    written) — used by test_reset_incomplete_reseed_raises to simulate a
+    partial reseed without inventing a fake fifth conversation id.
     """
     corpus_dir = tmp_path / "corpus"
     corpus_dir.mkdir()
 
-    conversation_id = "15169"
-    case_join_id = "1966_642"
-    conversations = {
-        conversation_id: {
-            "case_id": case_join_id,
-            "advocates": {"adv__jane_roe": {"side": 1}},
+    conversations: dict = {}
+    cases: list[dict] = []
+    speakers: dict = {}
+    utterances: list[dict] = []
+
+    for conversation_id, meta in FIXTURE_CONVERSATIONS.items():
+        advocate_key = f"adv__{conversation_id}"
+        justice_key = f"j__{conversation_id}"
+
+        if conversation_id != omit_conversation_id:
+            conversations[conversation_id] = {
+                "case_id": meta["case_join_id"],
+                "advocates": {advocate_key: {"side": 1}},
+            }
+
+        cases.append(
+            {
+                "id": meta["case_join_id"],
+                "docket_no": meta["docket_no"],
+                "title": meta["title"],
+                "petitioner": meta["petitioner"],
+                "respondent": meta["respondent"],
+                "year": meta["year"],
+                "transcripts": [
+                    {"id": conversation_id, "name": meta["transcript_name"]}
+                ],
+            }
+        )
+        speakers[advocate_key] = {
+            "name": f"Advocate {conversation_id}",
+            "type": "advocate",
         }
-    }
-    cases = [
-        {
-            "id": case_join_id,
-            "docket_no": "642",
-            "title": "Baltimore & Ohio Railroad Company v. United States",
-            "petitioner": "Baltimore & Ohio Railroad Company",
-            "respondent": "United States",
-            "year": 1966,
-            "transcripts": [{"id": conversation_id, "name": "Oral Argument - January 9, 1967"}],
+        speakers[justice_key] = {
+            "name": f"Justice {conversation_id}",
+            "type": "justice",
         }
-    ]
-    speakers = {
-        "adv__jane_roe": {"name": "Jane Roe", "type": "advocate"},
-        "j__test_justice_bench": {"name": "Test Justice Bench", "type": "justice"},
-    }
-    utterances = [
-        {
-            "id": "u1",
-            "conversation_id": conversation_id,
-            "speaker": "adv__jane_roe",
-            "text": "May it please the Court.",
-        },
-        {
-            "id": "u2",
-            "conversation_id": conversation_id,
-            "speaker": "j__test_justice_bench",
-            "text": "Counsel, what about the statute's plain text?",
-        },
-    ]
+        utterances.append(
+            {
+                "id": f"{conversation_id}-u1",
+                "conversation_id": conversation_id,
+                "speaker": advocate_key,
+                "text": "May it please the Court.",
+            }
+        )
+        utterances.append(
+            {
+                "id": f"{conversation_id}-u2",
+                "conversation_id": conversation_id,
+                "speaker": justice_key,
+                "text": "Counsel, what about the statute's plain text?",
+            }
+        )
 
     (corpus_dir / "conversations.json").write_text(
         json.dumps(conversations), encoding="utf-8"
@@ -174,6 +247,41 @@ def _admin_headers() -> dict:
     return {"X-Admin-Token": settings.admin_token}
 
 
+async def _post_reset(client, corpus_dir: Path):
+    """POST /api/admin/dev/reset-to-fixture, patching in the given synthetic
+    corpus_dir via the same corpus_dir-forwarding wrapper technique proven in
+    Plan 43-01 (never a request field)."""
+    from api.services import admin_dev as admin_dev_service
+
+    real_reset = admin_dev_service.reset_to_fixture
+
+    async def _patched(request_db):
+        return await real_reset(request_db, corpus_dir=corpus_dir)
+
+    with patch(
+        "api.routers.admin_dev.admin_dev_service.reset_to_fixture", new=_patched
+    ):
+        return await client.post(
+            "/api/admin/dev/reset-to-fixture", headers=_admin_headers()
+        )
+
+
+async def _fetch_argument(db, conversation_id: str) -> Argument:
+    db.expire_all()
+    return (
+        await db.execute(
+            select(Argument).where(Argument.oyez_transcript_id == conversation_id)
+        )
+    ).scalar_one()
+
+
+async def _fetch_admin_job(db, argument_id: int) -> AdminJob:
+    db.expire_all()
+    return (
+        await db.execute(select(AdminJob).where(AdminJob.argument_id == argument_id))
+    ).scalar_one()
+
+
 @pytest.mark.asyncio
 async def test_reset_requires_admin_token(client):
     """POST without a valid X-Admin-Token returns non-200/non-5xx and does
@@ -187,103 +295,228 @@ async def test_reset_requires_admin_token(client):
 
 @pytest.mark.asyncio
 async def test_reset_wipes_and_reseeds_fixtures(client, tmp_path, db):
-    """One HTTP POST wipes the test database and reseeds conversation 15169
-    through the real import-convokit path, landing it at status=PIPELINE with
-    a paired PAUSED/RESOLVE AdminJob (Phase 30 invariant), and leaves the
-    roles table's row count unchanged (proving roles was not truncated)."""
+    """One HTTP POST wipes the test database and reseeds all four
+    FIXTURE_SET conversations through the real import-convokit path, and
+    nothing that predated the reset survives."""
     _require_test_db()
 
-    # Seed one throwaway Person + Argument with a non-fixture oyez_transcript_id.
+    # Seed throwaway rows across every table this reset must clear. Primary
+    # keys are captured as plain ints BEFORE the reset (rather than read off
+    # the ORM objects afterward) because db.expire_all() below expires every
+    # attribute, including each object's own `id` -- re-accessing an expired
+    # PK attribute after its row has been TRUNCATEd away would attempt a
+    # synchronous lazy-reload that raises sqlalchemy.exc.MissingGreenlet in
+    # this async context.
     throwaway_person = Person(full_name="Throwaway Person")
     db.add(throwaway_person)
     await db.flush()
+    throwaway_person_id = throwaway_person.id
+
+    throwaway_tenure = CourtTenure(person_id=throwaway_person_id, office="associate")
+    db.add(throwaway_tenure)
 
     throwaway_argument = Argument(
         oyez_transcript_id="not-a-fixture-id",
         status=ArgumentStatusEnum.DRAFT,
     )
     db.add(throwaway_argument)
+    await db.flush()
+    throwaway_argument_id = throwaway_argument.id
+
+    throwaway_run = PipelineRun(argument_id=throwaway_argument_id, step="resolve")
+    db.add(throwaway_run)
+    await db.flush()
+    throwaway_run_id = throwaway_run.id
+
+    throwaway_utterance = Utterance(
+        argument_id=throwaway_argument_id,
+        pipeline_run_id=throwaway_run_id,
+        sequence=0,
+        text="Throwaway utterance.",
+        strategy="rule_based",
+    )
+    db.add(throwaway_utterance)
     await db.commit()
+    throwaway_utterance_id = throwaway_utterance.id
 
     roles_before = (
         await db.execute(select(func.count()).select_from(Role))
     ).scalar_one()
 
     corpus_dir = _write_corpus_fixture(tmp_path)
-
-    from api.services import admin_dev as admin_dev_service
-
-    real_reset = admin_dev_service.reset_to_fixture
-
-    async def _patched(request_db):
-        return await real_reset(request_db, corpus_dir=corpus_dir)
-
-    with patch(
-        "api.routers.admin_dev.admin_dev_service.reset_to_fixture", new=_patched
-    ):
-        resp = await client.post(
-            "/api/admin/dev/reset-to-fixture", headers=_admin_headers()
-        )
+    resp = await _post_reset(client, corpus_dir)
 
     assert resp.status_code == 200
     body = resp.json()
-    assert len(body["fixtures"]) == 1
-    fixture = body["fixtures"][0]
-    assert fixture["conversation_id"] == "15169"
-    assert fixture["case_name"] == "Baltimore & Ohio Railroad Company v. United States"
-    assert fixture["role"] == "Complexity"
+    assert len(body["fixtures"]) == 4
 
-    # The reset ran on its own AsyncSession, opened by the get_db dependency —
-    # this test's db fixture is a SEPARATE transaction. Use a fresh
-    # session-equivalent query via db after an expire_all so reads
-    # see the committed state, not a stale snapshot.
     db.expire_all()
 
-    # Throwaway rows are gone.
-    throwaway_arg_check = (
+    # Throwaway rows are all gone.
+    assert (
         await db.execute(
             select(Argument).where(Argument.oyez_transcript_id == "not-a-fixture-id")
         )
-    ).scalar_one_or_none()
-    assert throwaway_arg_check is None
-
-    throwaway_person_check = (
+    ).scalar_one_or_none() is None
+    assert (
         await db.execute(
             select(Person).where(Person.full_name == "Throwaway Person")
         )
-    ).scalar_one_or_none()
-    assert throwaway_person_check is None
-
-    # Exactly one Argument row, the fixture, at status=PIPELINE.
-    all_arguments = (await db.execute(select(Argument))).scalars().all()
-    assert len(all_arguments) == 1
-    argument = all_arguments[0]
-    assert argument.oyez_transcript_id == "15169"
-    assert argument.status == ArgumentStatusEnum.PIPELINE
-
-    # Exactly one paired AdminJob, PAUSED/RESOLVE (Phase 30 invariant).
-    jobs = (
+    ).scalar_one_or_none() is None
+    assert (
         await db.execute(
-            select(AdminJob).where(AdminJob.argument_id == argument.id)
+            select(CourtTenure).where(CourtTenure.person_id == throwaway_person_id)
         )
-    ).scalars().all()
-    assert len(jobs) == 1
-    assert jobs[0].status == AdminJobStatus.PAUSED
-    assert jobs[0].current_step == AdminJobStep.RESOLVE
+    ).scalar_one_or_none() is None
+    assert (
+        await db.execute(
+            select(Utterance).where(Utterance.id == throwaway_utterance_id)
+        )
+    ).scalar_one_or_none() is None
 
-    # At least one Utterance and one Person row exist.
-    utterance_count = (
-        await db.execute(select(func.count()).select_from(Utterance))
-    ).scalar_one()
-    assert utterance_count >= 1
+    # Exactly four Argument rows, the fixture set.
+    all_arguments = (await db.execute(select(Argument))).scalars().all()
+    assert len(all_arguments) == 4
+    assert {a.oyez_transcript_id for a in all_arguments} == set(FIXTURE_ORDER)
 
+    # Each fixture argument has exactly one paired AdminJob.
+    all_jobs = (await db.execute(select(AdminJob))).scalars().all()
+    assert len(all_jobs) == 4
+    job_argument_ids = {j.argument_id for j in all_jobs}
+    assert job_argument_ids == {a.id for a in all_arguments}
+
+    # The fixtures' own people were created.
     person_count = (
         await db.execute(select(func.count()).select_from(Person))
     ).scalar_one()
-    assert person_count >= 1
+    assert person_count > 0
 
     # roles table untouched — same row count before and after.
     roles_after = (
         await db.execute(select(func.count()).select_from(Role))
     ).scalar_one()
     assert roles_after == roles_before
+
+
+@pytest.mark.asyncio
+async def test_reset_response_order_is_declaration_order(client, tmp_path, db):
+    """The response's four conversation_id values, read in array order, are
+    exactly FIXTURE_ORDER — on both a first and second consecutive run
+    (Edge probe: ordering)."""
+    _require_test_db()
+
+    corpus_dir = _write_corpus_fixture(tmp_path)
+
+    resp1 = await _post_reset(client, corpus_dir)
+    assert resp1.status_code == 200
+    order1 = [f["conversation_id"] for f in resp1.json()["fixtures"]]
+    assert order1 == FIXTURE_ORDER
+
+    resp2 = await _post_reset(client, corpus_dir)
+    assert resp2.status_code == 200
+    order2 = [f["conversation_id"] for f in resp2.json()["fixtures"]]
+    assert order2 == FIXTURE_ORDER
+
+
+@pytest.mark.asyncio
+async def test_reset_is_repeatable(client, tmp_path, db):
+    """Running the reset twice in a row produces the identical four-fixture
+    end state: still exactly four arguments, no duplicates, and the same
+    per-docket question_number values as the first run (Edge probe:
+    adjacency)."""
+    _require_test_db()
+
+    corpus_dir = _write_corpus_fixture(tmp_path)
+
+    resp1 = await _post_reset(client, corpus_dir)
+    assert resp1.status_code == 200
+
+    db.expire_all()
+    first_run_numbers = {
+        a.oyez_transcript_id: (a.source_docket, a.question_number)
+        for a in (await db.execute(select(Argument))).scalars().all()
+    }
+    assert len(first_run_numbers) == 4
+    # Commit (ends this session's implicit read transaction) before the
+    # second reset's own TRUNCATE runs on a separate session/connection —
+    # Postgres's TRUNCATE takes ACCESS EXCLUSIVE, which conflicts with any
+    # still-open transaction that has touched the same table, even a bare
+    # SELECT (autobegin leaves the transaction open until commit/rollback).
+    # Leaving this uncommitted deadlocks the second POST against this
+    # fixture's own held lock.
+    await db.commit()
+
+    resp2 = await _post_reset(client, corpus_dir)
+    assert resp2.status_code == 200
+
+    db.expire_all()
+    second_run_arguments = (await db.execute(select(Argument))).scalars().all()
+    assert len(second_run_arguments) == 4
+    assert {a.oyez_transcript_id for a in second_run_arguments} == set(FIXTURE_ORDER)
+
+    seen_pairs = set()
+    for argument in second_run_arguments:
+        pair = (argument.source_docket, argument.question_number)
+        assert pair not in seen_pairs, "duplicate (source_docket, question_number) pair"
+        seen_pairs.add(pair)
+        assert pair == first_run_numbers[argument.oyez_transcript_id]
+
+
+@pytest.mark.asyncio
+async def test_reset_against_empty_database(client, tmp_path, db):
+    """A reset against an already-empty database succeeds and produces the
+    same four-fixture end state as a reset against a populated one — TRUNCATE
+    over empty tables is a no-op, not an error (Edge probe: empty)."""
+    _require_test_db()
+
+    corpus_dir = _write_corpus_fixture(tmp_path)
+
+    # Reach a known state, then TRUNCATE the wipe set directly to reach a
+    # genuinely empty database (bypassing the reset's own reseed step).
+    resp1 = await _post_reset(client, corpus_dir)
+    assert resp1.status_code == 200
+
+    from api.services.admin_dev import TRUNCATE_SQL
+    from sqlalchemy import text
+
+    await db.execute(text(TRUNCATE_SQL))
+    await db.commit()
+
+    db.expire_all()
+    empty_count = (
+        await db.execute(select(func.count()).select_from(Argument))
+    ).scalar_one()
+    assert empty_count == 0
+    # Commit before the second reset's TRUNCATE (see test_reset_is_repeatable
+    # for why an uncommitted read-only transaction here would deadlock it).
+    await db.commit()
+
+    resp2 = await _post_reset(client, corpus_dir)
+    assert resp2.status_code == 200
+    body = resp2.json()
+    assert len(body["fixtures"]) == 4
+    assert [f["conversation_id"] for f in body["fixtures"]] == FIXTURE_ORDER
+
+    db.expire_all()
+    all_arguments = (await db.execute(select(Argument))).scalars().all()
+    assert len(all_arguments) == 4
+    assert {a.oyez_transcript_id for a in all_arguments} == set(FIXTURE_ORDER)
+
+
+@pytest.mark.asyncio
+async def test_reset_incomplete_reseed_raises(client, tmp_path, db):
+    """A synthetic corpus missing one of the four conversations causes a
+    failure, not a 200 with a three-item fixtures array."""
+    _require_test_db()
+
+    corpus_dir = _write_corpus_fixture(tmp_path, omit_conversation_id="22372")
+
+    resp = await _post_reset(client, corpus_dir)
+
+    assert resp.status_code != 200
+    assert resp.status_code >= 500
+
+
+# Task 2 (state-realization) tests live below this line — see the second
+# half of this file, added once api.services.admin_dev.reset_to_fixture
+# drives the Draft/Published/Mid-pipeline fixtures to their end states.

@@ -6,7 +6,7 @@ development — settings.environment must equal "development" for
 reset_to_fixture to ever be reachable over HTTP at all (see api/main.py's
 guarded include_router call).
 
-NOT ATOMIC (RESEARCH.md Pitfall 1): the reset is three independently-
+NOT ATOMIC (RESEARCH.md Pitfall 1): the reset is several independently-
 committing units, not one transaction —
     1. the TRUNCATE runs on FastAPI's own AsyncSession (this module's `db`
        argument) and commits immediately;
@@ -19,6 +19,16 @@ Do NOT attempt to wrap the whole thing in one `async with db.begin():` —
 that session boundary never extends into pipeline's own engine. On any
 failure, the correct recovery is to re-run the whole reset: the TRUNCATE is
 idempotent-safe to re-invoke from any partial state.
+
+Performance note: run_import_convokit streams the whole
+data/corpus/utterances.jsonl file once per conversation, and each of the
+four fixtures below is in a different October Term, so a real-corpus reset
+performs four full passes over that file. Measured on the development
+machine at plan time: one pass over 900,080,134 bytes costs approximately
+20.4 seconds, so expect roughly 80-120 seconds end to end for a real-corpus
+reset. This is a dev-only tool on localhost with no proxy in the path — do
+not add a timeout, a background job, or a progress channel; the UI-SPEC's
+Running state is a deliberately blocking request with a spinner.
 """
 
 from pathlib import Path
@@ -46,22 +56,42 @@ class CorpusUnavailableError(Exception):
 
 class ResetIncompleteError(Exception):
     """Raised when a fixture's Argument row does not exist after
-    run_import_convokit returns. run_import_convokit catches and counts
-    per-conversation exceptions instead of raising (RESEARCH.md Open
-    Question 2), so success is never inferred from the mere absence of an
-    exception — this module always verifies the row exists."""
+    run_import_convokit returns, when run_import_convokit itself raises for
+    a fixture (e.g. an unresolvable/missing conversation id — RESEARCH.md
+    Open Question 2), or when a fixture landed without its required paired
+    AdminJob row. run_import_convokit catches and counts per-conversation
+    exceptions internally rather than always raising, so success is never
+    inferred from the mere absence of an exception — this module always
+    verifies both rows exist for every fixture before ever returning a
+    success response. A short `fixtures` list is never a valid 200."""
 
 
 # Single source of truth for both the reseed loop and the response
-# case_name/role values, transcribed from .planning/FIXTURES.md. Plan 43-01
-# includes only the Complexity fixture; Plan 43-02 adds the remaining three.
-# Declaration order is the response order (Complexity, then Draft, then
-# Published, then Mid-pipeline).
+# case_name/role values, transcribed from .planning/FIXTURES.md (status
+# CONFIRMED, operator-confirmed 2026-07-29) — that file is the authority if
+# these values ever disagree with this constant. Declaration order is the
+# response order (Complexity, then Draft, then Published, then
+# Mid-pipeline), and the /admin Success list renders this order verbatim.
 FIXTURE_SET: list[dict] = [
     {
         "conversation_id": "15169",
         "case_name": "Baltimore & Ohio Railroad Company v. United States",
         "role": "Complexity",
+    },
+    {
+        "conversation_id": "13015",
+        "case_name": "Archawski v. Hanioti",
+        "role": "Draft",
+    },
+    {
+        "conversation_id": "18897",
+        "case_name": "Anderson v. Liberty Lobby, Inc.",
+        "role": "Published",
+    },
+    {
+        "conversation_id": "22372",
+        "case_name": "Abbott v. United States",
+        "role": "Mid-pipeline",
     },
 ]
 
@@ -75,6 +105,14 @@ FIXTURE_SET: list[dict] = [
 # `roles` is deliberately EXCLUDED — D-01 excludes lookup tables. `roles` is
 # the parent of people.role_id / case_appearances.role_id (upstream), not a
 # child reached by CASCADE from any table in this list.
+#
+# One piece of state this reset destroys and does NOT restore: the
+# speaker_alias rows seeded independently by pipeline/commands/seed_aliases.py
+# are removed by CASCADE and are not recreated here, because the corpus
+# importer resolves people by oyez_speaker_id/full_name and never reads or
+# writes that table. Re-running the alias seeder is deliberately out of
+# scope for this reset — noted here so a later PDF-pipeline resolve step
+# starting from an empty alias table is not mistaken for a defect.
 TRUNCATE_SQL = """
     TRUNCATE TABLE
         utterances,
@@ -126,17 +164,32 @@ async def reset_to_fixture(db: AsyncSession, corpus_dir: str | Path | None = Non
     await db.execute(text(TRUNCATE_SQL))
     await db.commit()
 
-    # 3-4. Reseed each fixture through the real importer, then verify it landed.
+    # 3-4. Reseed each fixture through the real importer, then verify both
+    # its Argument row and its paired AdminJob row landed.
     fixtures: list[dict] = []
     for entry in FIXTURE_SET:
         conversation_id = entry["conversation_id"]
 
-        await run_import_convokit(
-            SimpleNamespace(
-                conversation_id=conversation_id,
-                corpus_dir=str(resolved_corpus_dir),
+        try:
+            await run_import_convokit(
+                SimpleNamespace(
+                    conversation_id=conversation_id,
+                    corpus_dir=str(resolved_corpus_dir),
+                )
             )
-        )
+        except Exception as exc:
+            # run_import_convokit's own per-conversation resilience only
+            # wraps the per-term _import_conversation call; a scoped
+            # --conversation-id lookup failure (e.g. the id is genuinely
+            # absent from conversations.json) raises BEFORE that guard, so
+            # this module must catch it here rather than let an unrelated
+            # exception type escape as an unhandled 500 (RESEARCH.md Open
+            # Question 2). Either way, a partial reseed never reports
+            # success — it always surfaces as ResetIncompleteError.
+            raise ResetIncompleteError(
+                f"Conversation {conversation_id!r} failed to import — "
+                f"reset is incomplete ({exc!r})."
+            ) from exc
 
         argument = (
             await db.execute(
@@ -154,6 +207,15 @@ async def reset_to_fixture(db: AsyncSession, corpus_dir: str | Path | None = Non
                 select(AdminJob).where(AdminJob.argument_id == argument.id)
             )
         ).scalar_one_or_none()
+        if admin_job is None:
+            # Phase 30 invariant: every corpus-imported argument must land
+            # paired with exactly one AdminJob, or it is unpublishable. A
+            # fixture missing its AdminJob is exactly as incomplete as a
+            # fixture missing its Argument row.
+            raise ResetIncompleteError(
+                f"Conversation {conversation_id!r} landed an Argument row but "
+                "no paired AdminJob — reset is incomplete."
+            )
 
         fixtures.append(
             {
@@ -162,7 +224,7 @@ async def reset_to_fixture(db: AsyncSession, corpus_dir: str | Path | None = Non
                 "role": entry["role"],
                 "argument_id": argument.id,
                 "argument_status": argument.status.value,
-                "admin_job_status": admin_job.status.value if admin_job else "",
+                "admin_job_status": admin_job.status.value,
             }
         )
 

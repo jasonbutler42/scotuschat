@@ -3,17 +3,17 @@ gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Corpus Fidelity & Resolve Rework
 current_phase: 43
-current_phase_name: Dev-Only Reset to Fixture
+current_phase_name: dev-only-reset-to-fixture
 status: executing
-stopped_at: Phase 43 UI-SPEC approved
-last_updated: "2026-07-31T13:24:30.229Z"
-last_activity: 2026-07-30
-last_activity_desc: Phase 42 complete, transitioned to Phase 43
+stopped_at: Completed 43-01-PLAN.md
+last_updated: "2026-07-31T14:14:23.375Z"
+last_activity: 2026-07-31
+last_activity_desc: Phase 43 execution started
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 12
-  completed_plans: 8
+  completed_plans: 9
   percent: 40
 ---
 
@@ -24,14 +24,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-29 after starting v1.7 milestone)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** Phase 42 — corpus-import-fidelity-diff-fix
+**Current focus:** Phase 43 — dev-only-reset-to-fixture
 
 ## Current Position
 
-Phase: 43 — Dev-Only Reset to Fixture
-Plan: Not started
+Phase: 43 (dev-only-reset-to-fixture) — EXECUTING
+Plan: 2 of 4
 Status: Ready to execute
-Last activity: 2026-07-30 — Phase 42 complete, transitioned to Phase 43
+Last activity: 2026-07-31 — Phase 43 execution started
 
 **Milestone shape:**
 
@@ -85,6 +85,7 @@ Still open from earlier milestones:
 | Phase 42 P03 | 29min | 3 tasks | 4 files |
 | Phase 42 P04 | 38min | 3 tasks | 6 files |
 | Phase 42 P05 | 35min | 3 tasks | 2 files |
+| Phase 43 P01 | 25min | 3 tasks | 8 files |
 
 v1.5/v1.6 per-plan metrics cleared at this milestone boundary per the standard STATE.md reset; the underlying per-plan SUMMARY files remain in `.planning/milestones/v1.5-phases/` and `.planning/milestones/v1.6-phases/`.
 
@@ -115,6 +116,8 @@ Full cross-milestone decision log lives in PROJECT.md's Key Decisions table. Per
 - [Phase ?]: Phase 42 Plan 04: Operator disposition (D-05/D-06 batch review) approved section-hint-derive for item 1 and bench-warn-only (not bench-general) for item 2 -- side is never reassigned for Marshall's fixture row; person-identity/classification-merging work explicitly deferred to a later phase, which also governs item 8's flag-only disposition (Person-dedup mismatch: White/Black/Clark/Douglas).
 - [Phase ?]: Phase 42 Plan 05 Task 1/2: Delete-then-reimport round trip re-verified all counts against Plan 01/02's recorded baseline (arguments=166, people=343, court_tenures=123, cases term_year=1966=1, fixture utterances=480) with zero divergence; Utterance.sequence ordering proven stable (0 differences, 480 rows) across the round trip; section_hint now non-null on exactly 1/480 rows because this fixture's only real raw side transition is the single PETITIONER-side turn -- no RESPONDENT-side advocate exists in the raw advocates dict since Marshall (the real SG/respondent advocate) stays BENCH per item 2's approved bench-warn-only disposition, so the transcript page will show exactly one section-jump link, not three.
 - [Phase ?]: Phase 42 Plan 05 Task 2: Exactness cross-check against FIXTURES.md's independently-derived counts for conversation 15169 found zero divergence (9 advocates, 15 distinct speakers, 8 bench speakers, 479 turns, 2 transcripts). Imported ArgumentParticipant roster (17) = 15 raw distinct speakers minus the <INAUDIBLE> unattributed sentinel, plus 2 advocates (Hugh B. Cox, Joseph Auerbach) listed in conversations.json's advocates dict but who never speak a turn -- correct behavior, not a defect. No backfill occurred: 163 pre-existing convokit_import pipeline_runs all date to 2026-07-10, none created during this phase.
+- [Phase ?]: Phase 43 Plan 01: environment: str given no default, placed directly after admin_token in Settings (D-02); DEVTOOL-01/02 intentionally NOT marked complete in REQUIREMENTS.md — both require the full 4-fixture reseed and frontend gate, delivered in later plans of this phase.
+- [Phase ?]: Phase 43 Plan 01: FastAPI 0.139.2 (installed) wraps include_router() results in _IncludedRouter objects with no .path attribute, breaking the flat app.routes walk RESEARCH.md's code examples assumed; fixed via a version-tolerant _all_route_paths() helper in tests/test_admin_dev_router_gate.py.
 
 ### Roadmap Evolution
 
@@ -148,9 +151,9 @@ v1.6's roadmap evolution is archived in `.planning/milestones/v1.6-ROADMAP.md`. 
 
 ## Session Continuity
 
-Last session: 2026-07-31T11:48:35.788Z
-Stopped at: Phase 43 UI-SPEC approved
-Resume file: .planning/phases/43-dev-only-reset-to-fixture/43-UI-SPEC.md
+Last session: 2026-07-31T14:14:22.956Z
+Stopped at: Completed 43-01-PLAN.md
+Resume file: None
 
 ## Operator Next Steps
 

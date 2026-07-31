@@ -131,7 +131,7 @@ Full phase details: `.planning/milestones/v1.6-ROADMAP.md`
 
 - [x] **Phase 41: Canonical Corpus Fixture Selection** - Analyze the ~7,800-argument ConvoKit dataset and get a 4-fixture set (1 structurally-complex audit fixture + 3 publish-state variants) operator-confirmed for the milestone (completed 2026-07-29)
 - [x] **Phase 42: Corpus Import Fidelity Diff & Fix** - Field-by-field diff of the fixture's raw ConvoKit source against its imported DB rows, then fix every real gap and re-import clean (completed 2026-07-30)
-- [ ] **Phase 43: Dev-Only Reset to Fixture** - Admin action that wipes all argument/people data and reseeds exactly the fixture, hard-gated against ever running outside a dev environment
+- [x] **Phase 43: Dev-Only Reset to Fixture** - Admin action that wipes all argument/people data and reseeds exactly the fixture, hard-gated against ever running outside a dev environment (completed 2026-07-31)
 - [ ] **Phase 44: Resolve Table Rework** - SEED-001's mockup-driven rework: 5 columns, segmented Bench/Advocate toggle, writable Argument Role, always-on Descriptor, consistent extracted hints, bench lock affordance
 - [ ] **Phase 45: Deferred UI Bug Fixes** - Unpublished arguments no longer leak into `/cases/` or direct URLs; popover scrollbar stays inside the card boundary
 
@@ -310,7 +310,7 @@ Plans:
 | 40.1. Sanitize docket input to close path-traversal/arbitrary-file-write gap (SUPERSEDED) | v1.6 | 0/0 | Complete (reconciliation, no execution) | 2026-07-29 |
 | 41. Canonical Corpus Fixture Selection | v1.7 | 3/3 | Complete    | 2026-07-29 |
 | 42. Corpus Import Fidelity Diff & Fix | v1.7 | 5/5 | Complete    | 2026-07-30 |
-| 43. Dev-Only Reset to Fixture | v1.7 | 4/4 | In Progress|  |
+| 43. Dev-Only Reset to Fixture | v1.7 | 4/4 | Complete    | 2026-07-31 |
 | 44. Resolve Table Rework | v1.7 | 0/0 | Not started | - |
 | 45. Deferred UI Bug Fixes | v1.7 | 0/0 | Not started | - |
 

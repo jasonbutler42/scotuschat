@@ -2,19 +2,19 @@
 gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Corpus Fidelity & Resolve Rework
-current_phase: 43
-current_phase_name: dev-only-reset-to-fixture
-status: executing
+current_phase: 44
+current_phase_name: Resolve Table Rework
+status: planning
 stopped_at: Completed 43-03-PLAN.md
-last_updated: "2026-07-31T16:32:55.437Z"
+last_updated: "2026-07-31T21:59:22.092Z"
 last_activity: 2026-07-31
-last_activity_desc: Phase 43 execution started
+last_activity_desc: Phase 43 complete, transitioned to Phase 44
 progress:
   total_phases: 5
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 12
-  completed_plans: 11
-  percent: 40
+  completed_plans: 12
+  percent: 60
 ---
 
 # Project State
@@ -28,10 +28,10 @@ See: .planning/PROJECT.md (updated 2026-07-29 after starting v1.7 milestone)
 
 ## Current Position
 
-Phase: 43 (dev-only-reset-to-fixture) — EXECUTING
-Plan: 4 of 4
-Status: Ready to execute
-Last activity: 2026-07-31 — Phase 43 execution started
+Phase: 44 — Resolve Table Rework
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-07-31 — Phase 43 complete, transitioned to Phase 44
 
 **Milestone shape:**
 

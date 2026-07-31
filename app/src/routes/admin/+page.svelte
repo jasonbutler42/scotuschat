@@ -63,10 +63,10 @@
 	);
 
 	// ──────────────────────────────────────────────────────────────────────────
-	// Dev Tools — "Reset to Fixture" (Phase 43, D-05/D-06). Five states driving
-	// one control: Idle -> Confirming -> Running -> Success | Error. Mirrors the
-	// deleteConfirming/deleteSubmitting convention from the arguments detail
-	// page's Danger Zone section.
+	// Dev-tools "Reset to Fixture" control (Phase 43, D-05/D-06). Five states
+	// driving one control: Idle -> Confirming -> Running -> Success | Error.
+	// Mirrors the deleteConfirming/deleteSubmitting convention from the
+	// arguments detail page's Danger Zone section.
 	// ──────────────────────────────────────────────────────────────────────────
 	let resetConfirming = $state(false);
 	let resetRunning = $state(false);

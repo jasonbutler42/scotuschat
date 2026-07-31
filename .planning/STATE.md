@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Corpus Fidelity & Resolve Rework
-current_phase: 42
-current_phase_name: corpus-import-fidelity-diff-fix
-status: verifying
+current_phase: 43
+current_phase_name: Dev-Only Reset to Fixture
+status: planning
 stopped_at: Completed 42-05-PLAN.md (CORPUS-14 closed; operator approved Task 3 transcript-page checkpoint)
-last_updated: "2026-07-30T20:13:45.981Z"
+last_updated: "2026-07-31T01:00:48.602Z"
 last_activity: 2026-07-30
-last_activity_desc: Phase 42 execution started
+last_activity_desc: Phase 42 complete, transitioned to Phase 43
 progress:
   total_phases: 5
   completed_phases: 2
@@ -28,10 +28,10 @@ See: .planning/PROJECT.md (updated 2026-07-29 after starting v1.7 milestone)
 
 ## Current Position
 
-Phase: 42 (corpus-import-fidelity-diff-fix) — EXECUTING
-Plan: 5 of 5
-Status: Phase complete — ready for verification
-Last activity: 2026-07-30 — Phase 42 execution started
+Phase: 43 — Dev-Only Reset to Fixture
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-07-30 — Phase 42 complete, transitioned to Phase 43
 
 **Milestone shape:**
 

@@ -5,15 +5,15 @@ milestone_name: Corpus Fidelity & Resolve Rework
 current_phase: 43
 current_phase_name: dev-only-reset-to-fixture
 status: executing
-stopped_at: Completed 43-01-PLAN.md
-last_updated: "2026-07-31T14:14:23.375Z"
+stopped_at: Completed 43-02-PLAN.md
+last_updated: "2026-07-31T15:22:58.135Z"
 last_activity: 2026-07-31
 last_activity_desc: Phase 43 execution started
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 12
-  completed_plans: 9
+  completed_plans: 10
   percent: 40
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-07-29 after starting v1.7 milestone)
 ## Current Position
 
 Phase: 43 (dev-only-reset-to-fixture) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-07-31 — Phase 43 execution started
 
@@ -86,6 +86,7 @@ Still open from earlier milestones:
 | Phase 42 P04 | 38min | 3 tasks | 6 files |
 | Phase 42 P05 | 35min | 3 tasks | 2 files |
 | Phase 43 P01 | 25min | 3 tasks | 8 files |
+| Phase 43 P02 | 45min | 2 tasks | 2 files |
 
 v1.5/v1.6 per-plan metrics cleared at this milestone boundary per the standard STATE.md reset; the underlying per-plan SUMMARY files remain in `.planning/milestones/v1.5-phases/` and `.planning/milestones/v1.6-phases/`.
 
@@ -118,6 +119,9 @@ Full cross-milestone decision log lives in PROJECT.md's Key Decisions table. Per
 - [Phase ?]: Phase 42 Plan 05 Task 2: Exactness cross-check against FIXTURES.md's independently-derived counts for conversation 15169 found zero divergence (9 advocates, 15 distinct speakers, 8 bench speakers, 479 turns, 2 transcripts). Imported ArgumentParticipant roster (17) = 15 raw distinct speakers minus the <INAUDIBLE> unattributed sentinel, plus 2 advocates (Hugh B. Cox, Joseph Auerbach) listed in conversations.json's advocates dict but who never speak a turn -- correct behavior, not a defect. No backfill occurred: 163 pre-existing convokit_import pipeline_runs all date to 2026-07-10, none created during this phase.
 - [Phase ?]: Phase 43 Plan 01: environment: str given no default, placed directly after admin_token in Settings (D-02); DEVTOOL-01/02 intentionally NOT marked complete in REQUIREMENTS.md — both require the full 4-fixture reseed and frontend gate, delivered in later plans of this phase.
 - [Phase ?]: Phase 43 Plan 01: FastAPI 0.139.2 (installed) wraps include_router() results in _IncludedRouter objects with no .path attribute, breaking the flat app.routes walk RESEARCH.md's code examples assumed; fixed via a version-tolerant _all_route_paths() helper in tests/test_admin_dev_router_gate.py.
+- [Phase ?]: Phase 43 Plan 02: FIXTURE_SET extended to all four confirmed fixtures (15169/13015/18897/22372) in FIXTURES.md declaration order; reseed loop now also checks for a paired AdminJob (not just Argument) and catches run_import_convokit exceptions, re-raising as ResetIncompleteError so a partial reseed never returns a short success list.
+- [Phase ?]: Phase 43 Plan 02: State-realization block drives 13015 to DRAFT via approve_job, 18897 to DRAFT-then-PUBLISHED via approve_job then publish_argument (order load-bearing, publish_argument's resolve-gate requires resolved_at non-null), and 22372's AdminJob to RUNNING via the one documented direct column write (D-04) -- D-03 is scoped to Argument.status, not AdminJob.status.
+- [Phase ?]: Phase 43 Plan 02: Did NOT mark DEVTOOL-01 complete in REQUIREMENTS.md -- its text requires the operator can trigger the reset from the admin panel, which ships in Plan 43-03, not this backend-only plan. Mirrors 43-01-SUMMARY's identical decision.
 
 ### Roadmap Evolution
 
@@ -151,8 +155,8 @@ v1.6's roadmap evolution is archived in `.planning/milestones/v1.6-ROADMAP.md`. 
 
 ## Session Continuity
 
-Last session: 2026-07-31T14:14:22.956Z
-Stopped at: Completed 43-01-PLAN.md
+Last session: 2026-07-31T15:22:57.918Z
+Stopped at: Completed 43-02-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

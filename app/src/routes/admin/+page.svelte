@@ -1,11 +1,22 @@
 <script lang="ts">
 	import StatCard from '$lib/components/StatCard.svelte';
+	import { enhance } from '$app/forms';
+	import { invalidateAll } from '$app/navigation';
 
-	let { data } = $props();
+	let { data, form } = $props();
 
 	// ──────────────────────────────────────────────────────────────────────────
 	// Types (mirror +page.server.ts's return shape)
 	// ──────────────────────────────────────────────────────────────────────────
+
+	interface ResetFixtureItem {
+		conversation_id: string;
+		case_name: string;
+		role: string;
+		argument_id: number;
+		argument_status: string;
+		admin_job_status: string;
+	}
 
 	interface RecentDraft {
 		id: number;
@@ -50,6 +61,16 @@
 			data.tenureGapJustices.length === 0 &&
 			data.draftsList.length === 0,
 	);
+
+	// ──────────────────────────────────────────────────────────────────────────
+	// Dev Tools — "Reset to Fixture" (Phase 43, D-05/D-06). Five states driving
+	// one control: Idle -> Confirming -> Running -> Success | Error. Mirrors the
+	// deleteConfirming/deleteSubmitting convention from the arguments detail
+	// page's Danger Zone section.
+	// ──────────────────────────────────────────────────────────────────────────
+	let resetConfirming = $state(false);
+	let resetRunning = $state(false);
+	let resetResult = $state<ResetFixtureItem[] | null>(null);
 </script>
 
 <svelte:head>
@@ -308,5 +329,207 @@
 			</h2>
 			<p style="font-size: 14px; color: #94a3b8; margin: 0;">Coming soon</p>
 		</div>
+
+		<!-- ═══════════════════════════════════════════════════════════════════
+		     DEV TOOLS (Phase 43, D-05/D-06/D-07) — last section on the page.
+		     The conditional block below is the client-side complement of a
+		     server decision (+page.server.ts's isDevelopment field), never the
+		     gate itself — this markup is genuinely absent from production HTML
+		     because the server never returns isDevelopment: true outside dev.
+		     ═══════════════════════════════════════════════════════════════════ -->
+		{#if data.isDevelopment}
+			<section
+				style="
+					background-color: #1e293b;
+					border: 1px solid #334155;
+					border-radius: 8px;
+					padding: 24px;
+					margin-top: 48px;
+				"
+			>
+				<h2 style="font-size: 20px; font-weight: 600; color: #e2e8f0; margin: 0 0 16px 0; line-height: 1.2;">
+					Dev Tools
+					<span
+						style="
+							display: inline-flex;
+							align-items: center;
+							gap: 4px;
+							border: 1px solid #fbbf24;
+							border-radius: 4px;
+							padding: 2px 8px;
+							font-size: 14px;
+							font-weight: 400;
+							color: #fbbf24;
+							background-color: #1e293b;
+							margin-left: 8px;
+							vertical-align: middle;
+						"
+					>
+						DEV ONLY
+					</span>
+				</h2>
+
+				<p style="font-size: 14px; color: #94a3b8; margin: 0 0 16px 0;">
+					Wipes every argument, utterance, person, court tenure, and participant in this
+					database, then reseeds exactly the four confirmed fixtures (see FIXTURES.md)
+					through the corpus importer.
+				</p>
+
+				{#if resetRunning}
+					<!-- Running state: replaces the button/confirm row in place. -->
+					<div style="display: flex; align-items: center; gap: 8px; min-height: 44px;">
+						<span
+							aria-hidden="true"
+							style="display: inline-block; animation: spin 1s linear infinite;"
+						>◌</span>
+						<span style="font-size: 16px; color: #94a3b8;">Resetting to fixture…</span>
+					</div>
+				{:else if resetConfirming}
+					<!-- Confirming state: two-step Yes/No, no type-to-confirm input (D-05). -->
+					<p style="font-size: 16px; color: #e2e8f0; margin: 0 0 8px 0;">
+						This will permanently delete <span style="font-weight: 600;">every</span> argument,
+						utterance, person, court tenure, and participant record — not just the fixtures.
+						It cannot be undone.
+					</p>
+					<div style="display: flex; gap: 8px;">
+						<form
+							method="POST"
+							action="?/resetToFixture"
+							style="flex: 1;"
+							use:enhance={() => {
+								resetRunning = true;
+								return async ({ result, update }) => {
+									resetRunning = false;
+									if (
+										result.type === 'success' &&
+										result.data &&
+										Array.isArray((result.data as { resetFixtures?: unknown }).resetFixtures)
+									) {
+										resetResult = (result.data as { resetFixtures: ResetFixtureItem[] })
+											.resetFixtures;
+										resetConfirming = false;
+										await invalidateAll();
+									} else {
+										// Error branch: control returns to Idle (not Confirming) and any
+										// stale success list is cleared so it never sits above a fresh error.
+										resetResult = null;
+										resetConfirming = false;
+										await update();
+									}
+								};
+							}}
+						>
+							<button
+								type="submit"
+								disabled={resetRunning}
+								style="
+									display: block;
+									width: 100%;
+									min-height: 44px;
+									background: transparent;
+									border: 1px solid #ef4444;
+									border-radius: 6px;
+									font-size: 16px;
+									font-weight: 600;
+									color: #ef4444;
+									cursor: pointer;
+								"
+							>
+								Confirm reset
+							</button>
+						</form>
+						<button
+							type="button"
+							disabled={resetRunning}
+							onclick={() => {
+								resetConfirming = false;
+							}}
+							style="
+								flex: 1;
+								min-height: 44px;
+								background: transparent;
+								border: 1px solid #334155;
+								border-radius: 6px;
+								font-size: 16px;
+								font-weight: 400;
+								color: #94a3b8;
+								cursor: pointer;
+							"
+						>
+							Cancel
+						</button>
+					</div>
+				{:else}
+					<!-- Idle state: type="button" only toggles state; it never submits. -->
+					<button
+						type="button"
+						onclick={() => {
+							resetConfirming = true;
+						}}
+						style="
+							display: block;
+							width: 100%;
+							min-height: 44px;
+							background: transparent;
+							border: 1px solid #ef4444;
+							border-radius: 6px;
+							font-size: 16px;
+							font-weight: 600;
+							color: #ef4444;
+							cursor: pointer;
+						"
+					>
+						Reset to Fixture
+					</button>
+				{/if}
+
+				{#if resetResult}
+					<!-- Success state: badge + one line per reseeded fixture, natural wrap. -->
+					<div style="margin-top: 16px;">
+						<span
+							style="
+								display: inline-flex;
+								align-items: center;
+								border: 1px solid #4ade80;
+								color: #4ade80;
+								background-color: #1e293b;
+								border-radius: 4px;
+								padding: 2px 8px;
+								font-size: 14px;
+								font-weight: 400;
+							"
+						>
+							✓ Reset complete
+						</span>
+						<div style="margin-top: 8px;">
+							{#each resetResult as fixture (fixture.conversation_id)}
+								<p style="font-size: 16px; color: #e2e8f0; margin: 0 0 4px 0;">
+									{fixture.case_name} — {fixture.role}
+								</p>
+							{/each}
+						</div>
+					</div>
+				{/if}
+
+				<!-- Error state: role=alert, same treatment as the existing form?.deleteError precedent. -->
+				{#if form?.resetError}
+					<p
+						role="alert"
+						style="color: #ef4444; font-size: 14px; font-weight: 400; margin: 8px 0 0 0;"
+					>{form.resetError}</p>
+				{/if}
+			</section>
+		{/if}
 	</div>
 </main>
+
+<style>
+	@keyframes spin {
+		from {
+			transform: rotate(0deg);
+		}
+		to {
+			transform: rotate(360deg);
+		}
+	}
+</style>

@@ -26,6 +26,10 @@ This is how the DB gets returned to a known state between corpus/resolve iterati
 
 ### Environment gate
 - **D-02:** Add a new required `environment: str` setting to `api/core/config.py`, with no default — the app fails to start without it set, exactly like `admin_token` today. The gate is allow-list, not block-list: it checks `settings.environment == "development"`, so an unset, misconfigured, or unknown value refuses by default rather than accidentally passing. This replaces the earlier idea of sniffing `DATABASE_URL` (too fragile — a dev DB hosted anywhere else, or a prod DB matching a dev-like host pattern, would break the gate silently). — **Reversibility:** costly — every deployed environment (dev, staging if any, and the DO production app) must have `ENVIRONMENT` set before this ships, or the app won't boot; rolling this out requires coordinating env-var config across all deployment targets first.
+- **D-07:** A handler-level check alone is not enough — this capability must not be *present* in a production deployment, not just refuse when called. Both the backend route and the frontend control are conditionally registered/rendered based on `environment`, not just checked inside the handler body:
+  - **Backend:** the reset endpoint's router is only mounted on the FastAPI app (in `api/main.py`, alongside the existing `app.include_router(...)` calls) when `settings.environment == "development"`. In production it is genuinely absent — a request to it 404s, it is not merely refused by a 403.
+  - **Frontend:** the new dev-tools section on `/admin` (D-06) is only rendered when the environment is development. Per Architecture Rule 2, this must be checked server-side (a `+page.server.ts`/`+layout.server.ts` load function reading a server-only env var — never exposed as `PUBLIC_`) and the section omitted from the response entirely for production, not hidden client-side with CSS/JS.
+  - Same codebase, no separate build artifact for prod vs dev — the gate is evaluated at app-startup/request-time based on the `environment` setting, consistent with D-02. — **Reversibility:** reversible — purely additive gating logic around D-02/D-06; removing it later just means the route/section become unconditional again.
 
 ### State realization for the 3 variety fixtures
 - **D-03:** Drive the DRAFT and Published target fixtures to their end states through the real service functions — the same resolve-completion path `api/services/admin_jobs.py` uses to move PIPELINE→DRAFT, and `admin_arguments.py::publish_argument` for DRAFT→PUBLISHED — never direct column writes. This guarantees `ArgumentStatusLog` rows, `resolved_at`/`published_at` timestamps, and any other side effects stay consistent with what a real operator action would produce, with no drift as the service layer evolves.
@@ -80,6 +84,8 @@ This is how the DB gets returned to a known state between corpus/resolve iterati
 ### Integration Points
 - `app/src/routes/admin/+page.svelte` — existing stat-card admin dashboard; D-06 adds a new section here rather than a new route.
 - `ArgumentStatusEnum` / `AdminJobStatus` / `AdminJobStep` enums in `api/models/models.py` (~lines 46-72) — the state values D-03/D-04 operate over.
+- `api/main.py` (~lines 21-31) — where `app.include_router(...)` calls live today (arguments/cases/people/admin routers); D-07's conditional router mount happens here.
+- `app/src/routes/admin/` currently has no `+layout.server.ts` — only `+layout.svelte` and per-route `+page.server.ts` files (e.g. the existing `admin/+page.server.ts` that already feeds `data` to `+page.svelte`). D-07's frontend gate needs a server-side environment check threaded through the `/admin` route's load function; there's no existing precedent for exposing the `environment` setting to SvelteKit, so planning should decide whether that's a new server-only env var on the SvelteKit side or a value fetched from the FastAPI backend.
 
 </code_context>
 

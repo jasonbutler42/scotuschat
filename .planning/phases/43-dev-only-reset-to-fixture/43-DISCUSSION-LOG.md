@@ -5,7 +5,7 @@
 
 **Date:** 2026-07-31
 **Phase:** 43-Dev-Only Reset to Fixture
-**Areas discussed:** Full-wipe deletion approach, Environment gate mechanism, State realization for the 3 variety fixtures, Confirmation UX & placement
+**Areas discussed:** Full-wipe deletion approach, Environment gate mechanism, State realization for the 3 variety fixtures, Confirmation UX & placement, Production removal strictness (post-hoc addition)
 
 ---
 
@@ -86,6 +86,21 @@ Follow-up: what distinguishes "Mid-pipeline" (22372) from the generic freshly-im
 
 **User's choice:** New section on existing /admin dashboard (recommended option)
 **Notes:** None given.
+
+---
+
+## Production removal strictness (post-hoc addition)
+
+Raised by the user after CONTEXT.md was first written: a handler-level environment check means the wipe capability still exists in production, just refuses to run when called. Asked whether that's strict enough, or whether the feature should be structurally absent from production.
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| Conditionally register at startup | Backend route only mounted when environment == development (404 in prod, not a refusal); frontend section only rendered server-side when dev. Same codebase, gated at startup/render time. | ✓ |
+| Runtime check only | Keep the original handler-level check — route/button always exist, handler refuses. | |
+| Track as a pre-launch removal task | Keep runtime check, add an explicit STATE.md Blockers/Concerns item to physically strip the feature before production launch. | |
+
+**User's choice:** Conditionally register at startup (recommended option)
+**Notes:** Recorded as D-07 in CONTEXT.md, amending D-02. This is a stronger requirement than the original environment-gate decision — the reset capability must not merely refuse in production, it must not be present (route 404s, admin UI never renders the section).
 
 ---
 

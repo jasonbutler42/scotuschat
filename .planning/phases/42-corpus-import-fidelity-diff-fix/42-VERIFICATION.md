@@ -1,8 +1,8 @@
 ---
 phase: 42-corpus-import-fidelity-diff-fix
 verified: 2026-07-30T21:15:00Z
-status: human_needed
-score: 5/5 roadmap success criteria verified; 2 items require human confirmation
+status: passed
+score: 5/5 roadmap success criteria verified; 2 human-confirmation items resolved 2026-07-30 via 42-UAT.md (both approved)
 behavior_unverified: 0
 overrides_applied: 0
 human_verification:
@@ -19,7 +19,7 @@ human_verification:
 **Phase Goal:** Everything `import-convokit` drops, mis-maps, or silently defaults for the confirmed fixture is identified, classified, and fixed — so the fixture's rows in `cases`, `arguments`, `utterances`, `people`, `argument_participants`, and `court_tenures` faithfully reflect its raw ConvoKit source, with real defects separated from deliberate exclusions.
 
 **Verified:** 2026-07-30T21:15:00Z
-**Status:** human_needed
+**Status:** passed (was human_needed; both items resolved 2026-07-30 via 42-UAT.md)
 **Re-verification:** No — initial verification
 
 ## Goal Achievement
@@ -132,7 +132,10 @@ These are correctly deferred, not something this phase should have fixed.
 | WR-02 fix behaves correctly on the untested edge case it targets | Direct interactive Python call with a no-underscore `case_id` | Correctly raises `ArgumentTypeError` naming both ids | ✓ PASS |
 | No FORBIDDEN_FIELDS raw value leak | grep of real raw values against the committed diff document | Zero matches | ✓ PASS |
 
-### Human Verification Required
+### Human Verification Required — RESOLVED 2026-07-30 (see 42-UAT.md)
+
+Both items below were presented to the operator and approved. Recorded in
+`.planning/CORPUS-FIDELITY-DIFF.md` (item 9 disposition) and `42-UAT.md` (both test results).
 
 1. **Item 9 (Post-Review Correction) operator disposition is still open.** `.planning/CORPUS-FIDELITY-DIFF.md`'s own "Post-Review Correction" section states its proposed classification ("documentation/cleanup note, not a fidelity defect") for the case-level `advocates` dead-key finding "is a proposal awaiting explicit operator confirmation, not something this correction may decide on its own" — and no such confirmation appears anywhere in `STATE.md` or any plan SUMMARY. This is a process gap the phase's own D-05/D-06 rule requires a human to close (items 1-8 all have recorded dispositions; item 9 does not), not a code defect — the underlying fix (CR-01) is verified correct.
    - **Expected:** Operator reviews and records an explicit disposition for item 9, matching the treatment already given to the structurally identical item 5 (dead `conversation_id` key).
@@ -149,11 +152,14 @@ No BLOCKER-level gaps found. All five ROADMAP success criteria, both requirement
 independently re-verified against live code, a live re-run of the diff generator, and
 direct database queries — not assumed from SUMMARY.md claims. All 5 code-review
 findings (1 critical, 4 warnings) were confirmed actually fixed in the committed code,
-not just claimed fixed in `42-REVIEW-FIX.md`'s prose. The two items above are
+not just claimed fixed in `42-REVIEW-FIX.md`'s prose. The two items above were
 WARNING-level (present, correct, but formally unconfirmed by a human) rather than
-defects — they route this verification to `human_needed` rather than `passed` per the
-decision tree, since both are genuinely open sign-off items rather than something a
-grep or test could resolve.
+defects — they routed this verification to `human_needed` rather than `passed` per the
+decision tree, since both were genuinely open sign-off items rather than something a
+grep or test could resolve. **Both were presented to the operator on 2026-07-30 and
+approved without adjustment** — item 9 approved as documentation/cleanup note (same
+treatment as item 5), and the existing DB UNIQUE constraint judged sufficient for the
+concurrency-safety question. No code changes resulted. Status updated to `passed`.
 
 ---
 

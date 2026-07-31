@@ -435,6 +435,13 @@ code was touched. Recorded verbatim below.
    they are okay with the duplicate Person rows existing as two separate entries for now, and
    want the merge deferred to a later phase.
 
+9. **NEW FINDING (post-review) -- case-level `advocates` dead key, misreported "Faithful"
+   before CR-01's fix.** **Approved as proposed** -- documentation/cleanup note, not a
+   fidelity defect (same treatment as item 5's structurally identical dead `conversation_id`
+   key). Recorded during Phase 42's own UAT gate, 2026-07-30, after the code-review fix
+   landed. No code change beyond CR-01's correction to the diff generator itself (already
+   applied; see Post-Review Correction section and Fixes Applied).
+
 ## Fixes Applied (Plan 04, Tasks 2/3)
 
 Every approved code change made in response to the Disposition section above, tied to the
@@ -504,11 +511,10 @@ have been corrected in place to the accurate `Dropped`/`dead key` verdict; the r
 unaffected and still correctly shown as `Faithful` in the `arguments` section.
 
 This does not change any prior disposition -- items 1-8's dispositions and the fixes already
-applied for them are unaffected. It is presented here for the operator's awareness and,
-consistent with how item 5's structurally identical dead-key finding was disposed, is proposed
-as **documentation/cleanup note, not a fidelity defect** -- but per D-05/D-06, that
-classification is a proposal awaiting explicit operator confirmation, not something this
-correction may decide on its own.
+applied for them are unaffected. **Resolved 2026-07-30 (Phase 42 UAT gate): the operator
+approved this as documentation/cleanup note, not a fidelity defect** -- the same treatment
+already given to item 5's structurally identical dead-key finding. See item 9 in the
+Disposition section above for the recorded disposition.
 
 ## Out of Scope
 

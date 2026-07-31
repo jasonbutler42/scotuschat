@@ -276,7 +276,12 @@ async def _fetch_argument(db, conversation_id: str) -> Argument:
 
 
 async def _fetch_admin_job(db, argument_id: int) -> AdminJob:
-    db.expire_all()
+    # Deliberately does NOT call db.expire_all() (unlike _fetch_argument) --
+    # callers commonly do `arg = await _fetch_argument(...)` followed by
+    # `job = await _fetch_admin_job(db, arg.id)` and then keep reading
+    # attributes off `arg`; expiring here would force a synchronous
+    # re-load of `arg`'s already-fetched attributes on next access, which
+    # raises sqlalchemy.exc.MissingGreenlet outside of an explicit await.
     return (
         await db.execute(select(AdminJob).where(AdminJob.argument_id == argument_id))
     ).scalar_one()
@@ -517,6 +522,105 @@ async def test_reset_incomplete_reseed_raises(client, tmp_path, db):
     assert resp.status_code >= 500
 
 
-# Task 2 (state-realization) tests live below this line — see the second
-# half of this file, added once api.services.admin_dev.reset_to_fixture
-# drives the Draft/Published/Mid-pipeline fixtures to their end states.
+@pytest.mark.asyncio
+async def test_reset_realizes_state_variety(client, tmp_path, db):
+    """All four fixtures land in four mutually distinguishable end states
+    after the reset (D-03, D-04)."""
+    _require_test_db()
+
+    corpus_dir = _write_corpus_fixture(tmp_path)
+    resp = await _post_reset(client, corpus_dir)
+    assert resp.status_code == 200
+
+    # 15169 (Complexity): untouched freshly-imported default.
+    complexity_arg = await _fetch_argument(db, "15169")
+    assert complexity_arg.status == ArgumentStatusEnum.PIPELINE
+    assert complexity_arg.resolved_at is None
+    assert complexity_arg.published_at is None
+    complexity_job = await _fetch_admin_job(db, complexity_arg.id)
+    assert complexity_job.status == AdminJobStatus.PAUSED
+    assert complexity_job.current_step == AdminJobStep.RESOLVE
+
+    # 13015 (Draft): PIPELINE -> DRAFT.
+    draft_arg = await _fetch_argument(db, "13015")
+    assert draft_arg.status == ArgumentStatusEnum.DRAFT
+    assert draft_arg.resolved_at is not None
+    assert draft_arg.published_at is None
+    draft_job = await _fetch_admin_job(db, draft_arg.id)
+    assert draft_job.status == AdminJobStatus.COMPLETED
+
+    # 18897 (Published): PIPELINE -> DRAFT -> PUBLISHED.
+    published_arg = await _fetch_argument(db, "18897")
+    assert published_arg.status == ArgumentStatusEnum.PUBLISHED
+    assert published_arg.resolved_at is not None
+    assert published_arg.published_at is not None
+    published_job = await _fetch_admin_job(db, published_arg.id)
+    assert published_job.status == AdminJobStatus.COMPLETED
+
+    # 22372 (Mid-pipeline): stays PIPELINE, AdminJob flipped to RUNNING.
+    mid_arg = await _fetch_argument(db, "22372")
+    assert mid_arg.status == ArgumentStatusEnum.PIPELINE
+    assert mid_arg.resolved_at is None
+    mid_job = await _fetch_admin_job(db, mid_arg.id)
+    assert mid_job.status == AdminJobStatus.RUNNING
+    assert mid_job.current_step == AdminJobStep.RESOLVE
+
+    # All four AdminJob rows still exist (none deleted).
+    all_jobs = (await db.execute(select(AdminJob))).scalars().all()
+    assert len(all_jobs) == 4
+
+
+@pytest.mark.asyncio
+async def test_reset_writes_status_log_rows(client, tmp_path, db):
+    """argument_status_log has at least one row for 13015's DRAFT transition
+    and at least one for 18897's PUBLISHED transition, and zero rows for
+    15169/22372 (which never left pipeline) — proof the transitions went
+    through the real service functions, not a column write."""
+    _require_test_db()
+
+    corpus_dir = _write_corpus_fixture(tmp_path)
+    resp = await _post_reset(client, corpus_dir)
+    assert resp.status_code == 200
+
+    # Capture each argument's id immediately after its own fetch -- the
+    # NEXT _fetch_argument call's internal db.expire_all() would otherwise
+    # expire this object's own `id` attribute too, and re-accessing an
+    # expired attribute later (outside an explicit await) raises
+    # sqlalchemy.exc.MissingGreenlet in this async context.
+    draft_argument_id = (await _fetch_argument(db, "13015")).id
+    published_argument_id = (await _fetch_argument(db, "18897")).id
+    complexity_argument_id = (await _fetch_argument(db, "15169")).id
+    mid_argument_id = (await _fetch_argument(db, "22372")).id
+
+    async def _log_count(argument_id: int) -> int:
+        return (
+            await db.execute(
+                select(func.count())
+                .select_from(ArgumentStatusLog)
+                .where(ArgumentStatusLog.argument_id == argument_id)
+            )
+        ).scalar_one()
+
+    assert await _log_count(draft_argument_id) >= 1
+    assert await _log_count(published_argument_id) >= 1
+    assert await _log_count(complexity_argument_id) == 0
+    assert await _log_count(mid_argument_id) == 0
+
+
+@pytest.mark.asyncio
+async def test_reset_response_reports_realized_states(client, tmp_path, db):
+    """Each response item's argument_status and admin_job_status fields
+    match the values read back from the database, not values assumed from
+    FIXTURE_SET."""
+    _require_test_db()
+
+    corpus_dir = _write_corpus_fixture(tmp_path)
+    resp = await _post_reset(client, corpus_dir)
+    assert resp.status_code == 200
+    body = resp.json()
+
+    for item in body["fixtures"]:
+        argument = await _fetch_argument(db, item["conversation_id"])
+        admin_job = await _fetch_admin_job(db, argument.id)
+        assert item["argument_status"] == argument.status.value
+        assert item["admin_job_status"] == admin_job.status.value

@@ -13,8 +13,10 @@ committing units, not one transaction —
     2. each `run_import_convokit` call opens and commits its own session via
        pipeline.db.get_session() — a SEPARATE engine/pool from FastAPI's
        AsyncSessionLocal, pointed at the same DATABASE_URL;
-    3. (Plan 43-02) state-transition service calls commit on yet another
-       session reference.
+    3. the state-realization block below (Plan 43-02) commits via the real
+       admin_jobs.approve_job / admin_arguments.publish_argument service
+       calls (each on this module's own `db` session) plus one direct
+       AdminJob.status bulk update/commit for the Mid-pipeline fixture.
 Do NOT attempt to wrap the whole thing in one `async with db.begin():` —
 that session boundary never extends into pipeline's own engine. On any
 failure, the correct recovery is to re-run the whole reset: the TRUNCATE is
@@ -34,10 +36,12 @@ Running state is a deliberately blocking request with a spinner.
 from pathlib import Path
 from types import SimpleNamespace
 
-from sqlalchemy import select, text
+from sqlalchemy import select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.models.models import AdminJob, Argument
+from api.models.models import AdminJob, AdminJobStatus, Argument
+from api.services import admin_arguments as arguments_service
+from api.services import admin_jobs as jobs_service
 from pipeline.commands.import_convokit import DEFAULT_CORPUS_DIR, run_import_convokit
 from pipeline.corpus.loader import (
     CASES_FILENAME,
@@ -145,8 +149,10 @@ def _require_corpus_files(corpus_dir: Path) -> None:
 
 async def reset_to_fixture(db: AsyncSession, corpus_dir: str | Path | None = None) -> dict:
     """
-    Wipe the full D-01 table set and reseed exactly FIXTURE_SET's
-    conversations through the real import-convokit path.
+    Wipe the full D-01 table set, reseed exactly FIXTURE_SET's conversations
+    through the real import-convokit path, then drive the three
+    state-variety fixtures into their distinguishable end states (D-03,
+    D-04).
 
     `corpus_dir` is a Python-level keyword argument used only by tests — it
     is NEVER exposed as a request body field, query parameter, or header on
@@ -165,8 +171,10 @@ async def reset_to_fixture(db: AsyncSession, corpus_dir: str | Path | None = Non
     await db.commit()
 
     # 3-4. Reseed each fixture through the real importer, then verify both
-    # its Argument row and its paired AdminJob row landed.
-    fixtures: list[dict] = []
+    # its Argument row and its paired AdminJob row landed. Collect
+    # (entry, argument_id, admin_job_id) triples in FIXTURE_SET declaration
+    # order for the state-realization step below.
+    fixture_rows: list[tuple[dict, int, int]] = []
     for entry in FIXTURE_SET:
         conversation_id = entry["conversation_id"]
 
@@ -217,16 +225,94 @@ async def reset_to_fixture(db: AsyncSession, corpus_dir: str | Path | None = Non
                 "no paired AdminJob — reset is incomplete."
             )
 
+        fixture_rows.append((entry, argument.id, admin_job.id))
+
+    # 5. State realization (D-03, D-04) — runs strictly AFTER every fixture
+    # has landed and passed its existence checks above, so every Argument
+    # and AdminJob row referenced below is guaranteed to exist before any
+    # transition is attempted. Looked up by id collected during the reseed
+    # loop, never assumed.
+    ids_by_conversation = {
+        entry["conversation_id"]: (argument_id, admin_job_id)
+        for entry, argument_id, admin_job_id in fixture_rows
+    }
+
+    # Fixture 15169 (Complexity): no action. It stays exactly as the
+    # importer left it — status=PIPELINE with a PAUSED/RESOLVE AdminJob.
+    # This is deliberate: it is the reference "freshly imported" state and
+    # the Phase 30 invariant's canonical shape.
+
+    # Fixture 13015 (Draft target): PIPELINE -> DRAFT via the real service
+    # function (D-03). approve_job stamps resolved_at, marks the AdminJob
+    # COMPLETED, and writes the ArgumentStatusLog row — this module performs
+    # none of those writes itself.
+    _draft_argument_id, draft_job_id = ids_by_conversation["13015"]
+    await jobs_service.approve_job(db, draft_job_id)
+
+    # Fixture 18897 (Published target): TWO calls, in this order, and the
+    # order is NOT optional. approve_job must run first to reach DRAFT and
+    # stamp resolved_at — publish_argument raises ValueError("Cannot
+    # publish: resolve step not yet complete") when resolved_at is still
+    # null, which is exactly the state a freshly-imported PIPELINE argument
+    # is in. Do not "simplify" these two calls into one.
+    published_argument_id, published_job_id = ids_by_conversation["18897"]
+    await jobs_service.approve_job(db, published_job_id)
+    await arguments_service.publish_argument(db, published_argument_id)
+
+    # Fixture 22372 (Mid-pipeline target, D-04): the ONE direct column
+    # write in this service, and it is deliberately NOT a D-03 violation —
+    # D-03 is scoped to Argument.status transitions, not to AdminJob.status.
+    # There is no ArgumentStatusLog-style audit table for AdminJob.status,
+    # and no existing service function performs a PAUSED -> RUNNING flip:
+    # the real step-advance guards try_advance_ingest_to_parse and
+    # try_advance_parse_to_resolve handle different step pairs entirely and
+    # must not be repurposed here (RESEARCH.md Pitfall 3). The simple flip
+    # (rather than partially resolving some ArgumentParticipant rows) is
+    # taken because (a) the Complexity fixture already gives Phase 44's
+    # Resolve Table Rework a fully editable PIPELINE argument with a
+    # PAUSED/RESOLVE job, so partially resolving participants here would add
+    # implementation cost without unlocking anything Phase 44 lacks, and
+    # (b) resolve-card editability keys on Argument.status staying PIPELINE,
+    # which this flip preserves (Argument.resolved_at stays null, unchanged).
+    _mid_argument_id, mid_job_id = ids_by_conversation["22372"]
+    await db.execute(
+        update(AdminJob)
+        .where(AdminJob.id == mid_job_id)
+        .values(status=AdminJobStatus.RUNNING)
+        .execution_options(synchronize_session=False)
+    )
+    await db.commit()
+
+    # 6. Build the response strictly from values re-read from the database
+    # after every transition above has committed — never from FIXTURE_SET
+    # and never from the values this function intended to write.
+    # publish_argument already calls db.refresh() on its own argument after
+    # its bulk update, but the other rows above were changed via
+    # synchronize_session=False updates on this same session too, so expire
+    # the whole identity map before this final read rather than trusting any
+    # object loaded earlier in this call (Phase 31 refresh-after-bulk-update
+    # precedent).
+    db.expire_all()
+
+    fixtures: list[dict] = []
+    for entry, argument_id, _admin_job_id in fixture_rows:
+        argument = (
+            await db.execute(select(Argument).where(Argument.id == argument_id))
+        ).scalar_one()
+        admin_job = (
+            await db.execute(
+                select(AdminJob).where(AdminJob.argument_id == argument_id)
+            )
+        ).scalar_one_or_none()
         fixtures.append(
             {
-                "conversation_id": conversation_id,
+                "conversation_id": entry["conversation_id"],
                 "case_name": entry["case_name"],
                 "role": entry["role"],
                 "argument_id": argument.id,
                 "argument_status": argument.status.value,
-                "admin_job_status": admin_job.status.value,
+                "admin_job_status": admin_job.status.value if admin_job else "",
             }
         )
 
-    # 5. Return in FIXTURE_SET declaration order, values read back from the DB.
     return {"fixtures": fixtures}

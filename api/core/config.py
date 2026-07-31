@@ -32,6 +32,18 @@ class Settings(BaseSettings):
     # Do NOT log or expose this value in any endpoint response.
     admin_token: str
 
+    # Required — set via ENVIRONMENT env var (Phase 43 D-02).
+    # No default value: app refuses to start without this set (fail-fast, mirrors
+    # admin_token above). The gate is an allow-list, not a block-list: consumers
+    # compare this value for equality with the literal "development" string, so
+    # an unset, misspelled, or unknown value refuses by default rather than
+    # accidentally passing. The comparison itself lives in api/main.py's
+    # conditional admin_dev router include, and separately in
+    # app/src/routes/admin/+page.server.ts — this field only holds the raw value.
+    # SvelteKit reads its OWN independent ENVIRONMENT from app/.env (a separate
+    # file with no shared source) — the two must be kept in sync manually.
+    environment: str
+
     # ---------------------------------------------------------------------------
     # DO Spaces — required only for PIPE-13 file upload (operator uploads a local PDF).
     # URL-mode (PIPE-12) works without these credentials — they default to "".
@@ -58,6 +70,9 @@ class Settings(BaseSettings):
     # Phase 6 note: the following env vars are SvelteKit-side ($env/static/private).
     # They are NOT read by the Python API — Python reads only the fields above.
     # Listed here so operators see all required env vars in one place.
+    # (SvelteKit also has its own independent ENVIRONMENT var, in app/.env —
+    # see the `environment` field's comment above; that one IS read by Python,
+    # this block only lists vars Python does not read.)
     #
     # SESSION_SECRET   — HMAC-SHA256 key for the scotus_admin_session cookie.
     #                    Minimum 32 characters. Rotating this key invalidates all

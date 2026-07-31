@@ -1,7 +1,7 @@
 ---
 phase: 43
 slug: dev-only-reset-to-fixture
-status: draft
+status: approved
 shadcn_initialized: false
 preset: none
 created: 2026-07-31
@@ -168,17 +168,42 @@ Five states, driving one control. Modeled directly on the two existing "Danger Z
 
 ## UI Considerations
 
-Applicable state considerations resolved: 6 covered, 1 backstop, 0 unresolved.
+> Elements probed (compiled ui-consideration-probe.cjs engine, run post-verification per
+> ui-phase Step 9.5): **E1** Reset to Fixture control (interactive-control), **E2** Dev Tools
+> section container (list-collection + interactive-control cues), **E3** Success detail list
+> (list-collection + static-content cues). 17 categories raised across the three elements;
+> destructive-confirm below is a bespoke consideration this phase's own Interaction & State
+> Contract resolves directly (outside the closed 8-category taxonomy, per
+> ui-consideration-probe.md's axis boundary) and is kept for continuity with the prior pass.
+
+Applicable state considerations resolved: 8 covered, 1 backstop, 8 dismissed, 0 unresolved.
 
 | Category | Element(s) | Status | Resolution / Reason |
 |----------|------------|--------|---------------------|
-| empty (non-dev environment) | Dev Tools section | ✅ covered | The section is not rendered at all outside `environment == "development"` (server-side gate per D-07) — there is no "disabled"/"hidden" visual state to design; absence from the DOM is the entire treatment. |
-| loading | Reset to Fixture action | ✅ covered | Running state (spinner + "Resetting to fixture…") replaces the confirm row in place, no layout shift, all controls non-interactive. |
-| error | Reset to Fixture action | ✅ covered | Two distinct error copies (mid-reset vs. environment-refusal) per Copywriting Contract; role="alert", returns control to Idle (not Confirming) on failure. |
-| populated (success) | Reset to Fixture action | ✅ covered | Success badge + explicit list of the 4 reseeded fixtures by name/role; rest of `/admin` page (stat cards, Needs Attention) must reload via the same invalidate/update pattern the existing delete actions use. |
-| destructive-confirm | Reset to Fixture button | ✅ covered | Two-step inline Confirm/Cancel (D-05), full wipe-scope statement shown before delete, matches existing Danger Zone precedent exactly. |
-| zero-one-many (fixture count in success list) | Success detail list | ✅ covered | Always exactly 4 entries (fixture set is fixed by FIXTURES.md) — no plural/singular ambiguity to resolve. |
-| long-text (fixture case names) | Success detail list | 🧪 backstop | Case names are proper nouns of varying length (e.g. "Baltimore & Ohio Railroad Co. v. United States" vs. shorter names); no explicit truncation/wrap rule was specified — default to natural text wrap at the section's existing 24px padding, held out as a visual-backstop check at verify time rather than asserted here. |
+| empty (non-dev environment) | E2 Dev Tools section | ✅ covered | The section is not rendered at all outside `environment == "development"` (server-side gate per D-07) — there is no "disabled"/"hidden" visual state to design; absence from the DOM is the entire treatment. |
+| empty (fixture success list) | E3 Success detail list | 🚫 dismissed | Fixture set is fixed at exactly 4 by FIXTURES.md; a success state with fewer than 4 indicates a genuine partial-failure bug, not a UI empty-state — that outcome routes to the mid-reset Error state instead (see `partial` row below). |
+| loading | E1 Reset to Fixture control | ✅ covered | Running state (spinner + "Resetting to fixture…") replaces the confirm row in place, no layout shift, all controls non-interactive. |
+| loading (section presence) | E2 Dev Tools section | 🚫 dismissed | The environment gate is resolved server-side (D-07) before the response is sent — no client-side loading flicker exists for the section's own presence/absence. |
+| loading (list render) | E3 Success detail list | 🚫 dismissed | The list only renders after the Running state completes; it has no independent loading phase beyond the already-covered Running state. |
+| error | E1 Reset to Fixture control | ✅ covered | Two distinct error copies (mid-reset vs. environment-refusal) per Copywriting Contract; role="alert", returns control to Idle (not Confirming) on failure. |
+| error (section page-load) | E2 Dev Tools section | 🚫 dismissed | A load failure for the section's own presence is the existing, unchanged `/admin` page-level load-error handling — out of this phase's scope. |
+| error (list-specific) | E3 Success detail list | 🚫 dismissed | The list is populated synchronously from the same response that confirms success; any failure routes through the overall Error state above, not a separate list-error state. |
+| populated (success) | E3 Success detail list | ✅ covered | Success badge + explicit one-per-line list of the 4 reseeded fixtures by name/role; rest of `/admin` page (stat cards, Needs Attention) must reload via the same invalidate/update pattern the existing delete actions use. |
+| populated (section volume) | E2 Dev Tools section | 🚫 dismissed | The section always contains exactly one fixed control (Reset to Fixture) — no variable-volume happy path to design; not a collection. |
+| partial (mid-reset partial completion) | E3 Success detail list | ✅ covered | A partial reseed (e.g. 3 of 4 fixtures import before a failure) is modeled as the overall mid-reset Error state, not a partial/incomplete success list — the operation is atomic pass/fail from the UI's perspective; there is no "2 of 4 reseeded" list rendering to design. |
+| partial (section fields) | E2 Dev Tools section | 🚫 dismissed | Static container with no data-driven fields of its own — nothing to be partially populated. |
+| overflow | E2 Dev Tools section | 🚫 dismissed | Section copy (heading, badge, description) is short fixed-length text; covered by the `long-text` row below, not a separate overflow concern. |
+| overflow (list rows) | E3 Success detail list | 🚫 dismissed | Same natural-wrap treatment as the `long-text` backstop below — not a distinct overflow behavior. |
+| zero-one-many (Dev Tools section) | E2 Dev Tools section | 🚫 dismissed | Not a collection — always exactly one control, no cardinality variation. |
+| zero-one-many (fixture count in success list) | E3 Success detail list | ✅ covered | Always exactly 4 entries (fixture set is fixed by FIXTURES.md) — no plural/singular ambiguity to resolve. |
+| long-text (control copy) | E1 Reset to Fixture control | ✅ covered | All copy on this control (button label, confirmation statement, error text) is fixed authored text at known lengths — wraps naturally within the existing card padding; no truncation logic needed. |
+| long-text (section heading/badge) | E2 Dev Tools section | ✅ covered | "Dev Tools" heading and "DEV ONLY" badge are short, fixed strings — no wrap/truncation risk. |
+| long-text (fixture case names) | E3 Success detail list | 🧪 backstop | Case names are proper nouns of varying length (e.g. "Baltimore & Ohio Railroad Co. v. United States" vs. shorter names); no explicit truncation/wrap rule was specified — default to natural text wrap at the section's existing 24px padding, held out as a visual-backstop check at verify time rather than asserted here. |
+| destructive-confirm *(bespoke, not in the closed 8-category taxonomy)* | E1 Reset to Fixture control | ✅ covered | Two-step inline Confirm/Cancel (D-05), full wipe-scope statement shown before delete, matches existing Danger Zone precedent exactly. |
+
+<!-- Dismissed rows are `resolved` status per the shared probe-core model (reason required,
+     audit trail preserved) but are NOT lifted into must_haves.truths — only ✅ covered
+     (explicit) and 🧪 backstop rows lift; ⚠ unresolved would lift as a planner assumption. -->
 
 ---
 
@@ -195,11 +220,11 @@ Not applicable — no shadcn, no component registry used for this phase.
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
-- [ ] Dimension 5 Spacing: PASS
-- [ ] Dimension 6 Registry Safety: PASS
+- [x] Dimension 1 Copywriting: PASS
+- [x] Dimension 2 Visuals: PASS
+- [x] Dimension 3 Color: PASS
+- [x] Dimension 4 Typography: PASS
+- [x] Dimension 5 Spacing: PASS
+- [x] Dimension 6 Registry Safety: PASS
 
-**Approval:** pending
+**Approval:** approved 2026-07-31

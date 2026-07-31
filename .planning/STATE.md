@@ -4,15 +4,15 @@ milestone: v1.7
 milestone_name: Corpus Fidelity & Resolve Rework
 current_phase: 43
 current_phase_name: Dev-Only Reset to Fixture
-status: planning
-stopped_at: Phase 43 context gathered
-last_updated: "2026-07-31T11:30:33.567Z"
+status: executing
+stopped_at: Phase 43 UI-SPEC approved
+last_updated: "2026-07-31T13:24:30.229Z"
 last_activity: 2026-07-30
 last_activity_desc: Phase 42 complete, transitioned to Phase 43
 progress:
   total_phases: 5
   completed_phases: 2
-  total_plans: 8
+  total_plans: 12
   completed_plans: 8
   percent: 40
 ---
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-07-29 after starting v1.7 milestone)
 
 Phase: 43 — Dev-Only Reset to Fixture
 Plan: Not started
-Status: Ready to plan
+Status: Ready to execute
 Last activity: 2026-07-30 — Phase 42 complete, transitioned to Phase 43
 
 **Milestone shape:**
@@ -148,9 +148,9 @@ v1.6's roadmap evolution is archived in `.planning/milestones/v1.6-ROADMAP.md`. 
 
 ## Session Continuity
 
-Last session: 2026-07-31T11:30:33.129Z
-Stopped at: Phase 43 context gathered
-Resume file: .planning/phases/43-dev-only-reset-to-fixture/43-CONTEXT.md
+Last session: 2026-07-31T11:48:35.788Z
+Stopped at: Phase 43 UI-SPEC approved
+Resume file: .planning/phases/43-dev-only-reset-to-fixture/43-UI-SPEC.md
 
 ## Operator Next Steps
 

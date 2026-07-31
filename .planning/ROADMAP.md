@@ -212,7 +212,22 @@ Plans:
   4. After a reset, each fixture argument is immediately usable in the normal resolve → approve → publish workflow (its paired admin job exists) with no manual repair, and the state-variety fixtures land in their intended publish/pipeline states (not all reset to the same default state).
   5. A reset run after Phase 42's importer fixes lands the corrected field values on the complexity fixture, confirming the reseed shares the real import path rather than a stale copy of it.
 
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 43-01-PLAN.md — Tracer: the required `environment` setting, a separately-mounted `/api/admin/dev` router, and a TRUNCATE + one-fixture reseed through the real importer, end to end (DEVTOOL-01, DEVTOOL-02)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 43-02-PLAN.md — Expand the reseed to all four fixtures and drive the three state-variety fixtures to their intended states via the real service functions (DEVTOOL-01)
+- [ ] 43-03-PLAN.md — Server-gated "Dev Tools" section on `/admin`: two-step confirm, five interaction states, and the source-invariant gate guard (DEVTOOL-01, DEVTOOL-02)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 43-04-PLAN.md — Blocking operator UAT: real-corpus reset against the dev database, and the production refusal demonstrated by actually attempting it (DEVTOOL-01, DEVTOOL-02)
+
 **UI hint**: yes
 
 ### Phase 44: Resolve Table Rework

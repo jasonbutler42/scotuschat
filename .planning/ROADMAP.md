@@ -243,7 +243,13 @@ Plans:
   4. A bench row with missing tenure still shows the existing "Missing tenure" warning and Edit-person path, and reads as visibly distinct from the locked valid-tenure state.
   5. Resolved As, Bench/Advocate, Argument Role, and Descriptor each show an "Extracted: …" hint of the raw extracted value, and Descriptor renders on bench rows (as "–") instead of the column disappearing.
 
-**Plans**: TBD
+**Plan-time confirmation of the frontend-only assumption**: partially false. Side and Argument Role need no new backend field or write path (confirmed: `argument_role` is a read-time projection of `ArgumentParticipant.side` via `ADVOCATE_LABEL_MAP`). The Descriptor column is not UI-copy-only — CONTEXT.md D-05/D-06 make it a full-stack rename of `ArgumentParticipant.title` to `.descriptor` with a new Alembic migration, absorbed into this phase in one pass. Success criterion 5's "Extracted: …" wording is delivered as "Imported: …" per D-09, the honest framing for corpus-passthrough data.
+
+**Plans**: 4 plans
+- [ ] 44-01-PLAN.md — Descriptor full-stack rename: Alembic 0025, ORM, schemas, services, routers, pipeline, both SvelteKit consumers, tests
+- [ ] 44-02-PLAN.md — Five-column skeleton, Raw Label badge, Action column removed, Resolved As single entry point, always-present Descriptor cell
+- [ ] 44-03-PLAN.md — Segmented Bench/Advocate toggle, writable Argument Role dropdown, bench lock affordance, preserved missing-tenure warning
+- [ ] 44-04-PLAN.md — "Imported:" hints across all four columns via a new `prefixLabel` prop, plus operator visual acceptance against the mockup
 **UI hint**: yes
 
 ### Phase 45: Deferred UI Bug Fixes

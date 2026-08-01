@@ -207,3 +207,190 @@ def test_no_unapproved_hex_colors_introduced() -> None:
         f"UI-SPEC Color table: found hex colour(s) outside the approved palette: {unapproved}. "
         f"Approved set: {APPROVED_HEX_COLORS}"
     )
+
+
+def _function_body(source: str, name: str) -> str:
+    """Extract a script-level `function {name}(...) { ... }` body, matching the
+    tab-indented-closing-brace convention `awk '/function name/,/^\\t}/'` relies on
+    at execution time."""
+    match = re.search(rf"function\s+{re.escape(name)}\s*\(", source)
+    assert match, f"could not find `function {name}(` in source"
+    start = match.start()
+    end_match = re.search(r"\n\t\}", source[start:])
+    assert end_match, f"could not find end of function {name}"
+    return source[start : start + end_match.end()]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Plan 44-03 — RESOLVE-02: segmented Bench/Advocate toggle, single submitted
+# side value, flushed submit (D-07)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_side_form_field_is_singular_and_lives_in_hidden_form() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    assert source.count('name="side"') == 1, (
+        "RESOLVE-02/T-44-11: exactly one element may carry the `side` form-field "
+        "name — the always-present hidden input is the sole submitting control"
+    )
+    form_region = _region(source, r'action="\?/saveResolveRow"', r"</form>")
+    assert form_region.count('name="side"') == 1, (
+        "RESOLVE-02: the `side` field must sit inside the per-row hidden form region"
+    )
+
+
+def test_flush_sync_imported_and_called_inside_submit_row() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    assert "import { flushSync } from 'svelte'" in source, (
+        "RESOLVE-02: the svelte runtime flush must be imported"
+    )
+    submit_row_body = _function_body(source, "submitRow")
+    assert "flushSync()" in submit_row_body, (
+        "RESOLVE-02: flushSync() must be called inside submitRow, before requestSubmit(), "
+        "so the just-set pendingSideOverrides value reaches the DOM before the form serializes"
+    )
+
+
+def test_side_toggle_snippet_has_two_pressed_segments_and_one_group() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    assert "{#snippet sideToggle(" in source, "RESOLVE-02: the segmented toggle must be its own snippet"
+    assert source.count("aria-pressed") == 2, "RESOLVE-02: exactly two segments carry aria-pressed"
+    assert source.count('role="group"') == 1, "RESOLVE-02: exactly one grouping role wraps the toggle"
+    assert source.count(">Bench<") == 1, "RESOLVE-02: the Bench segment label must appear exactly once"
+    assert source.count(">Advocate<") == 1, "RESOLVE-02: the Advocate segment label must appear exactly once"
+
+
+def test_toggle_side_handler_has_early_no_op_return() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    assert "function toggleSide(" in source, "RESOLVE-02: toggleSide must exist as the toggle's click handler"
+    toggle_body = _function_body(source, "toggleSide")
+    assert re.search(r"\breturn;", toggle_body), (
+        "RESOLVE-02: toggleSide must return early (no state write, no submit) when the "
+        "requested choice is already the active one — this is what stops a second "
+        "Advocate click from resetting a stored PETITIONER back to UNKNOWN"
+    )
+
+
+def test_confirm_side_and_on_side_change_preserved_not_replaced() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    assert "function confirmSide(" in source, (
+        "RESOLVE-02: confirmSide must be extended, not replaced (44-CONTEXT.md Established Patterns)"
+    )
+    assert "function onSideChange(" in source, (
+        "RESOLVE-02: onSideChange must be extended, not replaced (44-CONTEXT.md Established Patterns)"
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Plan 44-03 — RESOLVE-03: writable Argument Role dropdown (D-01, D-02)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_argument_role_select_is_singular_and_carries_no_name_or_form() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    assert source.count("<select") == 1, "RESOLVE-03: exactly one <select> should exist in the file"
+    select_region = _region(source, r"<select", r"</select>")
+    assert not re.search(r"\bname=", select_region), (
+        "RESOLVE-03: the Argument Role select must not submit directly — the hidden "
+        "`side` input from Task 1 is the sole submitting element"
+    )
+    assert not re.search(r"\bform=", select_region), (
+        "RESOLVE-03: the Argument Role select must not carry a form attribute"
+    )
+
+
+def test_argument_role_options_in_locked_order() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    assert source.count("<option value=") == 4, "RESOLVE-03: exactly four <option> declarations"
+    order = [
+        '<option value="UNKNOWN">',
+        '<option value="PETITIONER">',
+        '<option value="RESPONDENT">',
+        '<option value="AMICUS">',
+    ]
+    indices = []
+    for token in order:
+        idx = source.find(token)
+        assert idx != -1, f"RESOLVE-03: option {token!r} not found"
+        indices.append(idx)
+    assert indices == sorted(indices), (
+        "RESOLVE-03: options must appear in order placeholder, petitioner, respondent, amicus"
+    )
+
+
+def test_argument_role_placeholder_is_real_unknown_value() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    assert '<option value="UNKNOWN">Select case role</option>' in source, (
+        "D-02: the placeholder option's value must be the literal UNKNOWN enum member, "
+        "with the user-locked copy 'Select case role'"
+    )
+    assert 'value=""' not in source, (
+        "D-02: no empty-string sentinel value may exist anywhere in the file"
+    )
+    select_region = _region(source, r"<select", r"</select>")
+    assert "disabled>" not in select_region, (
+        "D-02: no option in the Argument Role select may be disabled — UNKNOWN is a "
+        "real, already-supported value"
+    )
+
+
+def test_choose_argument_role_handler_exists() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    assert "function chooseArgumentRole(" in source, (
+        "RESOLVE-03: chooseArgumentRole must exist as the Argument Role select's onchange handler"
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Plan 44-03 — RESOLVE-06: lock affordance / missing-tenure distinctness,
+# and in-flight disabling across all three row controls
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_argument_role_cell_has_exactly_one_svg() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    body = _snippet_body(source, "argumentRoleCell")
+    assert body.count("<svg") == 1, (
+        "RESOLVE-06: the Argument Role snippet must render exactly one lock icon SVG "
+        "(the locked bench branch), never one per branch"
+    )
+
+
+def test_missing_tenure_branch_shares_no_markup_with_locked_branch() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    body = _snippet_body(source, "argumentRoleCell")
+    missing_tenure_region = _region(body, r"Missing tenure", r"\{:else if rowEditable\}")
+    assert "<svg" not in missing_tenure_region, (
+        "RESOLVE-06: the missing-tenure branch must carry NO lock icon — a real data "
+        "gap must never read as a deliberate system-derived value"
+    )
+    assert "border-radius" not in missing_tenure_region, (
+        "RESOLVE-06: the missing-tenure branch must carry NO bordered box — it shares "
+        "no markup with the locked-bench branch"
+    )
+
+
+def test_missing_tenure_warning_and_lock_alternative_appear_exactly_once() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    assert source.count("⚠ Missing tenure") == 1, (
+        "RESOLVE-06: the app-wide warning glyph + copy must appear exactly once"
+    )
+    assert source.count(">Edit person<") == 1, "RESOLVE-06: the Edit person link must appear exactly once"
+    assert source.count("#fbbf24") >= 1, "RESOLVE-06: the amber warning color must still be present"
+    assert source.count("Set from tenure, not editable") == 1, (
+        "RESOLVE-06: the lock's visually-hidden a11y alternative must appear exactly once"
+    )
+
+
+def test_saving_flag_disables_all_three_row_controls() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    descriptor_body = _snippet_body(source, "descriptorCell")
+    assert "disabled" in descriptor_body, "RESOLVE-02 concurrency: Descriptor input must disable while saving"
+    toggle_body = _snippet_body(source, "sideToggle")
+    assert "disabled" in toggle_body, "RESOLVE-02 concurrency: toggle segments must disable while saving"
+    role_body = _snippet_body(source, "argumentRoleCell")
+    assert "disabled" in role_body, "RESOLVE-02 concurrency: Argument Role select must disable while saving"
+    assert source.count("saving") >= 3, (
+        "RESOLVE-02 concurrency: the saving flag identifier must be threaded through all "
+        "three controls, not just declared once"
+    )

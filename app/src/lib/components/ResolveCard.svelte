@@ -360,7 +360,7 @@
 	</span>
 {/snippet}
 
-{#snippet descriptorCell(row: MergedRow, side: string, rowEditable: boolean)}
+{#snippet descriptorCell(row: MergedRow, side: string, rowEditable: boolean, saving: boolean)}
 	{#if side === 'BENCH'}
 		<span style="color: #94a3b8;">–</span>
 	{:else if rowEditable}
@@ -371,6 +371,7 @@
 			value={row.descriptor ?? ''}
 			onblur={() => submitRow(row.participant_id)}
 			placeholder="e.g. Attorney, Location, or Affiliation"
+			disabled={saving}
 			style="
 				background-color: #0f1117;
 				border: 1px solid #334155;
@@ -829,7 +830,7 @@
 
 						<!-- Column 5: Descriptor (renamed from Title, Phase 44 RESOLVE-04) — always renders -->
 						<td style="font-size: 16px; color: #e2e8f0; border-bottom: 1px solid #334155; padding: 12px 0;">
-							{@render descriptorCell(row, side, rowEditable)}
+							{@render descriptorCell(row, side, rowEditable, saveState[row.participant_id]?.saving === true)}
 						</td>
 					</tr>
 				{/each}

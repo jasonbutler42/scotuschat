@@ -77,8 +77,13 @@ def test_provenance_line_omitted_when_raw_is_absent() -> None:
 
 
 def test_stacked_layout_renders_extracted_prefix_and_confidence_raw_line() -> None:
+    """Phase 44 D-09: the prefix is now the interpolated `prefixLabel` prop
+    (default 'Extracted'), not a hardcoded string, so every pre-existing
+    consumer that omits the prop still renders "Extracted:" — the default
+    value is the back-compat mechanism, not this markup line."""
     source = _source(COPYABLE_PATH)
-    assert '<span class="prefix">Extracted:</span>' in source
+    assert "<span class=\"prefix\">{prefixLabel}:</span>" in source
+    assert "prefixLabel = 'Extracted'" in source
     assert "{effectiveBand} confidence · Raw: {raw}" in source
 
 

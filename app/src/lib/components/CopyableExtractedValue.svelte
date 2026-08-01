@@ -12,9 +12,20 @@
 		/** Optional Phase 38 stacked-mode props — presence of either (even `null`) opts into the two-line layout. */
 		confidence?: ConfidenceBand | null;
 		raw?: string | null;
+		/** Phase 44 D-09 addition: overrides the stacked-mode line-1 prefix text.
+		 * Defaults to 'Extracted' so every pre-existing call site (which omits this
+		 * prop) renders identically to before. */
+		prefixLabel?: string;
 	};
 
-	let { value, copyLabel, variant = 'text', confidence, raw }: CopyableExtractedValueProps = $props();
+	let {
+		value,
+		copyLabel,
+		variant = 'text',
+		confidence,
+		raw,
+		prefixLabel = 'Extracted',
+	}: CopyableExtractedValueProps = $props();
 	let state = $state<CopyState>('idle');
 	let resetTimer: ReturnType<typeof setTimeout> | undefined;
 	let generation = 0;
@@ -108,7 +119,7 @@
 {#if isStacked}
 	<span class="copyable-value stacked" class:pill={variant === 'pill'}>
 		<span class="line1">
-			<span class="prefix">Extracted:</span>
+			<span class="prefix">{prefixLabel}:</span>
 			{@render copyButton()}
 		</span>
 		{#if state === 'error'}

@@ -165,6 +165,21 @@
 		onSideChange(row, choice === 'BENCH' ? 'BENCH' : 'UNKNOWN');
 	}
 
+	// Task 2 (RESOLVE-03): the Argument Role dropdown's onchange handler. Picking a
+	// role while the side gate is still open (D-07 delta #1) satisfies the gate the
+	// same way choosing Bench/Advocate on the toggle would — an operator picking
+	// "Petitioner's Counsel" has unambiguously chosen Advocate, so it would be a
+	// pointless extra step to force the toggle click first.
+	function chooseArgumentRole(row: MergedRow, value: string) {
+		if (needsSideGate(row)) {
+			pendingSideOverrides[row.participant_id] = value;
+			sideGateConfirmed[row.participant_id] = true;
+			submitRow(row.participant_id);
+			return;
+		}
+		onSideChange(row, value);
+	}
+
 	const SIDE_LABEL: Record<string, string> = {
 		BENCH: 'Bench',
 		PETITIONER: "Petitioner's Counsel",
@@ -439,6 +454,82 @@
 			"
 		>Advocate</button>
 	</div>
+{/snippet}
+
+{#snippet argumentRoleCell(row: MergedRow, side: string, gated: boolean, rowEditable: boolean, saving: boolean)}
+	{#if side === 'BENCH' && !row.missing_tenure}
+		<!-- RESOLVE-06 lock affordance: a resolved bench row with valid tenure is
+		     never editable here — the role is fully derived from court_tenures. -->
+		<div
+			style="
+				display: inline-flex;
+				align-items: center;
+				gap: 6px;
+				background-color: #1e293b;
+				border: 1px solid #334155;
+				border-radius: 6px;
+				padding: 8px 12px;
+				min-height: 36px;
+				box-sizing: border-box;
+			"
+		>
+			<svg
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				width="14"
+				height="14"
+				aria-hidden="true"
+				style="color: #94a3b8; flex-shrink: 0;"
+			>
+				<rect x="5" y="11" width="14" height="9" rx="2"></rect>
+				<path d="M8 11V7a4 4 0 0 1 8 0v4"></path>
+			</svg>
+			<span style="font-size: 16px; color: #e2e8f0;">{row.bench_role ?? row.argument_role ?? '–'}</span>
+			<span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%);">
+				Set from tenure, not editable
+			</span>
+		</div>
+	{:else if side === 'BENCH'}
+		<!-- Missing-tenure warning — preserved verbatim (RESOLVE-06): NO lock icon,
+		     NO bordered box, so this state shares no markup with the locked state
+		     above and reads as a real data gap, not a deliberate system value. -->
+		<span style="color: #fbbf24; font-size: 14px;">⚠ Missing tenure</span>
+		{#if row.person_edit_href}
+			<a href={row.person_edit_href} style="margin-left: 8px; font-size: 14px; color: #93c5fd; text-decoration: underline;">Edit person</a>
+		{/if}
+	{:else if rowEditable}
+		<!-- RESOLVE-03 writable dropdown — covers advocate rows and gated rows
+		     (D-07 delta #1). No name/form attribute: the hidden `side` input added
+		     in Task 1 is the sole submitting element. -->
+		{@const displayValue = side === 'ADVOCATE' ? 'UNKNOWN' : side}
+		<select
+			value={displayValue}
+			disabled={saving}
+			aria-label={`Argument role for ${row.raw_speaker_label}`}
+			onchange={(e) => chooseArgumentRole(row, (e.target as HTMLSelectElement).value)}
+			style="
+				background-color: #0f1117;
+				border: 1px solid #334155;
+				border-radius: 6px;
+				padding: 8px 12px;
+				font-size: 16px;
+				color: #e2e8f0;
+				min-height: 36px;
+				width: 100%;
+				box-sizing: border-box;
+				cursor: pointer;
+			"
+		>
+			<option value="UNKNOWN">Select case role</option>
+			<option value="PETITIONER">{SIDE_LABEL.PETITIONER}</option>
+			<option value="RESPONDENT">{SIDE_LABEL.RESPONDENT}</option>
+			<option value="AMICUS">{SIDE_LABEL.AMICUS}</option>
+		</select>
+	{:else}
+		<span style="font-size: 16px; color: #e2e8f0;">{row.argument_role ?? '—'}</span>
+	{/if}
 {/snippet}
 
 {#snippet personDisplay(fullName: string | null, photoUrl: string | null, roleLabel: string | null)}
@@ -731,24 +822,9 @@
 							{/if}
 						</td>
 
-						<!-- Column 4: Argument Role — bench tenure-derived role / Missing tenure, or advocate label -->
+						<!-- Column 4: Argument Role — bench lock / Missing tenure, or advocate dropdown (Task 2) -->
 						<td style="font-size: 16px; color: #e2e8f0; border-bottom: 1px solid #334155; padding: 12px 0; padding-right: 12px;">
-							{#if gated}
-								<span style="color: #94a3b8;">—</span>
-							{:else if side === 'BENCH'}
-								{#if row.missing_tenure}
-									<span style="color: #fbbf24; font-size: 14px;">Missing tenure</span>
-									{#if row.person_edit_href}
-										<a href={row.person_edit_href} style="margin-left: 8px; font-size: 14px; color: #93c5fd; text-decoration: underline;">
-											Edit person
-										</a>
-									{/if}
-								{:else}
-									<span style="font-size: 16px; color: #e2e8f0;">{row.bench_role ?? row.argument_role ?? '—'}</span>
-								{/if}
-							{:else}
-								<span style="font-size: 16px; color: #e2e8f0;">{row.argument_role ?? '—'}</span>
-							{/if}
+							{@render argumentRoleCell(row, side, gated, rowEditable, saveState[row.participant_id]?.saving === true)}
 						</td>
 
 						<!-- Column 5: Descriptor (renamed from Title, Phase 44 RESOLVE-04) — always renders -->

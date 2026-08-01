@@ -175,13 +175,17 @@
 		}
 		for (const d of disc) {
 			if (!(d.raw_speaker_label in rowMatchStates)) {
-				const isHit = d.auto_resolved === true;
+				// D-03/D-04: any row with an auto-match candidate seeds pre-filled and
+				// pre-accepted — the combobox opens already showing that candidate's name,
+				// and an untouched pre-fill still counts as accepted on submit since
+				// disposition/personId are seeded non-null (no Confirm button exists).
+				const hasCandidate = d.auto_match_id != null;
 				rowMatchStates[d.raw_speaker_label] = {
 					personId: d.auto_match_id ?? null,
-					disposition: isHit ? 'confirmed' : null,
-					correcting: false,
+					disposition: hasCandidate ? 'confirmed' : null,
+					correcting: hasCandidate,
 					extraCandidates: [],
-					comboQuery: '',
+					comboQuery: hasCandidate ? (d.auto_match_name ?? '') : '',
 					comboOpen: false,
 					comboHighlight: -1,
 				};
@@ -228,19 +232,20 @@
 		});
 	}
 
-	function handleConfirm(label: string, discrepancy: Discrepancy) {
+	// D-03: the single person-matching entry point — opens (or re-opens) the combobox for a
+	// row, pre-filled with whatever name is currently displayed for it (the resolved full
+	// name, or the discrepancy's auto-match name, or empty if nothing is set yet), so the
+	// input is never empty when there is already something to show. Replaces the old
+	// dedicated "Confirm" handler entirely — there is no separate accept-the-auto-match
+	// action any more.
+	function openPersonSearch(row: MergedRow) {
+		const label = row.raw_speaker_label;
 		const s = rowMatchStates[label];
 		if (!s) return;
-		s.personId = discrepancy.auto_match_id ?? null;
-		s.disposition = 'confirmed';
-		s.correcting = false;
-	}
-
-	function handleCorrect(label: string) {
-		const s = rowMatchStates[label];
-		if (!s) return;
+		const currentName = row.full_name ?? row.discrepancy?.auto_match_name ?? '';
 		s.correcting = true;
 		s.disposition = null;
+		s.comboQuery = currentName;
 	}
 
 	function handleSelectPerson(label: string, personId: number) {
@@ -461,149 +466,171 @@
 							{@render rawLabelBadge(row.raw_speaker_label)}
 						</td>
 
-						<!-- Column 2: Resolved as -->
+						<!-- Column 2: Resolved as — the single entry point for every person-matching
+						     action (D-03). Branch order: gate first, then pre-filled/correcting,
+						     then already-resolved, then unresolved-with-no-candidate. -->
 						<td style="font-size: 16px; color: #e2e8f0; border-bottom: 1px solid #334155; padding: 12px 0; padding-right: 12px;">
-							{#if isPaused && row.discrepancy}
-								{#if gated}
-									<span style="color: #94a3b8; font-size: 14px;">Select Bench or Advocate to continue</span>
-								{:else if s?.disposition === 'confirmed'}
-									<span style="color: #4ade80;">✓ Confirmed</span>
-									{#if row.discrepancy.auto_match_name}
-										<span style="color: #94a3b8; font-size: 14px; margin-left: 8px;">
-											{row.discrepancy.auto_match_name}{row.discrepancy.auto_match_role ? ` (${row.discrepancy.auto_match_role})` : ''}
-										</span>
-									{/if}
-								{:else if s?.correcting}
-									{@const comboId = `listbox-${label.replace(/\s+/g, '-')}`}
-									{@const candidates = getRowCandidates(row.discrepancy, label)}
-									{@const filteredCandidates = candidates.filter((c) => {
-										const text = c.role_name ? `${c.full_name} ${c.role_name}` : c.full_name;
-										return text.toLowerCase().includes((s.comboQuery ?? '').toLowerCase());
-									})}
-									{#if s.disposition === 'corrected'}
-										{@const selectedPerson = candidates.find((c) => c.id === s.personId)}
-										<div style="margin-bottom: 8px;">
-											<span style="color: #4ade80;">✓ Corrected</span>
-											{#if selectedPerson}
-												<span style="color: #94a3b8; font-size: 14px; margin-left: 8px;">
-													{selectedPerson.full_name}{selectedPerson.role_name ? ` (${selectedPerson.role_name})` : ''}
-												</span>
-											{/if}
-										</div>
-									{/if}
-									<div style="position: relative; width: 100%;" use:comboOutsideClick={label}>
-										<input
-											type="text"
-											role="combobox"
-											aria-expanded={s.comboOpen}
-											aria-haspopup="listbox"
-											aria-controls={comboId}
-											aria-autocomplete="list"
-											aria-label="Search for speaker"
-											placeholder="Type to search…"
-											value={s.comboQuery}
-											style="
-												background-color: #0f1117;
-												border: 1px solid #93c5fd;
-												border-radius: 6px;
-												padding: 6px 10px;
-												font-size: 16px;
-												color: #e2e8f0;
-												width: 100%;
-												box-sizing: border-box;
-											"
-											onfocus={() => {
-												s.comboOpen = true;
-												s.comboHighlight = -1;
-											}}
-											oninput={(e) => {
-												s.comboQuery = (e.target as HTMLInputElement).value;
-												s.comboOpen = true;
-												s.comboHighlight = -1;
-											}}
-											onkeydown={(e) => {
-												if (e.key === 'ArrowDown') {
-													e.preventDefault();
-													s.comboHighlight = Math.min(s.comboHighlight + 1, filteredCandidates.length - 1);
-												} else if (e.key === 'ArrowUp') {
-													e.preventDefault();
-													s.comboHighlight = Math.max(s.comboHighlight - 1, -1);
-												} else if (e.key === 'Enter') {
-													e.preventDefault();
-													if (s.comboHighlight >= 0 && s.comboHighlight < filteredCandidates.length) {
-														const picked = filteredCandidates[s.comboHighlight];
-														s.comboQuery = picked.full_name;
-														handleSelectPerson(label, picked.id);
-														s.comboOpen = false;
-													}
-												} else if (e.key === 'Escape') {
-													s.comboQuery = '';
-													s.comboOpen = false;
-													s.comboHighlight = -1;
-												}
-											}}
-										/>
-										{#if s.comboOpen}
-											<ul
-												id={comboId}
-												role="listbox"
-												style="
-													position: absolute;
-													top: 100%;
-													left: 0;
-													width: 100%;
-													margin: 4px 0 0 0;
-													background-color: #1e293b;
-													border: 1px solid #334155;
-													border-radius: 6px;
-													padding: 4px 0;
-													max-height: 240px;
-													overflow-y: auto;
-													z-index: 10;
-													list-style: none;
-												"
-											>
-												{#each filteredCandidates as candidate, idx (candidate.id)}
-													<li
-														role="option"
-														aria-selected={false}
-														style="
-															padding: 8px 12px;
-															font-size: 16px;
-															color: #e2e8f0;
-															cursor: pointer;
-															background-color: {s.comboHighlight === idx ? '#334155' : '#1e293b'};
-														"
-														onmouseenter={() => {
-															s.comboHighlight = idx;
-														}}
-														onclick={() => {
-															s.comboQuery = candidate.full_name;
-															handleSelectPerson(label, candidate.id);
-															s.comboOpen = false;
-														}}
-													>
-														{candidate.full_name}{#if candidate.role_name}<span style="font-size: 14px; color: #94a3b8; margin-left: 4px;">({candidate.role_name})</span>{/if}
-													</li>
-												{/each}
-											</ul>
+							{#if gated}
+								<button
+									type="button"
+									disabled
+									aria-disabled="true"
+									style="font-size: 16px; color: #93c5fd; text-decoration: underline; background: transparent; border: none; padding: 0; cursor: default; opacity: 0.6;"
+								>
+									Select person…
+								</button>
+								<span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%);">
+									Choose Bench or Advocate before selecting a person.
+								</span>
+							{:else if s?.correcting}
+								{@const comboId = `listbox-${label.replace(/\s+/g, '-')}`}
+								{@const candidates = getRowCandidates(row.discrepancy!, label)}
+								{@const filteredCandidates = candidates.filter((c) => {
+									const text = c.role_name ? `${c.full_name} ${c.role_name}` : c.full_name;
+									return text.toLowerCase().includes((s.comboQuery ?? '').toLowerCase());
+								})}
+								{#if s.disposition === 'corrected'}
+									{@const selectedPerson = candidates.find((c) => c.id === s.personId)}
+									<div style="margin-bottom: 8px;">
+										<span style="color: #4ade80;">✓ Corrected</span>
+										{#if selectedPerson}
+											<span style="color: #94a3b8; font-size: 14px; margin-left: 8px;">
+												{selectedPerson.full_name}{selectedPerson.role_name ? ` (${selectedPerson.role_name})` : ''}
+											</span>
 										{/if}
 									</div>
-									<div style="margin-top: 8px;">
-										<CreatePersonPopover
-											rawSpeakerLabel={label}
-											defaultAdvocateSide={side !== 'BENCH' ? side : 'UNKNOWN'}
-											onCreated={(person, createdSide) =>
-												handlePersonCreated(label, row.participant_id, person, createdSide)}
-										/>
-									</div>
-								{:else if row.discrepancy.auto_match_name}
-									{row.discrepancy.auto_match_name}{row.discrepancy.auto_match_role ? ` (${row.discrepancy.auto_match_role})` : ''}
-								{:else}
-									<span style="color: #94a3b8;">—</span>
+								{/if}
+								<div style="position: relative; width: 100%;" use:comboOutsideClick={label}>
+									<input
+										type="text"
+										role="combobox"
+										aria-expanded={s.comboOpen}
+										aria-haspopup="listbox"
+										aria-controls={comboId}
+										aria-autocomplete="list"
+										aria-label="Search for speaker"
+										placeholder="Type to search…"
+										value={s.comboQuery}
+										style="
+											background-color: #0f1117;
+											border: 1px solid #93c5fd;
+											border-radius: 6px;
+											padding: 6px 10px;
+											font-size: 16px;
+											color: #e2e8f0;
+											width: 100%;
+											box-sizing: border-box;
+										"
+										onfocus={() => {
+											s.comboOpen = true;
+											s.comboHighlight = -1;
+										}}
+										oninput={(e) => {
+											s.comboQuery = (e.target as HTMLInputElement).value;
+											s.comboOpen = true;
+											s.comboHighlight = -1;
+										}}
+										onkeydown={(e) => {
+											if (e.key === 'ArrowDown') {
+												e.preventDefault();
+												s.comboHighlight = Math.min(s.comboHighlight + 1, filteredCandidates.length - 1);
+											} else if (e.key === 'ArrowUp') {
+												e.preventDefault();
+												s.comboHighlight = Math.max(s.comboHighlight - 1, -1);
+											} else if (e.key === 'Enter') {
+												e.preventDefault();
+												if (s.comboHighlight >= 0 && s.comboHighlight < filteredCandidates.length) {
+													const picked = filteredCandidates[s.comboHighlight];
+													s.comboQuery = picked.full_name;
+													handleSelectPerson(label, picked.id);
+													s.comboOpen = false;
+												}
+											} else if (e.key === 'Escape') {
+												s.comboQuery = '';
+												s.comboOpen = false;
+												s.comboHighlight = -1;
+											}
+										}}
+									/>
+									{#if s.comboOpen}
+										<ul
+											id={comboId}
+											role="listbox"
+											style="
+												position: absolute;
+												top: 100%;
+												left: 0;
+												width: 100%;
+												margin: 4px 0 0 0;
+												background-color: #1e293b;
+												border: 1px solid #334155;
+												border-radius: 6px;
+												padding: 4px 0;
+												max-height: 240px;
+												overflow-y: auto;
+												z-index: 10;
+												list-style: none;
+											"
+										>
+											{#each filteredCandidates as candidate, idx (candidate.id)}
+												<li
+													role="option"
+													aria-selected={false}
+													style="
+														padding: 8px 12px;
+														font-size: 16px;
+														color: #e2e8f0;
+														cursor: pointer;
+														background-color: {s.comboHighlight === idx ? '#334155' : '#1e293b'};
+													"
+													onmouseenter={() => {
+														s.comboHighlight = idx;
+													}}
+													onclick={() => {
+														s.comboQuery = candidate.full_name;
+														handleSelectPerson(label, candidate.id);
+														s.comboOpen = false;
+													}}
+												>
+													{candidate.full_name}{#if candidate.role_name}<span style="font-size: 14px; color: #94a3b8; margin-left: 4px;">({candidate.role_name})</span>{/if}
+													{#if row.discrepancy?.auto_match_id === candidate.id}
+														<span style="font-size: 11px; color: #93c5fd; text-transform: uppercase; letter-spacing: 0.04em; margin-left: 6px;">Suggested</span>
+													{/if}
+												</li>
+											{/each}
+										</ul>
+									{/if}
+								</div>
+								<div style="margin-top: 8px;">
+									<CreatePersonPopover
+										rawSpeakerLabel={label}
+										defaultAdvocateSide={side !== 'BENCH' ? side : 'UNKNOWN'}
+										onCreated={(person, createdSide) =>
+											handlePersonCreated(label, row.participant_id, person, createdSide)}
+									/>
+								</div>
+							{:else if row.full_name != null || (s?.disposition != null && !s?.correcting)}
+								{@const displayName = row.full_name ?? row.discrepancy?.auto_match_name ?? null}
+								{@render personDisplay(displayName, row.photo_url, row.argument_role)}
+								{#if interactive && row.discrepancy}
+									<button
+										type="button"
+										onclick={() => openPersonSearch(row)}
+										style="font-size: 14px; color: #93c5fd; text-decoration: underline; background: transparent; border: none; padding: 0; margin-left: 8px; cursor: pointer;"
+									>Change</button>
 								{/if}
 							{:else}
-								{@render personDisplay(row.full_name, row.photo_url, row.argument_role)}
+								<button
+									type="button"
+									onclick={() => openPersonSearch(row)}
+									style="font-size: 16px; color: #93c5fd; text-decoration: underline; background: transparent; border: none; padding: 0; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"
+								>
+									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true">
+										<circle cx="10" cy="10" r="7" />
+										<line x1="21" y1="21" x2="15" y2="15" />
+									</svg>
+									Select person…
+								</button>
 							{/if}
 						</td>
 

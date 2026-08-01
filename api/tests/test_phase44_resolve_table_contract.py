@@ -394,3 +394,165 @@ def test_saving_flag_disables_all_three_row_controls() -> None:
         "RESOLVE-02 concurrency: the saving flag identifier must be threaded through all "
         "three controls, not just declared once"
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Plan 44-04 — RESOLVE-05: CopyableExtractedValue prefixLabel prop, the four
+# "Imported:" hints, and the five untouched call sites (D-08, D-09)
+# ─────────────────────────────────────────────────────────────────────────────
+
+COPYABLE_PATH = ROOT / "app" / "src" / "lib" / "components" / "CopyableExtractedValue.svelte"
+ARGUMENT_DETAILS_CARD_PATH = ROOT / "app" / "src" / "lib" / "components" / "ArgumentDetailsCard.svelte"
+DOCKET_PILL_PATH = ROOT / "app" / "src" / "lib" / "components" / "DocketPillInput.svelte"
+PIPELINE_JOB_PATH = ROOT / "app" / "src" / "routes" / "admin" / "pipeline" / "[job_id]" / "+page.svelte"
+PEOPLE_DETAIL_PATH = ROOT / "app" / "src" / "routes" / "admin" / "people" / "[id]" / "+page.svelte"
+ARGUMENT_EDIT_PATH = ROOT / "app" / "src" / "routes" / "admin" / "arguments" / "[id]" / "+page.svelte"
+
+# The five pre-existing call sites that must keep rendering the default
+# "Extracted:" prefix — asserted individually below, per the plan's explicit
+# instruction ("assert per file with a message naming the file, not as one
+# aggregate assertion").
+UNTOUCHED_CALL_SITES = [
+    ARGUMENT_DETAILS_CARD_PATH,
+    DOCKET_PILL_PATH,
+    PIPELINE_JOB_PATH,
+    PEOPLE_DETAIL_PATH,
+    ARGUMENT_EDIT_PATH,
+]
+
+
+def test_copyable_extracted_value_declares_prefix_label_prop_with_default() -> None:
+    source = _source(COPYABLE_PATH)
+    assert "prefixLabel?: string;" in source, (
+        "D-09: CopyableExtractedValue must declare the optional prefixLabel prop"
+    )
+    assert "prefixLabel = 'Extracted'" in source, (
+        "D-09: prefixLabel must default to the pre-existing wording so every "
+        "untouched call site keeps rendering 'Extracted:'"
+    )
+    assert '<span class="prefix">{prefixLabel}:</span>' in source, (
+        "D-09: the prefix element must render the interpolated prop, not a hardcoded string"
+    )
+    assert '<span class="prefix">Extracted:</span>' not in source, (
+        "D-09: no hardcoded prefix text may remain in the markup"
+    )
+
+
+def test_copyable_extracted_value_stacked_derivation_is_unaltered() -> None:
+    source = _source(COPYABLE_PATH)
+    assert "let isStacked = $derived(confidence !== undefined || raw !== undefined);" in source, (
+        "D-09: the back-compat stacked-mode derivation must be byte-identical — "
+        "prefixLabel must not be part of what activates stacked mode"
+    )
+
+
+def test_each_untouched_call_site_passes_no_prefix_label() -> None:
+    """Aggregate sweep over all five untouched call sites — see the five
+    dedicated per-file tests below for individually-named regression proof."""
+    for path in UNTOUCHED_CALL_SITES:
+        source = _source(path)
+        assert "prefixLabel" not in source, (
+            f"D-09: {path.name} must not reference prefixLabel — it must keep rendering "
+            f"the default 'Extracted:' prefix"
+        )
+
+
+def test_argument_details_card_passes_no_prefix_label() -> None:
+    source = _source(ARGUMENT_DETAILS_CARD_PATH)
+    assert "prefixLabel" not in source, (
+        "D-09: ArgumentDetailsCard.svelte must not reference prefixLabel — it must keep "
+        "rendering the default 'Extracted:' prefix"
+    )
+
+
+def test_docket_pill_input_passes_no_prefix_label() -> None:
+    source = _source(DOCKET_PILL_PATH)
+    assert "prefixLabel" not in source, (
+        "D-09: DocketPillInput.svelte must not reference prefixLabel — it must keep "
+        "rendering the default 'Extracted:' prefix"
+    )
+
+
+def test_pipeline_job_detail_page_passes_no_prefix_label() -> None:
+    source = _source(PIPELINE_JOB_PATH)
+    assert "prefixLabel" not in source, (
+        "D-09: admin/pipeline/[job_id]/+page.svelte must not reference prefixLabel — it "
+        "must keep rendering the default 'Extracted:' prefix"
+    )
+
+
+def test_people_detail_page_passes_no_prefix_label() -> None:
+    source = _source(PEOPLE_DETAIL_PATH)
+    assert "prefixLabel" not in source, (
+        "D-09: admin/people/[id]/+page.svelte must not reference prefixLabel — it must "
+        "keep rendering the default 'Extracted:' prefix"
+    )
+
+
+def test_argument_editor_page_passes_no_prefix_label() -> None:
+    source = _source(ARGUMENT_EDIT_PATH)
+    assert "prefixLabel" not in source, (
+        "D-09: admin/arguments/[id]/+page.svelte must not reference prefixLabel — it must "
+        "keep rendering the default 'Extracted:' prefix"
+    )
+
+
+def test_resolve_card_has_exactly_four_hint_usages() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    assert source.count("<CopyableExtractedValue") == 4, (
+        "RESOLVE-05: exactly four CopyableExtractedValue usages must exist in ResolveCard.svelte"
+    )
+    assert source.count('prefixLabel="Imported"') == 4, (
+        'RESOLVE-05: all four hints must pass prefixLabel="Imported"'
+    )
+    assert source.count("raw={null}") == 4, (
+        "RESOLVE-05: all four hints must pass an explicitly-null raw prop"
+    )
+    assert not re.search(r"confidence=", source), "RESOLVE-05: no hint may pass a confidence prop"
+
+
+def test_resolve_card_hint_copy_labels_each_appear_once() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    for label in ("Copy raw label", "Copy side", "Copy argument role", "Copy descriptor"):
+        assert source.count(f'copyLabel="{label}"') == 1, f"expected exactly one copyLabel={label!r}"
+
+
+def test_hint_value_helpers_exist_and_argument_role_helper_cannot_drift() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    assert "function resolvedAsHintValue(" in source, "RESOLVE-05: resolvedAsHintValue helper must exist"
+    assert "function sideHintValue(" in source, "RESOLVE-05: sideHintValue helper must exist"
+    assert "function argumentRoleHintValue(" in source, "RESOLVE-05: argumentRoleHintValue helper must exist"
+    body = _function_body(source, "argumentRoleHintValue")
+    assert "N/A - from tenure" in body, (
+        "RESOLVE-05: the valid-tenure bench hint text must live inside the helper"
+    )
+    assert "N/A - tenure not found" in body, (
+        "RESOLVE-05: the missing-tenure bench hint text must live inside the helper"
+    )
+    assert "missing_tenure" in body, (
+        "RESOLVE-05: the helper must fork on the same missing_tenure field the control above it uses"
+    )
+
+
+def test_raw_label_column_has_no_hint() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    badge_body = _snippet_body(source, "rawLabelBadge")
+    assert "CopyableExtractedValue" not in badge_body, (
+        "RESOLVE-05: Raw Label is itself the raw source and must carry no hint"
+    )
+
+
+def test_resolve_card_contains_no_html_directive() -> None:
+    """T-44-04: hint values are parse-derived text and must render as plain
+    Svelte interpolation only — never {@html}."""
+    source = _source(RESOLVE_CARD_PATH)
+    assert "{@html" not in source
+
+
+def test_palette_guard_still_passes_with_hint_additions() -> None:
+    """Re-affirms the 44-02 palette test still holds over the same file after
+    this plan's edits — no new colour was introduced by the hint markup."""
+    source = _source(RESOLVE_CARD_PATH)
+    found = set(re.findall(r"#[0-9a-fA-F]{6}", source))
+    unapproved = found - APPROVED_HEX_COLORS
+    assert not unapproved, f"found hex colour(s) outside the approved palette: {unapproved}"

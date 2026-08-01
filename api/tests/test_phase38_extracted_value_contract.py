@@ -168,17 +168,31 @@ def test_docket_pill_input_preserves_form_serialization_and_public_api() -> None
 # confidence/raw is adapted at the caller boundary with an explicit
 # qualitative fallback ("Medium") and the original field as the raw text —
 # never a fabricated percentage.
+#
+# Phase 44 Plan 04 (RESOLVE-05, D-08/D-09) superseded ResolveCard.svelte's four
+# hint call sites for THIS FILE ONLY: they now pass prefixLabel="Imported" and
+# raw={null} with no confidence prop at all, opting out of the two-line stacked
+# treatment below in favor of a single "Imported: …" line. The argument editor
+# (ARGUMENT_EDIT_PATH) did NOT change and still uses the original
+# confidence="Medium"/raw stacked pattern — a future reader must not "restore"
+# ResolveCard to that pattern; the opt-out is intentional and UI-SPEC-locked.
+# See api/tests/test_phase44_resolve_table_contract.py's RESOLVE-05 section for
+# the positive contract on the four new hints.
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def test_resolve_card_descriptor_hint_uses_stacked_provenance() -> None:
+def test_resolve_card_hints_opted_out_of_stacked_confidence_raw_per_phase_44() -> None:
+    """Phase 44 (RESOLVE-05, D-08/D-09) superseded this file's four hint call
+    sites with a single-line "Imported: …" treatment — no confidence band, no
+    mirrored raw prop. See the section banner above."""
     source = _source(RESOLVE_CARD_PATH)
-    assert 'copyLabel="Copy descriptor"' in source
-    assert 'confidence="Medium"' in source
-    assert "raw={row.descriptor_hint}" in source
-    # The component now owns the "Extracted:" prefix in stacked mode — no
-    # leftover caller-owned duplicate prefix.
+    assert source.count('prefixLabel="Imported"') == 4
+    assert source.count("raw={null}") == 4
+    assert "confidence=" not in source
+    # The component now owns the "Extracted:"/"Imported:" prefix in stacked
+    # mode — no leftover caller-owned duplicate prefix.
     assert "Extracted: <CopyableExtractedValue" not in source
+    assert "Imported: <CopyableExtractedValue" not in source
 
 
 def test_argument_editor_descriptor_hint_uses_stacked_provenance() -> None:
@@ -214,9 +228,16 @@ def test_no_fabricated_confidence_percentages_in_any_converted_consumer() -> Non
 
 def test_every_known_editable_destination_consumer_supplies_confidence_and_raw() -> None:
     """Enumerates every current CopyableExtractedValue call site across the
-    Phase 38 Plan 05 consumer files. A future usage added to one of these
-    files without confidence/raw fails this test loudly (Task 3 action)."""
-    for path in (RESOLVE_CARD_PATH, ARGUMENT_EDIT_PATH, PIPELINE_JOB_PATH):
+    Phase 38 Plan 05 consumer files that still use the stacked confidence/raw
+    treatment. RESOLVE_CARD_PATH is deliberately excluded here — Phase 44 Plan
+    04 (RESOLVE-05, D-08/D-09) opted its four hint call sites out of
+    confidence/raw entirely (see the section banner above and
+    test_resolve_card_hints_opted_out_of_stacked_confidence_raw_per_phase_44,
+    plus the positive RESOLVE-05 contract in
+    test_phase44_resolve_table_contract.py). A future usage added to one of
+    the two remaining files without confidence/raw fails this test loudly
+    (Task 3 action)."""
+    for path in (ARGUMENT_EDIT_PATH, PIPELINE_JOB_PATH):
         source = _source(path)
         calls = re.findall(r"<CopyableExtractedValue\b.*?/>", source, flags=re.DOTALL)
         assert calls, f"expected at least one CopyableExtractedValue usage in {path}"

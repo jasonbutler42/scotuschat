@@ -5,15 +5,15 @@ milestone_name: Corpus Fidelity & Resolve Rework
 current_phase: 44
 current_phase_name: resolve-table-rework
 status: executing
-stopped_at: Completed 44-01-PLAN.md
-last_updated: "2026-08-01T17:56:55.869Z"
+stopped_at: Completed 44-02-PLAN.md
+last_updated: "2026-08-01T18:21:47.044Z"
 last_activity: 2026-08-01
 last_activity_desc: Phase 44 execution started
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 16
-  completed_plans: 13
+  completed_plans: 14
   percent: 60
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-07-29 after starting v1.7 milestone)
 ## Current Position
 
 Phase: 44 (resolve-table-rework) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-08-01 — Phase 44 execution started
 
@@ -89,6 +89,7 @@ Still open from earlier milestones:
 | Phase 43 P02 | 45min | 2 tasks | 2 files |
 | Phase 43 P03 | 40min | 3 tasks | 3 files |
 | Phase 44 P01 | 36min | 3 tasks | 19 files |
+| Phase 44 P02 | 21min | 3 tasks | 2 files |
 
 v1.5/v1.6 per-plan metrics cleared at this milestone boundary per the standard STATE.md reset; the underlying per-plan SUMMARY files remain in `.planning/milestones/v1.5-phases/` and `.planning/milestones/v1.6-phases/`.
 
@@ -127,6 +128,8 @@ Full cross-milestone decision log lives in PROJECT.md's Key Decisions table. Per
 - [Phase ?]: Phase 43 Plan 03: ENVIRONMENT read via $env/dynamic/private (not static-private) so the Dev Tools gate is request-time, matching D-07; DEVTOOL-01/02 intentionally NOT marked complete in REQUIREMENTS.md, deferred to Plan 43-04's live production-refusal demonstration.
 - [Phase ?]: Phase 44 Plan 01: api/services/admin_arguments.py and api/routers/admin.py (touched by both Task 1 and Task 2) were edited fully before either task's commit, so their diffs were staged/committed per final per-task scope rather than git-hunk-split — no behavioral difference, documented in both commit messages and the SUMMARY.
 - [Phase ?]: Phase 44 Plan 01: RESOLVE-04 intentionally left un-checked in REQUIREMENTS.md — the phase's Source Coverage Audit splits it across 44-01 (backend rename, this plan) and 44-02 (Descriptor column always renders on Bench rows); marking it complete now would misrepresent state.
+- [Phase ?]: Phase 44 Plan 02: 'Change' link in Resolved As only renders when row.discrepancy is present (matches pre-Phase-44 Action column's row-actions-only-for-discrepancy-rows behavior) — avoids a dead clickable link for cleanly alias-resolved rows.
+- [Phase ?]: Phase 44 Plan 02: rowMatchStates seeding now sets correcting=true/disposition=confirmed/comboQuery=candidate-name for ANY row with a non-null auto_match_id (not just auto_resolved rows), collapsing Confirm/Select/Change into a single openPersonSearch entry point per D-03/D-04.
 
 ### Roadmap Evolution
 
@@ -160,8 +163,8 @@ v1.6's roadmap evolution is archived in `.planning/milestones/v1.6-ROADMAP.md`. 
 
 ## Session Continuity
 
-Last session: 2026-08-01T17:56:55.624Z
-Stopped at: Completed 44-01-PLAN.md
+Last session: 2026-08-01T18:21:46.664Z
+Stopped at: Completed 44-02-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

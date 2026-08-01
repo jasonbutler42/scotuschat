@@ -245,14 +245,14 @@ Plans:
 
 **Plan-time confirmation of the frontend-only assumption**: partially false. Side and Argument Role need no new backend field or write path (confirmed: `argument_role` is a read-time projection of `ArgumentParticipant.side` via `ADVOCATE_LABEL_MAP`). The Descriptor column is not UI-copy-only — CONTEXT.md D-05/D-06 make it a full-stack rename of `ArgumentParticipant.title` to `.descriptor` with a new Alembic migration, absorbed into this phase in one pass. Success criterion 5's "Extracted: …" wording is delivered as "Imported: …" per D-09, the honest framing for corpus-passthrough data.
 
-**Plans**: 1/4 plans executed
+**Plans**: 2/4 plans executed
 **Wave 1**
 
 - [x] 44-01-PLAN.md — Descriptor full-stack rename: Alembic 0025, ORM, schemas, services, routers, pipeline, both SvelteKit consumers, tests
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 44-02-PLAN.md — Five-column skeleton, Raw Label badge, Action column removed, Resolved As single entry point, always-present Descriptor cell
+- [x] 44-02-PLAN.md — Five-column skeleton, Raw Label badge, Action column removed, Resolved As single entry point, always-present Descriptor cell
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -329,7 +329,7 @@ Plans:
 | 41. Canonical Corpus Fixture Selection | v1.7 | 3/3 | Complete    | 2026-07-29 |
 | 42. Corpus Import Fidelity Diff & Fix | v1.7 | 5/5 | Complete    | 2026-07-30 |
 | 43. Dev-Only Reset to Fixture | v1.7 | 4/4 | Complete    | 2026-07-31 |
-| 44. Resolve Table Rework | v1.7 | 1/4 | In Progress|  |
+| 44. Resolve Table Rework | v1.7 | 2/4 | In Progress|  |
 | 45. Deferred UI Bug Fixes | v1.7 | 0/0 | Not started | - |
 
 ## Backlog

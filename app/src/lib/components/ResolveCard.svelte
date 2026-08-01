@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { flushSync } from 'svelte';
 	import { enhance } from '$app/forms';
 	import CopyableExtractedValue from '$lib/components/CopyableExtractedValue.svelte';
 	import CreatePersonPopover from '$lib/components/CreatePersonPopover.svelte';
@@ -109,6 +110,12 @@
 	}
 
 	function submitRow(participantId: number) {
+		// Svelte 5 batches $state writes into a microtask — flushing here forces the
+		// just-set pendingSideOverrides/descriptor state into the DOM before
+		// requestSubmit() serializes the form, so the hidden `side` input (and any
+		// other data-carrying input) reflects the value just chosen, not the
+		// previous render's value (Task 1, 44-03).
+		flushSync();
 		formRefs[participantId]?.requestSubmit();
 	}
 
@@ -136,6 +143,26 @@
 	function onSideChange(row: MergedRow, value: string) {
 		pendingSideOverrides[row.participant_id] = value;
 		submitRow(row.participant_id);
+	}
+
+	// Task 1 (RESOLVE-02): the segmented toggle's click handler. Both segments call
+	// this; it is the only new handler — confirmSide/onSideChange are extended, not
+	// replaced (44-CONTEXT.md "Established Patterns").
+	function toggleSide(row: MergedRow, choice: 'BENCH' | 'ADVOCATE') {
+		const gated = needsSideGate(row);
+		const current = effectiveSide(row);
+		const alreadyActive = !gated && (choice === 'BENCH' ? current === 'BENCH' : current !== 'BENCH');
+		if (alreadyActive) {
+			// No-op: clicking the already-active segment must not write state or
+			// submit, or a second Advocate click would reset a stored PETITIONER
+			// back to UNKNOWN.
+			return;
+		}
+		if (gated) {
+			confirmSide(row, choice);
+			return;
+		}
+		onSideChange(row, choice === 'BENCH' ? 'BENCH' : 'UNKNOWN');
 	}
 
 	const SIDE_LABEL: Record<string, string> = {
@@ -361,6 +388,59 @@
 	{/if}
 {/snippet}
 
+{#snippet sideToggle(row: MergedRow, side: string, gated: boolean, rowEditable: boolean, saving: boolean)}
+	{@const benchActive = !gated && side === 'BENCH'}
+	{@const advocateActive = !gated && side !== 'BENCH'}
+	{@const disabled = !rowEditable || saving}
+	<div
+		role="group"
+		aria-label={`Bench or Advocate for ${row.raw_speaker_label}`}
+		style="
+			display: inline-flex;
+			border: 1px solid #334155;
+			border-radius: 6px;
+			overflow: hidden;
+			min-height: 36px;
+		"
+	>
+		<button
+			type="button"
+			aria-pressed={benchActive}
+			disabled={disabled}
+			onclick={() => toggleSide(row, 'BENCH')}
+			style="
+				font-size: 14px;
+				padding: 6px 14px;
+				border: none;
+				border-right: 1px solid #334155;
+				line-height: 1.4;
+				background-color: {benchActive ? '#4ade80' : 'transparent'};
+				color: {benchActive ? '#0f1117' : '#94a3b8'};
+				font-weight: {benchActive ? 600 : 400};
+				cursor: {disabled ? 'default' : 'pointer'};
+				opacity: {disabled ? 0.6 : 1};
+			"
+		>Bench</button>
+		<button
+			type="button"
+			aria-pressed={advocateActive}
+			disabled={disabled}
+			onclick={() => toggleSide(row, 'ADVOCATE')}
+			style="
+				font-size: 14px;
+				padding: 6px 14px;
+				border: none;
+				line-height: 1.4;
+				background-color: {advocateActive ? '#93c5fd' : 'transparent'};
+				color: {advocateActive ? '#0f1117' : '#94a3b8'};
+				font-weight: {advocateActive ? 600 : 400};
+				cursor: {disabled ? 'default' : 'pointer'};
+				opacity: {disabled ? 0.6 : 1};
+			"
+		>Advocate</button>
+	</div>
+{/snippet}
+
 {#snippet personDisplay(fullName: string | null, photoUrl: string | null, roleLabel: string | null)}
 	{#if fullName}
 		<span style="display: inline-flex; align-items: center; gap: 8px;">
@@ -437,6 +517,11 @@
 			}}
 		>
 			<input type="hidden" name="participant_id" value={row.participant_id} />
+			<!-- Task 1 (RESOLVE-02, Phase 27 CR-01/CR-02): the ONLY element in this form
+			     carrying the `side` field name. The segmented toggle and the Argument
+			     Role select (Task 2) are pure state mutators with no `name`/`form` of
+			     their own; this always-present hidden input is what actually submits. -->
+			<input type="hidden" name="side" value={effectiveSide(row)} />
 		</form>
 	{/each}
 
@@ -634,53 +719,11 @@
 							{/if}
 						</td>
 
-						<!-- Column 3: Bench/Advocate — also the D-11/PJOB-18 side-first gate for intervention rows -->
+						<!-- Column 3: Bench/Advocate — segmented toggle (Task 1, RESOLVE-02); also
+						     absorbs the D-11/PJOB-18 side-first gate for intervention rows (D-07) —
+						     same component, neither segment active in the gate state. -->
 						<td style="font-size: 16px; color: #e2e8f0; border-bottom: 1px solid #334155; padding: 12px 0; padding-right: 12px;">
-							{#if gated}
-								<div style="display: flex; gap: 8px;">
-									<button
-										type="button"
-										onclick={() => confirmSide(row, 'BENCH')}
-										style="font-size: 14px; font-weight: 400; color: #e2e8f0; background: transparent; border: 1px solid #334155; border-radius: 4px; padding: 6px 12px; cursor: pointer; min-height: 36px;"
-									>
-										Bench
-									</button>
-									<button
-										type="button"
-										onclick={() => confirmSide(row, 'ADVOCATE')}
-										style="font-size: 14px; font-weight: 400; color: #e2e8f0; background: transparent; border: 1px solid #334155; border-radius: 4px; padding: 6px 12px; cursor: pointer; min-height: 36px;"
-									>
-										Advocate
-									</button>
-								</div>
-							{:else if rowEditable}
-								<select
-									form={rowFormId(row.participant_id)}
-									name="side"
-									value={side}
-									onchange={(e) => onSideChange(row, (e.target as HTMLSelectElement).value)}
-									style="
-										background-color: #0f1117;
-										border: 1px solid #334155;
-										border-radius: 6px;
-										padding: 8px 12px;
-										font-size: 16px;
-										font-weight: 400;
-										color: #e2e8f0;
-										min-height: 36px;
-										width: 100%;
-										cursor: pointer;
-									"
-								>
-									<option value="BENCH">Bench</option>
-									<option value="PETITIONER">Petitioner's Counsel</option>
-									<option value="RESPONDENT">Respondent's Counsel</option>
-									<option value="AMICUS">Amicus Curiae</option>
-									<option value="UNKNOWN">Counsel</option>
-								</select>
-							{:else}
-								<span style="font-size: 14px; color: #94a3b8;">{SIDE_LABEL[side] ?? side}</span>
-							{/if}
+							{@render sideToggle(row, side, gated, rowEditable, saveState[row.participant_id]?.saving === true)}
 							{#if saveState[row.participant_id]?.error}
 								<p role="alert" style="margin: 4px 0 0 0; font-size: 13px; color: #ef4444;">
 									{saveState[row.participant_id]?.error}

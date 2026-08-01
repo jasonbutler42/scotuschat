@@ -579,15 +579,15 @@ async def update_resolve_row(
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     """
-    Update a resolve row's side (BENCH allowed) and advocate title (D-14, D-18,
-    PJOB-14, PJOB-18).
+    Update a resolve row's side (BENCH allowed) and advocate descriptor (D-14,
+    D-18, PJOB-14, PJOB-18).
 
     This is the resolve-scoped mutation path — separate from
     PATCH /arguments/{argument_id}/participants/{participant_id}, which rejects
     BENCH by design (T-15-02-BENCH). Argument ownership is derived from job_id
     (never trusted from the client); the target participant must belong to that
     argument (T-25-14 IDOR guard). Rejected once the linked argument has left
-    the 'pipeline' status (D-18, D-19). title is forced to null server-side
+    the 'pipeline' status (D-18, D-19). descriptor is forced to null server-side
     whenever side == BENCH regardless of what the client sends (PJOB-15).
 
     Returns 422 on any guard failure (job/argument not found or not pipeline,
@@ -598,7 +598,7 @@ async def update_resolve_row(
         participant = await jobs_service.update_resolve_row_for_job(db, job_id, body)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
-    return {"id": participant.id, "side": participant.side.value, "title": participant.title}
+    return {"id": participant.id, "side": participant.side.value, "descriptor": participant.descriptor}
 
 
 @router.get("/jobs/{job_id}/resolve-rows", response_model=list[ResolveRow])
@@ -1336,15 +1336,16 @@ async def update_participant_side(
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     """
-    Update argument_participants.side and title for a specific participant
+    Update argument_participants.side and descriptor for a specific participant
     (ROLE-03, Phase 26 D-06).
 
     IDOR guard (T-15-02-IDOR): the participant must belong to the specified
     argument — a cross-argument update attempt returns 404.
 
-    Mass-assignment guard (T-26-04): only ``side`` and ``title`` are writable
-    via this endpoint (ParticipantSideUpdate exposes only those fields). title
-    is optional — omitting it leaves the existing title unchanged.
+    Mass-assignment guard (T-26-04): only ``side`` and ``descriptor`` are
+    writable via this endpoint (ParticipantSideUpdate exposes only those
+    fields). descriptor is optional — omitting it leaves the existing
+    descriptor unchanged.
 
     BENCH guard (T-15-02-BENCH): returns 422 if side == BENCH — operators
     cannot set advocate participants to BENCH via this endpoint.
@@ -1355,7 +1356,7 @@ async def update_participant_side(
     """
     try:
         result = await arguments_service.update_participant_side(
-            db, argument_id, participant_id, body.side, body.title
+            db, argument_id, participant_id, body.side, body.descriptor
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

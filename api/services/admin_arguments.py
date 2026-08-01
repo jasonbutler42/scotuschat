@@ -211,14 +211,15 @@ async def list_argument_speakers(db: AsyncSession, argument_id: int) -> list[dic
 
     Bench rows: bench_role/argument_role and missing_tenure come from
     _bench_role_and_missing_tenure against a CourtTenure date-window lookup
-    (title/title_hint always None — Title is advocate-only, PJOB-15 precedent).
-    An unresolved bench row (person_id IS NULL) reports missing_tenure=False —
-    there is no person to flag as missing tenure data, mirroring
-    list_resolve_rows_for_job's identical unresolved-row handling.
+    (descriptor/descriptor_hint always None — Descriptor is advocate-only,
+    PJOB-15 precedent). An unresolved bench row (person_id IS NULL) reports
+    missing_tenure=False — there is no person to flag as missing tenure data,
+    mirroring list_resolve_rows_for_job's identical unresolved-row handling.
 
-    Advocate rows: argument_role from ADVOCATE_LABEL_MAP; title and title_hint
-    both source ArgumentParticipant.title (D-06 — no separate stored "originally
-    extracted" snapshot exists for advocate title).
+    Advocate rows: argument_role from ADVOCATE_LABEL_MAP; descriptor and
+    descriptor_hint both source ArgumentParticipant.descriptor (D-06 — no
+    separate stored "originally extracted" snapshot exists for advocate
+    descriptor).
 
     utterance_count is computed via ONE grouped query over Utterance rows scoped
     to this argument (T-26-07 — avoids an N+1 per-participant count query).
@@ -292,8 +293,8 @@ async def list_argument_speakers(db: AsyncSession, argument_id: int) -> list[dic
                     "side": participant.side.value,
                     "is_bench": True,
                     "argument_role": bench_role,
-                    "title": None,
-                    "title_hint": None,
+                    "descriptor": None,
+                    "descriptor_hint": None,
                     "utterance_count": utterance_count,
                     "bench_role": bench_role,
                     "missing_tenure": missing_tenure,
@@ -309,8 +310,8 @@ async def list_argument_speakers(db: AsyncSession, argument_id: int) -> list[dic
                     "side": participant.side.value,
                     "is_bench": False,
                     "argument_role": ADVOCATE_LABEL_MAP.get(participant.side),
-                    "title": participant.title,
-                    "title_hint": participant.title,
+                    "descriptor": participant.descriptor,
+                    "descriptor_hint": participant.descriptor,
                     "utterance_count": utterance_count,
                     "bench_role": None,
                     "missing_tenure": False,
@@ -620,17 +621,17 @@ async def update_participant_side(
     argument_id: int,
     participant_id: int,
     side: SideEnum,
-    title: str | None = None,
+    descriptor: str | None = None,
 ) -> dict | None:
-    """Update argument_participants.side (and optionally title) for a specific
+    """Update argument_participants.side (and optionally descriptor) for a specific
     participant in a specific argument (ROLE-03, Phase 26 D-06).
 
     IDOR guard (T-15-02-IDOR): the SELECT and UPDATE are both scoped by BOTH
     argument_id AND participant_id — a participant that belongs to a different
     argument will return None → router returns 404.
 
-    Mass-assignment guard (T-26-04): only ``side`` and ``title`` are writable via
-    this function.
+    Mass-assignment guard (T-26-04): only ``side`` and ``descriptor`` are writable
+    via this function.
 
     BENCH guard (T-15-02-BENCH): raises ValueError when side == BENCH — operators
     cannot demote or re-classify bench participants.
@@ -642,13 +643,13 @@ async def update_participant_side(
     authoritative rejection; the edit-page UI additionally disables Save while
     the row is unresolved as defense-in-depth.
 
-    title is written ONLY when the caller passes a non-None value — omitting
-    title leaves the existing ArgumentParticipant.title unchanged (does not
-    clobber it), mirroring the "only write provided fields" pattern used by
+    descriptor is written ONLY when the caller passes a non-None value — omitting
+    descriptor leaves the existing ArgumentParticipant.descriptor unchanged (does
+    not clobber it), mirroring the "only write provided fields" pattern used by
     update_argument_metadata.
 
     Returns:
-        dict with ``id``, ``side``, and ``title`` on success.
+        dict with ``id``, ``side``, and ``descriptor`` on success.
         None if the participant does not exist under this argument_id (→ 404).
     """
     if side == SideEnum.BENCH:
@@ -669,8 +670,8 @@ async def update_participant_side(
         return None  # router → 404
 
     values_to_set: dict = {"side": side}
-    if title is not None:
-        values_to_set["title"] = title
+    if descriptor is not None:
+        values_to_set["descriptor"] = descriptor
 
     await db.execute(
         update(ArgumentParticipant)
@@ -683,8 +684,8 @@ async def update_participant_side(
     )
     await db.commit()
 
-    persisted_title = title if title is not None else participant.title
-    return {"id": participant_id, "side": side.value, "title": persisted_title}
+    persisted_descriptor = descriptor if descriptor is not None else participant.descriptor
+    return {"id": participant_id, "side": side.value, "descriptor": persisted_descriptor}
 
 
 async def unpublish_argument(db: AsyncSession, argument_id: int) -> dict | None:

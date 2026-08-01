@@ -15,16 +15,20 @@ Phase 15 additions:
 Phase 26 additions:
   - StatusLogEntry — one ArgumentStatusLog row (status, created_at); ArgumentDetail.status_log
     is the edit page's Status history list, oldest first (T-26-03)
-  - SpeakerRow — unified bench+advocate row (utterance_count, title, bench_role, missing_tenure,
+  - SpeakerRow — unified bench+advocate row (utterance_count, descriptor, bench_role, missing_tenure,
     person_edit_href); ArgumentDetail.speakers replaces the participants + tenure_gap_warnings
     split for the rebuilt edit page (D-05, AEDIT-05/06/07)
-  - ParticipantSideUpdate.title — advocate title, writable alongside side (D-06, AEDIT-06)
+  - ParticipantSideUpdate.descriptor — advocate descriptor, writable alongside side (D-06, AEDIT-06)
+
+Phase 44 additions:
+  - ParticipantSideUpdate.descriptor and SpeakerRow.descriptor/.descriptor_hint — full-stack
+    rename of the equivalent pre-Phase-44 field names (D-05).
 
 Security notes:
   - ArgumentUpdate allow-list is exactly {case_name, docket_number, argued_date} (T-11-MASS).
     published_at is NOT in this schema — it is controlled only by /publish and /unpublish.
     slug and id are also excluded — slug is derived server-side; id is path parameter.
-  - ParticipantSideUpdate exposes only ``side`` and ``title`` — no other ArgumentParticipant
+  - ParticipantSideUpdate exposes only ``side`` and ``descriptor`` — no other ArgumentParticipant
     field is writable via this schema (T-15-02-MASS, T-26-04).
 """
 
@@ -37,17 +41,17 @@ from api.models.models import ArgumentStatusEnum, SideEnum
 
 
 class ParticipantSideUpdate(BaseModel):
-    """PATCH body for argument_participants.side and title (ROLE-03, Phase 26 D-06).
+    """PATCH body for argument_participants.side and descriptor (ROLE-03, Phase 26 D-06).
 
-    Mass-assignment guard (T-26-04): ONLY ``side`` and ``title`` are writable via
-    this schema.  No other ArgumentParticipant column can be set.  Service
+    Mass-assignment guard (T-26-04): ONLY ``side`` and ``descriptor`` are writable
+    via this schema.  No other ArgumentParticipant column can be set.  Service
     validates that BENCH cannot be set (T-15-02-BENCH) — operators set advocate
-    roles only.  ``title`` is optional — omitting it (None) leaves the existing
-    title unchanged; it is written only for non-BENCH participants.
+    roles only.  ``descriptor`` is optional — omitting it (None) leaves the
+    existing descriptor unchanged; it is written only for non-BENCH participants.
     """
 
     side: SideEnum
-    title: Optional[str] = None
+    descriptor: Optional[str] = None
 
 
 class StatusLogEntry(BaseModel):
@@ -73,12 +77,12 @@ class SpeakerRow(BaseModel):
     Bench rows: is_bench=True; bench_role/argument_role come from a CourtTenure
     date-window lookup (_bench_role_and_missing_tenure); missing_tenure=True when no
     tenure covers argued_date; person_edit_href links to the person editor in that
-    case. title/title_hint are always None for bench rows — Title is advocate-only
-    (PJOB-15 precedent).
+    case. descriptor/descriptor_hint are always None for bench rows — Descriptor is
+    advocate-only (PJOB-15 precedent).
 
     Advocate rows: is_bench=False; argument_role comes from ADVOCATE_LABEL_MAP;
-    title and title_hint both source the same ArgumentParticipant.title column
-    (D-06 — there is no separate stored "originally extracted" snapshot, unlike
+    descriptor and descriptor_hint both source the same ArgumentParticipant.descriptor
+    column (D-06 — there is no separate stored "originally extracted" snapshot, unlike
     cover_metadata for argued_date/docket). bench_role is always None and
     missing_tenure is always False for these rows.
 
@@ -92,8 +96,8 @@ class SpeakerRow(BaseModel):
     side: str
     is_bench: bool
     argument_role: Optional[str] = None
-    title: Optional[str] = None
-    title_hint: Optional[str] = None
+    descriptor: Optional[str] = None
+    descriptor_hint: Optional[str] = None
     utterance_count: int
     bench_role: Optional[str] = None
     missing_tenure: bool

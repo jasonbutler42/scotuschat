@@ -442,7 +442,7 @@
 				Speakers
 			</h2>
 			<p style="font-size: 14px; font-weight: 400; color: #94a3b8; margin: 0 0 24px 0;">
-				All participants in this argument. Advocates: set the role and title they held here. Changing a role or title here does not affect other arguments.
+				All participants in this argument. Advocates: set the role and descriptor they held here. Changing a role or descriptor here does not affect other arguments.
 			</p>
 
 			{#if data.argument.speakers && data.argument.speakers.length > 0}
@@ -503,8 +503,8 @@
 											<div style="flex: 1; min-width: 160px;">
 												<input
 													type="text"
-													name="title"
-													value={speaker.title ?? ''}
+													name="descriptor"
+													value={speaker.descriptor ?? ''}
 													style="
 														display: block;
 														width: 100%;
@@ -523,16 +523,16 @@
 														margin: 4px 0 0 0;
 													"
 												>
-													<!-- Phase 38 (D-19/D-20): title_hint has no independently stored
-													     raw/confidence (admin_arguments.py D-06 — title and title_hint
+													<!-- Phase 38 (D-19/D-20): descriptor_hint has no independently stored
+													     raw/confidence (admin_arguments.py D-06 — descriptor and descriptor_hint
 													     source the same column), so the exact extracted text itself is
 													     the raw source and confidence uses an explicit qualitative
 													     fallback rather than a fabricated figure. -->
 													<CopyableExtractedValue
-														value={speaker.title_hint}
-														copyLabel="Copy title"
+														value={speaker.descriptor_hint}
+														copyLabel="Copy descriptor"
 														confidence="Medium"
-														raw={speaker.title_hint}
+														raw={speaker.descriptor_hint}
 													/>
 												</div>
 											</div>

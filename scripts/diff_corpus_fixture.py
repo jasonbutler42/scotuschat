@@ -919,8 +919,8 @@ def _build_argument_participants_rows(
 
     rows.append(
         _upstream_missing_row(
-            "title",
-            "ArgumentParticipant.title",
+            "descriptor",
+            "ArgumentParticipant.descriptor",
             "TOC subtitle from the PDF pipeline's cover extractor only",
         )
     )

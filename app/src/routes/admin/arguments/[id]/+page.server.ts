@@ -31,8 +31,8 @@ type SpeakerRow = {
 	side: string;
 	is_bench: boolean;
 	argument_role: string | null;
-	title: string | null;
-	title_hint: string | null;
+	descriptor: string | null;
+	descriptor_hint: string | null;
 	utterance_count: number;
 	bench_role: string | null;
 	missing_tenure: boolean;
@@ -163,7 +163,7 @@ export const actions: Actions = {
 		const formData = await request.formData();
 		const participant_id = ((formData.get('participant_id') as string) ?? '').trim();
 		const side = ((formData.get('side') as string) ?? '').trim();
-		const title = (formData.get('title') as string) ?? '';
+		const descriptor = (formData.get('descriptor') as string) ?? '';
 
 		let res: Response;
 		try {
@@ -175,7 +175,7 @@ export const actions: Actions = {
 						'X-Admin-Token': ADMIN_TOKEN,
 						'Content-Type': 'application/json',
 					},
-					body: JSON.stringify({ side, title }),
+					body: JSON.stringify({ side, descriptor }),
 				},
 			);
 		} catch {

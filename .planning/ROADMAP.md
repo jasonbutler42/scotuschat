@@ -246,10 +246,22 @@ Plans:
 **Plan-time confirmation of the frontend-only assumption**: partially false. Side and Argument Role need no new backend field or write path (confirmed: `argument_role` is a read-time projection of `ArgumentParticipant.side` via `ADVOCATE_LABEL_MAP`). The Descriptor column is not UI-copy-only — CONTEXT.md D-05/D-06 make it a full-stack rename of `ArgumentParticipant.title` to `.descriptor` with a new Alembic migration, absorbed into this phase in one pass. Success criterion 5's "Extracted: …" wording is delivered as "Imported: …" per D-09, the honest framing for corpus-passthrough data.
 
 **Plans**: 4 plans
+**Wave 1**
+
 - [ ] 44-01-PLAN.md — Descriptor full-stack rename: Alembic 0025, ORM, schemas, services, routers, pipeline, both SvelteKit consumers, tests
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 44-02-PLAN.md — Five-column skeleton, Raw Label badge, Action column removed, Resolved As single entry point, always-present Descriptor cell
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 44-03-PLAN.md — Segmented Bench/Advocate toggle, writable Argument Role dropdown, bench lock affordance, preserved missing-tenure warning
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 44-04-PLAN.md — "Imported:" hints across all four columns via a new `prefixLabel` prop, plus operator visual acceptance against the mockup
+
 **UI hint**: yes
 
 ### Phase 45: Deferred UI Bug Fixes

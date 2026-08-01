@@ -4,15 +4,15 @@ milestone: v1.7
 milestone_name: Corpus Fidelity & Resolve Rework
 current_phase: 44
 current_phase_name: Resolve Table Rework
-status: planning
-stopped_at: Phase 44 context gathered
-last_updated: "2026-08-01T15:17:09.888Z"
+status: executing
+stopped_at: Phase 44 UI-SPEC approved
+last_updated: "2026-08-01T16:49:17.882Z"
 last_activity: 2026-07-31
 last_activity_desc: Phase 43 complete, transitioned to Phase 44
 progress:
   total_phases: 5
   completed_phases: 3
-  total_plans: 12
+  total_plans: 16
   completed_plans: 12
   percent: 60
 ---
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-07-29 after starting v1.7 milestone)
 
 Phase: 44 — Resolve Table Rework
 Plan: Not started
-Status: Ready to plan
+Status: Ready to execute
 Last activity: 2026-07-31 — Phase 43 complete, transitioned to Phase 44
 
 **Milestone shape:**
@@ -157,9 +157,9 @@ v1.6's roadmap evolution is archived in `.planning/milestones/v1.6-ROADMAP.md`. 
 
 ## Session Continuity
 
-Last session: 2026-08-01T15:17:08.534Z
-Stopped at: Phase 44 context gathered
-Resume file: /mnt/c/workspace/scotuschat/project/.planning/phases/44-resolve-table-rework/44-CONTEXT.md
+Last session: 2026-08-01T15:54:55.997Z
+Stopped at: Phase 44 UI-SPEC approved
+Resume file: /mnt/c/workspace/scotuschat/project/.planning/phases/44-resolve-table-rework/44-UI-SPEC.md
 
 ## Operator Next Steps
 

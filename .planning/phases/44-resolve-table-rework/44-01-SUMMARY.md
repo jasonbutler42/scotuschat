@@ -232,3 +232,14 @@ None - no external service configuration required. The Alembic migration was app
 ---
 *Phase: 44-resolve-table-rework*
 *Completed: 2026-08-01*
+
+## Self-Check: PASSED
+
+- FOUND: `alembic/versions/0025_rename_participant_title_to_descriptor.py`
+- FOUND: `api/tests/test_phase44_descriptor_rename.py`
+- FOUND: `.planning/phases/44-resolve-table-rework/44-01-SUMMARY.md`
+- FOUND: `.planning/phases/44-resolve-table-rework/deferred-items.md`
+- FOUND: commit `c9e5b274` (Task 1)
+- FOUND: commit `cfd17de6` (Task 2)
+- FOUND: commit `03b23566` (Task 3)
+- FOUND: commit `32cd81db` (SUMMARY.md/deferred-items.md)

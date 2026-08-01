@@ -3,17 +3,17 @@ gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Corpus Fidelity & Resolve Rework
 current_phase: 44
-current_phase_name: Resolve Table Rework
+current_phase_name: resolve-table-rework
 status: executing
-stopped_at: Phase 44 UI-SPEC approved
-last_updated: "2026-08-01T16:49:17.882Z"
-last_activity: 2026-07-31
-last_activity_desc: Phase 43 complete, transitioned to Phase 44
+stopped_at: Completed 44-01-PLAN.md
+last_updated: "2026-08-01T17:56:55.869Z"
+last_activity: 2026-08-01
+last_activity_desc: Phase 44 execution started
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 16
-  completed_plans: 12
+  completed_plans: 13
   percent: 60
 ---
 
@@ -24,14 +24,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-29 after starting v1.7 milestone)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** Phase 43 — dev-only-reset-to-fixture
+**Current focus:** Phase 44 — resolve-table-rework
 
 ## Current Position
 
-Phase: 44 — Resolve Table Rework
-Plan: Not started
+Phase: 44 (resolve-table-rework) — EXECUTING
+Plan: 2 of 4
 Status: Ready to execute
-Last activity: 2026-07-31 — Phase 43 complete, transitioned to Phase 44
+Last activity: 2026-08-01 — Phase 44 execution started
 
 **Milestone shape:**
 
@@ -88,6 +88,7 @@ Still open from earlier milestones:
 | Phase 43 P01 | 25min | 3 tasks | 8 files |
 | Phase 43 P02 | 45min | 2 tasks | 2 files |
 | Phase 43 P03 | 40min | 3 tasks | 3 files |
+| Phase 44 P01 | 36min | 3 tasks | 19 files |
 
 v1.5/v1.6 per-plan metrics cleared at this milestone boundary per the standard STATE.md reset; the underlying per-plan SUMMARY files remain in `.planning/milestones/v1.5-phases/` and `.planning/milestones/v1.6-phases/`.
 
@@ -124,6 +125,8 @@ Full cross-milestone decision log lives in PROJECT.md's Key Decisions table. Per
 - [Phase ?]: Phase 43 Plan 02: State-realization block drives 13015 to DRAFT via approve_job, 18897 to DRAFT-then-PUBLISHED via approve_job then publish_argument (order load-bearing, publish_argument's resolve-gate requires resolved_at non-null), and 22372's AdminJob to RUNNING via the one documented direct column write (D-04) -- D-03 is scoped to Argument.status, not AdminJob.status.
 - [Phase ?]: Phase 43 Plan 02: Did NOT mark DEVTOOL-01 complete in REQUIREMENTS.md -- its text requires the operator can trigger the reset from the admin panel, which ships in Plan 43-03, not this backend-only plan. Mirrors 43-01-SUMMARY's identical decision.
 - [Phase ?]: Phase 43 Plan 03: ENVIRONMENT read via $env/dynamic/private (not static-private) so the Dev Tools gate is request-time, matching D-07; DEVTOOL-01/02 intentionally NOT marked complete in REQUIREMENTS.md, deferred to Plan 43-04's live production-refusal demonstration.
+- [Phase ?]: Phase 44 Plan 01: api/services/admin_arguments.py and api/routers/admin.py (touched by both Task 1 and Task 2) were edited fully before either task's commit, so their diffs were staged/committed per final per-task scope rather than git-hunk-split — no behavioral difference, documented in both commit messages and the SUMMARY.
+- [Phase ?]: Phase 44 Plan 01: RESOLVE-04 intentionally left un-checked in REQUIREMENTS.md — the phase's Source Coverage Audit splits it across 44-01 (backend rename, this plan) and 44-02 (Descriptor column always renders on Bench rows); marking it complete now would misrepresent state.
 
 ### Roadmap Evolution
 
@@ -157,9 +160,9 @@ v1.6's roadmap evolution is archived in `.planning/milestones/v1.6-ROADMAP.md`. 
 
 ## Session Continuity
 
-Last session: 2026-08-01T15:54:55.997Z
-Stopped at: Phase 44 UI-SPEC approved
-Resume file: /mnt/c/workspace/scotuschat/project/.planning/phases/44-resolve-table-rework/44-UI-SPEC.md
+Last session: 2026-08-01T17:56:55.624Z
+Stopped at: Completed 44-01-PLAN.md
+Resume file: None
 
 ## Operator Next Steps
 

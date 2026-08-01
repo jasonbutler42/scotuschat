@@ -4,7 +4,11 @@
 	import CreatePersonPopover from '$lib/components/CreatePersonPopover.svelte';
 
 	// Phase 25 — Restructured Resolve card (D-10 through D-19, D-21, PJOB-14 through PJOB-19, PJOB-21).
-	// Locked column order: Raw label, Resolved as, Bench/Advocate, Argument Role, Title, Action.
+	// Phase 44 (RESOLVE-01/D-03/D-04) — five-column rework: the Action column is deleted and
+	// its two person-matching buttons fold into a single combobox entry point inside Resolved
+	// As; Descriptor (renamed from Title, Phase 44 Plan 01) now always renders instead of
+	// disappearing for bench/gated rows.
+	// Locked column order: Raw Label, Resolved As, Bench/Advocate, Argument Role, Descriptor.
 	//
 	// Two backend data sources are merged by raw_speaker_label:
 	//  - resolveRows (GET .../resolve-rows, Plan 25-02): the authoritative side/descriptor/
@@ -15,7 +19,7 @@
 	//
 	// Side/descriptor edits submit immediately per-row via ?/saveResolveRow (T-25-16: job_id
 	// is the only trust boundary; participant ownership is re-verified server-side).
-	// Person-matching (Confirm/Select/Create person) accumulates client-side and submits
+	// Person-matching (search/select/create person) accumulates client-side and submits
 	// as a batch via ?/resolve when "Continue Resolve" is clicked (existing pipeline
 	// resolve-step contract, unchanged by Phase 25).
 
@@ -289,6 +293,69 @@
 	}
 </script>
 
+{#snippet rawLabelBadge(label: string)}
+	<span
+		style="
+			background-color: #0f1117;
+			border: 1px solid #334155;
+			border-radius: 4px;
+			padding: 4px 10px;
+			font-size: 14px;
+			font-weight: 400;
+			color: #e2e8f0;
+			text-transform: uppercase;
+			letter-spacing: 0.02em;
+			display: inline-block;
+			white-space: normal;
+		"
+	>
+		{label}
+	</span>
+{/snippet}
+
+{#snippet descriptorCell(row: MergedRow, side: string, rowEditable: boolean)}
+	{#if side === 'BENCH'}
+		<span style="color: #94a3b8;">–</span>
+	{:else if rowEditable}
+		<input
+			form={rowFormId(row.participant_id)}
+			name="descriptor"
+			type="text"
+			value={row.descriptor ?? ''}
+			onblur={() => submitRow(row.participant_id)}
+			placeholder="e.g. Attorney, Location, or Affiliation"
+			style="
+				background-color: #0f1117;
+				border: 1px solid #334155;
+				border-radius: 6px;
+				padding: 8px 12px;
+				font-size: 16px;
+				color: #e2e8f0;
+				min-height: 36px;
+				width: 100%;
+				box-sizing: border-box;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				white-space: nowrap;
+			"
+		/>
+		<div style="margin: 4px 0 0 0;">
+			<!-- Phase 38 (D-19/D-20): descriptor_hint has no independently stored raw/confidence
+			     (admin_arguments.py D-06 — descriptor and descriptor_hint source the same column), so
+			     the exact extracted text itself is the raw source and confidence uses an
+			     explicit qualitative fallback rather than a fabricated figure. -->
+			<CopyableExtractedValue
+				value={row.descriptor_hint}
+				copyLabel="Copy descriptor"
+				confidence="Medium"
+				raw={row.descriptor_hint}
+			/>
+		</div>
+	{:else}
+		<span>{row.descriptor ?? '–'}</span>
+	{/if}
+{/snippet}
+
 {#snippet personDisplay(fullName: string | null, photoUrl: string | null, roleLabel: string | null)}
 	{#if fullName}
 		<span style="display: inline-flex; align-items: center; gap: 8px;">
@@ -373,12 +440,11 @@
 		<table style="width: 100%; border-collapse: collapse; min-width: 720px;">
 			<thead>
 				<tr>
-					<th scope="col" style="font-size: 14px; font-weight: 400; color: #94a3b8; border-bottom: 1px solid #334155; padding: 8px 0; padding-right: 12px; text-align: left;">Raw label</th>
-					<th scope="col" style="font-size: 14px; font-weight: 400; color: #94a3b8; border-bottom: 1px solid #334155; padding: 8px 0; padding-right: 12px; text-align: left;">Resolved as</th>
-					<th scope="col" style="font-size: 14px; font-weight: 400; color: #94a3b8; border-bottom: 1px solid #334155; padding: 8px 0; padding-right: 12px; text-align: left;">Bench/Advocate</th>
-					<th scope="col" style="font-size: 14px; font-weight: 400; color: #94a3b8; border-bottom: 1px solid #334155; padding: 8px 0; padding-right: 12px; text-align: left;">Argument Role</th>
-					<th scope="col" style="font-size: 14px; font-weight: 400; color: #94a3b8; border-bottom: 1px solid #334155; padding: 8px 0; padding-right: 12px; text-align: left;">Title</th>
-					<th scope="col" style="font-size: 14px; font-weight: 400; color: #94a3b8; border-bottom: 1px solid #334155; padding: 8px 0; text-align: left;">Action</th>
+					<th scope="col" style="font-size: 14px; font-weight: 400; color: #94a3b8; border-bottom: 1px solid #334155; padding: 8px 0; padding-right: 12px; text-align: left; text-transform: uppercase; letter-spacing: 0.04em;">Raw Label</th>
+					<th scope="col" style="font-size: 14px; font-weight: 400; color: #94a3b8; border-bottom: 1px solid #334155; padding: 8px 0; padding-right: 12px; text-align: left; text-transform: uppercase; letter-spacing: 0.04em;">Resolved As</th>
+					<th scope="col" style="font-size: 14px; font-weight: 400; color: #94a3b8; border-bottom: 1px solid #334155; padding: 8px 0; padding-right: 12px; text-align: left; text-transform: uppercase; letter-spacing: 0.04em;">Bench/Advocate</th>
+					<th scope="col" style="font-size: 14px; font-weight: 400; color: #94a3b8; border-bottom: 1px solid #334155; padding: 8px 0; padding-right: 12px; text-align: left; text-transform: uppercase; letter-spacing: 0.04em;">Argument Role</th>
+					<th scope="col" style="font-size: 14px; font-weight: 400; color: #94a3b8; border-bottom: 1px solid #334155; padding: 8px 0; text-align: left; text-transform: uppercase; letter-spacing: 0.04em;">Descriptor</th>
 				</tr>
 			</thead>
 			<tbody>
@@ -390,9 +456,9 @@
 					{@const rowEditable = interactive && row.editable}
 
 					<tr>
-						<!-- Column 1: Raw label -->
+						<!-- Column 1: Raw Label -->
 						<td style="font-size: 16px; color: #e2e8f0; border-bottom: 1px solid #334155; padding: 12px 0; padding-right: 12px;">
-							{row.raw_speaker_label}
+							{@render rawLabelBadge(row.raw_speaker_label)}
 						</td>
 
 						<!-- Column 2: Resolved as -->
@@ -615,78 +681,9 @@
 							{/if}
 						</td>
 
-						<!-- Column 5: Title — advocate rows only (PJOB-15); hidden entirely for BENCH rows -->
-						<td style="font-size: 16px; color: #e2e8f0; border-bottom: 1px solid #334155; padding: 12px 0; padding-right: 12px;">
-							{#if !gated && side !== 'BENCH'}
-								{#if rowEditable}
-									<input
-										form={rowFormId(row.participant_id)}
-										name="descriptor"
-										type="text"
-										value={row.descriptor ?? ''}
-										onblur={() => submitRow(row.participant_id)}
-										style="
-											width: 100%;
-											background-color: #0f1117;
-											border: 1px solid #334155;
-											border-radius: 6px;
-											padding: 8px 12px;
-											font-size: 16px;
-											color: #e2e8f0;
-											box-sizing: border-box;
-											min-height: 36px;
-										"
-									/>
-									<div style="margin: 4px 0 0 0;">
-										<!-- Phase 38 (D-19/D-20): descriptor_hint has no independently stored raw/confidence
-										     (admin_arguments.py D-06 — descriptor and descriptor_hint source the same column), so
-										     the exact extracted text itself is the raw source and confidence uses an
-										     explicit qualitative fallback rather than a fabricated figure. -->
-										<CopyableExtractedValue
-											value={row.descriptor_hint}
-											copyLabel="Copy descriptor"
-											confidence="Medium"
-											raw={row.descriptor_hint}
-										/>
-									</div>
-								{:else}
-									<span>{row.descriptor ?? '—'}</span>
-								{/if}
-							{/if}
-						</td>
-
-						<!-- Column 6: Action -->
+						<!-- Column 5: Descriptor (renamed from Title, Phase 44 RESOLVE-04) — always renders -->
 						<td style="font-size: 16px; color: #e2e8f0; border-bottom: 1px solid #334155; padding: 12px 0;">
-							{#if !isPaused || !row.discrepancy || gated}
-								<span style="color: #94a3b8;">—</span>
-							{:else if row.discrepancy.auto_resolved === true || s?.disposition != null}
-								<button
-									type="button"
-									onclick={() => handleCorrect(label)}
-									style="font-size: 14px; font-weight: 400; color: #e2e8f0; background: transparent; border: 1px solid #334155; border-radius: 4px; padding: 6px 12px; cursor: pointer; min-height: 36px;"
-								>
-									Change
-								</button>
-							{:else}
-								<div style="display: flex; gap: 8px; flex-wrap: wrap;">
-									{#if row.discrepancy.auto_match_id}
-										<button
-											type="button"
-											onclick={() => handleConfirm(label, row.discrepancy!)}
-											style="font-size: 14px; font-weight: 400; color: #e2e8f0; background: transparent; border: 1px solid #334155; border-radius: 4px; padding: 6px 12px; cursor: pointer; min-height: 36px;"
-										>
-											Confirm
-										</button>
-									{/if}
-									<button
-										type="button"
-										onclick={() => handleCorrect(label)}
-										style="font-size: 14px; font-weight: 400; color: #e2e8f0; background: transparent; border: 1px solid #334155; border-radius: 4px; padding: 6px 12px; cursor: pointer; min-height: 36px;"
-									>
-										Select
-									</button>
-								</div>
-							{/if}
+							{@render descriptorCell(row, side, rowEditable)}
 						</td>
 					</tr>
 				{/each}

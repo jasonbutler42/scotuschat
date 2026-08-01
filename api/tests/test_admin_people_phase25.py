@@ -5,7 +5,7 @@ Covers:
   Task 1: ResolveRow schema, list_resolve_rows_for_job job-scoped listing
           (D-10, D-11, D-18, D-19, PJOB-14/15/16).
   Task 2: Tenure-derived bench_role/missing_tenure/person_edit_href, and
-          title/title_hint (advocate-only) via _bench_role_and_missing_tenure
+          descriptor/descriptor_hint (advocate-only) via _bench_role_and_missing_tenure
           (D-15, D-16, PJOB-15/16).
   Task 3: GET /api/admin/jobs/{job_id}/resolve-rows endpoint (T-25-04, T-25-06).
 
@@ -46,7 +46,7 @@ def _db_configured() -> bool:
 
 def test_resolve_row_schema_fields() -> None:
     """Test 1: ResolveRow serializes raw_speaker_label, resolved person avatar/name
-    fields, side, argument_role, title, title_hint, action-supporting fields, and
+    fields, side, argument_role, descriptor, descriptor_hint, action-supporting fields, and
     editable."""
     from api.models.models import SideEnum
     from api.schemas.admin_people import ResolveRow
@@ -59,8 +59,8 @@ def test_resolve_row_schema_fields() -> None:
         photo_url="https://example.com/smith.jpg",
         side=SideEnum.PETITIONER,
         argument_role="Petitioner's Counsel",
-        title="Counsel for Petitioner",
-        title_hint="Counsel for Petitioner",
+        descriptor="Counsel for Petitioner",
+        descriptor_hint="Counsel for Petitioner",
         bench_role=None,
         missing_tenure=False,
         person_edit_href=None,
@@ -73,8 +73,8 @@ def test_resolve_row_schema_fields() -> None:
     assert row.photo_url == "https://example.com/smith.jpg"
     assert row.side == SideEnum.PETITIONER
     assert row.argument_role == "Petitioner's Counsel"
-    assert row.title == "Counsel for Petitioner"
-    assert row.title_hint == "Counsel for Petitioner"
+    assert row.descriptor == "Counsel for Petitioner"
+    assert row.descriptor_hint == "Counsel for Petitioner"
     assert row.editable is True
 
 
@@ -443,9 +443,9 @@ async def test_bench_row_without_covering_tenure_returns_missing_tenure(db_sessi
 
 @pytest.mark.asyncio
 @pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
-async def test_advocate_row_no_missing_tenure_keeps_role_and_title(db_session) -> None:
+async def test_advocate_row_no_missing_tenure_keeps_role_and_descriptor(db_session) -> None:
     """Test 3: advocate rows do not show Missing tenure and keep argument
-    role/title editable data."""
+    role/descriptor editable data."""
     from api.models.models import (
         AdminJob,
         AdminJobStatus,
@@ -471,7 +471,7 @@ async def test_advocate_row_no_missing_tenure_keeps_role_and_title(db_session) -
         person_id=person.id,
         raw_speaker_label="MR. ADVOCATE",
         side=SideEnum.PETITIONER,
-        title="Counsel for Petitioner",
+        descriptor="Counsel for Petitioner",
     )
     db_session.add(participant)
     await db_session.flush()
@@ -487,15 +487,15 @@ async def test_advocate_row_no_missing_tenure_keeps_role_and_title(db_session) -
     assert row["missing_tenure"] is False
     assert row["bench_role"] is None
     assert row["argument_role"] == "Petitioner's Counsel"
-    assert row["title"] == "Counsel for Petitioner"
+    assert row["descriptor"] == "Counsel for Petitioner"
 
 
 @pytest.mark.asyncio
 @pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
-async def test_bench_row_title_null_advocate_row_title_present(db_session) -> None:
-    """Test 4: bench rows return title null and title_hint null so the Title
+async def test_bench_row_descriptor_null_advocate_row_descriptor_present(db_session) -> None:
+    """Test 4: bench rows return descriptor null and descriptor_hint null so the Descriptor
     column stays advocate-only per PJOB-15; advocate rows still carry
-    title/title_hint."""
+    descriptor/descriptor_hint."""
     from api.models.models import (
         AdminJob,
         AdminJobStatus,
@@ -528,7 +528,7 @@ async def test_bench_row_title_null_advocate_row_title_present(db_session) -> No
         person_id=advocate_person.id,
         raw_speaker_label="MR. ADVOCATE 2",
         side=SideEnum.RESPONDENT,
-        title="Counsel for Respondent",
+        descriptor="Counsel for Respondent",
     )
     db_session.add_all([bench_participant, advocate_participant])
     await db_session.flush()
@@ -540,10 +540,10 @@ async def test_bench_row_title_null_advocate_row_title_present(db_session) -> No
     rows = await list_resolve_rows_for_job(db_session, job.id)
     rows_by_label = {r["raw_speaker_label"]: r for r in rows}
 
-    assert rows_by_label["JUSTICE BENCH"]["title"] is None
-    assert rows_by_label["JUSTICE BENCH"]["title_hint"] is None
-    assert rows_by_label["MR. ADVOCATE 2"]["title"] == "Counsel for Respondent"
-    assert rows_by_label["MR. ADVOCATE 2"]["title_hint"] == "Counsel for Respondent"
+    assert rows_by_label["JUSTICE BENCH"]["descriptor"] is None
+    assert rows_by_label["JUSTICE BENCH"]["descriptor_hint"] is None
+    assert rows_by_label["MR. ADVOCATE 2"]["descriptor"] == "Counsel for Respondent"
+    assert rows_by_label["MR. ADVOCATE 2"]["descriptor_hint"] == "Counsel for Respondent"
 
 
 # ===========================================================================

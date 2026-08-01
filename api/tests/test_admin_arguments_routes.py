@@ -377,18 +377,18 @@ async def test_delete_argument_returns_409_for_pipeline(client: AsyncClient) -> 
 
 
 # ---------------------------------------------------------------------------
-# PATCH /arguments/{id}/participants/{id} — title persistence (Phase 26 Plan 02,
+# PATCH /arguments/{id}/participants/{id} — descriptor persistence (Phase 26 Plan 02,
 # D-06, T-26-04)
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
 @pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
-async def test_update_participant_route_persists_title_for_advocate(
+async def test_update_participant_route_persists_descriptor_for_advocate(
     client: AsyncClient,
 ) -> None:
-    """PATCH /arguments/{id}/participants/{id} with {side, title} persists title
-    for an advocate participant and returns it in the response body (D-06).
+    """PATCH /arguments/{id}/participants/{id} with {side, descriptor} persists
+    descriptor for an advocate participant and returns it in the response body (D-06).
     """
     from api.core.database import AsyncSessionLocal
     from api.models.models import (
@@ -424,13 +424,13 @@ async def test_update_participant_route_persists_title_for_advocate(
     try:
         response = await client.patch(
             f"/api/admin/arguments/{arg_id}/participants/{participant_id}",
-            json={"side": "PETITIONER", "title": "Counsel of Record"},
+            json={"side": "PETITIONER", "descriptor": "Counsel of Record"},
             headers=_admin_headers(),
         )
         assert response.status_code == 200
         body = response.json()
         assert body["side"] == "PETITIONER"
-        assert body["title"] == "Counsel of Record"
+        assert body["descriptor"] == "Counsel of Record"
 
         # BENCH is still rejected via the route (422).
         response = await client.patch(

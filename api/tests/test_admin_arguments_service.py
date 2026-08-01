@@ -869,7 +869,7 @@ async def test_list_argument_speakers_returns_empty_for_missing_argument() -> No
 async def test_list_argument_speakers_bench_advocate_and_utterance_counts() -> None:
     """One argument with a covered-tenure bench Justice, an uncovered-tenure
     bench Justice, and an advocate — asserts bench_role/missing_tenure,
-    advocate title/title_hint, and a single-grouped-query utterance_count
+    advocate descriptor/descriptor_hint, and a single-grouped-query utterance_count
     per participant (T-26-07).
     """
     import datetime
@@ -931,7 +931,7 @@ async def test_list_argument_speakers_bench_advocate_and_utterance_counts() -> N
             person_id=advocate.id,
             raw_speaker_label="MR. ADVOCATE",
             side=SideEnum.PETITIONER,
-            title="Counsel of Record",
+            descriptor="Counsel of Record",
         )
         db.add_all([bench_covered, bench_uncovered, advocate_participant])
         await db.flush()
@@ -989,8 +989,8 @@ async def test_list_argument_speakers_bench_advocate_and_utterance_counts() -> N
     assert covered_row["argument_role"] == "Associate Justice"
     assert covered_row["missing_tenure"] is False
     assert covered_row["person_edit_href"] is None
-    assert covered_row["title"] is None
-    assert covered_row["title_hint"] is None
+    assert covered_row["descriptor"] is None
+    assert covered_row["descriptor_hint"] is None
     assert covered_row["utterance_count"] == 1
 
     uncovered_row = by_id[bench_uncovered_id]
@@ -1003,8 +1003,8 @@ async def test_list_argument_speakers_bench_advocate_and_utterance_counts() -> N
     advocate_row = by_id[advocate_participant_id]
     assert advocate_row["is_bench"] is False
     assert advocate_row["argument_role"] == "Petitioner's Counsel"
-    assert advocate_row["title"] == "Counsel of Record"
-    assert advocate_row["title_hint"] == "Counsel of Record"
+    assert advocate_row["descriptor"] == "Counsel of Record"
+    assert advocate_row["descriptor_hint"] == "Counsel of Record"
     assert advocate_row["bench_role"] is None
     assert advocate_row["missing_tenure"] is False
     assert advocate_row["utterance_count"] == 3
@@ -1036,7 +1036,7 @@ async def test_list_argument_speakers_bench_advocate_and_utterance_counts() -> N
 
 # ---------------------------------------------------------------------------
 # get_argument_detail status_log / speakers wiring (Phase 26 Plan 02, T-26-03,
-# D-05) and update_participant_side title persistence (D-06, T-26-04)
+# D-05) and update_participant_side descriptor persistence (D-06, T-26-04)
 # ---------------------------------------------------------------------------
 
 
@@ -1142,8 +1142,8 @@ async def test_get_argument_detail_includes_status_log_and_speakers() -> None:
 
 @pytest.mark.asyncio
 @pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
-async def test_update_participant_side_persists_title_for_advocate() -> None:
-    """update_participant_side writes title when provided, leaves it unchanged
+async def test_update_participant_side_persists_descriptor_for_advocate() -> None:
+    """update_participant_side writes descriptor when provided, leaves it unchanged
     when omitted, and still raises on side==BENCH (D-06, T-26-04).
     """
     from api.core.database import AsyncSessionLocal
@@ -1178,29 +1178,29 @@ async def test_update_participant_side_persists_title_for_advocate() -> None:
         advocate_id = advocate.id
         participant_id = participant.id
 
-    # Provide a title alongside a side change — must persist.
+    # Provide a descriptor alongside a side change — must persist.
     async with AsyncSessionLocal() as db:
         result = await update_participant_side(
             db, arg_id, participant_id, SideEnum.PETITIONER, "Counsel of Record"
         )
     assert result is not None
     assert result["side"] == SideEnum.PETITIONER.value
-    assert result["title"] == "Counsel of Record"
+    assert result["descriptor"] == "Counsel of Record"
 
-    # Omitting title must leave the previously-persisted title unchanged.
+    # Omitting descriptor must leave the previously-persisted descriptor unchanged.
     async with AsyncSessionLocal() as db:
         result = await update_participant_side(
             db, arg_id, participant_id, SideEnum.RESPONDENT
         )
     assert result is not None
     assert result["side"] == SideEnum.RESPONDENT.value
-    assert result["title"] == "Counsel of Record"
+    assert result["descriptor"] == "Counsel of Record"
 
     async with AsyncSessionLocal() as db:
         p = await db.get(ArgumentParticipant, participant_id)
-        assert p.title == "Counsel of Record"
+        assert p.descriptor == "Counsel of Record"
 
-    # BENCH is still rejected regardless of title.
+    # BENCH is still rejected regardless of descriptor.
     async with AsyncSessionLocal() as db:
         with pytest.raises(ValueError):
             await update_participant_side(

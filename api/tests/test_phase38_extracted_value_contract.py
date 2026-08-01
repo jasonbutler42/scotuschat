@@ -166,21 +166,21 @@ def test_docket_pill_input_preserves_form_serialization_and_public_api() -> None
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def test_resolve_card_title_hint_uses_stacked_provenance() -> None:
+def test_resolve_card_descriptor_hint_uses_stacked_provenance() -> None:
     source = _source(RESOLVE_CARD_PATH)
-    assert 'copyLabel="Copy title"' in source
+    assert 'copyLabel="Copy descriptor"' in source
     assert 'confidence="Medium"' in source
-    assert "raw={row.title_hint}" in source
+    assert "raw={row.descriptor_hint}" in source
     # The component now owns the "Extracted:" prefix in stacked mode — no
     # leftover caller-owned duplicate prefix.
     assert "Extracted: <CopyableExtractedValue" not in source
 
 
-def test_argument_editor_title_hint_uses_stacked_provenance() -> None:
+def test_argument_editor_descriptor_hint_uses_stacked_provenance() -> None:
     source = _source(ARGUMENT_EDIT_PATH)
-    assert 'copyLabel="Copy title"' in source
+    assert 'copyLabel="Copy descriptor"' in source
     assert 'confidence="Medium"' in source
-    assert "raw={speaker.title_hint}" in source
+    assert "raw={speaker.descriptor_hint}" in source
     assert "Extracted: <CopyableExtractedValue" not in source
 
 

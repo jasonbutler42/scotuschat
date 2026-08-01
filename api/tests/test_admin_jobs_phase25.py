@@ -8,7 +8,7 @@ Covers:
   Task 2: PersonCreate side/raw_speaker_label extension, create_person_for_job
           job-scoped mini create-person mutation (D-12, D-13, PJOB-19).
   Task 3: ResolveRowUpdate schema, update_resolve_row_for_job job-scoped
-          resolve-row side/title mutation (D-14, D-18, D-19, PJOB-14, PJOB-18).
+          resolve-row side/descriptor mutation (D-14, D-18, D-19, PJOB-14, PJOB-18).
 
 Following the project pattern (test_admin_jobs_stats.py, test_admin_jobs_service.py):
   - Schema/pure-function tests run without a database.
@@ -725,7 +725,7 @@ async def test_create_person_for_job_rejects_participant_outside_job_argument(db
 
 
 # ===========================================================================
-# Task 3: Guarded resolve-row side and title mutation
+# Task 3: Guarded resolve-row side and descriptor mutation
 # ===========================================================================
 
 
@@ -739,19 +739,19 @@ def test_resolve_row_update_schema_allows_bench() -> None:
     from api.models.models import SideEnum
     from api.schemas.admin_jobs import ResolveRowUpdate
 
-    body = ResolveRowUpdate(participant_id=7, side=SideEnum.BENCH, title=None)
+    body = ResolveRowUpdate(participant_id=7, side=SideEnum.BENCH, descriptor=None)
     assert body.side == SideEnum.BENCH
-    assert body.title is None
+    assert body.descriptor is None
 
 
 def test_resolve_row_update_schema_fields() -> None:
     from api.models.models import SideEnum
     from api.schemas.admin_jobs import ResolveRowUpdate
 
-    body = ResolveRowUpdate(participant_id=7, side=SideEnum.PETITIONER, title="Counsel for Petitioner")
+    body = ResolveRowUpdate(participant_id=7, side=SideEnum.PETITIONER, descriptor="Counsel for Petitioner")
     assert body.participant_id == 7
     assert body.side == SideEnum.PETITIONER
-    assert body.title == "Counsel for Petitioner"
+    assert body.descriptor == "Counsel for Petitioner"
 
 
 # ---------------------------------------------------------------------------
@@ -839,12 +839,12 @@ async def test_update_resolve_row_bench_side_persists() -> None:
         participant_id = participant.id
         job_id = job.id
 
-    body = ResolveRowUpdate(participant_id=participant_id, side=SideEnum.BENCH, title=None)
+    body = ResolveRowUpdate(participant_id=participant_id, side=SideEnum.BENCH, descriptor=None)
 
     async with AsyncSessionLocal() as db:
         updated = await update_resolve_row_for_job(db, job_id, body)
         assert updated.side == SideEnum.BENCH
-        assert updated.title is None
+        assert updated.descriptor is None
 
     async with AsyncSessionLocal() as db:
         # cleanup
@@ -861,9 +861,9 @@ async def test_update_resolve_row_bench_side_persists() -> None:
 
 @pytest.mark.asyncio
 @pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
-async def test_update_resolve_row_advocate_title_persists_bench_title_forced_null() -> None:
-    """Test 2: updating an advocate row persists title and the selected non-bench
-    side (D-14, PJOB-14), while a bench-row payload stores title as null (PJOB-15).
+async def test_update_resolve_row_advocate_descriptor_persists_bench_descriptor_forced_null() -> None:
+    """Test 2: updating an advocate row persists descriptor and the selected non-bench
+    side (D-14, PJOB-14), while a bench-row payload stores descriptor as null (PJOB-15).
 
     Uses AsyncSessionLocal() directly rather than the shared db_session
     fixture — update_resolve_row_for_job commits internally (see the bench
@@ -922,25 +922,25 @@ async def test_update_resolve_row_advocate_title_persists_bench_title_forced_nul
     advocate_body = ResolveRowUpdate(
         participant_id=advocate_participant_id,
         side=SideEnum.RESPONDENT,
-        title="Counsel for Respondent",
+        descriptor="Counsel for Respondent",
     )
 
     async with AsyncSessionLocal() as db:
         updated_advocate = await update_resolve_row_for_job(db, job_id, advocate_body)
         assert updated_advocate.side == SideEnum.RESPONDENT
-        assert updated_advocate.title == "Counsel for Respondent"
+        assert updated_advocate.descriptor == "Counsel for Respondent"
 
-    # Bench payload sends a title too — service must force it to null (PJOB-15).
+    # Bench payload sends a descriptor too — service must force it to null (PJOB-15).
     bench_body = ResolveRowUpdate(
         participant_id=bench_participant_id,
         side=SideEnum.BENCH,
-        title="Should be discarded",
+        descriptor="Should be discarded",
     )
 
     async with AsyncSessionLocal() as db:
         updated_bench = await update_resolve_row_for_job(db, job_id, bench_body)
         assert updated_bench.side == SideEnum.BENCH
-        assert updated_bench.title is None
+        assert updated_bench.descriptor is None
 
     async with AsyncSessionLocal() as db:
         # cleanup
@@ -994,7 +994,7 @@ async def test_update_resolve_row_rejects_participant_outside_job_argument(db_se
     db_session.add(job)
     await db_session.flush()
 
-    body = ResolveRowUpdate(participant_id=other_participant.id, side=SideEnum.BENCH, title=None)
+    body = ResolveRowUpdate(participant_id=other_participant.id, side=SideEnum.BENCH, descriptor=None)
     with pytest.raises(ValueError):
         await update_resolve_row_for_job(db_session, job.id, body)
 
@@ -1043,7 +1043,7 @@ async def test_update_resolve_row_rejects_edit_when_argument_not_pipeline(db_ses
     db_session.add(job)
     await db_session.flush()
 
-    body = ResolveRowUpdate(participant_id=participant.id, side=SideEnum.BENCH, title=None)
+    body = ResolveRowUpdate(participant_id=participant.id, side=SideEnum.BENCH, descriptor=None)
     with pytest.raises(ValueError):
         await update_resolve_row_for_job(db_session, job.id, body)
 

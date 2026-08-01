@@ -189,6 +189,34 @@
 		ADVOCATE: 'Counsel', // legacy — never produced going forward
 	};
 
+	// Task 2 (RESOLVE-05, D-08/D-09): hint-value helpers for the four `Imported:`
+	// hints rendered below each hinted column's control. Each takes the same
+	// row/side/gate inputs the control above it already derives, so the hint can
+	// never drift from what is displayed there. D-08 confirmed no separate stored
+	// originally-extracted value exists for side or argument role — these
+	// necessarily redisplay the row's own current value under the honest
+	// "Imported:" wording rather than a fabricated per-field extraction event.
+	// Real per-row provenance detection is explicitly deferred (Deferred Ideas).
+	function resolvedAsHintValue(row: MergedRow): string | null {
+		return row.full_name != null ? row.raw_speaker_label : null;
+	}
+
+	function sideHintValue(side: string, gated: boolean): string | null {
+		if (gated) return null;
+		return side === 'BENCH' ? 'Bench' : 'Advocate';
+	}
+
+	function argumentRoleHintValue(row: MergedRow, side: string, gated: boolean): string | null {
+		if (gated) return null;
+		if (side === 'BENCH') {
+			return row.missing_tenure ? 'N/A - tenure not found' : 'N/A - from tenure';
+		}
+		if (side === 'PETITIONER' || side === 'RESPONDENT' || side === 'AMICUS') {
+			return SIDE_LABEL[side];
+		}
+		return null;
+	}
+
 	// ──────────────────────────────────────────────────────────────────────────
 	// Person-matching flow (only while isPaused) — adapted from the pre-Phase-25
 	// discrepancy review table, relocated into the "Resolved as"/Action columns.
@@ -387,21 +415,23 @@
 				white-space: nowrap;
 			"
 		/>
-		<div style="margin: 4px 0 0 0;">
-			<!-- Phase 38 (D-19/D-20): descriptor_hint has no independently stored raw/confidence
-			     (admin_arguments.py D-06 — descriptor and descriptor_hint source the same column), so
-			     the exact extracted text itself is the raw source and confidence uses an
-			     explicit qualitative fallback rather than a fabricated figure. -->
-			<CopyableExtractedValue
-				value={row.descriptor_hint}
-				copyLabel="Copy descriptor"
-				confidence="Medium"
-				raw={row.descriptor_hint}
-			/>
-		</div>
 	{:else}
 		<span>{row.descriptor ?? '–'}</span>
 	{/if}
+	<!-- Phase 44 (RESOLVE-05, D-08/D-09): supersedes the Phase 38 two-line stacked
+	     hint (the old call passed a medium confidence band and mirrored the hint
+	     value into the raw prop) for this file only — the UI-SPEC locks Descriptor
+	     to the same single-line "Imported: …" treatment as the other 3 hinted
+	     columns. Always renders, including on Bench rows (RESOLVE-04), since
+	     Descriptor itself always renders here. -->
+	<div style="margin-top: 8px;">
+		<CopyableExtractedValue
+			value={row.descriptor_hint}
+			copyLabel="Copy descriptor"
+			prefixLabel="Imported"
+			raw={null}
+		/>
+	</div>
 {/snippet}
 
 {#snippet sideToggle(row: MergedRow, side: string, gated: boolean, rowEditable: boolean, saving: boolean)}
@@ -809,6 +839,17 @@
 									Select person…
 								</button>
 							{/if}
+							<!-- Phase 44 (RESOLVE-05, D-08/D-09): Resolved As hint — the row's raw
+							     label when resolved, "Imported: N/A" otherwise (never an unconditional
+							     echo of raw_speaker_label). -->
+							<div style="margin-top: 8px;">
+								<CopyableExtractedValue
+									value={resolvedAsHintValue(row)}
+									copyLabel="Copy raw label"
+									prefixLabel="Imported"
+									raw={null}
+								/>
+							</div>
 						</td>
 
 						<!-- Column 3: Bench/Advocate — segmented toggle (Task 1, RESOLVE-02); also
@@ -816,6 +857,16 @@
 						     same component, neither segment active in the gate state. -->
 						<td style="font-size: 16px; color: #e2e8f0; border-bottom: 1px solid #334155; padding: 12px 0; padding-right: 12px;">
 							{@render sideToggle(row, side, gated, rowEditable, saveState[row.participant_id]?.saving === true)}
+							<!-- Phase 44 (RESOLVE-05, D-08/D-09): Bench/Advocate hint — coarse two-
+							     value label only, "Imported: N/A" in the gate state. -->
+							<div style="margin-top: 8px;">
+								<CopyableExtractedValue
+									value={sideHintValue(side, gated)}
+									copyLabel="Copy side"
+									prefixLabel="Imported"
+									raw={null}
+								/>
+							</div>
 							{#if saveState[row.participant_id]?.error}
 								<p role="alert" style="margin: 4px 0 0 0; font-size: 13px; color: #ef4444;">
 									{saveState[row.participant_id]?.error}
@@ -826,6 +877,17 @@
 						<!-- Column 4: Argument Role — bench lock / Missing tenure, or advocate dropdown (Task 2) -->
 						<td style="font-size: 16px; color: #e2e8f0; border-bottom: 1px solid #334155; padding: 12px 0; padding-right: 12px;">
 							{@render argumentRoleCell(row, side, gated, rowEditable, saveState[row.participant_id]?.saving === true)}
+							<!-- Phase 44 (RESOLVE-05, D-08/D-09): Argument Role hint — state-dependent,
+							     never a flat echo of side; forks on the same side/missing_tenure/gated
+							     inputs the control above it uses. -->
+							<div style="margin-top: 8px;">
+								<CopyableExtractedValue
+									value={argumentRoleHintValue(row, side, gated)}
+									copyLabel="Copy argument role"
+									prefixLabel="Imported"
+									raw={null}
+								/>
+							</div>
 						</td>
 
 						<!-- Column 5: Descriptor (renamed from Title, Phase 44 RESOLVE-04) — always renders -->

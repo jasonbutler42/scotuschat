@@ -19,11 +19,11 @@
 ### Resolve Table Rework
 
 - [x] **RESOLVE-01**: Resolve table renders 5 columns — Raw Label, Resolved As, Bench/Advocate, Argument Role, Descriptor — with no separate Action column; row actions (select/change person) live inside the Resolved As cell
-- [ ] **RESOLVE-02**: Bench/Advocate is a two-button segmented toggle (only one active) instead of a `<select>` dropdown
-- [ ] **RESOLVE-03**: Argument Role is a real writable dropdown for advocate rows (Petitioner's Counsel / Respondent's Counsel / select role), while remaining a locked, tenure-derived value for Bench rows
+- [x] **RESOLVE-02**: Bench/Advocate is a two-button segmented toggle (only one active) instead of a `<select>` dropdown
+- [x] **RESOLVE-03**: Argument Role is a real writable dropdown for advocate rows (Petitioner's Counsel / Respondent's Counsel / select role), while remaining a locked, tenure-derived value for Bench rows
 - [x] **RESOLVE-04**: The Title column is renamed Descriptor and always renders (shows "–" for Bench rows) instead of being conditionally hidden
 - [ ] **RESOLVE-05**: Every column (Resolved As, Bench/Advocate, Argument Role, Descriptor) shows a consistent "Extracted: ..." hint of the raw extracted value
-- [ ] **RESOLVE-06**: A resolved, tenure-valid Bench row shows a lock icon signaling its role is system-derived and not editable, distinct from the existing "Missing tenure" warning state
+- [x] **RESOLVE-06**: A resolved, tenure-valid Bench row shows a lock icon signaling its role is system-derived and not editable, distinct from the existing "Missing tenure" warning state
 
 ### Bug Fixes
 
@@ -56,11 +56,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DEVTOOL-01 | Phase 43 | Complete |
 | DEVTOOL-02 | Phase 43 | Complete |
 | RESOLVE-01 | Phase 44 | Complete |
-| RESOLVE-02 | Phase 44 | Pending |
-| RESOLVE-03 | Phase 44 | Pending |
+| RESOLVE-02 | Phase 44 | Complete |
+| RESOLVE-03 | Phase 44 | Complete |
 | RESOLVE-04 | Phase 44 | Complete |
 | RESOLVE-05 | Phase 44 | Pending |
-| RESOLVE-06 | Phase 44 | Pending |
+| RESOLVE-06 | Phase 44 | Complete |
 | BUG-01 | Phase 45 | Pending |
 | BUG-02 | Phase 45 | Pending |
 

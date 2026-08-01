@@ -197,3 +197,14 @@ None - no external service configuration required.
 ---
 *Phase: 44-resolve-table-rework*
 *Completed: 2026-08-01*
+
+## Self-Check: PASSED
+
+- FOUND: `app/src/lib/components/ResolveCard.svelte`
+- FOUND: `api/tests/test_phase44_resolve_table_contract.py`
+- FOUND: `api/tests/test_phase44_argument_role_roundtrip.py`
+- FOUND: `.planning/phases/44-resolve-table-rework/44-03-SUMMARY.md`
+- FOUND: commit `c19ae2a2` (Task 1)
+- FOUND: commit `360c18b9` (Task 2)
+- FOUND: commit `bbaac48d` (Task 3)
+- FOUND: commit `dc3429b3` (SUMMARY.md)

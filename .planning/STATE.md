@@ -5,15 +5,15 @@ milestone_name: Corpus Fidelity & Resolve Rework
 current_phase: 44
 current_phase_name: resolve-table-rework
 status: executing
-stopped_at: Completed 44-02-PLAN.md
-last_updated: "2026-08-01T18:21:47.044Z"
+stopped_at: Completed 44-03-PLAN.md
+last_updated: "2026-08-01T18:52:29.235Z"
 last_activity: 2026-08-01
 last_activity_desc: Phase 44 execution started
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 16
-  completed_plans: 14
+  completed_plans: 15
   percent: 60
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-07-29 after starting v1.7 milestone)
 ## Current Position
 
 Phase: 44 (resolve-table-rework) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 Status: Ready to execute
 Last activity: 2026-08-01 — Phase 44 execution started
 
@@ -90,6 +90,7 @@ Still open from earlier milestones:
 | Phase 43 P03 | 40min | 3 tasks | 3 files |
 | Phase 44 P01 | 36min | 3 tasks | 19 files |
 | Phase 44 P02 | 21min | 3 tasks | 2 files |
+| Phase 44 P03 | 25min | 3 tasks | 3 files |
 
 v1.5/v1.6 per-plan metrics cleared at this milestone boundary per the standard STATE.md reset; the underlying per-plan SUMMARY files remain in `.planning/milestones/v1.5-phases/` and `.planning/milestones/v1.6-phases/`.
 
@@ -130,6 +131,7 @@ Full cross-milestone decision log lives in PROJECT.md's Key Decisions table. Per
 - [Phase ?]: Phase 44 Plan 01: RESOLVE-04 intentionally left un-checked in REQUIREMENTS.md — the phase's Source Coverage Audit splits it across 44-01 (backend rename, this plan) and 44-02 (Descriptor column always renders on Bench rows); marking it complete now would misrepresent state.
 - [Phase ?]: Phase 44 Plan 02: 'Change' link in Resolved As only renders when row.discrepancy is present (matches pre-Phase-44 Action column's row-actions-only-for-discrepancy-rows behavior) — avoids a dead clickable link for cleanly alias-resolved rows.
 - [Phase ?]: Phase 44 Plan 02: rowMatchStates seeding now sets correcting=true/disposition=confirmed/comboQuery=candidate-name for ANY row with a non-null auto_match_id (not just auto_resolved rows), collapsing Confirm/Select/Change into a single openPersonSearch entry point per D-03/D-04.
+- [Phase ?]: Phase 44 Plan 03: toggleSide's already-active no-op check runs before the gated check (matches plan's literal ordering: no-op first, then gate, then onSideChange); argumentRoleCell's four branches key purely on side/missing_tenure/rowEditable, not on gated, per the plan's literal branch order.
 
 ### Roadmap Evolution
 
@@ -163,8 +165,8 @@ v1.6's roadmap evolution is archived in `.planning/milestones/v1.6-ROADMAP.md`. 
 
 ## Session Continuity
 
-Last session: 2026-08-01T18:21:46.664Z
-Stopped at: Completed 44-02-PLAN.md
+Last session: 2026-08-01T18:52:28.694Z
+Stopped at: Completed 44-03-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

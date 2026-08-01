@@ -93,8 +93,8 @@ interface ResolveRow {
 	photo_url: string | null;
 	side: string;
 	argument_role: string | null;
-	title: string | null;
-	title_hint: string | null;
+	descriptor: string | null;
+	descriptor_hint: string | null;
 	bench_role: string | null;
 	missing_tenure: boolean;
 	person_edit_href: string | null;
@@ -344,7 +344,7 @@ export const actions: Actions = {
 
 	/**
 	 * approve — POST to /api/admin/jobs/{job_id}/approve to transition the argument from
-	 * pipeline → draft state. Side/title persistence now happens per-row via ResolveCard's
+	 * pipeline → draft state. Side/descriptor persistence now happens per-row via ResolveCard's
 	 * own ?/saveResolveRow action (Phase 25) — this action only triggers the transition.
 	 * On success: redirect to the same page so it re-renders in read-only state.
 	 * On failure: return fail with approveError key so the UI shows a scoped error.
@@ -428,20 +428,21 @@ export const actions: Actions = {
 
 	/**
 	 * saveResolveRow — persist a Resolve card row's side (BENCH allowed) and
-	 * advocate title edit (Phase 25, D-14, D-18, PJOB-14, PJOB-18).
+	 * advocate descriptor edit (Phase 25, D-14, D-18, PJOB-14, PJOB-18).
 	 *
-	 * Reads participant_id, side, and optional title from form data. job_id
-	 * (the route param) is the only trust boundary consulted here — argument
-	 * ownership is derived and re-verified server-side inside the FastAPI PATCH
-	 * handler, so this action never accepts or forwards a client-supplied
-	 * argument_id (T-25-16 elevation-of-privilege guard). Backend 4xx guard
-	 * failures (IDOR, non-pipeline argument) surface as a scoped resolveRowError.
+	 * Reads participant_id, side, and optional descriptor from form data.
+	 * job_id (the route param) is the only trust boundary consulted here —
+	 * argument ownership is derived and re-verified server-side inside the
+	 * FastAPI PATCH handler, so this action never accepts or forwards a
+	 * client-supplied argument_id (T-25-16 elevation-of-privilege guard).
+	 * Backend 4xx guard failures (IDOR, non-pipeline argument) surface as a
+	 * scoped resolveRowError.
 	 */
 	saveResolveRow: async ({ request, params }) => {
 		const data = await request.formData();
 		const participantIdRaw = (data.get('participant_id') as string) ?? '';
 		const side = ((data.get('side') as string) ?? '').trim();
-		const title = ((data.get('title') as string) ?? '').trim();
+		const descriptor = ((data.get('descriptor') as string) ?? '').trim();
 
 		const participant_id = Number(participantIdRaw);
 		if (!Number.isInteger(participant_id) || participant_id <= 0) {
@@ -464,7 +465,7 @@ export const actions: Actions = {
 					body: JSON.stringify({
 						participant_id,
 						side,
-						title: title || null,
+						descriptor: descriptor || null,
 					}),
 				},
 			);

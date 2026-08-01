@@ -421,8 +421,8 @@ async def _run_parse_inner(args) -> None:
         # D-11: missing subtitle → NULL title; never raises.
         # -------------------------------------------------------------------
         if advocate_titles and run.argument_id is not None:
-            titles_updated = await _update_participant_titles(session, run.argument_id, advocate_titles)
-            print(f"Participant titles updated: {titles_updated} row(s) from TOC mapping.")
+            titles_updated = await _update_participant_descriptors(session, run.argument_id, advocate_titles)
+            print(f"Participant descriptors updated: {titles_updated} row(s) from TOC mapping.")
 
         # -------------------------------------------------------------------
         # Step 8: Transition running → completed (PIPE-10)
@@ -509,19 +509,20 @@ async def _update_participant_sides(
     return updated
 
 
-async def _update_participant_titles(
+async def _update_participant_descriptors(
     session: AsyncSession,
     argument_id: int,
-    titles_map: "dict[str, str]",
+    descriptors_map: "dict[str, str]",
 ) -> int:
     """
-    Update argument_participants.title for advocates whose normalized last name
-    matches a key in titles_map ({last_name_upper: title_string}).
+    Update argument_participants.descriptor for advocates whose normalized last
+    name matches a key in descriptors_map ({last_name_upper: descriptor_string}).
 
     Returns count of participant rows updated. Unmatched participants keep
-    NULL title (D-11). Title is stored as a plain string — no enum cast.
+    NULL descriptor (D-11). Descriptor is stored as a plain string — no enum
+    cast. (Phase 44 D-05: renamed from _update_participant_titles.)
     """
-    if not titles_map:
+    if not descriptors_map:
         return 0
 
     result = await session.execute(
@@ -536,8 +537,8 @@ async def _update_participant_titles(
         if p.raw_speaker_label is None:
             continue
         label_last = _normalize_label_last_name(p.raw_speaker_label)
-        if label_last and label_last.upper() in titles_map:
-            p.title = titles_map[label_last.upper()]
+        if label_last and label_last.upper() in descriptors_map:
+            p.descriptor = descriptors_map[label_last.upper()]
             updated += 1
 
     return updated

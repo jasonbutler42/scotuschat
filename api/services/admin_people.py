@@ -939,16 +939,17 @@ async def list_resolve_rows_for_job(db: AsyncSession, job_id: int) -> list[dict]
     Bench rows (side == BENCH) get bench_role/missing_tenure/person_edit_href
     from a CourtTenure date-window lookup against Argument.argued_date
     (_bench_role_and_missing_tenure); argument_role mirrors bench_role for
-    these rows. title/title_hint are always None (PJOB-15 — Title column is
-    advocate-only). person_edit_href is only set when person_id is known
-    (there is nothing to edit for an unresolved row).
+    these rows. descriptor/descriptor_hint are always None (PJOB-15 —
+    Descriptor column is advocate-only). person_edit_href is only set when
+    person_id is known (there is nothing to edit for an unresolved row).
 
-    Non-bench rows get argument_role from ADVOCATE_LABEL_MAP; title/title_hint
-    are sourced from ArgumentParticipant.title (there is no separate stored
-    "originally extracted" value for title — unlike cover_metadata for argued
-    date/docket, ArgumentParticipant.title is written once by the parse-time
-    TOC extraction and is the same column the operator edits). bench_role,
-    missing_tenure, and person_edit_href are always None/False for these rows.
+    Non-bench rows get argument_role from ADVOCATE_LABEL_MAP; descriptor/
+    descriptor_hint are sourced from ArgumentParticipant.descriptor (there is
+    no separate stored "originally extracted" value for descriptor — unlike
+    cover_metadata for argued date/docket, ArgumentParticipant.descriptor is
+    written once by the parse-time TOC extraction and is the same column the
+    operator edits). bench_role, missing_tenure, and person_edit_href are
+    always None/False for these rows.
     """
     job_result = await db.execute(select(AdminJob).where(AdminJob.id == job_id))
     job = job_result.scalar_one_or_none()
@@ -1018,8 +1019,8 @@ async def list_resolve_rows_for_job(db: AsyncSession, job_id: int) -> list[dict]
                     "photo_url": photo_url,
                     "side": participant.side.value,
                     "argument_role": bench_role,
-                    "title": None,
-                    "title_hint": None,
+                    "descriptor": None,
+                    "descriptor_hint": None,
                     "bench_role": bench_role,
                     "missing_tenure": missing_tenure,
                     "person_edit_href": person_edit_href,
@@ -1036,8 +1037,8 @@ async def list_resolve_rows_for_job(db: AsyncSession, job_id: int) -> list[dict]
                     "photo_url": photo_url,
                     "side": participant.side.value,
                     "argument_role": ADVOCATE_LABEL_MAP.get(participant.side),
-                    "title": participant.title,
-                    "title_hint": participant.title,
+                    "descriptor": participant.descriptor,
+                    "descriptor_hint": participant.descriptor,
                     "bench_role": None,
                     "missing_tenure": False,
                     "person_edit_href": None,

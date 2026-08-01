@@ -373,7 +373,8 @@ class ArgumentParticipant(Base):
     raw_speaker_label = Column(String(200), nullable=False)
     side = Column(SAEnum(SideEnum, name="side", values_callable=lambda e: [x.value for x in e]), nullable=False)
     # Phase 22 — migration 0013: TOC subtitle from cover extractor (PJOB-13)
-    title = Column(String(500), nullable=True)
+    # Phase 44 D-05 — migration 0025: renamed title -> descriptor (full-stack rename)
+    descriptor = Column(String(500), nullable=True)
 
 
 # ---------------------------------------------------------------------------

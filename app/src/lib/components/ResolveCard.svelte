@@ -7,13 +7,13 @@
 	// Locked column order: Raw label, Resolved as, Bench/Advocate, Argument Role, Title, Action.
 	//
 	// Two backend data sources are merged by raw_speaker_label:
-	//  - resolveRows (GET .../resolve-rows, Plan 25-02): the authoritative side/title/
+	//  - resolveRows (GET .../resolve-rows, Plan 25-02): the authoritative side/descriptor/
 	//    argument_role/bench_role/missing_tenure/editable state for every participant.
 	//  - discrepancies (AdminJobResponse.discrepancies, pre-Phase-25): only populated
 	//    while jobStatus === 'paused' — carries auto-match candidates for the operator's
 	//    person-matching flow that ArgumentParticipant.person_id has not yet committed.
 	//
-	// Side/title edits submit immediately per-row via ?/saveResolveRow (T-25-16: job_id
+	// Side/descriptor edits submit immediately per-row via ?/saveResolveRow (T-25-16: job_id
 	// is the only trust boundary; participant ownership is re-verified server-side).
 	// Person-matching (Confirm/Select/Create person) accumulates client-side and submits
 	// as a batch via ?/resolve when "Continue Resolve" is clicked (existing pipeline
@@ -42,8 +42,8 @@
 		photo_url: string | null;
 		side: string;
 		argument_role: string | null;
-		title: string | null;
-		title_hint: string | null;
+		descriptor: string | null;
+		descriptor_hint: string | null;
 		bench_role: string | null;
 		missing_tenure: boolean;
 		person_edit_href: string | null;
@@ -89,7 +89,7 @@
 	});
 
 	// ──────────────────────────────────────────────────────────────────────────
-	// Side/title inline save (saveResolveRow) — per-row hidden form, submitted
+	// Side/descriptor inline save (saveResolveRow) — per-row hidden form, submitted
 	// programmatically via requestSubmit() so the select/input controls (which
 	// live in different <td> cells) can share one form via the HTML `form=`
 	// attribute rather than nesting a <form> inside table cells.
@@ -621,9 +621,9 @@
 								{#if rowEditable}
 									<input
 										form={rowFormId(row.participant_id)}
-										name="title"
+										name="descriptor"
 										type="text"
-										value={row.title ?? ''}
+										value={row.descriptor ?? ''}
 										onblur={() => submitRow(row.participant_id)}
 										style="
 											width: 100%;
@@ -638,19 +638,19 @@
 										"
 									/>
 									<div style="margin: 4px 0 0 0;">
-										<!-- Phase 38 (D-19/D-20): title_hint has no independently stored raw/confidence
-										     (admin_arguments.py D-06 — title and title_hint source the same column), so
+										<!-- Phase 38 (D-19/D-20): descriptor_hint has no independently stored raw/confidence
+										     (admin_arguments.py D-06 — descriptor and descriptor_hint source the same column), so
 										     the exact extracted text itself is the raw source and confidence uses an
 										     explicit qualitative fallback rather than a fabricated figure. -->
 										<CopyableExtractedValue
-											value={row.title_hint}
-											copyLabel="Copy title"
+											value={row.descriptor_hint}
+											copyLabel="Copy descriptor"
 											confidence="Medium"
-											raw={row.title_hint}
+											raw={row.descriptor_hint}
 										/>
 									</div>
 								{:else}
-									<span>{row.title ?? '—'}</span>
+									<span>{row.descriptor ?? '—'}</span>
 								{/if}
 							{/if}
 						</td>

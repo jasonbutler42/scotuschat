@@ -188,24 +188,25 @@ class FailedStepRecovery(BaseModel):
 
 
 class ResolveRowUpdate(BaseModel):
-    """Request body for the job-scoped resolve-row side/title mutation.
+    """Request body for the job-scoped resolve-row side/descriptor mutation.
 
-    Mass-assignment guard (T-25-15): ONLY side and title are writable via this
-    schema. participant_id identifies the target row; ownership is re-verified
-    server-side against the job's linked argument before any mutation (T-25-14
-    IDOR guard) — this schema does not accept argument_id.
+    Mass-assignment guard (T-25-15): ONLY side and descriptor are writable via
+    this schema. participant_id identifies the target row; ownership is
+    re-verified server-side against the job's linked argument before any
+    mutation (T-25-14 IDOR guard) — this schema does not accept argument_id.
 
     Unlike ParticipantSideUpdate (api/schemas/admin_arguments.py), side here MAY
     be BENCH — this is the resolve-scoped write path, not the advocate-only
-    argument-editor path. title is ignored (forced to null) server-side whenever
-    side == BENCH (PJOB-15).
+    argument-editor path. descriptor is ignored (forced to null) server-side
+    whenever side == BENCH (PJOB-15).
 
-    WR-03: title is capped at 500 characters to match
-    ArgumentParticipant.title (String(500)) — without this, an over-length
-    title would raise an unhandled asyncpg DataError (500) instead of the
-    422 validation-error pattern used everywhere else in this file.
+    WR-03: descriptor is capped at 500 characters to match
+    ArgumentParticipant.descriptor (String(500)) — without this, an
+    over-length descriptor would raise an unhandled asyncpg DataError (500)
+    instead of the 422 validation-error pattern used everywhere else in this
+    file.
     """
 
     participant_id: int
     side: SideEnum
-    title: Optional[str] = Field(default=None, max_length=500)
+    descriptor: Optional[str] = Field(default=None, max_length=500)

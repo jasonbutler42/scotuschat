@@ -362,7 +362,7 @@ class ResolveRow(BaseModel):
     contract for the restructured Resolve card (25-UI-SPEC.md, PJOB-14/15/16).
 
     Column contract (locked order): raw_speaker_label, resolved-as (person_id/
-    full_name/photo_url), side (Bench/Advocate), argument_role, title
+    full_name/photo_url), side (Bench/Advocate), argument_role, descriptor
     (advocate-only), then the frontend Action column derives from the fields
     above (no separate schema field needed).
 
@@ -370,12 +370,13 @@ class ResolveRow(BaseModel):
     office title (Chief Justice/Associate Justice) for the tenure covering
     Argument.argued_date when one exists; when none covers the date,
     both are null, missing_tenure is true, and person_edit_href points at the
-    person editor (D-15, D-16, PJOB-16). title/title_hint are always null —
-    the Title column is advocate-only (PJOB-15).
+    person editor (D-15, D-16, PJOB-16). descriptor/descriptor_hint are always
+    null — the Descriptor column is advocate-only (PJOB-15).
 
     Non-bench rows: argument_role is the side's advocate label (e.g. "Petitioner's
-    Counsel"); title/title_hint carry ArgumentParticipant.title. bench_role,
-    missing_tenure, and person_edit_href are always null/false for these rows.
+    Counsel"); descriptor/descriptor_hint carry ArgumentParticipant.descriptor.
+    bench_role, missing_tenure, and person_edit_href are always null/false for
+    these rows.
 
     editable is false once the linked argument has left the 'pipeline' status —
     the Resolve card renders every row read-only in that state (D-18, D-19).
@@ -388,8 +389,8 @@ class ResolveRow(BaseModel):
     photo_url: Optional[str] = None
     side: SideEnum
     argument_role: Optional[str] = None
-    title: Optional[str] = None
-    title_hint: Optional[str] = None
+    descriptor: Optional[str] = None
+    descriptor_hint: Optional[str] = None
     bench_role: Optional[str] = None
     missing_tenure: bool = False
     person_edit_href: Optional[str] = None

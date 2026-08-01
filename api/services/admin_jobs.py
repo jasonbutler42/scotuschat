@@ -767,7 +767,7 @@ async def update_resolve_row_for_job(
     job_id: int,
     body: ResolveRowUpdate,
 ) -> ArgumentParticipant:
-    """Update ArgumentParticipant.side (BENCH allowed) and .title for a job-owned row.
+    """Update ArgumentParticipant.side (BENCH allowed) and .descriptor for a job-owned row.
 
     This is the resolve-scoped write path RESEARCH.md's Common Pitfalls table and
     Open Question #1 call for — it does NOT route through
@@ -780,8 +780,8 @@ async def update_resolve_row_for_job(
       3. The target ArgumentParticipant must belong to that argument (IDOR guard)
          — participant_id is never trusted on its own.
 
-    title is forced to null whenever side == BENCH, regardless of what the
-    client sent, so bench rows never carry an advocate title (PJOB-15).
+    descriptor is forced to null whenever side == BENCH, regardless of what the
+    client sent, so bench rows never carry an advocate descriptor (PJOB-15).
 
     Raises ValueError on any guard failure. Returns the updated ArgumentParticipant.
     """
@@ -817,7 +817,7 @@ async def update_resolve_row_for_job(
             f"AdminJob {job_id}'s linked argument"
         )
 
-    title = None if body.side == SideEnum.BENCH else body.title
+    descriptor = None if body.side == SideEnum.BENCH else body.descriptor
 
     await db.execute(
         update(ArgumentParticipant)
@@ -825,7 +825,7 @@ async def update_resolve_row_for_job(
             ArgumentParticipant.id == body.participant_id,
             ArgumentParticipant.argument_id == argument.id,
         )
-        .values(side=body.side, title=title)
+        .values(side=body.side, descriptor=descriptor)
         .execution_options(synchronize_session=False)
     )
     await db.commit()

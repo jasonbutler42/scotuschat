@@ -18,12 +18,25 @@
 
 ### Resolve Table Rework
 
-- [x] **RESOLVE-01**: Resolve table renders 5 columns — Raw Label, Resolved As, Bench/Advocate, Argument Role, Descriptor — with no separate Action column; row actions (select/change person) live inside the Resolved As cell
+- [ ] **RESOLVE-01**: ~~Resolve table renders 5 columns — Raw Label, Resolved As, Bench/Advocate, Argument Role, Descriptor~~ — **superseded by RESOLVE-07** (Figma reconciliation, 2026-08-04): the canonical layout merges Bench/Advocate into the Resolved As cell, leaving 4 columns
 - [x] **RESOLVE-02**: Bench/Advocate is a two-button segmented toggle (only one active) instead of a `<select>` dropdown
 - [x] **RESOLVE-03**: Argument Role is a real writable dropdown for advocate rows (Petitioner's Counsel / Respondent's Counsel / select role), while remaining a locked, tenure-derived value for Bench rows
 - [x] **RESOLVE-04**: The Title column is renamed Descriptor and always renders (shows "–" for Bench rows) instead of being conditionally hidden
-- [ ] **RESOLVE-05**: Every column (Resolved As, Bench/Advocate, Argument Role, Descriptor) shows a consistent "Extracted: ..." hint of the raw extracted value
+- [ ] **RESOLVE-05**: ~~Every column (Resolved As, Bench/Advocate, Argument Role, Descriptor) shows a consistent "Extracted: ..." hint of the raw extracted value~~ — **superseded/refined by RESOLVE-10** (Figma reconciliation, 2026-08-04): hint prefix is source-aware (`Imported:` corpus / `Extracted:` PDF), not a single hardcoded prefix, and does not apply uniformly to Bench rows (see RESOLVE-12/13)
 - [x] **RESOLVE-06**: A resolved, tenure-valid Bench row shows a lock icon signaling its role is system-derived and not editable, distinct from the existing "Missing tenure" warning state
+
+**Figma canonical reconciliation (2026-08-04, `.planning/phases/44-resolve-table-rework/44-FIGMA-RECONCILE.md`)** — design exploration after RESOLVE-01–06 shipped converged on a new canonical layout that discards the original `resolve-speakers-panel.png` mockup. RESOLVE-07–16 lock the replacement decisions; continues the numbering from RESOLVE-06:
+
+- [ ] **RESOLVE-07**: Resolve table is 4 columns; Bench/Advocate toggle and person control are stacked in the Resolved As cell
+- [ ] **RESOLVE-08**: Resolved As is a single always-editable dropdown; remove Change/Select links and the confirm/correct disposition state machine
+- [ ] **RESOLVE-09**: Person search candidates are filtered to the currently-selected side (bench vs advocate)
+- [ ] **RESOLVE-10**: Hint prefix is source-aware (`Imported:` corpus / `Extracted:` PDF), uniform per run
+- [ ] **RESOLVE-11**: Bench role + missing-tenure state is live-derived on every read (incl. published arguments), rendered identically in editable and read-only; `Edit person` opens in a new tab
+- [ ] **RESOLVE-12**: Bench role hint copy is `Calculated from tenure` / `Tenure not found` (not `Imported: N/A - …`)
+- [ ] **RESOLVE-13**: Bench rows show no descriptor hint and a dash; the stored descriptor is preserved (not cleared) on a side switch
+- [ ] **RESOLVE-14**: Unresolved bench role renders `(resolve person first)` with no dash and no hint
+- [ ] **RESOLVE-15**: Persistent progress indicator + always-visible, reason-disabled Continue
+- [ ] **RESOLVE-16**: Auto-matched / Needs-you row cue tags
 
 ### Bug Fixes
 
@@ -55,19 +68,29 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CORPUS-14 | Phase 42 | Complete |
 | DEVTOOL-01 | Phase 43 | Complete |
 | DEVTOOL-02 | Phase 43 | Complete |
-| RESOLVE-01 | Phase 44 | Complete |
+| RESOLVE-01 | Phase 44 | Superseded by RESOLVE-07 |
 | RESOLVE-02 | Phase 44 | Complete |
 | RESOLVE-03 | Phase 44 | Complete |
 | RESOLVE-04 | Phase 44 | Complete |
-| RESOLVE-05 | Phase 44 | Pending |
+| RESOLVE-05 | Phase 44 | Superseded by RESOLVE-10 |
 | RESOLVE-06 | Phase 44 | Complete |
+| RESOLVE-07 | Phase 44 | Pending |
+| RESOLVE-08 | Phase 44 | Pending |
+| RESOLVE-09 | Phase 44 | Pending |
+| RESOLVE-10 | Phase 44 | Pending |
+| RESOLVE-11 | Phase 44 | Pending |
+| RESOLVE-12 | Phase 44 | Pending |
+| RESOLVE-13 | Phase 44 | Pending |
+| RESOLVE-14 | Phase 44 | Pending |
+| RESOLVE-15 | Phase 44 | Pending |
+| RESOLVE-16 | Phase 44 | Pending |
 | BUG-01 | Phase 45 | Pending |
 | BUG-02 | Phase 45 | Pending |
 
 **Coverage:**
 
-- v1 requirements: 13 total
-- Mapped to phases: 13 ✓
+- v1 requirements: 23 total (13 original + 10 added 2026-08-04 via Figma reconciliation, RESOLVE-07–16)
+- Mapped to phases: 23 ✓
 - Unmapped: 0 ✓
 - Duplicated across phases: 0 ✓
 
@@ -78,9 +101,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | 41. Canonical Corpus Fixture Selection | CORPUS-12 | 1 |
 | 42. Corpus Import Fidelity Diff & Fix | CORPUS-13, CORPUS-14 | 2 |
 | 43. Dev-Only Reset to Fixture | DEVTOOL-01, DEVTOOL-02 | 2 |
-| 44. Resolve Table Rework | RESOLVE-01–06 | 6 |
+| 44. Resolve Table Rework | RESOLVE-01–16 (01 and 05 superseded, not counted twice) | 16 |
 | 45. Deferred UI Bug Fixes | BUG-01, BUG-02 | 2 |
 
 ---
 *Requirements defined: 2026-07-29*
-*Last updated: 2026-07-29 after roadmap creation (Phases 41–45 mapped, 13/13 coverage); CORPUS-12/DEVTOOL-01 widened to a 4-fixture set during Phase 41 discuss-phase*
+*Last updated: 2026-08-04 — added RESOLVE-07–16 from Figma canonical reconciliation (44-FIGMA-RECONCILE.md), superseding RESOLVE-01/05's original text; see phase 44 for the full reconciliation diff*

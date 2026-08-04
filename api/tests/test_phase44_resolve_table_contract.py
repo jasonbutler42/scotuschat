@@ -211,9 +211,10 @@ def test_gated_entry_point_is_genuinely_inert() -> None:
     assert "disabled" in dropdown_body, (
         "T-44-18: the gated person input must carry `disabled` — never removed from the DOM"
     )
-    assert 'aria-disabled="true"' in dropdown_body, (
-        "T-44-07/T-44-18: the gated Resolved As entry point must carry aria-disabled=\"true\" — "
-        "the D-11/PJOB-18 side-first gate must survive the removal of its instructional sentence"
+    assert re.search(r"aria-disabled=\{[^}]*gated[^}]*\}", dropdown_body), (
+        "T-44-07/T-44-18: the gated Resolved As entry point must bind aria-disabled to the "
+        "gate state — the D-11/PJOB-18 side-first gate must survive the removal of its "
+        "instructional sentence"
     )
     assert "clip-path: inset(50%)" in dropdown_body, (
         "D-07: the gated row must carry a visually-hidden (sr-only) explanation of the gate"

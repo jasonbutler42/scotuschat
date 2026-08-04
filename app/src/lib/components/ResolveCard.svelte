@@ -9,7 +9,15 @@
 	// its two person-matching buttons fold into a single combobox entry point inside Resolved
 	// As; Descriptor (renamed from Title, Phase 44 Plan 01) now always renders instead of
 	// disappearing for bench/gated rows.
-	// Locked column order: Raw Label, Resolved As, Bench/Advocate, Argument Role, Descriptor.
+	// Phase 44 Plan 05 (RESOLVE-07/08, Figma reconciliation) — four-column merge: the
+	// standalone Bench/Advocate column is deleted; the segmented toggle and the person
+	// control are stacked inside the single Resolved As cell. The confirm/correct
+	// disposition state machine (the click-to-reveal search handler, the Change link,
+	// the Select-person link, and the checkmark-plus-name confirmation banner) is
+	// deleted entirely — the person control is a single always-rendered searchable
+	// dropdown, gated (never removed) via disabled/aria-disabled when the row's side
+	// has not yet been chosen.
+	// Locked column order: Raw Label, Resolved As, Argument Role, Descriptor.
 	//
 	// Two backend data sources are merged by raw_speaker_label:
 	//  - resolveRows (GET .../resolve-rows, Plan 25-02): the authoritative side/descriptor/
@@ -224,8 +232,6 @@
 
 	interface RowMatchState {
 		personId: number | null;
-		disposition: 'confirmed' | 'corrected' | null;
-		correcting: boolean;
 		extraCandidates: Candidate[];
 		comboQuery: string;
 		comboOpen: boolean;
@@ -243,19 +249,27 @@
 				delete rowMatchStates[key];
 			}
 		}
+		// RESOLVE-08 delta 4: join against resolveRows (the prop, never mergedRows) so a
+		// row that already carries a committed person_id/full_name seeds as reviewed
+		// rather than un-reviewed, even if it still appears in the discrepancy list —
+		// otherwise allDispositioned/matchesJson would disagree with what the table
+		// visibly shows.
+		const rowsByLabel = new Map<string, ResolveRow>();
+		for (const r of resolveRows) {
+			rowsByLabel.set(r.raw_speaker_label, r);
+		}
 		for (const d of disc) {
 			if (!(d.raw_speaker_label in rowMatchStates)) {
-				// D-03/D-04: any row with an auto-match candidate seeds pre-filled and
-				// pre-accepted — the combobox opens already showing that candidate's name,
-				// and an untouched pre-fill still counts as accepted on submit since
-				// disposition/personId are seeded non-null (no Confirm button exists).
-				const hasCandidate = d.auto_match_id != null;
+				// D-03/D-04: any row with an auto-match candidate (or an already-committed
+				// person_id) seeds pre-filled — the dropdown opens already showing that
+				// name, and an untouched pre-fill still counts as accepted on submit since
+				// personId is seeded non-null (no Confirm button exists, no disposition
+				// field to track separately any more).
+				const committedRow = rowsByLabel.get(d.raw_speaker_label);
 				rowMatchStates[d.raw_speaker_label] = {
-					personId: d.auto_match_id ?? null,
-					disposition: hasCandidate ? 'confirmed' : null,
-					correcting: hasCandidate,
+					personId: d.auto_match_id ?? committedRow?.person_id ?? null,
 					extraCandidates: [],
-					comboQuery: hasCandidate ? (d.auto_match_name ?? '') : '',
+					comboQuery: d.auto_match_name ?? committedRow?.full_name ?? '',
 					comboOpen: false,
 					comboHighlight: -1,
 				};
@@ -268,13 +282,13 @@
 		const disc = discrepancies ?? [];
 		// WR-04: an empty discrepancy list while paused means every speaker was
 		// already resolved (auto-match or inline saveResolveRow) — there is
-		// nothing left to disposition, so "Continue Resolve" must still render
-		// rather than being permanently stuck behind a vacuously-false check.
+		// nothing left for the operator to review, so "Continue Resolve" must
+		// still render rather than being permanently stuck behind a vacuously-
+		// false check.
 		if (disc.length === 0) return true;
-		return disc.every((d) => {
-			const s = rowMatchStates[d.raw_speaker_label];
-			return s?.disposition != null && s?.personId != null;
-		});
+		// RESOLVE-08: the confirm/correct state machine is gone — the gate is a
+		// single personId predicate now.
+		return disc.every((d) => rowMatchStates[d.raw_speaker_label]?.personId != null);
 	});
 
 	let matchesJson = $derived.by(() => {
@@ -302,28 +316,18 @@
 		});
 	}
 
-	// D-03: the single person-matching entry point — opens (or re-opens) the combobox for a
-	// row, pre-filled with whatever name is currently displayed for it (the resolved full
-	// name, or the discrepancy's auto-match name, or empty if nothing is set yet), so the
-	// input is never empty when there is already something to show. Replaces the old
-	// dedicated "Confirm" handler entirely — there is no separate accept-the-auto-match
-	// action any more.
-	function openPersonSearch(row: MergedRow) {
-		const label = row.raw_speaker_label;
-		const s = rowMatchStates[label];
-		if (!s) return;
-		const currentName = row.full_name ?? row.discrepancy?.auto_match_name ?? '';
-		s.correcting = true;
-		s.disposition = null;
-		s.comboQuery = currentName;
+	// RESOLVE-08/T-44-17: the review-set predicate — only rows with an active discrepancy
+	// entry (and therefore a wire path through matchesJson/?/resolve) get an editable
+	// dropdown; every other row (already resolved outside the discrepancy list, or the
+	// read-only card) keeps the plain name display via personDisplay.
+	function personControlEditable(row: MergedRow, s: RowMatchState | undefined): boolean {
+		return interactive && row.discrepancy != null && s != null;
 	}
 
 	function handleSelectPerson(label: string, personId: number) {
 		const s = rowMatchStates[label];
 		if (!s) return;
 		s.personId = personId;
-		s.disposition = 'corrected';
-		s.correcting = true;
 	}
 
 	function handlePersonCreated(label: string, participantId: number, person: Candidate, side: string) {
@@ -331,8 +335,6 @@
 		if (!s) return;
 		s.extraCandidates = [...s.extraCandidates, person];
 		s.personId = person.id;
-		s.disposition = 'corrected';
-		s.correcting = true;
 		pendingSideOverrides[participantId] = side;
 		submitRow(participantId);
 	}
@@ -563,6 +565,143 @@
 	{/if}
 {/snippet}
 
+<!-- Phase 44 Plan 05 (RESOLVE-08): the single always-rendered person-matching entry
+     point — replaces the retired Change link / Select-person link / confirm-correct
+     combobox branches. Renders personDisplay for rows outside the review set (no
+     discrepancy entry, no persistence path — T-44-17); otherwise renders the
+     combobox unconditionally, gated (never removed from the DOM) via disabled +
+     aria-disabled when the row's side has not yet been chosen (T-44-18, Pitfall 4). -->
+{#snippet personDropdown(row: MergedRow, label: string, s: RowMatchState | undefined, gated: boolean, side: string)}
+	{#if !personControlEditable(row, s)}
+		{@render personDisplay(row.full_name, row.photo_url, row.argument_role)}
+	{:else}
+		{@const comboId = `listbox-${label.replace(/\s+/g, '-')}`}
+		{@const candidates = getRowCandidates(row.discrepancy!, label)}
+		{@const filteredCandidates = candidates.filter((c) => {
+			const text = c.role_name ? `${c.full_name} ${c.role_name}` : c.full_name;
+			return text.toLowerCase().includes((s!.comboQuery ?? '').toLowerCase());
+		})}
+		<div style="position: relative; width: 100%;" use:comboOutsideClick={label}>
+			<input
+				type="text"
+				role="combobox"
+				aria-expanded={s!.comboOpen}
+				aria-haspopup="listbox"
+				aria-controls={comboId}
+				aria-autocomplete="list"
+				aria-label="Search for speaker"
+				placeholder={side === 'BENCH' ? 'Select bench…' : 'Select advocate…'}
+				value={s!.comboQuery}
+				disabled={gated}
+				aria-disabled={gated ? 'true' : 'false'}
+				style="
+					background-color: #0f1117;
+					border: 1px solid #93c5fd;
+					border-radius: 6px;
+					padding: 6px 10px;
+					font-size: 16px;
+					color: #e2e8f0;
+					width: 100%;
+					box-sizing: border-box;
+					opacity: {gated ? 0.6 : 1};
+					cursor: {gated ? 'default' : 'text'};
+				"
+				onfocus={() => {
+					s!.comboOpen = true;
+					s!.comboHighlight = -1;
+				}}
+				oninput={(e) => {
+					s!.comboQuery = (e.target as HTMLInputElement).value;
+					s!.comboOpen = true;
+					s!.comboHighlight = -1;
+				}}
+				onkeydown={(e) => {
+					if (e.key === 'ArrowDown') {
+						e.preventDefault();
+						s!.comboHighlight = Math.min(s!.comboHighlight + 1, filteredCandidates.length - 1);
+					} else if (e.key === 'ArrowUp') {
+						e.preventDefault();
+						s!.comboHighlight = Math.max(s!.comboHighlight - 1, -1);
+					} else if (e.key === 'Enter') {
+						e.preventDefault();
+						if (s!.comboHighlight >= 0 && s!.comboHighlight < filteredCandidates.length) {
+							const picked = filteredCandidates[s!.comboHighlight];
+							s!.comboQuery = picked.full_name;
+							handleSelectPerson(label, picked.id);
+							s!.comboOpen = false;
+						}
+					} else if (e.key === 'Escape') {
+						s!.comboQuery = '';
+						s!.comboOpen = false;
+						s!.comboHighlight = -1;
+					}
+				}}
+			/>
+			{#if gated}
+				<span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%);">
+					Choose Bench or Advocate before selecting a person.
+				</span>
+			{/if}
+			{#if s!.comboOpen}
+				<ul
+					id={comboId}
+					role="listbox"
+					style="
+						position: absolute;
+						top: 100%;
+						left: 0;
+						width: 100%;
+						margin: 4px 0 0 0;
+						background-color: #1e293b;
+						border: 1px solid #334155;
+						border-radius: 6px;
+						padding: 4px 0;
+						max-height: 240px;
+						overflow-y: auto;
+						z-index: 10;
+						list-style: none;
+					"
+				>
+					{#each filteredCandidates as candidate, idx (candidate.id)}
+						<li
+							role="option"
+							aria-selected={false}
+							style="
+								padding: 8px 12px;
+								font-size: 16px;
+								color: #e2e8f0;
+								cursor: pointer;
+								background-color: {s!.comboHighlight === idx ? '#334155' : '#1e293b'};
+							"
+							onmouseenter={() => {
+								s!.comboHighlight = idx;
+							}}
+							onclick={() => {
+								s!.comboQuery = candidate.full_name;
+								handleSelectPerson(label, candidate.id);
+								s!.comboOpen = false;
+							}}
+						>
+							{candidate.full_name}{#if candidate.role_name}<span style="font-size: 14px; color: #94a3b8; margin-left: 4px;">({candidate.role_name})</span>{/if}
+							{#if row.discrepancy?.auto_match_id === candidate.id}
+								<span style="font-size: 11px; color: #93c5fd; text-transform: uppercase; letter-spacing: 0.04em; margin-left: 6px;">Suggested</span>
+							{/if}
+						</li>
+					{/each}
+				</ul>
+			{/if}
+		</div>
+		<div style="margin-top: 8px;">
+			<CreatePersonPopover
+				rawSpeakerLabel={label}
+				defaultAdvocateSide={side !== 'BENCH' ? side : 'UNKNOWN'}
+				onCreated={(person, createdSide) =>
+					handlePersonCreated(label, row.participant_id, person, createdSide)}
+			/>
+		</div>
+	{/if}
+{/snippet}
+
 {#snippet personDisplay(fullName: string | null, photoUrl: string | null, roleLabel: string | null)}
 	{#if fullName}
 		<span style="display: inline-flex; align-items: center; gap: 8px;">
@@ -654,7 +793,6 @@
 				<tr>
 					<th scope="col" style="font-size: 14px; font-weight: 400; color: #94a3b8; border-bottom: 1px solid #334155; padding: 8px 0; padding-right: 12px; text-align: left; text-transform: uppercase; letter-spacing: 0.04em;">Raw Label</th>
 					<th scope="col" style="font-size: 14px; font-weight: 400; color: #94a3b8; border-bottom: 1px solid #334155; padding: 8px 0; padding-right: 12px; text-align: left; text-transform: uppercase; letter-spacing: 0.04em;">Resolved As</th>
-					<th scope="col" style="font-size: 14px; font-weight: 400; color: #94a3b8; border-bottom: 1px solid #334155; padding: 8px 0; padding-right: 12px; text-align: left; text-transform: uppercase; letter-spacing: 0.04em;">Bench/Advocate</th>
 					<th scope="col" style="font-size: 14px; font-weight: 400; color: #94a3b8; border-bottom: 1px solid #334155; padding: 8px 0; padding-right: 12px; text-align: left; text-transform: uppercase; letter-spacing: 0.04em;">Argument Role</th>
 					<th scope="col" style="font-size: 14px; font-weight: 400; color: #94a3b8; border-bottom: 1px solid #334155; padding: 8px 0; text-align: left; text-transform: uppercase; letter-spacing: 0.04em;">Descriptor</th>
 				</tr>
@@ -673,188 +811,9 @@
 							{@render rawLabelBadge(row.raw_speaker_label)}
 						</td>
 
-						<!-- Column 2: Resolved as — the single entry point for every person-matching
-						     action (D-03). Branch order: gate first, then pre-filled/correcting,
-						     then already-resolved, then unresolved-with-no-candidate. -->
-						<td style="font-size: 16px; color: #e2e8f0; border-bottom: 1px solid #334155; padding: 12px 0; padding-right: 12px;">
-							{#if gated}
-								<button
-									type="button"
-									disabled
-									aria-disabled="true"
-									style="font-size: 16px; color: #93c5fd; text-decoration: underline; background: transparent; border: none; padding: 0; cursor: default; opacity: 0.6;"
-								>
-									Select person…
-								</button>
-								<span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%);">
-									Choose Bench or Advocate before selecting a person.
-								</span>
-							{:else if s?.correcting}
-								{@const comboId = `listbox-${label.replace(/\s+/g, '-')}`}
-								{@const candidates = getRowCandidates(row.discrepancy!, label)}
-								{@const filteredCandidates = candidates.filter((c) => {
-									const text = c.role_name ? `${c.full_name} ${c.role_name}` : c.full_name;
-									return text.toLowerCase().includes((s.comboQuery ?? '').toLowerCase());
-								})}
-								{#if s.disposition === 'corrected'}
-									{@const selectedPerson = candidates.find((c) => c.id === s.personId)}
-									<div style="margin-bottom: 8px;">
-										<span style="color: #4ade80;">✓ Corrected</span>
-										{#if selectedPerson}
-											<span style="color: #94a3b8; font-size: 14px; margin-left: 8px;">
-												{selectedPerson.full_name}{selectedPerson.role_name ? ` (${selectedPerson.role_name})` : ''}
-											</span>
-										{/if}
-									</div>
-								{/if}
-								<div style="position: relative; width: 100%;" use:comboOutsideClick={label}>
-									<input
-										type="text"
-										role="combobox"
-										aria-expanded={s.comboOpen}
-										aria-haspopup="listbox"
-										aria-controls={comboId}
-										aria-autocomplete="list"
-										aria-label="Search for speaker"
-										placeholder="Type to search…"
-										value={s.comboQuery}
-										style="
-											background-color: #0f1117;
-											border: 1px solid #93c5fd;
-											border-radius: 6px;
-											padding: 6px 10px;
-											font-size: 16px;
-											color: #e2e8f0;
-											width: 100%;
-											box-sizing: border-box;
-										"
-										onfocus={() => {
-											s.comboOpen = true;
-											s.comboHighlight = -1;
-										}}
-										oninput={(e) => {
-											s.comboQuery = (e.target as HTMLInputElement).value;
-											s.comboOpen = true;
-											s.comboHighlight = -1;
-										}}
-										onkeydown={(e) => {
-											if (e.key === 'ArrowDown') {
-												e.preventDefault();
-												s.comboHighlight = Math.min(s.comboHighlight + 1, filteredCandidates.length - 1);
-											} else if (e.key === 'ArrowUp') {
-												e.preventDefault();
-												s.comboHighlight = Math.max(s.comboHighlight - 1, -1);
-											} else if (e.key === 'Enter') {
-												e.preventDefault();
-												if (s.comboHighlight >= 0 && s.comboHighlight < filteredCandidates.length) {
-													const picked = filteredCandidates[s.comboHighlight];
-													s.comboQuery = picked.full_name;
-													handleSelectPerson(label, picked.id);
-													s.comboOpen = false;
-												}
-											} else if (e.key === 'Escape') {
-												s.comboQuery = '';
-												s.comboOpen = false;
-												s.comboHighlight = -1;
-											}
-										}}
-									/>
-									{#if s.comboOpen}
-										<ul
-											id={comboId}
-											role="listbox"
-											style="
-												position: absolute;
-												top: 100%;
-												left: 0;
-												width: 100%;
-												margin: 4px 0 0 0;
-												background-color: #1e293b;
-												border: 1px solid #334155;
-												border-radius: 6px;
-												padding: 4px 0;
-												max-height: 240px;
-												overflow-y: auto;
-												z-index: 10;
-												list-style: none;
-											"
-										>
-											{#each filteredCandidates as candidate, idx (candidate.id)}
-												<li
-													role="option"
-													aria-selected={false}
-													style="
-														padding: 8px 12px;
-														font-size: 16px;
-														color: #e2e8f0;
-														cursor: pointer;
-														background-color: {s.comboHighlight === idx ? '#334155' : '#1e293b'};
-													"
-													onmouseenter={() => {
-														s.comboHighlight = idx;
-													}}
-													onclick={() => {
-														s.comboQuery = candidate.full_name;
-														handleSelectPerson(label, candidate.id);
-														s.comboOpen = false;
-													}}
-												>
-													{candidate.full_name}{#if candidate.role_name}<span style="font-size: 14px; color: #94a3b8; margin-left: 4px;">({candidate.role_name})</span>{/if}
-													{#if row.discrepancy?.auto_match_id === candidate.id}
-														<span style="font-size: 11px; color: #93c5fd; text-transform: uppercase; letter-spacing: 0.04em; margin-left: 6px;">Suggested</span>
-													{/if}
-												</li>
-											{/each}
-										</ul>
-									{/if}
-								</div>
-								<div style="margin-top: 8px;">
-									<CreatePersonPopover
-										rawSpeakerLabel={label}
-										defaultAdvocateSide={side !== 'BENCH' ? side : 'UNKNOWN'}
-										onCreated={(person, createdSide) =>
-											handlePersonCreated(label, row.participant_id, person, createdSide)}
-									/>
-								</div>
-							{:else if row.full_name != null || (s?.disposition != null && !s?.correcting)}
-								{@const displayName = row.full_name ?? row.discrepancy?.auto_match_name ?? null}
-								{@render personDisplay(displayName, row.photo_url, row.argument_role)}
-								{#if interactive && row.discrepancy}
-									<button
-										type="button"
-										onclick={() => openPersonSearch(row)}
-										style="font-size: 14px; color: #93c5fd; text-decoration: underline; background: transparent; border: none; padding: 0; margin-left: 8px; cursor: pointer;"
-									>Change</button>
-								{/if}
-							{:else}
-								<button
-									type="button"
-									onclick={() => openPersonSearch(row)}
-									style="font-size: 16px; color: #93c5fd; text-decoration: underline; background: transparent; border: none; padding: 0; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"
-								>
-									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true">
-										<circle cx="10" cy="10" r="7" />
-										<line x1="21" y1="21" x2="15" y2="15" />
-									</svg>
-									Select person…
-								</button>
-							{/if}
-							<!-- Phase 44 (RESOLVE-05, D-08/D-09): Resolved As hint — the row's raw
-							     label when resolved, "Imported: N/A" otherwise (never an unconditional
-							     echo of raw_speaker_label). -->
-							<div style="margin-top: 8px;">
-								<CopyableExtractedValue
-									value={resolvedAsHintValue(row)}
-									copyLabel="Copy raw label"
-									prefixLabel="Imported"
-									raw={null}
-								/>
-							</div>
-						</td>
-
-						<!-- Column 3: Bench/Advocate — segmented toggle (Task 1, RESOLVE-02); also
-						     absorbs the D-11/PJOB-18 side-first gate for intervention rows (D-07) —
-						     same component, neither segment active in the gate state. -->
+						<!-- Column 2: Resolved As — the Bench/Advocate toggle and the person control
+						     are stacked in this single cell (RESOLVE-07); the person control is a
+						     single always-rendered dropdown, never a click-to-reveal link (RESOLVE-08). -->
 						<td style="font-size: 16px; color: #e2e8f0; border-bottom: 1px solid #334155; padding: 12px 0; padding-right: 12px;">
 							{@render sideToggle(row, side, gated, rowEditable, saveState[row.participant_id]?.saving === true)}
 							<!-- Phase 44 (RESOLVE-05, D-08/D-09): Bench/Advocate hint — coarse two-
@@ -872,9 +831,23 @@
 									{saveState[row.participant_id]?.error}
 								</p>
 							{/if}
+							<div style="margin-top: 12px;">
+								{@render personDropdown(row, label, s, gated, side)}
+							</div>
+							<!-- Phase 44 (RESOLVE-05, D-08/D-09): Resolved As hint — the row's raw
+							     label when resolved, "Imported: N/A" otherwise (never an unconditional
+							     echo of raw_speaker_label). -->
+							<div style="margin-top: 8px;">
+								<CopyableExtractedValue
+									value={resolvedAsHintValue(row)}
+									copyLabel="Copy raw label"
+									prefixLabel="Imported"
+									raw={null}
+								/>
+							</div>
 						</td>
 
-						<!-- Column 4: Argument Role — bench lock / Missing tenure, or advocate dropdown (Task 2) -->
+						<!-- Column 3: Argument Role — bench lock / Missing tenure, or advocate dropdown -->
 						<td style="font-size: 16px; color: #e2e8f0; border-bottom: 1px solid #334155; padding: 12px 0; padding-right: 12px;">
 							{@render argumentRoleCell(row, side, gated, rowEditable, saveState[row.participant_id]?.saving === true)}
 							<!-- Phase 44 (RESOLVE-05, D-08/D-09): Argument Role hint — state-dependent,
@@ -890,7 +863,7 @@
 							</div>
 						</td>
 
-						<!-- Column 5: Descriptor (renamed from Title, Phase 44 RESOLVE-04) — always renders -->
+						<!-- Column 4: Descriptor (renamed from Title, Phase 44 RESOLVE-04) — always renders -->
 						<td style="font-size: 16px; color: #e2e8f0; border-bottom: 1px solid #334155; padding: 12px 0;">
 							{@render descriptorCell(row, side, rowEditable, saveState[row.participant_id]?.saving === true)}
 						</td>

@@ -1,8 +1,8 @@
 """
 Phase 44 — Resolve table rework — pure static source contract.
 
-Plans 44-02, 44-03, and 44-04 all edit `ResolveCard.svelte` in place; this file is
-shared across all three, organized with one section-comment banner per plan so each
+Plans 44-02, 44-03, 44-04, and 44-05 all edit `ResolveCard.svelte` in place; this file
+is shared across all four, organized with one section-comment banner per plan so each
 plan's own contract stays easy to find as later plans append to it.
 
 No frontend test framework exists in this repo (see 39-RESEARCH.md / 36-PATTERNS.md),
@@ -12,19 +12,22 @@ so a static source contract is the strongest automated gate available. Follows
 sibling `RESOLVE_CARD_PATH` convention.
 
 Plan 44-02 (this section's author) guards:
-  1. Exactly five column headers exist, in the mockup's order, with no Action header
-     and no residual Title header (RESOLVE-01).
+  1. Established the five-column header order with no Action header and no residual
+     Title header (RESOLVE-01) — superseded by Plan 44-05's four-column merge
+     (RESOLVE-07); see that plan's banner below for the current header contract.
   2. The Descriptor input carries its renamed field name, placeholder copy, and
      ellipsis-truncation declaration; the Raw Label badge snippet wraps rather than
      truncates (RESOLVE-01).
   3. The Descriptor cell snippet always renders — one snippet contains both the bench
      en-dash literal and the editable `<input` (RESOLVE-04).
   4. The dedicated accept-the-auto-match handler and both retired button labels are
-     gone; the open-the-search handler is the one entry point; the "Suggested" badge
-     lives inside the listbox-option region; the gated entry point is genuinely inert
-     (D-03/D-04, T-44-07).
+     gone; the "Suggested" badge lives inside the listbox-option region — the
+     open-the-search handler itself is retired by Plan 44-05 (RESOLVE-08).
   5. Every hex colour literal in the file belongs to the UI-SPEC's approved palette —
      the standing guard against later passes smuggling in a new colour.
+
+Plan 44-05 adds: the four-column merge and the dropdown-only Resolved As contract
+(RESOLVE-07/08) — see its own banner section below.
 """
 
 import re
@@ -75,23 +78,28 @@ def _region(source: str, start_pattern: str, end_pattern: str) -> str:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def test_exactly_five_column_headers_declared() -> None:
+def test_exactly_four_column_headers_declared() -> None:
     source = _source(RESOLVE_CARD_PATH)
     count = source.count('<th scope="col"')
-    assert count == 5, f"RESOLVE-01 requires exactly five <th scope=\"col\"> cells, found {count}"
+    assert count == 4, f"RESOLVE-07 requires exactly four <th scope=\"col\"> cells, found {count}"
 
 
-def test_five_header_labels_appear_in_mockup_order() -> None:
+def test_four_header_labels_appear_in_canonical_order() -> None:
     source = _source(RESOLVE_CARD_PATH)
-    labels = [">Raw Label<", ">Resolved As<", ">Bench/Advocate<", ">Argument Role<", ">Descriptor<"]
+    labels = [">Raw Label<", ">Resolved As<", ">Argument Role<", ">Descriptor<"]
     indices = []
     for label in labels:
         idx = source.find(label)
-        assert idx != -1, f"RESOLVE-01: header label {label!r} not found in source"
+        assert idx != -1, f"RESOLVE-07: header label {label!r} not found in source"
         indices.append(idx)
     assert indices == sorted(indices), (
-        f"RESOLVE-01: header labels must appear in mockup order (Raw Label, Resolved As, "
-        f"Bench/Advocate, Argument Role, Descriptor); got index order {indices}"
+        f"RESOLVE-07: header labels must appear in canonical order (Raw Label, Resolved As, "
+        f"Argument Role, Descriptor); got index order {indices}"
+    )
+    assert ">Bench/Advocate<" not in source, (
+        "RESOLVE-07: no Bench/Advocate header cell may exist anywhere in the component — "
+        "expressed with > and < delimiters so it cannot match the toggle's own segment "
+        "labels (>Bench< / >Advocate<)"
     )
 
 
@@ -163,14 +171,27 @@ def test_dedicated_confirm_handler_and_retired_button_labels_are_gone() -> None:
     assert "Select Bench or Advocate to continue" not in source, (
         "D-07: the retired gate instructional sentence must be removed"
     )
+    assert ">Change</button>" not in source, (
+        "RESOLVE-08: the Change link's button is retired — the always-rendered dropdown is "
+        "the entry point now, there is nothing left to click to reveal it"
+    )
+    assert "✓ Corrected" not in source, (
+        "RESOLVE-08: the Corrected banner is retired along with the confirm/correct "
+        "disposition state machine"
+    )
 
 
-def test_open_person_search_is_the_one_entry_point() -> None:
+def test_person_dropdown_is_always_rendered_not_click_revealed() -> None:
     source = _source(RESOLVE_CARD_PATH)
-    count = source.count("openPersonSearch")
-    assert count >= 3, (
-        f"D-03: openPersonSearch must be the single entry point — expected a definition plus "
-        f"at least two call sites (Change link, Select-person link), found {count} occurrences"
+    assert "function openPersonSearch(" not in source, (
+        "RESOLVE-08: openPersonSearch must be deleted entirely — there is no click-to-reveal "
+        "entry point any more, the dropdown itself is the entry point"
+    )
+    assert "openPersonSearch" not in source, (
+        "RESOLVE-08: no reference to openPersonSearch (definition or call site) may remain"
+    )
+    assert source.count('role="combobox"') == 1, (
+        "RESOLVE-08: exactly one always-rendered combobox input must exist for the Resolved As cell"
     )
 
 
@@ -186,16 +207,26 @@ def test_suggested_badge_lives_inside_the_listbox_option_region() -> None:
 
 def test_gated_entry_point_is_genuinely_inert() -> None:
     source = _source(RESOLVE_CARD_PATH)
-    assert 'aria-disabled="true"' in source, (
-        "T-44-07: the gated Resolved As entry point must carry aria-disabled=\"true\" — "
+    dropdown_body = _snippet_body(source, "personDropdown")
+    assert "disabled" in dropdown_body, (
+        "T-44-18: the gated person input must carry `disabled` — never removed from the DOM"
+    )
+    assert 'aria-disabled="true"' in dropdown_body, (
+        "T-44-07/T-44-18: the gated Resolved As entry point must carry aria-disabled=\"true\" — "
         "the D-11/PJOB-18 side-first gate must survive the removal of its instructional sentence"
     )
-    assert "clip-path: inset(50%)" in source, (
+    assert "clip-path: inset(50%)" in dropdown_body, (
         "D-07: the gated row must carry a visually-hidden (sr-only) explanation of the gate"
     )
-    assert source.count("Select person…") == 2, (
-        "the gated inert variant and the active search link should each render 'Select person…' "
-        "exactly once, for a total of 2 occurrences"
+    combobox_match = re.search(r'role="combobox"', dropdown_body)
+    assert combobox_match, "RESOLVE-08: personDropdown must render the combobox input"
+    input_start = dropdown_body.rfind("<input", 0, combobox_match.start())
+    assert input_start != -1, "could not locate the <input role=\"combobox\"> tag's own start"
+    preceding_window = dropdown_body[max(0, input_start - 120) : input_start]
+    assert "{#if" not in preceding_window, (
+        "T-44-18/Pitfall 4: no {#if} may immediately precede the combobox input's own "
+        "declaration — the input must be unconditionally rendered, gated only via "
+        "disabled/aria-disabled (the listbox popup itself may still be conditionally rendered)"
     )
 
 
@@ -556,3 +587,149 @@ def test_palette_guard_still_passes_with_hint_additions() -> None:
     found = set(re.findall(r"#[0-9a-fA-F]{6}", source))
     unapproved = found - APPROVED_HEX_COLORS
     assert not unapproved, f"found hex colour(s) outside the approved palette: {unapproved}"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Plan 44-05 — RESOLVE-07/08: four-column merge, dropdown-only Resolved As
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _row_region(source: str) -> str:
+    """Extract the body row's `<tr>...</tr>` region from inside `<tbody>` —
+    distinct from the header row's own `<tr>` inside `<thead>`."""
+    tbody_idx = source.index("<tbody>")
+    body = source[tbody_idx:]
+    return _region(body, r"<tr>", r"</tr>")
+
+
+def _table_cells(row_region: str) -> list[str]:
+    return re.findall(r"<td.*?</td>", row_region, re.DOTALL)
+
+
+def _interface_body(source: str, name: str) -> str:
+    """Extract a script-level `interface {name} { ... }` body, matching the
+    tab-indented-closing-brace convention `_function_body` relies on."""
+    match = re.search(rf"interface\s+{re.escape(name)}\s*\{{", source)
+    assert match, f"could not find `interface {name} {{` in source"
+    start = match.start()
+    end_match = re.search(r"\n\t\}", source[start:])
+    assert end_match, f"could not find end of interface {name}"
+    return source[start : start + end_match.end()]
+
+
+def _derived_body(source: str, name: str) -> str:
+    """Extract a script-level `let {name} = $derived.by(() => { ... });` body."""
+    match = re.search(rf"let\s+{re.escape(name)}\s*=\s*\$derived\.by\(", source)
+    assert match, f"could not find `let {name} = $derived.by(` in source"
+    start = match.start()
+    end_match = re.search(r"\}\);", source[start:])
+    assert end_match, f"could not find end of derived {name}"
+    return source[start : start + end_match.end()]
+
+
+def _effect_body(source: str, marker: str) -> str:
+    """Extract the `$effect(() => { ... });` block whose body starts with `marker`
+    (there is more than one $effect block in the file, e.g. inside comboOutsideClick)."""
+    for match in re.finditer(r"\$effect\(\(\) => \{", source):
+        start = match.start()
+        end_match = re.search(r"\}\);", source[start:])
+        assert end_match, "could not find end of $effect block"
+        body = source[start : start + end_match.end()]
+        if marker in body[:200]:
+            return body
+    raise AssertionError(f"could not find a $effect block whose body starts with {marker!r}")
+
+
+def test_row_renders_exactly_four_data_cells() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    row_region = _row_region(source)
+    count = row_region.count("<td")
+    assert count == 4, f"RESOLVE-07: each row must render exactly four <td> cells, found {count}"
+
+
+def test_side_toggle_and_person_control_share_the_resolved_as_cell() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    row_region = _row_region(source)
+    cells = _table_cells(row_region)
+    assert len(cells) == 4, f"expected 4 <td> cells in the row region, found {len(cells)}"
+    resolved_as_cell = cells[1]
+    toggle_idx = resolved_as_cell.find("{@render sideToggle(")
+    dropdown_idx = resolved_as_cell.find("{@render personDropdown(")
+    assert toggle_idx != -1, "RESOLVE-07: sideToggle must render inside the Resolved As cell"
+    assert dropdown_idx != -1, "RESOLVE-07: personDropdown must render inside the Resolved As cell"
+    assert toggle_idx < dropdown_idx, (
+        "RESOLVE-07: the toggle must be stacked above the person control inside the merged cell"
+    )
+
+
+def test_row_match_state_has_no_confirm_correct_fields() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    body = _interface_body(source, "RowMatchState")
+    assert not re.search(r"\bdisposition\??:", body), (
+        "RESOLVE-08: RowMatchState must not declare a disposition field — the confirm/correct "
+        "distinction has no UI any more"
+    )
+    assert not re.search(r"\bcorrecting\??:", body), (
+        "RESOLVE-08: RowMatchState must not declare a correcting field — the control is always rendered"
+    )
+    for field in ("personId", "extraCandidates", "comboQuery", "comboOpen", "comboHighlight"):
+        assert field in body, f"RowMatchState must still declare {field}"
+
+
+def test_all_dispositioned_gate_keys_on_person_id_only() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    body = _derived_body(source, "allDispositioned")
+    assert "personId" in body, "RESOLVE-08: allDispositioned must key on personId"
+    assert not re.search(r"\.disposition\b", body), (
+        "RESOLVE-08: allDispositioned must not reference a disposition member access — "
+        "the gate is a single personId predicate now"
+    )
+
+
+def test_matches_payload_shape_is_unchanged() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    body = _derived_body(source, "matchesJson")
+    assert "raw_speaker_label" in body, (
+        "the ?/resolve wire contract must still key on raw_speaker_label"
+    )
+    assert "person_id:" in body, "the ?/resolve wire contract must still key on person_id"
+    assert not re.search(r"\bdisposition\b", body), (
+        "RESOLVE-08: matchesJson must not reference disposition — proof the state-machine "
+        "deletion did not touch the ?/resolve wire payload shape"
+    )
+
+
+def test_seeding_effect_falls_back_to_committed_person() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    body = _effect_body(source, "if (!isPaused) return;")
+    assert "auto_match_id" in body, "the seeding effect must still seed personId from auto_match_id"
+    assert "person_id" in body, (
+        "RESOLVE-08 delta 4: the seeding effect must fall back to the row's own committed "
+        "person_id so an already-committed row does not seed as un-reviewed"
+    )
+
+
+def test_single_side_input_survives_the_column_merge() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    assert source.count('name="side"') == 1, (
+        "T-44-16: merging the toggle into the Resolved As cell must not drop or duplicate "
+        "the single name=\"side\" submitting control"
+    )
+    form_region = _region(source, r'action="\?/saveResolveRow"', r"</form>")
+    assert form_region.count('name="side"') == 1, (
+        "T-44-16: the side field must still live inside the per-row hidden-form region "
+        "after the column merge"
+    )
+
+
+def test_person_control_editable_predicate_exists() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    assert "function personControlEditable(" in source, (
+        "T-44-17: personControlEditable must be a named function so the review-set scoping "
+        "is in source rather than inline in markup"
+    )
+    body = _function_body(source, "personControlEditable")
+    assert "discrepancy" in body, (
+        "T-44-17: personControlEditable must reference the discrepancy field — the dropdown "
+        "may only be editable for rows in the review set matchesJson serializes"
+    )

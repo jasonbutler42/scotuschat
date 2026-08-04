@@ -247,7 +247,10 @@ Plans:
 
 **Plan-time confirmation of the frontend-only assumption**: partially false. Side and Argument Role need no new backend field or write path (confirmed: `argument_role` is a read-time projection of `ArgumentParticipant.side` via `ADVOCATE_LABEL_MAP`). The Descriptor column is not UI-copy-only — CONTEXT.md D-05/D-06 make it a full-stack rename of `ArgumentParticipant.title` to `.descriptor` with a new Alembic migration, absorbed into this phase in one pass. Success criterion 5's "Extracted: …" wording is delivered as "Imported: …" per D-09, the honest framing for corpus-passthrough data. (Superseded 2026-08-04 by the source-aware prefix — see reconciliation note above.)
 
-**Plans**: 3/4 plans executed; 44-04's Task 4 (operator visual acceptance) never completed — superseded by the Figma reconciliation above rather than approved or rejected. Follow-on plan(s) from 44-05 cover RESOLVE-07–16.
+**Plans**: 9 plans — the original 4 (RESOLVE-01–06) plus 5 reconciliation plans 44-05 through 44-09 (RESOLVE-07–16). 3/4 of the original plans executed; 44-04's Task 4 (operator visual acceptance) never completed — superseded by the Figma reconciliation above rather than approved or rejected, so it is not pending work.
+
+**Original waves (RESOLVE-01–06)**
+
 **Wave 1**
 
 - [x] 44-01-PLAN.md — Descriptor full-stack rename: Alembic 0025, ORM, schemas, services, routers, pipeline, both SvelteKit consumers, tests
@@ -263,6 +266,25 @@ Plans:
 **Wave 4** *(blocked on Wave 3 completion)*
 
 - [ ] 44-04-PLAN.md — "Imported:" hints across all four columns via a new `prefixLabel` prop, plus operator visual acceptance against the mockup — Tasks 1-3 complete; Task 4 (visual acceptance) superseded by the Figma reconciliation (see phase note above), never approved or rejected
+
+**Reconciliation waves (RESOLVE-07–16, planned 2026-08-04)** — wave numbers restart at 1 because these plans build on the committed state of the code, not on the original waves. Sequenced structural → data/behaviour → copy/visual → client-only additions, per 44-FIGMA-RECONCILE.md's own priority ordering, refined by 44-05-RESEARCH.md's finding that RESOLVE-11 needs no service-layer code change.
+
+**Reconciliation Wave 1** *(44-05 and 44-06 run in parallel — zero file overlap)*
+
+- [ ] 44-05-PLAN.md — Four-column merge: Bench/Advocate toggle and person control stacked in the Resolved As cell, dropdown-only Resolved As, confirm/correct state machine deleted; leads with a tracer proving both save paths survive. Ends with operator visual acceptance of the merged cell (RESOLVE-07, RESOLVE-08)
+- [ ] 44-06-PLAN.md — Backend: bench writes stop destroying the stored descriptor, plus a DB-gated regression suite locking live tenure-derived bench roles on both read paths including published arguments (RESOLVE-11, RESOLVE-13)
+
+**Reconciliation Wave 2** *(blocked on 44-05)*
+
+- [ ] 44-07-PLAN.md — Side-scoped person search via the existing `is_justice` field, and a source-aware hint prefix threaded from the job's already-derived ingestion source (RESOLVE-09, RESOLVE-10)
+
+**Reconciliation Wave 3** *(blocked on 44-06 and 44-07)*
+
+- [ ] 44-08-PLAN.md — Bench copy: `Calculated from tenure` / `Tenure not found` / `(resolve person first)`, a new-tab `Edit person` link, a bench Descriptor dash with no hint, and read-only parity (RESOLVE-11, RESOLVE-12, RESOLVE-13, RESOLVE-14)
+
+**Reconciliation Wave 4** *(blocked on 44-08)*
+
+- [ ] 44-09-PLAN.md — Persistent progress line, always-visible reason-disabled Continue, and AUTO-MATCHED / NEEDS YOU row cue tags. Ends with operator acceptance of the complete reconciliation against all four canonical Figma frames (RESOLVE-15, RESOLVE-16)
 
 **UI hint**: yes
 

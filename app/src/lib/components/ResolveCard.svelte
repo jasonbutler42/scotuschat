@@ -112,6 +112,18 @@
 	let saveState = $state<Record<number, { saving: boolean; error: string | null }>>({});
 	let pendingSideOverrides = $state<Record<number, string>>({});
 	let sideGateConfirmed = $state<Record<number, boolean>>({});
+	// Task 3 checkpoint remediation (44-05, data-loss fix): `side` is the single
+	// stored column for both the Bench/Advocate toggle AND the specific advocate
+	// role (PETITIONER/RESPONDENT/AMICUS) — there is no separate argument-role
+	// column. Before this fix, toggleSide's Advocate branch hardcoded 'UNKNOWN'
+	// on every click, so a Bench→Advocate round trip silently discarded whatever
+	// specific role the operator had already chosen. This map remembers the last
+	// specific advocate role picked per row so the toggle can restore it instead.
+	let lastAdvocateRole = $state<Record<number, string>>({});
+
+	function specificAdvocateRole(value: string): string | null {
+		return value === 'PETITIONER' || value === 'RESPONDENT' || value === 'AMICUS' ? value : null;
+	}
 
 	function rowFormId(participantId: number): string {
 		return `resolve-row-form-${participantId}`;
@@ -170,7 +182,18 @@
 			confirmSide(row, choice);
 			return;
 		}
-		onSideChange(row, choice === 'BENCH' ? 'BENCH' : 'UNKNOWN');
+		if (choice === 'BENCH') {
+			onSideChange(row, 'BENCH');
+			return;
+		}
+		// Task 3 checkpoint remediation: restore the last specific advocate role
+		// chosen this session, falling back to the row's own already-committed
+		// side if it was already a specific role (e.g. loaded from the server
+		// still set to RESPONDENT) and only defaulting to the generic placeholder
+		// when neither is known — never destroy a role the operator already set.
+		const restored =
+			lastAdvocateRole[row.participant_id] ?? specificAdvocateRole(row.side) ?? 'UNKNOWN';
+		onSideChange(row, restored);
 	}
 
 	// Task 2 (RESOLVE-03): the Argument Role dropdown's onchange handler. Picking a
@@ -179,6 +202,12 @@
 	// "Petitioner's Counsel" has unambiguously chosen Advocate, so it would be a
 	// pointless extra step to force the toggle click first.
 	function chooseArgumentRole(row: MergedRow, value: string) {
+		const specific = specificAdvocateRole(value);
+		if (specific) {
+			// Task 3 checkpoint remediation: remember it so a later Bench→Advocate
+			// toggle restores this instead of resetting to UNKNOWN.
+			lastAdvocateRole[row.participant_id] = specific;
+		}
 		if (needsSideGate(row)) {
 			pendingSideOverrides[row.participant_id] = value;
 			sideGateConfirmed[row.participant_id] = true;
@@ -590,7 +619,11 @@
 				aria-controls={comboId}
 				aria-autocomplete="list"
 				aria-label="Search for speaker"
-				placeholder={side === 'BENCH' ? 'Select bench…' : 'Select advocate…'}
+				placeholder={gated
+					? 'Select person…'
+					: side === 'BENCH'
+						? 'Select bench…'
+						: 'Select advocate…'}
 				value={s!.comboQuery}
 				disabled={gated}
 				aria-disabled={gated ? 'true' : 'false'}
@@ -598,7 +631,7 @@
 					background-color: #0f1117;
 					border: 1px solid #93c5fd;
 					border-radius: 6px;
-					padding: 6px 10px;
+					padding: 6px 32px 6px 10px;
 					font-size: 16px;
 					color: #e2e8f0;
 					width: 100%;
@@ -637,15 +670,38 @@
 					}
 				}}
 			/>
+			<!-- Task 3 checkpoint remediation: a decorative chevron so the always-
+			     rendered input reads as a combobox with a popup, not a plain text
+			     box — the operator's checkpoint feedback flagged the missing
+			     affordance against Figma node 4205:81. Purely visual: it carries no
+			     click handler of its own and is aria-hidden so it never enters the
+			     input's accessible name. -->
+			<svg
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				width="16"
+				height="16"
+				aria-hidden="true"
+				style="
+					position: absolute;
+					right: 10px;
+					top: 50%;
+					transform: translateY(-50%);
+					color: #94a3b8;
+					pointer-events: none;
+				"
+			>
+				<polyline points="6 9 12 15 18 9"></polyline>
+			</svg>
 			{#if gated}
 				<span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%);">
 					Choose Bench or Advocate before selecting a person.
 				</span>
 			{/if}
 			{#if s!.comboOpen}
-				<ul
-					id={comboId}
-					role="listbox"
+				<div
 					style="
 						position: absolute;
 						top: 100%;
@@ -655,49 +711,62 @@
 						background-color: #1e293b;
 						border: 1px solid #334155;
 						border-radius: 6px;
-						padding: 4px 0;
-						max-height: 240px;
-						overflow-y: auto;
 						z-index: 10;
-						list-style: none;
 					"
 				>
-					{#each filteredCandidates as candidate, idx (candidate.id)}
-						<li
-							role="option"
-							aria-selected={false}
-							style="
-								padding: 8px 12px;
-								font-size: 16px;
-								color: #e2e8f0;
-								cursor: pointer;
-								background-color: {s!.comboHighlight === idx ? '#334155' : '#1e293b'};
-							"
-							onmouseenter={() => {
-								s!.comboHighlight = idx;
-							}}
-							onclick={() => {
-								s!.comboQuery = candidate.full_name;
-								handleSelectPerson(label, candidate.id);
-								s!.comboOpen = false;
-							}}
-						>
-							{candidate.full_name}{#if candidate.role_name}<span style="font-size: 14px; color: #94a3b8; margin-left: 4px;">({candidate.role_name})</span>{/if}
-							{#if row.discrepancy?.auto_match_id === candidate.id}
-								<span style="font-size: 11px; color: #93c5fd; text-transform: uppercase; letter-spacing: 0.04em; margin-left: 6px;">Suggested</span>
-							{/if}
-						</li>
-					{/each}
-				</ul>
+					<ul
+						id={comboId}
+						role="listbox"
+						style="
+							padding: 4px 0;
+							margin: 0;
+							max-height: 240px;
+							overflow-y: auto;
+							list-style: none;
+						"
+					>
+						{#each filteredCandidates as candidate, idx (candidate.id)}
+							<li
+								role="option"
+								aria-selected={false}
+								style="
+									padding: 8px 12px;
+									font-size: 16px;
+									color: #e2e8f0;
+									cursor: pointer;
+									background-color: {s!.comboHighlight === idx ? '#334155' : '#1e293b'};
+								"
+								onmouseenter={() => {
+									s!.comboHighlight = idx;
+								}}
+								onclick={() => {
+									s!.comboQuery = candidate.full_name;
+									handleSelectPerson(label, candidate.id);
+									s!.comboOpen = false;
+								}}
+							>
+								{candidate.full_name}{#if candidate.role_name}<span style="font-size: 14px; color: #94a3b8; margin-left: 4px;">({candidate.role_name})</span>{/if}
+								{#if row.discrepancy?.auto_match_id === candidate.id}
+									<span style="font-size: 11px; color: #93c5fd; text-transform: uppercase; letter-spacing: 0.04em; margin-left: 6px;">Suggested</span>
+								{/if}
+							</li>
+						{/each}
+					</ul>
+					<!-- Task 3 checkpoint remediation: create-person now lives inside
+					     the open popup (Figma 4205:81 shows it as part of the
+					     combobox's own popup affordance), not as a standalone element
+					     that was always visible beneath the input regardless of
+					     whether the popup was open. -->
+					<div style="border-top: 1px solid #334155; padding: 8px;">
+						<CreatePersonPopover
+							rawSpeakerLabel={label}
+							defaultAdvocateSide={side !== 'BENCH' ? side : 'UNKNOWN'}
+							onCreated={(person, createdSide) =>
+								handlePersonCreated(label, row.participant_id, person, createdSide)}
+						/>
+					</div>
+				</div>
 			{/if}
-		</div>
-		<div style="margin-top: 8px;">
-			<CreatePersonPopover
-				rawSpeakerLabel={label}
-				defaultAdvocateSide={side !== 'BENCH' ? side : 'UNKNOWN'}
-				onCreated={(person, createdSide) =>
-					handlePersonCreated(label, row.participant_id, person, createdSide)}
-			/>
 		</div>
 	{/if}
 {/snippet}

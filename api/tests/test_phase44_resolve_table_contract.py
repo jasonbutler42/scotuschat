@@ -27,7 +27,11 @@ Plan 44-02 (this section's author) guards:
      the standing guard against later passes smuggling in a new colour.
 
 Plan 44-05 adds: the four-column merge and the dropdown-only Resolved As contract
-(RESOLVE-07/08) — see its own banner section below.
+(RESOLVE-07/08) — see its own banner section below. A Task 3 checkpoint-remediation
+section follows it, added after the operator rejected the first Task 3 checkpoint
+with specific defects: create-person moved inside the open popup, a combobox
+affordance icon, a neutral gated placeholder, and a fix for the toggle discarding a
+previously-chosen specific advocate role.
 """
 
 import re
@@ -733,4 +737,108 @@ def test_person_control_editable_predicate_exists() -> None:
     assert "discrepancy" in body, (
         "T-44-17: personControlEditable must reference the discrepancy field — the dropdown "
         "may only be editable for rows in the review set matchesJson serializes"
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Plan 44-05, Task 3 checkpoint remediation — operator visual-acceptance defects
+# fixed after the first Task 3 checkpoint was rejected: create-person moved
+# inside the open popup, a combobox affordance icon, a neutral gated
+# placeholder, and the Bench/Advocate toggle no longer discarding a
+# previously-chosen specific advocate role.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _if_block(source: str, condition_literal: str) -> str:
+    """Extract a nesting-aware `{#if {condition_literal}}...{/if}` block — mirrors
+    `_snippet_body`'s brace-balanced approach but for #if blocks that may
+    themselves contain nested #if blocks (e.g. per-candidate conditionals
+    inside a listbox loop)."""
+    start_token = "{#if " + condition_literal + "}"
+    start = source.index(start_token)
+    pos = start + len(start_token)
+    depth = 1
+    while depth > 0:
+        next_if = source.find("{#if", pos)
+        next_close = source.find("{/if}", pos)
+        assert next_close != -1, f"unbalanced #if block for {condition_literal!r}"
+        if next_if != -1 and next_if < next_close:
+            depth += 1
+            pos = next_if + len("{#if")
+        else:
+            depth -= 1
+            pos = next_close + len("{/if}")
+    return source[start:pos]
+
+
+def test_create_person_trigger_lives_inside_the_open_listbox_popup() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    dropdown_body = _snippet_body(source, "personDropdown")
+    assert dropdown_body.count("<CreatePersonPopover") == 1, (
+        "exactly one create-person trigger should exist in the person control"
+    )
+    popup_block = _if_block(dropdown_body, "s!.comboOpen")
+    assert "CreatePersonPopover" in popup_block, (
+        "the create-person trigger must render inside the open listbox popup "
+        "(Figma 4205:81 shows it as part of the combobox's own popup affordance) "
+        "— not as a standalone element visible beneath the input regardless of "
+        "whether the popup is open, which was the operator's checkpoint feedback"
+    )
+
+
+def test_person_combobox_has_a_dropdown_affordance_icon() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    dropdown_body = _snippet_body(source, "personDropdown")
+    assert "<svg" in dropdown_body, (
+        "the always-rendered person control must carry a visual combobox "
+        "affordance (a chevron) so it reads as a dropdown rather than a plain "
+        "text box — the operator's checkpoint feedback flagged the missing "
+        "affordance against Figma node 4205:81"
+    )
+    svg_region = _region(dropdown_body, r"<svg", r"</svg>")
+    assert 'aria-hidden="true"' in svg_region, (
+        "the chevron is decorative and must not be exposed to the accessible name"
+    )
+
+
+def test_person_dropdown_placeholder_is_neutral_while_gated() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    dropdown_body = _snippet_body(source, "personDropdown")
+    assert "Select person…" in dropdown_body, (
+        "while a row's side has not yet been chosen, the placeholder must read "
+        "as genuinely side-neutral rather than guessing Bench/Advocate from an "
+        "unconfirmed, possibly ingestion-guessed side value"
+    )
+    placeholder_match = re.search(r"placeholder=\{gated", dropdown_body)
+    assert placeholder_match, (
+        "the placeholder expression must branch on the gated flag first, before "
+        "falling back to the side-specific wording"
+    )
+    assert dropdown_body.count("Select bench…") == 1 and dropdown_body.count("Select advocate…") == 1, (
+        "the side-specific placeholders must still exist for the non-gated case"
+    )
+
+
+def test_toggle_side_preserves_a_previously_chosen_advocate_role() -> None:
+    """A real data-loss bug the operator hit while re-verifying this plan's
+    checkpoint: `side` is the single stored column for both the Bench/Advocate
+    toggle and the specific advocate role (PETITIONER/RESPONDENT/AMICUS)
+    chosen via the Argument Role select. Before this fix, toggleSide's
+    Advocate branch hardcoded 'UNKNOWN' on every click, so clicking
+    Bench then Advocate silently discarded whatever specific role had already
+    been chosen."""
+    source = _source(RESOLVE_CARD_PATH)
+    assert "lastAdvocateRole" in source, (
+        "a per-row memory of the last specific advocate role must exist so "
+        "toggling Bench then Advocate cannot silently discard it"
+    )
+    toggle_body = _function_body(source, "toggleSide")
+    assert "lastAdvocateRole" in toggle_body, (
+        "toggleSide's Advocate branch must consult the remembered role rather "
+        "than unconditionally writing 'UNKNOWN'"
+    )
+    choose_body = _function_body(source, "chooseArgumentRole")
+    assert "lastAdvocateRole" in choose_body, (
+        "chooseArgumentRole must record the operator's specific role choice so "
+        "a later Bench/Advocate toggle can restore it"
     )

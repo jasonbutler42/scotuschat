@@ -525,16 +525,26 @@
 	     hint (the old call passed a medium confidence band and mirrored the hint
 	     value into the raw prop) for this file only — the UI-SPEC locks Descriptor
 	     to the same single-line "Imported: …" treatment as the other 3 hinted
-	     columns. Always renders, including on Bench rows (RESOLVE-04), since
-	     Descriptor itself always renders here. -->
-	<div style="margin-top: 8px;">
-		<CopyableExtractedValue
-			value={row.descriptor_hint}
-			copyLabel="Copy descriptor"
-			prefixLabel={sourcePrefix}
-			raw={null}
-		/>
-	</div>
+	     columns.
+	     Plan 44-08 (RESOLVE-13): suppressed on bench rows, wrapped rather than
+	     deleted. The shared hint component's `{#if isStacked}` branch renders
+	     its prefix span and copy button unconditionally, even when value is
+	     null — there is no early-return for a null value inside that shared
+	     component — so suppressing the hint has to be a call-site condition, not
+	     a component change. This is a render condition only: the stored
+	     ArgumentParticipant.descriptor is preserved untouched by 44-06's
+	     write-path fix; nothing here clears or blanks the value, it is simply
+	     not rendered while side is BENCH. -->
+	{#if side !== 'BENCH'}
+		<div style="margin-top: 8px;">
+			<CopyableExtractedValue
+				value={row.descriptor_hint}
+				copyLabel="Copy descriptor"
+				prefixLabel={sourcePrefix}
+				raw={null}
+			/>
+		</div>
+	{/if}
 {/snippet}
 
 {#snippet sideToggle(row: MergedRow, side: string, gated: boolean, rowEditable: boolean, saving: boolean)}

@@ -5,15 +5,15 @@ milestone_name: Corpus Fidelity & Resolve Rework
 current_phase: 44
 current_phase_name: resolve-table-rework
 status: executing
-stopped_at: Completed 44-03-PLAN.md
-last_updated: "2026-08-04T19:52:47.599Z"
-last_activity: 2026-08-04
-last_activity_desc: Phase 44 execution started
+stopped_at: Completed 44-06-PLAN.md
+last_updated: "2026-08-07T18:18:08.508Z"
+last_activity: 2026-08-07
+last_activity_desc: Plan 44-05 complete (operator-approved checkpoint after one remediation cycle); starting 44-06
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 21
-  completed_plans: 16
+  completed_plans: 18
   percent: 60
 ---
 
@@ -29,8 +29,8 @@ See: .planning/PROJECT.md (updated 2026-07-29 after starting v1.7 milestone)
 ## Current Position
 
 Phase: 44 (resolve-table-rework) — EXECUTING
-Plan: 5 of 9
-Status: Executing Phase 44
+Plan: 6 of 9
+Status: Ready to execute
 Last activity: 2026-08-07 — Plan 44-05 complete (operator-approved checkpoint after one remediation cycle); starting 44-06
 
 **Milestone shape:**
@@ -91,6 +91,7 @@ Still open from earlier milestones:
 | Phase 44 P01 | 36min | 3 tasks | 19 files |
 | Phase 44 P02 | 21min | 3 tasks | 2 files |
 | Phase 44 P03 | 25min | 3 tasks | 3 files |
+| Phase 44 P06 | 35min | 3 tasks | 4 files |
 
 v1.5/v1.6 per-plan metrics cleared at this milestone boundary per the standard STATE.md reset; the underlying per-plan SUMMARY files remain in `.planning/milestones/v1.5-phases/` and `.planning/milestones/v1.6-phases/`.
 
@@ -132,6 +133,8 @@ Full cross-milestone decision log lives in PROJECT.md's Key Decisions table. Per
 - [Phase ?]: Phase 44 Plan 02: 'Change' link in Resolved As only renders when row.discrepancy is present (matches pre-Phase-44 Action column's row-actions-only-for-discrepancy-rows behavior) — avoids a dead clickable link for cleanly alias-resolved rows.
 - [Phase ?]: Phase 44 Plan 02: rowMatchStates seeding now sets correcting=true/disposition=confirmed/comboQuery=candidate-name for ANY row with a non-null auto_match_id (not just auto_resolved rows), collapsing Confirm/Select/Change into a single openPersonSearch entry point per D-03/D-04.
 - [Phase ?]: Phase 44 Plan 03: toggleSide's already-active no-op check runs before the gated check (matches plan's literal ordering: no-op first, then gate, then onSideChange); argumentRoleCell's four branches key purely on side/missing_tenure/rowEditable, not on gated, per the plan's literal branch order.
+- [Phase ?]: Phase 44 Plan 06: Task 2's descriptor-preservation fix broke test_phase44_argument_role_roundtrip.py's own PJOB-15 re-assertion (outside declared files_modified); fixed inline (Rule 1) since the plan's own verify command requires the full suite green.
+- [Phase ?]: Phase 44 Plan 06: RESOLVE-11/RESOLVE-13 intentionally left un-checked in REQUIREMENTS.md — both split across this plan and 44-08 (client hint suppression + Edit-person new-tab markup), mirroring 44-01's RESOLVE-04 precedent.
 
 ### Roadmap Evolution
 
@@ -167,8 +170,8 @@ v1.6's roadmap evolution is archived in `.planning/milestones/v1.6-ROADMAP.md`. 
 
 ## Session Continuity
 
-Last session: 2026-08-01T18:52:28.694Z
-Stopped at: Completed 44-03-PLAN.md
+Last session: 2026-08-07T18:18:06.922Z
+Stopped at: Completed 44-06-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

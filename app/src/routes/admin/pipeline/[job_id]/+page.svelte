@@ -50,6 +50,10 @@
 		spaces_key?: string | null;
 		original_filename?: string | null;
 		parse_stats?: ParseStats | null;
+		// Phase 44 Plan 07 (RESOLVE-10): the job's real ingestion provenance
+		// (api/schemas/admin_jobs.py), threaded into the Resolve card below.
+		// Optional so a poll tick or fixture that omits this still type-checks.
+		source?: 'pdf' | 'corpus';
 	}
 
 	// Standalone script-level date formatter — reusable from any template scope
@@ -392,6 +396,7 @@
 				jobStatus={liveJob.status}
 				readonlyMode={data.readonlyMode}
 				resolveFormError={form?.error}
+				source={data.job.source ?? 'pdf'}
 			/>
 		{/if}
 

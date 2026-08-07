@@ -78,6 +78,10 @@
 		jobStatus: string;
 		readonlyMode: boolean;
 		resolveFormError?: string | null;
+		// Phase 44 Plan 07 (RESOLVE-10): the job's real ingestion provenance,
+		// already derived by the API (api/schemas/admin_jobs.py); no default —
+		// the parent always supplies it.
+		source: 'pdf' | 'corpus';
 	}
 
 	let {
@@ -88,10 +92,16 @@
 		jobStatus,
 		readonlyMode,
 		resolveFormError = null,
+		source,
 	}: ResolveCardProps = $props();
 
 	let isPaused = $derived(jobStatus === 'paused');
 	let interactive = $derived(!readonlyMode);
+	// Phase 44 Plan 07 (RESOLVE-10): one AdminJob has exactly one ingestion
+	// source, so this prefix is uniform for every row and every hinted cell of
+	// one card. Derived once from the API's own already-computed answer —
+	// never re-derived here from any pipeline-internal implementation detail.
+	let sourcePrefix = $derived(source === 'corpus' ? 'Imported' : 'Extracted');
 
 	interface MergedRow extends ResolveRow {
 		discrepancy: Discrepancy | null;
@@ -457,7 +467,7 @@
 	</span>
 {/snippet}
 
-{#snippet descriptorCell(row: MergedRow, side: string, rowEditable: boolean, saving: boolean)}
+{#snippet descriptorCell(row: MergedRow, side: string, rowEditable: boolean, saving: boolean, sourcePrefix: string)}
 	{#if side === 'BENCH'}
 		<span style="color: #94a3b8;">–</span>
 	{:else if rowEditable}
@@ -497,7 +507,7 @@
 		<CopyableExtractedValue
 			value={row.descriptor_hint}
 			copyLabel="Copy descriptor"
-			prefixLabel="Imported"
+			prefixLabel={sourcePrefix}
 			raw={null}
 		/>
 	</div>
@@ -930,7 +940,7 @@
 								<CopyableExtractedValue
 									value={sideHintValue(side, gated)}
 									copyLabel="Copy side"
-									prefixLabel="Imported"
+									prefixLabel={sourcePrefix}
 									raw={null}
 								/>
 							</div>
@@ -949,7 +959,7 @@
 								<CopyableExtractedValue
 									value={resolvedAsHintValue(row)}
 									copyLabel="Copy raw label"
-									prefixLabel="Imported"
+									prefixLabel={sourcePrefix}
 									raw={null}
 								/>
 							</div>
@@ -965,7 +975,7 @@
 								<CopyableExtractedValue
 									value={argumentRoleHintValue(row, side, gated)}
 									copyLabel="Copy argument role"
-									prefixLabel="Imported"
+									prefixLabel={sourcePrefix}
 									raw={null}
 								/>
 							</div>
@@ -973,7 +983,7 @@
 
 						<!-- Column 4: Descriptor (renamed from Title, Phase 44 RESOLVE-04) — always renders -->
 						<td style="font-size: 16px; color: #e2e8f0; border-bottom: 1px solid #334155; padding: 12px 0;">
-							{@render descriptorCell(row, side, rowEditable, saveState[row.participant_id]?.saving === true)}
+							{@render descriptorCell(row, side, rowEditable, saveState[row.participant_id]?.saving === true, sourcePrefix)}
 						</td>
 					</tr>
 				{/each}

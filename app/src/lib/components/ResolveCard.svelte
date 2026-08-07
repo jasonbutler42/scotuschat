@@ -262,13 +262,37 @@
 
 	function argumentRoleHintValue(row: MergedRow, side: string, gated: boolean): string | null {
 		if (gated) return null;
-		if (side === 'BENCH') {
-			return row.missing_tenure ? 'N/A - tenure not found' : 'N/A - from tenure';
-		}
+		// Plan 44-08 (RESOLVE-12): the bench fork moved out of the hint layer and
+		// into argumentRoleCell/benchRoleState — the bench role was never an
+		// ingested value, so it never had an "Imported:"/"Extracted:" hint to
+		// begin with. This helper now only ever answers for the three advocate
+		// sides.
 		if (side === 'PETITIONER' || side === 'RESPONDENT' || side === 'AMICUS') {
 			return SIDE_LABEL[side];
 		}
 		return null;
+	}
+
+	// Plan 44-08 (RESOLVE-12/14): the three mutually-exclusive bench Argument
+	// Role states, extracted into a named predicate so the ordering rule lives
+	// in one place and the contract test can assert the fork directly instead
+	// of scraping markup. Keys only on side, person_id and missing_tenure —
+	// never on rowEditable/gated — so the read-only card renders identically
+	// (RESOLVE-11, canonical point 10).
+	//
+	// Order matters: an unresolved bench row (row.person_id == null) reports
+	// missing_tenure === false from the service (api/services/admin_people.py
+	// -- `if participant.person_id is not None else (None, False)`), so the
+	// unresolved check must run before the calculated check or an unresolved
+	// row would fall into the locked box with nothing to show.
+	function benchRoleState(
+		row: MergedRow,
+		side: string,
+	): 'unresolved' | 'calculated' | 'missing-tenure' | null {
+		if (side !== 'BENCH') return null;
+		if (row.person_id == null) return 'unresolved';
+		if (!row.missing_tenure) return 'calculated';
+		return 'missing-tenure';
 	}
 
 	// ──────────────────────────────────────────────────────────────────────────
@@ -567,7 +591,15 @@
 {/snippet}
 
 {#snippet argumentRoleCell(row: MergedRow, side: string, gated: boolean, rowEditable: boolean, saving: boolean)}
-	{#if side === 'BENCH' && !row.missing_tenure}
+	{@const benchState = benchRoleState(row, side)}
+	{#if benchState === 'unresolved'}
+		<!-- Plan 44-08 (RESOLVE-14): no person resolved yet, so the role cannot be
+		     computed at all — this is checked before the calculated branch below
+		     because the service reports missing_tenure=false for an unresolved
+		     bench row, which would otherwise fall into the empty locked box. No
+		     bordered box, no lock icon, no en dash, and no hint line beneath. -->
+		<span style="font-size: 14px; color: #94a3b8;">(resolve person first)</span>
+	{:else if benchState === 'calculated'}
 		<!-- RESOLVE-06 lock affordance: a resolved bench row with valid tenure is
 		     never editable here — the role is fully derived from court_tenures. -->
 		<div
@@ -596,18 +628,41 @@
 				<rect x="5" y="11" width="14" height="9" rx="2"></rect>
 				<path d="M8 11V7a4 4 0 0 1 8 0v4"></path>
 			</svg>
-			<span style="font-size: 16px; color: #e2e8f0;">{row.bench_role ?? row.argument_role ?? '–'}</span>
+			<span style="font-size: 16px; color: #e2e8f0;">{row.bench_role ?? row.argument_role}</span>
 			<span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%);">
 				Set from tenure, not editable
 			</span>
 		</div>
-	{:else if side === 'BENCH'}
+		<!-- Plan 44-08 (RESOLVE-12): the role was never an ingested value, so this
+		     is not an "Imported:"/"Extracted:" hint — it says what is actually
+		     true about the value. -->
+		<div style="margin-top: 8px;">
+			<span style="font-size: 14px; color: #94a3b8;">Calculated from tenure</span>
+		</div>
+	{:else if benchState === 'missing-tenure'}
 		<!-- Missing-tenure warning — preserved verbatim (RESOLVE-06): NO lock icon,
 		     NO bordered box, so this state shares no markup with the locked state
 		     above and reads as a real data gap, not a deliberate system value. -->
 		<span style="color: #fbbf24; font-size: 14px;">⚠ Missing tenure</span>
+		<!-- Plan 44-08 (RESOLVE-12): a tenure gap must never read as a derived
+		     value, so this shares no wording with the calculated branch above. -->
+		<div style="margin-top: 8px;">
+			<span style="font-size: 14px; color: #94a3b8;">Tenure not found</span>
+		</div>
 		{#if row.person_edit_href}
-			<a href={row.person_edit_href} style="margin-left: 8px; font-size: 14px; color: #93c5fd; text-decoration: underline;">Edit person</a>
+			<!-- Plan 44-08 (RESOLVE-11): opens in a new tab so the operator can fix
+			     tenure in one tab and return to this still-loaded Resolve card in
+			     the other, where the role recomputes live on next read. The
+			     noopener rel severs the opened tab's window.opener handle back to
+			     this admin page (T-44-31, reverse tabnabbing). The arrow glyph sits
+			     in its own aria-hidden span so the accessible name stays exactly
+			     "Edit person", matching how the warning glyph above is handled. -->
+			<a
+				href={row.person_edit_href}
+				target="_blank"
+				rel="noopener"
+				style="margin-left: 8px; font-size: 14px; color: #93c5fd; text-decoration: underline;"
+			>Edit person<span aria-hidden="true"> ↗</span></a>
 		{/if}
 	{:else if rowEditable}
 		<!-- RESOLVE-03 writable dropdown — covers advocate rows and gated rows
@@ -970,15 +1025,21 @@
 							{@render argumentRoleCell(row, side, gated, rowEditable, saveState[row.participant_id]?.saving === true)}
 							<!-- Phase 44 (RESOLVE-05, D-08/D-09): Argument Role hint — state-dependent,
 							     never a flat echo of side; forks on the same side/missing_tenure/gated
-							     inputs the control above it uses. -->
-							<div style="margin-top: 8px;">
-								<CopyableExtractedValue
-									value={argumentRoleHintValue(row, side, gated)}
-									copyLabel="Copy argument role"
-									prefixLabel={sourcePrefix}
-									raw={null}
-								/>
-							</div>
+							     inputs the control above it uses.
+							     Plan 44-08 (RESOLVE-12): wrapped rather than deleted — the bench role
+							     was never an ingested value, so it never had an ingestion-prefixed hint
+							     to begin with; the three bench states above render their own copy
+							     directly. Advocate rows keep this hint unchanged. -->
+							{#if side !== 'BENCH'}
+								<div style="margin-top: 8px;">
+									<CopyableExtractedValue
+										value={argumentRoleHintValue(row, side, gated)}
+										copyLabel="Copy argument role"
+										prefixLabel={sourcePrefix}
+										raw={null}
+									/>
+								</div>
+							{/if}
 						</td>
 
 						<!-- Column 4: Descriptor (renamed from Title, Phase 44 RESOLVE-04) — always renders -->

@@ -39,6 +39,17 @@ prefix (RESOLVE-10) — see its own banner section below. It also re-points the
 at the new derived `sourcePrefix` expression rather than the retired hardcoded
 "Imported" literal; the test's other assertions and the five untouched-call-site
 guards are unchanged.
+
+Plan 44-08 adds: the three mutually-exclusive bench Argument Role states with
+their canonical copy, the new-tab Edit person link, and the bench-conditional
+Descriptor hint (RESOLVE-11/12/13/14) — see its own banner section below. It
+re-points the 44-04 section's `test_hint_value_helpers_exist_and_...` test
+(renamed `test_hint_value_helpers_exist_and_bench_fork_left_the_hint_layer`):
+the bench fork moved out of `argumentRoleHintValue` and into the cell itself,
+so the retired "N/A - from tenure" / "N/A - tenure not found" hint strings no
+longer live in that helper. It also widens the 44-02 section's descriptor-cell
+test to allow the new bench-conditional hint wrapper while still guarding that
+the data-carrying `<input>` itself stays unconditionally in the DOM.
 """
 
 import re
@@ -165,9 +176,16 @@ def test_descriptor_cell_snippet_always_renders_bench_dash_and_editable_input() 
         "RESOLVE-04: the Descriptor cell must render an editable <input> for non-BENCH rows — "
         "both states in the same snippet is the 'always renders' contract"
     )
-    assert "side !== 'BENCH'" not in body, (
-        "RESOLVE-04: the cell body must not be gated by a wrapping non-bench check — "
-        "Phase 27 CR-01/CR-02 requires the data-carrying input stay in the DOM unconditionally"
+    # Plan 44-08 (RESOLVE-13) re-point: the hint block below the input is now
+    # wrapped in `{#if side !== 'BENCH'}`, but the data-carrying <input> itself
+    # must still render before and outside that wrapper — Phase 27 CR-01/CR-02
+    # requires the input stay in the DOM unconditionally; only the hint may be
+    # bench-gated.
+    input_idx = body.index("<input")
+    hint_condition_idx = body.index("{#if side !== 'BENCH'}")
+    assert input_idx < hint_condition_idx, (
+        "RESOLVE-04/RESOLVE-13: the data-carrying <input> must render before and outside "
+        "the bench-conditional hint wrapper introduced by Plan 44-08"
     )
 
 
@@ -566,20 +584,25 @@ def test_resolve_card_hint_copy_labels_each_appear_once() -> None:
         assert source.count(f'copyLabel="{label}"') == 1, f"expected exactly one copyLabel={label!r}"
 
 
-def test_hint_value_helpers_exist_and_argument_role_helper_cannot_drift() -> None:
+def test_hint_value_helpers_exist_and_bench_fork_left_the_hint_layer() -> None:
     source = _source(RESOLVE_CARD_PATH)
     assert "function resolvedAsHintValue(" in source, "RESOLVE-05: resolvedAsHintValue helper must exist"
     assert "function sideHintValue(" in source, "RESOLVE-05: sideHintValue helper must exist"
     assert "function argumentRoleHintValue(" in source, "RESOLVE-05: argumentRoleHintValue helper must exist"
     body = _function_body(source, "argumentRoleHintValue")
-    assert "N/A - from tenure" in body, (
-        "RESOLVE-05: the valid-tenure bench hint text must live inside the helper"
+    # Plan 44-08 (RESOLVE-12) re-point: the bench fork moved out of the hint
+    # layer and into argumentRoleCell/benchRoleState — the bench role was
+    # never an ingested value, so the helper no longer answers for bench at
+    # all, and the retired "N/A - ..." hint strings must not live here.
+    assert "missing_tenure" not in body, (
+        "RESOLVE-12: argumentRoleHintValue must no longer fork on missing_tenure — that fork "
+        "now lives in benchRoleState, not the hint layer"
     )
-    assert "N/A - tenure not found" in body, (
-        "RESOLVE-05: the missing-tenure bench hint text must live inside the helper"
+    assert "N/A - from tenure" not in body, (
+        "RESOLVE-12: the retired valid-tenure bench hint text must not live inside this helper"
     )
-    assert "missing_tenure" in body, (
-        "RESOLVE-05: the helper must fork on the same missing_tenure field the control above it uses"
+    assert "N/A - tenure not found" not in body, (
+        "RESOLVE-12: the retired missing-tenure bench hint text must not live inside this helper"
     )
 
 
@@ -1001,4 +1024,179 @@ def test_copyable_extracted_value_default_prefix_unchanged() -> None:
     assert "prefixLabel = 'Extracted'" in source, (
         "RESOLVE-10: CopyableExtractedValue's app-wide default prefix must be unchanged — "
         "44-07 did not quietly move the default"
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Plan 44-08 — RESOLVE-11/12/13/14: bench copy, new-tab link, read-only parity
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_calculated_from_tenure_copy_present_once() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    assert source.count("Calculated from tenure") == 1, (
+        "RESOLVE-12: the calculated-bench-role copy must appear exactly once"
+    )
+
+
+def test_tenure_not_found_copy_present_once() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    assert source.count("Tenure not found") == 1, (
+        "RESOLVE-12: the missing-tenure copy must appear exactly once"
+    )
+
+
+def test_retired_bench_hint_strings_are_gone() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    assert "N/A - from tenure" not in source, (
+        "RESOLVE-12: the retired ingestion-prefixed valid-tenure bench hint must not exist anywhere"
+    )
+    assert "N/A - tenure not found" not in source, (
+        "RESOLVE-12: the retired ingestion-prefixed missing-tenure bench hint must not exist anywhere"
+    )
+
+
+def test_argument_role_hint_is_bench_conditional() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    row_region = _row_region(source)
+    cells = _table_cells(row_region)
+    argument_role_cell = cells[2]
+    condition_idx = argument_role_cell.find("{#if side !== 'BENCH'}")
+    call_idx = argument_role_cell.find("<CopyableExtractedValue")
+    assert condition_idx != -1, (
+        "RESOLVE-12: the Argument Role <td> must guard its hint with a non-bench condition"
+    )
+    assert call_idx != -1, "RESOLVE-12: the Argument Role <td> must still call the hint component"
+    assert condition_idx < call_idx, (
+        "RESOLVE-12: the non-bench condition must wrap the hint call, not follow it"
+    )
+
+
+def test_unresolved_bench_copy_present_once_and_carries_no_dash() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    assert source.count("(resolve person first)") == 1, (
+        "RESOLVE-14: the unresolved-bench copy must appear exactly once"
+    )
+    body = _snippet_body(source, "argumentRoleCell")
+    region = _region(
+        body,
+        r"\(resolve person first\)",
+        r"\{:else if benchState === 'calculated'\}",
+    )
+    assert "–" not in region, (
+        "RESOLVE-14: the unresolved bench branch must carry no en dash — the truth is 'not yet "
+        "computable', not 'does not apply'"
+    )
+    assert "CopyableExtractedValue" not in region, (
+        "RESOLVE-14: the unresolved bench branch must carry no hint call"
+    )
+
+
+def test_bench_role_state_predicate_exists_and_orders_unresolved_first() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    assert "function benchRoleState(" in source, (
+        "RESOLVE-11/12/14: benchRoleState must exist as a single named predicate driving all "
+        "three bench branches"
+    )
+    body = _function_body(source, "benchRoleState")
+    assert "person_id" in body, "RESOLVE-14: benchRoleState must fork on row.person_id"
+    unresolved_idx = body.index("'unresolved'")
+    calculated_idx = body.index("'calculated'")
+    assert unresolved_idx < calculated_idx, (
+        "RESOLVE-14: the unresolved return must be checked before the calculated return — the "
+        "service reports missing_tenure=false for an unresolved bench row, so checking "
+        "calculated first would render an empty locked box"
+    )
+
+
+def test_bench_role_state_ignores_editability() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    body = _function_body(source, "benchRoleState")
+    assert "rowEditable" not in body, (
+        "RESOLVE-11: benchRoleState must not reference the editability flag — this is what "
+        "makes the read-only card render the same three bench states as the editable card"
+    )
+
+
+def test_edit_person_link_opens_in_a_new_tab_with_noopener() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    anchor_region = _region(source, r"\{#if row\.person_edit_href\}", r"</a>")
+    assert 'target="_blank"' in anchor_region, (
+        "RESOLVE-11: the Edit person link must open in a new tab"
+    )
+    assert 'rel="noopener"' in anchor_region, (
+        "T-44-31: the Edit person link must carry rel=\"noopener\" to sever the opened tab's "
+        "window.opener handle back to this admin page"
+    )
+
+
+def test_edit_person_accessible_name_excludes_the_glyph() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    anchor_region = _region(source, r"\{#if row\.person_edit_href\}", r"</a>")
+    assert re.search(r'>Edit person<span aria-hidden="true">[^<]*↗</span></a>', anchor_region), (
+        "RESOLVE-11: the ↗ glyph must sit inside its own aria-hidden span, after the anchor's "
+        "own text run, so the accessible name stays exactly 'Edit person'"
+    )
+
+
+def test_descriptor_hint_is_bench_conditional() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    body = _snippet_body(source, "descriptorCell")
+    assert body.count("<CopyableExtractedValue") == 1, (
+        "RESOLVE-13: exactly one hint call site must exist in descriptorCell"
+    )
+    condition_idx = body.index("{#if side !== 'BENCH'}")
+    call_idx = body.index("<CopyableExtractedValue")
+    assert condition_idx < call_idx, (
+        "RESOLVE-13: the non-bench condition must wrap the hint call, not follow it"
+    )
+
+
+def test_bench_descriptor_branch_renders_only_a_dash() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    body = _snippet_body(source, "descriptorCell")
+    bench_branch = _region(body, r"\{#if side === 'BENCH'\}", r"\{:else if rowEditable\}")
+    assert "–" in bench_branch, "RESOLVE-13: the bench branch must render the muted en dash"
+    assert "CopyableExtractedValue" not in bench_branch, (
+        "RESOLVE-13: the bench branch itself must carry no hint call"
+    )
+
+
+def test_all_bench_branches_are_independent_of_editability() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    body = _snippet_body(source, "argumentRoleCell")
+    unresolved_region = _region(
+        body, r"benchState === 'unresolved'", r"\{:else if benchState === 'calculated'\}"
+    )
+    calculated_region = _region(
+        body, r"benchState === 'calculated'", r"\{:else if benchState === 'missing-tenure'\}"
+    )
+    missing_tenure_region = _region(
+        body, r"benchState === 'missing-tenure'", r"\{:else if rowEditable\}"
+    )
+    for name, region in (
+        ("unresolved", unresolved_region),
+        ("calculated", calculated_region),
+        ("missing-tenure", missing_tenure_region),
+    ):
+        # Trim the trailing `{:else if ...}` boundary marker itself — for the
+        # missing-tenure branch that boundary is literally `{:else if
+        # rowEditable}`, which is the *next* branch's own guard, not a
+        # reference made by this branch.
+        content = region[: region.rfind("{:else if")]
+        assert "rowEditable" not in content, (
+            f"RESOLVE-11: the {name} bench branch must not reference the editability flag — "
+            "this is what makes the read-only card render it identically"
+        )
+
+
+def test_four_headers_render_in_readonly_too() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    thead_region = _region(source, r"<thead>", r"</thead>")
+    assert "rowEditable" not in thead_region, (
+        "RESOLVE-11/canonical point 10: the table headers must not be gated by editability — "
+        "the read-only card keeps its four headers"
+    )
+    assert "readonlyMode" not in thead_region, (
+        "RESOLVE-11/canonical point 10: the table headers must not reference readonlyMode"
     )

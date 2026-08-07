@@ -432,6 +432,27 @@
 		return interactive && row.discrepancy != null && s != null;
 	}
 
+	// Plan 44-09 (RESOLVE-16): the row cue tag predicate — a row outside the
+	// review set, and every row on the read-only card, has nothing to review
+	// and no suggestion to disclose, so it carries no tag. The needs-attention
+	// case is checked first so a suggested-but-still-gated row reads as
+	// needing the operator, not as already handled — that ordering is what
+	// makes the two tags mutually exclusive. An operator-chosen match falls
+	// through to the final `null`: labelling it as auto-matched would claim
+	// the machine identified a person when a human did (T-44-35). No explicit
+	// return-type annotation: TypeScript infers the two-literal union from
+	// the return statements below, so each tag string is written exactly
+	// once in this file rather than twice (once in a union annotation, once
+	// on its own return).
+	function rowCueTag(row: MergedRow, s: RowMatchState | undefined) {
+		if (!interactive) return null;
+		if (!row.discrepancy) return null;
+		if (!s) return null;
+		if (s.personId == null || needsSideGate(row)) return 'NEEDS YOU';
+		if (row.discrepancy.auto_match_id != null && s.personId === row.discrepancy.auto_match_id) return 'AUTO-MATCHED';
+		return null;
+	}
+
 	function handleSelectPerson(label: string, personId: number) {
 		const s = rowMatchStates[label];
 		if (!s) return;
@@ -1012,6 +1033,12 @@
 					{@const gated = needsSideGate(row)}
 					{@const side = effectiveSide(row)}
 					{@const rowEditable = interactive && row.editable}
+					{@const cueTag = rowCueTag(row, s)}
+					<!-- Mirrors rowCueTag's own needs-attention branch condition (reusing
+					     the already-declared `gated`), so the tag's color can be picked
+					     without a second comparison against either of rowCueTag's two
+					     return values — those must each appear exactly once in this file. -->
+					{@const cueTagIsWarning = s?.personId == null || gated}
 
 					<tr>
 						<!-- Column 1: Raw Label -->
@@ -1023,6 +1050,22 @@
 						     are stacked in this single cell (RESOLVE-07); the person control is a
 						     single always-rendered dropdown, never a click-to-reveal link (RESOLVE-08). -->
 						<td style="font-size: 16px; color: #e2e8f0; border-bottom: 1px solid #334155; padding: 12px 0; padding-right: 12px;">
+							<!-- Plan 44-09 (RESOLVE-16): the row cue tag renders above the toggle so a
+							     scan down the column surfaces rows needing attention before rows that
+							     are already handled (canonical point 9). Non-interactive text only —
+							     no accent token, no background fill, no border. -->
+							{#if cueTag}
+								<span
+									style="
+										font-size: 14px;
+										text-transform: uppercase;
+										letter-spacing: 0.04em;
+										display: inline-block;
+										margin-bottom: 8px;
+										color: {cueTagIsWarning ? '#fbbf24' : '#94a3b8'};
+									"
+								>{cueTag}</span>
+							{/if}
 							{@render sideToggle(row, side, gated, rowEditable, saveState[row.participant_id]?.saving === true)}
 							<!-- Phase 44 (RESOLVE-05, D-08/D-09): Bench/Advocate hint — coarse two-
 							     value label only, "Imported: N/A" in the gate state. -->

@@ -29,7 +29,7 @@
 	// Side/descriptor edits submit immediately per-row via ?/saveResolveRow (T-25-16: job_id
 	// is the only trust boundary; participant ownership is re-verified server-side).
 	// Person-matching (search/select/create person) accumulates client-side and submits
-	// as a batch via ?/resolve when "Continue Resolve" is clicked (existing pipeline
+	// as a batch via ?/resolve when the primary CTA is clicked (existing pipeline
 	// resolve-step contract, unchanged by Phase 25).
 
 	interface Candidate {
@@ -352,13 +352,26 @@
 		const disc = discrepancies ?? [];
 		// WR-04: an empty discrepancy list while paused means every speaker was
 		// already resolved (auto-match or inline saveResolveRow) — there is
-		// nothing left for the operator to review, so "Continue Resolve" must
+		// nothing left for the operator to review, so the primary CTA must
 		// still render rather than being permanently stuck behind a vacuously-
 		// false check.
 		if (disc.length === 0) return true;
 		// RESOLVE-08: the confirm/correct state machine is gone — the gate is a
 		// single personId predicate now.
 		return disc.every((d) => rowMatchStates[d.raw_speaker_label]?.personId != null);
+	});
+
+	// Plan 44-09 (RESOLVE-15): reviewProgress and allDispositioned must read
+	// the same personId predicate — the header count and the Continue gate
+	// both derive their N from this one value, so a header saying nothing
+	// remains can never coexist with a still-disabled button, or the reverse.
+	let reviewProgress = $derived.by(() => {
+		const disc = discrepancies ?? [];
+		const total = disc.length;
+		const remaining = disc.filter(
+			(d) => rowMatchStates[d.raw_speaker_label]?.personId == null,
+		).length;
+		return { total, remaining };
 	});
 
 	let matchesJson = $derived.by(() => {
@@ -931,6 +944,18 @@
 		Resolve
 	</h2>
 
+	<!-- Plan 44-09 (RESOLVE-15): a persistent progress line — visible before,
+	     during and after the operator works, never a transient message.
+	     Renders only while the job is paused and the review set is
+	     non-empty; an empty review set has nothing to count (delta #2 above). -->
+	{#if isPaused && reviewProgress.total > 0}
+		<p id="resolve-progress" style="font-size: 14px; color: #94a3b8; margin: 0 0 16px 0;">
+			{reviewProgress.remaining > 0
+				? `${reviewProgress.remaining} of ${reviewProgress.total} speakers still need review`
+				: `All ${reviewProgress.total} speakers reviewed`}
+		</p>
+	{/if}
+
 	{#if peopleLoadError}
 		<p role="alert" style="margin-bottom: 12px; font-size: 13px; color: #fbbf24; font-family: monospace;">
 			Warning: could not load people list — typeahead may be incomplete. ({peopleLoadError})
@@ -1062,8 +1087,13 @@
 		</table>
 	</div>
 
-	<!-- Continue Resolve — moved into the Resolve card footer (PJOB-21); only when all rows dispositioned -->
-	{#if isPaused && allDispositioned}
+	<!-- The primary CTA footer — moved into the Resolve card footer (PJOB-21).
+	     Plan 44-09 (RESOLVE-15): the form now renders whenever the job is
+	     paused, not only once every row is dispositioned — the button itself
+	     carries the completeness gate via `disabled`, with a reason line that
+	     is programmatically associated via aria-describedby so it reaches
+	     assistive technology, not only sighted users. -->
+	{#if isPaused}
 		<form
 			method="POST"
 			action="?/resolve"
@@ -1084,7 +1114,8 @@
 			<input type="hidden" name="matches" value={matchesJson} />
 			<button
 				type="submit"
-				disabled={continueSubmitting}
+				disabled={!allDispositioned || continueSubmitting}
+				aria-describedby={reviewProgress.remaining > 0 ? 'resolve-continue-reason' : undefined}
 				style="
 					width: 100%;
 					min-height: 44px;
@@ -1095,11 +1126,17 @@
 					border: 1px solid #93c5fd;
 					border-radius: 6px;
 					padding: 12px 24px;
-					cursor: pointer;
+					cursor: {(reviewProgress.remaining > 0 || continueSubmitting) ? 'default' : 'pointer'};
+					opacity: {(reviewProgress.remaining > 0 || continueSubmitting) ? 0.6 : 1};
 				"
 			>
 				{continueSubmitting ? 'Submitting…' : 'Continue Resolve'}
 			</button>
+			{#if reviewProgress.remaining > 0}
+				<p id="resolve-continue-reason" style="font-size: 14px; color: #94a3b8; margin-top: 8px;">
+					Resolve {reviewProgress.remaining} more to continue
+				</p>
+			{/if}
 		</form>
 		{#if resolveFormError}
 			<p role="alert" style="margin-top: 8px; color: #ef4444; font-size: 14px;">

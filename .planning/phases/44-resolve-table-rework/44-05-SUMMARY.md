@@ -142,14 +142,14 @@ coverage:
         status: pass
     human_judgment: false
 
-duration: in progress (paused at Task 3 checkpoint, re-verification pending after remediation)
-completed: null
-status: paused-checkpoint
+duration: ~70min (Tasks 1-2 + Task 3 remediation cycle)
+completed: 2026-08-07
+status: complete
 ---
 
-# Phase 44 Plan 05: Four-Column Resolved-As Merge (RESOLVE-07/08) Summary — PAUSED AT CHECKPOINT (re-verification pending)
+# Phase 44 Plan 05: Four-Column Resolved-As Merge (RESOLVE-07/08) Summary
 
-**Collapsed the Resolve table's standalone Bench/Advocate column into the Resolved As cell (toggle stacked above a new always-rendered `personDropdown` combobox) and deleted the confirm/correct disposition state machine entirely — Tasks 1 and 2 are committed and green. The first Task 3 checkpoint was rejected with specific defects; confirmed-in-scope defects (create-person placement, combobox affordance, neutral gated placeholder, and a toggle data-loss bug) are now fixed and covered by new regression tests. A fresh Task 3 checkpoint is open, awaiting operator re-verification.**
+**Collapsed the Resolve table's standalone Bench/Advocate column into the Resolved As cell (toggle stacked above a new always-rendered `personDropdown` combobox) and deleted the confirm/correct disposition state machine entirely. The first Task 3 checkpoint was rejected with specific defects; confirmed-in-scope defects (create-person placement, combobox affordance, neutral gated placeholder, and a toggle data-loss bug) were fixed and covered by new regression tests. The operator approved the second Task 3 checkpoint on 2026-08-07 — plan complete.**
 
 ## Performance
 
@@ -305,7 +305,9 @@ rather than a dropdown") describes a specific row state — a committed `person_
 **not** in the current `discrepancies` list — that the operator's test fixture likely doesn't
 contain. Reworded below to be self-contained and to note the fixture requirement explicitly.
 
-## Awaiting Operator Verification (Task 3 — checkpoint:human-verify, gate="blocking", second attempt)
+## Task 3 Checkpoint — Approved 2026-08-07 (second attempt)
+
+The operator verified the checklist below against the running app and Figma nodes 4205:81/4210:81 and replied "approved". No further defects reported.
 
 **Environment:** both dev servers are already running natively on Windows and reachable from each
 other (FastAPI at `http://localhost:8000`, SvelteKit at `http://localhost:5173`) — no restart should

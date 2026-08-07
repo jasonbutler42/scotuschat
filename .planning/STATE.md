@@ -6,14 +6,14 @@ current_phase: 44
 current_phase_name: resolve-table-rework
 status: executing
 stopped_at: Completed 44-03-PLAN.md
-last_updated: "2026-08-04T16:47:43.512Z"
-last_activity: 2026-08-01
+last_updated: "2026-08-04T19:52:47.599Z"
+last_activity: 2026-08-04
 last_activity_desc: Phase 44 execution started
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 21
-  completed_plans: 15
+  completed_plans: 16
   percent: 60
 ---
 
@@ -29,9 +29,9 @@ See: .planning/PROJECT.md (updated 2026-07-29 after starting v1.7 milestone)
 ## Current Position
 
 Phase: 44 (resolve-table-rework) — EXECUTING
-Plan: 4 of 4
-Status: Ready to execute
-Last activity: 2026-08-01 — Phase 44 execution started
+Plan: 5 of 9
+Status: Executing Phase 44
+Last activity: 2026-08-07 — Plan 44-05 complete (operator-approved checkpoint after one remediation cycle); starting 44-06
 
 **Milestone shape:**
 

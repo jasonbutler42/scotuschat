@@ -247,7 +247,7 @@ Plans:
 
 **Plan-time confirmation of the frontend-only assumption**: partially false. Side and Argument Role need no new backend field or write path (confirmed: `argument_role` is a read-time projection of `ArgumentParticipant.side` via `ADVOCATE_LABEL_MAP`). The Descriptor column is not UI-copy-only — CONTEXT.md D-05/D-06 make it a full-stack rename of `ArgumentParticipant.title` to `.descriptor` with a new Alembic migration, absorbed into this phase in one pass. Success criterion 5's "Extracted: …" wording is delivered as "Imported: …" per D-09, the honest framing for corpus-passthrough data. (Superseded 2026-08-04 by the source-aware prefix — see reconciliation note above.)
 
-**Plans**: 4/9 plans executed
+**Plans**: 5/9 plans executed
 
 **Original waves (RESOLVE-01–06)**
 
@@ -271,7 +271,7 @@ Plans:
 
 **Reconciliation Wave 1** *(44-05 and 44-06 run in parallel — zero file overlap)*
 
-- [ ] 44-05-PLAN.md — Four-column merge: Bench/Advocate toggle and person control stacked in the Resolved As cell, dropdown-only Resolved As, confirm/correct state machine deleted; leads with a tracer proving both save paths survive. Ends with operator visual acceptance of the merged cell (RESOLVE-07, RESOLVE-08)
+- [x] 44-05-PLAN.md — Four-column merge: Bench/Advocate toggle and person control stacked in the Resolved As cell, dropdown-only Resolved As, confirm/correct state machine deleted; leads with a tracer proving both save paths survive. Ends with operator visual acceptance of the merged cell (RESOLVE-07, RESOLVE-08)
 - [ ] 44-06-PLAN.md — Backend: bench writes stop destroying the stored descriptor, plus a DB-gated regression suite locking live tenure-derived bench roles on both read paths including published arguments (RESOLVE-11, RESOLVE-13)
 
 **Reconciliation Wave 2** *(blocked on 44-05)*
@@ -353,7 +353,7 @@ Plans:
 | 41. Canonical Corpus Fixture Selection | v1.7 | 3/3 | Complete    | 2026-07-29 |
 | 42. Corpus Import Fidelity Diff & Fix | v1.7 | 5/5 | Complete    | 2026-07-30 |
 | 43. Dev-Only Reset to Fixture | v1.7 | 4/4 | Complete    | 2026-07-31 |
-| 44. Resolve Table Rework | v1.7 | 4/9 | In Progress|  |
+| 44. Resolve Table Rework | v1.7 | 5/9 | In Progress|  |
 | 45. Deferred UI Bug Fixes | v1.7 | 0/0 | Not started | - |
 
 ## Backlog

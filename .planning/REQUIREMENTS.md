@@ -31,10 +31,10 @@
 - [ ] **RESOLVE-08**: Resolved As is a single always-editable dropdown; remove Change/Select links and the confirm/correct disposition state machine
 - [x] **RESOLVE-09**: Person search candidates are filtered to the currently-selected side (bench vs advocate)
 - [x] **RESOLVE-10**: Hint prefix is source-aware (`Imported:` corpus / `Extracted:` PDF), uniform per run
-- [ ] **RESOLVE-11**: Bench role + missing-tenure state is live-derived on every read (incl. published arguments), rendered identically in editable and read-only; `Edit person` opens in a new tab
-- [ ] **RESOLVE-12**: Bench role hint copy is `Calculated from tenure` / `Tenure not found` (not `Imported: N/A - …`)
-- [ ] **RESOLVE-13**: Bench rows show no descriptor hint and a dash; the stored descriptor is preserved (not cleared) on a side switch
-- [ ] **RESOLVE-14**: Unresolved bench role renders `(resolve person first)` with no dash and no hint
+- [x] **RESOLVE-11**: Bench role + missing-tenure state is live-derived on every read (incl. published arguments), rendered identically in editable and read-only; `Edit person` opens in a new tab
+- [x] **RESOLVE-12**: Bench role hint copy is `Calculated from tenure` / `Tenure not found` (not `Imported: N/A - …`)
+- [x] **RESOLVE-13**: Bench rows show no descriptor hint and a dash; the stored descriptor is preserved (not cleared) on a side switch
+- [x] **RESOLVE-14**: Unresolved bench role renders `(resolve person first)` with no dash and no hint
 - [ ] **RESOLVE-15**: Persistent progress indicator + always-visible, reason-disabled Continue
 - [ ] **RESOLVE-16**: Auto-matched / Needs-you row cue tags
 
@@ -78,10 +78,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | RESOLVE-08 | Phase 44 | Pending |
 | RESOLVE-09 | Phase 44 | Complete |
 | RESOLVE-10 | Phase 44 | Complete |
-| RESOLVE-11 | Phase 44 | Pending |
-| RESOLVE-12 | Phase 44 | Pending |
-| RESOLVE-13 | Phase 44 | Pending |
-| RESOLVE-14 | Phase 44 | Pending |
+| RESOLVE-11 | Phase 44 | Complete |
+| RESOLVE-12 | Phase 44 | Complete |
+| RESOLVE-13 | Phase 44 | Complete |
+| RESOLVE-14 | Phase 44 | Complete |
 | RESOLVE-15 | Phase 44 | Pending |
 | RESOLVE-16 | Phase 44 | Pending |
 | BUG-01 | Phase 45 | Pending |

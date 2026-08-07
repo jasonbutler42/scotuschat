@@ -32,6 +32,13 @@ section follows it, added after the operator rejected the first Task 3 checkpoin
 with specific defects: create-person moved inside the open popup, a combobox
 affordance icon, a neutral gated placeholder, and a fix for the toggle discarding a
 previously-chosen specific advocate role.
+
+Plan 44-07 adds: side-scoped candidates (RESOLVE-09) and the source-aware hint
+prefix (RESOLVE-10) — see its own banner section below. It also re-points the
+44-04 section's `test_resolve_card_has_exactly_four_hint_usages` prefix assertion
+at the new derived `sourcePrefix` expression rather than the retired hardcoded
+"Imported" literal; the test's other assertions and the five untouched-call-site
+guards are unchanged.
 """
 
 import re
@@ -538,8 +545,14 @@ def test_resolve_card_has_exactly_four_hint_usages() -> None:
     assert source.count("<CopyableExtractedValue") == 4, (
         "RESOLVE-05: exactly four CopyableExtractedValue usages must exist in ResolveCard.svelte"
     )
-    assert source.count('prefixLabel="Imported"') == 4, (
-        'RESOLVE-05: all four hints must pass prefixLabel="Imported"'
+    # Plan 44-07 (RESOLVE-10) re-point: the four hints now pass the derived
+    # sourcePrefix expression instead of a hardcoded "Imported" literal — see
+    # the Plan 44-07 banner below for the dedicated sourcePrefix assertions.
+    assert source.count("prefixLabel={sourcePrefix}") == 4, (
+        "RESOLVE-05/RESOLVE-10: all four hints must pass the derived sourcePrefix expression"
+    )
+    assert not re.search(r'prefixLabel="[A-Za-z]+"', source), (
+        "RESOLVE-10: no hardcoded prefix-label string may remain on any call site in this file"
     )
     assert source.count("raw={null}") == 4, (
         "RESOLVE-05: all four hints must pass an explicitly-null raw prop"
@@ -841,4 +854,151 @@ def test_toggle_side_preserves_a_previously_chosen_advocate_role() -> None:
     assert "lastAdvocateRole" in choose_body, (
         "chooseArgumentRole must record the operator's specific role choice so "
         "a later Bench/Advocate toggle can restore it"
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Plan 44-07 — RESOLVE-09/10: side-scoped candidates, source-aware hint prefix
+# ─────────────────────────────────────────────────────────────────────────────
+
+PAGE_SERVER_PATH = ROOT / "app" / "src" / "routes" / "admin" / "pipeline" / "[job_id]" / "+page.server.ts"
+PAGE_SVELTE_PATH = ROOT / "app" / "src" / "routes" / "admin" / "pipeline" / "[job_id]" / "+page.svelte"
+
+
+def test_side_scoped_candidates_filter_exists_and_wraps_the_merge() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    assert "function sideScopedCandidates(" in source, (
+        "RESOLVE-09: sideScopedCandidates must exist as a named function"
+    )
+    body = _function_body(source, "sideScopedCandidates")
+    assert body.count("getRowCandidates(") == 1, (
+        "RESOLVE-09: sideScopedCandidates must wrap getRowCandidates exactly once — the "
+        "merge/de-dupe contract is reused, not replaced"
+    )
+
+
+def test_side_scoped_candidates_filters_on_is_justice_not_labels() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    body = _function_body(source, "sideScopedCandidates")
+    assert "is_justice" in body, "RESOLVE-09: the filter must reference is_justice"
+    assert "role_name" not in body, (
+        "RESOLVE-09: the filter must not reference role_name — no name/label heuristic"
+    )
+    assert "SIDE_LABEL" not in body, (
+        "RESOLVE-09: the filter must not reference SIDE_LABEL — no name/label heuristic"
+    )
+
+
+def test_side_scoped_candidates_fails_open_on_unknown_side() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    body = _function_body(source, "sideScopedCandidates")
+    assert re.search(r"is_justice\s*==\s*null|is_justice\s*===\s*undefined|is_justice\s*\?\?", body), (
+        "RESOLVE-09 fail-open: a candidate whose is_justice is unknown (present only in a "
+        "stale discrepancies snapshot) must be kept, not dropped from both sides"
+    )
+
+
+def test_side_scoped_candidates_skips_filtering_while_gated() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    body = _function_body(source, "sideScopedCandidates")
+    assert "gated" in body, "RESOLVE-09: the filter must reference the gated parameter"
+    assert re.search(r"if \(gated\)", body), (
+        "RESOLVE-09: while the side gate is open, the list must be returned unfiltered — "
+        "no side has been chosen, so filtering it would be filtering nothing"
+    )
+
+
+def test_person_dropdown_uses_the_side_scoped_list() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    body = _snippet_body(source, "personDropdown")
+    assert "sideScopedCandidates(" in body, (
+        "RESOLVE-09: personDropdown must call sideScopedCandidates for the rendered list"
+    )
+    assert "getRowCandidates(" not in body, (
+        "RESOLVE-09: personDropdown must not call getRowCandidates directly any more — "
+        "sideScopedCandidates is the sole entry point now"
+    )
+
+
+def test_candidate_interface_carries_is_justice() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    body = _interface_body(source, "Candidate")
+    assert "is_justice" in body, "RESOLVE-09: the Candidate interface must declare is_justice"
+
+
+def test_created_person_is_enriched_with_a_side() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    body = _function_body(source, "handlePersonCreated")
+    assert "is_justice" in body, (
+        "RESOLVE-09: handlePersonCreated must enrich the created candidate with is_justice, "
+        "derived from the side already known at creation time"
+    )
+
+
+def test_load_people_type_carries_is_justice_and_no_bogus_role_name() -> None:
+    source = _source(PAGE_SERVER_PATH)
+    match = re.search(r"let people: Array<\{[^}]*\}>", source)
+    assert match, "could not find the `people` local's declared type in +page.server.ts"
+    region = match.group(0)
+    assert "is_justice" in region, "RESOLVE-09: the people local's type must carry is_justice"
+    assert "role_name" not in region, (
+        "RESOLVE-09: the people local's type must not carry role_name — it is not a real "
+        "PersonListItem field and the annotation had been wrong since it was written"
+    )
+
+
+def test_create_person_trigger_is_side_scoped() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    assert source.count("Create new advocate") == 1, (
+        "RESOLVE-09: the advocate-side create-person trigger label must appear exactly once"
+    )
+    assert source.count("Create new bench person") == 1, (
+        "RESOLVE-09: the bench-side create-person trigger label must appear exactly once"
+    )
+
+
+def test_source_prefix_is_derived_from_the_source_prop() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    match = re.search(r"let sourcePrefix = \$derived\(([^;]*)\);", source)
+    assert match, "RESOLVE-10: sourcePrefix must be declared as a derived value"
+    assert "'corpus'" in match.group(1), (
+        "RESOLVE-10: the sourcePrefix expression must branch on the 'corpus' literal"
+    )
+
+
+def test_resolve_card_props_declares_the_source_prop() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    body = _interface_body(source, "ResolveCardProps")
+    assert "source: 'pdf' | 'corpus';" in body, (
+        "RESOLVE-10: ResolveCardProps must declare source as the two-literal union"
+    )
+
+
+def test_page_passes_source_from_load_data_not_the_polled_copy() -> None:
+    source = _source(PAGE_SVELTE_PATH)
+    region = _region(source, r"<ResolveCard", r"/>")
+    assert "source={data.job.source" in region, (
+        "RESOLVE-10: the <ResolveCard> call site must pass source from the load data (data.job)"
+    )
+    assert "source={liveJob" not in region, (
+        "RESOLVE-10: the source prop must not read from the 1s-polled liveJob copy — a job's "
+        "ingestion source is immutable for the life of the job"
+    )
+
+
+def test_source_is_not_rederived_client_side() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    assert "PipelineRun" not in source, (
+        "RESOLVE-10: the component must not reference the internal PipelineRun identifier"
+    )
+    assert "convokit" not in source, (
+        "RESOLVE-10: the component must not reference the internal import-strategy vocabulary"
+    )
+
+
+def test_copyable_extracted_value_default_prefix_unchanged() -> None:
+    source = _source(COPYABLE_PATH)
+    assert "prefixLabel = 'Extracted'" in source, (
+        "RESOLVE-10: CopyableExtractedValue's app-wide default prefix must be unchanged — "
+        "44-07 did not quietly move the default"
     )

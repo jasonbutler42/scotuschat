@@ -50,6 +50,14 @@ so the retired "N/A - from tenure" / "N/A - tenure not found" hint strings no
 longer live in that helper. It also widens the 44-02 section's descriptor-cell
 test to allow the new bench-conditional hint wrapper while still guarding that
 the data-carrying `<input>` itself stays unconditionally in the DOM.
+
+Plan 44-09 adds: the persistent header progress line, the always-visible
+reason-disabled Continue button, and the AUTO-MATCHED/NEEDS YOU row cue tags
+(RESOLVE-15/16) — see its own banner section below. Both `rowCueTag` and the
+two tag strings appear exactly once each in the source: `rowCueTag` carries no
+explicit return-type annotation (TypeScript infers the two-literal union from
+its return statements) precisely so each tag string is written once, not
+twice, keeping this file's own single-occurrence contract satisfiable.
 """
 
 import re
@@ -1199,4 +1207,160 @@ def test_four_headers_render_in_readonly_too() -> None:
     )
     assert "readonlyMode" not in thead_region, (
         "RESOLVE-11/canonical point 10: the table headers must not reference readonlyMode"
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Plan 44-09 — RESOLVE-15/16: progress indicator, reason-disabled Continue,
+# row cue tags
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_progress_copy_present_for_both_states() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    assert source.count("still need review") == 1, (
+        "RESOLVE-15: the countdown progress string must appear exactly once"
+    )
+    assert source.count("speakers reviewed") == 1, (
+        "RESOLVE-15: the all-reviewed progress string must appear exactly once"
+    )
+
+
+def test_progress_derives_from_the_same_person_id_predicate() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    progress_body = _derived_body(source, "reviewProgress")
+    disposition_body = _derived_body(source, "allDispositioned")
+    shared_predicate = "rowMatchStates[d.raw_speaker_label]?.personId"
+    assert shared_predicate in progress_body, (
+        "RESOLVE-15/T-44-36: reviewProgress must read the exact same "
+        "rowMatchStates[...].personId predicate allDispositioned uses"
+    )
+    assert shared_predicate in disposition_body, (
+        "RESOLVE-15/T-44-36: allDispositioned must still read that same predicate — "
+        "if either body drifts to a different field, the count and the gate can disagree"
+    )
+
+
+def test_continue_footer_is_not_gated_on_completeness() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    assert "{#if isPaused && allDispositioned}" not in source, (
+        "RESOLVE-15: the retired combined condition must not exist anywhere — the footer "
+        "renders whenever the job is paused, not only once every row is dispositioned"
+    )
+
+
+def test_continue_button_is_disabled_by_completeness_inside_the_form() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    form_region = _region(source, r'action="\?/resolve"', r"</form>")
+    assert re.search(r"disabled=\{[^}]*allDispositioned[^}]*\}", form_region), (
+        "RESOLVE-15: the ?/resolve form region must contain a disabled= attribute "
+        "referencing allDispositioned"
+    )
+    assert 'name="matches"' in form_region, (
+        "RESOLVE-15: the ?/resolve payload input must still exist inside the form region"
+    )
+
+
+def test_disabled_reason_is_programmatically_associated() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    form_region = _region(source, r'action="\?/resolve"', r"</form>")
+    assert "aria-describedby" in form_region, (
+        "T-44-37: the disabled Continue button must carry aria-describedby so the reason "
+        "reaches assistive technology, not only sighted users"
+    )
+    reason_region = _region(form_region, r'id="resolve-continue-reason"', r"</p>")
+    assert "more to continue" in reason_region, (
+        "RESOLVE-15: the element carrying the aria-describedby id must contain the reason copy"
+    )
+
+
+def test_continue_enabled_label_unchanged() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    assert source.count("Continue Resolve") == 1, (
+        "RESOLVE-15: the enabled Continue label must be unchanged and appear exactly once"
+    )
+
+
+def test_progress_line_carries_no_speaker_characterisation() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    region = _region(source, r'id="resolve-progress"', r"</p>")
+    assert "Bench" not in region and "Advocate" not in region, (
+        "RESOLVE-15/CLAUDE.md apolitical constraint: the progress line must report a single "
+        "count of rows needing review, never a count split by kind of speaker"
+    )
+
+
+def test_both_cue_tag_labels_present_once() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    assert source.count("AUTO-MATCHED") == 1, "RESOLVE-16: the auto-matched tag string must appear exactly once"
+    assert source.count("NEEDS YOU") == 1, "RESOLVE-16: the needs-attention tag string must appear exactly once"
+
+
+def test_row_cue_tag_predicate_exists_and_orders_needs_attention_first() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    assert "function rowCueTag(" in source, "RESOLVE-16: rowCueTag must exist as a named predicate"
+    body = _function_body(source, "rowCueTag")
+    needs_idx = body.index("'NEEDS YOU'")
+    auto_idx = body.index("'AUTO-MATCHED'")
+    assert needs_idx < auto_idx, (
+        "RESOLVE-16/T-44-35: the needs-attention return must precede the auto-matched return — "
+        "that ordering is what makes a suggested-but-still-gated row read as needing the "
+        "operator rather than as already handled"
+    )
+
+
+def test_row_cue_tag_excludes_readonly_and_non_review_rows() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    body = _function_body(source, "rowCueTag")
+    assert "interactive" in body, (
+        "RESOLVE-16: rowCueTag must reference the interactive flag — the read-only card "
+        "renders no cue tags"
+    )
+    assert "discrepancy" in body, (
+        "RESOLVE-16: rowCueTag must reference the discrepancy field — a row outside the "
+        "review set carries no tag"
+    )
+
+
+def test_row_cue_tag_requires_an_untouched_suggestion() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    body = _function_body(source, "rowCueTag")
+    assert "auto_match_id" in body, "RESOLVE-16: rowCueTag must reference auto_match_id"
+    assert "s.personId === row.discrepancy.auto_match_id" in body, (
+        "RESOLVE-16/T-44-35: rowCueTag must compare the current personId against the "
+        "suggestion's own id, so an operator-changed row loses the auto-matched tag"
+    )
+
+
+def test_cue_tag_renders_above_the_side_toggle() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    row_region = _row_region(source)
+    cells = _table_cells(row_region)
+    resolved_as_cell = cells[1]
+    tag_idx = resolved_as_cell.find("{#if cueTag}")
+    toggle_idx = resolved_as_cell.find("{@render sideToggle(")
+    assert tag_idx != -1, "RESOLVE-16: the cue tag conditional must render inside the Resolved As cell"
+    assert toggle_idx != -1, "the side toggle must still render inside the Resolved As cell"
+    assert tag_idx < toggle_idx, (
+        "RESOLVE-16/canonical point 9: the tag must render above the side toggle, not below it"
+    )
+
+
+def test_cue_tag_uses_no_accent_token() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    tag_region = _region(source, r"\{#if cueTag\}", r"</span>")
+    assert "#93c5fd" not in tag_region, (
+        "UI-SPEC Color table: the accent token is reserved for interactive elements — a "
+        "cue tag is non-interactive text"
+    )
+    assert not re.search(r"background\s*:", tag_region), (
+        "RESOLVE-16: the cue tag must use no background fill, only a text color"
+    )
+
+
+def test_cue_tag_evaluated_once_per_row() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    assert source.count("rowCueTag(") == 2, (
+        "RESOLVE-16: rowCueTag must be referenced exactly twice — one declaration, one call — "
+        "so the predicate is evaluated once per row, not once to test and once to render"
     )

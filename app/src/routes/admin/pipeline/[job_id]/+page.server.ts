@@ -120,7 +120,11 @@ export const load: PageServerLoad = async ({ params }) => {
 
 	// Fetch all people for the HIT-row Change typeahead (Gap 1b — Plan 07-07).
 	// On non-OK, default to [] so the job view still renders.
-	let people: Array<{ id: number; full_name: string; role_name: string | null }> = [];
+	// Phase 44 Plan 07 (RESOLVE-09): widened to match the real PersonListItem shape
+	// (api/schemas/admin_people.py) — is_justice is what ResolveCard.svelte's
+	// sideScopedCandidates filters on. role_name was never a PersonListItem field;
+	// this annotation had been wrong since it was written and is dropped here.
+	let people: Array<{ id: number; full_name: string; is_justice: boolean }> = [];
 	let peopleLoadError: string | null = null;
 	try {
 		const peopleRes = await fetch(`${FASTAPI_BASE_URL}/api/admin/people`, {

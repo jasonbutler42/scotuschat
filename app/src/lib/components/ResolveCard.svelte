@@ -36,6 +36,13 @@
 		id: number;
 		full_name: string;
 		role_name?: string | null;
+		// Phase 44 Plan 07 (RESOLVE-09): optional because not every candidate source
+		// carries it — the `people` prop always does (PersonListItem), but a
+		// discrepancy-snapshot candidate (pipeline/commands/resolve.py) and a
+		// freshly-created candidate that predates handlePersonCreated's enrichment
+		// do not. That optionality is exactly what sideScopedCandidates' fail-open
+		// rule below exists to handle.
+		is_justice?: boolean;
 	}
 
 	interface Discrepancy {
@@ -345,6 +352,31 @@
 		});
 	}
 
+	// Phase 44 Plan 07 (RESOLVE-09): scope the merged candidate list to the row's
+	// currently-selected side. Fail-open, not fail-closed: a candidate whose
+	// is_justice is unknown (null/undefined) — present only in a stale
+	// discrepancies snapshot and absent from the live people list — is kept on
+	// BOTH sides rather than hidden from both, because an over-inclusive list
+	// costs the operator one extra glance while an under-inclusive one makes a
+	// real person unreachable and pushes them toward creating a duplicate
+	// record. Filters on is_justice only — never role_name or SIDE_LABEL — the
+	// same field the People directory's own Bench/Advocate tabs use.
+	function sideScopedCandidates(
+		discrepancy: Discrepancy,
+		label: string,
+		side: string,
+		gated: boolean,
+	): Candidate[] {
+		const merged = getRowCandidates(discrepancy, label);
+		if (gated) {
+			// No side has been chosen yet — the control is inert in this state, so
+			// filtering it would be filtering nothing.
+			return merged;
+		}
+		const wantBench = side === 'BENCH';
+		return merged.filter((c) => c.is_justice == null || c.is_justice === wantBench);
+	}
+
 	// RESOLVE-08/T-44-17: the review-set predicate — only rows with an active discrepancy
 	// entry (and therefore a wire path through matchesJson/?/resolve) get an editable
 	// dropdown; every other row (already resolved outside the discrepancy list, or the
@@ -362,8 +394,14 @@
 	function handlePersonCreated(label: string, participantId: number, person: Candidate, side: string) {
 		const s = rowMatchStates[label];
 		if (!s) return;
-		s.extraCandidates = [...s.extraCandidates, person];
-		s.personId = person.id;
+		// Phase 44 Plan 07 (RESOLVE-09): enrich the created candidate with the side
+		// already known at creation time, so the newly created person appears
+		// immediately in the filtered list for the side they were created on — no
+		// refetch, no backend schema change, since `side` is already this handler's
+		// own parameter.
+		const enriched: Candidate = { ...person, is_justice: side === 'BENCH' };
+		s.extraCandidates = [...s.extraCandidates, enriched];
+		s.personId = enriched.id;
 		pendingSideOverrides[participantId] = side;
 		submitRow(participantId);
 	}
@@ -605,7 +643,7 @@
 		{@render personDisplay(row.full_name, row.photo_url, row.argument_role)}
 	{:else}
 		{@const comboId = `listbox-${label.replace(/\s+/g, '-')}`}
-		{@const candidates = getRowCandidates(row.discrepancy!, label)}
+		{@const candidates = sideScopedCandidates(row.discrepancy!, label, side, gated)}
 		{@const filteredCandidates = candidates.filter((c) => {
 			const text = c.role_name ? `${c.full_name} ${c.role_name}` : c.full_name;
 			return text.toLowerCase().includes((s!.comboQuery ?? '').toLowerCase());
@@ -760,6 +798,7 @@
 					<div style="border-top: 1px solid #334155; padding: 8px;">
 						<CreatePersonPopover
 							rawSpeakerLabel={label}
+							triggerLabel={side === 'BENCH' ? 'Create new bench person' : 'Create new advocate'}
 							defaultAdvocateSide={side !== 'BENCH' ? side : 'UNKNOWN'}
 							onCreated={(person, createdSide) =>
 								handlePersonCreated(label, row.participant_id, person, createdSide)}

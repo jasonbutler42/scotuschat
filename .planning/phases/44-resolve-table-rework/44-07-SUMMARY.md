@@ -178,3 +178,7 @@ None - no external service configuration required.
 ---
 *Phase: 44-resolve-table-rework*
 *Completed: 2026-08-07*
+
+## Self-Check: PASSED
+
+All 5 modified/created files confirmed present on disk; all 4 commit hashes (`ef6f4975`, `5f664ce9`, `418d60d8`, `3caa9b60`) confirmed in git log.

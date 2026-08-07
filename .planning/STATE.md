@@ -5,15 +5,15 @@ milestone_name: Corpus Fidelity & Resolve Rework
 current_phase: 44
 current_phase_name: resolve-table-rework
 status: executing
-stopped_at: Completed 44-06-PLAN.md
-last_updated: "2026-08-07T18:18:08.508Z"
+stopped_at: Completed 44-07-PLAN.md
+last_updated: "2026-08-07T19:12:32.275Z"
 last_activity: 2026-08-07
-last_activity_desc: Plan 44-05 complete (operator-approved checkpoint after one remediation cycle); starting 44-06
+last_activity_desc: Plan 44-07 complete (RESOLVE-09/10 side-scoped candidates + source-aware hint prefix); starting 44-08
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 21
-  completed_plans: 18
+  completed_plans: 19
   percent: 60
 ---
 
@@ -29,9 +29,9 @@ See: .planning/PROJECT.md (updated 2026-07-29 after starting v1.7 milestone)
 ## Current Position
 
 Phase: 44 (resolve-table-rework) — EXECUTING
-Plan: 6 of 9
+Plan: 7 of 9
 Status: Ready to execute
-Last activity: 2026-08-07 — Plan 44-05 complete (operator-approved checkpoint after one remediation cycle); starting 44-06
+Last activity: 2026-08-07 — Plan 44-07 complete (RESOLVE-09/10 side-scoped candidates + source-aware hint prefix); starting 44-08
 
 **Milestone shape:**
 
@@ -92,6 +92,7 @@ Still open from earlier milestones:
 | Phase 44 P02 | 21min | 3 tasks | 2 files |
 | Phase 44 P03 | 25min | 3 tasks | 3 files |
 | Phase 44 P06 | 35min | 3 tasks | 4 files |
+| Phase 44 P07 | 40min | 3 tasks | 5 files |
 
 v1.5/v1.6 per-plan metrics cleared at this milestone boundary per the standard STATE.md reset; the underlying per-plan SUMMARY files remain in `.planning/milestones/v1.5-phases/` and `.planning/milestones/v1.6-phases/`.
 
@@ -135,6 +136,7 @@ Full cross-milestone decision log lives in PROJECT.md's Key Decisions table. Per
 - [Phase ?]: Phase 44 Plan 03: toggleSide's already-active no-op check runs before the gated check (matches plan's literal ordering: no-op first, then gate, then onSideChange); argumentRoleCell's four branches key purely on side/missing_tenure/rowEditable, not on gated, per the plan's literal branch order.
 - [Phase ?]: Phase 44 Plan 06: Task 2's descriptor-preservation fix broke test_phase44_argument_role_roundtrip.py's own PJOB-15 re-assertion (outside declared files_modified); fixed inline (Rule 1) since the plan's own verify command requires the full suite green.
 - [Phase ?]: Phase 44 Plan 06: RESOLVE-11/RESOLVE-13 intentionally left un-checked in REQUIREMENTS.md — both split across this plan and 44-08 (client hint suppression + Edit-person new-tab markup), mirroring 44-01's RESOLVE-04 precedent.
+- [Phase ?]: RESOLVE-09/10: is_justice-based side filter (fail-open on unknown side) and source-aware hint prefix derived from data.job.source, both threading existing data with zero backend change
 
 ### Roadmap Evolution
 
@@ -170,8 +172,8 @@ v1.6's roadmap evolution is archived in `.planning/milestones/v1.6-ROADMAP.md`. 
 
 ## Session Continuity
 
-Last session: 2026-08-07T18:18:06.922Z
-Stopped at: Completed 44-06-PLAN.md
+Last session: 2026-08-07T19:12:30.551Z
+Stopped at: Completed 44-07-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

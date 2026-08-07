@@ -10,7 +10,10 @@ enforcement boundary.
 Part 2 (DB-gated): a write-then-read round trip through
 `update_resolve_row_for_job` + `list_resolve_rows_for_job` for each of the
 three real advocate roles (RESOLVE-03), plus a re-assertion at the
-round-trip level that a BENCH payload forces descriptor to null (PJOB-15).
+round-trip level that a BENCH payload leaves the already-stored descriptor
+untouched rather than forcing it to null (RESOLVE-13, superseding PJOB-15's
+storage half — see `api/tests/test_admin_jobs_phase25.py`'s inverted bench
+test for the canonical version of this assertion).
 
 Following the project pattern (`test_admin_people_phase25.py`,
 `test_admin_jobs_phase25.py`):
@@ -144,18 +147,19 @@ async def test_argument_role_round_trips_for_each_real_advocate_role(
             assert row["argument_role"] == expected_label
             assert row["descriptor"] == "Counsel of Record"
 
-        # PJOB-15 re-assertion at the round-trip level: a BENCH payload with a
-        # non-empty descriptor must have descriptor forced to null, even
-        # though the row was just an advocate row with a real descriptor set.
+        # RESOLVE-13 re-assertion at the round-trip level: a BENCH payload
+        # carrying a different descriptor must NOT overwrite the value the
+        # row already has ("Counsel of Record", set above) — the client's
+        # bench descriptor is ignored, and the stored value is preserved.
         bench_body = ResolveRowUpdate(
             participant_id=participant_id,
             side=SideEnum.BENCH,
-            descriptor="Should be discarded",
+            descriptor="Should not be written",
         )
         async with AsyncSessionLocal() as db:
             updated_bench = await update_resolve_row_for_job(db, job_id, bench_body)
             assert updated_bench.side == SideEnum.BENCH
-            assert updated_bench.descriptor is None
+            assert updated_bench.descriptor == "Counsel of Record"
     finally:
         async with AsyncSessionLocal() as db:
             seeded_participant = await db.get(ArgumentParticipant, participant_id)

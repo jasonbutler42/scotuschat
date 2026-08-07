@@ -780,8 +780,12 @@ async def update_resolve_row_for_job(
       3. The target ArgumentParticipant must belong to that argument (IDOR guard)
          — participant_id is never trusted on its own.
 
-    descriptor is forced to null whenever side == BENCH, regardless of what the
-    client sent, so bench rows never carry an advocate descriptor (PJOB-15).
+    On a BENCH write the descriptor column is left untouched: the stored value
+    is preserved and a client-supplied descriptor is ignored (RESOLVE-13, this
+    supersedes PJOB-15's storage half). The Resolve card still hides the value
+    on bench rows via the read path in `list_resolve_rows_for_job`, which
+    reports descriptor/descriptor_hint as null for BENCH rows, rather than by
+    clearing it here — "hidden, not shown, not cleared."
 
     Raises ValueError on any guard failure. Returns the updated ArgumentParticipant.
     """
@@ -817,7 +821,14 @@ async def update_resolve_row_for_job(
             f"AdminJob {job_id}'s linked argument"
         )
 
-    descriptor = None if body.side == SideEnum.BENCH else body.descriptor
+    # RESOLVE-13: the descriptor key is included only when the side is not
+    # BENCH, so a BENCH write never appears in the generated SQL for that
+    # column at all — the stored value is preserved, not overwritten with
+    # null, and a client-supplied bench descriptor is ignored rather than
+    # written.
+    values: dict[str, object] = {"side": body.side}
+    if body.side != SideEnum.BENCH:
+        values["descriptor"] = body.descriptor
 
     await db.execute(
         update(ArgumentParticipant)
@@ -825,7 +836,7 @@ async def update_resolve_row_for_job(
             ArgumentParticipant.id == body.participant_id,
             ArgumentParticipant.argument_id == argument.id,
         )
-        .values(side=body.side, descriptor=descriptor)
+        .values(**values)
         .execution_options(synchronize_session=False)
     )
     await db.commit()

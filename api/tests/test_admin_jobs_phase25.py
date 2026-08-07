@@ -861,9 +861,14 @@ async def test_update_resolve_row_bench_side_persists() -> None:
 
 @pytest.mark.asyncio
 @pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
-async def test_update_resolve_row_advocate_descriptor_persists_bench_descriptor_forced_null() -> None:
-    """Test 2: updating an advocate row persists descriptor and the selected non-bench
-    side (D-14, PJOB-14), while a bench-row payload stores descriptor as null (PJOB-15).
+async def test_update_resolve_row_advocate_descriptor_persists_bench_descriptor_preserved() -> None:
+    """Test 2: updating an advocate row persists its descriptor and the selected
+    non-bench side (D-14, PJOB-14). A bench-row payload leaves whatever descriptor
+    is already stored on that participant untouched — the client-supplied bench
+    descriptor is never written (RESOLVE-13). This reverses PJOB-15's storage
+    half: the read path (`list_resolve_rows_for_job`) still reports null for
+    bench rows, so the value is preserved in the DB but hidden, not shown, not
+    cleared.
 
     Uses AsyncSessionLocal() directly rather than the shared db_session
     fixture — update_resolve_row_for_job commits internally (see the bench
@@ -899,11 +904,14 @@ async def test_update_resolve_row_advocate_descriptor_persists_bench_descriptor_
             raw_speaker_label="MR. ADVOCATE",
             side=SideEnum.UNKNOWN,
         )
+        # Bench participant starts with a real stored descriptor so the
+        # preservation assertion below is unambiguous in a failure diff.
         bench_participant = ArgumentParticipant(
             argument_id=arg.id,
             person_id=bench_person.id,
             raw_speaker_label="JUSTICE BENCH",
             side=SideEnum.UNKNOWN,
+            descriptor="Solicitor General",
         )
         db.add_all([advocate_participant, bench_participant])
         await db.flush()
@@ -930,17 +938,26 @@ async def test_update_resolve_row_advocate_descriptor_persists_bench_descriptor_
         assert updated_advocate.side == SideEnum.RESPONDENT
         assert updated_advocate.descriptor == "Counsel for Respondent"
 
-    # Bench payload sends a descriptor too — service must force it to null (PJOB-15).
+    # Bench payload sends a DIFFERENT descriptor — the service must ignore it
+    # and leave the already-stored value ("Solicitor General") untouched.
+    # This single assertion proves both halves at once: the stored value was
+    # preserved, and the client-supplied bench descriptor was not written.
     bench_body = ResolveRowUpdate(
         participant_id=bench_participant_id,
         side=SideEnum.BENCH,
-        descriptor="Should be discarded",
+        descriptor="Should not be written",
     )
 
     async with AsyncSessionLocal() as db:
         updated_bench = await update_resolve_row_for_job(db, job_id, bench_body)
         assert updated_bench.side == SideEnum.BENCH
-        assert updated_bench.descriptor is None
+        assert updated_bench.descriptor == "Solicitor General"
+
+    # Re-read in a fresh session so the assertion is about the committed row,
+    # not a stale identity-mapped instance.
+    async with AsyncSessionLocal() as db:
+        refreshed_bench = await db.get(ArgumentParticipant, bench_participant_id)
+        assert refreshed_bench.descriptor == "Solicitor General"
 
     async with AsyncSessionLocal() as db:
         # cleanup
@@ -957,6 +974,119 @@ async def test_update_resolve_row_advocate_descriptor_persists_bench_descriptor_
         bench_person = await db.get(Person, bench_person_id)
         await db.delete(bench_person)
         await db.commit()
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_update_resolve_row_descriptor_survives_advocate_bench_advocate_round_trip() -> None:
+    """RESOLVE-13: an operator who types a descriptor, toggles the row to Bench,
+    and toggles it back sees their own text again — the descriptor survives a
+    three-step advocate -> bench -> advocate round trip across three separate
+    sessions and a fresh re-read.
+
+    Step 3 sends the descriptor back deliberately: the real client's hidden
+    form has no descriptor field in the DOM while bench is selected, so on
+    switching back the browser submits whatever the input now shows, which is
+    the value the read path just returned. This test mirrors that.
+    """
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import (
+        AdminJob,
+        AdminJobStatus,
+        AdminJobStep,
+        Argument,
+        ArgumentParticipant,
+        ArgumentStatusEnum,
+        Person,
+        SideEnum,
+    )
+    from api.schemas.admin_jobs import ResolveRowUpdate
+    from api.services.admin_jobs import update_resolve_row_for_job
+
+    async with AsyncSessionLocal() as db:
+        person = Person(full_name="Round Trip Example")
+        db.add(person)
+        await db.flush()
+
+        arg = Argument(status=ArgumentStatusEnum.PIPELINE, question_number=1)
+        db.add(arg)
+        await db.flush()
+
+        participant = ArgumentParticipant(
+            argument_id=arg.id,
+            person_id=person.id,
+            raw_speaker_label="MR. ROUND TRIP",
+            side=SideEnum.UNKNOWN,
+        )
+        db.add(participant)
+        await db.flush()
+
+        job = AdminJob(status=AdminJobStatus.PAUSED, current_step=AdminJobStep.RESOLVE, argument_id=arg.id)
+        db.add(job)
+        await db.commit()
+
+        person_id = person.id
+        arg_id = arg.id
+        participant_id = participant.id
+        job_id = job.id
+
+    try:
+        # Step 1: PETITIONER with a real descriptor — both stored.
+        step1_body = ResolveRowUpdate(
+            participant_id=participant_id,
+            side=SideEnum.PETITIONER,
+            descriptor="Counsel for Petitioner",
+        )
+        async with AsyncSessionLocal() as db:
+            updated1 = await update_resolve_row_for_job(db, job_id, step1_body)
+            assert updated1.side == SideEnum.PETITIONER
+            assert updated1.descriptor == "Counsel for Petitioner"
+
+        # Step 2: toggle to BENCH with descriptor=None (the hidden form has no
+        # descriptor field while bench is selected) — side moves, descriptor
+        # is untouched.
+        step2_body = ResolveRowUpdate(
+            participant_id=participant_id,
+            side=SideEnum.BENCH,
+            descriptor=None,
+        )
+        async with AsyncSessionLocal() as db:
+            updated2 = await update_resolve_row_for_job(db, job_id, step2_body)
+            assert updated2.side == SideEnum.BENCH
+            assert updated2.descriptor == "Counsel for Petitioner"
+
+        # Step 3: toggle back to RESPONDENT, sending the descriptor the read
+        # path returned — descriptor intact, side moved. Re-read in a fresh
+        # session to assert the committed row, not a stale instance.
+        step3_body = ResolveRowUpdate(
+            participant_id=participant_id,
+            side=SideEnum.RESPONDENT,
+            descriptor="Counsel for Petitioner",
+        )
+        async with AsyncSessionLocal() as db:
+            updated3 = await update_resolve_row_for_job(db, job_id, step3_body)
+            assert updated3.side == SideEnum.RESPONDENT
+            assert updated3.descriptor == "Counsel for Petitioner"
+
+        async with AsyncSessionLocal() as db:
+            refreshed = await db.get(ArgumentParticipant, participant_id)
+            assert refreshed.side == SideEnum.RESPONDENT
+            assert refreshed.descriptor == "Counsel for Petitioner"
+    finally:
+        async with AsyncSessionLocal() as db:
+            seeded_participant = await db.get(ArgumentParticipant, participant_id)
+            if seeded_participant is not None:
+                await db.delete(seeded_participant)
+            seeded_job = await db.get(AdminJob, job_id)
+            if seeded_job is not None:
+                await db.delete(seeded_job)
+            seeded_arg = await db.get(Argument, arg_id)
+            if seeded_arg is not None:
+                await db.delete(seeded_arg)
+            seeded_person = await db.get(Person, person_id)
+            if seeded_person is not None:
+                await db.delete(seeded_person)
+            await db.commit()
 
 
 @pytest.mark.asyncio

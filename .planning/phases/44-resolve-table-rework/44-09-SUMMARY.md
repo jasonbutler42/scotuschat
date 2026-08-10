@@ -605,3 +605,76 @@ for a row where the operator picked the person themselves — verify this
 specifically alongside the existing AUTO-MATCHED/NEEDS YOU states during the
 live browser walkthrough. No other checklist item changed. Still not yet
 approved.
+
+## Fourth Checkpoint Round — live-testing regressions, root-caused and fixed directly
+
+The operator live-tested against two real pipeline jobs (1249: reset fixture;
+1253: PDF import) rather than the checklist alone, and reported three failure
+scenarios. Given the prior three rounds had each introduced or missed a new
+issue, this round's diagnosis was done by direct source reading (no
+speculative dispatch) before any fix was written, and the fix was applied
+directly rather than through another executor round.
+
+**Confirmed and fixed (two distinct root causes, both explain all three
+reported scenarios except one):**
+
+1. **`sideToggle`'s highlight disagreed with the row's other cells after a
+   refresh.** `benchActive`/`advocateActive` were gated on `needsSideGate()`,
+   but `sideGateConfirmed` is pure client-side `$state` that resets to
+   "locked" on every page load — even for a row whose `side` was already
+   saved to the database in a prior session. `argumentRoleCell` and
+   `descriptorCell` never looked at the gate at all; they branch purely on
+   `side`. Net effect: after a refresh, the toggle showed neither segment
+   active while the fields beneath it correctly showed the saved side — a
+   visible disagreement between controls describing the same row (operator's
+   scenario 2, and the toggle-reset half of scenario 3). Picking an Argument
+   Role "fixed" the toggle because `chooseArgumentRole` sets
+   `sideGateConfirmed = true` as a side effect, confirming the diagnosis.
+   Fix: the highlight now keys only on `side`, matching every other cell.
+   `gated` still fully controls the person dropdown's own disabled state and
+   `toggleSide`'s confirm-vs-plain-change branch — only the display
+   computation changed.
+2. **The seeding effect's fallback ignored which side a candidate belongs
+   to.** `personId: d.auto_match_id ?? committedRow?.person_id ?? null` — a
+   person cleared client-side by switching sides was never actually
+   unlinked from the pipeline's original auto-match or the row's committed
+   `person_id` (side changes save via `?/saveResolveRow`, which never
+   touches `person_id`), so a fresh page load simply re-seeded the same
+   wrong-side candidate every time (operator's scenario 1, and the
+   person-not-clearing half of scenario 3). Fix: look up each candidate's
+   `is_justice` from the `people` prop and drop the seed when it positively
+   conflicts with the row's current side bucket — failing open (existing
+   RESOLVE-09 convention) when `is_justice` is unknown, so an ambiguous
+   candidate still seeds rather than being silently dropped.
+
+Both fixes committed together in `5261f9dd`, with two new contract tests
+(`test_side_toggle_highlight_does_not_depend_on_the_side_gate`,
+`test_seeding_effect_drops_a_side_mismatched_auto_match`) locking the exact
+mechanism, not just the symptom. Full verification: `pytest
+tests/conftest.py api/tests/test_phase44_resolve_table_contract.py` — 100
+passed; full `pytest tests/conftest.py api/tests` — 656 passed, 0 failures,
+same 4 pre-existing unrelated collection errors; `npm --prefix app run
+check` — 0 errors, 36 pre-existing warnings (unchanged baseline).
+
+**Deliberately NOT fixed — flagged as an open design question, not a bug:**
+the second half of scenario 3 (a Bench row's tenure-derived Argument Role
+doesn't appear immediately after picking a person). `benchRoleState` keys on
+`row.person_id`, the *committed* database value — but person matches live
+only in client-side `rowMatchStates` until the batch `?/resolve` submission
+commits them. This is an inherent property of the two-phase
+pick-then-batch-commit design, not a regression from this round's changes,
+and fixing it would mean either committing `person_id` per-row (a real
+architecture change) or deriving a preview tenure-role client-side ahead of
+commit. Recorded here rather than guessed at under time pressure — needs a
+deliberate design decision, not a patch.
+
+## Checkpoint Status: BLOCKED at Task 4 (gate=blocking, human-verify) — fourth round, re-issued
+
+Everything from the third round stands. This round fixes two confirmed,
+root-caused regressions surfaced by live testing against real pipeline jobs.
+Add to the live walkthrough: repeat scenarios 1 and 2 from the operator's
+report (switch a resolved bench row to Advocate and back, refresh at each
+step; confirm a manually-side-confirmed advocate row's toggle stays lit
+after a refresh) and confirm both now behave correctly. The tenure-preview
+gap in scenario 3 is knowingly still open — not expected to be fixed by this
+round. Still not yet approved.

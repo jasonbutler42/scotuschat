@@ -1364,3 +1364,105 @@ def test_cue_tag_evaluated_once_per_row() -> None:
         "RESOLVE-16: rowCueTag must be referenced exactly twice — one declaration, one call — "
         "so the predicate is evaluated once per row, not once to test and once to render"
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Plan 44-09, Task 4 second checkpoint remediation — operator visual-acceptance
+# defects fixed after the second Task 4 checkpoint (full 44-05..44-09 Figma
+# reconciliation acceptance) was rejected with specific, Figma-confirmed
+# feedback: a confirmed descriptor data-loss bug (toggling Advocate -> Bench
+# -> Advocate could submit an empty string over an already-saved descriptor),
+# a person selection surviving a Bench<->Advocate side switch despite the two
+# candidate pools being disjoint, plus the pill/position/structural fixes
+# covered by the re-pointed tests above (progress pill, cue tag pill and
+# position, the combined Resolved As hint, and the Continue button's
+# self-describing disabled label). Explicitly out of scope and untouched by
+# this remediation: the "manually-matched" third tag state (contradicts
+# RESOLVE-16, not in Figma), the dedicated typeahead redesign, the
+# dropdown-open-causes-card-scrollbar layout issue, and the hint-mirrors-
+# live-value finding (confirmed pre-existing from 44-04, already tracked as
+# backlog).
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_descriptor_input_uses_a_client_memory_that_survives_side_toggles() -> None:
+    """Confirmed root cause: `list_resolve_rows_for_job` (44-06) correctly
+    reports descriptor: null while a row is on BENCH (by design — "hidden,
+    not shown"). Without a client-side memory, toggling
+    Advocate -> Bench -> Advocate destroys an already-saved descriptor: the
+    moment the Advocate branch re-renders, the descriptor <input> reappears
+    bound to the now-null row.descriptor prop (''), and because toggleSide's
+    own submitRow() fires synchronously in the same click (flushSync() then
+    requestSubmit()), that empty string is submitted in the SAME request as
+    the side change — and since side is no longer BENCH, the server writes
+    descriptor="". This mirrors the pre-existing lastAdvocateRole pattern: a
+    per-participant client-side memory that survives the row's own prop
+    going null while hidden."""
+    source = _source(RESOLVE_CARD_PATH)
+    assert "lastDescriptorValue" in source, (
+        "a per-participant client-side memory of the last-typed descriptor must exist so "
+        "toggling Advocate -> Bench -> Advocate cannot submit an empty string over an "
+        "already-saved value"
+    )
+    body = _snippet_body(source, "descriptorCell")
+    assert re.search(
+        r"value=\{lastDescriptorValue\[row\.participant_id\]\s*\?\?\s*row\.descriptor\s*\?\?\s*''\}",
+        body,
+    ), (
+        "the descriptor input's value must prefer the client memory over the nullable "
+        "server-reported prop, falling back to the prop only when no memory exists yet — "
+        "so a row that already has a committed descriptor still shows it correctly on first "
+        "render, with no separate seeding step needed"
+    )
+    assert re.search(r"oninput=\{", body), (
+        "the memory must be captured via oninput, not only onblur — a side toggle auto-"
+        "submits synchronously (flushSync() + requestSubmit()) and can fire before blur, so "
+        "blur alone would miss an in-progress edit"
+    )
+
+
+def test_side_bucket_change_clears_the_previously_selected_person() -> None:
+    """Confirmed real bug (item 6): when an operator selects Bench, picks a
+    person, then switches to Advocate (or vice versa), the person selection
+    must clear/reset rather than carry over — a person matched under one
+    side must not silently remain selected after the side changes, since the
+    candidate pools are disjoint (sideScopedCandidates, RESOLVE-09). Keyed on
+    the BENCH/non-BENCH bucket (not the raw side value) so switching among
+    the three specific advocate roles never clears the pick — only a real
+    Bench<->Advocate flip does — and never on the first bucket recorded for a
+    participant, so initial load/seeding is never mistaken for an
+    operator-driven switch."""
+    source = _source(RESOLVE_CARD_PATH)
+    assert "function clearPersonOnSideBucketChange(" in source, (
+        "a named function must own the side-bucket-change clearing rule"
+    )
+    body = _function_body(source, "clearPersonOnSideBucketChange")
+    assert "personId = null" in body, "the clearing rule must reset personId"
+    assert "comboQuery = ''" in body, "the clearing rule must reset comboQuery"
+    assert "previousBucket !== undefined" in body, (
+        "the rule must not fire on the first bucket ever recorded for a participant — "
+        "initial load/seeding must never be mistaken for an operator-driven switch"
+    )
+    on_side_change_body = _function_body(source, "onSideChange")
+    assert "clearPersonOnSideBucketChange(" in on_side_change_body, (
+        "onSideChange (the toggle's and the non-gated argument-role select's shared write "
+        "path) must invoke the clearing rule"
+    )
+    confirm_side_body = _function_body(source, "confirmSide")
+    assert "clearPersonOnSideBucketChange(" in confirm_side_body, (
+        "confirmSide (the gated toggle's own write path) must invoke the clearing rule too"
+    )
+
+
+def test_side_bucket_helper_treats_all_advocate_roles_as_one_bucket() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    assert "function sideBucket(" in source, (
+        "a named helper must map any side value onto the two-value BENCH/ADVOCATE bucket"
+    )
+    body = _function_body(source, "sideBucket")
+    assert "'BENCH'" in body, "sideBucket must special-case the literal BENCH value"
+    assert "'ADVOCATE'" in body, (
+        "every other side value (UNKNOWN/PETITIONER/RESPONDENT/AMICUS) must collapse to the "
+        "single ADVOCATE bucket, so switching among specific advocate roles never clears "
+        "the person selection"
+    )

@@ -185,14 +185,49 @@
 		return !sideGateConfirmed[row.participant_id];
 	}
 
+	// Task 4 checkpoint remediation (44-09, item 6): a person matched under
+	// one side must not silently remain selected once the operator switches
+	// the row to the other side — the two candidate pools are disjoint
+	// (sideScopedCandidates, RESOLVE-09), so a carried-over personId could
+	// point at a person the new side's dropdown would never itself have
+	// offered. Keyed on the BENCH/non-BENCH bucket, not the raw side value,
+	// so switching among the three specific advocate roles
+	// (PETITIONER/RESPONDENT/AMICUS) never clears the pick — only a real
+	// Bench<->Advocate flip does.
+	let lastSideBucket = $state<Record<number, 'BENCH' | 'ADVOCATE'>>({});
+
+	function sideBucket(value: string): 'BENCH' | 'ADVOCATE' {
+		return value === 'BENCH' ? 'BENCH' : 'ADVOCATE';
+	}
+
+	// Clears the row's own person selection only when the bucket recorded
+	// for this participant differs from the new one — never on the first
+	// bucket ever recorded for a participant, so initial load/seeding (see
+	// the seeding $effect below) is never mistaken for an operator-driven
+	// switch.
+	function clearPersonOnSideBucketChange(row: MergedRow, newSide: string): void {
+		const newBucket = sideBucket(newSide);
+		const previousBucket = lastSideBucket[row.participant_id];
+		if (previousBucket !== undefined && previousBucket !== newBucket) {
+			const s = rowMatchStates[row.raw_speaker_label];
+			if (s) {
+				s.personId = null;
+				s.comboQuery = '';
+			}
+		}
+		lastSideBucket[row.participant_id] = newBucket;
+	}
+
 	function confirmSide(row: MergedRow, choice: 'BENCH' | 'ADVOCATE') {
 		const value = choice === 'BENCH' ? 'BENCH' : 'UNKNOWN';
+		clearPersonOnSideBucketChange(row, value);
 		pendingSideOverrides[row.participant_id] = value;
 		sideGateConfirmed[row.participant_id] = true;
 		submitRow(row.participant_id);
 	}
 
 	function onSideChange(row: MergedRow, value: string) {
+		clearPersonOnSideBucketChange(row, value);
 		pendingSideOverrides[row.participant_id] = value;
 		submitRow(row.participant_id);
 	}
@@ -241,6 +276,7 @@
 			lastAdvocateRole[row.participant_id] = specific;
 		}
 		if (needsSideGate(row)) {
+			clearPersonOnSideBucketChange(row, value);
 			pendingSideOverrides[row.participant_id] = value;
 			sideGateConfirmed[row.participant_id] = true;
 			submitRow(row.participant_id);
@@ -358,6 +394,15 @@
 					comboOpen: false,
 					comboHighlight: -1,
 				};
+				// Task 4 checkpoint remediation (item 6): seed the baseline bucket
+				// from the row's own already-committed side, if any — this is
+				// recorded, never cleared against, so the operator's first
+				// explicit switch this session (even away from a side that was
+				// only ever known from the server, not chosen in this session)
+				// is still detected as a real switch.
+				if (committedRow) {
+					lastSideBucket[committedRow.participant_id] = sideBucket(committedRow.side);
+				}
 			}
 		}
 	});
@@ -485,6 +530,12 @@
 		const enriched: Candidate = { ...person, is_justice: side === 'BENCH' };
 		s.extraCandidates = [...s.extraCandidates, enriched];
 		s.personId = enriched.id;
+		// Task 4 checkpoint remediation (item 6): record the baseline bucket for
+		// the side the person was just created on, so a later genuine switch
+		// away from it is still detected (clearPersonOnSideBucketChange is not
+		// called here — this action creates and selects the person for `side`
+		// on purpose, it must not immediately clear its own selection).
+		lastSideBucket[participantId] = sideBucket(side);
 		pendingSideOverrides[participantId] = side;
 		submitRow(participantId);
 	}

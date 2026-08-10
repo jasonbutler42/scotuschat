@@ -84,6 +84,13 @@ disclosing, not omitting. `rowCueTag` now returns a three-literal union;
 each of the three tag strings still appears exactly once in the source (one
 declaration inside `rowCueTag`, no second literal anywhere else), preserving
 this file's single-occurrence contract at three terms instead of two.
+
+Plan 44-09's tenure-preview follow-up (raised by the operator immediately
+after the hint-freeze fix above was confirmed as "a huge improvement") adds
+a live preview of a bench pick's tenure-derived Argument Role before the
+batch ?/resolve commit writes it — see its own banner section at the end of
+this file, and api/tests/test_phase44_bench_role_preview.py for the backing
+endpoint's own tests.
 """
 
 import re
@@ -1190,9 +1197,15 @@ def test_bench_role_state_ignores_editability() -> None:
     )
 
 
+# Both anchor-region tests below are re-pointed for the tenure-preview
+# follow-up: the if-condition legitimately grew a second disjunct
+# (`|| previewedPersonId != null`) so the Edit person link still renders for
+# an uncommitted preview pick, not only a committed row's own
+# person_edit_href. The anchor markup itself (new-tab target, noopener,
+# aria-hidden glyph) is unchanged — only the region's start pattern moved.
 def test_edit_person_link_opens_in_a_new_tab_with_noopener() -> None:
     source = _source(RESOLVE_CARD_PATH)
-    anchor_region = _region(source, r"\{#if row\.person_edit_href\}", r"</a>")
+    anchor_region = _region(source, r"\{#if row\.person_edit_href \|\| previewedPersonId != null\}", r"</a>")
     assert 'target="_blank"' in anchor_region, (
         "RESOLVE-11: the Edit person link must open in a new tab"
     )
@@ -1204,7 +1217,7 @@ def test_edit_person_link_opens_in_a_new_tab_with_noopener() -> None:
 
 def test_edit_person_accessible_name_excludes_the_glyph() -> None:
     source = _source(RESOLVE_CARD_PATH)
-    anchor_region = _region(source, r"\{#if row\.person_edit_href\}", r"</a>")
+    anchor_region = _region(source, r"\{#if row\.person_edit_href \|\| previewedPersonId != null\}", r"</a>")
     assert re.search(r'>Edit person<span aria-hidden="true">[^<]*↗</span></a>', anchor_region), (
         "RESOLVE-11: the ↗ glyph must sit inside its own aria-hidden span, after the anchor's "
         "own text run, so the accessible name stays exactly 'Edit person'"
@@ -1759,4 +1772,96 @@ def test_combined_hint_freezes_the_extracted_side_not_the_live_toggle() -> None:
     assert "sideHintValue(extractedSide" in body, (
         "sideHintValue must be called with the frozen extractedSide, not the bare `side` "
         "prop — this is the exact regression the operator reported"
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Plan 44-09 tenure-preview follow-up (operator-approved during Task 4
+# remediation) — a bench candidate's tenure-derived Argument Role must appear
+# the moment the operator picks them, not only after the batch ?/resolve
+# commit writes ArgumentParticipant.person_id. Backed by a new read-only
+# endpoint (GET /api/admin/jobs/{job_id}/people/{person_id}/bench-role-preview,
+# see api/tests/test_phase44_bench_role_preview.py) that reuses
+# _bench_role_and_missing_tenure — never a client-side reimplementation of the
+# tenure derivation (44-06's explicit prohibition).
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_job_id_prop_added_for_the_preview_fetch_only() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    props_body = _interface_body(source, "ResolveCardProps")
+    assert "jobId: number" in props_body, (
+        "the component needs the job id to call the job-scoped bench-role-preview "
+        "endpoint — it must arrive as a prop, not be derived or guessed client-side"
+    )
+    assert re.search(r"\bjobId\b", _function_body(source, "fetchBenchRolePreview")), (
+        "jobId must actually be used by the preview fetch, not merely declared"
+    )
+
+
+def test_fetch_bench_role_preview_calls_the_job_scoped_endpoint() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    assert "async function fetchBenchRolePreview(" in source
+    body = _function_body(source, "fetchBenchRolePreview")
+    assert "/admin/pipeline/${jobId}/bench-role-preview" in body, (
+        "must call the SvelteKit proxy route (never FASTAPI_BASE_URL directly from "
+        "client code — Architecture Rule 2)"
+    )
+    assert "person_id=${personId}" in body
+    assert "benchRolePreview[participantId] = {" in body
+    assert "personId," in body, (
+        "the stored preview must carry the personId it was computed for, so a stale "
+        "response can be told apart from the row's current pick"
+    )
+
+
+def test_preview_fetch_effect_skips_committed_rows_and_dedupes_by_pick() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    body = _effect_body(source, "for (const row of mergedRows)")
+    assert "effectiveSide(row) !== 'BENCH'" in body, (
+        "only a BENCH row's uncommitted pick needs a tenure preview — an advocate row "
+        "never has a bench role to preview"
+    )
+    assert "row.person_id != null" in body, (
+        "once the pick is committed, list_resolve_rows_for_job's own bench_role/"
+        "missing_tenure are authoritative and must not be shadowed by a preview"
+    )
+    assert "benchRolePreviewFetched" in body, (
+        "without a dedup cache, this effect (which re-scans every row on any row's "
+        "rowMatchStates change) would re-fetch every already-previewed row on every "
+        "unrelated edit"
+    )
+    assert "fetchBenchRolePreview(" in body
+
+
+def test_bench_role_state_only_trusts_a_preview_for_the_currently_picked_person() -> None:
+    # 44-06's prohibition: a tenure-derived role must never be older than the
+    # request that rendered it. Without this guard, picking candidate A (preview
+    # fetched), then quickly picking candidate B, could render A's still-cached
+    # preview under B's name until A's response is overwritten.
+    source = _source(RESOLVE_CARD_PATH)
+    body = _function_body(source, "benchRoleState")
+    assert "benchRolePreview[row.participant_id]" in body
+    assert "preview?.personId === personId" in body, (
+        "a preview must only be trusted when it was computed for the exact personId "
+        "currently picked for this row — a mismatch must fall through to 'unresolved', "
+        "never render a stale candidate's role under the current pick"
+    )
+
+
+def test_bench_role_cell_falls_back_to_the_preview_for_role_text_and_edit_link() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    body = _snippet_body(source, "argumentRoleCell")
+    assert "previewedBenchRole" in body, (
+        "the calculated-state role text must fall back to the preview's bench_role when "
+        "row.bench_role is still null (uncommitted pick)"
+    )
+    assert "row.bench_role ?? previewedBenchRole ?? row.argument_role" in body
+    assert "previewedPersonId" in body, (
+        "the missing-tenure state's Edit person link must still render for an "
+        "uncommitted pick — row.person_edit_href alone is null until commit"
+    )
+    assert "row.person_edit_href ?? `/admin/people/${previewedPersonId}`" in body, (
+        "the fallback link must reuse the same /admin/people/{id} path the service "
+        "constructs — not a different shape"
     )

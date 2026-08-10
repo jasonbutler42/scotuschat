@@ -375,24 +375,29 @@ export const actions: Actions = {
 	/**
 	 * addPerson — create a new person inline during discrepancy review (D-13).
 	 *
-	 * Accepts full_name and (optional) role_name from formData for the older
-	 * typeahead-driven flow, plus raw_speaker_label and side for the Phase 25
-	 * mini create-person popover (D-12, PJOB-19) — when both are present the
-	 * backend also sets Person.is_justice from side == BENCH and updates the
-	 * matching job-owned ArgumentParticipant's person_id/side. role_name is no
-	 * longer a required field for the mini popover path, but is still forwarded
-	 * (as null when absent) so the older typeahead flow keeps working.
+	 * Accepts first_name/last_name (structured parts) and (optional) role_name,
+	 * raw_speaker_label, and side from formData for the Phase 25 mini
+	 * create-person popover (D-12, PJOB-19) — when raw_speaker_label and side
+	 * are both present the backend also sets Person.is_justice from
+	 * side == BENCH and updates the matching job-owned ArgumentParticipant's
+	 * person_id/side. Phase 38 (D-01/D-03/D-09) removed full_name from
+	 * PersonCreate entirely — the backend derives it server-side from
+	 * first_name/last_name via prepare_person_name, which requires at least
+	 * one of the two non-blank; sending full_name is now a 422
+	 * (extra="forbid"). This action previously still sent full_name (a stale
+	 * caller Phase 38 never migrated, found live 2026-08-10) — fixed here.
 	 * On success: returns the created person { id, full_name } for client-side dropdown update.
 	 */
 	addPerson: async ({ request, params }) => {
 		const data = await request.formData();
-		const full_name = (data.get('full_name') as string) ?? '';
+		const first_name = (data.get('first_name') as string) ?? '';
+		const last_name = (data.get('last_name') as string) ?? '';
 		const role_name = (data.get('role_name') as string) ?? '';
 		const raw_speaker_label = (data.get('raw_speaker_label') as string) ?? '';
 		const side = (data.get('side') as string) ?? '';
 
-		if (!full_name.trim()) {
-			return fail(400, { error: 'Full name is required.' });
+		if (!first_name.trim() && !last_name.trim()) {
+			return fail(400, { error: 'First or last name is required.' });
 		}
 
 		let res: Response;
@@ -404,7 +409,8 @@ export const actions: Actions = {
 					'Content-Type': 'application/json',
 				},
 				body: JSON.stringify({
-					full_name: full_name.trim(),
+					first_name: first_name.trim() || null,
+					last_name: last_name.trim() || null,
 					role_name: role_name.trim() || null,
 					raw_speaker_label: raw_speaker_label.trim() || null,
 					side: side.trim() || null,

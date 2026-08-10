@@ -31,7 +31,17 @@
 	}: CreatePersonPopoverProps = $props();
 
 	let open = $state(false);
-	let name = $state('');
+	// Phase 38 (D-01/D-03/D-09) removed full_name from PersonCreate entirely —
+	// the backend derives it from structured parts via prepare_person_name,
+	// which requires at least one of first/last non-blank. This popover never
+	// migrated off its original single "Name" field, so every submit sent a
+	// now-forbidden `full_name` key and was rejected with a 422 (found live,
+	// 2026-08-10). Mirrors the People-directory's own create-person fields
+	// (app/src/routes/admin/people/new/+page.svelte) minus middle/suffix —
+	// this popover stays intentionally minimal; full profile completion still
+	// happens later in People Admin.
+	let firstName = $state('');
+	let lastName = $state('');
 	let side = $state<'BENCH' | 'ADVOCATE'>('ADVOCATE');
 	let submitting = $state(false);
 	let errorMessage = $state<string | null>(null);
@@ -41,7 +51,8 @@
 	}
 
 	function resetForm() {
-		name = '';
+		firstName = '';
+		lastName = '';
 		side = 'ADVOCATE';
 		errorMessage = null;
 	}
@@ -120,30 +131,57 @@
 				<input type="hidden" name="raw_speaker_label" value={rawSpeakerLabel} />
 				<input type="hidden" name="side" value={resolvedSide()} />
 
-				<div style="margin-bottom: 12px;">
-					<label
-						for="cp-name-{rawSpeakerLabel}"
-						style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 4px;"
-					>
-						Name
-					</label>
-					<input
-						id="cp-name-{rawSpeakerLabel}"
-						name="full_name"
-						type="text"
-						bind:value={name}
-						style="
-							width: 100%;
-							background-color: #0f1117;
-							border: 1px solid #334155;
-							border-radius: 6px;
-							padding: 8px 12px;
-							font-size: 16px;
-							color: #e2e8f0;
-							box-sizing: border-box;
-							font-family: inherit;
-						"
-					/>
+				<div style="display: flex; gap: 8px; margin-bottom: 12px;">
+					<div style="flex: 1;">
+						<label
+							for="cp-first-{rawSpeakerLabel}"
+							style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 4px;"
+						>
+							First name
+						</label>
+						<input
+							id="cp-first-{rawSpeakerLabel}"
+							name="first_name"
+							type="text"
+							bind:value={firstName}
+							style="
+								width: 100%;
+								background-color: #0f1117;
+								border: 1px solid #334155;
+								border-radius: 6px;
+								padding: 8px 12px;
+								font-size: 16px;
+								color: #e2e8f0;
+								box-sizing: border-box;
+								font-family: inherit;
+							"
+						/>
+					</div>
+					<div style="flex: 1;">
+						<label
+							for="cp-last-{rawSpeakerLabel}"
+							style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 4px;"
+						>
+							Last name
+						</label>
+						<input
+							id="cp-last-{rawSpeakerLabel}"
+							name="last_name"
+							type="text"
+							bind:value={lastName}
+							style="
+								width: 100%;
+								background-color: #0f1117;
+								border: 1px solid #334155;
+								border-radius: 6px;
+								padding: 8px 12px;
+								font-size: 16px;
+								color: #e2e8f0;
+								box-sizing: border-box;
+								font-family: inherit;
+							"
+						/>
+					</div>
 				</div>
 
 				<div style="margin-bottom: 16px;">
@@ -205,7 +243,7 @@
 				<div style="display: flex; gap: 8px;">
 					<button
 						type="submit"
-						disabled={submitting || !name.trim()}
+						disabled={submitting || (!firstName.trim() && !lastName.trim())}
 						style="
 							flex: 1;
 							min-height: 44px;

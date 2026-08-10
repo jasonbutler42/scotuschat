@@ -1670,23 +1670,55 @@ def test_side_bucket_helper_treats_all_advocate_roles_as_one_bucket() -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def test_side_toggle_highlight_does_not_depend_on_the_side_gate() -> None:
+def test_side_toggle_highlight_stays_gated_but_the_gate_is_seeded_correctly() -> None:
+    # Corrected after a real regression: removing the gate check from the
+    # highlight (so it read `side` alone) made an untouched row's default
+    # 'UNKNOWN' side render as "Advocate active" — the toggle looked decided
+    # while the person dropdown correctly stayed locked behind an explicit
+    # click. The gate belongs in the highlight; the actual bug was that the
+    # gate itself (sideGateConfirmed) was untrustworthy on a fresh page load.
+    # See test_seeding_effect_seeds_side_gate_confirmed_from_unambiguous_evidence.
     source = _source(RESOLVE_CARD_PATH)
     body = _snippet_body(source, "sideToggle")
     bench_active = _region(body, r"benchActive\s*=", r"\n")
     advocate_active = _region(body, r"advocateActive\s*=", r"\n")
-    assert "gated" not in bench_active, (
-        "benchActive must key only on `side`, matching how argumentRoleCell and "
-        "descriptorCell already decide bench-vs-advocate — gating the highlight caused "
-        "the toggle to show neither segment active on a fresh page load (sideGateConfirmed "
-        "is client-only memory that resets on refresh) while the fields below it correctly "
-        "showed the already-saved side"
+    assert "!gated" in bench_active, (
+        "benchActive must stay gated — an unconfirmed row's side defaults to 'UNKNOWN', "
+        "and a bare `side === 'BENCH'` check would never falsely activate Bench for that "
+        "case, but the mirror bug (below) does apply to the Advocate segment"
     )
-    assert "gated" not in advocate_active, (
-        "advocateActive must key only on `side`, for the same reason as benchActive"
+    assert "!gated" in advocate_active, (
+        "advocateActive must stay gated — without this, an untouched row's default "
+        "'UNKNOWN' side satisfies `side !== 'BENCH'` and the toggle shows Advocate active "
+        "while the person dropdown is still (correctly) locked behind an explicit click"
     )
     assert "side === 'BENCH'" in bench_active
     assert "side !== 'BENCH'" in advocate_active
+
+
+def test_seeding_effect_seeds_side_gate_confirmed_from_unambiguous_evidence() -> None:
+    # sideGateConfirmed is otherwise pure client memory that resets to
+    # "locked" on every page load, even for a row explicitly confirmed in a
+    # past session — this seeds it from server-side evidence a side was
+    # already dealt with, so the gate (and therefore the toggle's highlight)
+    # survives a refresh without guessing at the genuinely ambiguous case
+    # (bare generic Advocate, no role picked yet — indistinguishable from a
+    # truly untouched row, since both store side='UNKNOWN').
+    source = _source(RESOLVE_CARD_PATH)
+    assert "sideGateConfirmed[committedRow.participant_id] = true" in source, (
+        "the seeding effect must set sideGateConfirmed for a row with unambiguous "
+        "evidence of a prior confirmation"
+    )
+    marker = source.index("sideGateConfirmed[committedRow.participant_id] = true")
+    seed_condition = source[source.rindex("if (", 0, marker) : marker]
+    assert "committedRow.side !== 'UNKNOWN'" in seed_condition, (
+        "a specific advocate role already saved is unambiguous proof of a prior "
+        "confirmation and must unlock the gate on load"
+    )
+    assert "committedRow.person_id != null" in seed_condition, (
+        "an already-committed person proves the full resolve flow (which requires a "
+        "side) already ran for this row, and must also unlock the gate on load"
+    )
 
 
 def test_seeding_effect_drops_a_side_mismatched_auto_match() -> None:

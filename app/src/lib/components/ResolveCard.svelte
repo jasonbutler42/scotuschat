@@ -438,6 +438,26 @@
 				// is still detected as a real switch.
 				if (committedRow) {
 					lastSideBucket[committedRow.participant_id] = sideBucket(committedRow.side);
+					// Checkpoint remediation (44-09, corrected): sideGateConfirmed is
+					// otherwise pure client memory that resets to "locked" on every
+					// page load, even for a row explicitly confirmed in a past
+					// session — the toggle then had to fight the fields below it for
+					// which side to display (see sideToggle's comment). Seed it true
+					// from unambiguous server-side evidence a side was already dealt
+					// with: a specific advocate role was saved (side !== 'UNKNOWN'),
+					// or a person is already committed (proves the full resolve flow,
+					// which requires a side, already ran for this row). A row saved
+					// as bare generic Advocate with no role picked yet (side stays
+					// 'UNKNOWN', the same value a truly untouched row has) is
+					// genuinely indistinguishable from untouched — it re-locks after
+					// a refresh, which costs one extra click, rather than guessing
+					// and risking a misleading always-unlocked dropdown.
+					if (
+						committedRow.side !== 'UNKNOWN' ||
+						committedRow.person_id != null
+					) {
+						sideGateConfirmed[committedRow.participant_id] = true;
+					}
 				}
 			}
 		}
@@ -694,21 +714,18 @@
 {/snippet}
 
 {#snippet sideToggle(row: MergedRow, side: string, gated: boolean, rowEditable: boolean, saving: boolean)}
-	<!-- Checkpoint remediation (44-09): the toggle's own highlight must reflect
-	     the row's actual side exactly like every other cell (argumentRoleCell,
-	     descriptorCell) already does — those never look at `gated` at all,
-	     they branch purely on `side`. Gating the highlight here caused the
-	     toggle to show neither segment active on a fresh page load for any
-	     non-auto-resolved row (sideGateConfirmed is client-only memory that
-	     resets on refresh, so `gated` starts true again even though `side`
-	     was already saved), while the fields below it correctly showed the
-	     saved side — a visible disagreement between controls describing the
-	     same row. `gated` still fully controls the person dropdown's own
-	     disabled/placeholder state (personDropdown) and the click handler's
-	     confirm-vs-plain-change branch (toggleSide) — only this display
-	     computation changes. -->
-	{@const benchActive = side === 'BENCH'}
-	{@const advocateActive = side !== 'BENCH'}
+	<!-- Checkpoint remediation (44-09, corrected): the highlight IS gated —
+	     removing that check (a prior attempt) made an untouched row's UNKNOWN
+	     side read as "Advocate active" (side !== 'BENCH'), so the toggle
+	     looked decided while the person dropdown correctly stayed locked
+	     behind an explicit click. The real bug was that `gated` itself
+	     (needsSideGate/sideGateConfirmed) was untrustworthy on a fresh page
+	     load — see the seeding effect below, which now seeds
+	     sideGateConfirmed from unambiguous server-side evidence of a prior
+	     confirmation, so `gated` is correct here without reintroducing the
+	     refresh-disagreement bug this round started from. -->
+	{@const benchActive = !gated && side === 'BENCH'}
+	{@const advocateActive = !gated && side !== 'BENCH'}
 	{@const disabled = !rowEditable || saving}
 	<div
 		role="group"

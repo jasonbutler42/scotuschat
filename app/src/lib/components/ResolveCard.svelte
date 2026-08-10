@@ -311,6 +311,18 @@
 		return side === 'BENCH' ? 'Bench' : 'Advocate';
 	}
 
+	// Task 4 checkpoint remediation (44-09, item 5, confirmed via Figma): the
+	// Resolved As cell's Bench/Advocate hint and Name hint merge into a single
+	// line — "{SideLabel} · {NameOrN/A}", or bare "N/A" while the side gate is
+	// still open. Reuses sideHintValue's own gated/label logic and
+	// resolvedAsHintValue's own raw-label-or-null logic unchanged; only the
+	// combination is new.
+	function combinedResolvedAsHintValue(row: MergedRow, side: string, gated: boolean): string | null {
+		const sideLabel = sideHintValue(side, gated);
+		if (sideLabel == null) return null;
+		return `${sideLabel} · ${resolvedAsHintValue(row) ?? 'N/A'}`;
+	}
+
 	function argumentRoleHintValue(row: MergedRow, side: string, gated: boolean): string | null {
 		if (gated) return null;
 		// Plan 44-08 (RESOLVE-12): the bench fork moved out of the hint layer and
@@ -1030,21 +1042,52 @@
 		margin-bottom: 24px;
 	"
 >
-	<h2 style="font-size: 20px; font-weight: 600; color: #e2e8f0; margin: 0 0 16px 0; line-height: 1.2;">
-		Resolve
-	</h2>
+	<!-- Task 4 checkpoint remediation (44-09, item 4, confirmed via Figma
+	     node 4207:116): the heading and the progress indicator share one
+	     flex row, heading left, pill right. -->
+	<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px;">
+		<h2 style="font-size: 20px; font-weight: 600; color: #e2e8f0; margin: 0; line-height: 1.2;">
+			Resolve
+		</h2>
 
-	<!-- Plan 44-09 (RESOLVE-15): a persistent progress line — visible before,
-	     during and after the operator works, never a transient message.
-	     Renders only while the job is paused and the review set is
-	     non-empty; an empty review set has nothing to count (delta #2 above). -->
-	{#if isPaused && reviewProgress.total > 0}
-		<p id="resolve-progress" style="font-size: 14px; color: #94a3b8; margin: 0 0 16px 0;">
-			{reviewProgress.remaining > 0
-				? `${reviewProgress.remaining} of ${reviewProgress.total} speakers still need review`
-				: `All ${reviewProgress.total} speakers reviewed`}
-		</p>
-	{/if}
+		<!-- Plan 44-09 (RESOLVE-15): a persistent progress line — visible before,
+		     during and after the operator works, never a transient message.
+		     Renders only while the job is paused and the review set is
+		     non-empty; an empty review set has nothing to count (delta #2 above).
+		     Task 4 checkpoint remediation: restyled as a pill with a
+		     status-colored dot (amber while rows remain, green once all are
+		     reviewed) rather than a bare paragraph. -->
+		{#if isPaused && reviewProgress.total > 0}
+			<div
+				id="resolve-progress"
+				style="
+					display: inline-flex;
+					align-items: center;
+					gap: 8px;
+					background-color: #0f1117;
+					border: 1px solid #334155;
+					border-radius: 12px;
+					padding: 4px 12px 4px 10px;
+				"
+			>
+				<span
+					aria-hidden="true"
+					style="
+						display: inline-block;
+						width: 6px;
+						height: 6px;
+						border-radius: 50%;
+						background-color: {reviewProgress.remaining > 0 ? '#fbbf24' : '#4ade80'};
+					"
+				></span>
+				<span style="color: #e2e8f0; font-size: 14px; font-weight: 500;">
+					{reviewProgress.remaining > 0
+						? `${reviewProgress.remaining} of ${reviewProgress.total} speakers still need review`
+						: `All ${reviewProgress.total} speakers reviewed`}
+				</span>
+			</div>
+		{/if}
+	</div>
 
 	{#if peopleLoadError}
 		<p role="alert" style="margin-bottom: 12px; font-size: 13px; color: #fbbf24; font-family: monospace;">
@@ -1119,48 +1162,53 @@
 						     are stacked in this single cell (RESOLVE-07); the person control is a
 						     single always-rendered dropdown, never a click-to-reveal link (RESOLVE-08). -->
 						<td style="font-size: 16px; color: #e2e8f0; border-bottom: 1px solid #334155; padding: 12px 0; padding-right: 12px;">
-							<!-- Plan 44-09 (RESOLVE-16): the row cue tag renders above the toggle so a
-							     scan down the column surfaces rows needing attention before rows that
-							     are already handled (canonical point 9). Non-interactive text only —
-							     no accent token, no background fill, no border. -->
-							{#if cueTag}
-								<span
-									style="
-										font-size: 14px;
-										text-transform: uppercase;
-										letter-spacing: 0.04em;
-										display: inline-block;
-										margin-bottom: 8px;
-										color: {cueTagIsWarning ? '#fbbf24' : '#94a3b8'};
-									"
-								>{cueTag}</span>
-							{/if}
+							<!-- Task 4 checkpoint remediation (44-09, items 2 and 5, confirmed via
+							     Figma nodes 4183:23/4183:25/4205:81/4205:111): corrected order is
+							     (1) toggle, (2) person control, (3) the tag, (4) one combined hint
+							     line — the tag used to render above the toggle; it now renders after
+							     the person control and before the hint. The Bench/Advocate hint and
+							     the Name hint (previously two separate call sites) are merged into
+							     one combined hint below. -->
 							{@render sideToggle(row, side, gated, rowEditable, saveState[row.participant_id]?.saving === true)}
-							<!-- Phase 44 (RESOLVE-05, D-08/D-09): Bench/Advocate hint — coarse two-
-							     value label only, "Imported: N/A" in the gate state. -->
-							<div style="margin-top: 8px;">
-								<CopyableExtractedValue
-									value={sideHintValue(side, gated)}
-									copyLabel="Copy side"
-									prefixLabel={sourcePrefix}
-									raw={null}
-								/>
-							</div>
 							{#if saveState[row.participant_id]?.error}
-								<p role="alert" style="margin: 4px 0 0 0; font-size: 13px; color: #ef4444;">
+								<p role="alert" style="margin: 8px 0 0 0; font-size: 13px; color: #ef4444;">
 									{saveState[row.participant_id]?.error}
 								</p>
 							{/if}
 							<div style="margin-top: 12px;">
 								{@render personDropdown(row, label, s, gated, side)}
 							</div>
-							<!-- Phase 44 (RESOLVE-05, D-08/D-09): Resolved As hint — the row's raw
-							     label when resolved, "Imported: N/A" otherwise (never an unconditional
-							     echo of raw_speaker_label). -->
+							<!-- Plan 44-09 (RESOLVE-16): the row cue tag — a pill (border only, no
+							     background fill), per Figma nodes 4183:23/4183:25/4205:111. The
+							     auto-matched state uses the approved Success/Bench-active token
+							     (#4ade80, UI-SPEC "Success (Bench-active)" row) — the prior plain-
+							     text treatment wrongly used the muted token (#94a3b8) for this
+							     state; the needs-attention state keeps the warning token
+							     (#fbbf24). -->
+							{#if cueTag}
+								<span
+									style="
+										display: inline-block;
+										margin-top: 8px;
+										border: 1px solid {cueTagIsWarning ? '#fbbf24' : '#4ade80'};
+										border-radius: 4px;
+										padding: 2px 8px;
+										font-size: 11px;
+										font-weight: 500;
+										letter-spacing: 0.22px;
+										color: {cueTagIsWarning ? '#fbbf24' : '#4ade80'};
+									"
+								>{cueTag}</span>
+							{/if}
+							<!-- Phase 44 (RESOLVE-05, D-08/D-09), merged by Task 4 checkpoint
+							     remediation (item 5): the Bench/Advocate hint and the Resolved As
+							     (name) hint are now one combined line —
+							     "{SideLabel} · {NameOrN/A}", or bare "N/A" while the side gate is
+							     still open. -->
 							<div style="margin-top: 8px;">
 								<CopyableExtractedValue
-									value={resolvedAsHintValue(row)}
-									copyLabel="Copy raw label"
+									value={combinedResolvedAsHintValue(row, side, gated)}
+									copyLabel="Copy resolved as"
 									prefixLabel={sourcePrefix}
 									raw={null}
 								/>
@@ -1202,9 +1250,12 @@
 	<!-- The primary CTA footer — moved into the Resolve card footer (PJOB-21).
 	     Plan 44-09 (RESOLVE-15): the form now renders whenever the job is
 	     paused, not only once every row is dispositioned — the button itself
-	     carries the completeness gate via `disabled`, with a reason line that
-	     is programmatically associated via aria-describedby so it reaches
-	     assistive technology, not only sighted users. -->
+	     carries the completeness gate via `disabled`.
+	     Task 4 checkpoint remediation (44-09, item 3, confirmed via Figma
+	     nodes 4207:119/4210:218): the reason is the button's own visible text
+	     while disabled, replacing the label entirely — there is no longer a
+	     separate reason paragraph, so it needs no aria-describedby wiring;
+	     the reason is already part of the button's own accessible name. -->
 	{#if isPaused}
 		<form
 			method="POST"
@@ -1227,28 +1278,25 @@
 			<button
 				type="submit"
 				disabled={!allDispositioned || continueSubmitting}
-				aria-describedby={reviewProgress.remaining > 0 ? 'resolve-continue-reason' : undefined}
 				style="
 					width: 100%;
 					min-height: 44px;
 					font-size: 16px;
 					font-weight: 600;
-					color: #e2e8f0;
+					color: {(reviewProgress.remaining > 0 || continueSubmitting) ? '#94a3b8' : '#e2e8f0'};
 					background: transparent;
-					border: 1px solid #93c5fd;
+					border: 1px solid {(reviewProgress.remaining > 0 || continueSubmitting) ? '#334155' : '#93c5fd'};
 					border-radius: 6px;
 					padding: 12px 24px;
 					cursor: {(reviewProgress.remaining > 0 || continueSubmitting) ? 'default' : 'pointer'};
-					opacity: {(reviewProgress.remaining > 0 || continueSubmitting) ? 0.6 : 1};
 				"
 			>
-				{continueSubmitting ? 'Submitting…' : 'Continue Resolve'}
+				{continueSubmitting
+					? 'Submitting…'
+					: reviewProgress.remaining > 0
+						? `Resolve ${reviewProgress.remaining} more to continue`
+						: 'Continue Resolve'}
 			</button>
-			{#if reviewProgress.remaining > 0}
-				<p id="resolve-continue-reason" style="font-size: 14px; color: #94a3b8; margin-top: 8px;">
-					Resolve {reviewProgress.remaining} more to continue
-				</p>
-			{/if}
 		</form>
 		{#if resolveFormError}
 			<p role="alert" style="margin-top: 8px; color: #ef4444; font-size: 14px;">

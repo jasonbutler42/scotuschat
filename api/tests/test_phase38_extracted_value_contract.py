@@ -182,7 +182,7 @@ def test_docket_pill_input_preserves_form_serialization_and_public_api() -> None
 
 
 def test_resolve_card_hints_opted_out_of_stacked_confidence_raw_per_phase_44() -> None:
-    """Phase 44 (RESOLVE-05, D-08/D-09) superseded this file's four hint call
+    """Phase 44 (RESOLVE-05, D-08/D-09) superseded this file's hint call
     sites with a single-line "Imported: …" treatment — no confidence band, no
     mirrored raw prop. See the section banner above.
 
@@ -192,10 +192,18 @@ def test_resolve_card_hints_opted_out_of_stacked_confidence_raw_per_phase_44() -
     test_phase44_resolve_table_contract.py's RESOLVE-10 section for the
     positive contract). The no-confidence/no-raw-mirroring half of this test
     is unaffected and stays as written.
+
+    44-09's Task 4 second checkpoint remediation (item 5, confirmed via
+    Figma) merges the Resolved As cell's two separate hints (Bench/Advocate
+    + Name) into one combined hint, dropping the file's total hint call-site
+    count from four to three — see
+    test_phase44_resolve_table_contract.py's
+    `test_resolve_card_has_exactly_three_hint_usages` for the positive
+    contract on the corrected count.
     """
     source = _source(RESOLVE_CARD_PATH)
-    assert source.count("prefixLabel={sourcePrefix}") == 4
-    assert source.count("raw={null}") == 4
+    assert source.count("prefixLabel={sourcePrefix}") == 3
+    assert source.count("raw={null}") == 3
     assert "confidence=" not in source
     # The component now owns the "Extracted:"/"Imported:" prefix in stacked
     # mode — no leftover caller-owned duplicate prefix.

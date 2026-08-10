@@ -58,6 +58,18 @@ two tag strings appear exactly once each in the source: `rowCueTag` carries no
 explicit return-type annotation (TypeScript infers the two-literal union from
 its return statements) precisely so each tag string is written once, not
 twice, keeping this file's own single-occurrence contract satisfiable.
+
+Plan 44-09's Task 4 second checkpoint remediation (see its own banner section
+at the end of this file) fixes: a confirmed descriptor data-loss bug
+(toggling Advocate -> Bench -> Advocate could submit an empty string over an
+already-saved descriptor) and a person-selection-survives-a-side-switch bug,
+and re-points every test this round's pill/position/structural fixes touched:
+the progress indicator (now a pill), the row cue tags (now pills, in a
+corrected position, with a fixed AUTO-MATCHED color), the Continue button's
+disabled label (now the button's own text, not a separate aria-described
+paragraph), and the Resolved As cell's hint (the Bench/Advocate hint and the
+Name hint merge into one combined line, dropping the file's hint call-site
+count from four to three).
 """
 
 import re
@@ -566,30 +578,44 @@ def test_argument_editor_page_passes_no_prefix_label() -> None:
     )
 
 
-def test_resolve_card_has_exactly_four_hint_usages() -> None:
+def test_resolve_card_has_exactly_three_hint_usages() -> None:
+    """Task 4 checkpoint remediation (44-09, item 5) re-point: the Resolved As
+    cell's separate Bench/Advocate hint and Name hint (two call sites) merged
+    into one combined hint, dropping the file's total from four call sites to
+    three (Resolved As, Argument Role, Descriptor)."""
     source = _source(RESOLVE_CARD_PATH)
-    assert source.count("<CopyableExtractedValue") == 4, (
-        "RESOLVE-05: exactly four CopyableExtractedValue usages must exist in ResolveCard.svelte"
+    assert source.count("<CopyableExtractedValue") == 3, (
+        "RESOLVE-05/checkpoint remediation: exactly three CopyableExtractedValue "
+        "usages must exist in ResolveCard.svelte after the Resolved As hint merge"
     )
-    # Plan 44-07 (RESOLVE-10) re-point: the four hints now pass the derived
-    # sourcePrefix expression instead of a hardcoded "Imported" literal — see
-    # the Plan 44-07 banner below for the dedicated sourcePrefix assertions.
-    assert source.count("prefixLabel={sourcePrefix}") == 4, (
-        "RESOLVE-05/RESOLVE-10: all four hints must pass the derived sourcePrefix expression"
+    # Plan 44-07 (RESOLVE-10) re-point: the hints pass the derived sourcePrefix
+    # expression instead of a hardcoded "Imported" literal — see the Plan
+    # 44-07 banner below for the dedicated sourcePrefix assertions.
+    assert source.count("prefixLabel={sourcePrefix}") == 3, (
+        "RESOLVE-05/RESOLVE-10: all three hints must pass the derived sourcePrefix expression"
     )
     assert not re.search(r'prefixLabel="[A-Za-z]+"', source), (
         "RESOLVE-10: no hardcoded prefix-label string may remain on any call site in this file"
     )
-    assert source.count("raw={null}") == 4, (
-        "RESOLVE-05: all four hints must pass an explicitly-null raw prop"
+    assert source.count("raw={null}") == 3, (
+        "RESOLVE-05: all three hints must pass an explicitly-null raw prop"
     )
     assert not re.search(r"confidence=", source), "RESOLVE-05: no hint may pass a confidence prop"
 
 
 def test_resolve_card_hint_copy_labels_each_appear_once() -> None:
+    """Task 4 checkpoint remediation (44-09, item 5) re-point: "Copy side" and
+    "Copy raw label" no longer exist as separate call sites — the merged
+    Resolved As hint uses a single "Copy resolved as" label."""
     source = _source(RESOLVE_CARD_PATH)
-    for label in ("Copy raw label", "Copy side", "Copy argument role", "Copy descriptor"):
+    for label in ("Copy resolved as", "Copy argument role", "Copy descriptor"):
         assert source.count(f'copyLabel="{label}"') == 1, f"expected exactly one copyLabel={label!r}"
+    assert 'copyLabel="Copy side"' not in source, (
+        "checkpoint remediation: the separate side-only hint call site is retired"
+    )
+    assert 'copyLabel="Copy raw label"' not in source, (
+        "checkpoint remediation: the separate name-only hint call site is retired"
+    )
 
 
 def test_hint_value_helpers_exist_and_bench_fork_left_the_hint_layer() -> None:
@@ -611,6 +637,30 @@ def test_hint_value_helpers_exist_and_bench_fork_left_the_hint_layer() -> None:
     )
     assert "N/A - tenure not found" not in body, (
         "RESOLVE-12: the retired missing-tenure bench hint text must not live inside this helper"
+    )
+
+
+def test_combined_resolved_as_hint_value_reuses_the_two_retired_call_sites_own_logic() -> None:
+    """Task 4 checkpoint remediation (44-09, item 5, confirmed via Figma): the
+    Bench/Advocate hint and the Name hint merge into one combined line —
+    "{SideLabel} · {NameOrN/A}", or bare "N/A" while the side gate is still
+    open. The per-field logic itself (sideHintValue's gated/label fork,
+    resolvedAsHintValue's raw-label-or-null fork) must not change — only the
+    combination is new."""
+    source = _source(RESOLVE_CARD_PATH)
+    assert "function combinedResolvedAsHintValue(" in source, (
+        "a single combined hint-value helper must exist for the merged Resolved As hint"
+    )
+    body = _function_body(source, "combinedResolvedAsHintValue")
+    assert "sideHintValue(" in body, (
+        "the combined helper must reuse sideHintValue's own gated/label logic, not duplicate it"
+    )
+    assert "resolvedAsHintValue(" in body, (
+        "the combined helper must reuse resolvedAsHintValue's own raw-label-or-null logic, "
+        "not duplicate it"
+    )
+    assert "' · '" in body or '" · "' in body or "` · `" in body or "·" in body, (
+        "the combined value must join side and name with the Figma-confirmed middle-dot separator"
     )
 
 
@@ -1226,6 +1276,46 @@ def test_progress_copy_present_for_both_states() -> None:
     )
 
 
+def test_progress_indicator_is_a_pill_with_a_status_colored_dot() -> None:
+    """Task 4 checkpoint remediation (44-09, item 4, confirmed via Figma
+    get_design_context on node 4207:116; dot fills confirmed via raw SVG):
+    a pill (dark fill, bordered, rounded) containing a 6x6px colored dot
+    (amber while rows remain, green once all are reviewed) plus the existing
+    text — not a bare paragraph."""
+    source = _source(RESOLVE_CARD_PATH)
+    region = _region(source, r'id="resolve-progress"', r"</div>")
+    assert "border-radius: 12px" in region, "the progress pill must be rounded per Figma node 4207:116"
+    assert "width: 6px" in region and "height: 6px" in region, (
+        "the status dot must be exactly 6x6px per Figma node 4207:116"
+    )
+    assert "border-radius: 50%" in region, "the status dot must be a circle"
+    assert "#fbbf24" in region and "#4ade80" in region, (
+        "the dot must fork between the amber (remaining > 0) and green (all resolved) fills "
+        "confirmed against the live mockup's raw SVG"
+    )
+
+
+def test_progress_indicator_is_positioned_inline_with_the_heading() -> None:
+    """Task 4 checkpoint remediation (44-09, item 4): per Figma, the pill sits
+    right-aligned in the same row as the "Resolve" heading, not stacked
+    beneath it."""
+    source = _source(RESOLVE_CARD_PATH)
+    heading_match = re.search(r"<h2[^>]*>\s*Resolve\s*</h2>", source)
+    assert heading_match, "the Resolve heading must exist"
+    heading_idx = heading_match.start()
+    pill_idx = source.find('id="resolve-progress"')
+    assert pill_idx != -1, "the progress pill must exist"
+    assert heading_idx < pill_idx, (
+        "the heading must precede the pill in source order, consistent with the pill "
+        "rendering to the right of the heading in the shared flex row"
+    )
+    between = source[heading_idx:pill_idx]
+    assert "</h2>" in between, (
+        "the heading and the pill must share one flex row (the heading closes before the "
+        "pill's own conditional block begins, both inside the same wrapping row element)"
+    )
+
+
 def test_progress_derives_from_the_same_person_id_predicate() -> None:
     source = _source(RESOLVE_CARD_PATH)
     progress_body = _derived_body(source, "reviewProgress")
@@ -1261,16 +1351,28 @@ def test_continue_button_is_disabled_by_completeness_inside_the_form() -> None:
     )
 
 
-def test_disabled_reason_is_programmatically_associated() -> None:
+def test_disabled_reason_is_the_buttons_own_visible_text() -> None:
+    """Task 4 checkpoint remediation (44-09, item 3, confirmed via Figma nodes
+    4207:119/4210:218): both button states are ONE <button> with ONE text
+    node — the reason replaces the label entirely rather than living beside
+    it in a separate paragraph. Since the reason is now the button's own
+    visible text, it is already part of the accessible name — no
+    aria-describedby wiring is needed, and the old separate paragraph is
+    retired along with it."""
     source = _source(RESOLVE_CARD_PATH)
     form_region = _region(source, r'action="\?/resolve"', r"</form>")
-    assert "aria-describedby" in form_region, (
-        "T-44-37: the disabled Continue button must carry aria-describedby so the reason "
-        "reaches assistive technology, not only sighted users"
+    assert "aria-describedby" not in form_region, (
+        "checkpoint remediation: no separate reason paragraph exists any more to describe"
     )
-    reason_region = _region(form_region, r'id="resolve-continue-reason"', r"</p>")
-    assert "more to continue" in reason_region, (
-        "RESOLVE-15: the element carrying the aria-describedby id must contain the reason copy"
+    assert "resolve-continue-reason" not in form_region, (
+        "checkpoint remediation: the retired standalone reason paragraph's id must be gone"
+    )
+    button_region = _region(form_region, r"<button", r"</button>")
+    assert "more to continue" in button_region, (
+        "the disabled reason must be the button's own template-literal text content"
+    )
+    assert "Continue Resolve" in button_region, (
+        "the enabled label must still be the button's own text content"
     )
 
 
@@ -1282,8 +1384,11 @@ def test_continue_enabled_label_unchanged() -> None:
 
 
 def test_progress_line_carries_no_speaker_characterisation() -> None:
+    """Task 4 checkpoint remediation (44-09, item 4) re-point: the progress
+    line is now a `<div id="resolve-progress">` pill (Figma node 4207:116),
+    not a bare `<p>`."""
     source = _source(RESOLVE_CARD_PATH)
-    region = _region(source, r'id="resolve-progress"', r"</p>")
+    region = _region(source, r'id="resolve-progress"', r"</div>")
     assert "Bench" not in region and "Advocate" not in region, (
         "RESOLVE-15/CLAUDE.md apolitical constraint: the progress line must report a single "
         "count of rows needing review, never a count split by kind of speaker"
@@ -1332,29 +1437,54 @@ def test_row_cue_tag_requires_an_untouched_suggestion() -> None:
     )
 
 
-def test_cue_tag_renders_above_the_side_toggle() -> None:
+def test_cue_tag_renders_between_the_person_dropdown_and_the_hint() -> None:
+    """Task 4 checkpoint remediation (44-09, item 2) re-point: per the actual
+    Figma frame (node 4205:81, confirmed via get_metadata), the corrected
+    order inside the Resolved As cell is (1) toggle, (2) person control, (3)
+    the tag, (4) the combined hint — the tag no longer renders above the
+    toggle."""
     source = _source(RESOLVE_CARD_PATH)
     row_region = _row_region(source)
     cells = _table_cells(row_region)
     resolved_as_cell = cells[1]
+    dropdown_idx = resolved_as_cell.find("{@render personDropdown(")
     tag_idx = resolved_as_cell.find("{#if cueTag}")
-    toggle_idx = resolved_as_cell.find("{@render sideToggle(")
+    hint_idx = resolved_as_cell.find("<CopyableExtractedValue")
+    assert dropdown_idx != -1, "the person control must still render inside the Resolved As cell"
     assert tag_idx != -1, "RESOLVE-16: the cue tag conditional must render inside the Resolved As cell"
-    assert toggle_idx != -1, "the side toggle must still render inside the Resolved As cell"
-    assert tag_idx < toggle_idx, (
-        "RESOLVE-16/canonical point 9: the tag must render above the side toggle, not below it"
+    assert hint_idx != -1, "the combined hint must still render inside the Resolved As cell"
+    assert dropdown_idx < tag_idx < hint_idx, (
+        "the tag must render after the person control and before the combined hint, per the "
+        "corrected Figma read of node 4205:81"
     )
 
 
-def test_cue_tag_uses_no_accent_token() -> None:
+def test_cue_tag_is_a_pill_with_correct_colors() -> None:
+    """Task 4 checkpoint remediation (44-09, item 2, confirmed via Figma
+    get_design_context on nodes 4183:23/4183:25 and instance 4205:111):
+    border + rounded corners + padding + typography, no background fill.
+    AUTO-MATCHED must use the approved Success/Bench-active token (#4ade80)
+    rather than the muted token (#94a3b8) the prior plain-text treatment
+    wrongly used for it."""
     source = _source(RESOLVE_CARD_PATH)
     tag_region = _region(source, r"\{#if cueTag\}", r"</span>")
+    assert "border: 1px solid" in tag_region, "the cue tag must carry a 1px solid border"
+    assert "border-radius: 4px" in tag_region, "the cue tag must carry a 4px border radius"
+    assert "padding: 2px 8px" in tag_region, "the cue tag must carry the confirmed pill padding"
+    assert "font-size: 11px" in tag_region, "the cue tag must carry the confirmed 11px type size"
+    assert "letter-spacing: 0.22px" in tag_region, (
+        "the cue tag must carry the confirmed 0.22px letter spacing (not the old 0.04em)"
+    )
+    assert "#4ade80" in tag_region, (
+        "the AUTO-MATCHED state must use the approved Success/Bench-active token (#4ade80), "
+        "not the muted token — this was a confirmed color bug, not just a missing border"
+    )
     assert "#93c5fd" not in tag_region, (
         "UI-SPEC Color table: the accent token is reserved for interactive elements — a "
         "cue tag is non-interactive text"
     )
     assert not re.search(r"background\s*:", tag_region), (
-        "RESOLVE-16: the cue tag must use no background fill, only a text color"
+        "RESOLVE-16: the cue tag must use no background fill, only a border and a text color"
     )
 
 

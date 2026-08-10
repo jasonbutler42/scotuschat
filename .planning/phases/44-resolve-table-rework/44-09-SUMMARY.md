@@ -12,8 +12,8 @@ provides:
   - "reviewProgress — a $derived.by value reading the exact same rowMatchStates[...].personId predicate allDispositioned uses, so the header count and the Continue gate cannot disagree (RESOLVE-15, T-44-36)"
   - "A persistent header progress line, visible whenever the job is paused and the review set is non-empty: 'N of M speakers still need review' / 'All M speakers reviewed'"
   - "An always-visible Continue footer while paused; the button's disabled attribute reads allDispositioned, with a reason line ('Resolve N more to continue') programmatically associated via aria-describedby (T-44-37)"
-  - "rowCueTag(row, s) — a named predicate returning 'NEEDS YOU' (checked first, so a suggested-but-gated row still reads as needing the operator), 'AUTO-MATCHED' (only while the current personId still equals the untouched auto_match_id), or null (T-44-35)"
-  - "Per-row AUTO-MATCHED/NEEDS YOU cue tags rendered at the top of the Resolved As cell, muted/warning tokens only, no accent, no background fill (RESOLVE-16)"
+  - "rowCueTag(row, s) — a named predicate returning 'NEEDS YOU' (checked first, so a suggested-but-gated row still reads as needing the operator), 'AUTO-MATCHED' (only while the current personId still equals the untouched auto_match_id), 'MANUALLY MATCHED' (third checkpoint round: any remaining row with a chosen, non-gated, non-untouched-suggestion person — an explicit provenance-disclosure tag for an operator's own pick, added by operator request, superseding RESOLVE-16's original 'carries neither tag' rule), or null (T-44-35)"
+  - "Per-row AUTO-MATCHED/NEEDS YOU/MANUALLY MATCHED cue tags rendered at the top of the Resolved As cell, muted/warning/success tokens only (muted for the new third state), no accent, no background fill (RESOLVE-16)"
 affects: []
 
 actuals:
@@ -35,6 +35,7 @@ key-files:
     - api/tests/test_phase44_resolve_table_contract.py
     - api/tests/test_phase44_argument_role_roundtrip.py
     - api/tests/test_phase38_extracted_value_contract.py
+    - .planning/REQUIREMENTS.md
 
 key-decisions:
   - "The Continue button's disabled-styling (cursor/opacity) reads reviewProgress.remaining > 0 rather than repeating !allDispositioned a second and third time inside the ?/resolve form region — the two conditions are logically equivalent (proven: disc.length===0 gives allDispositioned=true and remaining=0; disc.length>0 gives allDispositioned=(remaining===0)), and this plan's own acceptance criteria require the literal string 'allDispositioned' to appear exactly once inside that form region (on the disabled attribute itself)."
@@ -45,6 +46,8 @@ key-decisions:
   - "The side-switch-clears-person fix (`clearPersonOnSideBucketChange`) keys on a two-value BENCH/ADVOCATE bucket, not the raw `side` string, so switching among the three specific advocate roles (PETITIONER/RESPONDENT/AMICUS) never clears an already-picked person — only an actual Bench<->Advocate flip does. The baseline bucket is seeded (never cleared against) the first time it is recorded for a participant, so initial load/seeding is never mistaken for an operator-driven switch."
   - "The Resolved As cell's two separate hints (Bench/Advocate + Name) merge into one `combinedResolvedAsHintValue` call that reuses `sideHintValue`'s and `resolvedAsHintValue`'s existing per-field logic unchanged, rather than duplicating either fork — only the combination (the `·`-joined string) is new. This drops the file's total `<CopyableExtractedValue>` call-site count from four to three, requiring re-pointed assertions in both this file and the sibling `test_phase38_extracted_value_contract.py`."
   - "Commits for this remediation round were produced via a revert-and-selectively-reapply reconstruction (save the fully-edited working tree, restore each file to its pre-edit HEAD content, then reapply each concern's edits in isolation and commit) rather than editing-then-splitting a single combined diff, because the three concerns (descriptor fix, side-switch fix, visual restructuring) were implemented in one continuous session before any commit. This produced three self-consistent, independently-verified commits instead of one large one. The tail block of three new contract tests (the descriptor client-memory test plus the two side-bucket tests) was committed together with the side-switch fix rather than split further, since the two fixes' tests were appended contiguously in the same file section and splitting them by hunk would have required hand-editing a unified diff rather than reapplying whole edits — a reasonable-fidelity trade the plan's own \"e.g.\" grouping language allows."
+  - "Third checkpoint round: `rowCueTag`'s new fallback branch (`'MANUALLY MATCHED'`) is written as an unconditional `return` after the two existing checks rather than an explicit third `if`, so mutual exclusivity with the other two states is a structural property of check ORDER (needs-attention, then auto-matched, then this fallback) rather than a condition that could independently drift out of sync with the other two. This deliberately reverses RESOLVE-16's originally-stated rule (recorded in this plan's own prohibitions and re-affirmed as explicitly out-of-scope in the second remediation round above) that an operator-picked row \"carries neither tag\" — the operator's own words, given mid-review: \"in testing I realized it was needed to be explicit to maintain provenance for data.\" Distinguishing a human decision from an untouched machine suggestion is itself provenance information worth disclosing, not omitting."
+  - "The new state's color (the muted token, `#94a3b8`) is derived the same way the existing two colors are — a second rendering-only boolean, `cueTagIsAutoMatched`, mirroring rowCueTag's own auto-matched branch condition — rather than a third string comparison against `cueTag`'s own return value, preserving the existing single-occurrence-per-literal pattern (`cueTagIsWarning`/`cueTagIsAutoMatched` cover branches 1 and 2; the muted color is the ternary's unconditional else, needing no boolean of its own)."
 
 requirements-completed: [RESOLVE-15, RESOLVE-16]
 
@@ -170,11 +173,11 @@ coverage:
     rationale: "Static source contracts and a DB-gated backend round-trip test prove every confirmed defect's fix is in place and the server-side half of the descriptor fix survives an immediate (no-reload) three-step round trip, but the visual/interactive result (pill appearance, exact positioning, and a live browser round trip of the descriptor/side-switch fixes) still requires the operator's own eyes — this executor has no browser or vision tool. Deferred to the re-issued Task 4 checkpoint below."
 ---
 
-# Phase 44 Plan 09: Progress indicator, Continue gate, and row cue tags — INTERIM (paused at Task 4 checkpoint, second remediation round)
+# Phase 44 Plan 09: Progress indicator, Continue gate, and row cue tags — INTERIM (paused at Task 4 checkpoint, third remediation round)
 
-**Tasks 1-3 complete: the Resolve card now shows a persistent "N of M speakers still need review" header line, an always-visible Continue button that states why it's disabled, and per-row AUTO-MATCHED/NEEDS YOU cue tags — all reading the same personId predicate so the count and the gate cannot disagree. Task 4 (operator acceptance of the full 44-05→44-09 Figma reconciliation) is a blocking human-verify checkpoint this executor cannot perform. Its first pass was REJECTED with specific, Figma-confirmed feedback; this round fixes every confirmed defect (a real descriptor data-loss bug, a real side-switch person-selection bug, and four visual/structural corrections against the actual mockup) and re-issues the checkpoint — still not yet approved.**
+**Tasks 1-3 complete: the Resolve card now shows a persistent "N of M speakers still need review" header line, an always-visible Continue button that states why it's disabled, and per-row AUTO-MATCHED/NEEDS YOU/MANUALLY MATCHED cue tags — all reading the same personId predicate so the count and the gate cannot disagree. Task 4 (operator acceptance of the full 44-05→44-09 Figma reconciliation) is a blocking human-verify checkpoint this executor cannot perform. Its first pass was REJECTED with specific, Figma-confirmed feedback; the second round fixed every confirmed defect (a real descriptor data-loss bug, a real side-switch person-selection bug, and four visual/structural corrections against the actual mockup); this third round adds the MANUALLY MATCHED row cue tag the operator requested mid-review, deliberately superseding RESOLVE-16's originally-stated "operator-picked row carries neither tag" rule for provenance-disclosure reasons — still not yet approved.**
 
-## Status: NOT COMPLETE — paused at Task 4 checkpoint (second remediation round)
+## Status: NOT COMPLETE — paused at Task 4 checkpoint (third remediation round)
 
 This is an **interim summary**. Per the plan's own structure, Task 4 is a
 `checkpoint:human-verify` with `gate="blocking"` requiring a live browser
@@ -185,18 +188,25 @@ vision tool and has not performed, and cannot fake, that verification.
 The first Task 4 checkpoint (Tasks 1-3 accomplishments below) was rejected
 with a 12-item checklist response; see "Second Checkpoint Remediation" below
 for everything fixed in response, and "Explicitly Out of Scope" for what was
-deliberately left untouched per the operator's own direction.
+deliberately left untouched per the operator's own direction (including, at
+that time, the manually-matched tag — see "RESOLVE-16 Rule Reversal
+(Third Checkpoint Round)" further below for why that changed).
 
-`.planning/STATE.md`, `.planning/ROADMAP.md`, and `.planning/REQUIREMENTS.md`
-have deliberately **not** been updated by this run — per the calling
-instruction, they are only to be touched after operator approval, in a later
-continuation that resumes from this checkpoint.
+`.planning/STATE.md` and `.planning/ROADMAP.md` have deliberately **not**
+been updated by this run — per the calling instruction, they are only to be
+touched after operator approval, in a later continuation that resumes from
+this checkpoint. `.planning/REQUIREMENTS.md`'s RESOLVE-16 **description**
+text was updated this round to name the third tag state (explicitly
+instructed for this remediation, to keep the requirement wording accurate
+while it's being actively revised); its checkbox/traceability status is
+still unchecked/"Pending" — completion status itself is still deferred to
+post-approval, unchanged from prior rounds.
 
 ## Performance
 
-- **Tasks completed:** 3 of 4 (Task 4 pending operator action; rejected once, remediated, re-issued)
-- **Files modified (cumulative across both rounds):** `app/src/lib/components/ResolveCard.svelte`, `api/tests/test_phase44_resolve_table_contract.py`, `api/tests/test_phase44_argument_role_roundtrip.py`, `api/tests/test_phase38_extracted_value_contract.py`
-- **Commits:** 6 (3 from the first round below, 3 from this remediation round)
+- **Tasks completed:** 3 of 4 (Task 4 pending operator action; rejected once, remediated twice, re-issued)
+- **Files modified (cumulative across all three rounds):** `app/src/lib/components/ResolveCard.svelte`, `api/tests/test_phase44_resolve_table_contract.py`, `api/tests/test_phase44_argument_role_roundtrip.py`, `api/tests/test_phase38_extracted_value_contract.py`, `.planning/REQUIREMENTS.md` (description text only, this round)
+- **Commits:** 7 (3 from the first round, 3 from the second remediation round, 1 from this third round)
 
 ## Accomplishments (Tasks 1-3)
 
@@ -458,7 +468,9 @@ approved, and re-issued the Task 4 checkpoint.
   current explicit rule (an operator-chosen row carries no tag) and is not
   present in any Figma frame. `rowCueTag` still returns only
   `'AUTO-MATCHED' | 'NEEDS YOU' | null`. Flagged back as a decision for the
-  project owner, not built.
+  project owner, not built. **UPDATE (third remediation round, below):** the
+  project owner's decision was to build it — see "RESOLVE-16 Rule Reversal
+  (Third Checkpoint Round)" further below.
 - **The dedicated typeahead redesign** — operator explicitly deferred this to
   a future design phase to be specified later.
 - **The dropdown-open-causes-card-scrollbar layout issue** — operator
@@ -492,7 +504,7 @@ approved, and re-issued the Task 4 checkpoint.
 - FOUND: commit `ea68112f`
 - FOUND: commit `4f32ea8d`
 
-## Checkpoint Status: BLOCKED at Task 4 (gate=blocking, human-verify) — second remediation round, re-issued
+## Checkpoint Status (second remediation round, historical — see third round below)
 
 The first Task 4 checkpoint was rejected with specific, Figma-confirmed
 feedback (see "Second Checkpoint Remediation" above). Every confirmed defect
@@ -508,3 +520,88 @@ See the returned checkpoint message for the updated `<how-to-verify>`
 checklist. Awaiting operator sign-off in a live browser session against
 Figma file `9PDECvbdHM2vYVxt3SCwru`, page "screen mockups for GSD", nodes
 `4205:81`, `4210:81`, `4206:111`, `4194:72`.
+
+## RESOLVE-16 Rule Reversal (Third Checkpoint Round)
+
+The project owner's decision on the flagged-back item above (see "Explicitly
+out of scope" in the second remediation round) is now recorded: **build it.**
+Immediately after the second remediation round was independently verified
+(653 passed, 0 failures, `npm run check` 0 errors), and before the operator's
+re-verification pass against the checkpoint above, the operator asked for
+the "manually-matched" third cue-tag state after all, in the operator's own
+words:
+
+> "in testing I realized it was needed to be explicit to maintain provenance
+> for data."
+
+This is a deliberate **reversal**, not a clarification, of RESOLVE-16's
+originally-stated rule — recorded in this plan's own prohibitions ("A row
+whose person the operator picked themselves carries neither tag — a system
+suggestion and an operator decision are never labelled the same way") and
+re-affirmed as explicitly out of scope in the second remediation round above
+("it contradicts RESOLVE-16's current explicit rule ... and is not present
+in any Figma frame"). Distinguishing "a human decided this" from "the
+machine suggested this, untouched" is itself provenance information worth
+disclosing, not omitting — the operator's stated reason directly overturns
+the prior rule's premise (that labelling the two identically was correct
+because a system suggestion and an operator decision must never be labelled
+the same way; the correction is that they must, in fact, be labelled
+differently — which is what the new third tag now does).
+
+### What changed
+
+- `rowCueTag(row, s)` gains a third, final fallback branch: any row that
+  reaches it already has a chosen person (`s.personId` non-null, established
+  by the needs-attention check above it), is not side-gated, and is not the
+  untouched auto-match (established by the auto-matched check above it) — by
+  construction, an operator's own pick. Returns `'MANUALLY MATCHED'`.
+- The three states remain mutually exclusive purely by check ORDER
+  (needs-attention, then auto-matched, then this fallback) — no new
+  overlapping condition was introduced.
+- Pill styling matches the other two tags exactly (border + text color only,
+  4px radius, `2px 8px` padding, 11px type, `0.22px` letter-spacing, no
+  background), using the muted token (`#94a3b8`) — neutral, since this state
+  is neither a warning nor a success signal, and the accent token stays
+  reserved for interactive elements per UI-SPEC.
+- `.planning/REQUIREMENTS.md`'s RESOLVE-16 entry description now names all
+  three states and cross-references this reversal; its completion status is
+  unchanged (still unchecked/Pending — deferred to post-approval like every
+  prior round).
+- Contract tests extended (`api/tests/test_phase44_resolve_table_contract.py`):
+  `test_both_cue_tag_labels_present_once` renamed
+  `test_all_three_cue_tag_labels_present_once` and extended to assert
+  `MANUALLY MATCHED` appears exactly once; a new
+  `test_row_cue_tag_manually_matched_is_the_third_and_final_fallback` asserts
+  the branch is reachable only after both other checks in source order and
+  references `personId`; `test_cue_tag_is_a_pill_with_correct_colors`
+  extended to assert the muted token appears in the tag region alongside the
+  existing warning/success tokens.
+
+### Verification (third round)
+
+- `.venv/Scripts/python.exe -m pytest tests/conftest.py api/tests/test_phase44_resolve_table_contract.py -q` — **98 passed**, 0 failures.
+- `.venv/Scripts/python.exe -m pytest tests/conftest.py api/tests -q` — **654 passed**, 0 failures, the same 4 pre-existing collection errors documented since 44-01/02/03 (Node.js path issue in `test_phase38_people_ui_contract.py`, unrelated to this plan or this change).
+- `npm --prefix app run check` — **0 errors**, 36 pre-existing warnings (identical baseline to prior rounds — no new warnings introduced).
+- Each of `AUTO-MATCHED`, `NEEDS YOU`, `MANUALLY MATCHED` appears exactly once in `ResolveCard.svelte` (verified via `grep -c`, matching the new contract test).
+
+### Task Commit (third round)
+
+7. **MANUALLY MATCHED row cue tag + extended contract tests + REQUIREMENTS.md description update** — `c7ba7d01` (feat)
+
+### Self-Check: PASSED (third round)
+
+- FOUND: `app/src/lib/components/ResolveCard.svelte`
+- FOUND: `api/tests/test_phase44_resolve_table_contract.py`
+- FOUND: `.planning/REQUIREMENTS.md`
+- FOUND: commit `c7ba7d01`
+
+## Checkpoint Status: BLOCKED at Task 4 (gate=blocking, human-verify) — third remediation round, re-issued
+
+Every item from the second remediation round stands (unchanged, still
+awaiting operator sign-off against the same four Figma frames). This third
+round adds one net-new, operator-requested item to the same checklist: the
+Resolved As cell's row cue tag now shows **MANUALLY MATCHED** (not no tag)
+for a row where the operator picked the person themselves — verify this
+specifically alongside the existing AUTO-MATCHED/NEEDS YOU states during the
+live browser walkthrough. No other checklist item changed. Still not yet
+approved.

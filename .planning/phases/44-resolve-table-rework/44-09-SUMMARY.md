@@ -678,3 +678,36 @@ step; confirm a manually-side-confirmed advocate row's toggle stays lit
 after a refresh) and confirm both now behave correctly. The tenure-preview
 gap in scenario 3 is knowingly still open — not expected to be fixed by this
 round. Still not yet approved.
+
+### Correction (same round): the first attempt at the toggle-highlight fix was itself wrong
+
+The fourth-round fix above (commit `5261f9dd`) made `sideToggle`'s highlight
+key on `side` alone, dropping the `gated` check entirely, on the reasoning
+that `argumentRoleCell`/`descriptorCell` already do this and never
+disagreed. That reasoning missed a case: a genuinely untouched row defaults
+to `side='UNKNOWN'`, which satisfies `side !== 'BENCH'` — so the toggle
+rendered Advocate as active for a row nobody had touched yet, while the
+person dropdown correctly stayed locked behind an explicit click. The
+operator caught this immediately in live testing (reported the same turn).
+
+Corrected in `2be6f8aa`: the highlight is gated again (`!gated && side ===
+'BENCH'` / `!gated && side !== 'BENCH'`), and the actual bug — `gated`
+(`sideGateConfirmed`) being pure client memory that resets to "locked" on
+every page load regardless of prior confirmation — is fixed at its source.
+The seeding effect now sets `sideGateConfirmed[participantId] = true` when
+there's unambiguous server-side evidence a side was already confirmed: a
+specific advocate role saved (`side !== 'UNKNOWN'`), or a person already
+committed. A row saved as bare generic Advocate with no specific role ever
+picked stores the identical `'UNKNOWN'` value a truly untouched row has —
+genuinely indistinguishable from it with the data available — so that one
+case re-locks after a refresh (costs one extra click) rather than guessing
+and risking a misleading always-unlocked dropdown. The corresponding
+contract test was rewritten to match (`test_side_toggle_highlight_stays_gated_but_the_gate_is_seeded_correctly`,
+replacing the now-invalid `test_side_toggle_highlight_does_not_depend_on_the_side_gate`),
+plus a new test locking the seeding condition itself.
+
+Verification after the correction: `pytest tests/conftest.py
+api/tests/test_phase44_resolve_table_contract.py` — 101 passed; full
+`pytest tests/conftest.py api/tests` — 657 passed, 0 failures, same 4
+pre-existing collection errors; `npm --prefix app run check` — 0 errors, 36
+pre-existing warnings.

@@ -70,6 +70,20 @@ disabled label (now the button's own text, not a separate aria-described
 paragraph), and the Resolved As cell's hint (the Bench/Advocate hint and the
 Name hint merge into one combined line, dropping the file's hint call-site
 count from four to three).
+
+Plan 44-09's Task 4 THIRD checkpoint round adds a MANUALLY MATCHED row cue
+tag, requested by the operator after the second-round remediation above was
+independently verified. This is a deliberate REVERSAL of RESOLVE-16's
+originally-stated rule that "a row whose person the operator picked
+themselves carries neither tag" (see 44-05-PLAN.md and the second-round
+remediation banner's own exclusion note near the end of this file, both of
+which record the now-superseded rule) — the operator's own reasoning,
+recorded verbatim in 44-09-SUMMARY.md, is that provenance ("a human decided
+this" vs. "the machine suggested this, untouched") is itself worth
+disclosing, not omitting. `rowCueTag` now returns a three-literal union;
+each of the three tag strings still appears exactly once in the source (one
+declaration inside `rowCueTag`, no second literal anywhere else), preserving
+this file's single-occurrence contract at three terms instead of two.
 """
 
 import re
@@ -1395,10 +1409,19 @@ def test_progress_line_carries_no_speaker_characterisation() -> None:
     )
 
 
-def test_both_cue_tag_labels_present_once() -> None:
+def test_all_three_cue_tag_labels_present_once() -> None:
+    """RESOLVE-16, superseded rule (Task 4, third checkpoint round): the
+    operator explicitly requested a third tag for a self-picked row, reversing
+    44-05's original "carries neither tag" rule for provenance-disclosure
+    reasons (see 44-09-SUMMARY.md). All three tag strings must each still
+    appear exactly once in the source — one declaration per literal, no
+    duplicate quoting anywhere else."""
     source = _source(RESOLVE_CARD_PATH)
     assert source.count("AUTO-MATCHED") == 1, "RESOLVE-16: the auto-matched tag string must appear exactly once"
     assert source.count("NEEDS YOU") == 1, "RESOLVE-16: the needs-attention tag string must appear exactly once"
+    assert source.count("MANUALLY MATCHED") == 1, (
+        "RESOLVE-16 (superseded): the manually-matched tag string must appear exactly once"
+    )
 
 
 def test_row_cue_tag_predicate_exists_and_orders_needs_attention_first() -> None:
@@ -1411,6 +1434,31 @@ def test_row_cue_tag_predicate_exists_and_orders_needs_attention_first() -> None
         "RESOLVE-16/T-44-35: the needs-attention return must precede the auto-matched return — "
         "that ordering is what makes a suggested-but-still-gated row read as needing the "
         "operator rather than as already handled"
+    )
+
+
+def test_row_cue_tag_manually_matched_is_the_third_and_final_fallback() -> None:
+    """RESOLVE-16, superseded rule (Task 4, third checkpoint round): the
+    manually-matched branch must come after BOTH the needs-attention and the
+    auto-matched checks in source order (so it is only reachable once neither
+    of those has already returned), and must reference `personId` — the same
+    field the needs-attention check reads — so it is legible as "this row
+    has a chosen person that isn't the untouched suggestion", not an
+    independent, possibly-overlapping condition."""
+    source = _source(RESOLVE_CARD_PATH)
+    body = _function_body(source, "rowCueTag")
+    needs_idx = body.index("'NEEDS YOU'")
+    auto_idx = body.index("'AUTO-MATCHED'")
+    manual_idx = body.index("'MANUALLY MATCHED'")
+    assert needs_idx < manual_idx and auto_idx < manual_idx, (
+        "RESOLVE-16 (superseded): the manually-matched return must be the last of the three, "
+        "reached only when neither the needs-attention nor the auto-matched check has already "
+        "returned — this is what keeps the three states mutually exclusive by construction"
+    )
+    assert "personId" in body[auto_idx:manual_idx] or "personId" in body[:needs_idx], (
+        "RESOLVE-16 (superseded): the manually-matched branch's reachability must depend on "
+        "personId (via the needs-attention check above it already having required it to be "
+        "non-null) — the branch is an operator pick precisely because it survived that check"
     )
 
 
@@ -1465,7 +1513,10 @@ def test_cue_tag_is_a_pill_with_correct_colors() -> None:
     border + rounded corners + padding + typography, no background fill.
     AUTO-MATCHED must use the approved Success/Bench-active token (#4ade80)
     rather than the muted token (#94a3b8) the prior plain-text treatment
-    wrongly used for it."""
+    wrongly used for it. Third checkpoint round: the new MANUALLY MATCHED
+    state legitimately DOES use the muted token (#94a3b8) — it is neither a
+    warning nor a success signal, so the accent token stays reserved for
+    interactive elements only, per UI-SPEC."""
     source = _source(RESOLVE_CARD_PATH)
     tag_region = _region(source, r"\{#if cueTag\}", r"</span>")
     assert "border: 1px solid" in tag_region, "the cue tag must carry a 1px solid border"
@@ -1478,6 +1529,13 @@ def test_cue_tag_is_a_pill_with_correct_colors() -> None:
     assert "#4ade80" in tag_region, (
         "the AUTO-MATCHED state must use the approved Success/Bench-active token (#4ade80), "
         "not the muted token — this was a confirmed color bug, not just a missing border"
+    )
+    assert "#fbbf24" in tag_region, (
+        "the NEEDS YOU state must keep the approved warning token (#fbbf24)"
+    )
+    assert "#94a3b8" in tag_region, (
+        "RESOLVE-16 (superseded): the MANUALLY MATCHED state must use the muted token "
+        "(#94a3b8) — neutral, since it is neither a warning nor a success signal"
     )
     assert "#93c5fd" not in tag_region, (
         "UI-SPEC Color table: the accent token is reserved for interactive elements — a "
@@ -1507,11 +1565,18 @@ def test_cue_tag_evaluated_once_per_row() -> None:
 # covered by the re-pointed tests above (progress pill, cue tag pill and
 # position, the combined Resolved As hint, and the Continue button's
 # self-describing disabled label). Explicitly out of scope and untouched by
-# this remediation: the "manually-matched" third tag state (contradicts
-# RESOLVE-16, not in Figma), the dedicated typeahead redesign, the
+# this remediation: the dedicated typeahead redesign, the
 # dropdown-open-causes-card-scrollbar layout issue, and the hint-mirrors-
 # live-value finding (confirmed pre-existing from 44-04, already tracked as
 # backlog).
+#
+# UPDATE (Task 4, third checkpoint round): the "manually-matched" third tag
+# state noted above as out-of-scope/contradicts-RESOLVE-16 was requested by
+# the operator immediately after this remediation round was independently
+# verified. RESOLVE-16's "neither tag" rule is deliberately superseded — see
+# the module docstring's own note above and 44-09-SUMMARY.md for the
+# operator's stated provenance rationale. See the dedicated banner section
+# further below for that state's own tests.
 # ─────────────────────────────────────────────────────────────────────────────
 
 

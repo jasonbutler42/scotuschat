@@ -522,7 +522,14 @@
 		if (!s) return null;
 		if (s.personId == null || needsSideGate(row)) return 'NEEDS YOU';
 		if (row.discrepancy.auto_match_id != null && s.personId === row.discrepancy.auto_match_id) return 'AUTO-MATCHED';
-		return null;
+		// Task 4 checkpoint remediation (44-09, RESOLVE-16 supersession): the
+		// operator asked mid-review for a third, explicit tag distinguishing
+		// "a human decided this" from "the machine suggested this and it was
+		// left untouched" — provenance disclosure, not derived insight. Any row
+		// that reaches this branch already has a chosen person (s.personId is
+		// non-null per the check above) and is not side-gated and is not the
+		// untouched auto-match, so it is, by construction, an operator pick.
+		return 'MANUALLY MATCHED';
 	}
 
 	function handleSelectPerson(label: string, personId: number) {
@@ -1146,11 +1153,16 @@
 					{@const side = effectiveSide(row)}
 					{@const rowEditable = interactive && row.editable}
 					{@const cueTag = rowCueTag(row, s)}
-					<!-- Mirrors rowCueTag's own needs-attention branch condition (reusing
-					     the already-declared `gated`), so the tag's color can be picked
-					     without a second comparison against either of rowCueTag's two
-					     return values — those must each appear exactly once in this file. -->
+					<!-- Mirrors rowCueTag's own branch conditions (reusing the already-
+					     declared `gated`), so the tag's color can be picked without a
+					     second comparison against any of rowCueTag's three return
+					     values — those must each appear exactly once in this file.
+					     Third state added by Task 4 checkpoint remediation (44-09,
+					     RESOLVE-16 supersession): a truthy cueTag that is neither the
+					     needs-attention nor the auto-matched case is, by construction,
+					     the manually-matched case — no separate boolean needed. -->
 					{@const cueTagIsWarning = s?.personId == null || gated}
+					{@const cueTagIsAutoMatched = row.discrepancy?.auto_match_id != null && s?.personId === row.discrepancy?.auto_match_id}
 
 					<tr>
 						<!-- Column 1: Raw Label -->
@@ -1184,19 +1196,32 @@
 							     (#4ade80, UI-SPEC "Success (Bench-active)" row) — the prior plain-
 							     text treatment wrongly used the muted token (#94a3b8) for this
 							     state; the needs-attention state keeps the warning token
-							     (#fbbf24). -->
+							     (#fbbf24).
+							     Third state (Task 4 checkpoint remediation, RESOLVE-16
+							     supersession): the manually-matched tag — a row where the operator
+							     picked the person themselves, as opposed to an untouched machine
+							     suggestion (the auto-matched tag) or a row still awaiting input
+							     (the needs-attention tag). This deliberately reverses 44-05's
+							     original rule that an operator-picked row "carries neither tag" —
+							     the operator determined in testing that provenance ("a human
+							     decided this" vs. "the machine suggested this") is itself worth
+							     disclosing, not
+							     omitting. Uses the muted token (#94a3b8, same token used
+							     elsewhere for neutral/non-signal text) since this state is neither
+							     a warning nor a success signal — the accent token is reserved for
+							     interactive elements per UI-SPEC. -->
 							{#if cueTag}
 								<span
 									style="
 										display: inline-block;
 										margin-top: 8px;
-										border: 1px solid {cueTagIsWarning ? '#fbbf24' : '#4ade80'};
+										border: 1px solid {cueTagIsWarning ? '#fbbf24' : cueTagIsAutoMatched ? '#4ade80' : '#94a3b8'};
 										border-radius: 4px;
 										padding: 2px 8px;
 										font-size: 11px;
 										font-weight: 500;
 										letter-spacing: 0.22px;
-										color: {cueTagIsWarning ? '#fbbf24' : '#4ade80'};
+										color: {cueTagIsWarning ? '#fbbf24' : cueTagIsAutoMatched ? '#4ade80' : '#94a3b8'};
 									"
 								>{cueTag}</span>
 							{/if}

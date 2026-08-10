@@ -36,7 +36,7 @@
 - [x] **RESOLVE-13**: Bench rows show no descriptor hint and a dash; the stored descriptor is preserved (not cleared) on a side switch
 - [x] **RESOLVE-14**: Unresolved bench role renders `(resolve person first)` with no dash and no hint
 - [ ] **RESOLVE-15**: Persistent progress indicator + always-visible, reason-disabled Continue
-- [ ] **RESOLVE-16**: Auto-matched / Needs-you row cue tags
+- [ ] **RESOLVE-16**: Auto-matched / Needs-you / Manually-matched row cue tags (the manually-matched state supersedes 44-05's original "operator-picked row carries neither tag" rule — added mid-review for provenance disclosure per operator request; see 44-09-SUMMARY.md)
 
 ### Bug Fixes
 

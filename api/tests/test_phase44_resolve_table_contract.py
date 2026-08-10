@@ -1865,3 +1865,38 @@ def test_bench_role_cell_falls_back_to_the_preview_for_role_text_and_edit_link()
         "the fallback link must reuse the same /admin/people/{id} path the service "
         "constructs — not a different shape"
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Checkpoint remediation (44-09, sixth round) — a real pre-existing bug found
+# during operator live-testing of the tenure-preview feature: CreatePersonPopover
+# (nested inside this combobox's own open dropdown since an earlier round moved
+# it there) uses bits-ui's Popover.Portal, which mounts to document.body by
+# default — outside comboOutsideClick's `container`. Any click inside the
+# nested popover read as "outside the combobox" and closed it mid-interaction.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_combo_outside_click_does_not_close_on_a_click_inside_a_nested_popover() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    # handleClick is nested inside comboOutsideClick (2-tab indent) — _function_body's
+    # single-tab-closing-brace convention only holds for top-level functions, so this
+    # scopes to the enclosing comboOutsideClick instead; handleClick's body is a subset.
+    body = _function_body(source, "comboOutsideClick")
+    assert "container.contains(target)" in body, (
+        "the original in-container check must remain — this is an additional "
+        "guard, not a replacement"
+    )
+    assert "data-popover-content" in body, (
+        "a click inside any bits-ui Popover.Content (e.g. CreatePersonPopover's "
+        "portalled content) must not be treated as outside the combobox — "
+        "checked via bits-ui's own data-popover-content attribute, present on "
+        "every Popover.Content regardless of its portal target"
+    )
+    container_check_idx = body.index("container.contains(target)")
+    popover_check_idx = body.index("data-popover-content")
+    assert container_check_idx < popover_check_idx, (
+        "the in-container check must run first (cheapest, most common case); "
+        "the popover-content check is the fallback for content the portal "
+        "relocated outside container"
+    )

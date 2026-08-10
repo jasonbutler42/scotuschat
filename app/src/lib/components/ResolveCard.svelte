@@ -701,11 +701,22 @@
 	// Svelte action — close the combobox dropdown on outside click.
 	function comboOutsideClick(container: HTMLElement, rowKey: string) {
 		function handleClick(e: MouseEvent) {
-			if (!container.contains(e.target as Node)) {
-				const s = rowMatchStates[rowKey];
-				if (s) {
-					s.comboOpen = false;
-				}
+			const target = e.target as Node;
+			if (container.contains(target)) return;
+			// CreatePersonPopover (rendered inside this combobox's own open
+			// dropdown) uses bits-ui's Popover.Portal, which mounts its content
+			// to document.body by default (bits-ui's resolvePortalToProp default,
+			// confirmed in node_modules/bits-ui/dist/.../prop-resolvers.js) — NOT
+			// as a DOM descendant of `container`. Without this guard, any click
+			// inside that nested popover (the name field, the Bench/Advocate
+			// toggle, the Create person button itself) reads as "outside the
+			// combobox", closing `comboOpen` — which unmounts the entire
+			// `{#if s.comboOpen}` block, destroying the create-person popover
+			// (and its in-flight submit) mid-interaction.
+			if (target instanceof Element && target.closest('[data-popover-content]')) return;
+			const s = rowMatchStates[rowKey];
+			if (s) {
+				s.comboOpen = false;
 			}
 		}
 		$effect(() => {

@@ -1661,3 +1661,47 @@ def test_side_bucket_helper_treats_all_advocate_roles_as_one_bucket() -> None:
         "single ADVOCATE bucket, so switching among specific advocate roles never clears "
         "the person selection"
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Checkpoint remediation (44-09, third round) — the toggle's highlight must not
+# disagree with the row's other cells about which side is active, and a
+# refreshed page must not re-seed a person from the wrong side.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_side_toggle_highlight_does_not_depend_on_the_side_gate() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    body = _snippet_body(source, "sideToggle")
+    bench_active = _region(body, r"benchActive\s*=", r"\n")
+    advocate_active = _region(body, r"advocateActive\s*=", r"\n")
+    assert "gated" not in bench_active, (
+        "benchActive must key only on `side`, matching how argumentRoleCell and "
+        "descriptorCell already decide bench-vs-advocate — gating the highlight caused "
+        "the toggle to show neither segment active on a fresh page load (sideGateConfirmed "
+        "is client-only memory that resets on refresh) while the fields below it correctly "
+        "showed the already-saved side"
+    )
+    assert "gated" not in advocate_active, (
+        "advocateActive must key only on `side`, for the same reason as benchActive"
+    )
+    assert "side === 'BENCH'" in bench_active
+    assert "side !== 'BENCH'" in advocate_active
+
+
+def test_seeding_effect_drops_a_side_mismatched_auto_match() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    assert "peopleIsJusticeById" in source, (
+        "the seeding effect must build an is_justice lookup from the people prop so it can "
+        "tell whether a candidate actually belongs to the row's current side"
+    )
+    assert "sideMismatch" in source, (
+        "a bare `d.auto_match_id ?? committedRow?.person_id ?? null` fallback ignores which "
+        "side the candidate belongs to, so a person cleared by a side switch silently "
+        "reappeared on the next page load, still seeded from the pipeline's original "
+        "(now wrong-side) auto-match"
+    )
+    assert "candidateIsJustice != null" in source, (
+        "the mismatch check must fail open (RESOLVE-09 convention) when a candidate's "
+        "is_justice is unknown — only a positively-confirmed mismatch drops the seed"
+    )

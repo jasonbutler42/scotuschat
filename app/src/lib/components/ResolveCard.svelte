@@ -391,6 +391,10 @@
 		for (const r of resolveRows) {
 			rowsByLabel.set(r.raw_speaker_label, r);
 		}
+		const peopleIsJusticeById = new Map<number, boolean>();
+		for (const p of people) {
+			if (p.is_justice != null) peopleIsJusticeById.set(p.id, p.is_justice);
+		}
 		for (const d of disc) {
 			if (!(d.raw_speaker_label in rowMatchStates)) {
 				// D-03/D-04: any row with an auto-match candidate (or an already-committed
@@ -399,10 +403,30 @@
 				// personId is seeded non-null (no Confirm button exists, no disposition
 				// field to track separately any more).
 				const committedRow = rowsByLabel.get(d.raw_speaker_label);
+				const candidateId = d.auto_match_id ?? committedRow?.person_id ?? null;
+				// Checkpoint remediation (44-09): a bare fallback here ignores which
+				// side the candidate actually belongs to. On a fresh page load the
+				// row's own `side` already reflects any switch made in a prior
+				// session (side changes save immediately via ?/saveResolveRow), but
+				// this seed used to re-fill the dropdown from the pipeline's original
+				// auto-match / a stale committed person_id regardless — so a person
+				// cleared by switching sides silently reappeared on refresh, still
+				// attached to the side they no longer belong to. Fail open (RESOLVE-09
+				// convention): only drop the candidate when we can positively confirm
+				// its side doesn't match; an unknown is_justice still seeds normally.
+				const currentBucket = sideBucket(committedRow?.side ?? 'UNKNOWN');
+				const candidateIsJustice =
+					candidateId != null ? peopleIsJusticeById.get(candidateId) : undefined;
+				const sideMismatch =
+					candidateIsJustice != null &&
+					((currentBucket === 'BENCH') !== candidateIsJustice);
+				const seededPersonId = sideMismatch ? null : candidateId;
 				rowMatchStates[d.raw_speaker_label] = {
-					personId: d.auto_match_id ?? committedRow?.person_id ?? null,
+					personId: seededPersonId,
 					extraCandidates: [],
-					comboQuery: d.auto_match_name ?? committedRow?.full_name ?? '',
+					comboQuery: sideMismatch
+						? ''
+						: (d.auto_match_name ?? committedRow?.full_name ?? ''),
 					comboOpen: false,
 					comboHighlight: -1,
 				};
@@ -670,8 +694,21 @@
 {/snippet}
 
 {#snippet sideToggle(row: MergedRow, side: string, gated: boolean, rowEditable: boolean, saving: boolean)}
-	{@const benchActive = !gated && side === 'BENCH'}
-	{@const advocateActive = !gated && side !== 'BENCH'}
+	<!-- Checkpoint remediation (44-09): the toggle's own highlight must reflect
+	     the row's actual side exactly like every other cell (argumentRoleCell,
+	     descriptorCell) already does — those never look at `gated` at all,
+	     they branch purely on `side`. Gating the highlight here caused the
+	     toggle to show neither segment active on a fresh page load for any
+	     non-auto-resolved row (sideGateConfirmed is client-only memory that
+	     resets on refresh, so `gated` starts true again even though `side`
+	     was already saved), while the fields below it correctly showed the
+	     saved side — a visible disagreement between controls describing the
+	     same row. `gated` still fully controls the person dropdown's own
+	     disabled/placeholder state (personDropdown) and the click handler's
+	     confirm-vs-plain-change branch (toggleSide) — only this display
+	     computation changes. -->
+	{@const benchActive = side === 'BENCH'}
+	{@const advocateActive = side !== 'BENCH'}
 	{@const disabled = !rowEditable || saving}
 	<div
 		role="group"

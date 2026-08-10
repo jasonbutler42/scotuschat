@@ -1046,3 +1046,47 @@ async def list_resolve_rows_for_job(db: AsyncSession, job_id: int) -> list[dict]
                 }
             )
     return rows
+
+
+async def bench_role_preview_for_job(
+    db: AsyncSession, job_id: int, person_id: int
+) -> tuple[Optional[str], bool]:
+    """Preview (bench_role, missing_tenure) for a candidate BENCH pick that has
+    not yet been committed to ArgumentParticipant.person_id (Plan 44-09
+    tenure-preview follow-up).
+
+    Reuses _bench_role_and_missing_tenure — the identical derivation
+    list_resolve_rows_for_job (above) and admin_arguments.list_argument_speakers
+    already call — against the job's linked argument's argued_date, so the
+    preview can never drift from what the committed row would eventually show.
+    person_id need not already be a participant on this argument: a preview by
+    definition previews a pick the operator has not committed yet.
+
+    Scoped by job_id rather than a client-supplied argument_id, matching the
+    IDOR guard already established for the sibling resolve-rows routes
+    (T-25-06/T-25-14) — the argument is always derived from the job, never
+    trusted directly from the client.
+
+    Raises ValueError if the job does not exist or has no linked argument,
+    mirroring list_resolve_rows_for_job (mapped to a 422 by the router).
+    """
+    job_result = await db.execute(select(AdminJob).where(AdminJob.id == job_id))
+    job = job_result.scalar_one_or_none()
+    if job is None:
+        raise ValueError(f"AdminJob {job_id} not found")
+    if job.argument_id is None:
+        raise ValueError(f"AdminJob {job_id} has no linked argument")
+
+    arg_result = await db.execute(
+        select(Argument).where(Argument.id == job.argument_id)
+    )
+    argument = arg_result.scalar_one_or_none()
+    if argument is None:
+        raise ValueError(f"Argument not found for job {job_id}")
+
+    tenures_result = await db.execute(
+        select(CourtTenure).where(CourtTenure.person_id == person_id)
+    )
+    tenures = list(tenures_result.scalars().all())
+
+    return _bench_role_and_missing_tenure(tenures, argument.argued_date)

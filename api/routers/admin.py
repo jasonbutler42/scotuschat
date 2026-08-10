@@ -82,6 +82,7 @@ from api.schemas.admin_dashboard import (
     UtteranceCount,
 )
 from api.schemas.admin_people import (
+    BenchRolePreview,
     MergePreview,
     MergeRequest,
     ParticipantItem,
@@ -624,6 +625,37 @@ async def list_resolve_rows(
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return [ResolveRow(**r) for r in rows]
+
+
+@router.get(
+    "/jobs/{job_id}/people/{person_id}/bench-role-preview",
+    response_model=BenchRolePreview,
+)
+async def preview_bench_role(
+    job_id: int,
+    person_id: int,
+    db: AsyncSession = Depends(get_db),
+) -> BenchRolePreview:
+    """
+    Preview a candidate's tenure-derived bench role before the Resolve card's
+    batch ?/resolve commit writes it (Plan 44-09 tenure-preview follow-up,
+    operator-approved during Task 4 remediation).
+
+    Read-only — never writes ArgumentParticipant.person_id or any other row.
+    Scoped by job_id, never a client-supplied argument_id, matching the
+    sibling resolve-rows routes' IDOR guard (T-25-06/T-25-14): the argument
+    (and its argued_date) is always derived from the job.
+
+    Returns 422 if the job does not exist or has no linked argument.
+    Auth inherited from router-level verify_admin_token dependency.
+    """
+    try:
+        bench_role, missing_tenure = await people_service.bench_role_preview_for_job(
+            db, job_id, person_id
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return BenchRolePreview(bench_role=bench_role, missing_tenure=missing_tenure)
 
 
 @router.get("/people", response_model=list[PersonListItem])

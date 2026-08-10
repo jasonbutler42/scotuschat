@@ -396,4 +396,22 @@ class ResolveRow(BaseModel):
     person_edit_href: Optional[str] = None
     editable: bool = True
 
+
+class BenchRolePreview(BaseModel):
+    """Response from GET /api/admin/jobs/{job_id}/people/{person_id}/bench-role-preview
+    (Plan 44-09 tenure-preview follow-up, RESOLVE-15/16 remediation).
+
+    Previews the tenure-derived bench role for a person the operator has
+    picked for a BENCH row but not yet committed via the Resolve card's batch
+    ?/resolve submit — ArgumentParticipant.person_id is two-phase (client-side
+    pick, then batch commit), so ResolveRow.bench_role/missing_tenure stay
+    null/false for that row until the commit lands. This mirrors
+    _bench_role_and_missing_tenure's own (bench_role, missing_tenure) shape
+    exactly, computed against the same person and the same argument's
+    argued_date the eventual committed row would use.
+    """
+
+    bench_role: Optional[str] = None
+    missing_tenure: bool = False
+
     model_config = {"from_attributes": True}

@@ -29,13 +29,19 @@ tech-stack:
     - "Omit an explicit return-type annotation on a function returning a small string-literal union when a duplicate-literal-count acceptance criterion would otherwise force writing each literal twice (once in the annotation, once in a return) — TypeScript still infers the correct union type from the return statements"
 
 key-files:
-  created: []
+  created:
+    - api/tests/test_phase44_bench_role_preview.py
+    - "app/src/routes/admin/pipeline/[job_id]/bench-role-preview/+server.ts"
   modified:
     - app/src/lib/components/ResolveCard.svelte
     - api/tests/test_phase44_resolve_table_contract.py
     - api/tests/test_phase44_argument_role_roundtrip.py
     - api/tests/test_phase38_extracted_value_contract.py
     - .planning/REQUIREMENTS.md
+    - api/routers/admin.py
+    - api/schemas/admin_people.py
+    - api/services/admin_people.py
+    - "app/src/routes/admin/pipeline/[job_id]/+page.svelte"
 
 key-decisions:
   - "The Continue button's disabled-styling (cursor/opacity) reads reviewProgress.remaining > 0 rather than repeating !allDispositioned a second and third time inside the ?/resolve form region — the two conditions are logically equivalent (proven: disc.length===0 gives allDispositioned=true and remaining=0; disc.length>0 gives allDispositioned=(remaining===0)), and this plan's own acceptance criteria require the literal string 'allDispositioned' to appear exactly once inside that form region (on the disabled attribute itself)."
@@ -173,11 +179,11 @@ coverage:
     rationale: "Static source contracts and a DB-gated backend round-trip test prove every confirmed defect's fix is in place and the server-side half of the descriptor fix survives an immediate (no-reload) three-step round trip, but the visual/interactive result (pill appearance, exact positioning, and a live browser round trip of the descriptor/side-switch fixes) still requires the operator's own eyes — this executor has no browser or vision tool. Deferred to the re-issued Task 4 checkpoint below."
 ---
 
-# Phase 44 Plan 09: Progress indicator, Continue gate, and row cue tags — INTERIM (paused at Task 4 checkpoint, third remediation round)
+# Phase 44 Plan 09: Progress indicator, Continue gate, and row cue tags — INTERIM (paused at Task 4 checkpoint, fifth remediation round)
 
-**Tasks 1-3 complete: the Resolve card now shows a persistent "N of M speakers still need review" header line, an always-visible Continue button that states why it's disabled, and per-row AUTO-MATCHED/NEEDS YOU/MANUALLY MATCHED cue tags — all reading the same personId predicate so the count and the gate cannot disagree. Task 4 (operator acceptance of the full 44-05→44-09 Figma reconciliation) is a blocking human-verify checkpoint this executor cannot perform. Its first pass was REJECTED with specific, Figma-confirmed feedback; the second round fixed every confirmed defect (a real descriptor data-loss bug, a real side-switch person-selection bug, and four visual/structural corrections against the actual mockup); this third round adds the MANUALLY MATCHED row cue tag the operator requested mid-review, deliberately superseding RESOLVE-16's originally-stated "operator-picked row carries neither tag" rule for provenance-disclosure reasons — still not yet approved.**
+**Tasks 1-3 complete: the Resolve card now shows a persistent "N of M speakers still need review" header line, an always-visible Continue button that states why it's disabled, and per-row AUTO-MATCHED/NEEDS YOU/MANUALLY MATCHED cue tags — all reading the same personId predicate so the count and the gate cannot disagree. Task 4 (operator acceptance of the full 44-05→44-09 Figma reconciliation) is a blocking human-verify checkpoint this executor cannot perform. Its first pass was REJECTED with specific, Figma-confirmed feedback; the second round fixed every confirmed defect (a real descriptor data-loss bug, a real side-switch person-selection bug, and four visual/structural corrections against the actual mockup); the third round added the MANUALLY MATCHED row cue tag the operator requested mid-review; the fourth round root-caused and fixed two live-testing regressions (toggle-highlight/gate disagreement, side-mismatched seeding); this fifth round builds the tenure-preview endpoint the fourth round deliberately deferred — still not yet approved.**
 
-## Status: NOT COMPLETE — paused at Task 4 checkpoint (third remediation round)
+## Status: NOT COMPLETE — paused at Task 4 checkpoint (fifth remediation round)
 
 This is an **interim summary**. Per the plan's own structure, Task 4 is a
 `checkpoint:human-verify` with `gate="blocking"` requiring a live browser
@@ -711,3 +717,105 @@ api/tests/test_phase44_resolve_table_contract.py` — 101 passed; full
 `pytest tests/conftest.py api/tests` — 657 passed, 0 failures, same 4
 pre-existing collection errors; `npm --prefix app run check` — 0 errors, 36
 pre-existing warnings.
+
+## Fifth Checkpoint Round — tenure-preview endpoint built (approved feature, not a defect fix)
+
+The fourth round left one item deliberately unfixed: a Bench row's
+tenure-derived Argument Role didn't appear until the batch `?/resolve`
+commit wrote `ArgumentParticipant.person_id`, because `benchRoleState`
+keyed on that committed value and a person pick lives only in client-side
+`rowMatchStates` until commit. The operator explicitly approved building a
+live preview endpoint rather than a client-side workaround. This round
+builds it, after reading `_bench_role_and_missing_tenure` and both its
+existing call sites (`list_resolve_rows_for_job`,
+`admin_arguments.list_argument_speakers`) in full, per the paused session's
+own discipline note.
+
+### What was built
+
+- **`GET /api/admin/jobs/{job_id}/people/{person_id}/bench-role-preview`**
+  (`api/routers/admin.py`) — read-only, scoped by `job_id` (never a
+  client-supplied `argument_id`), matching the sibling resolve-rows routes'
+  IDOR guard (T-25-06/T-25-14). Backed by a new service function,
+  `bench_role_preview_for_job` (`api/services/admin_people.py`), which
+  derives the job's linked argument's `argued_date`, fetches the candidate
+  person's `CourtTenure` rows, and calls `_bench_role_and_missing_tenure` —
+  the identical derivation the committed path uses, never a duplicate. The
+  candidate need not already be an `ArgumentParticipant` on the argument —
+  a preview by definition previews an uncommitted pick. New schema:
+  `BenchRolePreview` (`api/schemas/admin_people.py`).
+- **A new SvelteKit proxy route**,
+  `app/src/routes/admin/pipeline/[job_id]/bench-role-preview/+server.ts`,
+  mirroring the sibling polling `+server.ts`'s pattern — client code in
+  `ResolveCard.svelte` never calls `FASTAPI_BASE_URL` directly
+  (Architecture Rule 2). `+page.svelte` now passes `jobId={liveJob.id}` into
+  `ResolveCard`.
+- **`ResolveCard.svelte` wiring**: a new `$effect` scans every BENCH row on
+  each pass and fetches a preview for any row with an uncommitted person
+  pick (`rowMatchStates[label].personId` non-null, `row.person_id` still
+  null) — covering a manual dropdown pick, a freshly created bench person,
+  and a pipeline auto-match the seeding effect pre-filled, uniformly,
+  without hooking every mutation site individually. A
+  `benchRolePreviewFetched` dedup cache keyed by `participantId:personId`
+  keeps this effect (which re-scans all rows on any row's state change) to
+  at most one fetch per distinct pick. `benchRoleState` and
+  `argumentRoleCell` now fall back to the preview's `bench_role`/
+  `missing_tenure`/derived edit-link — but **only** when the stored
+  preview's own `personId` still equals the row's current pick, so a slow
+  response for a candidate the operator has since moved away from is never
+  rendered under the new pick (44-06's prohibition: a tenure-derived role
+  must never be older than the request that rendered it).
+
+### Verification
+
+- `./.venv/Scripts/python.exe -m pytest tests/conftest.py api/tests/test_phase44_resolve_table_contract.py api/tests/test_phase44_bench_role_preview.py -q` — **117 passed**, 0 failures.
+- `./.venv/Scripts/python.exe -m pytest tests/conftest.py api/tests pipeline/tests -q` — **899 passed, 5 xfailed**, 0 failures, the same 4 pre-existing collection errors documented since 44-01/02/03 (Node.js path issue in `test_phase38_people_ui_contract.py`, unrelated to this plan).
+- `npm --prefix app run check` — **806 files, 0 errors**, 36 pre-existing warnings (identical baseline to every prior round).
+- Two pre-existing anchor-region tests (`test_edit_person_link_opens_in_a_new_tab_with_noopener`, `test_edit_person_accessible_name_excludes_the_glyph`) were re-pointed: their `{#if row.person_edit_href}` start pattern legitimately grew a second disjunct (`|| previewedPersonId != null`) so the Edit person link still renders for an uncommitted preview pick; the anchor markup itself (new-tab target, `rel="noopener"`, aria-hidden glyph) is unchanged.
+- `git diff --name-only` for this round touches exactly: `api/routers/admin.py`, `api/schemas/admin_people.py`, `api/services/admin_people.py`, `app/src/lib/components/ResolveCard.svelte`, `app/src/routes/admin/pipeline/[job_id]/+page.svelte`, plus the two new files listed in `key-files.created` above — no other file, and the same pre-existing not-mine changes (`.env.example`, `app/.env.example`, `app/vite.config.ts`, `scripts/dev-start.ps1`, the todos-directory move) remain untouched.
+
+### Task Commits (fifth round)
+
+8. **Tenure-preview endpoint (service + schema + router)** — `ba3e95d2` (feat)
+9. **ResolveCard wiring + SvelteKit proxy route** — `42d88ead` (feat)
+10. **Backend + frontend tests for both** — `6cf7149e` (test)
+
+### Self-Check: PASSED (fifth round)
+
+- FOUND: `api/routers/admin.py`
+- FOUND: `api/schemas/admin_people.py`
+- FOUND: `api/services/admin_people.py`
+- FOUND: `app/src/lib/components/ResolveCard.svelte`
+- FOUND: `app/src/routes/admin/pipeline/[job_id]/+page.svelte`
+- FOUND: `app/src/routes/admin/pipeline/[job_id]/bench-role-preview/+server.ts`
+- FOUND: `api/tests/test_phase44_bench_role_preview.py`
+- FOUND: commit `ba3e95d2`
+- FOUND: commit `42d88ead`
+- FOUND: commit `6cf7149e`
+
+## Checkpoint Status: BLOCKED at Task 4 (gate=blocking, human-verify) — fifth round, re-issued
+
+Everything from the fourth round stands (still awaiting operator sign-off
+against Figma nodes 4205:81, 4210:81, 4206:111, 4194:72, including a repeat
+of scenarios 1/2 from the operator's live-testing report). This round adds
+the tenure-preview endpoint that closes scenario 3's remaining half — the
+piece the fourth round deliberately left open. Add to the live walkthrough:
+
+13. On a BENCH row with no person yet resolved, open the person dropdown
+    and pick a candidate with a covering tenure. Confirm the Argument Role
+    cell switches from "(resolve person first)" to the calculated role
+    (locked box, "Calculated from tenure") **immediately**, before clicking
+    Continue Resolve.
+14. Pick a different bench candidate for the same row (one with no
+    covering tenure). Confirm the cell switches to the "⚠ Missing tenure"
+    state, including a working new-tab "Edit person" link, still before
+    commit.
+15. Click Continue Resolve to commit the batch. Confirm the role shown
+    immediately before commit matches what renders after the page reloads
+    (i.e., the preview and the committed value agree).
+16. Refresh a paused job that has an auto-matched-but-uncommitted BENCH
+    row. Confirm its Argument Role cell shows the calculated/missing-tenure
+    state on load, not "(resolve person first)" — this is the seeding-effect
+    path, not the manual-pick path, and both must work.
+
+Still not yet approved.

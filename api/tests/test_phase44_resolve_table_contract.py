@@ -1737,3 +1737,26 @@ def test_seeding_effect_drops_a_side_mismatched_auto_match() -> None:
         "the mismatch check must fail open (RESOLVE-09 convention) when a candidate's "
         "is_justice is unknown — only a positively-confirmed mismatch drops the seed"
     )
+
+
+def test_combined_hint_freezes_the_extracted_side_not_the_live_toggle() -> None:
+    # Live operator testing found that combinedResolvedAsHintValue passed the
+    # live `side` prop straight into sideHintValue, so the hint's text
+    # changed every time Bench/Advocate was toggled — defeating its purpose
+    # (comparing the operator's current decision against what the source
+    # document actually said). Fixed by feeding it
+    # `row.discrepancy?.extracted_side` — a value the pipeline now freezes
+    # into the discrepancy blob before any operator edit can touch it.
+    source = _source(RESOLVE_CARD_PATH)
+    assert "extracted_side" in source, (
+        "the Discrepancy interface and the combined hint must reference extracted_side"
+    )
+    body = _function_body(source, "combinedResolvedAsHintValue")
+    assert "row.discrepancy?.extracted_side" in body, (
+        "the combined hint must read the frozen extracted_side, not the live `side` "
+        "parameter, for the value it feeds into sideHintValue"
+    )
+    assert "sideHintValue(extractedSide" in body, (
+        "sideHintValue must be called with the frozen extractedSide, not the bare `side` "
+        "prop — this is the exact regression the operator reported"
+    )

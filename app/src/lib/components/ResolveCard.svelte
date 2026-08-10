@@ -52,6 +52,12 @@
 		auto_match_role?: string | null;
 		auto_resolved?: boolean | null;
 		candidates: Candidate[];
+		// Phase 44 hint-snapshot fix: the side as classified at parse/import
+		// time, frozen into the discrepancy blob before any operator edit can
+		// overwrite ArgumentParticipant.side — lets the Resolve As hint show
+		// what was actually extracted independent of the live toggle. Absent
+		// on discrepancies created before this fix shipped (older jobs).
+		extracted_side?: string | null;
 	}
 
 	interface ResolveRow {
@@ -317,8 +323,22 @@
 	// still open. Reuses sideHintValue's own gated/label logic and
 	// resolvedAsHintValue's own raw-label-or-null logic unchanged; only the
 	// combination is new.
+	//
+	// Checkpoint remediation (44-09, live testing): the side fed into
+	// sideHintValue is `row.discrepancy?.extracted_side` — the side as it
+	// stood right after parse/import, frozen into the discrepancy blob
+	// before any operator edit could overwrite it (see the pipeline's
+	// discrepancy-building steps) — not the live `side` prop. A hint whose
+	// text changes every time the operator toggles
+	// Bench/Advocate cannot answer the one question it exists to answer:
+	// "what did the source document actually say," so it must stay frozen
+	// regardless of the current toggle. Falls back to the live `side` only
+	// for discrepancies created before this fix shipped, which never
+	// captured extracted_side — better than showing nothing for old jobs,
+	// though it still won't be frozen for those.
 	function combinedResolvedAsHintValue(row: MergedRow, side: string, gated: boolean): string | null {
-		const sideLabel = sideHintValue(side, gated);
+		const extractedSide = row.discrepancy?.extracted_side ?? side;
+		const sideLabel = sideHintValue(extractedSide, gated);
 		if (sideLabel == null) return null;
 		return `${sideLabel} · ${resolvedAsHintValue(row) ?? 'N/A'}`;
 	}

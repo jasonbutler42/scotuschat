@@ -431,6 +431,10 @@ def _build_discrepancies(participants: list[ArgumentParticipant]) -> list[dict]:
             "auto_match_name": p.raw_speaker_label,
             "auto_match_role": None,
             "auto_resolved": True,
+            # Phase 44 hint-snapshot fix: mirrors resolve.py's HIT branch —
+            # freezes the side as classified at import time so the Resolve
+            # card's hint can show it independent of any later operator edit.
+            "extracted_side": p.side.value if p.side is not None else None,
         }
         for p in participants
         if p.person_id is not None

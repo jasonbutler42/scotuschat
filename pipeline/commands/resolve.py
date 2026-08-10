@@ -195,6 +195,23 @@ async def _run_resolve_inner(args) -> None:
             )
             people_rows = people_result.all()
 
+            # Phase 44 hint-snapshot fix: capture each participant's side as it
+            # stood right after parse (before any operator edit can overwrite
+            # ArgumentParticipant.side) into the discrepancy blob itself, so the
+            # Resolve card's "Extracted:"/"Imported:" hint can show what the PDF
+            # actually said independent of the operator's current Bench/Advocate
+            # toggle. discrepancies is an untyped JSON column (list[dict] in the
+            # API schema) so this needs no migration and no schema change.
+            participant_sides_result = await session.execute(
+                select(
+                    ArgumentParticipant.raw_speaker_label,
+                    ArgumentParticipant.side,
+                ).where(ArgumentParticipant.argument_id == parse_run.argument_id)
+            )
+            extracted_side_by_label: dict[str, str] = {
+                label: side.value for label, side in participant_sides_result.all()
+            }
+
             # Step 4: Resolve each unique label
             for raw_label in raw_labels:
                 normalized = normalize_label(raw_label)
@@ -251,6 +268,7 @@ async def _run_resolve_inner(args) -> None:
                             "auto_match_name": person.full_name,
                             "auto_match_role": auto_match_role,
                             "auto_resolved": True,
+                            "extracted_side": extracted_side_by_label.get(raw_label),
                         }
                     )
 
@@ -278,6 +296,7 @@ async def _run_resolve_inner(args) -> None:
                             "auto_match_name": None,
                             "auto_match_role": None,
                             "auto_resolved": None,
+                            "extracted_side": extracted_side_by_label.get(raw_label),
                         }
                     )
 

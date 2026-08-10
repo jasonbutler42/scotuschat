@@ -232,6 +232,7 @@ async def test_discrepancies_are_hit_shaped_for_advocate_and_bench(
         "auto_match_name",
         "auto_match_role",
         "auto_resolved",
+        "extracted_side",
     }
     labels = {d["raw_speaker_label"] for d in job.discrepancies}
     assert labels == {"Jane Roe", "Test Justice Bench"}
@@ -243,6 +244,10 @@ async def test_discrepancies_are_hit_shaped_for_advocate_and_bench(
         assert d["auto_match_id"] is not None
         assert d["auto_match_name"] == d["raw_speaker_label"]
         assert d["auto_match_role"] is None
+        # Phase 44 hint-snapshot fix: the side classified at import time,
+        # frozen into the discrepancy blob so the Resolve card's hint can
+        # show it independent of any later operator edit.
+        assert d["extracted_side"] in ("BENCH", "PETITIONER", "RESPONDENT", "AMICUS", "UNKNOWN")
 
 
 @pytest.mark.asyncio

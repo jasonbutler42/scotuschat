@@ -138,6 +138,21 @@
 	// specific advocate role picked per row so the toggle can restore it instead.
 	let lastAdvocateRole = $state<Record<number, string>>({});
 
+	// Task 4 checkpoint remediation (44-09, item 9 — confirmed data-loss bug):
+	// `list_resolve_rows_for_job` correctly reports descriptor: null while a
+	// row is on BENCH (44-06, by design — "hidden, not shown"). Without this
+	// memory, toggling Advocate -> Bench -> Advocate destroys an already-saved
+	// descriptor: the moment the Advocate branch re-renders, the descriptor
+	// `<input>` reappears bound to the now-null row.descriptor prop (''), and
+	// because toggleSide's own submitRow() fires synchronously in the same
+	// click (flushSync() then requestSubmit(), same pattern as
+	// lastAdvocateRole above), that empty string is submitted in the SAME
+	// request as the side change — and since side is no longer BENCH, the
+	// server writes descriptor="". This mirrors lastAdvocateRole exactly: a
+	// per-participant client-side memory that survives the row's own prop
+	// going null while hidden.
+	let lastDescriptorValue = $state<Record<number, string>>({});
+
 	function specificAdvocateRole(value: string): string | null {
 		return value === 'PETITIONER' || value === 'RESPONDENT' || value === 'AMICUS' ? value : null;
 	}
@@ -533,7 +548,10 @@
 			form={rowFormId(row.participant_id)}
 			name="descriptor"
 			type="text"
-			value={row.descriptor ?? ''}
+			value={lastDescriptorValue[row.participant_id] ?? row.descriptor ?? ''}
+			oninput={(e) => {
+				lastDescriptorValue[row.participant_id] = (e.target as HTMLInputElement).value;
+			}}
 			onblur={() => submitRow(row.participant_id)}
 			placeholder="e.g. Attorney, Location, or Affiliation"
 			disabled={saving}

@@ -15,6 +15,13 @@ untouched rather than forcing it to null (RESOLVE-13, superseding PJOB-15's
 storage half — see `api/tests/test_admin_jobs_phase25.py`'s inverted bench
 test for the canonical version of this assertion).
 
+Part 3 (DB-gated, added by 44-09's Task 4 second checkpoint remediation,
+item 9): an immediate three-step Advocate -> Bench -> Advocate round trip in
+one session (no manual page reload) proving the server-side half of the
+confirmed descriptor data-loss fix — the client-side half
+(`lastDescriptorValue` in ResolveCard.svelte) is covered by a static source
+contract in `test_phase44_resolve_table_contract.py`.
+
 Following the project pattern (`test_admin_people_phase25.py`,
 `test_admin_jobs_phase25.py`):
   - Schema/pure-function tests run without a database.
@@ -160,6 +167,169 @@ async def test_argument_role_round_trips_for_each_real_advocate_role(
             updated_bench = await update_resolve_row_for_job(db, job_id, bench_body)
             assert updated_bench.side == SideEnum.BENCH
             assert updated_bench.descriptor == "Counsel of Record"
+    finally:
+        async with AsyncSessionLocal() as db:
+            seeded_participant = await db.get(ArgumentParticipant, participant_id)
+            if seeded_participant is not None:
+                await db.delete(seeded_participant)
+            seeded_job = await db.get(AdminJob, job_id)
+            if seeded_job is not None:
+                await db.delete(seeded_job)
+            seeded_arg = await db.get(Argument, arg_id)
+            if seeded_arg is not None:
+                await db.delete(seeded_arg)
+            seeded_person = await db.get(Person, person_id)
+            if seeded_person is not None:
+                await db.delete(seeded_person)
+            await db.commit()
+
+
+# ---------------------------------------------------------------------------
+# Part 3 — 44-09 Task 4 checkpoint remediation (item 9): immediate
+# Advocate -> Bench -> Advocate round trip, no manual reload
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_descriptor_and_specific_role_survive_an_immediate_bench_then_back_toggle() -> None:
+    """Confirmed root cause (ResolveCard.svelte descriptorCell): while a row
+    is on BENCH, `list_resolve_rows_for_job` correctly reports
+    descriptor: null (44-06, by design). Without a client-side memory that
+    survives that null read, toggling Advocate -> Bench -> Advocate can
+    submit an empty string over an already-saved descriptor in the SAME
+    request as the side change (the toggle's own submitRow() flushes and
+    submits synchronously, before the operator ever blurs the field).
+
+    This is a backend round-trip proof, not a browser test — this executor
+    has no browser/vision tool. It proves the *server* side of the fix: given
+    the payloads a correctly-behaving client (one that resubmits its
+    memorized descriptor, exactly as ResolveCard.svelte's `lastDescriptorValue`
+    now does) would send for each of the three steps, immediately and in one
+    session (no manual page reload), the full sequence round-trips both the
+    descriptor and the specific advocate role with no data loss. The client
+    fix itself — `lastDescriptorValue` preferred over the nullable
+    `row.descriptor` prop, captured via oninput so a synchronous toggle-
+    triggered submit cannot race ahead of a blur — is covered by the static
+    source contract in api/tests/test_phase44_resolve_table_contract.py
+    (`test_descriptor_input_uses_a_client_memory_that_survives_side_toggles`);
+    together the two tests cover what a live browser session would otherwise
+    be needed to prove."""
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import (
+        AdminJob,
+        AdminJobStatus,
+        AdminJobStep,
+        Argument,
+        ArgumentParticipant,
+        ArgumentStatusEnum,
+        Person,
+        SideEnum,
+    )
+    from api.services.admin_jobs import update_resolve_row_for_job
+    from api.services.admin_people import list_resolve_rows_for_job
+
+    async with AsyncSessionLocal() as db:
+        person = Person(full_name="Immediate Toggle Roundtrip")
+        db.add(person)
+        await db.flush()
+
+        arg = Argument(status=ArgumentStatusEnum.PIPELINE, question_number=1)
+        db.add(arg)
+        await db.flush()
+
+        participant = ArgumentParticipant(
+            argument_id=arg.id,
+            person_id=person.id,
+            raw_speaker_label="MR. IMMEDIATE TOGGLE",
+            side=SideEnum.UNKNOWN,
+        )
+        db.add(participant)
+        await db.flush()
+
+        job = AdminJob(status=AdminJobStatus.PAUSED, current_step=AdminJobStep.RESOLVE, argument_id=arg.id)
+        db.add(job)
+        await db.commit()
+
+        person_id = person.id
+        arg_id = arg.id
+        participant_id = participant.id
+        job_id = job.id
+
+    try:
+        # Step (a): while Advocate, pick a specific Argument Role and type a
+        # Descriptor — mirrors the operator typing "Attorney" while Advocate,
+        # then blurring (which saves it).
+        step_a = ResolveRowUpdate(
+            participant_id=participant_id,
+            side=SideEnum.PETITIONER,
+            descriptor="Attorney",
+        )
+        async with AsyncSessionLocal() as db:
+            updated_a = await update_resolve_row_for_job(db, job_id, step_a)
+            assert updated_a.side == SideEnum.PETITIONER
+            assert updated_a.descriptor == "Attorney"
+
+        async with AsyncSessionLocal() as db:
+            rows = await list_resolve_rows_for_job(db, job_id)
+            row_a = next(r for r in rows if r["raw_speaker_label"] == "MR. IMMEDIATE TOGGLE")
+            assert row_a["side"] == "PETITIONER"
+            assert row_a["argument_role"] == "Petitioner's Counsel"
+            assert row_a["descriptor"] == "Attorney"
+
+        # Step (b): toggle to Bench. The client's own descriptor input still
+        # shows "Attorney" at the instant of this submit (the null read-back
+        # only happens on the NEXT read), but it does not matter either way —
+        # the server drops a client-supplied descriptor whenever side==BENCH
+        # (44-06/RESOLVE-13), so the stored "Attorney" survives regardless of
+        # what the client sends here.
+        step_b = ResolveRowUpdate(
+            participant_id=participant_id,
+            side=SideEnum.BENCH,
+            descriptor="Attorney",
+        )
+        async with AsyncSessionLocal() as db:
+            updated_b = await update_resolve_row_for_job(db, job_id, step_b)
+            assert updated_b.side == SideEnum.BENCH
+            assert updated_b.descriptor == "Attorney"
+
+        async with AsyncSessionLocal() as db:
+            rows = await list_resolve_rows_for_job(db, job_id)
+            row_b = next(r for r in rows if r["raw_speaker_label"] == "MR. IMMEDIATE TOGGLE")
+            assert row_b["side"] == "BENCH"
+            # 44-06/RESOLVE-13: the read path reports descriptor: null while
+            # BENCH by design ("hidden, not shown") — this is exactly the
+            # null read-back the client-side fix (lastDescriptorValue) exists
+            # to survive.
+            assert row_b["descriptor"] is None
+
+        # Step (c): toggle back to Advocate, immediately (same session, no
+        # manual reload). A client with the fixed `lastDescriptorValue`
+        # memory resubmits "Attorney" (its last-known value) in the SAME
+        # request as the side change, rather than the empty string the
+        # now-null `row.descriptor` prop would otherwise have bound the
+        # reappearing <input> to.
+        step_c = ResolveRowUpdate(
+            participant_id=participant_id,
+            side=SideEnum.PETITIONER,
+            descriptor="Attorney",
+        )
+        async with AsyncSessionLocal() as db:
+            updated_c = await update_resolve_row_for_job(db, job_id, step_c)
+            assert updated_c.side == SideEnum.PETITIONER
+            assert updated_c.descriptor == "Attorney"
+
+        async with AsyncSessionLocal() as db:
+            rows = await list_resolve_rows_for_job(db, job_id)
+            row_c = next(r for r in rows if r["raw_speaker_label"] == "MR. IMMEDIATE TOGGLE")
+            # Both halves of item 9 verified in one immediate round trip: the
+            # specific advocate role (a pure client-memory restore,
+            # lastAdvocateRole, already correct pre-remediation) and the
+            # descriptor (the confirmed data-loss bug, now fixed) both
+            # survive Bench -> Advocate with no manual reload.
+            assert row_c["side"] == "PETITIONER"
+            assert row_c["argument_role"] == "Petitioner's Counsel"
+            assert row_c["descriptor"] == "Attorney"
     finally:
         async with AsyncSessionLocal() as db:
             seeded_participant = await db.get(ArgumentParticipant, participant_id)

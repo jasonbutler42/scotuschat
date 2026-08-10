@@ -397,6 +397,7 @@
 				readonlyMode={data.readonlyMode}
 				resolveFormError={form?.error}
 				source={data.job.source ?? 'pdf'}
+				jobId={liveJob.id}
 			/>
 		{/if}
 

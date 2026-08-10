@@ -88,6 +88,10 @@
 		// already derived by the API (api/schemas/admin_jobs.py); no default —
 		// the parent always supplies it.
 		source: 'pdf' | 'corpus';
+		// Plan 44-09 tenure-preview follow-up: needed to call the job-scoped
+		// bench-role-preview proxy endpoint (app/src/routes/admin/pipeline/
+		// [job_id]/bench-role-preview/+server.ts) — never used for anything else.
+		jobId: number;
 	}
 
 	let {
@@ -99,6 +103,7 @@
 		readonlyMode,
 		resolveFormError = null,
 		source,
+		jobId,
 	}: ResolveCardProps = $props();
 
 	let isPaused = $derived(jobStatus === 'paused');
@@ -158,6 +163,43 @@
 	// per-participant client-side memory that survives the row's own prop
 	// going null while hidden.
 	let lastDescriptorValue = $state<Record<number, string>>({});
+
+	// Plan 44-09 tenure-preview follow-up (operator-approved during Task 4
+	// remediation): benchRoleState/argumentRoleCell key on row.person_id, the
+	// COMMITTED database value — but a person picked in the Resolved As
+	// dropdown lives only in client-side rowMatchStates until the batch
+	// ?/resolve submit commits it, so a freshly-picked bench candidate's
+	// tenure-derived role was stuck showing the unresolved-bench copy below
+	// until commit. Keyed by participant_id, each entry also carries the personId
+	// it was computed for — read alongside rowMatchStates[label].personId
+	// wherever this is consulted, so a slow response for a candidate the
+	// operator has since moved away from is never mistaken for the current
+	// pick's role (44-06's prohibition: a tenure-derived role must never be
+	// older than the request that rendered it).
+	let benchRolePreview = $state<
+		Record<number, { personId: number; bench_role: string | null; missing_tenure: boolean }>
+	>({});
+	// Dedup cache so the effect below issues at most one fetch per distinct
+	// (participant, personId) pair, even though it re-runs (and re-scans every
+	// row) whenever any row's rowMatchStates entry changes.
+	let benchRolePreviewFetched = $state<Record<string, boolean>>({});
+
+	async function fetchBenchRolePreview(participantId: number, personId: number) {
+		try {
+			const res = await fetch(`/admin/pipeline/${jobId}/bench-role-preview?person_id=${personId}`);
+			if (!res.ok) return;
+			const data = await res.json();
+			benchRolePreview[participantId] = {
+				personId,
+				bench_role: data?.bench_role ?? null,
+				missing_tenure: data?.missing_tenure === true,
+			};
+		} catch {
+			// Best-effort only — the committed value still lands correctly once
+			// the batch ?/resolve submit runs; a failed preview just leaves the
+			// row in its unresolved-bench state until then.
+		}
+	}
 
 	function specificAdvocateRole(value: string): string | null {
 		return value === 'PETITIONER' || value === 'RESPONDENT' || value === 'AMICUS' ? value : null;
@@ -373,7 +415,18 @@
 		side: string,
 	): 'unresolved' | 'calculated' | 'missing-tenure' | null {
 		if (side !== 'BENCH') return null;
-		if (row.person_id == null) return 'unresolved';
+		if (row.person_id == null) {
+			// Plan 44-09 tenure-preview follow-up: prefer a live preview over the
+			// unresolved state, but only while it was computed for the exact
+			// personId currently picked — a stale preview for a candidate the
+			// operator has since moved away from must never render (44-06).
+			const personId = rowMatchStates[row.raw_speaker_label]?.personId;
+			const preview = benchRolePreview[row.participant_id];
+			if (personId != null && preview?.personId === personId) {
+				return preview.missing_tenure ? 'missing-tenure' : 'calculated';
+			}
+			return 'unresolved';
+		}
 		if (!row.missing_tenure) return 'calculated';
 		return 'missing-tenure';
 	}
@@ -480,6 +533,28 @@
 					}
 				}
 			}
+		}
+	});
+
+	// Plan 44-09 tenure-preview follow-up: fetch a live preview for every BENCH
+	// row that has an uncommitted person pick — covers a manual dropdown pick
+	// (handleSelectPerson), a freshly created bench person
+	// (handlePersonCreated), and a pipeline auto-match the seeding effect
+	// above pre-filled but the operator has not yet reached the batch commit
+	// for. Runs once per distinct (participant, personId) pair via the
+	// benchRolePreviewFetched cache — this effect itself re-runs whenever any
+	// row's rowMatchStates entry changes, which would otherwise re-fetch every
+	// still-unchanged row on every unrelated edit.
+	$effect(() => {
+		for (const row of mergedRows) {
+			if (effectiveSide(row) !== 'BENCH') continue;
+			if (row.person_id != null) continue; // already committed; the service's own value is authoritative
+			const personId = rowMatchStates[row.raw_speaker_label]?.personId;
+			if (personId == null) continue;
+			const key = `${row.participant_id}:${personId}`;
+			if (benchRolePreviewFetched[key]) continue;
+			benchRolePreviewFetched[key] = true;
+			fetchBenchRolePreview(row.participant_id, personId);
 		}
 	});
 
@@ -798,6 +873,15 @@
 
 {#snippet argumentRoleCell(row: MergedRow, side: string, gated: boolean, rowEditable: boolean, saving: boolean)}
 	{@const benchState = benchRoleState(row, side)}
+	<!-- Plan 44-09 tenure-preview follow-up: row.bench_role/row.person_edit_href
+	     stay null until the batch ?/resolve commit; while benchState reads
+	     'calculated'/'missing-tenure' from an uncommitted preview (see
+	     benchRoleState above), these two fall back to the preview's own
+	     bench_role and to the not-yet-committed personId respectively. Once
+	     row.person_id is non-null (committed), row.bench_role/person_edit_href
+	     are always the service's own value and these fallbacks are unused. -->
+	{@const previewedBenchRole = benchRolePreview[row.participant_id]?.bench_role}
+	{@const previewedPersonId = rowMatchStates[row.raw_speaker_label]?.personId}
 	{#if benchState === 'unresolved'}
 		<!-- Plan 44-08 (RESOLVE-14): no person resolved yet, so the role cannot be
 		     computed at all — this is checked before the calculated branch below
@@ -834,7 +918,7 @@
 				<rect x="5" y="11" width="14" height="9" rx="2"></rect>
 				<path d="M8 11V7a4 4 0 0 1 8 0v4"></path>
 			</svg>
-			<span style="font-size: 16px; color: #e2e8f0;">{row.bench_role ?? row.argument_role}</span>
+			<span style="font-size: 16px; color: #e2e8f0;">{row.bench_role ?? previewedBenchRole ?? row.argument_role}</span>
 			<span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%);">
 				Set from tenure, not editable
 			</span>
@@ -855,16 +939,23 @@
 		<div style="margin-top: 8px;">
 			<span style="font-size: 14px; color: #94a3b8;">Tenure not found</span>
 		</div>
-		{#if row.person_edit_href}
+		{#if row.person_edit_href || previewedPersonId != null}
 			<!-- Plan 44-08 (RESOLVE-11): opens in a new tab so the operator can fix
 			     tenure in one tab and return to this still-loaded Resolve card in
 			     the other, where the role recomputes live on next read. The
 			     noopener rel severs the opened tab's window.opener handle back to
 			     this admin page (T-44-31, reverse tabnabbing). The arrow glyph sits
 			     in its own aria-hidden span so the accessible name stays exactly
-			     "Edit person", matching how the warning glyph above is handled. -->
+			     "Edit person", matching how the warning glyph above is handled.
+			     Plan 44-09 tenure-preview follow-up: row.person_edit_href is null
+			     until commit even when this branch was reached via an uncommitted
+			     preview — previewedPersonId is guaranteed non-null here (benchState
+			     only reads 'missing-tenure' from a preview when a personId is
+			     picked), so the same /admin/people/{id} link the service would
+			     construct is built client-side from a value already in hand,
+			     rather than duplicating any tenure derivation. -->
 			<a
-				href={row.person_edit_href}
+				href={row.person_edit_href ?? `/admin/people/${previewedPersonId}`}
 				target="_blank"
 				rel="noopener"
 				style="margin-left: 8px; font-size: 14px; color: #93c5fd; text-decoration: underline;"

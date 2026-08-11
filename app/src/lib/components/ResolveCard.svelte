@@ -536,6 +536,36 @@
 		}
 	});
 
+	// Code review finding CR-01/CR-02 (44-09, confirmed real bug): lastDescriptorValue
+	// and lastAdvocateRole were only ever WRITTEN from their own input/select's
+	// oninput/onchange handler, never seeded from the row's already-committed server
+	// value. A row that already has a correct descriptor or specific advocate role
+	// from a PRIOR session — one the operator never retypes/repicks in the current
+	// session — silently lost it on an Advocate->Bench->Advocate round trip: the
+	// first toggle's own save triggers a page reload (submitRow -> ?/saveResolveRow
+	// -> use:enhance's update() -> invalidateAll), after which row.descriptor is
+	// null (RESOLVE-13, hidden while BENCH) and row.side is 'BENCH' — so by the time
+	// the second toggle restores Advocate, both fallbacks (`row.descriptor`,
+	// `specificAdvocateRole(row.side)`) read the POST-TOGGLE server state, not the
+	// pre-toggle value that needed preserving. Unlike the gated seeding effect above
+	// (rowMatchStates/lastSideBucket/sideGateConfirmed, isPaused-only), this must run
+	// for every editable row regardless of pause state — the toggle/descriptor input
+	// are not gated on isPaused. Seeds at most once per participant (never
+	// overwrites), so a real in-session edit via the input/select always wins.
+	$effect(() => {
+		for (const row of mergedRows) {
+			if (lastDescriptorValue[row.participant_id] === undefined && row.descriptor != null) {
+				lastDescriptorValue[row.participant_id] = row.descriptor;
+			}
+			if (lastAdvocateRole[row.participant_id] === undefined) {
+				const specific = specificAdvocateRole(row.side);
+				if (specific) {
+					lastAdvocateRole[row.participant_id] = specific;
+				}
+			}
+		}
+	});
+
 	// Plan 44-09 tenure-preview follow-up: fetch a live preview for every BENCH
 	// row that has an uncommitted person pick — covers a manual dropdown pick
 	// (handleSelectPerson), a freshly created bench person
@@ -719,12 +749,13 @@
 				s.comboOpen = false;
 			}
 		}
-		$effect(() => {
-			document.addEventListener('click', handleClick);
-			return () => {
-				document.removeEventListener('click', handleClick);
-			};
-		});
+		// Code review finding WR-02: a Svelte action's own body already runs once
+		// per node mount and its returned destroy() already runs once per unmount —
+		// wrapping the listener in a nested $effect (removed here) registered a
+		// second, redundant teardown path for the same listener. Harmless (removing
+		// an already-removed listener is a no-op) but dead code that could hide a
+		// real leak if only one path were edited in the future.
+		document.addEventListener('click', handleClick);
 		return {
 			destroy() {
 				document.removeEventListener('click', handleClick);

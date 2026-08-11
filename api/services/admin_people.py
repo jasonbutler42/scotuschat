@@ -1067,8 +1067,11 @@ async def bench_role_preview_for_job(
     (T-25-06/T-25-14) — the argument is always derived from the job, never
     trusted directly from the client.
 
-    Raises ValueError if the job does not exist or has no linked argument,
-    mirroring list_resolve_rows_for_job (mapped to a 422 by the router).
+    Raises ValueError if the job does not exist, has no linked argument, or
+    person_id does not refer to an existing Person — mirroring
+    list_resolve_rows_for_job's job/argument guards and matching every
+    sibling person-scoped route's existence check (get_person, update_person,
+    upload_person_photo, etc.), all mapped to a 422 by the router.
     """
     job_result = await db.execute(select(AdminJob).where(AdminJob.id == job_id))
     job = job_result.scalar_one_or_none()
@@ -1083,6 +1086,10 @@ async def bench_role_preview_for_job(
     argument = arg_result.scalar_one_or_none()
     if argument is None:
         raise ValueError(f"Argument not found for job {job_id}")
+
+    person_result = await db.execute(select(Person).where(Person.id == person_id))
+    if person_result.scalar_one_or_none() is None:
+        raise ValueError(f"Person {person_id} not found")
 
     tenures_result = await db.execute(
         select(CourtTenure).where(CourtTenure.person_id == person_id)

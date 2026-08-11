@@ -1817,7 +1817,11 @@ def test_fetch_bench_role_preview_calls_the_job_scoped_endpoint() -> None:
 
 def test_preview_fetch_effect_skips_committed_rows_and_dedupes_by_pick() -> None:
     source = _source(RESOLVE_CARD_PATH)
-    body = _effect_body(source, "for (const row of mergedRows)")
+    # Marker must be unique to this effect, not just its shared opening line —
+    # the CR-01/CR-02 seeding effect (added after this test) also opens with
+    # "for (const row of mergedRows) {", so a bare-loop marker would grab
+    # whichever of the two effects appears first in the file instead of this one.
+    body = _effect_body(source, "effectiveSide(row) !== 'BENCH'")
     assert "effectiveSide(row) !== 'BENCH'" in body, (
         "only a BENCH row's uncommitted pick needs a tenure preview — an advocate row "
         "never has a bench role to preview"
@@ -1899,4 +1903,73 @@ def test_combo_outside_click_does_not_close_on_a_click_inside_a_nested_popover()
         "the in-container check must run first (cheapest, most common case); "
         "the popover-content check is the fallback for content the portal "
         "relocated outside container"
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Code review findings CR-01/CR-02 (44-09, confirmed real bugs, found by
+# gsd-code-reviewer and independently verified against the actual source):
+# lastDescriptorValue and lastAdvocateRole were only ever written from their
+# own input/select's event handler, never seeded from the row's already-
+# committed server value — so a descriptor or specific advocate role that was
+# correct BEFORE the current session, and never retyped/repicked in it, was
+# silently destroyed by an Advocate->Bench->Advocate round trip (the first
+# toggle's own save reloads the page, after which row.descriptor is null and
+# row.side is 'BENCH' — exactly the values both fallbacks read from).
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_last_descriptor_and_advocate_role_are_seeded_from_committed_state() -> None:
+    source = _source(RESOLVE_CARD_PATH)
+    # Marker must be unique to this effect for the same reason the tenure-preview
+    # effect's own test above needed one — both open with the identical
+    # "for (const row of mergedRows) {" line.
+    body = _effect_body(source, "lastDescriptorValue[row.participant_id] === undefined")
+    assert "row.descriptor != null" in body, (
+        "must only seed from a real, non-null committed descriptor — never seed a "
+        "blank/null value over whatever (possibly already-correct) memory exists"
+    )
+    assert "specificAdvocateRole(row.side)" in body, (
+        "lastAdvocateRole must be seeded from the row's own committed side via the "
+        "same specificAdvocateRole helper toggleSide's restore path already uses — "
+        "not a second, independently-maintained specific-role check"
+    )
+    assert "lastAdvocateRole[row.participant_id] === undefined" in body, (
+        "must check for 'never seeded yet' before writing, the same seed-once "
+        "guard used for lastDescriptorValue in this same effect"
+    )
+
+
+def test_seeding_effect_never_overwrites_an_already_seeded_value() -> None:
+    # The seed-once guard is what makes this safe: once seeded (either by this
+    # effect on first render, or by a real operator edit via oninput/onchange),
+    # a later re-run of this effect (e.g. after the very reload that nulls
+    # row.descriptor/flips row.side to BENCH) must never clobber it back to
+    # null/UNKNOWN.
+    source = _source(RESOLVE_CARD_PATH)
+    body = _effect_body(source, "lastDescriptorValue[row.participant_id] === undefined")
+    assert body.count("lastDescriptorValue[row.participant_id]") >= 2, (
+        "must both check (=== undefined) and assign lastDescriptorValue by the same key"
+    )
+    # The assignment must be inside the `=== undefined` guard, not a bare
+    # unconditional write — verified structurally: the guard's own `{` opens
+    # before the assignment appears.
+    guard_idx = body.index("lastDescriptorValue[row.participant_id] === undefined")
+    assign_idx = body.index("lastDescriptorValue[row.participant_id] = row.descriptor")
+    assert guard_idx < assign_idx, (
+        "the undefined-check must precede the assignment it guards"
+    )
+
+
+def test_seeding_effect_is_not_gated_on_ispaused() -> None:
+    # Unlike the rowMatchStates/lastSideBucket/sideGateConfirmed seeding effect
+    # above (which returns immediately `if (!isPaused) return;`), the toggle and
+    # descriptor input are NOT gated on isPaused — an operator can flip
+    # Bench/Advocate and edit Descriptor on an already-resolved (non-paused)
+    # editable row too, so this seeding must run unconditionally.
+    source = _source(RESOLVE_CARD_PATH)
+    body = _effect_body(source, "lastDescriptorValue[row.participant_id] === undefined")
+    assert "if (!isPaused) return" not in body, (
+        "this seeding effect must not be gated on isPaused — the bug it fixes "
+        "reproduces on non-paused editable rows too"
     )

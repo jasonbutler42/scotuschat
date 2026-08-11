@@ -243,6 +243,27 @@ async def test_preview_raises_for_unlinked_job(db_session) -> None:
         await bench_role_preview_for_job(db_session, job.id, person.id)
 
 
+@pytest.mark.asyncio
+async def test_preview_raises_for_nonexistent_person(db_session) -> None:
+    """Code review finding WR-01: a valid job/argument but a person_id that
+    does not refer to any Person must raise, matching every sibling
+    person-scoped route's existence check — not silently return
+    (None, True) as if the person exists but has no covering tenure."""
+    from api.models.models import AdminJob, AdminJobStatus, AdminJobStep, Argument, ArgumentStatusEnum
+    from api.services.admin_people import bench_role_preview_for_job
+
+    arg = Argument(status=ArgumentStatusEnum.PIPELINE, question_number=1, argued_date=ARGUED_DATE)
+    db_session.add(arg)
+    await db_session.flush()
+
+    job = AdminJob(status=AdminJobStatus.PAUSED, current_step=AdminJobStep.RESOLVE, argument_id=arg.id)
+    db_session.add(job)
+    await db_session.flush()
+
+    with pytest.raises(ValueError, match="Person 999999 not found"):
+        await bench_role_preview_for_job(db_session, job.id, 999999)
+
+
 # ---------------------------------------------------------------------------
 # Router-level behavioral tests (via FastAPI TestClient)
 # ---------------------------------------------------------------------------

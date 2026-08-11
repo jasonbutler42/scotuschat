@@ -104,6 +104,11 @@ class PersonCreate(BaseModel):
     helper, same as the standalone people-directory create). `extra="forbid"`
     means a client that posts `full_name` gets a 422, not a silently-ignored
     write — Full Name is always derived server-side from these parts.
+
+    This schema carries no `descriptor` field at all, so RESOLVE-13's "hidden,
+    not shown, not cleared" supersession (see create_person_for_job's sibling
+    docstring in api.services.admin_jobs) does not apply here — there is
+    nothing for this create path to write or preserve.
     """
 
     role_id: Optional[int] = None

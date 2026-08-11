@@ -153,7 +153,8 @@ v1.6's roadmap evolution is archived in `.planning/milestones/v1.6-ROADMAP.md`. 
 
 ### Pending Todos
 
-- None unassigned. Both previously-pending todos (`2026-07-28-unpublished-argument-visible-in-cases-list.md`, `2026-07-29-popover-scrollbar-outside-card.md`) are now covered by Phase 45 (BUG-01 / BUG-02) and should be moved to `todos/completed/` when that phase verifies.
+- `2026-08-11-create-person-popover-side-and-selection.md` (ui, minor) — unassigned. Create-person popover in the Resolve card should inherit the row's current Bench/Advocate side as its default, and the newly created person should be visibly selected (comboQuery updated) afterward. Found during Phase 44-09 checkpoint live-testing; deferred by the operator, not blocking.
+- The two previously-pending todos (`2026-07-28-unpublished-argument-visible-in-cases-list.md`, `2026-07-29-popover-scrollbar-outside-card.md`) are covered by Phase 45 (BUG-01 / BUG-02) and should be moved to `todos/completed/` when that phase verifies.
 
 ### Blockers/Concerns
 

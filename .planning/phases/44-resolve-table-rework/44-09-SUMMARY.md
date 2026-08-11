@@ -933,4 +933,62 @@ RESOLVE-08, RESOLVE-15, and RESOLVE-16 are marked complete in
 `.planning/REQUIREMENTS.md` (RESOLVE-07/08 were implemented in Plan 44-05
 but gated on this checkpoint's whole-reconciliation sign-off).
 
+## Post-Approval Code Review Gate — two more real bugs found and fixed
+
+After Task 4 approval, the standard `execute-phase` post-checkpoint flow ran
+`gsd-code-reviewer` against the phase's full file set (`44-REVIEW.md`,
+standard depth, 21 files line-audited). It found 6 issues — 2 Critical, 2
+Warning, 2 Info. Both Criticals were independently re-verified by direct
+source reading (not taken on faith) before fixing, and both were **real,
+confirmed bugs** that directly contradicted this document's own earlier
+"confirmed fixed" claims for the same two features:
+
+- **CR-01/CR-02:** `lastDescriptorValue` and `lastAdvocateRole` (the
+  descriptor/specific-advocate-role client memories, "fixed" in the second
+  checkpoint remediation round above) were only ever *written* from their
+  own input/select's event handler — never *seeded* from the row's
+  already-committed server value. A descriptor or specific role that was
+  already correct from a **prior** session, never retyped/repicked in the
+  current one, was silently destroyed by a single Advocate→Bench→Advocate
+  toggle round trip: the first toggle's own save triggers a full page
+  reload, after which `row.descriptor` is `null` (RESOLVE-13, by design
+  while BENCH) and `row.side` is `'BENCH'` — exactly the values both
+  "fixed" fallbacks read from on the toggle back. This is why it survived
+  six rounds of live checkpoint testing: every verification (the static
+  source-contract tests, the DB-gated round-trip test, and the operator's
+  own live retests) either checked that the memory *pattern* existed or
+  exercised only the "operator edits within this session" case — never the
+  "value arrived pre-set from a prior session, never touched this one"
+  case, which is the actual common path (an operator correcting a
+  Bench/Advocate misclassification on an already-resolved row).
+  **Fixed:** a new, ungated `$effect` (the toggle/descriptor input are not
+  gated on `isPaused`) seeds both memories from `mergedRows` at most once
+  per participant, never overwriting an already-seeded value. Commit
+  `1c6483c7`.
+- **WR-01:** `bench_role_preview_for_job` didn't validate `person_id`
+  exists, unlike every sibling person-scoped route. Fixed. Commit `1c6483c7`.
+- **WR-02:** `comboOutsideClick` had a redundant double-teardown (dead, not
+  harmful) — cleaned up. Commit `1c6483c7`.
+- **IN-02:** stale `PersonCreate` docstring cross-reference — fixed.
+  Commit `1c6483c7`.
+- **IN-01:** `console.debug` in the poll loop — **not fixed**, it's a
+  deliberate, documented diagnostic from an earlier phase (PIPE-18, D-02),
+  out of this phase's scope to reverse.
+
+`44-REVIEW.md`'s status is `clean` — all findings resolved manually (not
+via the automated `--fix` path) and independently re-verified. Full suite
+after fixes: 904 passed, 5 xfailed, same 4 pre-existing collection errors,
+0 failures. `npm run check`: 806 files, 0 errors, 36 pre-existing warnings.
+
+**This finding does not reopen the Task 4 checkpoint** — the operator's
+live approval covered the *visible/interactive* behavior of the 16
+checklist items, all of which still hold; CR-01/CR-02 were a *data
+persistence* defect on a code path (committed-in-a-prior-session values)
+the checklist's own live-testing session couldn't exercise (everything
+tested was necessarily created/edited within that same session). Recorded
+here rather than silently folded into an earlier round's history, since
+those earlier rounds' own "confirmed fixed" language was — in the specific
+sense this review found — incorrect, and future readers of this document
+deserve that correction on the record rather than a quietly edited history.
+
 Plan 44-09, and Phase 44 (resolve-table-rework) as a whole, are complete.

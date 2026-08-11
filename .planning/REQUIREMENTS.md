@@ -27,16 +27,16 @@
 
 **Figma canonical reconciliation (2026-08-04, `.planning/phases/44-resolve-table-rework/44-FIGMA-RECONCILE.md`)** — design exploration after RESOLVE-01–06 shipped converged on a new canonical layout that discards the original `resolve-speakers-panel.png` mockup. RESOLVE-07–16 lock the replacement decisions; continues the numbering from RESOLVE-06:
 
-- [ ] **RESOLVE-07**: Resolve table is 4 columns; Bench/Advocate toggle and person control are stacked in the Resolved As cell
-- [ ] **RESOLVE-08**: Resolved As is a single always-editable dropdown; remove Change/Select links and the confirm/correct disposition state machine
+- [x] **RESOLVE-07**: Resolve table is 4 columns; Bench/Advocate toggle and person control are stacked in the Resolved As cell
+- [x] **RESOLVE-08**: Resolved As is a single always-editable dropdown; remove Change/Select links and the confirm/correct disposition state machine
 - [x] **RESOLVE-09**: Person search candidates are filtered to the currently-selected side (bench vs advocate)
 - [x] **RESOLVE-10**: Hint prefix is source-aware (`Imported:` corpus / `Extracted:` PDF), uniform per run
 - [x] **RESOLVE-11**: Bench role + missing-tenure state is live-derived on every read (incl. published arguments), rendered identically in editable and read-only; `Edit person` opens in a new tab
 - [x] **RESOLVE-12**: Bench role hint copy is `Calculated from tenure` / `Tenure not found` (not `Imported: N/A - …`)
 - [x] **RESOLVE-13**: Bench rows show no descriptor hint and a dash; the stored descriptor is preserved (not cleared) on a side switch
 - [x] **RESOLVE-14**: Unresolved bench role renders `(resolve person first)` with no dash and no hint
-- [ ] **RESOLVE-15**: Persistent progress indicator + always-visible, reason-disabled Continue
-- [ ] **RESOLVE-16**: Auto-matched / Needs-you / Manually-matched row cue tags (the manually-matched state supersedes 44-05's original "operator-picked row carries neither tag" rule — added mid-review for provenance disclosure per operator request; see 44-09-SUMMARY.md)
+- [x] **RESOLVE-15**: Persistent progress indicator + always-visible, reason-disabled Continue
+- [x] **RESOLVE-16**: Auto-matched / Needs-you / Manually-matched row cue tags (the manually-matched state supersedes 44-05's original "operator-picked row carries neither tag" rule — added mid-review for provenance disclosure per operator request; see 44-09-SUMMARY.md)
 
 ### Bug Fixes
 
@@ -74,16 +74,16 @@ Which phases cover which requirements. Updated during roadmap creation.
 | RESOLVE-04 | Phase 44 | Complete |
 | RESOLVE-05 | Phase 44 | Superseded by RESOLVE-10 |
 | RESOLVE-06 | Phase 44 | Complete |
-| RESOLVE-07 | Phase 44 | Pending |
-| RESOLVE-08 | Phase 44 | Pending |
+| RESOLVE-07 | Phase 44 | Complete |
+| RESOLVE-08 | Phase 44 | Complete |
 | RESOLVE-09 | Phase 44 | Complete |
 | RESOLVE-10 | Phase 44 | Complete |
 | RESOLVE-11 | Phase 44 | Complete |
 | RESOLVE-12 | Phase 44 | Complete |
 | RESOLVE-13 | Phase 44 | Complete |
 | RESOLVE-14 | Phase 44 | Complete |
-| RESOLVE-15 | Phase 44 | Pending |
-| RESOLVE-16 | Phase 44 | Pending |
+| RESOLVE-15 | Phase 44 | Complete |
+| RESOLVE-16 | Phase 44 | Complete |
 | BUG-01 | Phase 45 | Pending |
 | BUG-02 | Phase 45 | Pending |
 

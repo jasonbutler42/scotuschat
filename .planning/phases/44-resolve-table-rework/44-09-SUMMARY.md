@@ -54,6 +54,9 @@ key-decisions:
   - "Commits for this remediation round were produced via a revert-and-selectively-reapply reconstruction (save the fully-edited working tree, restore each file to its pre-edit HEAD content, then reapply each concern's edits in isolation and commit) rather than editing-then-splitting a single combined diff, because the three concerns (descriptor fix, side-switch fix, visual restructuring) were implemented in one continuous session before any commit. This produced three self-consistent, independently-verified commits instead of one large one. The tail block of three new contract tests (the descriptor client-memory test plus the two side-bucket tests) was committed together with the side-switch fix rather than split further, since the two fixes' tests were appended contiguously in the same file section and splitting them by hunk would have required hand-editing a unified diff rather than reapplying whole edits — a reasonable-fidelity trade the plan's own \"e.g.\" grouping language allows."
   - "Third checkpoint round: `rowCueTag`'s new fallback branch (`'MANUALLY MATCHED'`) is written as an unconditional `return` after the two existing checks rather than an explicit third `if`, so mutual exclusivity with the other two states is a structural property of check ORDER (needs-attention, then auto-matched, then this fallback) rather than a condition that could independently drift out of sync with the other two. This deliberately reverses RESOLVE-16's originally-stated rule (recorded in this plan's own prohibitions and re-affirmed as explicitly out-of-scope in the second remediation round above) that an operator-picked row \"carries neither tag\" — the operator's own words, given mid-review: \"in testing I realized it was needed to be explicit to maintain provenance for data.\" Distinguishing a human decision from an untouched machine suggestion is itself provenance information worth disclosing, not omitting."
   - "The new state's color (the muted token, `#94a3b8`) is derived the same way the existing two colors are — a second rendering-only boolean, `cueTagIsAutoMatched`, mirroring rowCueTag's own auto-matched branch condition — rather than a third string comparison against `cueTag`'s own return value, preserving the existing single-occurrence-per-literal pattern (`cueTagIsWarning`/`cueTagIsAutoMatched` cover branches 1 and 2; the muted color is the ternary's unconditional else, needing no boolean of its own)."
+  - "Sixth checkpoint round: `comboOutsideClick`'s in-container check is supplemented with a `[data-popover-content]` guard rather than replaced, and the guard is generic (matches any bits-ui Popover.Content, not just CreatePersonPopover specifically) — this file has exactly one nested popover today, but the guard is correct for any future one without modification, since the conflict is inherent to how bits-ui's Popover.Portal relocates content (default target document.body) relative to any homegrown container-based outside-click check."
+  - "Sixth checkpoint round: CreatePersonPopover's mini create-person form gained First/Last name fields (not the People-directory's full four-field First/Middle/Last/Suffix set) — this popover's own stated scope (\"captures name plus a Bench/Advocate choice only; full profile completion happens later in People Admin\") governs which of PersonCreate's structured-parts fields belong here; Middle/Suffix stay deferred to the full editor, matching the pre-existing design intent this popover already had before Phase 38 broke it, not an expansion of that intent."
+  - "The two UX gaps found in the same final testing pass (create-person popover's Bench/Advocate default ignoring the row's own toggle; a newly created person not visibly appearing selected in the combobox) were logged as a todo rather than fixed inline, per the operator's explicit direction (\"log a future improvement\") — neither is a defect against anything Plan 44-09 or this checkpoint actually promises."
 
 requirements-completed: [RESOLVE-15, RESOLVE-16]
 
@@ -129,9 +132,12 @@ coverage:
   - id: T4
     description: "Operator acceptance of the complete Figma reconciliation (44-05 through 44-09) against all four canonical frames, including end-to-end descriptor-preservation and live-tenure-recompute walkthroughs"
     requirement: "RESOLVE-07 through RESOLVE-16 (whole-reconciliation sign-off)"
-    verification: []
+    verification:
+      - kind: manual
+        ref: "Operator live-verified all 16 checklist items (the original 12 plus rounds 4/5's additions) against Figma nodes 4205:81, 4210:81, 4206:111, 4194:72 in a live browser session, 2026-08-11"
+        status: pass
     human_judgment: true
-    rationale: "Task 4 was rejected on its first pass with specific, Figma-confirmed feedback (see 'Second Checkpoint Remediation' section below). All confirmed defects have now been fixed and re-verified via the automated suite; a fresh checkpoint has been re-issued for operator re-verification. STILL NOT YET APPROVED — see Checkpoint Status below."
+    rationale: "Task 4 was rejected on its first pass with specific, Figma-confirmed feedback; five further rounds fixed every confirmed defect (including two found in this final pass: the create-person popover's outside-click bug and its stale full_name/422 schema mismatch — see 'Sixth Checkpoint Round' below). APPROVED 2026-08-11 — operator confirmed all 16 checklist items pass. See 'Checkpoint APPROVED' below."
   - id: T5
     description: "Second checkpoint remediation: descriptor data-loss fix, side-switch-clears-person fix, and progress/cue-tag/hint/button restyling per the corrected Figma read — 6 new/re-pointed tests plus 3 re-pointed pre-existing tests; full suite and npm run check re-verified green"
     requirement: "RESOLVE-13, RESOLVE-15, RESOLVE-16 (remediation of confirmed defects within the already-completed requirements)"
@@ -179,11 +185,11 @@ coverage:
     rationale: "Static source contracts and a DB-gated backend round-trip test prove every confirmed defect's fix is in place and the server-side half of the descriptor fix survives an immediate (no-reload) three-step round trip, but the visual/interactive result (pill appearance, exact positioning, and a live browser round trip of the descriptor/side-switch fixes) still requires the operator's own eyes — this executor has no browser or vision tool. Deferred to the re-issued Task 4 checkpoint below."
 ---
 
-# Phase 44 Plan 09: Progress indicator, Continue gate, and row cue tags — INTERIM (paused at Task 4 checkpoint, fifth remediation round)
+# Phase 44 Plan 09: Progress indicator, Continue gate, and row cue tags — COMPLETE (Task 4 approved after sixth remediation round)
 
-**Tasks 1-3 complete: the Resolve card now shows a persistent "N of M speakers still need review" header line, an always-visible Continue button that states why it's disabled, and per-row AUTO-MATCHED/NEEDS YOU/MANUALLY MATCHED cue tags — all reading the same personId predicate so the count and the gate cannot disagree. Task 4 (operator acceptance of the full 44-05→44-09 Figma reconciliation) is a blocking human-verify checkpoint this executor cannot perform. Its first pass was REJECTED with specific, Figma-confirmed feedback; the second round fixed every confirmed defect (a real descriptor data-loss bug, a real side-switch person-selection bug, and four visual/structural corrections against the actual mockup); the third round added the MANUALLY MATCHED row cue tag the operator requested mid-review; the fourth round root-caused and fixed two live-testing regressions (toggle-highlight/gate disagreement, side-mismatched seeding); this fifth round builds the tenure-preview endpoint the fourth round deliberately deferred — still not yet approved.**
+**Tasks 1-3 complete: the Resolve card now shows a persistent "N of M speakers still need review" header line, an always-visible Continue button that states why it's disabled, and per-row AUTO-MATCHED/NEEDS YOU/MANUALLY MATCHED cue tags — all reading the same personId predicate so the count and the gate cannot disagree. Task 4 (operator acceptance of the full 44-05→44-09 Figma reconciliation) is a blocking human-verify checkpoint this executor cannot perform. Its first pass was REJECTED with specific, Figma-confirmed feedback; the second round fixed every confirmed defect (a real descriptor data-loss bug, a real side-switch person-selection bug, and four visual/structural corrections against the actual mockup); the third round added the MANUALLY MATCHED row cue tag the operator requested mid-review; the fourth round root-caused and fixed two live-testing regressions (toggle-highlight/gate disagreement, side-mismatched seeding); the fifth round built the tenure-preview endpoint the fourth round deliberately deferred; the sixth round found and fixed two more real bugs during final live-testing (a create-person popover outside-click bug, and a stale full_name/422 schema mismatch) — the operator then confirmed all 16 checklist items pass. APPROVED 2026-08-11.**
 
-## Status: NOT COMPLETE — paused at Task 4 checkpoint (fifth remediation round)
+## Status: COMPLETE — Task 4 approved (sixth remediation round)
 
 This is an **interim summary**. Per the plan's own structure, Task 4 is a
 `checkpoint:human-verify` with `gate="blocking"` requiring a live browser
@@ -207,6 +213,14 @@ instructed for this remediation, to keep the requirement wording accurate
 while it's being actively revised); its checkbox/traceability status is
 still unchecked/"Pending" — completion status itself is still deferred to
 post-approval, unchanged from prior rounds.
+
+**Post-approval update (2026-08-11):** the operator approved Task 4 in a live
+browser session — all 16 checklist items (the original 12 plus rounds 4/5's
+additions) passed. `.planning/REQUIREMENTS.md`'s RESOLVE-07/08/15/16 are now
+checked complete (RESOLVE-07/08 were implemented in Plan 44-05 but gated on
+this checkpoint, per the "whole-reconciliation sign-off" note on Task 4's own
+`requirement` field above). See "Checkpoint APPROVED" at the end of this
+document for the final round's fixes and the approval record.
 
 ## Performance
 
@@ -819,3 +833,104 @@ piece the fourth round deliberately left open. Add to the live walkthrough:
     path, not the manual-pick path, and both must work.
 
 Still not yet approved.
+
+## Sixth Checkpoint Round — two real bugs found during final live-testing, fixed; checkpoint approved
+
+The operator live-tested items 13-16 (the tenure-preview endpoint) and
+confirmed it worked, then hit two further real bugs while continuing through
+the create-person flow — neither related to the tenure-preview work itself,
+both pre-existing (the first since an earlier round moved CreatePersonPopover
+inside the open combobox dropdown; the second since Phase 38 removed
+`full_name` from the person-creation contract and this popover was never
+migrated). Root-caused by direct source/dependency reading, not guessed at,
+per this round's own established discipline.
+
+**1. [Confirmed real bug] CreatePersonPopover closed on its own clicks**
+
+- **Root cause:** `CreatePersonPopover` (nested inside the Resolved As
+  combobox's own open dropdown since an earlier round) uses bits-ui's
+  `Popover.Portal`, which mounts its content to `document.body` by default
+  (`resolvePortalToProp`'s default, confirmed directly in
+  `node_modules/bits-ui/dist/bits/utilities/config/prop-resolvers.js`) — not
+  as a DOM descendant of `comboOutsideClick`'s `container`. Every click
+  inside the nested popover (the name field, the Bench/Advocate toggle, the
+  Create person button itself) read as "outside the combobox," closing
+  `comboOpen` and unmounting the create-person popover mid-interaction.
+- **Fix:** `comboOutsideClick`'s `handleClick` also treats a click inside any
+  bits-ui `Popover.Content` (detected via its own `data-popover-content`
+  attribute, present regardless of portal target) as inside the combobox.
+- **Verification:** new contract test
+  `test_combo_outside_click_does_not_close_on_a_click_inside_a_nested_popover`.
+- **Commit:** `c9dff8e2`.
+
+**2. [Confirmed real bug] Create person always failed with "Could not create person. Please try again."**
+
+- **Root cause:** Phase 38 (D-01/D-03/D-09) removed `full_name` from
+  `PersonCreate` entirely — the schema now takes structured
+  `first_name`/`middle_name`/`last_name`/`name_suffix` parts, derives
+  `full_name` server-side via `prepare_person_name`, and sets
+  `extra="forbid"`. `CreatePersonPopover` still submitted a single
+  `full_name` field, and `+page.server.ts`'s `?/addPerson` action still
+  forwarded it — every submission was rejected with a 422, swallowed by the
+  action's generic error message. Confirmed via the live access log (a real
+  404-turned-422 request trace) and by reading `PersonCreate`,
+  `prepare_person_name`, and the People-directory's own create-person form
+  (`app/src/routes/admin/people/new/+page.svelte`) directly — that form
+  already uses four structured fields, confirming the intended post-Phase-38
+  pattern this popover had never migrated to.
+- **Fix:** Replaced the single "Name" field with "First name"/"Last name"
+  (mirroring the People-directory's fields, minus middle/suffix — this
+  popover stays intentionally minimal); `?/addPerson` now sends
+  `first_name`/`last_name`; the submit-disabled condition mirrors the
+  backend's own "at least one of first/last required" rule.
+- **Verification:** full suite green; `PersonCreate` schema confirmed
+  directly to accept the new request shape; live HMR-verified against the
+  running dev server.
+- **Commit:** `d3f8b965`.
+
+**Deferred, not fixed (logged as a todo, not blocking):** two related UX
+polish items surfaced during this same testing — the popover's Bench/Advocate
+default ignores the row's own current toggle, and a newly created person's
+name doesn't appear in the combobox search box afterward even though the row
+is correctly resolved internally. Neither is a defect in what Plan 44-09
+(or this checkpoint) actually promises, and the operator explicitly asked
+for these to be logged for later rather than fixed now. See
+`.planning/todos/pending/2026-08-11-create-person-popover-side-and-selection.md`.
+
+### Verification (sixth round)
+
+- `./.venv/Scripts/python.exe -m pytest tests/conftest.py api/tests/test_phase44_resolve_table_contract.py -q` — **108 passed**, 0 failures.
+- `./.venv/Scripts/python.exe -m pytest tests/conftest.py api/tests pipeline/tests -q` — **900 passed, 5 xfailed**, 0 failures, the same 4 pre-existing collection errors documented since 44-01/02/03.
+- `npm --prefix app run check` — **806 files, 0 errors**, 36 pre-existing warnings (identical baseline to every prior round).
+- Both fixes verified live against the running dev server (HMR-confirmed for the frontend fix; a direct service-level call against the real dev DB for the schema fix) — not just the automated suite.
+
+### Task Commits (sixth round)
+
+8. **Tenure-preview endpoint (service + schema + router)** — `ba3e95d2` (feat)
+9. **ResolveCard wiring + SvelteKit proxy route** — `42d88ead` (feat)
+10. **Backend + frontend tests for both** — `6cf7149e` (test)
+11. **Fix create-person popover closing on its own clicks** — `c9dff8e2` (fix)
+12. **Migrate create-person popover off the retired full_name field** — `d3f8b965` (fix)
+
+### Self-Check: PASSED (sixth round)
+
+- FOUND: `app/src/lib/components/CreatePersonPopover.svelte`
+- FOUND: `app/src/routes/admin/pipeline/[job_id]/+page.server.ts`
+- FOUND: `app/src/lib/components/ResolveCard.svelte`
+- FOUND: `api/tests/test_phase44_resolve_table_contract.py`
+- FOUND: commit `c9dff8e2`
+- FOUND: commit `d3f8b965`
+- FOUND: `.planning/todos/pending/2026-08-11-create-person-popover-side-and-selection.md`
+
+## Checkpoint APPROVED — Task 4 closed 2026-08-11
+
+The operator live-tested the complete 44-05→44-09 Figma reconciliation —
+all 16 checklist items (the original 12 from the plan's own
+`<how-to-verify>`, plus round 4's toggle/gate repeat, plus round 5's
+tenure-preview items 13-16) — and confirmed every one passes, after this
+round's two additional fixes. Task 4 is APPROVED. Requirements RESOLVE-07,
+RESOLVE-08, RESOLVE-15, and RESOLVE-16 are marked complete in
+`.planning/REQUIREMENTS.md` (RESOLVE-07/08 were implemented in Plan 44-05
+but gated on this checkpoint's whole-reconciliation sign-off).
+
+Plan 44-09, and Phase 44 (resolve-table-rework) as a whole, are complete.

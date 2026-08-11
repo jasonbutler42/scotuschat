@@ -132,7 +132,7 @@ Full phase details: `.planning/milestones/v1.6-ROADMAP.md`
 - [x] **Phase 41: Canonical Corpus Fixture Selection** - Analyze the ~7,800-argument ConvoKit dataset and get a 4-fixture set (1 structurally-complex audit fixture + 3 publish-state variants) operator-confirmed for the milestone (completed 2026-07-29)
 - [x] **Phase 42: Corpus Import Fidelity Diff & Fix** - Field-by-field diff of the fixture's raw ConvoKit source against its imported DB rows, then fix every real gap and re-import clean (completed 2026-07-30)
 - [x] **Phase 43: Dev-Only Reset to Fixture** - Admin action that wipes all argument/people data and reseeds exactly the fixture, hard-gated against ever running outside a dev environment (completed 2026-07-31)
-- [ ] **Phase 44: Resolve Table Rework** - originally SEED-001's mockup-driven rework (5 columns); superseded 2026-08-04 by a Figma canonical reconciliation (4 columns, dropdown-only Resolved As, side-scoped search, source-aware hints, live tenure recompute — RESOLVE-07–16)
+- [x] **Phase 44: Resolve Table Rework** - originally SEED-001's mockup-driven rework (5 columns); superseded 2026-08-04 by a Figma canonical reconciliation (4 columns, dropdown-only Resolved As, side-scoped search, source-aware hints, live tenure recompute — RESOLVE-07–16) (completed 2026-08-11)
 - [ ] **Phase 45: Deferred UI Bug Fixes** - Unpublished arguments no longer leak into `/cases/` or direct URLs; popover scrollbar stays inside the card boundary
 
 ## Phase Details
@@ -284,7 +284,7 @@ Plans:
 
 **Reconciliation Wave 4** *(blocked on 44-08)*
 
-- [ ] 44-09-PLAN.md — Persistent progress line, always-visible reason-disabled Continue, and AUTO-MATCHED / NEEDS YOU row cue tags. Ends with operator acceptance of the complete reconciliation against all four canonical Figma frames (RESOLVE-15, RESOLVE-16)
+- [x] 44-09-PLAN.md — Persistent progress line, always-visible reason-disabled Continue, and AUTO-MATCHED / NEEDS YOU row cue tags. Ends with operator acceptance of the complete reconciliation against all four canonical Figma frames (RESOLVE-15, RESOLVE-16)
 
 **UI hint**: yes
 
@@ -353,7 +353,7 @@ Plans:
 | 41. Canonical Corpus Fixture Selection | v1.7 | 3/3 | Complete    | 2026-07-29 |
 | 42. Corpus Import Fidelity Diff & Fix | v1.7 | 5/5 | Complete    | 2026-07-30 |
 | 43. Dev-Only Reset to Fixture | v1.7 | 4/4 | Complete    | 2026-07-31 |
-| 44. Resolve Table Rework | v1.7 | 8/9 | In Progress|  |
+| 44. Resolve Table Rework | v1.7 | 9/9 | Complete    | 2026-08-11 |
 | 45. Deferred UI Bug Fixes | v1.7 | 0/0 | Not started | - |
 
 ## Backlog

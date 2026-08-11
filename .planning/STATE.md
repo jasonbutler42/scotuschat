@@ -2,19 +2,19 @@
 gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Corpus Fidelity & Resolve Rework
-current_phase: 44
-current_phase_name: resolve-table-rework
-status: executing
+current_phase: 45
+current_phase_name: Deferred UI Bug Fixes
+status: planning
 stopped_at: Completed 44-08-PLAN.md
-last_updated: "2026-08-07T19:51:36.213Z"
-last_activity: 2026-08-07
-last_activity_desc: Plan 44-08 complete (RESOLVE-11/12/13/14 bench copy, new-tab Edit person link, read-only parity); starting 44-09
+last_updated: "2026-08-11T20:23:42.518Z"
+last_activity: 2026-08-11
+last_activity_desc: Phase 44 complete, transitioned to Phase 45
 progress:
   total_phases: 5
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 21
-  completed_plans: 20
-  percent: 60
+  completed_plans: 21
+  percent: 80
 ---
 
 # Project State
@@ -28,10 +28,10 @@ See: .planning/PROJECT.md (updated 2026-07-29 after starting v1.7 milestone)
 
 ## Current Position
 
-Phase: 44 (resolve-table-rework) — EXECUTING
-Plan: 8 of 9
-Status: Ready to execute
-Last activity: 2026-08-07 — Plan 44-08 complete (RESOLVE-11/12/13/14 bench copy, new-tab Edit person link, read-only parity); starting 44-09
+Phase: 45 — Deferred UI Bug Fixes
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-08-11 — Phase 44 complete, transitioned to Phase 45
 
 **Milestone shape:**
 

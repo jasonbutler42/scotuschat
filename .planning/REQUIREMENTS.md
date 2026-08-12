@@ -40,8 +40,8 @@
 
 ### Bug Fixes
 
-- [ ] **BUG-01**: An unpublished argument is not visible in the `/cases/` list and is not directly accessible by URL (both listing and direct-access are gated on publish status)
-- [ ] **BUG-02**: The speaker popover's scrollbar renders flush inside the card's visible rounded boundary instead of outside it, on long/expanded content
+- [x] **BUG-01**: An unpublished argument is not visible in the `/cases/` list and is not directly accessible by URL (both listing and direct-access are gated on publish status)
+- [x] **BUG-02**: The speaker popover's scrollbar renders flush inside the card's visible rounded boundary instead of outside it, on long/expanded content
 
 ## v2 Requirements
 
@@ -84,8 +84,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | RESOLVE-14 | Phase 44 | Complete |
 | RESOLVE-15 | Phase 44 | Complete |
 | RESOLVE-16 | Phase 44 | Complete |
-| BUG-01 | Phase 45 | Pending |
-| BUG-02 | Phase 45 | Pending |
+| BUG-01 | Phase 45 | Complete |
+| BUG-02 | Phase 45 | Complete |
 
 **Coverage:**
 

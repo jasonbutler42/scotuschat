@@ -231,12 +231,7 @@
 
 <style>
 	.popover-card {
-		background-color: #1e293b;
-		border: 1px solid #334155;
-		border-radius: 8px;
 		padding: 24px;
-		min-width: 300px;
-		max-width: 400px;
 		display: block;
 	}
 </style>

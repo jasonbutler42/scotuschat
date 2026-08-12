@@ -142,7 +142,9 @@
 				trapFocus={true}
 				escapeKeydownBehavior="close"
 				interactOutsideBehavior="close"
-				style="z-index: 50; max-height: min(560px, 80vh); overflow-y: auto;"
+				style="z-index: 50; max-height: min(560px, 80vh); overflow-y: auto;
+				       background-color: #1e293b; border: 1px solid #334155; border-radius: 8px;
+				       min-width: 300px; max-width: 400px;"
 			>
 				{#if currentSpeaker}
 					<SpeakerPopover speaker={currentSpeaker} />

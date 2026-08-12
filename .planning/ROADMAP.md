@@ -301,14 +301,14 @@ Plans:
   4. When a Justice popover's content overflows (long bio with Read more expanded), the scrollbar renders flush inside the card's visible rounded boundary.
   5. The popover still shows every field Phase 39 added, with no content truncated or escaping the card.
 
-**Plans**: 2 plans
+**Plans**: 2/2 plans executed
 **UI hint**: yes
 
 Plans:
 **Wave 1** *(both plans run in parallel — zero file overlap, no dependency)*
 
-- [ ] 45-01-PLAN.md — BUG-01: apply the `Argument.published_at.isnot(None)` gate inside `get_argument_with_utterances` and `get_argument_speakers` (None sentinel + new router 404 branch) so both public argument-detail endpoints return a plain 404 indistinguishable from a nonexistent ID; source-contract + DB-gated integration tests in `test_published_gate.py`; operator publish/unpublish round trip
-- [ ] 45-02-PLAN.md — BUG-02: relocate the card box model (surface, border, radius, width bounds) onto `Popover.Content` so the scrolling element and the visually-bounded element are one box; new `test_phase45_popover_boxmodel_contract.py` locking single-box ownership, the nine Phase 39 regression-checklist fields, and the overflow boundary/precision contract; operator visual verification at both threshold branches
+- [x] 45-01-PLAN.md — BUG-01: apply the `Argument.published_at.isnot(None)` gate inside `get_argument_with_utterances` and `get_argument_speakers` (None sentinel + new router 404 branch) so both public argument-detail endpoints return a plain 404 indistinguishable from a nonexistent ID; source-contract + DB-gated integration tests in `test_published_gate.py`; operator publish/unpublish round trip
+- [x] 45-02-PLAN.md — BUG-02: relocate the card box model (surface, border, radius, width bounds) onto `Popover.Content` so the scrolling element and the visually-bounded element are one box; new `test_phase45_popover_boxmodel_contract.py` locking single-box ownership, the nine Phase 39 regression-checklist fields, and the overflow boundary/precision contract; operator visual verification at both threshold branches
 
 ## Progress
 
@@ -360,7 +360,7 @@ Plans:
 | 42. Corpus Import Fidelity Diff & Fix | v1.7 | 5/5 | Complete    | 2026-07-30 |
 | 43. Dev-Only Reset to Fixture | v1.7 | 4/4 | Complete    | 2026-07-31 |
 | 44. Resolve Table Rework | v1.7 | 9/9 | Complete    | 2026-08-11 |
-| 45. Deferred UI Bug Fixes | v1.7 | 0/0 | Not started | - |
+| 45. Deferred UI Bug Fixes | v1.7 | 2/2 | In Progress|  |
 
 ## Backlog
 

@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Corpus Fidelity & Resolve Rework
 current_phase: 45
-current_phase_name: Deferred UI Bug Fixes
+current_phase_name: deferred-ui-bug-fixes
 status: executing
 stopped_at: Phase 45 UI-SPEC approved
-last_updated: "2026-08-12T13:33:37.445Z"
-last_activity: 2026-08-11
-last_activity_desc: Phase 44 complete, transitioned to Phase 45
+last_updated: "2026-08-12T13:51:33.913Z"
+last_activity: 2026-08-12
+last_activity_desc: Phase 45 execution started
 progress:
   total_phases: 5
   completed_phases: 4
@@ -24,14 +24,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-29 after starting v1.7 milestone)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** Phase 44 — resolve-table-rework
+**Current focus:** Phase 45 — deferred-ui-bug-fixes
 
 ## Current Position
 
-Phase: 45 — Deferred UI Bug Fixes
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-08-11 — Phase 44 complete, transitioned to Phase 45
+Phase: 45 (deferred-ui-bug-fixes) — EXECUTING
+Plan: 1 of 2
+Status: Executing Phase 45
+Last activity: 2026-08-12 — Phase 45 execution started
 
 **Milestone shape:**
 

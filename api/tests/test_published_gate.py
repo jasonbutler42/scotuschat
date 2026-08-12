@@ -198,18 +198,92 @@ class TestArgumentDetailPublishedGate:
             f"Actual body (non-comment lines):\n{combined}"
         )
 
+    def test_get_argument_speakers_uses_published_at_filter(self):
+        """
+        get_argument_speakers() must gate on Argument.published_at.
+
+        This closes BUG-01's second leak path (D-02, T-45-02): direct access to
+        GET /arguments/{id}/speakers must not leak an unpublished argument's
+        speaker roster.
+        """
+        lines = _service_function_source_lines("speakers.py", "get_argument_speakers")
+        assert lines, (
+            "Could not extract get_argument_speakers() body from api/services/speakers.py"
+        )
+
+        combined = "\n".join(lines)
+        assert "Argument.published_at" in combined, (
+            "get_argument_speakers() must filter/gate on Argument.published_at "
+            "(BUG-01/D-02 visibility gate). "
+            f"Actual body (non-comment lines):\n{combined}"
+        )
+
+    def test_get_argument_speakers_does_not_use_resolved_at_filter(self):
+        """
+        get_argument_speakers() must NOT gate on Argument.resolved_at.
+
+        The gate must key on published_at only, never resolved_at (D-02).
+        """
+        lines = _service_function_source_lines("speakers.py", "get_argument_speakers")
+        assert lines, (
+            "Could not extract get_argument_speakers() body from api/services/speakers.py"
+        )
+
+        combined = "\n".join(lines)
+        assert "Argument.resolved_at" not in combined, (
+            "get_argument_speakers() must not gate on Argument.resolved_at — the "
+            "visibility gate must key on published_at only (BUG-01/D-02). "
+            f"Actual body (non-comment lines):\n{combined}"
+        )
+
+    def test_get_argument_speakers_preserves_empty_list_short_circuit(self):
+        """
+        The legitimate empty-list path (published argument, zero resolved
+        speakers) must survive the publish gate unchanged — an empty list must
+        never be converted into a 404 (EDGE empty, BUG-01).
+        """
+        lines = _service_function_source_lines("speakers.py", "get_argument_speakers")
+        assert lines, (
+            "Could not extract get_argument_speakers() body from api/services/speakers.py"
+        )
+
+        combined = "\n".join(lines)
+        assert "if not person_ids" in combined, (
+            "get_argument_speakers() must preserve the 'if not person_ids: return []' "
+            "short-circuit — a published argument with zero resolved speakers must "
+            f"return 200/[] , never 404 (EDGE empty, BUG-01). Actual body:\n{combined}"
+        )
+
+    def test_speakers_router_404_detail_matches_utterances_router(self):
+        """
+        D-01: the speakers endpoint's 404 must be byte-identical (same detail
+        string, same status) to the utterances endpoint's 404 for the same
+        absent/unpublished argument.
+        """
+        import pathlib
+        source_path = pathlib.Path(__file__).parent.parent / "routers" / "arguments.py"
+        source = source_path.read_text(encoding="utf-8")
+
+        detail_line = 'raise HTTPException(status_code=404, detail="Argument not found")'
+        occurrences = source.count(detail_line)
+        assert occurrences == 2, (
+            "api/routers/arguments.py must raise the identical "
+            f'{detail_line!r} exactly twice — once in get_utterances, once in '
+            f"get_speakers (D-01). Found {occurrences} occurrence(s)."
+        )
+
     def test_publish_gate_adjacency_across_gated_functions(self):
         """
-        EDGE adjacency (BUG-01): all public publish gates evaluate the identical
-        NULL-check predicate Argument.published_at.isnot(None), and none of them
-        compares published_at against a clock value — so publishing introduces no
-        embargo or scheduled-publish semantics.
+        EDGE adjacency (BUG-01): all public publish gates key on
+        Argument.published_at (never a clock comparison against it) — so
+        publishing introduces no embargo or scheduled-publish semantics.
 
-        This task (Task 1) asserts the predicate's presence in get_cases() and
-        get_argument_with_utterances(), and the clock-comparison absence across
-        all three gated bodies, including get_argument_speakers() in its
-        pre-Task-2 (not yet gated) state. Task 2 adds the predicate-presence
-        assertion for get_argument_speakers() once that function is gated.
+        get_cases() and get_argument_with_utterances() use the exact
+        Argument.published_at.isnot(None) predicate at the SQL layer;
+        get_argument_speakers() gates on the same column via a Python-side
+        None check on the fetched value (per 45-PATTERNS.md's recommendation),
+        which is asserted for substring presence rather than the exact SQL
+        predicate text.
         """
         cases_lines = _get_cases_source_lines()
         arguments_lines = _service_function_source_lines(
@@ -230,6 +304,10 @@ class TestArgumentDetailPublishedGate:
         assert "Argument.published_at.isnot(None)" in arguments_combined, (
             "get_argument_with_utterances() must use the exact predicate "
             "Argument.published_at.isnot(None) (BUG-01 EDGE adjacency)."
+        )
+        assert "Argument.published_at" in speakers_combined, (
+            "get_argument_speakers() must gate on Argument.published_at "
+            "(BUG-01 EDGE adjacency)."
         )
 
         clock_markers = ("func.now", "datetime.now", "utcnow")
@@ -380,6 +458,33 @@ class TestArgumentDetailPublishedGateLive:
         argument_id = await _find_argument_id_by_publish_state(db_session, published=False)
         unpublished_response = await client.get(f"/arguments/{argument_id}/utterances")
         nonexistent_response = await client.get("/arguments/987654321/utterances")
+
+        assert unpublished_response.status_code == 404
+        assert nonexistent_response.status_code == 404
+        assert unpublished_response.json() == {"detail": "Argument not found"}
+        assert nonexistent_response.json() == {"detail": "Argument not found"}
+
+    async def test_unpublished_argument_speakers_returns_404(self, client, db_session):
+        """BUG-01/D-02 (Task 2): the speakers endpoint gates on published_at
+        exactly like the utterances endpoint."""
+        argument_id = await _find_argument_id_by_publish_state(db_session, published=False)
+        response = await client.get(f"/arguments/{argument_id}/speakers")
+        assert response.status_code == 404
+        assert response.json() == {"detail": "Argument not found"}
+
+    async def test_published_argument_speakers_returns_200(self, client, db_session):
+        argument_id = await _find_argument_id_by_publish_state(db_session, published=True)
+        response = await client.get(f"/arguments/{argument_id}/speakers")
+        assert response.status_code == 200
+        assert isinstance(response.json(), list)
+
+    async def test_unpublished_speakers_404_body_matches_nonexistent_id(self, client, db_session):
+        """D-01: the 404 for an unpublished argument's speakers must be
+        body-identical to the 404 for a definitely-nonexistent ID — the same
+        equality property already proven for the utterances endpoint."""
+        argument_id = await _find_argument_id_by_publish_state(db_session, published=False)
+        unpublished_response = await client.get(f"/arguments/{argument_id}/speakers")
+        nonexistent_response = await client.get("/arguments/987654321/speakers")
 
         assert unpublished_response.status_code == 404
         assert nonexistent_response.status_code == 404

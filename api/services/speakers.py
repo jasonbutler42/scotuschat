@@ -112,28 +112,37 @@ def _tenure_role_name(
 async def get_argument_speakers(
     db: AsyncSession,
     argument_id: int,
-) -> list[dict]:
+) -> list[dict] | None:
     """
     Return speaker popover data for all resolved speakers in an argument.
 
     Five-step async subquery pattern (Phase 15 extends the original three steps):
-      0. Fetch the argument's argued_date (date-range tenure lookup).
+      0. Fetch the argument's argued_date and published_at (date-range tenure
+         lookup; published_at gates public visibility per BUG-01/D-02).
       1. Collect distinct person_ids from utterances for this argument.
       2. Fetch Person + Role.name for those person_ids in one query.
       3. Fetch all CourtTenure rows for those person_ids in one query.
       4. Fetch argument_participants.side per person for this argument.
 
-    Returns [] immediately when no utterances have a resolved person_id
-    (e.g. resolve step has not run yet) — never raises 404.
+    Returns None when the argument row is absent or its published_at IS NULL
+    (BUG-01/D-02) — the router maps None to a plain 404 (D-01). Returns []
+    (not None) for a published argument with no resolved speakers (e.g. resolve
+    step has not run yet) — an empty roster is never converted into a 404.
 
     Returns list[dict] shaped to match SpeakerPopoverEntry (validated by
-    the router's response_model).
+    the router's response_model), or None per the publish gate above.
     """
-    # Step 0 — Fetch the argument's argued_date (needed for tenure lookup) ----
+    # Step 0 — Fetch the argument's argued_date + published_at ---------------
+    # Gate on published_at (BUG-01/D-02): an absent row or a NULL publish
+    # timestamp both return None here, distinct from the legitimate [] case
+    # below (published argument, zero resolved speakers).
     arg_result = await db.execute(
-        select(Argument.argued_date).where(Argument.id == argument_id)
+        select(Argument.argued_date, Argument.published_at).where(Argument.id == argument_id)
     )
-    argued_date = arg_result.scalar_one_or_none()
+    arg_row = arg_result.one_or_none()
+    if arg_row is None or arg_row.published_at is None:
+        return None
+    argued_date = arg_row.argued_date
 
     # Step 1 — Collect distinct person_ids (ignore unresolved utterances) ----
     person_ids_result = await db.execute(

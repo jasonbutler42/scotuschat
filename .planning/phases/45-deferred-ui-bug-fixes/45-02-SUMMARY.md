@@ -9,15 +9,16 @@ requires:
   - phase: 39
     provides: the widened SpeakerPopover.svelte (bio clamp, tenure list, dividers) whose field set this plan's contract test locks
 provides:
-  - "Popover.Content in +page.svelte owns the full visible box model (surface, border, radius, width bounds, max-height, overflow, z-index) — Task 1, committed"
-  - "api/tests/test_phase45_popover_boxmodel_contract.py — 21-assertion static source contract covering single-box ownership, the nine Phase 39 regression-checklist fields, the overflow threshold's two min() branches, the border-box precision contract, and the phase prohibitions — Task 2, committed"
+  - "Popover.Content in +page.svelte owns surface/border/radius/width-bounds but NOT max-height/overflow-y — revised after live checkpoint feedback, see 'Deviations from Plan'"
+  - "The bio <p> in SpeakerPopover.svelte is the sole scrolling element, capped at max-height:150px via a `.bio-scroll` class (expanded state only), with a thin custom scrollbar"
+  - "api/tests/test_phase45_popover_boxmodel_contract.py — 26-assertion static source contract covering the revised box model, bio-scoped scroll, custom scrollbar theming, the nine Phase 39 regression-checklist fields, and the phase prohibitions"
 affects: [phase-45-bug-02-scrollbar-plan]
 
 # Actuals (#2632)
 actuals:
   tokens: 3411
   tasks: 2
-  commits: 2
+  commits: 3
 
 # Tech tracking
 tech-stack:
@@ -34,25 +35,22 @@ key-files:
     - app/src/lib/components/SpeakerPopover.svelte
 
 key-decisions:
-  - "D-03 implemented as specified: background-color #1e293b, border 1px solid #334155, border-radius 8px, min-width 300px, and max-width 400px moved from .popover-card onto Popover.Content's existing inline style= string, joining the pre-existing z-index/max-height/overflow-y declarations there; no wrapper element introduced."
+  - "D-03 REVISED at the Task 3 checkpoint: the original whole-card-scroll relocation (max-height/overflow-y moved onto Popover.Content) did not match operator intent. Operator supplied a Figma reference (\"person popover with bio examples\", node 4230:121, file 9PDECvbdHM2vYVxt3SCwru) showing the card sizing to its content with NO outer scroll — only the expanded bio paragraph scrolls internally, capped at 150px. Popover.Content kept background-color #1e293b, border 1px solid #334155, border-radius 8px, min-width 300px, max-width 400px, but max-height/overflow-y were removed entirely (no outer cap, explicit operator direction)."
   - "Padding stayed on .popover-card (not load-bearing for the fix, smaller diff) per 45-PATTERNS.md's recommendation — .popover-card now declares only padding: 24px and display: block."
-  - "No custom scrollbar theming added — the structural relocation alone is the approved fix per 45-CONTEXT.md; the escape hatch is explicitly not exercised without operator direction, which is exactly what Task 3's checkpoint exists to gather."
+  - "Custom scrollbar theming WAS added, reversing the original prohibition — explicit operator direction at the checkpoint (Figma mockup shows a thin ~3px scrollbar). Scoped narrowly to a new `.bio-scroll` class (scrollbar-width: thin + ::-webkit-scrollbar rules), built only from the existing #334155 token color — no new color introduced."
 
 patterns-established:
   - "Pattern: when relocating CSS box-model ownership between two elements in a component with no <style> block (inline style= convention), region-scope every absence assertion in the accompanying source-contract test to the specific extracted rule/tag text, not the whole file, to avoid false failures against legitimate same-named properties elsewhere (avatar border-radius, divider border-top, etc.)."
 
-requirements-completed: []  # BUG-02 is NOT complete — Task 3 (checkpoint:human-verify, gate=blocking) is still pending operator action; do not mark complete in REQUIREMENTS.md until that checkpoint is approved.
+requirements-completed: [BUG-02]
 
 coverage:
   - id: D1
-    description: "Popover.Content owns the surface color, border, radius, width bounds, max-height, and overflow together (single-box ownership) — the scrolling element and the visually-bounded element are the same box (Task 1)"
+    description: "REVISED: Popover.Content owns surface/border/radius/width-bounds but no max-height/overflow-y (no outer cap); the bio paragraph is the sole scrolling element, capped at 150px, scoped via a `.bio-scroll` class active only when expanded (Task 1, revised post-checkpoint)"
     requirement: "BUG-02"
     verification:
       - kind: unit
-        ref: "api/tests/test_phase45_popover_boxmodel_contract.py::test_popover_content_owns_full_box_model"
-        status: pass
-      - kind: unit
-        ref: "api/tests/test_phase45_popover_boxmodel_contract.py::test_popover_card_reduced_to_padding_and_display_only"
+        ref: "api/tests/test_phase45_popover_boxmodel_contract.py::test_popover_content_has_no_max_height_or_overflow, ::test_bio_expanded_branch_caps_height_and_scrolls, ::test_popover_content_no_longer_shares_scroll_with_bio"
         status: pass
     human_judgment: false
   - id: D2
@@ -75,24 +73,27 @@ coverage:
         status: pass
     human_judgment: false
   - id: D4
-    description: "Operator-confirmed live verification: scrollbar renders flush inside the rounded card at both threshold branches, every field renders unclipped, a short-bio popover shows no scrollbar, scrolled content does not collide with the rounded corners, interaction (Escape/outside-click/focus-trap/wheel/drag) stays intact, and the advocate popover's card boundary matches the Justice popover's (Task 3)"
-    verification: []
+    description: "Operator-confirmed live verification: scrollbar renders correctly inside the bio block at all heights (Task 3, against the revised bio-scoped architecture, not the original whole-card D1 shape)"
+    verification:
+      - kind: manual
+        ref: "Operator: \"that scrollbar placement is perfect! looks good at all heights. Approved\""
+        status: pass
     human_judgment: true
-    rationale: "Requires a human to open a live browser popover, resize the viewport across both min() branches, visually confirm scrollbar placement relative to the rounded border, and confirm keyboard/pointer interaction — none of this is something the executor agent can fabricate or substitute with an automated check."
+    rationale: "Requires a human to open a live browser popover and visually confirm scrollbar placement relative to the bio block and the card border — none of this is something the executor agent can fabricate or substitute with an automated check."
 
 # Metrics
-duration: ~25min
+duration: ~25min (Tasks 1-2) + revision after checkpoint feedback
 completed: 2026-08-12
-status: in-progress
+status: complete
 ---
 
 # Phase 45 Plan 02: BUG-02 popover box-model relocation Summary
 
-**Popover.Content now owns the full visible box model (surface, border, radius, width bounds) alongside its pre-existing scroll properties, so the scrolling element and the visually-bounded card are the same box; a new 21-assertion static source contract locks single-box ownership, the full Phase 39 field set, and the overflow threshold's precision — Task 3's live operator verification is still pending.**
+**BUG-02 is closed. After the initial whole-card-scroll fix (D-03 as originally specified) failed live checkpoint verification, the operator supplied a Figma reference showing the intended shape: only the bio paragraph scrolls internally (capped at 150px), not the whole card. Popover.Content dropped its max-height/overflow-y; the bio `<p>` gained a `.bio-scroll` class with a thin custom scrollbar. Operator-approved on the revised implementation.**
 
 ## Performance
 
-- **Tasks:** 2 of 3 completed (Task 1 and Task 2 committed; Task 3 is a `checkpoint:human-verify` with `gate="blocking"`, awaiting operator action)
+- **Tasks:** 3 of 3 completed (Task 1, Task 2, and the post-checkpoint revision all committed; Task 3 checkpoint approved by operator)
 - **Files modified:** 3 (`app/src/routes/cases/[slug]/arguments/[id]/+page.svelte`, `app/src/lib/components/SpeakerPopover.svelte`, `api/tests/test_phase45_popover_boxmodel_contract.py`)
 
 ## Accomplishments
@@ -106,8 +107,9 @@ Each task was committed atomically:
 
 1. **Task 1: Relocate the card box model onto the scrolling element and lock it with a contract test** - `a064ab13` (feat)
 2. **Task 2: Lock the Phase 39 field set and the overflow boundary/precision contract** - `bac9173e` (test)
+3. **Task 1 revision (post-checkpoint): scope the scroll to the bio paragraph, not the whole card** - `0e804589` (fix) — see "Deviations from Plan"
 
-**Task 3 (checkpoint:human-verify, gate="blocking") has NOT been executed or approved.** It requires an operator to drive a live browser session across two viewport heights and report what the scrollbar looks like relative to the card border. See the CHECKPOINT REACHED message returned alongside this plan's execution for the exact verification steps.
+**Task 3 (checkpoint:human-verify, gate="blocking") is APPROVED.** The operator confirmed the scrollbar renders correctly inside the bio block at all heights after the revision landed.
 
 ## Files Created/Modified
 
@@ -123,7 +125,17 @@ Each task was committed atomically:
 
 ## Deviations from Plan
 
-None — plan executed exactly as written for Tasks 1 and 2.
+### Post-Checkpoint Design Revision
+
+**1. [Live verification found the D-03 whole-card-scroll approach did not match intent] Popover.Content's max-height/overflow-y removed; scroll rescoped to the bio paragraph alone**
+- **Found during:** Task 3 live browser verification, first pass.
+- **Issue:** the operator reported the scrollbar still wasn't rendering "inside" the popover card as intended, and clarified the actual desired behavior: only a small chunk of the bio text should expand/scroll — not the whole card. The operator supplied a Figma reference ("person popover with bio examples" frame, node 4230:121, file `9PDECvbdHM2vYVxt3SCwru`) showing three states (short bio / collapsed / expanded-scrolling), none of which give `Popover.Content` any max-height or overflow — the card always sizes to its content. State 3's `bio-scroll-container` node is fixed at exactly 150px with its own thin scrollbar, independent of the outer card.
+- **Fix:** removed `max-height: min(560px, 80vh)` and `overflow-y: auto` from `Popover.Content`'s inline style (kept surface/border/radius/width-bounds). Added a `.bio-scroll` class to the bio `<p>`, applied only when expanded, with inline `max-height:150px; overflow-y:auto;` and a thin custom scrollbar (`scrollbar-width: thin` + `::-webkit-scrollbar*` rules, thumb color reusing the existing `#334155` token — no new color). Rewrote `test_phase45_popover_boxmodel_contract.py`'s box-model assertions (26 tests, up from 21) to lock the revised shape. Confirmed via `AskUserQuestion` that the operator wanted (a) no outer cap at all (not even a generous safety ceiling) and (b) a custom scrollbar matching the mockup, not the native default.
+- **Files modified:** `app/src/routes/cases/[slug]/arguments/[id]/+page.svelte`, `app/src/lib/components/SpeakerPopover.svelte`, `api/tests/test_phase45_popover_boxmodel_contract.py`
+- **Commit:** `0e804589`
+- **Verified:** `test_phase45_popover_boxmodel_contract.py` (26 passed), `test_phase39_popover_ui_contract.py` (17 passed, unchanged), `npm run check` (0 errors, 36 pre-existing warnings, none new). Operator approved the revised scrollbar behavior live in-browser.
+
+Otherwise: Tasks 1 and 2 executed as written before the revision.
 
 ## Issues Encountered
 
@@ -131,9 +143,9 @@ None — plan executed exactly as written for Tasks 1 and 2.
 
 ## Next Phase Readiness
 
-- Tasks 1 and 2 are complete, committed, and independently verified via targeted pytest runs and the plan's literal acceptance-criteria greps.
-- Task 3 (checkpoint:human-verify, `gate="blocking"`) is outstanding — a human operator must open a published argument's speaker popover, confirm the scrollbar renders flush inside the rounded card at both `min()` threshold branches, confirm every Phase 39 field still renders, confirm short-bio and advocate-popover behavior, and confirm interaction (Escape/outside-click/focus-trap/wheel/drag) before this plan is fully complete and BUG-02 can be checked off in REQUIREMENTS.md.
+- All three tasks are complete, committed, and independently verified: Tasks 1-2 via targeted pytest runs and the plan's literal acceptance-criteria greps, the post-checkpoint revision via the expanded 26-test contract plus `npm run check`, and Task 3 via live operator confirmation in-browser.
+- BUG-02 is closed. Combined with 45-01 (BUG-01, also operator-approved), Phase 45 has no outstanding plans.
 
 ---
 *Phase: 45-deferred-ui-bug-fixes*
-*Completed: 2026-08-12 (Tasks 1-2; Task 3 pending)*
+*Completed: 2026-08-12*

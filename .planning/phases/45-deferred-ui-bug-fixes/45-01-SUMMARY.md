@@ -46,7 +46,7 @@ key-decisions:
 patterns-established:
   - "Pattern: when a service function needs to distinguish 'not found/blocked' from 'found but legitimately empty,' return None for the former and [] for the latter, and let the router branch on None (not on an empty collection) to raise 404."
 
-requirements-completed: []  # BUG-01 is not yet complete — Task 3 (live operator verification) is still pending; do not mark complete until that checkpoint is approved.
+requirements-completed: [BUG-01]
 
 coverage:
   - id: D1
@@ -73,14 +73,17 @@ coverage:
     human_judgment: false
   - id: D3
     description: "Operator-confirmed live publish/unpublish round trip, client-side-nav and hard-SSR-refresh error page behavior, curl-verified 404 indistinguishability, published-but-unresolved 200/[] behavior, and preserved admin access (Task 3)"
-    verification: []
+    verification:
+      - kind: manual
+        ref: "Operator ran all seven checkpoint steps against seeded fixtures (published: argument 1953; unpublished: 1951/1952/1954) and confirmed all pass."
+        status: pass
     human_judgment: true
     rationale: "Requires a human to drive a live browser session (client-side navigation, F5 hard refresh, admin UI interaction) and report observed curl output — none of this is something the executor agent can fabricate or substitute with an automated check."
 
 # Metrics
 duration: n/a (continuation of a crashed prior execution; Task 1 timing not tracked by this agent)
 completed: 2026-08-12
-status: in-progress
+status: complete
 ---
 
 # Phase 45 Plan 01: BUG-01 publish gate on argument-detail endpoints Summary
@@ -149,6 +152,12 @@ None — this plan's changes are exactly the mitigations described in the plan's
 - FOUND commit `f49af5ae` in `git log --oneline --all`
 - FOUND commit `3ae41acf` in `git log --oneline --all`
 
+## Task 3: Operator Verification — Approved
+
+The database was empty in this environment (0 rows in every table) when verification was first attempted — unrelated to this plan's code, traced to a stale dev stack and never-seeded fixtures. The orchestrator restarted the dev stack, ran `POST /api/admin/dev/reset-to-fixture` to seed the Phase 41 four-fixture set, and published one argument (id `1953`, *Anderson v. Liberty Lobby, Inc.*) via `POST /api/admin/arguments/1953/publish` so both a published and unpublished (`1951`/`1952`/`1954`) argument existed to test against.
+
+The operator then ran all seven checkpoint steps (public list, client-side-nav 404, hard-refresh 404, curl 404-body-equality against the unpublished ID and a nonexistent sentinel on both endpoints, publish/unpublish round trip, published-but-unresolved `200 []`, and preserved admin access) and confirmed all pass. **BUG-01 is closed.**
+
 ## Next Step
 
-**Task 3 (checkpoint:human-verify, gate="blocking") is outstanding.** A human operator must perform the live publish/unpublish round trip, client-side-navigation and hard-SSR-refresh checks, curl-based 404-indistinguishability checks, and the admin-access check described in the plan's Task 3, then resume with "approved" (or describe any deviation) before this plan can be marked complete and `status: complete` set in a follow-up SUMMARY update.
+None — this plan is complete. Phase 45 also requires 45-02 (BUG-02) to close before the phase itself is done.

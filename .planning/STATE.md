@@ -4,15 +4,15 @@ milestone: v1.7
 milestone_name: Corpus Fidelity & Resolve Rework
 current_phase: 45
 current_phase_name: Deferred UI Bug Fixes
-status: planning
-stopped_at: Phase 45 context gathered
-last_updated: "2026-08-11T20:50:49.219Z"
+status: executing
+stopped_at: Phase 45 UI-SPEC approved
+last_updated: "2026-08-12T13:33:37.445Z"
 last_activity: 2026-08-11
 last_activity_desc: Phase 44 complete, transitioned to Phase 45
 progress:
   total_phases: 5
   completed_phases: 4
-  total_plans: 21
+  total_plans: 23
   completed_plans: 21
   percent: 80
 ---
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-07-29 after starting v1.7 milestone)
 
 Phase: 45 — Deferred UI Bug Fixes
 Plan: Not started
-Status: Ready to plan
+Status: Ready to execute
 Last activity: 2026-08-11 — Phase 44 complete, transitioned to Phase 45
 
 **Milestone shape:**
@@ -176,9 +176,9 @@ v1.6's roadmap evolution is archived in `.planning/milestones/v1.6-ROADMAP.md`. 
 
 ## Session Continuity
 
-Last session: 2026-08-11T20:50:44.443Z
-Stopped at: Phase 45 context gathered
-Resume file: .planning/phases/45-deferred-ui-bug-fixes/45-CONTEXT.md
+Last session: 2026-08-12T02:34:31.728Z
+Stopped at: Phase 45 UI-SPEC approved
+Resume file: /mnt/c/workspace/scotuschat/project/.planning/phases/45-deferred-ui-bug-fixes/45-UI-SPEC.md
 
 ## Operator Next Steps
 

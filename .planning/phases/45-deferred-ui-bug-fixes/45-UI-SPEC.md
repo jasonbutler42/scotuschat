@@ -175,17 +175,33 @@ it to any other element as part of this fix.
 
 ## UI Considerations
 
-Applicable state considerations resolved: 2 covered, 0 backstop, 0 unresolved.
+Ran through the UI-consideration probe against two named surfaces — **E1** the SpeakerPopover
+card as a whole (detected kinds: `list-collection`, `media`, `interactive-control`,
+`static-content`) and **E2** the bio paragraph specifically (detected kinds: `list-collection`,
+`interactive-control`, `static-content`; the `list-collection` cue on E2 is a probe false-positive
+triggered by "3-line clamp" phrasing — a single text block is not a cardinality-bearing
+collection, handled under `zero-one-many` below). No missed kind was identified beyond what the
+probe detected — media (avatar), list (tenure rows), interactive (Read more toggle), and static
+content cover everything this card renders.
+
+Applicable considerations: 16 (8 categories × 2 elements). Resolved (explicit): 7. Dismissed: 9.
+Resolved (backstop): 0. Unresolved: 0.
 
 | Category | Element(s) | Status | Resolution / Reason |
 |----------|------------|--------|----------------------|
-| overflow | SpeakerPopover card (static-content, with an interactive-control "Read more" toggle) | ✅ covered | Long/expanded bio content that exceeds `max-height: min(560px, 80vh)` scrolls via `overflow-y: auto` on the same box that owns the visible border/background/radius (this phase's fix) — the scrollbar renders flush inside the card boundary, content is never clipped or escapes the card. |
-| long-text | SpeakerPopover bio paragraph (static-content) | ✅ covered | Collapsed state clamps to 3 lines (`-webkit-line-clamp:3`) with a "Read more" toggle already implemented (Phase 39); expanded state is the overflow case above — unchanged by this fix, must not regress. |
+| empty | E1 card + E2 bio paragraph | Dismissed | No async/empty-card state exists — the popover only opens once its speaker prop is already resolved; a null bio simply omits the bio block entirely (pre-existing, unchanged by BUG-02). |
+| loading | E1 card + E2 bio paragraph | Dismissed | No data fetching of its own — every field arrives as a prop already loaded before the popover renders. BUG-02 is a box-model fix only and adds no fetch. |
+| error | E1 card + E2 bio paragraph | Dismissed | No fetch of its own to fail. BUG-01's 404 is a separate route-level concern, already scoped out of this UI-SPEC (see Copywriting Contract). |
+| populated | E1 card + E2 bio paragraph | Resolved (explicit) | Happy-path rendering of every field is enforced by the "BUG-02 Regression Checklist" below — all Phase 39 fields must render unchanged after the box-model fix. |
+| partial | E1 card | Resolved (explicit) | Partial data (e.g. birth date without death date, null `role_name`) already renders correctly per Phase 39 — each field is independently omittable per the Regression Checklist; BUG-02 does not touch this logic. |
+| partial | E2 bio paragraph | Dismissed | Not applicable — a bio paragraph is a single scalar text field, not a composite record that can be partially populated. |
+| overflow | E1 card + E2 bio paragraph | Resolved (explicit) | Content exceeding `max-height: min(560px, 80vh)` scrolls via `overflow-y: auto` on the same box that owns the visible border/background/radius (this fix) — the scrollbar renders flush inside the card boundary, content is never clipped or escapes the card. |
+| zero-one-many | E1 card (tenure list) | Dismissed | Tenure-list cardinality (0/1/many rows) is pre-existing Phase 39 rendering logic untouched by this box-model fix; already exercised by the Regression Checklist's tenure-list bullet. |
+| zero-one-many | E2 bio paragraph | Dismissed | Not applicable — a single text block, not a cardinality-bearing collection (see the false-positive note above). |
+| long-text | E1 card + E2 bio paragraph | Resolved (explicit) | Collapsed state clamps to 3 lines (`-webkit-line-clamp:3`) with a "Read more" toggle already implemented (Phase 39); expanded state is the overflow case above — unchanged by this fix, must not regress. |
 
-Categories not raised: `empty`/`loading`/`error`/`populated`/`partial`/`zero-one-many` do not
-apply — this is a pre-existing, already-populated static display component with no data
-fetching of its own (data arrives already loaded as a prop), and BUG-01's 404 is explicitly
-scoped out of UI (see Scope Note).
+BUG-01's 404 response is explicitly out of scope for this section — see the Scope Note at the top
+of this document.
 
 ---
 

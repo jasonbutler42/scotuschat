@@ -42,9 +42,11 @@ async def get_argument_with_utterances(
     The utterances list is ordered by sequence ASC and filtered to the
     maximum pipeline_run_id so callers always see the most recent parse results.
     """
-    # --- Step 1: Verify the argument exists --------------------------------
+    # --- Step 1: Verify the argument exists and is published ---------------
     arg_result = await db.execute(
-        select(Argument).where(Argument.id == argument_id)
+        select(Argument)
+        .where(Argument.id == argument_id)
+        .where(Argument.published_at.isnot(None))  # hide unpublished arguments (BUG-01/D-02)
     )
     argument = arg_result.scalar_one_or_none()
     if argument is None:

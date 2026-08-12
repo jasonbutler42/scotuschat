@@ -271,7 +271,14 @@ class TestGetArgumentSpeakersReasonLeft:
         db_session.add(person)
         await db_session.flush()
 
-        arg = Argument(status=ArgumentStatusEnum.PIPELINE, argued_date=datetime.date(2024, 1, 10))
+        arg = Argument(
+            status=ArgumentStatusEnum.PIPELINE,
+            argued_date=datetime.date(2024, 1, 10),
+            # get_argument_speakers() gates on published_at (BUG-01/D-02) — this
+            # fixture tests payload shape, not the publish gate, so it publishes
+            # the argument to keep the pre-existing assertions meaningful.
+            published_at=datetime.datetime.now(datetime.timezone.utc),
+        )
         db_session.add(arg)
         await db_session.flush()
 
@@ -416,7 +423,14 @@ class TestGetArgumentSpeakersWidenedContractShape:
         db_session.add(person)
         await db_session.flush()
 
-        arg = Argument(status=ArgumentStatusEnum.PIPELINE, argued_date=datetime.date(2024, 1, 10))
+        arg = Argument(
+            status=ArgumentStatusEnum.PIPELINE,
+            argued_date=datetime.date(2024, 1, 10),
+            # get_argument_speakers() gates on published_at (BUG-01/D-02) — this
+            # fixture tests payload shape, not the publish gate, so it publishes
+            # the argument to keep the pre-existing assertions meaningful.
+            published_at=datetime.datetime.now(datetime.timezone.utc),
+        )
         db_session.add(arg)
         await db_session.flush()
 

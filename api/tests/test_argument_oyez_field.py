@@ -96,6 +96,8 @@ async def test_utterances_payload_includes_oyez_transcript_id(client: AsyncClien
     an uncommitted row in a different session/connection would not be
     visible to it.
     """
+    import datetime
+
     from api.core.database import AsyncSessionLocal
     from api.models.models import Argument, ArgumentStatusEnum, Case, CaseArgument
 
@@ -116,6 +118,10 @@ async def test_utterances_payload_includes_oyez_transcript_id(client: AsyncClien
             question_number=1,
             source_docket="14-556-OYEZ-FIELD-TEST",
             status=ArgumentStatusEnum.DRAFT,
+            # get_argument_with_utterances() gates on published_at (BUG-01/D-02) —
+            # this fixture tests the oyez_transcript_id field, not the publish
+            # gate, so it publishes the argument to keep the assertion live.
+            published_at=datetime.datetime.now(datetime.timezone.utc),
         )
         db.add(argument)
         await db.flush()
@@ -201,6 +207,8 @@ async def test_utterances_endpoint_returns_200_for_null_argued_date(db_session) 
     step=="parse" filter mismatch (see this plan's <objective>) — an empty
     utterances list is still a valid 200 response for this test's purpose.
     """
+    import datetime
+
     from api.models.models import (
         Argument,
         ArgumentStatusEnum,
@@ -227,6 +235,10 @@ async def test_utterances_endpoint_returns_200_for_null_argued_date(db_session) 
         source_docket="1955-99-CR01-TEST",
         status=ArgumentStatusEnum.DRAFT,
         oyez_transcript_id="synthetic-null-date-transcript-cr01",
+        # get_argument_with_utterances() gates on published_at (BUG-01/D-02) —
+        # this fixture tests the null-argued_date response shape, not the
+        # publish gate, so it publishes the argument to keep the assertion live.
+        published_at=datetime.datetime.now(datetime.timezone.utc),
     )
     db_session.add(argument)
     await db_session.flush()

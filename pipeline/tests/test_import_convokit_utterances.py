@@ -452,6 +452,17 @@ async def test_utterances_readable_via_arguments_service_after_import(
     ]
     argument = await _run_and_fetch_argument(isolated_session, tmp_path, utterances)
 
+    # get_argument_with_utterances() gates on published_at (BUG-01/D-02). This
+    # test proves the corpus-import -> read-path round trip, not the publish
+    # gate — a freshly imported argument is legitimately unpublished, so
+    # publish it here to keep the pre-existing assertions exercising what
+    # they were written to test.
+    import datetime
+
+    argument.published_at = datetime.datetime.now(datetime.timezone.utc)
+    isolated_session.add(argument)
+    await isolated_session.flush()
+
     result = await get_argument_with_utterances(isolated_session, argument.id)
 
     assert result is not None

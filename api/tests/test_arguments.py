@@ -92,6 +92,10 @@ async def seeded_argument():
             argued_date=datetime.date(2015, 4, 28),
             question_number=1,
             resolved_at=datetime.datetime.now(datetime.timezone.utc),
+            # get_argument_with_utterances() gates on published_at (BUG-01/D-02) —
+            # this fixture tests the utterances payload, not the publish gate, so
+            # it publishes the argument to keep the pre-existing assertions live.
+            published_at=datetime.datetime.now(datetime.timezone.utc),
         )
         db.add(arg)
         await db.flush()

@@ -12,7 +12,7 @@ Endpoints:
     Empty list when no utterances have been resolved (person_id IS NULL).
 """
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Path
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.core.database import get_db
@@ -26,7 +26,7 @@ router = APIRouter(prefix="/arguments", tags=["arguments"])
 
 @router.get("/{argument_id}/utterances", response_model=ArgumentUtterancesResponse)
 async def get_utterances(
-    argument_id: int,
+    argument_id: int = Path(..., ge=1, le=2_147_483_647),
     db: AsyncSession = Depends(get_db),
 ) -> ArgumentUtterancesResponse:
     """
@@ -34,7 +34,9 @@ async def get_utterances(
 
     Path parameter `argument_id` is validated as int by FastAPI — non-integer
     values produce a 422 Unprocessable Entity response without reaching the
-    service layer (T-05-01 SQL injection mitigation).
+    service layer (T-05-01 SQL injection mitigation). The ge/le bounds match
+    the `Integer` (int4) DB column's range so an out-of-range ID 422s cleanly
+    instead of raising an unhandled driver error and 500ing.
 
     Returns 404 if the argument ID is not found or has no linked cases.
     """
@@ -46,7 +48,7 @@ async def get_utterances(
 
 @router.get("/{argument_id}/speakers", response_model=list[SpeakerPopoverEntry])
 async def get_speakers(
-    argument_id: int,
+    argument_id: int = Path(..., ge=1, le=2_147_483_647),
     db: AsyncSession = Depends(get_db),
 ) -> list[SpeakerPopoverEntry]:
     """
@@ -58,6 +60,8 @@ async def get_speakers(
     (person_id IS NULL).
     argument_id validated as int by FastAPI — non-integer path values produce 422
     without reaching the service layer (T-14-01 SQL injection mitigation, same as T-05-01).
+    The ge/le bounds match the `Integer` (int4) DB column's range so an out-of-range
+    ID 422s cleanly instead of raising an unhandled driver error and 500ing.
     """
     result = await speakers_service.get_argument_speakers(db, argument_id)
     if result is None:

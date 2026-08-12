@@ -25,7 +25,8 @@ async def get_argument_with_utterances(
     argument_id: int,
 ) -> dict | None:
     """
-    Return argument metadata + latest-run utterances, or None if not found.
+    Return argument metadata + latest-run utterances, or None if not found
+    or not published (BUG-01/D-02).
 
     Returns a dict with shape:
         {

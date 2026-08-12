@@ -455,3 +455,14 @@ Plans:
 - [ ] TBD (promote with /gsd-review-backlog when ready)
 
 **Note:** 999.10 (bulk-import historical justices CSV) was removed 2026-07-12 during backlog review — SUPERSEDED/ABSORBED into Phase 29's `import-justices` command per CONTEXT.md D-01, 2026-07-09. 999.17 (FastAPI test lifespan/session-factory failure) was removed 2026-07-12 — FIXED 2026-07-10 during Phase 30 Wave 1, commits `1a99f28a`/`f7ad3082`. 999.1, the earlier 999.9 (README), 999.11, 999.12, 999.13, 999.14, 999.15, 999.16, 999.18, 999.19 were promoted 2026-07-12 to Phases 36, 40, 39, 35, 34, 33, 38, 37, 32, 31 respectively, and folded into the v1.6 milestone on 2026-07-13. The canonical allocator later reused the now-vacant 999.9 slot for the edit-affordance backlog item captured 2026-07-13, and subsequently reused the now-vacant 999.10 slot for the Node.js path-mangling test backlog item captured 2026-07-31 (unrelated to the original 999.10, bulk-import historical justices CSV). See the Phase Details section above for promoted-item scope.
+
+### Phase 46: Dev Environment Reliability
+
+**Goal:** Fix the local dev setup now that Windows admin access is available (the project was previously constrained to run without it). Priority: the pytest DB-isolation bypass discovered in Phase 45 that can silently wipe the shared dev database (`.planning/todos/pending/2026-08-12-pytest-explicit-paths-bypass-db-isolation.md`). Also revisit `scripts/dev-start.ps1`, the portable-Postgres-via-pg_ctl setup, and the Windows-venv-via-WSL-interop path for a more reliable single start/stop flow.
+**Requirements**: TBD
+**Depends on:** Phase 45
+**Plans:** 0 plans
+
+Plans:
+
+- [ ] TBD (run /gsd-plan-phase 46 to break down)

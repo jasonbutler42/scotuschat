@@ -151,10 +151,14 @@ v1.6's roadmap evolution is archived in `.planning/milestones/v1.6-ROADMAP.md`. 
 
 2026-08-04: Phase 44's Wave 4 (44-04) operator visual-acceptance checkpoint surfaced that live Figma design exploration had moved materially past the original `resolve-speakers-panel.png` mockup while Waves 1–3 were executing. Rather than approve/reject the stale checkpoint, the operator ran an iterative design pass directly in Figma (file `9PDECvbdHM2vYVxt3SCwru`, page "screen mockups for GSD") and produced `.planning/phases/44-resolve-table-rework/44-FIGMA-RECONCILE.md`, which locks a new canonical Resolve-table layout and discards the old mockup. RESOLVE-07 through RESOLVE-16 added to REQUIREMENTS.md and ROADMAP.md Phase 44 (superseding RESOLVE-01's 5-column claim and refining RESOLVE-05's hint-prefix wording); 44-04's Task 4 marked superseded rather than complete. Follow-on plan(s) from 44-05 will implement the reconciliation, sequenced structural → data/behavior → copy/visual per the doc's own priority ordering.
 
+2026-08-12: All 5 phases of v1.7 (41–45) complete. Phase 45's own checkpoint verification surfaced a serious dev-environment finding: invoking pytest with explicit paths under `api/tests/`/`pipeline/tests/` skips `tests/conftest.py`'s `TEST_DATABASE_URL` redirect, silently running "DB-gated" tests against the live shared dev database — it wiped the dev DB to 0 rows twice during Phase 45's own execution. Also, the operator has since migrated to a machine with Windows admin access, removing the original admin-less constraint that shaped `scripts/dev-start.ps1`'s portable-Postgres-via-pg_ctl approach. Phase 46 ("Dev Environment Reliability") added to address both, prioritizing the data-loss-causing pytest isolation bug.
+
 ### Pending Todos
 
 - `2026-08-11-create-person-popover-side-and-selection.md` (ui, minor) — unassigned. Create-person popover in the Resolve card should inherit the row's current Bench/Advocate side as its default, and the newly created person should be visibly selected (comboQuery updated) afterward. Found during Phase 44-09 checkpoint live-testing; deferred by the operator, not blocking.
-- The two previously-pending todos (`2026-07-28-unpublished-argument-visible-in-cases-list.md`, `2026-07-29-popover-scrollbar-outside-card.md`) are covered by Phase 45 (BUG-01 / BUG-02) and should be moved to `todos/completed/` when that phase verifies.
+- `2026-08-12-pytest-explicit-paths-bypass-db-isolation.md` (dev-environment, high) — assigned to Phase 46, priority item.
+- `2026-08-12-speakers-bench-classification-silent-fallback.md` (api, low) — unassigned, from Phase 45 code review.
+- `2026-08-12-speaker-popover-frontend-duplication-cleanup.md` (ui, low) — unassigned, from Phase 45 code review.
 
 ### Blockers/Concerns
 

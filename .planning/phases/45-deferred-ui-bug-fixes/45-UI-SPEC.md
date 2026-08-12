@@ -128,17 +128,14 @@ not introduced by this phase, not to be "fixed" as part of BUG-02.
 
 ## Typography
 
-No new typography is introduced. Existing values used inside the popover, restated as the
-contract this fix must not disturb:
-
-| Role | Size | Weight | Line Height | Where |
-|------|------|--------|-------------|-------|
-| Name | 16px | 600 | normal (unset) | speaker full name |
-| Role pill | 12px | 600 | 1.2 | role_name badge |
-| Body / bio | 14px | 400 | 1.5 | bio_text paragraph |
-| Label (small) | 13px | 400 or 600 | 1.5 | birth/death line, descriptor placeholder, tenure office title (600), tenure metadata rows |
-| Link | 13px | 400 | inherit | "Read more" / "Show less" toggle |
-| Avatar initials | 18px | 600 | normal (unset) | fallback initials circle |
+No new typography is introduced by this phase, so no new typography contract is declared
+here. BUG-02 does not touch font size, weight, or line-height on any element — it only
+relocates `background-color`/`border`/`border-radius` to a different box (see the box-model
+contract above). All Phase 39 typography must render unchanged; that is enforced by the
+"BUG-02 Regression Checklist" section below, which lists each affected field's existing
+size/weight inline where relevant (e.g. name at 16px/600, role pill at 12px/600, bio at
+14px/400/1.5, descriptor placeholder at 13px) as a rendering check, not as a new design
+token declaration. Refer to Phase 39's UI-SPEC for the authoritative type scale.
 
 ---
 

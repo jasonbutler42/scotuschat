@@ -185,7 +185,8 @@
 		<div style="margin-top:16px;border-top:1px solid #334155;padding-top:16px;">
 			<p
 				bind:this={bioEl}
-				style="font-size:14px;font-weight:400;line-height:1.5;color:#94a3b8;margin:0;{bioExpanded ? '' : 'display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden;'}"
+				class={bioExpanded ? 'bio-scroll' : ''}
+				style="font-size:14px;font-weight:400;line-height:1.5;color:#94a3b8;margin:0;{bioExpanded ? 'max-height:150px;overflow-y:auto;' : 'display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden;'}"
 			>{speaker.bio_text}</p>
 			{#if bioOverflows}
 				<button
@@ -233,5 +234,26 @@
 	.popover-card {
 		padding: 24px;
 		display: block;
+	}
+
+	/* Bio-scoped scroll (BUG-02 revision, Figma "person popover with bio
+	   examples" frame): only the expanded bio paragraph scrolls internally,
+	   capped at 150px — the card itself no longer owns any scroll or height
+	   ceiling. Thin custom scrollbar per explicit operator direction at the
+	   Phase 45 checkpoint; thumb reuses the existing #334155 divider color
+	   rather than introducing a new one. */
+	.bio-scroll {
+		scrollbar-width: thin;
+		scrollbar-color: #334155 transparent;
+	}
+	.bio-scroll::-webkit-scrollbar {
+		width: 3px;
+	}
+	.bio-scroll::-webkit-scrollbar-track {
+		background: transparent;
+	}
+	.bio-scroll::-webkit-scrollbar-thumb {
+		background: #334155;
+		border-radius: 2px;
 	}
 </style>

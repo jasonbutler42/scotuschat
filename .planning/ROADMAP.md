@@ -464,9 +464,22 @@ Plans:
 **Plans:** 5 plans (waves 1→5, sequential — each wave reconfigures the environment the next depends on)
 
 Plans:
+**Wave 1**
 
 - [ ] 46-01-PLAN.md — Relocate the pytest DB-isolation redirect to the rootdir conftest and fail closed in both sibling conftests (D-03, folded todo)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 46-02-PLAN.md — WSL-native Python 3.12 venv + Windows PostgreSQL 18 service configured for scoped WSL access (D-01, D-02)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 46-03-PLAN.md — Prove WSL→Windows Postgres reachability, cut `.env` over, migrate both DBs, empirically confirm the dev-DB wipe cannot recur (D-02, D-03)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 46-04-PLAN.md — Single WSL-native start/stop entry point with real health checks and clean teardown (D-01, D-03)
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
 - [ ] 46-05-PLAN.md — Live stack smoke, README rewritten to one setup path, retire the in-repo Postgres directories (D-01, D-02, D-03)

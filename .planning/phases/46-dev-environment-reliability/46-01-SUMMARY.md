@@ -169,3 +169,7 @@ assert False
 ---
 *Phase: 46-dev-environment-reliability*
 *Completed: 2026-08-12*
+
+## Self-Check: PASSED
+
+All created files confirmed present (`conftest.py`, `tests/test_pytest_isolation_invocation_shapes.py`, `api/tests/test_db_isolation_probe.py`, `pipeline/tests/test_db_isolation_probe.py`, `.planning/phases/46-dev-environment-reliability/46-01-SUMMARY.md`), `tests/conftest.py` confirmed deleted, and all four task commits (`736b28d4`, `fc00ac02`, `05f31051`, plus this summary's own `e55c8d6a`) confirmed present in `git log`.

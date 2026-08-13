@@ -461,12 +461,12 @@ Plans:
 **Goal:** Fix the local dev setup now that Windows admin access is available (the project was previously constrained to run without it). Priority: the pytest DB-isolation bypass discovered in Phase 45 that can silently wipe the shared dev database (`.planning/todos/pending/2026-08-12-pytest-explicit-paths-bypass-db-isolation.md`). Also revisit `scripts/dev-start.ps1`, the portable-Postgres-via-pg_ctl setup, and the Windows-venv-via-WSL-interop path for a more reliable single start/stop flow.
 **Requirements**: D-01, D-02, D-03 (46-CONTEXT.md decision IDs — no formal REQUIREMENTS.md IDs assigned) + folded todo `2026-08-12-pytest-explicit-paths-bypass-db-isolation.md`
 **Depends on:** Phase 45
-**Plans:** 5 plans (waves 1→5, sequential — each wave reconfigures the environment the next depends on)
+**Plans:** 1/5 plans executed (waves 1→5, sequential — each wave reconfigures the environment the next depends on)
 
 Plans:
 **Wave 1**
 
-- [ ] 46-01-PLAN.md — Relocate the pytest DB-isolation redirect to the rootdir conftest and fail closed in both sibling conftests (D-03, folded todo)
+- [x] 46-01-PLAN.md — Relocate the pytest DB-isolation redirect to the rootdir conftest and fail closed in both sibling conftests (D-03, folded todo)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 

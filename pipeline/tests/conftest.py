@@ -129,7 +129,35 @@ async def clean_db(async_session: AsyncSession) -> None:
 
 
 @pytest.fixture(scope="session", autouse=True)
-async def _reset_test_db():
+def _require_root_conftest_redirect(pytestconfig):
+    """
+    Fail closed (D-03) if TEST_DATABASE_URL is configured but the rootdir
+    conftest.py's redirect did not fire for this invocation.
+
+    Session-scoped because the fixture it must precede, _reset_test_db, is
+    itself session-scoped and TRUNCATEs tables — a function-scoped guard
+    cannot run before it. No-ops when TEST_DATABASE_URL is unset, matching
+    the suite's existing "no-op unless explicitly satisfied" convention.
+    """
+    if not os.environ.get("TEST_DATABASE_URL"):
+        return
+
+    assert getattr(pytestconfig, "_scotus_redirect_fired", False), (
+        "The rootdir conftest.py's pytest_configure hook did not fire for "
+        "this pytest invocation — refusing to run DB-gated pipeline/tests "
+        "against a possibly-unredirected DATABASE_URL rather than silently "
+        "falling through to the shared dev DB (D-03)."
+    )
+    assert os.environ.get("DATABASE_URL") == os.environ.get("TEST_DATABASE_URL"), (
+        "DATABASE_URL does not equal TEST_DATABASE_URL even though the "
+        "rootdir conftest.py's sentinel fired — refusing to run DB-gated "
+        "pipeline/tests against a possibly-unredirected DATABASE_URL rather "
+        "than silently falling through to the shared dev DB (D-03)."
+    )
+
+
+@pytest.fixture(scope="session", autouse=True)
+async def _reset_test_db(_require_root_conftest_redirect):
     """
     Session-scoped auto-reset: TRUNCATE all pipeline-relevant tables once,
     before the suite runs (D-02), so tests start from an empty database.

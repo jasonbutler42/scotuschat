@@ -1,8 +1,29 @@
 """
-Root-level pytest conftest.
+Root-level (pytest rootdir) conftest.
+
+This file lives at the pytest rootdir — the same directory as pytest.ini —
+precisely because the rootdir is an ancestor of every `testpaths` entry
+(`tests`, `pipeline/tests`, `api/tests`). pytest's conftest.py discovery is
+strictly hierarchical: a conftest.py's hooks/module-level side effects apply
+only to test paths at or below its own directory. A conftest at the rootdir
+is collected for EVERY invocation shape — bare (`pytest`), explicit single
+file (`pytest api/tests/test_foo.py`), or explicit multi-path
+(`pytest api/tests/test_foo.py pipeline/tests/test_bar.py`) — because the
+rootdir is, by construction, an ancestor of anything under it.
+
+This file used to live at `tests/conftest.py`, a SIBLING of `api/tests/` and
+`pipeline/tests/`, not their ancestor. Any pytest invocation with explicit
+paths under those sibling directories never walked up into `tests/`, so this
+redirect and the row-count tripwire below silently no-op'd — the DATABASE_URL
+redirect never fired, and DB-gated tests ran directly against the shared dev
+database. This wiped the dev DB to 0 rows twice during Phase 45 (see D-03,
+`.planning/todos/pending/2026-08-12-pytest-explicit-paths-bypass-db-isolation.md`).
+Relocating this file here is the actual fix — see
+`tests/test_pytest_isolation_invocation_shapes.py` for the permanent
+regression test proving all three invocation shapes now redirect correctly.
 
 Loads .env so DATABASE_URL and other env vars are available to all test
-modules in the `tests/` directory.
+modules across the whole suite (tests/, api/tests/, pipeline/tests/).
 
 Also wires the whole suite (api + pipeline) onto a dedicated test database
 (`TEST_DATABASE_URL`) when configured, and enforces a self-checking guard
@@ -30,8 +51,9 @@ _REAL_DATABASE_URL = os.environ.get("DATABASE_URL")
 # and every AsyncSessionLocal() without touching any production module —
 # both of those modules read the env var lazily via Settings()/
 # create_async_engine(), and this conftest is collected before either is
-# imported. If TEST_DATABASE_URL is unset, DATABASE_URL is left untouched
-# (tests run against the real dev DB).
+# imported, for every invocation shape (it lives at rootdir). If
+# TEST_DATABASE_URL is unset, DATABASE_URL is left untouched (tests run
+# against the real dev DB).
 if os.environ.get("TEST_DATABASE_URL"):
     os.environ["DATABASE_URL"] = os.environ["TEST_DATABASE_URL"]
 
@@ -39,6 +61,19 @@ if os.environ.get("TEST_DATABASE_URL"):
 def _db_configured(url: str | None) -> bool:
     """Same placeholder guard every DB-gated fixture in this suite uses."""
     return bool(url) and "sk-ant" not in url and url != "postgresql+asyncpg://user:pass@host/db"
+
+
+def pytest_configure(config):
+    """
+    Set a sentinel that other conftests (api/tests, pipeline/tests) can
+    assert on before running any DB-gated test (D-03 fail-closed guard).
+
+    This hook is guaranteed to run for every invocation shape because THIS
+    FILE is at the pytest rootdir — an ancestor of every testpaths entry —
+    so pytest always collects it regardless of which explicit paths (if any)
+    are passed on the command line.
+    """
+    config._scotus_redirect_fired = True
 
 
 def pytest_sessionstart(session):

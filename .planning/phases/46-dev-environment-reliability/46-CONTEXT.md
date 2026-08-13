@@ -116,6 +116,26 @@ needed to reflect the new setup).
   or duplicate it per-directory, or fail closed) are exactly the mechanism
   Claude has discretion over above.
 
+### DrvFs relocation (decided 2026-08-13, at plan 46-04 Task 1's checkpoint)
+- **D-04:** Relocate the git repository off `/mnt/c` (9p/DrvFs) onto native
+  WSL ext4 (e.g. `~/scotuschat/project`) as the real fix for WSL2
+  file-watching unreliability (Vite HMR / uvicorn `--reload`), rather than
+  the polling-flags fallback (`WATCHFILES_FORCE_POLLING`, Vite `usePolling`)
+  plan 46-04 Task 3 would otherwise have added.
+  — **Reversibility:** costly (every absolute `/mnt/c/workspace/scotuschat/project`
+  path recorded in prior `.planning/` SUMMARYs, `46-WINDOWS-POSTGRES-SETUP.md`,
+  etc. becomes stale; Windows-side editors/tools must switch to the `\\wsl$\`
+  UNC path; git remote/working-copy state must move without data loss).
+  **This decision STOPPED plan 46-04 per its own explicit instruction**
+  ("If chosen, this plan must stop and the phase must be replanned — do not
+  attempt relocation as an inline task"). Plan 46-04's Task 1 checkpoint
+  offered three options (polling-flags/recommended, relocate, defer); the
+  operator chose relocate. Waves 4 and 5 (plans 46-04, 46-05) were planned
+  assuming the repository stays at `/mnt/c/...` and need to be replanned
+  around the new location before execution resumes — most concretely,
+  46-04's Task 2 (`scripts/dev-start.sh`/`dev-start.ps1`) and 46-05's README
+  and final validation both assume the current path.
+
 </decisions>
 
 <canonical_refs>

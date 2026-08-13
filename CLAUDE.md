@@ -28,6 +28,7 @@ This project uses the Get Shit Done (GSD) workflow. Always follow the phase-gate
 - **Raw PDFs are immutable.** Never modify source files after ingest. All derived data can be regenerated.
 - **Alembic is the sole DDL authority.** Never call `Base.metadata.create_all` anywhere.
 - **asyncpg requires `statement_cache_size=0`** when behind Digital Ocean PgBouncer (Transaction mode). This must be in the initial engine config.
+- **Invocation-shape-independent pytest hooks belong in the repository-root `conftest.py`.** Any pytest hook or module-level side effect that must fire regardless of which subset of tests is invoked (e.g. the `TEST_DATABASE_URL` redirect) must live in the repo-root `conftest.py` beside `pytest.ini`, never in a subdirectory conftest — a conftest in `tests/`, `api/tests/`, or `pipeline/tests/` only loads when that directory is in the collected path set, and putting the redirect there is what let explicit-path invocations wipe the shared dev database twice during Phase 45 (D-03). See the regression test `tests/test_pytest_isolation_invocation_shapes.py`.
 
 ## Stack
 

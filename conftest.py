@@ -112,7 +112,27 @@ def pytest_sessionstart(session):
         finally:
             await engine.dispose()
 
-    people_count, arguments_count = asyncio.run(_snapshot())
+    try:
+        people_count, arguments_count = asyncio.run(_snapshot())
+    except Exception as exc:
+        # DATABASE_URL is configured (passes _db_configured) but the real dev
+        # DB is genuinely unreachable right now — e.g. mid-cutover between the
+        # portable Postgres and the Windows service (Phase 46 D-02), or any
+        # other transient outage. The guard's whole job is comparing a before
+        # and after snapshot; with no reachable connection there is nothing to
+        # snapshot or compare, so no-op exactly like the "unconfigured" case
+        # above (D-13) instead of crashing the entire pytest session with an
+        # unhandled connection error.
+        import warnings
+
+        warnings.warn(
+            "pytest_sessionstart: could not snapshot dev DB row counts — "
+            f"DATABASE_URL is configured but unreachable ({exc!r}). "
+            "Dev-DB leak-detection guard is disabled for this session.",
+            stacklevel=1,
+        )
+        return
+
     session.config._scotus_pre_counts = {"people": people_count, "arguments": arguments_count}
 
 
@@ -153,7 +173,23 @@ def pytest_sessionfinish(session, exitstatus):
         finally:
             await engine.dispose()
 
-    post_people, post_arguments = asyncio.run(_recheck())
+    try:
+        post_people, post_arguments = asyncio.run(_recheck())
+    except Exception as exc:
+        # Symmetric with pytest_sessionstart's guard above: the dev DB was
+        # reachable at session start (pre_counts got set) but became
+        # unreachable by session finish. There is nothing to compare against
+        # a DB we can no longer reach, so no-op rather than crash — the
+        # snapshot-and-compare guard is a tripwire, not a hard dependency.
+        import warnings
+
+        warnings.warn(
+            "pytest_sessionfinish: could not re-check dev DB row counts — "
+            f"DATABASE_URL is configured but unreachable ({exc!r}). "
+            "Dev-DB leak-detection guard could not complete for this session.",
+            stacklevel=1,
+        )
+        return
     post_counts = {"people": post_people, "arguments": post_arguments}
 
     mismatches = [

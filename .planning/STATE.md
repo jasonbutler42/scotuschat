@@ -5,16 +5,16 @@ milestone_name: Corpus Fidelity & Resolve Rework
 current_phase: 46
 current_phase_name: dev-environment-reliability
 status: executing
-stopped_at: Phase 46 context gathered
-last_updated: "2026-08-13T03:50:29.478Z"
+stopped_at: Completed 46-03-PLAN.md
+last_updated: "2026-08-13T19:45:32.038Z"
 last_activity: 2026-08-12
 last_activity_desc: Phase 45 execution started
 progress:
   total_phases: 6
   completed_phases: 5
   total_plans: 28
-  completed_plans: 23
-  percent: 82
+  completed_plans: 26
+  percent: 83
 ---
 
 # Project State
@@ -29,8 +29,8 @@ See: .planning/PROJECT.md (updated 2026-07-29 after starting v1.7 milestone)
 ## Current Position
 
 Phase: 46 (dev-environment-reliability) — EXECUTING
-Plan: 1 of 5
-Status: Executing Phase 46
+Plan: 4 of 5
+Status: Ready to execute
 Last activity: 2026-08-12 — Phase 46 execution started
 
 **Milestone shape:**
@@ -94,6 +94,7 @@ Still open from earlier milestones:
 | Phase 44 P06 | 35min | 3 tasks | 4 files |
 | Phase 44 P07 | 40min | 3 tasks | 5 files |
 | Phase 44 P08 | ~45min | 3 tasks | 2 files |
+| Phase 46 P03 | ~50min | 3 tasks | 3 files |
 
 v1.5/v1.6 per-plan metrics cleared at this milestone boundary per the standard STATE.md reset; the underlying per-plan SUMMARY files remain in `.planning/milestones/v1.5-phases/` and `.planning/milestones/v1.6-phases/`.
 
@@ -140,6 +141,8 @@ Full cross-milestone decision log lives in PROJECT.md's Key Decisions table. Per
 - [Phase ?]: RESOLVE-09/10: is_justice-based side filter (fail-open on unknown side) and source-aware hint prefix derived from data.job.source, both threading existing data with zero backend change
 - [Phase ?]: Phase 44 Plan 08: benchRoleState(row, side) checks person_id==null (unresolved) before !missing_tenure (calculated) — an unresolved bench row reports missing_tenure=false from the service, so the reverse order would render an empty locked box; the three bench branches key only on side/person_id/missing_tenure, never rowEditable, so the read-only card renders them identically (RESOLVE-11).
 - [Phase ?]: Phase 44 Plan 08: re-pointed a plan-unlisted stale 44-02 assertion (test_descriptor_cell_snippet_always_renders_bench_dash_and_editable_input) that banned the literal string "side !== 'BENCH'" anywhere in descriptorCell — widened (not weakened) to assert the data-carrying <input> renders before and outside the new RESOLVE-13 hint wrapper.
+- [Phase ?]: [Phase 46 Plan 03]: Operator approved Task 3's checkpoint on the row-count/fail-closed evidence -- all four row counts (people/arguments/cases/utterances) byte-identical across every pytest invocation shape including the literal Phase 45 wipe command; the fail-closed guard aborted correctly with a genuinely-present TEST_DATABASE_URL.
+- [Phase ?]: [Phase 46 Plan 03]: The 2 pre-existing/unrelated full-suite failures (test_no_create_all_in_codebase false positive; order-dependent Phase 44 argument_role_roundtrip flake) surfaced by the first full-suite run against a reachable dev/test Postgres were explicitly deferred to the backlog by the operator, logged in deferred-items.md, not fixed in this plan.
 
 ### Roadmap Evolution
 
@@ -180,9 +183,9 @@ v1.6's roadmap evolution is archived in `.planning/milestones/v1.6-ROADMAP.md`. 
 
 ## Session Continuity
 
-Last session: 2026-08-12T22:21:50.970Z
-Stopped at: Phase 46 context gathered
-Resume file: .planning/phases/46-dev-environment-reliability/46-CONTEXT.md
+Last session: 2026-08-13T19:45:31.614Z
+Stopped at: Completed 46-03-PLAN.md
+Resume file: None
 
 ## Operator Next Steps
 

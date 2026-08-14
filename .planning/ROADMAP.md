@@ -361,6 +361,7 @@ Plans:
 | 43. Dev-Only Reset to Fixture | v1.7 | 4/4 | Complete    | 2026-07-31 |
 | 44. Resolve Table Rework | v1.7 | 9/9 | Complete    | 2026-08-11 |
 | 45. Deferred UI Bug Fixes | v1.7 | 2/2 | Complete    | 2026-08-12 |
+| 46. Dev Environment Reliability | v1.7 | 6/6 | Complete    | 2026-08-14 |
 
 ## Backlog
 
@@ -461,7 +462,7 @@ Plans:
 **Goal:** Fix the local dev setup now that Windows admin access is available (the project was previously constrained to run without it). Priority: the pytest DB-isolation bypass discovered in Phase 45 that can silently wipe the shared dev database (`.planning/todos/pending/2026-08-12-pytest-explicit-paths-bypass-db-isolation.md`). Also revisit `scripts/dev-start.ps1`, the portable-Postgres-via-pg_ctl setup, and the Windows-venv-via-WSL-interop path for a more reliable single start/stop flow.
 **Requirements**: D-01, D-02, D-03, D-04 (46-CONTEXT.md decision IDs — no formal REQUIREMENTS.md IDs assigned) + folded todo `2026-08-12-pytest-explicit-paths-bypass-db-isolation.md`
 **Depends on:** Phase 45
-**Plans:** 5/6 plans executed (waves 1→6, sequential — each wave reconfigures the environment the next depends on)
+**Plans:** 6/6 plans executed (waves 1→6, sequential — each wave reconfigures the environment the next depends on)
 
 Plans:
 **Wave 1**
@@ -486,6 +487,6 @@ Plans:
 
 **Wave 6** *(blocked on Wave 5 completion)*
 
-- [ ] 46-06-PLAN.md — README rewritten to one setup path and one working-copy location, retire the pre-relocation checkout, close the validation record (D-01, D-02, D-03, D-04)
+- [x] 46-06-PLAN.md — README rewritten to one setup path and one working-copy location, retire the pre-relocation checkout, close the validation record (D-01, D-02, D-03, D-04)
 
 *Waves 4–5 were replanned on 2026-08-13 after decision D-04 (relocate the repository onto native WSL ext4) superseded the polling-flags fallback the original 46-04/46-05 assumed; the superseded Vite-polling task was dropped rather than carried forward, and a sixth wave was added so the relocation, the start/stop script, and the documentation/cleanup close-out each get their own plan.*

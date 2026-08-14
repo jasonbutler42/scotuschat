@@ -4,17 +4,17 @@ milestone: v1.7
 milestone_name: Corpus Fidelity & Resolve Rework
 current_phase: 46
 current_phase_name: dev-environment-reliability
-status: executing
-stopped_at: Completed 46-05-PLAN.md
-last_updated: "2026-08-14T20:02:20.892Z"
+status: verifying
+stopped_at: Completed 46-06-PLAN.md — Phase 46 fully complete
+last_updated: "2026-08-14T20:40:31.413Z"
 last_activity: 2026-08-14
-last_activity_desc: Completed 46-05-PLAN.md (WSL-native dev-start.sh, live smoke tested and approved)
+last_activity_desc: Completed 46-06-PLAN.md (README rewritten, pre-relocation checkout retired under option-c, validation record closed — Phase 46 fully complete)
 progress:
   total_phases: 6
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 29
-  completed_plans: 28
-  percent: 97
+  completed_plans: 29
+  percent: 100
 ---
 
 # Project State
@@ -28,10 +28,10 @@ See: .planning/PROJECT.md (updated 2026-07-29 after starting v1.7 milestone)
 
 ## Current Position
 
-Phase: 46 (dev-environment-reliability) — EXECUTING
+Phase: 46 (dev-environment-reliability) — COMPLETE (6/6 plans)
 Plan: 6 of 6
-Status: Ready to execute
-Last activity: 2026-08-14 — Completed 46-05-PLAN.md (WSL-native dev-start.sh, live smoke tested and approved)
+Status: Phase complete — ready for verification
+Last activity: 2026-08-14 — Completed 46-06-PLAN.md (README rewritten, pre-relocation checkout retired under option-c, validation record closed — Phase 46 fully complete)
 
 **Milestone shape:**
 
@@ -97,6 +97,7 @@ Still open from earlier milestones:
 | Phase 46 P03 | ~50min | 3 tasks | 3 files |
 | Phase 46 P04 | ~35min | 3 tasks | 1 files |
 | Phase 46 P05 | ~50min+~1h | 3 tasks | 4 files |
+| Phase 46 P06 | ~40min | 3 tasks | 3 files |
 
 v1.5/v1.6 per-plan metrics cleared at this milestone boundary per the standard STATE.md reset; the underlying per-plan SUMMARY files remain in `.planning/milestones/v1.5-phases/` and `.planning/milestones/v1.6-phases/`.
 
@@ -148,6 +149,8 @@ Full cross-milestone decision log lives in PROJECT.md's Key Decisions table. Per
 - [Phase ?]: [Phase 46 Plan 04]: Operator approved Task 3's cutover checkpoint with a general affirmation ("from what I can tell, everything seems correct") rather than an itemized walkthrough; recorded honestly as general approval, with the orchestrator's independent read-only re-verification at DST (git history match, clean tree, ext4, core.ignorecase=false, data dirs present) recorded distinctly, including a benign racy-git stat-cache false positive on README.md, resolved and explained.
 - [Phase ?]: [Phase 46 Plan 04]: Corrected the plan's anticipated one-commit SRC/DST hand-off gap to the actual two commits observed at DST HEAD (94f178a7, predating both 1bbcba33 and c3c5f30c); does not change the outcome — 46-05 Task 1's fast-forward gate still closes the gap regardless of exact size.
 - [Phase ?]: [Phase 46 Plan 05]: Task 3's live smoke test surfaced two real problems: wait_for_http misread Vite's legitimate 404 on bare '/' as unhealthy (fixed, committed 3443b267) and an orphaned pre-relocation Windows-native node.exe process broke the WSL2 localhost:5173 forwarding relay (documented, flagged for 46-06's README, no code fix needed).
+- [Phase ?]: [Phase 46 Plan 06]: Task 2 decision on the pre-relocation checkout's fate was pre-answered as option-c (leave in place, marked as retired) by the operator via the orchestrator before this plan's execution; Task 3 skipped removal/push and filed a follow-up todo instead, per option-c's own consequence.
+- [Phase ?]: [Phase 46 Plan 06]: 46-VALIDATION.md brought to status validated / nyquist_compliant: true / wave_0_complete: true, closing Phase 46's validation record with the pre-existing 46-01-01 green row left byte-identical.
 
 ### Roadmap Evolution
 
@@ -188,8 +191,8 @@ v1.6's roadmap evolution is archived in `.planning/milestones/v1.6-ROADMAP.md`. 
 
 ## Session Continuity
 
-Last session: 2026-08-14T20:02:20.748Z
-Stopped at: Completed 46-05-PLAN.md
+Last session: 2026-08-14T20:40:31.375Z
+Stopped at: Completed 46-06-PLAN.md — Phase 46 fully complete
 Resume file: None
 
 ## Operator Next Steps

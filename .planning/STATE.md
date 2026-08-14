@@ -3,10 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Corpus Fidelity & Resolve Rework
 current_phase: 46
-current_phase_name: dev-environment-reliability
-status: verifying
+status: completed
 stopped_at: Completed 46-06-PLAN.md — Phase 46 fully complete
-last_updated: "2026-08-14T20:40:31.413Z"
+last_updated: "2026-08-14T21:43:54.440Z"
 last_activity: 2026-08-14
 last_activity_desc: Completed 46-06-PLAN.md (README rewritten, pre-relocation checkout retired under option-c, validation record closed — Phase 46 fully complete)
 progress:
@@ -15,6 +14,7 @@ progress:
   total_plans: 29
   completed_plans: 29
   percent: 100
+current_phase_name: dev-environment-reliability
 ---
 
 # Project State
@@ -28,10 +28,10 @@ See: .planning/PROJECT.md (updated 2026-07-29 after starting v1.7 milestone)
 
 ## Current Position
 
-Phase: 46 (dev-environment-reliability) — COMPLETE (6/6 plans)
-Plan: 6 of 6
-Status: Phase complete — ready for verification
-Last activity: 2026-08-14 — Completed 46-06-PLAN.md (README rewritten, pre-relocation checkout retired under option-c, validation record closed — Phase 46 fully complete)
+Phase: 46
+Plan: Not started
+Status: All phases complete
+Last activity: 2026-08-14 — Phase 46 complete
 
 **Milestone shape:**
 

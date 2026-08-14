@@ -76,9 +76,20 @@ cleanup() {
 }
 
 resolve_win_host_ip() {
-  WIN_HOST_IP="$(ip route show default | awk '{print $3}' || true)"
+  WIN_HOST_IP="$(ip route show default | awk 'NR==1{print $3}' || true)"
   if [ -z "$WIN_HOST_IP" ]; then
     echo "ERROR: could not resolve the Windows host IP via 'ip route show default'." >&2
+    exit 1
+  fi
+  # HARD SAFETY GUARD: WIN_HOST_IP is interpolated, unescaped, into a
+  # `bash -c` /dev/tcp probe and a `sed -i` replacement below. Validate its
+  # shape here, at the single point of origin, before either sink ever sees
+  # it -- a second default route (e.g. a corporate VPN client), a locale/
+  # format change in `ip route`'s output, or a misconfigured routing table
+  # can otherwise feed non-IP text (or injected shell metacharacters) into
+  # both call sites.
+  if [[ ! "$WIN_HOST_IP" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]; then
+    echo "ERROR: 'ip route show default' did not resolve to a plain IPv4 address (got: '${WIN_HOST_IP}')." >&2
     exit 1
   fi
   echo "Resolved Windows host IP: ${WIN_HOST_IP}"

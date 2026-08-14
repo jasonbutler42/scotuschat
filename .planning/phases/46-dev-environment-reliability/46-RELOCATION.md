@@ -132,3 +132,43 @@ SRC (`/mnt/c/workspace/scotuschat/project`) is left completely untouched:
 SRC remains the rollback path. Nothing was moved, deleted, or renamed at SRC by
 this plan. Retiring SRC is a separate, gated, one-way decision reserved for
 plan 46-06.
+
+## Rebuilt toolchain (Task 2)
+
+The WSL-native Python venv and lockfile-exact `node_modules` were rebuilt at
+DST (never copied) and the full stack was proved working from there.
+
+- **Interpreter:** `/home/jason/.local/bin/python3.12` → `python3.12 -m venv .venv` at
+  DST. `.venv/bin/python --version` reports `Python 3.12.13`. The first line of
+  `.venv/bin/pytest` is exactly `#!/home/jason/scotuschat/project/.venv/bin/python`
+  — the rebuilt venv points at itself, not at SRC. `.venv/Scripts` does not exist
+  (no Windows-layout venv).
+- **Requirements:** both `requirements.txt` and `requirements-dev.txt` installed
+  with no new dependency added or upgraded. `git status --porcelain -uno` at DST
+  remained empty afterward — neither requirements file drifted.
+- **Frontend dependencies:** `npm ci` run from `app/` reinstalled strictly from
+  the committed `app/package-lock.json`. `app/node_modules/.bin/vite` exists and
+  is executable.
+- **Alembic revision:** `alembic current` reports `0025 (head)` on the dev
+  database (`DATABASE_URL`) and `0025 (head)` on the test database
+  (`TEST_DATABASE_URL`) — identical to plan 46-03's recorded value. The
+  relocation moved the client, not the database.
+- **Regression tests:** `./.venv/bin/python -m pytest tests/test_wsl_postgres_reachability.py tests/test_pytest_isolation_invocation_shapes.py -q`
+  → **5 passed** from the new root — WSL-native reachability over the
+  dynamically-resolved gateway and the rootdir conftest redirect both fire
+  correctly from the new location.
+- **Full suite:** `./.venv/bin/python -m pytest -q` →
+  `5 failed, 1024 passed, 6 skipped, 5 xfailed in 166.09s` — the exact same five
+  pre-existing failures recorded in `deferred-items.md`
+  (`test_no_create_all_in_codebase` false positive, plus the four parametrized
+  cases of `test_resolve_row_update_accepts_each_dropdown_value_and_coerces_enum`)
+  and no additional failure.
+- **Dev-database row counts, before and after the full-suite run:**
+  `people=36, arguments=4, cases=4, utterances=1001` — byte-identical to each
+  other and to plan 46-03's recorded baseline both before and after the run.
+- **Frontend build:** `npx vite build` from `app/` exited `0` (built client and
+  server bundles; only pre-existing Svelte a11y/reactivity lint warnings
+  unrelated to the relocation, no errors).
+- **GSD test command:** `.planning/config.json`'s `workflow.test_command`
+  (`./.venv/bin/python -m pytest`) is repository-relative and needed no edit —
+  confirmed it resolves correctly from the new root.

@@ -114,11 +114,15 @@ sync_env_db_host() {
   if { [ -z "$db_host" ] || [ "$db_host" = "$WIN_HOST_IP" ]; } && \
      { [ -z "$test_host" ] || [ "$test_host" = "$WIN_HOST_IP" ]; }; then
     echo "No .env host change needed (already ${WIN_HOST_IP})."
+    PROBE_HOST="$WIN_HOST_IP"
     return 0
   fi
 
   if [ -n "${SCOTUS_DEV_NO_ENV_SYNC:-}" ]; then
     echo "WARNING: .env DB host (${db_host:-$test_host}) differs from the resolved Windows host IP (${WIN_HOST_IP}); SCOTUS_DEV_NO_ENV_SYNC is set, skipping the rewrite." >&2
+    # The host actually left in .env -- not WIN_HOST_IP -- is what Alembic/
+    # uvicorn will use, so that's what must be probed (WR-02).
+    PROBE_HOST="${db_host:-$test_host}"
     return 0
   fi
 
@@ -139,12 +143,18 @@ sync_env_db_host() {
     "$env_file"
 
   echo ".env DB host updated: ${db_host:-$test_host} -> ${WIN_HOST_IP}"
+  PROBE_HOST="$WIN_HOST_IP"
 }
 
 probe_postgres() {
-  if ! timeout 5 bash -c "exec 3<>/dev/tcp/${WIN_HOST_IP}/5432" 2>/dev/null; then
+  # Probe PROBE_HOST (the host actually in effect for .env), not WIN_HOST_IP
+  # directly -- sync_env_db_host sets PROBE_HOST to the untouched .env host
+  # when SCOTUS_DEV_NO_ENV_SYNC left a legitimately different host in place,
+  # so this check validates the server Alembic/uvicorn will actually use
+  # rather than the resolved-but-unused WSL2 gateway (WR-02).
+  if ! timeout 5 bash -c "exec 3<>/dev/tcp/${PROBE_HOST}/5432" 2>/dev/null; then
     cat >&2 <<EOF
-ERROR: could not reach PostgreSQL at ${WIN_HOST_IP}:5432.
+ERROR: could not reach PostgreSQL at ${PROBE_HOST}:5432.
 
 Check all three independent access gates -- any one alone produces this
 exact symptom. See .planning/phases/46-dev-environment-reliability/46-WINDOWS-POSTGRES-SETUP.md
@@ -155,7 +165,7 @@ for this machine's recorded values:
 EOF
     exit 1
   fi
-  echo "PostgreSQL reachable at ${WIN_HOST_IP}:5432."
+  echo "PostgreSQL reachable at ${PROBE_HOST}:5432."
 }
 
 wait_for_http() {

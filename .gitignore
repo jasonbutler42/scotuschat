@@ -47,3 +47,10 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+
+# Dev-stack orchestration (scripts/dev-start.sh) runtime output — can carry
+# connection strings and tokens; regenerated on every run
+.dev-logs/
+
+# Backup of .env written by scripts/dev-start.sh before rewriting the DB host
+.env.bak

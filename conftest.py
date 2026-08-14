@@ -35,6 +35,8 @@ import os
 
 from dotenv import load_dotenv
 
+from tests._db_guard import is_db_configured as _db_configured
+
 # Load .env before any tests run.
 # Tests that need DATABASE_URL will get it from os.environ after this call.
 load_dotenv()
@@ -56,11 +58,6 @@ _REAL_DATABASE_URL = os.environ.get("DATABASE_URL")
 # against the real dev DB).
 if os.environ.get("TEST_DATABASE_URL"):
     os.environ["DATABASE_URL"] = os.environ["TEST_DATABASE_URL"]
-
-
-def _db_configured(url: str | None) -> bool:
-    """Same placeholder guard every DB-gated fixture in this suite uses."""
-    return bool(url) and "sk-ant" not in url and url != "postgresql+asyncpg://user:pass@host/db"
 
 
 # Full table list the leak-detection tripwire below watches. Mirrors the

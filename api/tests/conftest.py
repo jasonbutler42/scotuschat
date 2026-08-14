@@ -17,11 +17,12 @@ import os
 import pytest
 import pytest_asyncio
 
+from tests._db_guard import is_db_configured
+
 
 def _db_configured() -> bool:
-    """Same guard every api/tests DB-gated fixture uses."""
-    url = os.environ.get("DATABASE_URL", "")
-    return bool(url) and "sk-ant" not in url and url != "postgresql+asyncpg://user:pass@host/db"
+    """Same guard every api/tests DB-gated fixture uses (WR-04: shared with conftest.py)."""
+    return is_db_configured(os.environ.get("DATABASE_URL", ""))
 
 
 @pytest.fixture(autouse=True)

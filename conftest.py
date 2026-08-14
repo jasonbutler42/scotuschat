@@ -63,6 +63,25 @@ def _db_configured(url: str | None) -> bool:
     return bool(url) and "sk-ant" not in url and url != "postgresql+asyncpg://user:pass@host/db"
 
 
+# Full table list the leak-detection tripwire below watches. Mirrors the
+# TRUNCATE list in pipeline/tests/conftest.py's clean_db/_reset_test_db
+# fixtures exactly (WR-01) -- watching only a subset (e.g. just `people` and
+# `arguments`) would let a leak confined to any other table pass silently
+# even though real dev data was destroyed or mutated.
+_WATCHED_TABLES = (
+    "people",
+    "arguments",
+    "cases",
+    "utterances",
+    "roles",
+    "court_tenures",
+    "case_arguments",
+    "case_appearances",
+    "argument_participants",
+    "pipeline_runs",
+)
+
+
 def pytest_configure(config):
     """
     Set a sentinel that other conftests (api/tests, pipeline/tests) can
@@ -76,9 +95,21 @@ def pytest_configure(config):
     config._scotus_redirect_fired = True
 
 
+async def _query_watched_table_counts(engine) -> dict[str, int]:
+    """Query row counts for every table in _WATCHED_TABLES over one connection."""
+    from sqlalchemy import text
+
+    async with engine.connect() as conn:
+        return {
+            table: (await conn.execute(text(f"SELECT COUNT(*) FROM {table}"))).scalar_one()
+            for table in _WATCHED_TABLES
+        }
+
+
 def pytest_sessionstart(session):
     """
-    Snapshot Person/Argument row counts on the REAL shared dev DB (D-11).
+    Snapshot row counts for every _WATCHED_TABLES table on the REAL shared
+    dev DB (D-11, WR-01).
 
     Always uses _REAL_DATABASE_URL (captured above, before any
     TEST_DATABASE_URL override) — never the possibly-overridden
@@ -94,7 +125,6 @@ def pytest_sessionstart(session):
 
     import asyncio
 
-    from sqlalchemy import text
     from sqlalchemy.ext.asyncio import create_async_engine
 
     async def _snapshot():
@@ -105,15 +135,12 @@ def pytest_sessionstart(session):
             echo=False,
         )
         try:
-            async with engine.connect() as conn:
-                people = (await conn.execute(text("SELECT COUNT(*) FROM people"))).scalar_one()
-                arguments = (await conn.execute(text("SELECT COUNT(*) FROM arguments"))).scalar_one()
-                return people, arguments
+            return await _query_watched_table_counts(engine)
         finally:
             await engine.dispose()
 
     try:
-        people_count, arguments_count = asyncio.run(_snapshot())
+        pre_counts = asyncio.run(_snapshot())
     except Exception as exc:
         # DATABASE_URL is configured (passes _db_configured) but the real dev
         # DB is genuinely unreachable right now — e.g. mid-cutover between the
@@ -133,16 +160,18 @@ def pytest_sessionstart(session):
         )
         return
 
-    session.config._scotus_pre_counts = {"people": people_count, "arguments": arguments_count}
+    session.config._scotus_pre_counts = pre_counts
 
 
 def pytest_sessionfinish(session, exitstatus):
     """
-    Re-query Person/Argument counts on the real dev DB and assert unchanged (D-11, D-12).
+    Re-query counts for every _WATCHED_TABLES table on the real dev DB and
+    assert unchanged (D-11, D-12, WR-01).
 
-    Only checks `people` and `arguments` — not the full clean_db table list —
-    to keep the failure message unambiguous. Silently no-ops (D-13) under the
-    same guard as pytest_sessionstart.
+    Watches the full clean_db/_reset_test_db truncate-table list (not just
+    `people`/`arguments`) so a leak confined to any other table (e.g.
+    `utterances`, `roles`, `cases`) doesn't pass this guard silently.
+    Silently no-ops (D-13) under the same guard as pytest_sessionstart.
     """
     if not _db_configured(_REAL_DATABASE_URL):
         return
@@ -155,7 +184,6 @@ def pytest_sessionfinish(session, exitstatus):
 
     import asyncio
 
-    from sqlalchemy import text
     from sqlalchemy.ext.asyncio import create_async_engine
 
     async def _recheck():
@@ -166,15 +194,12 @@ def pytest_sessionfinish(session, exitstatus):
             echo=False,
         )
         try:
-            async with engine.connect() as conn:
-                people = (await conn.execute(text("SELECT COUNT(*) FROM people"))).scalar_one()
-                arguments = (await conn.execute(text("SELECT COUNT(*) FROM arguments"))).scalar_one()
-                return people, arguments
+            return await _query_watched_table_counts(engine)
         finally:
             await engine.dispose()
 
     try:
-        post_people, post_arguments = asyncio.run(_recheck())
+        post_counts = asyncio.run(_recheck())
     except Exception as exc:
         # Symmetric with pytest_sessionstart's guard above: the dev DB was
         # reachable at session start (pre_counts got set) but became
@@ -190,11 +215,10 @@ def pytest_sessionfinish(session, exitstatus):
             stacklevel=1,
         )
         return
-    post_counts = {"people": post_people, "arguments": post_arguments}
 
     mismatches = [
         f"{table}: before={pre_counts[table]} after={post_counts[table]}"
-        for table in ("people", "arguments")
+        for table in _WATCHED_TABLES
         if pre_counts[table] != post_counts[table]
     ]
     if mismatches:

@@ -100,6 +100,16 @@ _extract_env_host() {
   grep "^${var}=" "$file" 2>/dev/null | head -n1 | sed -E "s#^${var}=[A-Za-z0-9+]+://[^@]*@([^:/]+).*#\\1#" || true
 }
 
+# Regex matched against a drifted .env DB host to decide whether it "looks
+# like" a WSL2 NAT gateway address worth accepting without a rewrite (see
+# the `db_host == WIN_HOST_IP` short-circuit above, which already covers
+# the common "no change needed" case). Defaults to the default WSL2 NAT
+# range (172.16.0.0/12); WSL2 "mirrored" networking mode or a custom
+# `.wslconfig` subnet can legitimately resolve the gateway outside that
+# range, so override this with a regex matching your machine's actual
+# gateway prefix rather than editing the script.
+: "${SCOTUS_DEV_HOST_PATTERN:=^172\.(1[6-9]|2[0-9]|3[01])\.}"
+
 sync_env_db_host() {
   local env_file="${REPO_ROOT}/.env"
   if [ ! -f "$env_file" ]; then
@@ -128,8 +138,8 @@ sync_env_db_host() {
 
   local host
   for host in "$db_host" "$test_host"; do
-    if [ -n "$host" ] && [ "$host" != "$WIN_HOST_IP" ] && ! [[ "$host" =~ ^172\.(1[6-9]|2[0-9]|3[01])\. ]]; then
-      echo "ERROR: .env host (${host}) does not look like a WSL2 NAT gateway address. Refusing to rewrite .env automatically -- fix it by hand, or set SCOTUS_DEV_NO_ENV_SYNC=1 to skip this check." >&2
+    if [ -n "$host" ] && [ "$host" != "$WIN_HOST_IP" ] && ! [[ "$host" =~ $SCOTUS_DEV_HOST_PATTERN ]]; then
+      echo "ERROR: .env host (${host}) does not match SCOTUS_DEV_HOST_PATTERN (${SCOTUS_DEV_HOST_PATTERN}), so it does not look like a WSL2 NAT gateway address. Refusing to rewrite .env automatically -- fix it by hand, set SCOTUS_DEV_HOST_PATTERN to match your WSL2 networking mode's gateway range (e.g. mirrored networking or a custom .wslconfig subnet), or set SCOTUS_DEV_NO_ENV_SYNC=1 to skip this check." >&2
       exit 1
     fi
   done

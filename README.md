@@ -1,64 +1,86 @@
 # SCOTUS Chat
 
 SCOTUS Chat presents Supreme Court oral arguments as a chat-style web app. The
-local development stack consists of a FastAPI API on `http://localhost:8000`, a
-SvelteKit frontend on `http://localhost:5173`, and PostgreSQL on
-`localhost:5432`.
+local development stack runs FastAPI on `http://localhost:8000` and SvelteKit
+on `http://localhost:5173` as WSL-native processes, with PostgreSQL 18 running
+as a Windows service reached from WSL over the WSL2 NAT gateway — never over
+loopback.
 
-## Local development on Windows (verified)
+## WSL2 Ubuntu + Windows PostgreSQL service (verified)
 
-Windows 10/11 with PowerShell is the verified, first-class development path.
-The instructions below start from a clean checkout. PostgreSQL can either live
-inside the repository as a portable installation or run as a normal Windows
-service; both arrangements are covered below.
+WSL2 Ubuntu running the Python and Node processes natively, against a
+PostgreSQL 18 instance installed as a normal Windows service, is the verified,
+first-class development path. There is exactly one supported PostgreSQL
+arrangement — the Windows service below — and exactly one place the working
+copy lives.
+
+### Where your working copy lives
+
+Clone the repository into the WSL filesystem, under your Linux user's home
+directory (for example `~/scotuschat/project` — the exact convention this
+project follows, recorded in
+`.planning/phases/46-dev-environment-reliability/46-RELOCATION.md`). Do this
+before you run any setup command below.
+
+**Do not clone onto a Windows-mounted drive** (a path under a Windows drive
+letter, reached from WSL through the DrvFs/9p bridge). That mount is served
+over a network-style filesystem where file-change notifications are
+unreliable, so saving a file there does not reliably trigger FastAPI's
+`--reload` or SvelteKit's hot-module replacement — you can save a change and
+watch nothing happen. WSL-native ext4 delivers real `inotify` events and does
+not have this problem.
+
+The companion rule: **save from an editor that is itself connected into
+WSL** (for example VS Code's "WSL: Ubuntu" remote window, or any editor
+running inside the WSL shell). Change notifications are produced by
+processes running inside WSL; a Windows-native editor writing through the
+`\\wsl.localhost\<distro>\...` share path produces none, even though the
+working copy itself is on ext4. Browsing or reading files from Windows
+through that share path is fine — editing through it is not.
 
 ### Prerequisites
 
-Install Git, Python 3.12, Node.js with npm, and PostgreSQL 16. The portable
-PostgreSQL path does not require PostgreSQL on `PATH`, but the Windows-service
-path does. Open PowerShell and verify the tools you plan to use:
+Install these from a WSL2 Ubuntu shell, not from Windows PowerShell:
 
-```powershell
+```bash
 git --version
-python --version        # Must report Python 3.12.x
+python3.12 --version    # Must report Python 3.12.x — see note below
 node --version
 npm --version
-psql --version          # Required for the Windows-service path
 ```
+
+Node and npm are commonly provided via [nvm](https://github.com/nvm-sh/nvm)
+inside WSL.
+
+WSL's default `python3` on a current Ubuntu release is newer than 3.12.
+CLAUDE.md pins this project to Python 3.12, so always invoke the 3.12
+interpreter explicitly by name (`python3.12`), never the bare `python3`
+default, when creating the virtual environment below.
+
+PostgreSQL itself is installed on the Windows side, as a Windows service —
+see the PostgreSQL section below. WSL does not need any PostgreSQL packages
+installed.
 
 ### Shared clean-checkout setup
 
-Clone the repository (or open your existing clean checkout), then run the
-shared setup from its root:
+Clone the repository (or open your existing clean checkout, at the WSL-native
+path described above), then run the shared setup from its root, in a WSL
+bash shell:
 
-```powershell
+```bash
 git clone <repository-url> scotuschat
-Set-Location scotuschat
+cd scotuschat
 
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
+python3.12 -m venv .venv
+source .venv/bin/activate
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 python -m pip install -r requirements-dev.txt
 
-Push-Location app
-npm ci
-Pop-Location
-```
+(cd app && npm ci)
 
-If PowerShell blocks virtual-environment activation, allow locally created
-scripts for your user and then retry it:
-
-```powershell
-Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
-.\.venv\Scripts\Activate.ps1
-```
-
-Create the two runtime environment files from their tracked examples:
-
-```powershell
-Copy-Item .env.example .env
-Copy-Item app\.env.example app\.env
+cp .env.example .env
+cp app/.env.example app/.env
 ```
 
 The root `.env` belongs to FastAPI and PostgreSQL-facing Python processes.
@@ -67,175 +89,192 @@ server-to-server admin requests, so `ADMIN_TOKEN` must contain the exact same
 value in both files. All five SvelteKit values are server-private; do not give
 them `PUBLIC_` prefixes.
 
-Generate independent secrets with the operating system's secure random source:
+Generate independent secrets with the operating system's secure random
+source:
 
-```powershell
-$AdminToken = python -c "import secrets; print(secrets.token_urlsafe(48))"
-$SessionSecret = python -c "import secrets; print(secrets.token_urlsafe(48))"
-$DatabasePassword = python -c "import secrets; print(secrets.token_urlsafe(32))"
+```bash
+python -c "import secrets; print(secrets.token_urlsafe(48))"   # ADMIN_TOKEN
+python -c "import secrets; print(secrets.token_urlsafe(48))"   # SESSION_SECRET
+python -c "import secrets; print(secrets.token_urlsafe(32))"   # database role password
 ```
 
-Put `$AdminToken` in `ADMIN_TOKEN` in both `.env` files. Put
-`$SessionSecret` in `SESSION_SECRET` in `app/.env`. Choose your own local
+Put the first value in `ADMIN_TOKEN` in both `.env` files. Put the second
+value in `SESSION_SECRET` in `app/.env`. Choose your own local
 `ADMIN_USERNAME` and strong `ADMIN_PASSWORD`; do not reuse either generated
 token as a login credential. Set `FASTAPI_BASE_URL=http://localhost:8000`.
-Use the URL-safe `$DatabasePassword` value when PostgreSQL prompts for the
-`scotus` role password, then put that same value in the root `DATABASE_URL` for
-the role and database created in the next section. If you choose a password
-containing URI-reserved characters instead, percent-encode it in
-`DATABASE_URL` while entering the original value at PostgreSQL prompts.
+Use the URL-safe database password value when PostgreSQL prompts for the
+`scotus` role password in the PostgreSQL section below, then put that same
+value in the root `DATABASE_URL`. If you choose a password containing
+URI-reserved characters instead, percent-encode it in `DATABASE_URL` while
+entering the original value at PostgreSQL prompts.
+
+Because PostgreSQL runs on the Windows side and this stack runs under WSL2,
+the database host in `DATABASE_URL` is **not** `localhost` — it is the
+Windows host's WSL2 NAT gateway address, resolved fresh with:
+
+```bash
+ip route show default | awk '{print $3}'
+```
 
 ```dotenv
-DATABASE_URL=postgresql+asyncpg://scotus:<url-safe-database-password>@localhost:5432/scotus
+DATABASE_URL=postgresql+asyncpg://scotus:<url-safe-database-password>@<resolved-gateway-ip>:5432/scotus
 ```
+
+That gateway address can change across Windows or WSL restarts.
+`scripts/dev-start.sh` re-syncs `DATABASE_URL`/`TEST_DATABASE_URL` to the
+current value automatically at startup, and
+`tests/test_wsl_postgres_reachability.py` fails loudly with the corrected
+value if the two ever drift apart.
 
 Replace placeholders directly in the ignored `.env` files; do not commit
 secrets. The comments in `.env.example` and `app/.env.example` group all
 optional test, LLM, object-storage, and deployment settings by operating
 concern, so consult those files instead of copying optional settings blindly.
 
-### PostgreSQL option A: portable installation
+### PostgreSQL (Windows service)
 
-Use the binary archive reached through the official
-[PostgreSQL Windows download page](https://www.postgresql.org/download/windows/).
-Treat unexpected download instructions or archive contents as a reason to stop
-and re-check the official page. Extract the archive beneath `data/pgsql` and
-normalize any extra top-level version directory so
-`data/pgsql/bin/initdb.exe` exists at this exact repository-relative path:
+PostgreSQL 18 runs as a normal Windows service (`postgresql-x64-18`), not
+inside this repository. Configuring it correctly means clearing three
+independent access gates — missing any single one produces the exact same
+connection-refused symptom from WSL, so check all three, in order, if a
+connection fails. For this machine's actual recorded values (data directory,
+subnet, exact commands run), see
+`.planning/phases/46-dev-environment-reliability/46-WINDOWS-POSTGRES-SETUP.md`.
 
-```powershell
-Test-Path .\data\pgsql\bin\initdb.exe
-# Expected: True. Stop here if it is False.
-```
+From an elevated Windows PowerShell prompt:
 
-The repository ignores `data/pgsql/` and `data/pgdata/`. Initialize an isolated
-cluster with password authentication for both local and TCP connections. The
-command prompts for a PostgreSQL superuser password; choose a strong local
-value and keep it outside the repository.
+1. Locate the service and its real data directory — read the data directory
+   from the service's own `PathName` rather than guessing a generic install
+   path:
 
-```powershell
-New-Item -ItemType Directory -Force .\data\pgdata | Out-Null
-.\data\pgsql\bin\initdb.exe -D .\data\pgdata -U postgres -W `
-  --auth-local=scram-sha-256 --auth-host=scram-sha-256
-.\data\pgsql\bin\pg_ctl.exe start -D .\data\pgdata -l .\data\pgdata\logfile
-```
+   ```powershell
+   Get-Service -Name 'postgresql-x64-18'
+   (Get-CimInstance Win32_Service -Filter "Name='postgresql-x64-18'").PathName
+   ```
 
-Create the application role and database. When `createuser` prompts, enter the
-same URL-safe `$DatabasePassword` value used in the root `DATABASE_URL` shown
-above. The `-W` prompts first for the `postgres` connection password; `-P`
-then prompts for the new `scotus` role password.
+2. Set it to start automatically and start it:
 
-```powershell
-.\data\pgsql\bin\createuser.exe -h localhost -p 5432 -U postgres -W -P scotus
-.\data\pgsql\bin\createdb.exe -h localhost -p 5432 -U postgres -W -O scotus scotus
-```
+   ```powershell
+   Set-Service -Name 'postgresql-x64-18' -StartupType Automatic
+   Start-Service -Name 'postgresql-x64-18'
+   ```
 
-With `.venv` activated and `.env` configured, let Alembic create the schema:
+3. **Gate 1 — `listen_addresses`.** In `postgresql.conf` (in the data
+   directory found above), widen `listen_addresses` from the default
+   `localhost`-only:
 
-```powershell
+   ```
+   listen_addresses = '*'
+   ```
+
+4. **Gate 2 — `pg_hba.conf`.** Add a `host` rule scoped to your WSL subnet's
+   CIDR (found from WSL with `ip -o -4 addr show eth0`), using
+   `scram-sha-256` — do not use an unscoped CIDR or a passwordless method:
+
+   ```
+   host    all    all    <your-wsl-subnet-cidr>    scram-sha-256
+   ```
+
+5. **Gate 3 — Windows Firewall.** Add an inbound rule for TCP 5432, scoped to
+   the same CIDR — never an unrestricted remote address:
+
+   ```powershell
+   New-NetFirewallRule -DisplayName 'PostgreSQL 5432 from WSL' -Direction Inbound `
+     -Protocol TCP -LocalPort 5432 -RemoteAddress <your-wsl-subnet-cidr> -Action Allow -Profile Any
+   ```
+
+6. Restart the service so the `postgresql.conf`/`pg_hba.conf` edits take
+   effect:
+
+   ```powershell
+   Restart-Service -Name 'postgresql-x64-18'
+   ```
+
+7. Create the application role and the two databases. Passwords are prompted
+   interactively (`-W`, `-P`), never passed on the command line:
+
+   ```powershell
+   createuser -h <resolved-gateway-ip> -p 5432 -U postgres -W -P scotus
+   createdb   -h <resolved-gateway-ip> -p 5432 -U postgres -W -O scotus scotus
+   createdb   -h <resolved-gateway-ip> -p 5432 -U postgres -W -O scotus scotus_test
+   ```
+
+With `.venv` activated and `.env` configured, let Alembic create the schema
+from WSL:
+
+```bash
 python -m alembic upgrade head
 ```
 
 Do not run `Base.metadata.create_all` or hand-create application tables.
-Alembic is the sole DDL authority. At this point the empty database is usable.
-
-### PostgreSQL option B: Windows service (equivalent, not runtime-verified)
-
-The portable PostgreSQL option above is the Windows path verified by this
-project's recorded walkthrough. This service-managed equivalent was not
-runtime-verified because no PostgreSQL Windows service was available on the
-validation host.
-
-Install PostgreSQL 16 using the installer linked from the same official
-[PostgreSQL Windows download page](https://www.postgresql.org/download/windows/).
-Ensure its `bin` directory is on `PATH`, open a new PowerShell window, and
-locate the installed service:
-
-```powershell
-psql --version
-$PostgresService = Get-Service | Where-Object Name -Like 'postgresql*' |
-  Select-Object -First 1
-$PostgresService | Format-Table Name, Status
-if ($PostgresService.Status -ne 'Running') {
-    Start-Service -Name $PostgresService.Name
-}
-```
-
-If no service is returned, stop and repair the PostgreSQL installation rather
-than guessing a service name. Use the PATH-resolved client tools to create the
-same password-protected role and owned database. Enter the installer-selected
-`postgres` password for `-W`, and the same URL-safe application database password used in `DATABASE_URL`
-when `-P` prompts for the new role.
-
-```powershell
-createuser -h localhost -p 5432 -U postgres -W -P scotus
-createdb -h localhost -p 5432 -U postgres -W -O scotus scotus
-```
-
-Finally, activate `.venv` from the repository root and apply the sole schema
-authority to produce an empty usable database:
-
-```powershell
-.\.venv\Scripts\Activate.ps1
-python -m alembic upgrade head
-```
+Alembic is the sole DDL authority. At this point the empty database is
+usable.
 
 ## Every time you develop
 
-### Portable PostgreSQL (recommended recurring command)
+From the repository root, in WSL:
 
-From the repository root, activate `.venv`, then run the portable startup
-script:
-
-```powershell
-.\.venv\Scripts\Activate.ps1
-./scripts/dev-start.ps1
+```bash
+./scripts/dev-start.sh
 ```
 
-This is a recurring-start command, not a bootstrap command. It assumes `.venv`,
-`.env`, and `app/.env` already exist; Python and npm dependencies are already
-installed; and the portable PostgreSQL binaries and `data/pgdata` cluster are
-already initialized. The script starts the portable PostgreSQL server if
-needed, applies Alembic migrations, and launches FastAPI and SvelteKit. It does
-not create the virtual environment, install dependencies, copy or edit env
-files, initialize PostgreSQL, or create the role and database.
+This resolves the current Windows host IP, syncs (or refuses to silently
+guess at) a drifted `.env` database host, verifies PostgreSQL is reachable at
+that address, runs Alembic migrations, then launches FastAPI and SvelteKit as
+their own process groups with real HTTP health checks before printing a
+ready banner.
 
-Open `http://localhost:5173/cases` for the public app; FastAPI is available at
-`http://localhost:8000`. Press Ctrl+C in the script window to stop the FastAPI
-and SvelteKit background jobs. The portable PostgreSQL server remains running
-and will be reused on the next start.
+It deliberately does **not** create the virtual environment, install Python
+or Node dependencies, create either `.env` file, or configure or start the
+PostgreSQL Windows service — those are one-time setup steps above.
 
-### Windows-service PostgreSQL (unverified equivalent; two visible terminals)
+Press Ctrl+C to stop both processes cleanly. If a previous run was killed
+without cleanup and a port is stuck, recover with:
 
-First confirm the Windows service is running with the service check above.
-Then use two visible PowerShell terminals so each development server keeps its
-own logs and Ctrl+C lifecycle.
+```bash
+./scripts/dev-start.sh --stop
+```
+
+Run `./scripts/dev-start.sh --help` for the full usage summary.
+
+On the Windows side, `scripts/dev-start.ps1` is a thin wrapper: invoke it
+from the repository's `\\wsl.localhost\<distro>\...` share path in
+PowerShell and it forwards its arguments straight into the WSL script above.
+
+If `DATABASE_URL`/`TEST_DATABASE_URL` legitimately point somewhere other than
+the resolved WSL2 gateway (rare), set `SCOTUS_DEV_NO_ENV_SYNC=1` to skip the
+automatic rewrite.
+
+A short manual two-terminal fallback, if you need each server's own log and
+Ctrl+C lifecycle instead of the combined script:
 
 Terminal 1, from the repository root:
 
-```powershell
-.\.venv\Scripts\Activate.ps1
-python -m uvicorn api.main:app --reload --port 8000
+```bash
+source .venv/bin/activate
+python -m uvicorn api.main:app --host 0.0.0.0 --reload --port 8000
 ```
 
 Terminal 2:
 
-```powershell
-Set-Location app
+```bash
+cd app
 npm run dev
 ```
 
-Open `http://localhost:5173/cases` for the public SvelteKit app and
-`http://localhost:8000` for FastAPI. Press Ctrl+C in each terminal to stop its
-development server; manage the PostgreSQL Windows service separately.
+Binding uvicorn to all interfaces (`--host 0.0.0.0`) is what lets a
+Windows-side browser reach the WSL-native server.
 
 ## Equivalent setup on macOS and Linux
 
-These commands are the project equivalent of the Windows path; unlike the
-portable Windows walkthrough, they have not been runtime-verified by this
-project. Install and manage PostgreSQL 16 outside this repository using the
-method appropriate to your system. The commands below assume its standard CLI
-tools are already on `PATH` and a PostgreSQL server is listening on port 5432.
+The WSL path above is, at its core, this same POSIX flow — clone, create a
+`.venv`, install dependencies, point `DATABASE_URL` at PostgreSQL, run
+Alembic — with a networked PostgreSQL host standing in for a local one. These
+commands are the direct macOS/Linux equivalent; unlike the WSL2 + Windows-
+service path above, they have not been runtime-verified by this project.
+Install and manage PostgreSQL 16+ outside this repository using the method
+appropriate to your system. The commands below assume its standard CLI tools
+are already on `PATH` and a PostgreSQL server is listening locally.
 
 From a clean checkout, run:
 
@@ -262,14 +301,14 @@ python -c "import secrets; print(secrets.token_urlsafe(32))" # SESSION_SECRET
 python -c "import secrets; print(secrets.token_urlsafe(32))" # database role password
 ```
 
-Using a PostgreSQL administrator account, create the same application role and
-database used by the Windows guide. Use the URL-safe database role password
-generated above in both `DATABASE_URL` and the `createuser -P` prompt. These commands prompt for
-passwords rather than putting them in shell history:
+Using a PostgreSQL administrator account, create the same application role
+and databases used by the WSL guide. Use the URL-safe database role password
+generated above in both `DATABASE_URL` and the `createuser -P` prompt. These
+commands prompt for passwords rather than putting them in shell history:
 
 ```bash
-createuser -h localhost -p 5432 -U postgres -W -P scotus
-createdb -h localhost -p 5432 -U postgres -W -O scotus scotus
+createuser -h <your-postgres-host> -p 5432 -U postgres -W -P scotus
+createdb -h <your-postgres-host> -p 5432 -U postgres -W -O scotus scotus
 ```
 
 Set the root `DATABASE_URL` to the local role/database, set
@@ -295,16 +334,17 @@ cd app
 npm run dev
 ```
 
-The root `.env` remains owned by Python processes and `app/.env` by SvelteKit;
-the ports and exact-match `ADMIN_TOKEN` contract are identical on every
-platform.
+The root `.env` remains owned by Python processes and `app/.env` by
+SvelteKit; the ports and exact-match `ADMIN_TOKEN` contract are identical on
+every platform.
 
 ## Verify the local stack
 
 Use this checklist after either platform's startup steps:
 
-1. Confirm PostgreSQL accepts an authenticated connection on port `5432`
-   (`psql` or the migration command above is sufficient proof).
+1. Confirm PostgreSQL accepts an authenticated connection from WSL on port
+   `5432` at the resolved gateway address (`python -m alembic current` is
+   sufficient proof).
 2. Open `http://localhost:8000/health`. It must return HTTP 200 with
    `{"status":"ok"}`.
 3. Open `http://localhost:5173/cases`; the public SCOTUS Chat application must load on port `5173`.
@@ -339,19 +379,32 @@ python -m pipeline import-justices
 
 ## Troubleshooting
 
-- **Portable command is missing:** confirm
-  `Test-Path .\data\pgsql\bin\initdb.exe` is true. Re-extract the official
-  archive if `data/pgsql/bin` is incomplete; do not run similarly named files
-  downloaded from an unverified source.
-- **Portable cluster is uninitialized or stale:** inspect
-  `data/pgdata/logfile` and confirm the directory belongs to this checkout.
-  Initialize only a new, known-empty path. Never delete an unknown cluster to
-  make startup succeed.
-- **Port 5432, 8000, or 5173 is occupied:** diagnose first with
-  `Get-NetTCPConnection -State Listen | Where-Object LocalPort -In 5432,8000,5173`
-  and inspect each `OwningProcess` with `Get-Process -Id <pid>`. Stop only a
-  process you recognize and own; otherwise change the conflicting service's
-  configuration or ask its operator.
+- **Port 8000 or 5173 already in use:** diagnose from WSL with
+  `ss -ltnp | grep -E ':(8000|5173)'` to see the owning process, then recover
+  with `./scripts/dev-start.sh --stop`, which terminates whatever is
+  listening on either port. Stop only a process you recognize and own;
+  otherwise change the conflicting service's configuration or ask its
+  operator.
+- **WSL can't reach PostgreSQL after a reboot:** the WSL2 NAT gateway address
+  can shift across Windows or WSL restarts. Check the current value with
+  `ip route show default`. `scripts/dev-start.sh` re-syncs `.env`
+  automatically at every startup; if you instead run a bare `pytest`, the
+  drift surfaces as a `tests/test_wsl_postgres_reachability.py` failure
+  carrying the corrected DSN in its message.
+- **PostgreSQL reachable from Windows but refused from WSL:** check the three
+  access gates in `.planning/phases/46-dev-environment-reliability/46-WINDOWS-POSTGRES-SETUP.md`
+  in order — `listen_addresses`, the `pg_hba.conf` host rule, and the
+  Windows Firewall rule. The firewall rule is the usual culprit when a
+  Windows-side client (e.g. `psql` run from PowerShell) already works but WSL
+  gets connection-refused.
+- **Reload or hot-module replacement doesn't fire on save:** check, in this
+  order, (1) whether your editor is actually connected into WSL rather than
+  writing through the `\\wsl.localhost\...` share path from a Windows-native
+  editor, and (2) whether your working copy is on native ext4 rather than a
+  Windows-mounted drive.
+- A checkout sitting on a Windows-mounted drive is the root cause of the
+  second of those two checks — it is not something to work around with
+  watcher-polling settings; relocate the checkout instead.
 - **Database authentication or connection fails:** verify host, port, role,
   database, and password in `DATABASE_URL`, then test the same target with
   `psql`. Do not weaken PostgreSQL authentication as a shortcut.
@@ -362,7 +415,8 @@ python -m pipeline import-justices
   `ADMIN_PASSWORD` in `app/.env`, and generate a new independent
   `SESSION_SECRET` of at least 32 characters. Restart SvelteKit after edits;
   rotating the secret invalidates existing sessions.
-- **Python commands use the wrong interpreter:** activate `.venv` and confirm
+- **Python commands use the wrong interpreter:** activate `.venv`
+  (`source .venv/bin/activate`) and confirm
   `python -c "import sys; print(sys.executable)"` points inside the checkout.
 - **Alembic migration fails:** stop the API, re-check `DATABASE_URL`, then run
   `python -m alembic current` and `python -m alembic upgrade head`. Read the
@@ -371,11 +425,12 @@ python -m pipeline import-justices
   the lockfile-defined dependencies, then retry `npm run dev`. Do not delete or
   rewrite `package-lock.json` as a troubleshooting shortcut.
 
-For safe restarts, use Ctrl+C in application terminals (or the portable
-script's terminal), confirm their PIDs have exited, and then run the documented
-startup command again. Manage a Windows PostgreSQL service separately. Stop a
-portable cluster only when its data directory and process are known to belong
-to this checkout, for example with its matching `pg_ctl -D <known-path> stop`.
+For safe restarts, use Ctrl+C in the `dev-start.sh` window (or `./scripts/dev-start.sh --stop`
+from another shell), confirm the ports are free, and then run
+`./scripts/dev-start.sh` again. The PostgreSQL Windows service is managed
+independently through normal Windows service tooling (`Services.msc`,
+`Get-Service`/`Start-Service`/`Restart-Service`) and is not started or
+stopped by this script.
 
 ## Attribution / Credits
 

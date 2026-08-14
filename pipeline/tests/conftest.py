@@ -37,17 +37,32 @@ def test_db_url() -> str:
     """
     Return the test database URL.
 
-    Resolution order:
-        1. TEST_DATABASE_URL env var (dedicated test DB — preferred)
-        2. DATABASE_URL env var (falls back to dev DB — use with care)
+    HARD SAFETY GUARD (T-31-01): this fixture must never fall back to
+    DATABASE_URL. It reads TEST_DATABASE_URL only, and additionally requires
+    the resolved database name to be exactly "scotus_test" before returning
+    it — mirroring _reset_test_db's guard below. engine/async_session/
+    clean_db all build on top of this fixture's return value, so this is the
+    single choke point that keeps them from ever truncating the shared dev
+    DB (the exact D-02/D-03 incident class this phase exists to close).
 
-    If neither is set, all DB-dependent tests are skipped via pytest.skip().
+    If TEST_DATABASE_URL is unset, or does not target scotus_test, all
+    DB-dependent tests are skipped via pytest.skip() rather than silently
+    proceeding against DATABASE_URL.
     """
-    url = os.getenv("TEST_DATABASE_URL") or os.getenv("DATABASE_URL", "")
+    url = os.getenv("TEST_DATABASE_URL", "")
     if not url:
         pytest.skip(
-            "No DATABASE_URL configured — skipping DB-dependent tests. "
-            "Set TEST_DATABASE_URL or DATABASE_URL in .env to run them."
+            "TEST_DATABASE_URL not configured — skipping DB-dependent tests. "
+            "clean_db/async_session must never fall back to DATABASE_URL (T-31-01)."
+        )
+
+    from sqlalchemy.engine import make_url
+
+    if make_url(url).database != "scotus_test":
+        pytest.skip(
+            "TEST_DATABASE_URL does not target scotus_test — refusing to run "
+            "DB-dependent tests against a database that isn't the dedicated "
+            "test DB (T-31-01)."
         )
     return url
 

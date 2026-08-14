@@ -5,15 +5,15 @@ milestone_name: Corpus Fidelity & Resolve Rework
 current_phase: 46
 current_phase_name: dev-environment-reliability
 status: executing
-stopped_at: Completed 46-03-PLAN.md
-last_updated: "2026-08-14T03:38:37.447Z"
-last_activity: 2026-08-12
-last_activity_desc: Phase 45 execution started
+stopped_at: Completed 46-04-PLAN.md
+last_updated: "2026-08-14T16:34:31.276Z"
+last_activity: 2026-08-14
+last_activity_desc: Completed 46-04-PLAN.md (repository relocation to native ext4)
 progress:
   total_phases: 6
   completed_phases: 5
   total_plans: 29
-  completed_plans: 26
+  completed_plans: 27
   percent: 83
 ---
 
@@ -29,9 +29,9 @@ See: .planning/PROJECT.md (updated 2026-07-29 after starting v1.7 milestone)
 ## Current Position
 
 Phase: 46 (dev-environment-reliability) — EXECUTING
-Plan: 4 of 5
+Plan: 5 of 6
 Status: Ready to execute
-Last activity: 2026-08-12 — Phase 46 execution started
+Last activity: 2026-08-14 — Completed 46-04-PLAN.md (repository relocation to native ext4)
 
 **Milestone shape:**
 
@@ -95,6 +95,7 @@ Still open from earlier milestones:
 | Phase 44 P07 | 40min | 3 tasks | 5 files |
 | Phase 44 P08 | ~45min | 3 tasks | 2 files |
 | Phase 46 P03 | ~50min | 3 tasks | 3 files |
+| Phase 46 P04 | ~35min | 3 tasks | 1 files |
 
 v1.5/v1.6 per-plan metrics cleared at this milestone boundary per the standard STATE.md reset; the underlying per-plan SUMMARY files remain in `.planning/milestones/v1.5-phases/` and `.planning/milestones/v1.6-phases/`.
 
@@ -143,6 +144,8 @@ Full cross-milestone decision log lives in PROJECT.md's Key Decisions table. Per
 - [Phase ?]: Phase 44 Plan 08: re-pointed a plan-unlisted stale 44-02 assertion (test_descriptor_cell_snippet_always_renders_bench_dash_and_editable_input) that banned the literal string "side !== 'BENCH'" anywhere in descriptorCell — widened (not weakened) to assert the data-carrying <input> renders before and outside the new RESOLVE-13 hint wrapper.
 - [Phase ?]: [Phase 46 Plan 03]: Operator approved Task 3's checkpoint on the row-count/fail-closed evidence -- all four row counts (people/arguments/cases/utterances) byte-identical across every pytest invocation shape including the literal Phase 45 wipe command; the fail-closed guard aborted correctly with a genuinely-present TEST_DATABASE_URL.
 - [Phase ?]: [Phase 46 Plan 03]: The 2 pre-existing/unrelated full-suite failures (test_no_create_all_in_codebase false positive; order-dependent Phase 44 argument_role_roundtrip flake) surfaced by the first full-suite run against a reachable dev/test Postgres were explicitly deferred to the backlog by the operator, logged in deferred-items.md, not fixed in this plan.
+- [Phase ?]: [Phase 46 Plan 04]: Operator approved Task 3's cutover checkpoint with a general affirmation ("from what I can tell, everything seems correct") rather than an itemized walkthrough; recorded honestly as general approval, with the orchestrator's independent read-only re-verification at DST (git history match, clean tree, ext4, core.ignorecase=false, data dirs present) recorded distinctly, including a benign racy-git stat-cache false positive on README.md, resolved and explained.
+- [Phase ?]: [Phase 46 Plan 04]: Corrected the plan's anticipated one-commit SRC/DST hand-off gap to the actual two commits observed at DST HEAD (94f178a7, predating both 1bbcba33 and c3c5f30c); does not change the outcome — 46-05 Task 1's fast-forward gate still closes the gap regardless of exact size.
 
 ### Roadmap Evolution
 
@@ -183,8 +186,8 @@ v1.6's roadmap evolution is archived in `.planning/milestones/v1.6-ROADMAP.md`. 
 
 ## Session Continuity
 
-Last session: 2026-08-13T19:45:31.614Z
-Stopped at: Completed 46-03-PLAN.md
+Last session: 2026-08-14T16:34:30.291Z
+Stopped at: Completed 46-04-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

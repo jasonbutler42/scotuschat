@@ -149,10 +149,11 @@ EOF
 
 wait_for_http() {
   local url="$1" label="$2" logfile="$3"
-  local attempt
+  local attempt code
   for attempt in $(seq 1 30); do
-    if curl -sf --max-time 2 "$url" >/dev/null 2>&1; then
-      echo "${label} is up (${url})."
+    code="$(curl -s -o /dev/null --max-time 2 -w '%{http_code}' "$url" 2>/dev/null || true)"
+    if [ -n "$code" ] && [ "$code" != "000" ]; then
+      echo "${label} is up (${url}, HTTP ${code})."
       return 0
     fi
     sleep 1

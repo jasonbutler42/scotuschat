@@ -172,3 +172,67 @@ DST (never copied) and the full stack was proved working from there.
 - **GSD test command:** `.planning/config.json`'s `workflow.test_command`
   (`./.venv/bin/python -m pytest`) is repository-relative and needed no edit —
   confirmed it resolves correctly from the new root.
+
+## Retirement (2026-08-14, Phase 46 Plan 06 Task 2/3)
+
+**Decision selected:** option-c — "Leave it in place, marked as retired."
+Verbatim resume signal used by the operator, relayed via the orchestrator
+that gathered the decision before this plan's execution: *option-c —
+"leave it in place, marked as retired."* Option-c's own consequences,
+per Task 2's decision text: "Option-c skips the removal in Task 3 and files
+a follow-up todo to revisit after a period of running from the new
+location."
+
+**Integrity re-proof, taken immediately before acting on the decision (at
+the current repository, DST):**
+
+| Check | Value | Result |
+|---|---|---|
+| `git fsck --no-dangling` | exit 0 | clean |
+| `git status --porcelain -uno` | empty | clean |
+| `git rev-list --all --count` | 1588 (plan 46-04 recorded 1579 at relocation; 9 commits added since across plan 46-05's fast-forward and its own commits, plus this plan's Task 1 README commit) | matches expected growth |
+| `git remote get-url origin` | `https://github.com/jasonbutler42/scotuschat` | resolves, intact |
+| `.env` | present, non-empty, mode 600 | pass |
+| `app/.env` | present, non-empty, mode 600 | pass |
+| `data/corpus` | present, 11 files | pass |
+| `data/pdfs` | present, 63 files | pass |
+| `data/uploads` | present, 35 files | pass |
+
+No secret value or connection string is recorded in this table or anywhere
+in this section.
+
+**Push to `origin`:** not performed. Option-c does not push — that action is
+reserved for option-b, which was not selected.
+
+**What was removed:** nothing. Under option-c, the pre-relocation checkout
+at `/mnt/c/workspace/scotuschat/project` is retained in full, including its
+retired `data/pgsql`/`data/pgdata` directories (already `.gitignore`'d
+there, so this changes nothing tracked). It remains a full offline second
+copy of the repository's history and untracked payload.
+
+**What was retained:** the entire pre-relocation checkout, untouched, at
+`/mnt/c/workspace/scotuschat/project` (9p/DrvFs Windows-mounted
+filesystem) — the path recorded at the top of this document under "Both
+absolute paths."
+
+**Marker file:** a plain-text, untracked file was written at the root of
+the pre-relocation checkout:
+
+- **Location:** `/mnt/c/workspace/scotuschat/project/RETIRED-CHECKOUT.txt`
+- **Contents (summary):** states the checkout is retired as of 2026-08-14,
+  names the current live repository path
+  (`/home/jason/scotuschat/project`), states this checkout is kept only as
+  an offline second copy per the option-c decision, and instructs the
+  reader not to commit into it. Confirmed untracked via
+  `git status --porcelain RETIRED-CHECKOUT.txt` at the pre-relocation
+  checkout (reports `??`, not staged or committed).
+
+**Follow-up todo filed:** `.planning/todos/pending/2026-08-14-revisit-pre-relocation-checkout-removal.md`
+— revisit the removal decision after a period of running from the new
+location, per option-c's own consequence as stated in Task 2's resume
+signal.
+
+**Retired in-repository PostgreSQL directories at the current repository
+(DST):** confirmed absent — `test ! -d data/pgsql` and `test ! -d data/pgdata`
+both succeed. Their `.gitignore` entries (`data/pgsql/`, `data/pgdata/`)
+remain in place.

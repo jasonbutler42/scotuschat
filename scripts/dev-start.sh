@@ -131,8 +131,18 @@ sync_env_db_host() {
   if [ -n "${SCOTUS_DEV_NO_ENV_SYNC:-}" ]; then
     echo "WARNING: .env DB host (${db_host:-$test_host}) differs from the resolved Windows host IP (${WIN_HOST_IP}); SCOTUS_DEV_NO_ENV_SYNC is set, skipping the rewrite." >&2
     # The host actually left in .env -- not WIN_HOST_IP -- is what Alembic/
-    # uvicorn will use, so that's what must be probed (WR-02).
-    PROBE_HOST="${db_host:-$test_host}"
+    # uvicorn will use, so that's what must be probed (WR-02). Validate its
+    # shape before assigning: this value is interpolated, unescaped, into a
+    # `bash -c` /dev/tcp probe below, so an unvalidated .env host string
+    # (`_extract_env_host`'s `[^:/]+` capture blocks `:`/`/` but not `;`,
+    # `$`, backticks, or `${IFS}`) is an injection primitive of the same
+    # class the WIN_HOST_IP guard above closes (security-audit finding).
+    local probe_host="${db_host:-$test_host}"
+    if [[ ! "$probe_host" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]; then
+      echo "ERROR: .env host (${probe_host}) is not a plain IPv4 address; refusing to probe it. Fix .env by hand or unset SCOTUS_DEV_NO_ENV_SYNC." >&2
+      exit 1
+    fi
+    PROBE_HOST="$probe_host"
     return 0
   fi
 

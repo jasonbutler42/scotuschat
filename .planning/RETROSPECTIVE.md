@@ -305,6 +305,54 @@
 
 ---
 
+## Milestone: v1.7 — Corpus Fidelity & Resolve Rework
+
+**Shipped:** 2026-08-15
+**Phases:** 6 (41–46) | **Plans:** 29 | **Timeline:** 17 days (2026-07-29 → 2026-08-15)
+**Files changed:** 209 (+39,432 / -1,137 lines) | **Commits:** 235
+
+### What Was Built
+
+- Corpus fidelity confirmed and fixed: a deterministic 4-fixture set selected from the ~7,800-argument ConvoKit dataset and operator-confirmed (41), then field-by-field diffed against raw source to find and fix real import gaps — `section_hint` derivation and a bench-tenure mismatch warning (42) — while correctly leaving the apolitical field allow-list's intentional exclusions alone
+- Dev-only, environment-gated reset-to-fixture tool (43): one admin action reseeds all four fixtures into distinguishable publish/pipeline states through the real import/publish pipeline, with a fail-closed environment gate live-demonstrated rather than asserted from code
+- Resolve table fully reworked (44): Bench/Advocate and Argument Role became independently editable, replacing a single conflated dropdown; live Figma-driven design exploration mid-phase converged on a materially different, leaner canonical layout than the original mockup; two real data-loss bugs found and fixed by post-approval code review
+- Two long-standing UI bugs closed (45): unpublished arguments no longer directly accessible; popover scrollbar correctly scoped to just the bio text instead of the whole card
+- Dev environment made reliable end-to-end (46, inserted mid-milestone once Windows admin access became available): the pytest DB-isolation bug that twice wiped the shared dev database closed at its root (rootdir `conftest.py` + fail-closed sibling guards); the stack moved to WSL-native tooling against a real Windows-hosted PostgreSQL service; the repository relocated off a Windows-mounted filesystem onto native ext4; a single `dev-start.sh`/`dev-start.ps1` start/stop entry point shipped; a post-execution security audit found and closed 3 real vulnerabilities (2 from code review, 1 reintroduced by the review's own fix and caught by the audit)
+
+### What Worked
+
+- **A mid-milestone phase insertion (46) driven by a real, previously-blocking environmental constraint being lifted (Windows admin access), rather than scope creep.** The phase was scoped tightly around the one bug that mattered most (the dev-DB wipe) plus the infrastructure changes that constraint had been forcing workarounds for — it didn't try to also fix unrelated backlog items just because the environment was being touched anyway.
+- **Live design exploration mid-phase (44) was treated as a first-class reconciliation, not a scope violation.** When Figma exploration converged on a materially different canonical layout than the original mockup, the team wrote a dedicated reconciliation document (`44-FIGMA-RECONCILE.md`), explicitly marked the original success criteria as superseded rather than silently abandoning them, and renumbered requirements (RESOLVE-07–16) to track the new shape — keeping the paper trail honest instead of quietly pretending the original plan was followed.
+- **Post-execution code review and security audit caught real, priority-matching bugs after "verification passed."** Phase 46's own goal-verification agent scored 20/20 must-haves before code review even ran — yet code review then found a fixture (`clean_db`/`test_db_url`) that recreated the exact dev-DB-wipe bug class the phase existed to close, plus a real command-injection primitive in `dev-start.sh`. Both were treated as blocking despite the code-review gate's default advisory-only stance, because shipping them undiscovered would have defeated the phase's own goal. The security audit then caught a third issue — a narrower regression the review's own fix (WR-02) had reintroduced in a different code path — proving that a fix cycle needs its own adversarial check, not just the original review's sign-off.
+- **A repository-relocation decision (D-04) treated its own irreversibility as a design constraint, not an afterthought.** Rather than deleting the pre-relocation checkout once the new location proved out, the team explicitly chose "leave it in place, marked retired" (option-c) specifically because it was the only offline second copy of unpushed history and untracked secrets — and backed that decision with a fresh integrity re-proof performed immediately before acting, plus a plain-text advisory marker at the old location.
+
+### What Was Inefficient
+
+- **An orchestrator working across a repository relocation (D-04, Phase 46) initially operated in the wrong, retired checkout for several steps before noticing the retirement marker file (`RETIRED-CHECKOUT.txt`) that explicitly said not to commit there.** A stray commit had to be reset and redone at the correct location. The marker file did its job the moment it was actually read — the gap was that nothing prompted reading it before the first write. **Structural fix for next time:** when a phase's own evidence record (`46-RELOCATION.md`/`46-VALIDATION.md`) documents a repository relocation with a retirement marker at the old path, any workflow that resolves a working directory for that project should check for a `RETIRED-CHECKOUT.txt`-style marker (or equivalent) at the resolved path *before* the first write, not rely on the operator or the agent noticing it organically.
+- **The folded todo for the phase's own priority bug (`2026-08-12-pytest-explicit-paths-bypass-db-isolation.md`) sat in `todos/pending/` for a full day after the fix shipped and was independently re-verified**, because it carried no `resolves_phase` tag and the standard `close_phase_todos` automation only matches on that field. This is the same "stale tracking artifact after the fix lands" class of issue flagged in v1.5 and v1.6's retrospectives — recurring for a fourth time, now specifically in the todo-file variant rather than debug-session/verification-file variants.
+- **The milestone-close artifact audit surfaced 6 "deferred item" entries and 1 dormant seed that were substantially already resolved or absorbed** (the seed's bulk was already delivered by Phase 44; several deferred items were pre-existing, already-diagnosed, unrelated test failures carried forward from Phases 43/44 with no new information added at close time). None were wrong to carry forward, but the volume of "acknowledge and defer" boilerplate at close time suggests the per-phase deferred-items convention could periodically self-prune already-actioned entries rather than accumulate indefinitely.
+
+### Patterns Established
+
+- **Threat-register hardening applied retroactively to post-hoc review findings, not just plan-time threats.** When code review surfaces a new security-relevant finding outside a phase's original `<threat_model>` block (CR-01, CR-02), the security audit folds it into the phase's `SECURITY.md` threat register with its own threat ID and full mitigation evidence, rather than leaving it undocumented outside the formal register just because it wasn't planned in advance.
+- **A fix cycle gets its own adversarial re-check.** Don't treat a code-review fix pass as automatically safe just because it addressed the original findings — the WR-02 fix that reopened CR-02's injection sink is the concrete case for why the next verification stage (security audit, in this case) should re-examine files touched by the fix pass, not just the files the original review flagged.
+- **Irreversible-decision gates re-prove the survivor's integrity immediately before acting**, not just before the decision is made — Phase 46's retirement-checkout task re-ran `git fsck`, clean-tree, commit-count, remote, and secrets-presence checks at the moment of writing the marker file, not only when the decision was first proposed.
+
+### Key Lessons
+
+1. **A repository-relocation decision needs a structural safeguard that fires on session/workflow start, not just a marker file that relies on being read.** The marker (`RETIRED-CHECKOUT.txt`) worked exactly as designed the moment it was read — the gap is that nothing forced that read before the first write to the wrong location. Any project that has relocated its working directory should have its retirement marker checked automatically by the tooling that resolves "where do I work," not left to organic discovery.
+2. **"Close tracking artifacts when the fix lands" now has four documented occurrences across four different artifact types (debug sessions v1.1/v1.5, verification files v1.6, todo files v1.7) — this is a systemic gap in the workflow, not a one-off oversight in any single phase.** The common thread across all four: a fix lands, but nothing in the normal workflow revisits the artifact that described the problem it fixed, because closing that artifact was never that fix's job. A structural fix (e.g., a commit-time check for tracking artifacts referencing files touched by the current commit) would close all four variants at once rather than needing a fifth reminder for the next artifact type.
+3. **Verification passing is not the same as review passing, and review passing is not the same as the review's own fixes being safe.** Phase 46 needed all three stages (goal verification, code review, security audit) to independently catch different real issues — each stage validates a different property, and skipping any one of them would have shipped a real vulnerability.
+4. **When code review or a security audit finds issues that recreate the exact bug class a phase exists to close, escalate them from advisory to blocking even though the tooling's default is advisory-only** — matching what Phase 46 did with CR-01/CR-02, and consistent with v1.6's Key Lesson on independently re-verifying "already fixed" claims before accepting them.
+
+### Cost Observations
+
+- Model mix: Sonnet primary throughout, including the code-review, code-fixer, verifier, and security-auditor subagents; Opus for the security auditor specifically
+- Sessions: multiple across the 17-day window, plus one dedicated verify-work/execute-phase/milestone-close session that discovered and corrected the wrong-checkout mistake
+- Notable: the wrong-checkout mistake cost one stray commit (cleanly reset, no data lost) and some session time diagnosing it — cheap relative to what it would have cost if the mistake had gone unnoticed and diverged further from the live repository's history
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -318,6 +366,7 @@
 | v1.4 Admin Completeness | 4 | 13 | Shortest milestone (3 days); tri-state delete pattern; unconditional polling fix; stale todos/requirements repeated lesson |
 | v1.5 Admin Screens Cleanup | 10 (incl. inserted 30.1) | 55 | Largest milestone yet; absorbed an unplanned 7,800-argument bulk corpus import mid-milestone; inserted gap-closure phase pattern for milestone-audit findings; recurring "close debug sessions at fix time" lesson |
 | v1.6 Backlog Cleanup | 11 (incl. inserted 40.1) | 51 | A stale debug session caused a duplicate security-fix phase to be inserted and discussed before the planner's own source audit caught it pre-implementation; "close debug sessions at fix time" recurred for a third time and is now flagged for a structural fix, not another reminder |
+| v1.7 Corpus Fidelity & Resolve Rework | 6 (incl. inserted 46) | 29 | Mid-milestone phase insertion (46) driven by a real environmental constraint lifting (Windows admin access); all three post-implementation gates (goal verification, code review, security audit) each independently caught a different real issue on the same phase; "close tracking artifacts at fix time" recurred a fourth time in a new variant (todo files, not just debug sessions/verification files) |
 
 ### Cumulative Quality
 
@@ -330,5 +379,7 @@
 
 1. Keep requirements checked off in real time — stale checkboxes create reconciliation work at milestone close (v1.0 + v1.1)
 2. Run the milestone audit before the milestone close ceremony — surfaces stale artifacts early
-3. Close debug sessions and update verification status when the fix lands — not at milestone close (v1.1, v1.5, and v1.6 — three occurrences now; v1.6's cost a full discuss-phase cycle on a phantom vulnerability, not just stale bookkeeping. Needs a structural fix per v1.6's Key Lessons, not a fourth reminder.)
+3. Close tracking artifacts (debug sessions, verification files, todo files) and update their status when the fix lands — not at milestone close (v1.1, v1.5, v1.6, and now v1.7 — four occurrences across four artifact types; v1.6's cost a full discuss-phase cycle on a phantom vulnerability. This is a systemic workflow gap, not an artifact-specific oversight — needs one structural fix that covers all tracking-artifact types, not another per-type reminder.)
 4. A planner's (or any agent's) "this is already done" conclusion should be independently re-verified against primary sources before being accepted, especially when the alternative is writing or skipping security-relevant code (v1.6)
+5. Verification passing, code review passing, and a code review's own fixes being safe are three separate properties — each needs its own check, and a fix cycle should get its own adversarial re-examination rather than inheriting the original review's clean bill of health (v1.7)
+6. When a workflow resolves "where do I work" for a project that has relocated its repository, check for a retirement/relocation marker at the resolved path before the first write — don't rely on an agent or operator noticing it organically (v1.7)

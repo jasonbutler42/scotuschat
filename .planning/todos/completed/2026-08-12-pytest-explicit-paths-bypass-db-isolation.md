@@ -1,5 +1,7 @@
 ---
 created: 2026-08-12T00:00:00.000Z
+resolved: 2026-08-15T00:00:00.000Z
+resolves_phase: 46
 title: pytest explicit-path invocations bypass DB test isolation and can wipe the dev DB
 area: dev-environment
 priority: high
@@ -8,6 +10,21 @@ files:
   - api/tests/conftest.py
   - pytest.ini
 ---
+
+## Resolution (Phase 46, plan 46-01)
+
+Fixed via this todo's own suggested option 2/3: the `TEST_DATABASE_URL` redirect
+and row-count tripwire were relocated to the rootdir `conftest.py` via a
+`pytest_configure` sentinel (fires for every invocation shape regardless of
+collected paths), with both sibling conftests (`api/tests/`, `pipeline/tests/`)
+failing closed with a loud `AssertionError` if the sentinel didn't fire.
+Regression-pinned by `tests/test_pytest_isolation_invocation_shapes.py` (all
+three invocation shapes). The exact scenario this todo describes — a full
+suite run PLUS the literal explicit-path command that wiped the dev DB during
+Phase 45 — was re-run with dev-DB row counts proven byte-identical, and
+independently re-verified twice more since (46-03 finalization, and Phase 46's
+own goal-verification agent). See `46-VERIFICATION.md` and `46-SECURITY.md`
+(T-46-01-01/02, threat register) for the full evidence trail.
 
 ## Problem
 

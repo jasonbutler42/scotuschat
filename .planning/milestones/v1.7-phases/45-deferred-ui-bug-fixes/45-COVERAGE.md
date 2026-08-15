@@ -1,0 +1,1 @@
+No external API integration: BUG-01 adds a publish-status predicate to two existing internal FastAPI read routes backed by PostgreSQL via SQLAlchemy, and BUG-02 relocates CSS box-model properties between two local Svelte files — no external API, SDK, or third-party service is called, imported, or configured by this phase.

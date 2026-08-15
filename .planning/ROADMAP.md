@@ -9,7 +9,7 @@
 - ✅ **v1.4 Admin Completeness** — Phases 18–21 (shipped 2026-07-02)
 - ✅ **v1.5 Admin Screens Cleanup** — Phases 22–30, 30.1 (shipped 2026-07-12)
 - ✅ **v1.6 Backlog Cleanup** — Phases 31–40, 40.1 (shipped 2026-07-29)
-- 🚧 **v1.7 Corpus Fidelity & Resolve Rework** — Phases 41–45 (in progress, started 2026-07-29)
+- ✅ **v1.7 Corpus Fidelity & Resolve Rework** — Phases 41–46 (shipped 2026-08-15)
 
 ## Phases
 
@@ -125,190 +125,21 @@ Full phase details: `.planning/milestones/v1.6-ROADMAP.md`
 
 </details>
 
-### 🚧 v1.7 Corpus Fidelity & Resolve Rework (Phases 41–45) — IN PROGRESS
+<details>
+<summary>✅ v1.7 Corpus Fidelity & Resolve Rework (Phases 41–46) — SHIPPED 2026-08-15</summary>
 
-**Overview:** Trust the corpus-import data pipeline end to end on one representative case, rework the Resolve table into a real editing tool, and close two known UI bugs — with a dev-only reset harness to make it all iterable. The corpus track is deliberately gated: a 4-fixture set (one structurally-complex argument plus three chosen for publish/pipeline-state variety) is chosen and operator-confirmed (Phase 41) before any diff or importer change happens. Only the complex fixture goes through Phase 42's diff/fix work; the dev reset tool (Phase 43) reseeds the full four-fixture set so the state-variety fixtures are available for Phase 43/45's publish-unpublish testing. The Resolve rework (Phase 44) and the two bug fixes (Phase 45) are independent of the corpus track and can run in parallel with it. Deployment (DEPLOY-01/03) and the remaining 999.x backlog (999.2–999.8) are explicitly out of scope; so is any full-corpus backfill of Phase 42's importer fixes.
+**Overview:** Trusted the corpus-import data pipeline end to end on one representative case, reworked the Resolve table into a real editing tool, closed two known UI bugs, and (inserted mid-milestone once Windows admin access became available) made the local dev environment reliable — closing the pytest DB-isolation bug that twice wiped the shared dev database and relocating the repository/toolchain to WSL-native infrastructure.
 
-- [x] **Phase 41: Canonical Corpus Fixture Selection** - Analyze the ~7,800-argument ConvoKit dataset and get a 4-fixture set (1 structurally-complex audit fixture + 3 publish-state variants) operator-confirmed for the milestone (completed 2026-07-29)
-- [x] **Phase 42: Corpus Import Fidelity Diff & Fix** - Field-by-field diff of the fixture's raw ConvoKit source against its imported DB rows, then fix every real gap and re-import clean (completed 2026-07-30)
-- [x] **Phase 43: Dev-Only Reset to Fixture** - Admin action that wipes all argument/people data and reseeds exactly the fixture, hard-gated against ever running outside a dev environment (completed 2026-07-31)
-- [x] **Phase 44: Resolve Table Rework** - originally SEED-001's mockup-driven rework (5 columns); superseded 2026-08-04 by a Figma canonical reconciliation (4 columns, dropdown-only Resolved As, side-scoped search, source-aware hints, live tenure recompute — RESOLVE-07–16) (completed 2026-08-11)
-- [x] **Phase 45: Deferred UI Bug Fixes** - Unpublished arguments no longer leak into `/cases/` or direct URLs; popover scrollbar stays inside the card boundary (completed 2026-08-12)
+- [x] Phase 41: Canonical Corpus Fixture Selection (3/3 plans) — completed 2026-07-29
+- [x] Phase 42: Corpus Import Fidelity Diff & Fix (5/5 plans) — completed 2026-07-30
+- [x] Phase 43: Dev-Only Reset to Fixture (4/4 plans) — completed 2026-07-31
+- [x] Phase 44: Resolve Table Rework (9/9 plans) — completed 2026-08-11
+- [x] Phase 45: Deferred UI Bug Fixes (2/2 plans) — completed 2026-08-12
+- [x] Phase 46: Dev Environment Reliability (INSERTED, 6/6 plans) — completed 2026-08-15
 
-## Phase Details
+Full phase details: `.planning/milestones/v1.7-ROADMAP.md`
 
-### Phase 41: Canonical Corpus Fixture Selection
-
-**Goal**: The operator has a named, justified 4-argument fixture set confirmed that every later phase in this milestone references: one structurally-complex argument (the canonical audit fixture Phase 42 diffs against raw ConvoKit source) plus three additional arguments chosen for publish/pipeline-state variety (e.g. unpublished/DRAFT, published, mid-pipeline) so Phase 43's reset tool and Phase 45's publish/unpublish bug work have real states to exercise. This is a decision gate, not an implementation phase — the ~7,800-argument corpus is analyzed for structural complexity signals (speaker count, advocate count, consolidated multi-docket cases, transcript length, re-argument/question-number shape), a ranked shortlist plus one recommendation is presented for the complex fixture, the three state-variety fixtures are proposed separately by state rather than complexity, and the operator explicitly confirms the whole set before Phase 42's diff work or Phase 43's reseed target is locked in. Choosing badly here means auditing a case that exercises none of the importer's hard paths, so the choice is surfaced rather than silently auto-decided.
-**Depends on**: Nothing (first phase of v1.7)
-**Requirements**: CORPUS-12
-**Success Criteria** (what must be TRUE):
-
-  1. A ranked shortlist of candidate arguments drawn from the full ConvoKit dataset is presented, each with the concrete structural-complexity signals that ranked it (speaker count, advocate count, number of source dockets, utterance count).
-  2. Exactly one argument is recommended as the canonical complexity fixture, with a stated reason why it exercises more of the importer's paths than the runners-up, plus three additional arguments recommended for publish/pipeline-state variety.
-  3. The operator explicitly confirms (or rejects and redirects) the full 4-fixture recommendation before any downstream corpus work begins — no phase proceeds on an assumed fixture set.
-  4. The confirmed fixture set is recorded in a durable, referenceable form (ConvoKit conversation id, case name, docket(s), term, argued date, and each fixture's role — complexity fixture vs. which state variant) that Phases 42 and 43 both read instead of re-deriving; Phase 42 reads only the complexity fixture, Phase 43 reads the full set.
-  5. No importer code and no database rows are changed by this phase — selection and confirmation only.
-
-**Plans**: 3/3 plans executed
-**Wave 1**
-
-- [x] 41-01-PLAN.md — Build `scripts/select_corpus_fixtures.py`: read-only path-coverage scoring over the ConvoKit corpus, apolitical exclusion enforced structurally and at commit time, deterministic top-5 shortlist with per-candidate flag annotations
-
-**Wave 2** *(blocked on Wave 1 completion)*
-
-- [x] 41-02-PLAN.md — Run the full-corpus streaming pass once (persisted aggregate cache), then author `.planning/FIXTURES.md` at status PROPOSED with the four-fixture table plus its ranking evidence
-
-**Wave 3** *(blocked on Wave 2 completion)*
-
-- [x] 41-03-PLAN.md — Blocking operator confirmation of the four-fixture set; record the decision in `.planning/FIXTURES.md` at status CONFIRMED and prove no importer code or database rows changed
-
-### Phase 42: Corpus Import Fidelity Diff & Fix
-
-**Goal**: Everything `import-convokit` drops, mis-maps, or silently defaults for the confirmed fixture is identified, classified, and fixed — so the fixture's rows in `cases`, `arguments`, `utterances`, `people`, `argument_participants`, and `court_tenures` faithfully reflect its raw ConvoKit source. Some current omissions are intentional (the apolitical field allow-list from Phase 29 strips partisan/outcome fields by design, and SCDB data is excluded entirely), so the diff must separate real defects from deliberate exclusions rather than "restoring" fields the apolitical hard constraint forbids. Fixes land on the importer's code path and are proven by re-importing this one fixture; backfilling the other ~7,800 arguments is explicitly out of scope.
-**Depends on**: Phase 41 (needs the confirmed complexity fixture — the other 3 fixtures in Phase 41's set are not diffed here, they're reserved for Phase 43/45)
-**Requirements**: CORPUS-13, CORPUS-14
-**Success Criteria** (what must be TRUE):
-
-  1. A field-by-field comparison of the fixture's raw ConvoKit source against its imported rows exists for all six affected tables, with every field marked faithful, dropped, mis-mapped, or silently defaulted.
-  2. Each discrepancy is classified as a real importer defect or an intentional exclusion (apolitical allow-list, schema-absent field, upstream-missing data), with the reason recorded next to it.
-  3. Re-importing the fixture after the fixes produces rows where every field flagged as a real defect is now correct, re-verified against the same comparison rather than assumed.
-  4. The re-imported fixture's utterance count, speaker roster, and source-docket set match the raw ConvoKit source exactly — no dropped, duplicated, or merged turns.
-  5. Corpus-import behavior for arguments other than the fixture is unchanged and no full-corpus backfill is triggered.
-
-**Plans**: 5/5 plans executed
-
-Plans:
-**Wave 1**
-
-- [x] 42-01-PLAN.md — Scoped single-conversation import path (`--conversation-id`), landing conversation 15169 in the dev DB (tracer)
-
-**Wave 2** *(blocked on Wave 1 completion)*
-
-- [x] 42-02-PLAN.md — Fixture delete-and-reimport routine, with the round trip proven against the real fixture
-
-**Wave 3** *(blocked on Wave 2 completion)*
-
-- [x] 42-03-PLAN.md — Field-by-field fidelity diff generator and the durable `.planning/CORPUS-FIDELITY-DIFF.md` document (CORPUS-13)
-
-**Wave 4** *(blocked on Wave 3 completion)*
-
-- [x] 42-04-PLAN.md — Operator batch classification review gate (D-05/D-06) and the approved importer fixes
-
-**Wave 5** *(blocked on Wave 4 completion)*
-
-- [x] 42-05-PLAN.md — Post-fix delete, re-import, and re-verification against the same comparison (CORPUS-14)
-
-### Phase 43: Dev-Only Reset to Fixture
-
-**Goal**: The operator can return a local database to a known four-fixture state from the admin panel in a single action, making the corpus and resolve work iterable instead of requiring hand-built SQL cleanup between attempts. The action is fully destructive by design — it wipes every argument, utterance, person, court tenure, and argument participant, then reseeds exactly Phase 41's four-fixture set plus their associated people — so an environment gate that makes it impossible to fire against a real/production database is a hard requirement of the feature, not follow-up polish. Reseeding runs through the same `import-convokit` path a normal corpus import uses, so Phase 42's importer fixes flow through automatically rather than being duplicated in a hand-rolled seeder.
-**Depends on**: Phase 41 (needs the confirmed fixture set as the reseed target). Not blocked by Phase 42 — it reseeds through whatever the current importer produces.
-**Requirements**: DEVTOOL-01, DEVTOOL-02
-**Success Criteria** (what must be TRUE):
-
-  1. Operator triggers "Reset to Fixture" from the admin panel and, on completion, the database contains exactly the four fixture arguments plus their associated people — zero other arguments, utterances, people, court tenures, or argument participants.
-  2. With a production-like environment setting active, the action refuses to execute and says why; the refusal is demonstrated by actually attempting it, not asserted from the code.
-  3. The action requires an explicit operator confirmation step that states exactly what will be wiped before anything is deleted.
-  4. After a reset, each fixture argument is immediately usable in the normal resolve → approve → publish workflow (its paired admin job exists) with no manual repair, and the state-variety fixtures land in their intended publish/pipeline states (not all reset to the same default state).
-  5. A reset run after Phase 42's importer fixes lands the corrected field values on the complexity fixture, confirming the reseed shares the real import path rather than a stale copy of it.
-
-**Plans**: 4/4 plans executed
-
-Plans:
-**Wave 1**
-
-- [x] 43-01-PLAN.md — Tracer: the required `environment` setting, a separately-mounted `/api/admin/dev` router, and a TRUNCATE + one-fixture reseed through the real importer, end to end (DEVTOOL-01, DEVTOOL-02)
-
-**Wave 2** *(blocked on Wave 1 completion)*
-
-- [x] 43-02-PLAN.md — Expand the reseed to all four fixtures and drive the three state-variety fixtures to their intended states via the real service functions (DEVTOOL-01)
-- [x] 43-03-PLAN.md — Server-gated "Dev Tools" section on `/admin`: two-step confirm, five interaction states, and the source-invariant gate guard (DEVTOOL-01, DEVTOOL-02)
-
-**Wave 3** *(blocked on Wave 2 completion)*
-
-- [x] 43-04-PLAN.md — Blocking operator UAT: real-corpus reset against the dev database, and the production refusal demonstrated by actually attempting it (DEVTOOL-01, DEVTOOL-02)
-
-**UI hint**: yes
-
-### Phase 44: Resolve Table Rework
-
-**Goal**: The Resolve table becomes a real editing tool instead of a display with one overloaded control. Today (Phase 25) the Bench/Advocate `<select>` is the only writable field and the Argument Role column is a read-only mirror of it, so the operator cannot directly say "this speaker is Petitioner's Counsel" — they have to work through a single dropdown that conflates the coarse category with the advocate role. SEED-001's mockup splits these into separate controls, drops the redundant Action column into the Resolved As cell, makes Descriptor always-present (the extracted value is genuinely free-form — sometimes a title, sometimes a location — so a single generic field is intentional), gives every column a consistent extracted-value hint, and adds a lock affordance so a system-derived bench role reads as deliberate rather than broken. SEED-001's own finding is that the backend already accepts every value this needs (`SideEnum`, `ADVOCATE_LABEL_MAP`, `ResolveRowUpdate.side`), so this is expected to be a frontend rework of `ResolveCard.svelte` — to be confirmed at plan time, not assumed.
-**Depends on**: Nothing (independent of the corpus track — can run in parallel with Phases 41–43)
-**Requirements**: RESOLVE-01, RESOLVE-02, RESOLVE-03, RESOLVE-04, RESOLVE-05, RESOLVE-06, RESOLVE-07, RESOLVE-08, RESOLVE-09, RESOLVE-10, RESOLVE-11, RESOLVE-12, RESOLVE-13, RESOLVE-14, RESOLVE-15, RESOLVE-16
-**Success Criteria** (what must be TRUE):
-
-  1. ~~The Resolve table renders exactly five columns...~~ — **superseded, see Figma reconciliation note below.** The canonical layout is four columns (Bench/Advocate merges into the Resolved As cell); every row action is still reachable from inside that cell, with no separate Action column anywhere.
-  2. Operator sets Bench vs. Advocate with a two-button segmented toggle in which exactly one option reads as active at a time, replacing the dropdown. (Toggle itself unchanged; now stacked inside the Resolved As cell rather than its own column — RESOLVE-07.)
-  3. For an advocate row, operator can directly pick Petitioner's Counsel or Respondent's Counsel from the Argument Role control and the choice persists across a reload; for a resolved bench row with valid tenure, Argument Role stays non-editable, shows the tenure-derived value, and carries a lock affordance. Person search on this row is now scoped to the selected side (RESOLVE-09), and the bench role value is live-derived on every read rather than a stored snapshot (RESOLVE-11).
-  4. A bench row with missing tenure still shows the existing "Missing tenure" warning and Edit-person path (now opening in a new tab), and reads as visibly distinct from the locked valid-tenure state. Live-recomputed on every read, including published arguments (RESOLVE-11).
-  5. ~~Resolved As, Bench/Advocate, Argument Role, and Descriptor each show an "Extracted: …" hint...~~ — **superseded, see Figma reconciliation note below.** Hint prefix is source-aware (`Imported:`/`Extracted:`, RESOLVE-10); Bench Argument Role and Descriptor cells use different, non-`Imported:`/`Extracted:` copy (RESOLVE-12/13/14).
-
-**Figma canonical reconciliation (2026-08-04)** — after Waves 1–3 shipped and Wave 4 (44-04) reached its operator visual-acceptance checkpoint, live design exploration in Figma (page "screen mockups for GSD", file `9PDECvbdHM2vYVxt3SCwru`) converged on a materially different canonical layout. `.planning/phases/44-resolve-table-rework/44-FIGMA-RECONCILE.md` locks the replacement decisions and discards the original `resolve-speakers-panel.png` mockup, which never matched the pipeline-embedded, per-row-save reality of the build. Key changes: 4 columns not 5 (Bench/Advocate + person control stacked in one cell); Resolved As becomes a single always-editable dropdown (removes the Change/Select-person link pair and the confirm/correct disposition state machine); person search is side-scoped; hint prefix is source-aware (`Imported:` corpus / `Extracted:` PDF) instead of hardcoded; Bench Argument Role is live-derived every read (not a snapshot) with new copy (`Calculated from tenure` / `Tenure not found`); Bench Descriptor shows a dash with no hint and preserves its stored value across a side switch; header gets a persistent `N of M` progress indicator and an always-visible, reason-disabled Continue button; rows carry `AUTO-MATCHED`/`NEEDS YOU` cue tags. New requirements RESOLVE-07–16 (REQUIREMENTS.md) capture this; RESOLVE-01 and RESOLVE-05's original text is superseded as noted above. Reconciliation work is planned as follow-on plan(s) starting at 44-05.
-
-**Plan-time confirmation of the frontend-only assumption**: partially false. Side and Argument Role need no new backend field or write path (confirmed: `argument_role` is a read-time projection of `ArgumentParticipant.side` via `ADVOCATE_LABEL_MAP`). The Descriptor column is not UI-copy-only — CONTEXT.md D-05/D-06 make it a full-stack rename of `ArgumentParticipant.title` to `.descriptor` with a new Alembic migration, absorbed into this phase in one pass. Success criterion 5's "Extracted: …" wording is delivered as "Imported: …" per D-09, the honest framing for corpus-passthrough data. (Superseded 2026-08-04 by the source-aware prefix — see reconciliation note above.)
-
-**Plans**: 8/9 plans executed
-
-**Original waves (RESOLVE-01–06)**
-
-**Wave 1**
-
-- [x] 44-01-PLAN.md — Descriptor full-stack rename: Alembic 0025, ORM, schemas, services, routers, pipeline, both SvelteKit consumers, tests
-
-**Wave 2** *(blocked on Wave 1 completion)*
-
-- [x] 44-02-PLAN.md — Five-column skeleton, Raw Label badge, Action column removed, Resolved As single entry point, always-present Descriptor cell
-
-**Wave 3** *(blocked on Wave 2 completion)*
-
-- [x] 44-03-PLAN.md — Segmented Bench/Advocate toggle, writable Argument Role dropdown, bench lock affordance, preserved missing-tenure warning
-
-**Wave 4** *(blocked on Wave 3 completion)*
-
-- [x] 44-04-PLAN.md — "Imported:" hints across all four columns via a new `prefixLabel` prop, plus operator visual acceptance against the mockup — Tasks 1-3 complete; Task 4 (visual acceptance) superseded by the Figma reconciliation (see phase note above), never approved or rejected
-
-**Reconciliation waves (RESOLVE-07–16, planned 2026-08-04)** — wave numbers restart at 1 because these plans build on the committed state of the code, not on the original waves. Sequenced structural → data/behaviour → copy/visual → client-only additions, per 44-FIGMA-RECONCILE.md's own priority ordering, refined by 44-05-RESEARCH.md's finding that RESOLVE-11 needs no service-layer code change.
-
-**Reconciliation Wave 1** *(44-05 and 44-06 run in parallel — zero file overlap)*
-
-- [x] 44-05-PLAN.md — Four-column merge: Bench/Advocate toggle and person control stacked in the Resolved As cell, dropdown-only Resolved As, confirm/correct state machine deleted; leads with a tracer proving both save paths survive. Ends with operator visual acceptance of the merged cell (RESOLVE-07, RESOLVE-08)
-- [x] 44-06-PLAN.md — Backend: bench writes stop destroying the stored descriptor, plus a DB-gated regression suite locking live tenure-derived bench roles on both read paths including published arguments (RESOLVE-11, RESOLVE-13)
-
-**Reconciliation Wave 2** *(blocked on 44-05)*
-
-- [x] 44-07-PLAN.md — Side-scoped person search via the existing `is_justice` field, and a source-aware hint prefix threaded from the job's already-derived ingestion source (RESOLVE-09, RESOLVE-10)
-
-**Reconciliation Wave 3** *(blocked on 44-06 and 44-07)*
-
-- [x] 44-08-PLAN.md — Bench copy: `Calculated from tenure` / `Tenure not found` / `(resolve person first)`, a new-tab `Edit person` link, a bench Descriptor dash with no hint, and read-only parity (RESOLVE-11, RESOLVE-12, RESOLVE-13, RESOLVE-14)
-
-**Reconciliation Wave 4** *(blocked on 44-08)*
-
-- [x] 44-09-PLAN.md — Persistent progress line, always-visible reason-disabled Continue, and AUTO-MATCHED / NEEDS YOU row cue tags. Ends with operator acceptance of the complete reconciliation against all four canonical Figma frames (RESOLVE-15, RESOLVE-16)
-
-**UI hint**: yes
-
-### Phase 45: Deferred UI Bug Fixes
-
-**Goal**: Two operator-reported defects carried out of v1.6 are closed. They are unrelated in cause and are grouped only because both are small and already root-caused. BUG-01 is a real content-exposure gap: an argument that has not been published still appears in the public `/cases/` list and can be opened directly by URL — publish status must gate both listing and direct access, and the intended direct-access response (404 vs. an explicit not-published state) is a decision to settle before implementing. BUG-02 is a styling/boundary mismatch, already diagnosed: `Popover.Content` in the argument page owns `max-height`/`overflow-y`, but the visible rounded card (background, border, radius) lives on an inner element in `SpeakerPopover.svelte`, so the native scrollbar renders at the edge of the invisible scroll box instead of flush inside the card.
-**Depends on**: Nothing (independent of every other phase — can run in parallel)
-**Requirements**: BUG-01, BUG-02
-**Success Criteria** (what must be TRUE):
-
-  1. An argument in Draft or Unpublished status does not appear in the public `/cases/` list.
-  2. Requesting an unpublished argument's URL directly returns the chosen non-content response instead of rendering the transcript, on both in-app navigation and a hard SSR refresh.
-  3. Publishing an argument makes it appear in the list and become directly accessible again, with no restart or cache clear needed.
-  4. When a Justice popover's content overflows (long bio with Read more expanded), the scrollbar renders flush inside the card's visible rounded boundary.
-  5. The popover still shows every field Phase 39 added, with no content truncated or escaping the card.
-
-**Plans**: 2/2 plans executed
-**UI hint**: yes
-
-Plans:
-**Wave 1** *(both plans run in parallel — zero file overlap, no dependency)*
-
-- [x] 45-01-PLAN.md — BUG-01: apply the `Argument.published_at.isnot(None)` gate inside `get_argument_with_utterances` and `get_argument_speakers` (None sentinel + new router 404 branch) so both public argument-detail endpoints return a plain 404 indistinguishable from a nonexistent ID; source-contract + DB-gated integration tests in `test_published_gate.py`; operator publish/unpublish round trip
-- [x] 45-02-PLAN.md — BUG-02: relocate the card box model (surface, border, radius, width bounds) onto `Popover.Content` so the scrolling element and the visually-bounded element are one box; new `test_phase45_popover_boxmodel_contract.py` locking single-box ownership, the nine Phase 39 regression-checklist fields, and the overflow boundary/precision contract; operator visual verification at both threshold branches
+</details>
 
 ## Progress
 
@@ -456,37 +287,3 @@ Plans:
 - [ ] TBD (promote with /gsd-review-backlog when ready)
 
 **Note:** 999.10 (bulk-import historical justices CSV) was removed 2026-07-12 during backlog review — SUPERSEDED/ABSORBED into Phase 29's `import-justices` command per CONTEXT.md D-01, 2026-07-09. 999.17 (FastAPI test lifespan/session-factory failure) was removed 2026-07-12 — FIXED 2026-07-10 during Phase 30 Wave 1, commits `1a99f28a`/`f7ad3082`. 999.1, the earlier 999.9 (README), 999.11, 999.12, 999.13, 999.14, 999.15, 999.16, 999.18, 999.19 were promoted 2026-07-12 to Phases 36, 40, 39, 35, 34, 33, 38, 37, 32, 31 respectively, and folded into the v1.6 milestone on 2026-07-13. The canonical allocator later reused the now-vacant 999.9 slot for the edit-affordance backlog item captured 2026-07-13, and subsequently reused the now-vacant 999.10 slot for the Node.js path-mangling test backlog item captured 2026-07-31 (unrelated to the original 999.10, bulk-import historical justices CSV). See the Phase Details section above for promoted-item scope.
-
-### Phase 46: Dev Environment Reliability
-
-**Goal:** Fix the local dev setup now that Windows admin access is available (the project was previously constrained to run without it). Priority: the pytest DB-isolation bypass discovered in Phase 45 that can silently wipe the shared dev database (`.planning/todos/pending/2026-08-12-pytest-explicit-paths-bypass-db-isolation.md`). Also revisit `scripts/dev-start.ps1`, the portable-Postgres-via-pg_ctl setup, and the Windows-venv-via-WSL-interop path for a more reliable single start/stop flow.
-**Requirements**: D-01, D-02, D-03, D-04 (46-CONTEXT.md decision IDs — no formal REQUIREMENTS.md IDs assigned) + folded todo `2026-08-12-pytest-explicit-paths-bypass-db-isolation.md`
-**Depends on:** Phase 45
-**Plans:** 6/6 plans complete
-
-Plans:
-**Wave 1**
-
-- [x] 46-01-PLAN.md — Relocate the pytest DB-isolation redirect to the rootdir conftest and fail closed in both sibling conftests (D-03, folded todo)
-
-**Wave 2** *(blocked on Wave 1 completion)*
-
-- [x] 46-02-PLAN.md — WSL-native Python 3.12 venv + Windows PostgreSQL 18 service configured for scoped WSL access (D-01, D-02)
-
-**Wave 3** *(blocked on Wave 2 completion)*
-
-- [x] 46-03-PLAN.md — Prove WSL→Windows Postgres reachability, cut `.env` over, migrate both DBs, empirically confirm the dev-DB wipe cannot recur (D-02, D-03)
-
-**Wave 4** *(blocked on Wave 3 completion)*
-
-- [x] 46-04-PLAN.md — Relocate the repository off the 9p/DrvFs mount onto native ext4 at `~/scotuschat/project`, prove git integrity, rebuild the WSL-native toolchain there (D-01, D-02, D-04)
-
-**Wave 5** *(blocked on Wave 4 completion)*
-
-- [x] 46-05-PLAN.md — Single WSL-native start/stop entry point with real health checks and clean teardown, plus the live smoke and native-inotify reload proof (D-01, D-03, D-04)
-
-**Wave 6** *(blocked on Wave 5 completion)*
-
-- [x] 46-06-PLAN.md — README rewritten to one setup path and one working-copy location, retire the pre-relocation checkout, close the validation record (D-01, D-02, D-03, D-04)
-
-*Waves 4–5 were replanned on 2026-08-13 after decision D-04 (relocate the repository onto native WSL ext4) superseded the polling-flags fallback the original 46-04/46-05 assumed; the superseded Vite-polling task was dropped rather than carried forward, and a sixth wave was added so the relocation, the start/stop script, and the documentation/cleanup close-out each get their own plan.*

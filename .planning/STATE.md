@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Corpus Fidelity & Resolve Rework
-current_phase: 46
-status: completed
+status: Awaiting next milestone
 stopped_at: Completed 46-06-PLAN.md — Phase 46 fully complete
-last_updated: "2026-08-14T21:43:54.440Z"
-last_activity: 2026-08-14
-last_activity_desc: Completed 46-06-PLAN.md (README rewritten, pre-relocation checkout retired under option-c, validation record closed — Phase 46 fully complete)
+last_updated: "2026-08-15T18:40:32.295Z"
+last_activity: 2026-08-15
+last_activity_desc: Milestone v1.7 completed and archived
 progress:
   total_phases: 6
   completed_phases: 6
   total_plans: 29
   completed_plans: 29
   percent: 100
+current_phase: 46
 current_phase_name: dev-environment-reliability
 ---
 
@@ -28,22 +28,10 @@ See: .planning/PROJECT.md (updated 2026-07-29 after starting v1.7 milestone)
 
 ## Current Position
 
-Phase: 46
-Plan: Not started
-Status: All phases complete
-Last activity: 2026-08-14 — Phase 46 complete
-
-**Milestone shape:**
-
-| Phase | Name | Requirements | Depends on |
-|-------|------|--------------|------------|
-| 41 | Canonical Corpus Fixture Selection | CORPUS-12 | — |
-| 42 | Corpus Import Fidelity Diff & Fix | CORPUS-13, CORPUS-14 | 41 |
-| 43 | Dev-Only Reset to Fixture | DEVTOOL-01, DEVTOOL-02 | 41 |
-| 44 | Resolve Table Rework | RESOLVE-01–06 | — (parallel) |
-| 45 | Deferred UI Bug Fixes | BUG-01, BUG-02 | — (parallel) |
-
-Phases 44 and 45 are independent of the corpus track and of each other; 41 is a gated operator-confirmation phase that both 42 and 43 read from.
+Phase: Milestone v1.7 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-08-15 — Milestone v1.7 completed and archived
 
 ## Deferred Items
 
@@ -64,6 +52,18 @@ Still open from earlier milestones:
 | verification | 01/03/04-VERIFICATION.md | human_needed (stale — human UAT completed per commits) | 2026-06-15 |
 | verification | 11-VERIFICATION.md | human_needed (v1.2 carry-over — Argument Metadata Editing human UAT never formally closed) | 2026-06-29 |
 | context_question | Phase 999.2 (999.2-CONTEXT.md, 3 open questions) | not started | 2026-07-12 |
+
+Acknowledged and deferred at v1.7 close on 2026-08-15 (all pre-existing backlog unrelated to what v1.7 shipped — no gaps in v1.7's own delivered scope):
+
+| Category | Item | Status |
+|----------|------|--------|
+| todo | 2026-08-11-create-person-popover-side-and-selection.md (ui) | pending — candidate for `/gsd-review-backlog` |
+| todo | 2026-08-12-speaker-popover-frontend-duplication-cleanup.md (ui, low) | pending — candidate for `/gsd-review-backlog` |
+| todo | 2026-08-12-speakers-bench-classification-silent-fallback.md (api, low) | pending — candidate for `/gsd-review-backlog` |
+| todo | 2026-08-14-revisit-pre-relocation-checkout-removal.md (dev-environment, low) | pending — revisit after the relocated repo has run without incident for a period |
+| seed | SEED-001-rework-resolve-table-requirements | dormant — the bulk of this seed was already absorbed into RESOLVE-01–06 (Phase 44); remaining scope, if any, is a candidate for `/gsd-review-backlog` |
+| deferred_item | Phase 43/44 — 4 pre-existing `test_phase38_people_ui_contract.py` Node-subprocess path-concatenation failures (Windows/WSL path glued without separators) | not fixed — confirmed pre-existing and unrelated to both phases; not in either phase's own `files_modified` |
+| deferred_item | Phase 44 — full-suite invocation quirk (`pytest api/tests -q` skips the `tests/conftest.py` DB redirect since `tests/` is a sibling, not ancestor, path) | documented convention note — recommend `pytest tests/conftest.py api/tests -q`; superseded in spirit by Phase 46's rootdir-conftest fix, which closes this class of invocation-shape gap going forward |
 
 ## Performance Metrics
 
@@ -197,6 +197,4 @@ Resume file: None
 
 ## Operator Next Steps
 
-- Review `.planning/ROADMAP.md` (v1.7 section) and `.planning/REQUIREMENTS.md` traceability.
-- Then `/gsd-discuss-phase 41` to gather context for the fixture-selection gate.
-- Phases 44 and 45 are independent of the corpus track — either can be started in parallel if you'd rather begin with the Resolve rework or the bug fixes.
+- Start the next milestone with /gsd-new-milestone

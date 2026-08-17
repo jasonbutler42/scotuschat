@@ -203,3 +203,11 @@ None — no external service configuration required.
 ---
 *Phase: 47-provenance-foundation*
 *Completed: 2026-08-17*
+
+## Self-Check: PASSED
+
+- FOUND: `.planning/phases/47-provenance-foundation/47-03-SUMMARY.md`
+- FOUND commit: `726fe89bb`
+- FOUND commit: `e954f6e2a`
+- FOUND commit: `fd1aceda1`
+- FOUND commit: `4ee4bc5f9`

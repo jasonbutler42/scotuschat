@@ -8,7 +8,7 @@ and creates the following database records:
       the primary/first docket (canonical dedup key); Argument.source_dockets
       is set to the full ordered docket list (primary + --dockets).
     - CaseArgument rows — M:M join (one per case, with is_lead=True for primary)
-    - PipelineRun row — status=COMPLETED (ingest is synchronous)
+    - ImportRun row — status=COMPLETED (ingest is synchronous)
 
 SECURITY: URL validation (SSRF mitigation) happens BEFORE any httpx call.
 Only https://...supremecourt.gov/... URLs are accepted.
@@ -54,8 +54,8 @@ from api.models.models import (
     Argument,
     Case,
     CaseArgument,
-    PipelineRun,
-    PipelineRunStatus,
+    ImportRun,
+    ImportRunStatus,
 )
 from pipeline.db import get_session
 
@@ -524,11 +524,19 @@ async def _run_ingest_inner(args) -> None:
                 )
                 session.add(link)
 
-        # ---- d. PipelineRun record ----
-        run = PipelineRun(
+        # ---- d. ImportRun record ----
+        # Phase 47 (D-01 gap-closure): renamed from the old run-model class
+        # so this module remains importable after models.py's rename -- the
+        # source=pdf_pipeline/method=normalized stamping this row needs is
+        # plan 47-02's scoped work (RESEARCH.md Pattern 2); this run
+        # construction is intentionally left without source/method for now
+        # and will fail its NOT NULL constraint if actually invoked before
+        # 47-02 lands, matching 47-01-PLAN.md's <intermediate_state_note>
+        # ("pipeline/commands/{ingest,parse,resolve}.py ... are RED").
+        run = ImportRun(
             argument_id=argument.id,
             step="ingest",
-            status=PipelineRunStatus.COMPLETED,
+            status=ImportRunStatus.COMPLETED,
             pdf_path=str(pdf_path),
             pdf_url=args.url,
         )

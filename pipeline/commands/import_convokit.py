@@ -3,7 +3,7 @@ Pipeline import-convokit command.
 
 Term-batched orchestration (D-07) for Phase 29's bulk historical import: for
 one October Term (--term) or an inclusive range (--term-range), scaffolds
-Case / Argument / CaseArgument / PipelineRun rows, resolves bench/advocate
+Case / Argument / CaseArgument / ImportRun rows, resolves bench/advocate
 speakers into Person + ArgumentParticipant rows, streams each argument's
 utterances.jsonl turns into Utterance rows (D-18), splits detected stage
 directions into their own rows (D-16/D-17), and prints a per-batch summary
@@ -12,7 +12,7 @@ report (D-14).
 Built task-by-task:
     29-04 Task 1: CLI subcommand, --term/--term-range validation,
         --corpus-dir validation, and the per-term file-loading skeleton.
-    29-04 Task 2: idempotent Case/Argument/CaseArgument/PipelineRun entity
+    29-04 Task 2: idempotent Case/Argument/CaseArgument/ImportRun entity
         creation, apolitical field stripping (T-29-02), and per-conversation
         resilience (T-29-05b).
     29-04 Task 3: bench/advocate speaker resolution into Person (D-11 key
@@ -90,9 +90,11 @@ from api.models.models import (
     Case,
     CaseArgument,
     CourtTenure,
+    ImportMethod,
+    ImportRun,
+    ImportRunStatus,
+    ImportSource,
     Person,
-    PipelineRun,
-    PipelineRunStatus,
     SideEnum,
     Utterance,
 )
@@ -112,9 +114,12 @@ from pipeline.db import get_session
 # ConvoKit source files here locally; it is gitignored, not tracked.
 DEFAULT_CORPUS_DIR = Path("data/corpus")
 
-# D-09: every argument imported by this command gets a real pipeline_runs
+# D-09: every argument imported by this command gets a real import_run
 # row stamped with this strategy value, ahead of any utterance write path
-# (Utterance.pipeline_run_id is NOT NULL, T-29-09).
+# (Utterance.import_run_id is NOT NULL, T-29-09). Phase 47 (D-04): this
+# constant and its two consumers are kept in place for now -- plan 47-03
+# owns their deletion together with api/services/admin_jobs.py's
+# strategy== check.
 PIPELINE_RUN_STRATEGY = "convokit_import"
 
 # conversations.json advocate side codes -> SideEnum (RESEARCH.md Standard
@@ -267,7 +272,7 @@ def _resolve_corpus_dir(args) -> Path:
 
 
 # ---------------------------------------------------------------------------
-# Task 2: per-conversation entity creation (Case/Argument/CaseArgument/PipelineRun)
+# Task 2: per-conversation entity creation (Case/Argument/CaseArgument/ImportRun)
 # ---------------------------------------------------------------------------
 
 
@@ -452,7 +457,7 @@ async def _import_conversation(
 ) -> None:
     """
     Import one conversation: idempotent Case/Argument/CaseArgument/
-    PipelineRun scaffolding (29-04 Task 2), bench/advocate speaker
+    ImportRun scaffolding (29-04 Task 2), bench/advocate speaker
     resolution (29-04 Task 3), and utterance streaming/stage-direction
     splitting (29-05 Task 1) for this conversation's `turns` (already
     filtered/grouped by the caller from utterances.jsonl, T-29-03).
@@ -552,19 +557,27 @@ async def _import_conversation(
     if link_result.scalar_one_or_none() is None:
         session.add(CaseArgument(case_id=case.id, argument_id=argument.id, is_lead=True))
 
-    # ---- PipelineRun -- this single row performs the combined work the PDF
+    # ---- ImportRun -- this single row performs the combined work the PDF
     # pipeline splits across three separate CLI-invoked stages (ingest,
     # parse, resolve), but is labeled by its function -- the run that writes
     # this argument's Utterance rows -- matching the meaning
     # api/services/arguments.py's get_argument_with_utterances and
     # api/services/admin_jobs.py's get_run_id_for_step already give
     # step="parse" everywhere else in the codebase. Created BEFORE any
-    # utterance write path (T-29-09).
-    run = PipelineRun(
+    # utterance write path (T-29-09). Phase 47 (D-03's locked mapping,
+    # convokit_import -> corpus/direct): declares source=CORPUS/
+    # method=DIRECT explicitly; external_id is a dual-write of the
+    # ConvoKit conversation id (Argument.oyez_transcript_id, set below at
+    # argument creation, remains the live dedup key and public API field --
+    # RESEARCH.md Pitfall 1). No pdf_path/pdf_url -- the corpus path
+    # fabricates no PDF artifacts (PROV-06).
+    run = ImportRun(
         argument_id=argument.id,
         step="parse",
-        status=PipelineRunStatus.COMPLETED,
-        strategy=PIPELINE_RUN_STRATEGY,  # D-09
+        status=ImportRunStatus.COMPLETED,
+        source=ImportSource.CORPUS,
+        method=ImportMethod.DIRECT,
+        external_id=conversation_id,
     )
     session.add(run)
     await session.flush()
@@ -596,8 +609,7 @@ async def _import_conversation(
     await _import_utterances(
         session=session,
         argument_id=argument.id,
-        pipeline_run_id=run.id,
-        strategy=run.strategy,
+        import_run_id=run.id,
         turns=turns,
         speakers_index=speakers_index,
         resolved_participants=resolved_participants,
@@ -937,8 +949,7 @@ def _split_turn_into_rows(text: str) -> list[tuple[str, bool]]:
 async def _import_utterances(
     session,
     argument_id: int,
-    pipeline_run_id: int,
-    strategy: str,
+    import_run_id: int,
     turns: list[dict],
     speakers_index: dict,
     resolved_participants: dict[str, ArgumentParticipant],
@@ -968,9 +979,9 @@ async def _import_utterances(
     avoiding redundant DB round trips across a conversation's turns.
 
     `sequence` is a fresh monotonic counter starting at 1 for this
-    argument_id/pipeline_run_id pair (T-29-09 -- every row created here
-    carries a non-null pipeline_run_id and a sequence unique within
-    (argument_id, pipeline_run_id), matching uq_utterance_arg_run_seq).
+    argument_id/import_run_id pair (T-29-09 -- every row created here
+    carries a non-null import_run_id and a sequence unique within
+    (argument_id, import_run_id), matching uq_utterance_arg_run_seq).
 
     Malformed turns (missing "conversation_id"/"text", or missing
     "speaker" on a spoken row) are validated (V5) and counted in
@@ -1052,14 +1063,13 @@ async def _import_utterances(
                 session.add(
                     Utterance(
                         argument_id=argument_id,
-                        pipeline_run_id=pipeline_run_id,
+                        import_run_id=import_run_id,
                         sequence=sequence,
                         raw_speaker_label=None,  # D-16
                         text=row_text,
                         is_stage_direction=True,
                         side=SideEnum.UNKNOWN,
                         person_id=None,
-                        strategy=strategy,
                         section_hint=None,  # D-04: stage directions never
                         # carry or change a section.
                     )
@@ -1106,7 +1116,7 @@ async def _import_utterances(
                 session.add(
                     Utterance(
                         argument_id=argument_id,
-                        pipeline_run_id=pipeline_run_id,
+                        import_run_id=import_run_id,
                         sequence=sequence,
                         raw_speaker_label=(
                             participant.raw_speaker_label if participant else None
@@ -1115,7 +1125,6 @@ async def _import_utterances(
                         is_stage_direction=False,
                         side=resolved_side,
                         person_id=participant.person_id if participant else None,
-                        strategy=strategy,
                         section_hint=section_hint,
                     )
                 )

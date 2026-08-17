@@ -52,9 +52,9 @@ from api.models.models import (
     AdminJobStep,
     Argument,
     ArgumentParticipant,
+    ImportRun,
+    ImportRunStatus,
     Person,
-    PipelineRun,
-    PipelineRunStatus,
     Role,
     SpeakerAlias,
     Utterance,
@@ -126,26 +126,26 @@ async def _run_resolve_inner(args) -> None:
         # -------------------------------------------------------------------
         # Step 1: Load the parse run (read-only input)
         # -------------------------------------------------------------------
-        parse_run: Optional[PipelineRun] = await session.get(
-            PipelineRun, args.run_id
+        parse_run: Optional[ImportRun] = await session.get(
+            ImportRun, args.run_id
         )
         if parse_run is None:
-            raise ValueError(f"No pipeline_run with id={args.run_id}")
+            raise ValueError(f"No import_run with id={args.run_id}")
 
         if parse_run.step != "parse":
             raise ValueError(
-                f"pipeline_run {args.run_id} has step='{parse_run.step}'; "
+                f"import_run {args.run_id} has step='{parse_run.step}'; "
                 "expected step='parse'. Pass the ID of a parse run."
             )
 
         # -------------------------------------------------------------------
-        # Step 2: Create a new resolve PipelineRun
+        # Step 2: Create a new resolve ImportRun
         # NEVER mutate parse_run.status (Pitfall 1)
         # -------------------------------------------------------------------
-        resolve_run = PipelineRun(
+        resolve_run = ImportRun(
             argument_id=parse_run.argument_id,
             step="resolve",
-            status=PipelineRunStatus.RUNNING,
+            status=ImportRunStatus.RUNNING,
         )
         session.add(resolve_run)
         await session.flush()  # get resolve_run.id
@@ -175,7 +175,7 @@ async def _run_resolve_inner(args) -> None:
                 .distinct()
                 .where(
                     Utterance.argument_id == parse_run.argument_id,
-                    Utterance.pipeline_run_id == args.run_id,
+                    Utterance.import_run_id == args.run_id,
                     Utterance.is_stage_direction == False,  # noqa: E712
                     Utterance.raw_speaker_label != None,  # noqa: E711
                 )
@@ -243,7 +243,7 @@ async def _run_resolve_inner(args) -> None:
                         update(Utterance)
                         .where(
                             Utterance.argument_id == parse_run.argument_id,
-                            Utterance.pipeline_run_id == args.run_id,
+                            Utterance.import_run_id == args.run_id,
                             Utterance.raw_speaker_label == raw_label,
                         )
                         .values(person_id=person_id)
@@ -322,7 +322,7 @@ async def _run_resolve_inner(args) -> None:
             # ----------------------------------------------------------------
             if misses:
                 # --- Paused: write discrepancies and set NEEDS_REVIEW ---
-                resolve_run.status = PipelineRunStatus.NEEDS_REVIEW
+                resolve_run.status = ImportRunStatus.NEEDS_REVIEW
                 resolve_run.completed_at = datetime.now(timezone.utc)
                 await session.flush()
 
@@ -346,7 +346,7 @@ async def _run_resolve_inner(args) -> None:
 
             else:
                 # --- All auto-resolved: mark COMPLETED ---
-                resolve_run.status = PipelineRunStatus.COMPLETED
+                resolve_run.status = ImportRunStatus.COMPLETED
                 resolve_run.completed_at = datetime.now(timezone.utc)
                 print(
                     f"Resolve complete. {len(resolved_map)} labels auto-resolved. "
@@ -356,7 +356,7 @@ async def _run_resolve_inner(args) -> None:
         except KeyboardInterrupt:
             # Direct CLI interrupt — set NEEDS_REVIEW and exit cleanly
             # (job-driven subprocesses won't receive KeyboardInterrupt in normal flow)
-            resolve_run.status = PipelineRunStatus.NEEDS_REVIEW
+            resolve_run.status = ImportRunStatus.NEEDS_REVIEW
             await session.flush()
             print(
                 "\nInterrupted — resolve run status set to needs_review. "

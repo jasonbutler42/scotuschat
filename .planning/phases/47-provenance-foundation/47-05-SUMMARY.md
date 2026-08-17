@@ -215,3 +215,12 @@ None — no external service configuration required.
 ---
 *Phase: 47-provenance-foundation*
 *Completed: 2026-08-17*
+
+## Self-Check: PASSED
+
+- FOUND: `.planning/phases/47-provenance-foundation/47-05-SUMMARY.md`
+- FOUND: `.planning/phases/47-provenance-foundation/deferred-items.md`
+- FOUND commit: `9ef87502d`
+- FOUND commit: `e628d2011`
+- FOUND commit: `bad35a159`
+- FOUND commit: `ca01f47a7`

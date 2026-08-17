@@ -10,8 +10,8 @@ Covers:
       produces a separate Utterance row (is_stage_direction=True,
       raw_speaker_label=None), and a turn mixing spoken segments with an
       inline marker segment is split into adjacent rows.
-    - T-29-09: every created Utterance has a non-null pipeline_run_id and
-      a sequence unique within (argument_id, pipeline_run_id).
+    - T-29-09: every created Utterance has a non-null import_run_id and
+      a sequence unique within (argument_id, import_run_id).
     - Stage-direction classification is delegated to
       stage_directions.detect_stage_direction (no re-implemented regex).
     - D-14: the printed per-batch summary contains the term year and the
@@ -32,7 +32,7 @@ from unittest.mock import patch
 import pytest
 from sqlalchemy import select
 
-from api.models.models import Argument, PipelineRun, SideEnum, Utterance
+from api.models.models import Argument, ImportRun, SideEnum, Utterance
 from api.schemas.utterance import ArgumentUtterancesResponse
 from api.services.arguments import get_argument_with_utterances
 from pipeline.commands.import_convokit import run_import_convokit
@@ -353,12 +353,12 @@ async def test_repeat_speaker_across_many_turns_resolved_once_no_duplicate_parti
 
 
 # ===========================================================================
-# T-29-09: pipeline_run_id / sequence invariants
+# T-29-09: import_run_id / sequence invariants
 # ===========================================================================
 
 
 @pytest.mark.asyncio
-async def test_every_utterance_has_pipeline_run_id_and_unique_sequence(
+async def test_every_utterance_has_import_run_id_and_unique_sequence(
     isolated_session, tmp_path
 ):
     utterances = [
@@ -392,7 +392,7 @@ async def test_every_utterance_has_pipeline_run_id_and_unique_sequence(
     ).scalars().all()
     run = (
         await isolated_session.execute(
-            select(PipelineRun).where(PipelineRun.argument_id == argument.id)
+            select(ImportRun).where(ImportRun.argument_id == argument.id)
         )
     ).scalar_one()
 
@@ -401,8 +401,8 @@ async def test_every_utterance_has_pipeline_run_id_and_unique_sequence(
     assert sequences == sorted(sequences)
     assert len(set(sequences)) == len(sequences)  # unique within this run
     for r in rows:
-        assert r.pipeline_run_id == run.id
-        assert r.pipeline_run_id is not None
+        assert r.import_run_id == run.id
+        assert r.import_run_id is not None
     assert run.step == "parse"
 
     # Justice speaker resolved via utterances.jsonl (not present in
@@ -427,7 +427,7 @@ async def test_utterances_readable_via_arguments_service_after_import(
 
     Before Task 1's step="parse" fix, result["utterances"] was always []
     for a corpus-imported argument (max_run_id never resolved because the
-    PipelineRun was labeled step="ingest") -- this is the exact assertion
+    ImportRun was labeled step="ingest") -- this is the exact assertion
     29-07-PLAN.md's own regression test explicitly declined to make.
     """
     utterances = [

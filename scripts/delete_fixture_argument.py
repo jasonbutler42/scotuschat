@@ -18,8 +18,8 @@ routine instead: it mirrors `delete_argument`'s FK-ordered cascade order, but
 without the DRAFT-only gate, plus one extra defensive step (see below).
 
 Cascade order (single transaction, one session block):
-    1. utterances            (references pipeline_runs.id -- must go first)
-    2. pipeline_runs
+    1. utterances            (references import_run.id -- must go first)
+    2. import_run
     3. argument_participants
     4. case_arguments
     5. argument_status_log   (defensive -- delete_argument never needed this
@@ -68,7 +68,7 @@ from api.models.models import (  # noqa: E402
     ArgumentStatusLog,
     Case,
     CaseArgument,
-    PipelineRun,
+    ImportRun,
     Utterance,
 )
 from pipeline.db import get_session  # noqa: E402
@@ -79,7 +79,7 @@ from pipeline.db import get_session  # noqa: E402
 # delete/scope every statement.
 DEPENDENT_MODELS: list[tuple[str, type]] = [
     ("utterances", Utterance),
-    ("pipeline_runs", PipelineRun),
+    ("import_run", ImportRun),
     ("argument_participants", ArgumentParticipant),
     ("case_arguments", CaseArgument),
     ("argument_status_log", ArgumentStatusLog),
@@ -195,8 +195,8 @@ async def _run(conversation_id: str, delete_case: bool, destructive: bool) -> in
             .execution_options(synchronize_session=False)
         )
         await session.execute(
-            delete(PipelineRun)
-            .where(PipelineRun.argument_id == argument_id)
+            delete(ImportRun)
+            .where(ImportRun.argument_id == argument_id)
             .execution_options(synchronize_session=False)
         )
         await session.execute(

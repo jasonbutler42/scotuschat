@@ -52,12 +52,13 @@ from pipeline.parser.llm_pass import ParsedUtterance, ParseResponse
 
 # ---------------------------------------------------------------------------
 # Fixture helpers/constants copied (not imported) from
-# pipeline/tests/test_import_convokit_core.py -- that module's own top-level
-# `from api.models.models import (..., PipelineRun, PipelineRunStatus, ...)`
-# is broken until plans 47-04/47-05 convert the test suite (wave 3, see
-# 47-01-PLAN.md <intermediate_state_note>), so importing it here would fail
-# collection. The plan's own action explicitly allows "import them or copy
-# them locally" -- copied verbatim, never touches the real 900MB corpus.
+# pipeline/tests/test_import_convokit_core.py -- at the time plans 47-01/
+# 47-02 were written, that module's own top-level model import referenced
+# the pre-Phase-47 run model name and was broken until plan 47-04 converted
+# the test suite (wave 3, see 47-01-PLAN.md <intermediate_state_note>), so
+# importing it here would have failed collection. The plan's own action
+# explicitly allows "import them or copy them locally" -- copied verbatim,
+# never touches the real 900MB corpus.
 # ---------------------------------------------------------------------------
 
 

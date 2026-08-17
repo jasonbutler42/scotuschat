@@ -45,8 +45,6 @@ from api.models.models import (
     CaseArgument,
     CourtTenure,
     Person,
-    PipelineRun,
-    PipelineRunStatus,
     SideEnum,
 )
 from pipeline.commands import import_convokit

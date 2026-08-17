@@ -90,7 +90,7 @@ def test_resolve_interactive_prompt():
 def test_resolve_interrupt_sets_needs_review():
     """
     When a KeyboardInterrupt is raised during the resolve loop, the resolve
-    PipelineRun's status is set to NEEDS_REVIEW and session.flush() is called.
+    ImportRun's status is set to NEEDS_REVIEW and session.flush() is called.
 
     This is a unit test using a mocked session — no live DB required.
     """
@@ -99,7 +99,7 @@ def test_resolve_interrupt_sets_needs_review():
     from unittest.mock import AsyncMock, MagicMock, patch
     from contextlib import asynccontextmanager
 
-    # Import PipelineRun/PipelineRunStatus via pipeline.commands.resolve's own
+    # Import ImportRun/ImportRunStatus via pipeline.commands.resolve's own
     # namespace (not a fresh `from api.models.models import ...`) so the
     # isinstance/equality checks below always compare against the exact same
     # class objects that run_resolve() itself binds to internally — immune to
@@ -110,24 +110,24 @@ def test_resolve_interrupt_sets_needs_review():
     # been reimported (a fresh class object) while pipeline.commands.resolve
     # (imported earlier, e.g. via api/services/admin_jobs.py's module-level
     # import chain) still holds the OLD class object bound at its own import
-    # time, `isinstance(obj, PipelineRun)` silently returns False for every
+    # time, `isinstance(obj, ImportRun)` silently returns False for every
     # object added by run_resolve() — this is what caused
-    # "Expected exactly 1 PipelineRun added, got 0" when the full suite ran
+    # "Expected exactly 1 ImportRun added, got 0" when the full suite ran
     # with tests/ collected before pipeline/tests/ (Phase 31, T-31-19).
     from pipeline.commands import resolve as resolve_module
 
-    PipelineRun = resolve_module.PipelineRun
-    PipelineRunStatus = resolve_module.PipelineRunStatus
+    ImportRun = resolve_module.ImportRun
+    ImportRunStatus = resolve_module.ImportRunStatus
 
     # Build a fake parse_run that looks like a completed parse step
-    fake_parse_run = MagicMock(spec=PipelineRun)
+    fake_parse_run = MagicMock(spec=ImportRun)
     fake_parse_run.id = 1
     fake_parse_run.argument_id = 10
     fake_parse_run.step = "parse"
-    fake_parse_run.status = PipelineRunStatus.COMPLETED
+    fake_parse_run.status = ImportRunStatus.COMPLETED
 
     # Build a fake resolve_run that will be created by run_resolve
-    fake_resolve_run = MagicMock(spec=PipelineRun)
+    fake_resolve_run = MagicMock(spec=ImportRun)
     fake_resolve_run.id = 2
 
     # Session mock: get() returns parse_run; flush is async no-op
@@ -151,7 +151,7 @@ def test_resolve_interrupt_sets_needs_review():
         if flush_call_count["n"] == 1:
             # First flush: assign the resolve_run's id (simulates DB auto-increment)
             for obj in added_objects:
-                if isinstance(obj, PipelineRun):
+                if isinstance(obj, ImportRun):
                     obj.id = 2
         # Subsequent flushes (e.g., from the except block) are no-ops
         # so that status mutations set by run_resolve() are preserved.
@@ -168,11 +168,11 @@ def test_resolve_interrupt_sets_needs_review():
         asyncio.run(_run_resolve_catching_interrupt(args))
 
     # After KeyboardInterrupt, the resolve_run's status must be NEEDS_REVIEW
-    resolve_runs = [obj for obj in added_objects if isinstance(obj, PipelineRun)]
+    resolve_runs = [obj for obj in added_objects if isinstance(obj, ImportRun)]
     assert len(resolve_runs) == 1, (
-        f"Expected exactly 1 PipelineRun added, got {len(resolve_runs)}"
+        f"Expected exactly 1 ImportRun added, got {len(resolve_runs)}"
     )
-    assert resolve_runs[0].status == PipelineRunStatus.NEEDS_REVIEW, (
+    assert resolve_runs[0].status == ImportRunStatus.NEEDS_REVIEW, (
         f"Expected NEEDS_REVIEW, got {resolve_runs[0].status}"
     )
 

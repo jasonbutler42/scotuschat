@@ -1,5 +1,5 @@
 """
-Pipeline run state machine and re-run behavior tests.
+Import run state machine and re-run behavior tests.
 
 Test IDs covered (from VALIDATION.md):
   - 1-state-machine: PIPE-10 status transitions pending→running→completed
@@ -23,7 +23,7 @@ from sqlalchemy import func, select
 @pytest.mark.asyncio
 async def test_state_machine(async_session):
     """
-    PipelineRun status must follow: pending → running → completed.
+    ImportRun status must follow: pending → running → completed.
 
     Verifies that all three status values can be set and persisted,
     and that the final status is 'completed'.
@@ -32,8 +32,10 @@ async def test_state_machine(async_session):
         Argument,
         Case,
         CaseArgument,
-        PipelineRun,
-        PipelineRunStatus,
+        ImportMethod,
+        ImportRun,
+        ImportRunStatus,
+        ImportSource,
     )
 
     # Create minimal supporting records
@@ -55,33 +57,35 @@ async def test_state_machine(async_session):
     async_session.add(case_arg)
     await async_session.flush()
 
-    # Create pipeline run in PENDING status
-    run = PipelineRun(
+    # Create import run in PENDING status
+    run = ImportRun(
         argument_id=argument.id,
         step="parse",
-        status=PipelineRunStatus.PENDING,
+        status=ImportRunStatus.PENDING,
+        source=ImportSource.PDF_PIPELINE,
+        method=ImportMethod.RULE_BASED,
     )
     async_session.add(run)
     await async_session.flush()
 
-    assert run.status == PipelineRunStatus.PENDING, (
+    assert run.status == ImportRunStatus.PENDING, (
         f"Expected PENDING, got {run.status}"
     )
 
     # Transition: pending → running
-    run.status = PipelineRunStatus.RUNNING
+    run.status = ImportRunStatus.RUNNING
     await async_session.flush()
 
-    assert run.status == PipelineRunStatus.RUNNING, (
+    assert run.status == ImportRunStatus.RUNNING, (
         f"Expected RUNNING, got {run.status}"
     )
 
     # Transition: running → completed
-    run.status = PipelineRunStatus.COMPLETED
+    run.status = ImportRunStatus.COMPLETED
     run.completed_at = datetime.datetime.now(datetime.timezone.utc)
     await async_session.flush()
 
-    assert run.status == PipelineRunStatus.COMPLETED, (
+    assert run.status == ImportRunStatus.COMPLETED, (
         f"Expected COMPLETED, got {run.status}"
     )
     assert run.completed_at is not None
@@ -95,7 +99,7 @@ async def test_state_machine(async_session):
 @pytest.mark.asyncio
 async def test_rerun_creates_new_rows(async_session, monkeypatch):
     """
-    Running parse twice (for two different pipeline_run_ids) must:
+    Running parse twice (for two different import_run_ids) must:
     1. Create new utterance rows for the second run.
     2. NOT delete the utterance rows from the first run.
     3. Total utterance count = sum from both runs (each run's rows preserved).
@@ -104,8 +108,10 @@ async def test_rerun_creates_new_rows(async_session, monkeypatch):
         Argument,
         Case,
         CaseArgument,
-        PipelineRun,
-        PipelineRunStatus,
+        ImportMethod,
+        ImportRun,
+        ImportRunStatus,
+        ImportSource,
         SideEnum,
         Utterance,
     )
@@ -129,22 +135,24 @@ async def test_rerun_creates_new_rows(async_session, monkeypatch):
     async_session.add(case_arg)
     await async_session.flush()
 
-    # Run 1: create pipeline_run and write 3 utterance rows
-    run1 = PipelineRun(
+    # Run 1: create import_run and write 3 utterance rows
+    run1 = ImportRun(
         argument_id=argument.id,
         step="parse",
-        status=PipelineRunStatus.PENDING,
+        status=ImportRunStatus.PENDING,
+        source=ImportSource.PDF_PIPELINE,
+        method=ImportMethod.RULE_BASED,
     )
     async_session.add(run1)
     await async_session.flush()
 
-    run1.status = PipelineRunStatus.RUNNING
+    run1.status = ImportRunStatus.RUNNING
     await async_session.flush()
 
     for seq in range(1, 4):
         utt = Utterance(
             argument_id=argument.id,
-            pipeline_run_id=run1.id,
+            import_run_id=run1.id,
             sequence=seq,
             raw_speaker_label="CHIEF JUSTICE ROBERTS" if seq % 2 == 1 else "MR. OLSON",
             text=f"Run 1 utterance {seq}.",
@@ -152,40 +160,40 @@ async def test_rerun_creates_new_rows(async_session, monkeypatch):
             section_hint=None,
             side=SideEnum.BENCH if seq % 2 == 1 else SideEnum.ADVOCATE,
             person_id=None,
-            strategy="rule_based",
         )
         async_session.add(utt)
 
-    run1.status = PipelineRunStatus.COMPLETED
+    run1.status = ImportRunStatus.COMPLETED
     run1.completed_at = datetime.datetime.now(datetime.timezone.utc)
-    run1.strategy = "rule_based"
     await async_session.flush()
 
     # Verify run 1 rows exist
     result1 = await async_session.execute(
         select(func.count()).select_from(Utterance).where(
-            Utterance.pipeline_run_id == run1.id
+            Utterance.import_run_id == run1.id
         )
     )
     count_after_run1 = result1.scalar()
     assert count_after_run1 == 3, f"Expected 3 rows after run 1, got {count_after_run1}"
 
-    # Run 2: create a NEW pipeline_run and write 2 utterance rows
-    run2 = PipelineRun(
+    # Run 2: create a NEW import_run and write 2 utterance rows
+    run2 = ImportRun(
         argument_id=argument.id,
         step="parse",
-        status=PipelineRunStatus.PENDING,
+        status=ImportRunStatus.PENDING,
+        source=ImportSource.PDF_PIPELINE,
+        method=ImportMethod.RULE_BASED,
     )
     async_session.add(run2)
     await async_session.flush()
 
-    run2.status = PipelineRunStatus.RUNNING
+    run2.status = ImportRunStatus.RUNNING
     await async_session.flush()
 
     for seq in range(1, 3):
         utt = Utterance(
             argument_id=argument.id,
-            pipeline_run_id=run2.id,
+            import_run_id=run2.id,
             sequence=seq,
             raw_speaker_label="CHIEF JUSTICE ROBERTS" if seq == 1 else "MR. OLSON",
             text=f"Run 2 utterance {seq}.",
@@ -193,19 +201,17 @@ async def test_rerun_creates_new_rows(async_session, monkeypatch):
             section_hint=None,
             side=SideEnum.BENCH if seq == 1 else SideEnum.ADVOCATE,
             person_id=None,
-            strategy="rule_based",
         )
         async_session.add(utt)
 
-    run2.status = PipelineRunStatus.COMPLETED
+    run2.status = ImportRunStatus.COMPLETED
     run2.completed_at = datetime.datetime.now(datetime.timezone.utc)
-    run2.strategy = "rule_based"
     await async_session.flush()
 
     # Verify run 1 rows STILL EXIST after run 2 (PIPE-11 — no delete on re-run)
     result1_after = await async_session.execute(
         select(func.count()).select_from(Utterance).where(
-            Utterance.pipeline_run_id == run1.id
+            Utterance.import_run_id == run1.id
         )
     )
     count_run1_after_rerun = result1_after.scalar()
@@ -217,7 +223,7 @@ async def test_rerun_creates_new_rows(async_session, monkeypatch):
     # Verify run 2 rows exist
     result2 = await async_session.execute(
         select(func.count()).select_from(Utterance).where(
-            Utterance.pipeline_run_id == run2.id
+            Utterance.import_run_id == run2.id
         )
     )
     count_run2 = result2.scalar()

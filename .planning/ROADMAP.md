@@ -160,19 +160,32 @@ Full phase details: `.planning/milestones/v1.7-ROADMAP.md`
 **Depends on**: Nothing (first phase of v1.8; builds on the shipped v1.7 schema)
 **Requirements**: PROV-01, PROV-02, PROV-03, PROV-04, PROV-05, PROV-06
 **Success Criteria** (what must be TRUE):
+
   1. Every `import_run` row records a declared `source` and a declared `method` from the closed vocabularies, readable directly with no join-and-infer step.
   2. `import_run` is the lineage backbone that generalizes `pipeline_run`, and every utterance references its `import_run`.
   3. External-source lineage (oyez transcript/case ids) is captured on `import_run.external_id` for corpus-sourced runs.
   4. Every import path stamps provenance at write time, verified by re-seeding a fixture and reading it directly off the rows — a corpus row reads `source=corpus / method=direct`, a rule-parsed PDF row reads `pdf_pipeline / rule_based`, an LLM-corrected row reads `pdf_pipeline / llm_corrective`. The verification fixture must exercise all three combinations.
   5. `pdf_path` / `pdf_url` are nullable and populated only for `pdf_pipeline` runs; corpus runs carry no fabricated PDF artifacts.
+
 **Plans**: 6 plans (4 waves)
 
 Plans:
+**Wave 1**
+
 - [ ] 47-01-PLAN.md — Schema spine + corpus tracer: `ImportRun` model, migration 0026, the three hardcoded table-name sites, corpus writer stamping `corpus`/`direct`/`external_id` (wave 1)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 47-02-PLAN.md — PDF pipeline writers stamp `pdf_pipeline` with `normalized` / `rule_based` / `llm_corrective`; the two PDF legs of the D-06 guardrail (wave 2)
 - [ ] 47-03-PLAN.md — API read layer + public schema; retires the `strategy == "convokit_import"` hack for `ImportRun.source == ImportSource.CORPUS` (wave 2)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 47-04-PLAN.md — `pipeline/tests` conversion; `test_pipeline_run.py` renamed to `test_import_run.py` (wave 3)
 - [ ] 47-05-PLAN.md — `api/tests` and root `tests/` conversion, including the two schema-contract files (wave 3)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 47-06-PLAN.md — Live re-seed, D-06 three-combination evidence, full-suite gate, operator verification (wave 4)
 
 ### Phase 48: Trust & Lifecycle
@@ -181,14 +194,17 @@ Plans:
 **Depends on**: Phase 47 (trust tier derives from declared provenance)
 **Requirements**: TRUST-01, TRUST-02, TRUST-03, TRUST-04, TRUST-05
 **Success Criteria** (what must be TRUE):
+
   1. Every argument carries a `trust_tier` (verified / trusted / provisional / uncertain) derived from provenance + review state by one documented function.
   2. An argument's `trust_tier` is the floor (minimum) of its utterances and participants, materialized and recomputed whenever a constituent changes.
   3. A newly imported argument is born a `candidate` (not public) with its tier set on arrival.
   4. Attempting to publish an argument while any UNCERTAIN element remains is hard-blocked at the single `published_at` promotion gate.
   5. The operator can override the publish block with a deliberate, per-argument acknowledgment that is logged.
+
 **Plans**: TBD
 
 Plans:
+
 - [ ] TBD (planned via `/gsd-plan-phase 48`)
 
 ### Phase 49: Review Model
@@ -197,15 +213,18 @@ Plans:
 **Depends on**: Phase 48 (the review queue filters by trust tier; resolving items recomputes trust)
 **Requirements**: REVIEW-01, REVIEW-02, REVIEW-03, REVIEW-04, REVIEW-05
 **Success Criteria** (what must be TRUE):
+
   1. Operator-editable rows (person names, argument participants) carry a four-state `review_state` (unreviewed / needs_review / operator_confirmed / operator_edited).
   2. A re-import that disagrees with an equal-or-higher-authority value records a discrepancy for operator review instead of silently overwriting it.
   3. The operator can open a review queue listing every item needing review, filterable by trust tier and review state.
   4. The operator can resolve a review item (confirm or edit) from the queue, and doing so advances its `review_state` and recomputes the affected argument's trust.
   5. The legacy `name_needs_review` / `name_extraction_metadata` mechanism is folded into the unified review_state + provenance record, with no parallel mechanism remaining.
+
 **Plans**: TBD
 **UI hint**: yes
 
 Plans:
+
 - [ ] TBD (planned via `/gsd-plan-phase 49`)
 
 ### Phase 50: Unified Import Path
@@ -214,14 +233,17 @@ Plans:
 **Depends on**: Phase 49 (re-import discrepancy recording builds on the review model; requires the full provenance + trust + review schema in place)
 **Requirements**: IMPORT-01, IMPORT-02, IMPORT-03, IMPORT-04, IMPORT-05
 **Success Criteria** (what must be TRUE):
+
   1. Corpus import writes an `import_run` directly with `source=corpus` and fabricates no PDF-pipeline artifacts (no synthetic run with meaningless `pdf_path` / `prompt_version`).
   2. The PDF pipeline path reads and writes `import_run` as one strategy among peers, keeping its parse/resolve lifecycle intact.
   3. `admin_job` references an existing `import_run`; the corpus CLI batch runs with no admin_job at all.
   4. Re-running any import is idempotent — the same input yields the same rows and never clobbers operator-authored values.
   5. The authority ordering (operator > corpus > pdf/rule > pdf/llm) governs the overwrite decision on every writer.
+
 **Plans**: TBD
 
 Plans:
+
 - [ ] TBD (planned via `/gsd-plan-phase 50`)
 
 ### Phase 51: Design System & Noun Alignment
@@ -230,14 +252,17 @@ Plans:
 **Depends on**: Phase 50 (deliberately last — the UI reflects the fully corrected domain language and unified import model)
 **Requirements**: DS-01, DS-02, DS-03, DS-04
 **Success Criteria** (what must be TRUE):
+
   1. The public route/noun is aligned to "arguments" (`/cases` → arguments), and every previously shareable URL still resolves via redirects.
   2. Reused UI is extracted into a shared component library (absorbs backlog 999.4).
   3. Design tokens (color / type / spacing) are established as the visual foundation (absorbs backlog 999.8).
   4. The arguments listing style is decided and implemented (absorbs backlog 999.6).
+
 **Plans**: TBD
 **UI hint**: yes
 
 Plans:
+
 - [ ] TBD (planned via `/gsd-plan-phase 51`)
 
 ## Progress

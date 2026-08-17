@@ -7,7 +7,7 @@ directly using in-memory transcript excerpts.
 Test IDs covered (from VALIDATION.md):
   - 1-stage-dirs:  PIPE-05 stage direction classification
   - 1-parse-rows:  PIPE-03 parser output structure
-  - 1-run-id:      PIPE-04 pipeline_run_id and strategy (DB-dependent, skips if no DB)
+  - 1-run-id:      PIPE-04 import_run_id and method (DB-dependent, skips if no DB)
   - 1-llm-failures: PIPE-06 LLM failure mode classification
 
 Regression tests:
@@ -94,15 +94,18 @@ def test_stage_directions():
 
 
 # ---------------------------------------------------------------------------
-# Test 2: run_id and strategy on utterance rows (PIPE-04 / 1-run-id)
+# Test 2: run_id and method on utterance rows (PIPE-04 / 1-run-id)
 # DB-dependent — skips gracefully if no DATABASE_URL configured
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
-async def test_run_id_strategy(async_session, monkeypatch):
+async def test_run_id_and_method(async_session, monkeypatch):
     """
-    Every utterance row must have pipeline_run_id and strategy set (PIPE-04).
+    Every utterance row must have import_run_id set, and the parent run's
+    method must be declared (PIPE-04). The per-utterance strategy column was
+    dropped in Phase 47 (D-05) — the method now lives on the parent
+    ImportRun only.
 
     Skips if no database is configured (async_session fixture handles skip).
     """
@@ -113,8 +116,10 @@ async def test_run_id_strategy(async_session, monkeypatch):
         Argument,
         Case,
         CaseArgument,
-        PipelineRun,
-        PipelineRunStatus,
+        ImportMethod,
+        ImportRun,
+        ImportRunStatus,
+        ImportSource,
         Utterance,
     )
 
@@ -167,18 +172,20 @@ async def test_run_id_strategy(async_session, monkeypatch):
     with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as f:
         tmp_path = f.name
 
-    pipeline_run = PipelineRun(
+    source_run = ImportRun(
         argument_id=argument.id,
-        step="parse",
-        status=PipelineRunStatus.PENDING,
+        step="ingest",
+        status=ImportRunStatus.COMPLETED,
+        source=ImportSource.PDF_PIPELINE,
+        method=ImportMethod.NORMALIZED,
         pdf_path=tmp_path,
     )
-    async_session.add(pipeline_run)
+    async_session.add(source_run)
     await async_session.flush()
 
     # Run the parse command
     import argparse
-    args = argparse.Namespace(run_id=pipeline_run.id, dry_run=False, job_id=None)
+    args = argparse.Namespace(run_id=source_run.id, dry_run=False, job_id=None)
 
     # Override get_session to use the test session
     from unittest.mock import AsyncMock, MagicMock
@@ -193,33 +200,37 @@ async def test_run_id_strategy(async_session, monkeypatch):
     from pipeline.commands.parse import run_parse
     await run_parse(args)
 
-    # run_parse() creates a BRAND-NEW PipelineRun row for this parse attempt
+    # run_parse() creates a BRAND-NEW ImportRun row for this parse attempt
     # (PIPE-11 re-run semantics: re-running a step never overwrites a prior
-    # run's row) rather than writing utterances against `pipeline_run` above
+    # run's row) rather than writing utterances against `source_run` above
     # — that row is only the *source* record parse reads pdf_path/argument_id
     # from via args.run_id. Utterances link to the new run's id, not the
     # source run's id.
     new_run_result = await async_session.execute(
-        select(PipelineRun).where(
-            PipelineRun.argument_id == argument.id,
-            PipelineRun.step == "parse",
-            PipelineRun.id != pipeline_run.id,
+        select(ImportRun).where(
+            ImportRun.argument_id == argument.id,
+            ImportRun.step == "parse",
+            ImportRun.id != source_run.id,
         )
     )
     new_run = new_run_result.scalar_one()
 
-    # Verify utterance rows have pipeline_run_id and strategy set
+    # ImportMethod is declared on the parent run (Phase 47, D-05) — the
+    # per-utterance strategy column no longer exists.
+    assert new_run.method in (ImportMethod.RULE_BASED, ImportMethod.LLM_CORRECTIVE), (
+        f"Expected new_run.method to be rule_based or llm_corrective, got {new_run.method}"
+    )
+
+    # Verify utterance rows have import_run_id set
     result = await async_session.execute(
-        select(Utterance).where(Utterance.pipeline_run_id == new_run.id)
+        select(Utterance).where(Utterance.import_run_id == new_run.id)
     )
     rows = result.scalars().all()
 
     assert len(rows) > 0, "Expected at least 1 utterance row after parse"
     for row in rows:
-        assert row.pipeline_run_id is not None, "pipeline_run_id must not be None"
-        assert row.pipeline_run_id == new_run.id
-        assert row.strategy is not None, "strategy must not be None"
-        assert row.strategy in ("rule_based", "llm_corrective")
+        assert row.import_run_id is not None, "import_run_id must not be None"
+        assert row.import_run_id == new_run.id
 
     # Cleanup temp file
     import os
@@ -244,8 +255,10 @@ async def test_parse_preserves_operator_docket_when_extracted_pair_conflicts(
         Argument,
         Case,
         CaseArgument,
-        PipelineRun,
-        PipelineRunStatus,
+        ImportMethod,
+        ImportRun,
+        ImportRunStatus,
+        ImportSource,
     )
     from pipeline.commands.parse import run_parse
 
@@ -276,10 +289,12 @@ async def test_parse_preserves_operator_docket_when_extracted_pair_conflicts(
     with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as pdf:
         pdf_path = pdf.name
 
-    source_run = PipelineRun(
+    source_run = ImportRun(
         argument_id=target.id,
-        step="parse",
-        status=PipelineRunStatus.PENDING,
+        step="ingest",
+        status=ImportRunStatus.COMPLETED,
+        source=ImportSource.PDF_PIPELINE,
+        method=ImportMethod.NORMALIZED,
         pdf_path=pdf_path,
     )
     async_session.add(source_run)

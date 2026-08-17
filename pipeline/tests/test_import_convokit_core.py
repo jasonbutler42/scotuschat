@@ -4,7 +4,7 @@ Tests for pipeline.commands.import_convokit.
 Covers:
     - Task 1: _parse_term_range() validation and --corpus-dir fail-fast
       (no DB required for these).
-    - Task 2: idempotent Case/Argument/CaseArgument/PipelineRun scaffolding,
+    - Task 2: idempotent Case/Argument/CaseArgument/ImportRun scaffolding,
       D-15 term_year sourcing, apolitical field stripping (T-29-02), and
       resumable re-run behavior (D-08/T-29-04).
     - Task 3: Person resolution via oyez_speaker_id-first/full_name-fallback
@@ -44,8 +44,10 @@ from api.models.models import (
     ArgumentStatusEnum,
     Case,
     CaseArgument,
+    ImportMethod,
+    ImportRun,
+    ImportSource,
     Person,
-    PipelineRun,
     SideEnum,
     Utterance,
 )
@@ -226,14 +228,14 @@ def _scoped_args(conversation_id, corpus_dir: Path) -> argparse.Namespace:
 
 
 @pytest.mark.asyncio
-async def test_creates_case_argument_caseargument_pipelinerun_entities(
+async def test_creates_case_argument_caseargument_importrun_entities(
     isolated_session, tmp_path
 ):
     """
     Given a synthetic conversation+case fixture, a Case (lead docket only),
     Argument (status=pipeline -- Phase 30 supersedes D-06, see
     30-RESEARCH.md Pitfall 1; oyez_transcript_id set), CaseArgument
-    (is_lead=True), and PipelineRun (strategy='convokit_import') are
+    (is_lead=True), and ImportRun (source=corpus, method=direct) are
     created. term_year comes from cases.jsonl's "year" (1955) even though
     the argued_date's calendar year (1956) differs (D-15 regression case).
     """
@@ -267,6 +269,10 @@ async def test_creates_case_argument_caseargument_pipelinerun_entities(
     assert argument.status == ArgumentStatusEnum.PIPELINE
     assert argument.source_docket == "55-71"
     assert argument.argued_date.isoformat() == "1956-11-15"  # calendar year != term_year
+    # Standing guard (Phase 47 Task 2): import_run.external_id is a
+    # dual-write, never a relocation -- oyez_transcript_id must still carry
+    # the same ConvoKit conversation id it always did.
+    assert argument.oyez_transcript_id == "9999_71"
 
     link = (
         await isolated_session.execute(
@@ -280,10 +286,11 @@ async def test_creates_case_argument_caseargument_pipelinerun_entities(
 
     run = (
         await isolated_session.execute(
-            select(PipelineRun).where(PipelineRun.argument_id == argument.id)
+            select(ImportRun).where(ImportRun.argument_id == argument.id)
         )
     ).scalar_one()
-    assert run.strategy == "convokit_import"
+    assert run.source == ImportSource.CORPUS
+    assert run.method == ImportMethod.DIRECT
     assert run.step == "parse"
 
 
@@ -1225,7 +1232,7 @@ async def test_scoped_import_zero_turn_conversation_creates_argument_zero_uttera
     isolated_session, tmp_path
 ):
     """A scoped conversation whose utterances.jsonl yields zero matching
-    turns still creates its Argument and PipelineRun rows, creates zero
+    turns still creates its Argument and ImportRun rows, creates zero
     Utterance rows, and raises nothing (empty-input edge item)."""
     conversations = {
         "30003": {
@@ -1265,10 +1272,11 @@ async def test_scoped_import_zero_turn_conversation_creates_argument_zero_uttera
 
     run = (
         await isolated_session.execute(
-            select(PipelineRun).where(PipelineRun.argument_id == argument.id)
+            select(ImportRun).where(ImportRun.argument_id == argument.id)
         )
     ).scalar_one()
-    assert run.strategy == "convokit_import"
+    assert run.source == ImportSource.CORPUS
+    assert run.method == ImportMethod.DIRECT
 
     utterance_count = (
         await isolated_session.execute(

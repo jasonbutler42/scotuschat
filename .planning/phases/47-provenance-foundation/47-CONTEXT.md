@@ -53,9 +53,9 @@ write time + drop of the redundant `utterance.strategy` column.
   and reading provenance directly off the rows.* Success criterion #4 (the
   backfill/row-count-unchanged criterion) is superseded by this write-time
   guarantee. This matches how the DB actually behaves now (disposable,
-  fixture-reseedable). **ACTION:** REQUIREMENTS.md (PROV-05) and ROADMAP.md
-  (Phase 47 success criterion #4) must be edited to reflect this before the phase
-  closes — flagged for operator sign-off. — **Reversibility:** costly — reverting
+  fixture-reseedable). **DONE 2026-08-17 (operator-approved):** REQUIREMENTS.md
+  (PROV-05) and ROADMAP.md (Phase 47 goal + success criterion #4) edited to
+  reflect this. — **Reversibility:** costly — reverting
   to a true in-place backfill requirement would re-introduce migration logic and
   a row-count-preservation constraint the current DB no longer needs.
 

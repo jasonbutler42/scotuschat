@@ -3,6 +3,7 @@ created: 2026-08-12T00:00:00.000Z
 title: Reduce duplication in speaker popover frontend files
 area: ui
 priority: low
+resolves_phase: 51
 files:
   - app/src/lib/components/SpeakerPopover.svelte
   - app/src/routes/cases/[slug]/arguments/[id]/+page.svelte

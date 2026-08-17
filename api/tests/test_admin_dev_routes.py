@@ -45,8 +45,10 @@ from api.models.models import (
     ArgumentStatusEnum,
     ArgumentStatusLog,
     CourtTenure,
+    ImportMethod,
+    ImportRun,
+    ImportSource,
     Person,
-    PipelineRun,
     Role,
     Utterance,
 )
@@ -328,17 +330,21 @@ async def test_reset_wipes_and_reseeds_fixtures(client, tmp_path, db):
     await db.flush()
     throwaway_argument_id = throwaway_argument.id
 
-    throwaway_run = PipelineRun(argument_id=throwaway_argument_id, step="resolve")
+    throwaway_run = ImportRun(
+        argument_id=throwaway_argument_id,
+        step="resolve",
+        source=ImportSource.PDF_PIPELINE,
+        method=ImportMethod.NORMALIZED,
+    )
     db.add(throwaway_run)
     await db.flush()
     throwaway_run_id = throwaway_run.id
 
     throwaway_utterance = Utterance(
         argument_id=throwaway_argument_id,
-        pipeline_run_id=throwaway_run_id,
+        import_run_id=throwaway_run_id,
         sequence=0,
         text="Throwaway utterance.",
-        strategy="rule_based",
     )
     db.add(throwaway_utterance)
     await db.commit()

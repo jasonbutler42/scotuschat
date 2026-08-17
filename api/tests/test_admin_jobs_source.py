@@ -1,9 +1,9 @@
 """
 Tests for the AdminJobResponse.source derivation (Phase 30 Plan 02, PJOB-01).
 
-source is "corpus" when the job's linked Argument has any PipelineRun row
-with strategy == "convokit_import" (via an exists() subquery, duplication-safe
-over the 1:many Argument -> PipelineRun relationship), else "pdf".
+source is "corpus" when the job's linked Argument has any ImportRun row with
+source == ImportSource.CORPUS (via an exists() subquery, duplication-safe
+over the 1:many Argument -> ImportRun relationship), else "pdf".
 
 DB-gated: all tests are skipped when DATABASE_URL is not configured, matching
 the established pattern in test_admin_jobs_list.py.
@@ -34,17 +34,19 @@ def _db_configured() -> bool:
 
 @pytest.mark.asyncio
 @pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
-async def test_source_is_corpus_for_convokit_import_run(db_session: AsyncSession) -> None:
-    """A job whose linked Argument has a convokit_import PipelineRun must report source='corpus'
-    from both list_jobs() and get_job() (parity, not a hardcoded default)."""
+async def test_source_is_corpus_for_declared_corpus_import_run(db_session: AsyncSession) -> None:
+    """A job whose linked Argument has an ImportRun with source=CORPUS must report
+    source='corpus' from both list_jobs() and get_job() (parity, not a hardcoded default)."""
     from api.models.models import (
         AdminJob,
         AdminJobStatus,
         AdminJobStep,
         Argument,
         ArgumentStatusEnum,
-        PipelineRun,
-        PipelineRunStatus,
+        ImportMethod,
+        ImportRun,
+        ImportRunStatus,
+        ImportSource,
     )
     from api.services.admin_jobs import get_job, list_jobs
 
@@ -52,11 +54,12 @@ async def test_source_is_corpus_for_convokit_import_run(db_session: AsyncSession
     db_session.add(argument)
     await db_session.flush()
 
-    run = PipelineRun(
+    run = ImportRun(
         argument_id=argument.id,
         step="parse",
-        status=PipelineRunStatus.COMPLETED,
-        strategy="convokit_import",
+        status=ImportRunStatus.COMPLETED,
+        source=ImportSource.CORPUS,
+        method=ImportMethod.DIRECT,
     )
     db_session.add(run)
     await db_session.flush()
@@ -81,7 +84,7 @@ async def test_source_is_corpus_for_convokit_import_run(db_session: AsyncSession
 @pytest.mark.asyncio
 @pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
 async def test_source_is_pdf_for_non_corpus_run(db_session: AsyncSession) -> None:
-    """A job whose linked Argument has only a non-corpus PipelineRun must report source='pdf'
+    """A job whose linked Argument has only a non-corpus ImportRun must report source='pdf'
     from both list_jobs() and get_job()."""
     from api.models.models import (
         AdminJob,
@@ -89,8 +92,10 @@ async def test_source_is_pdf_for_non_corpus_run(db_session: AsyncSession) -> Non
         AdminJobStep,
         Argument,
         ArgumentStatusEnum,
-        PipelineRun,
-        PipelineRunStatus,
+        ImportMethod,
+        ImportRun,
+        ImportRunStatus,
+        ImportSource,
     )
     from api.services.admin_jobs import get_job, list_jobs
 
@@ -98,11 +103,12 @@ async def test_source_is_pdf_for_non_corpus_run(db_session: AsyncSession) -> Non
     db_session.add(argument)
     await db_session.flush()
 
-    run = PipelineRun(
+    run = ImportRun(
         argument_id=argument.id,
         step="parse",
-        status=PipelineRunStatus.COMPLETED,
-        strategy="llm_corrective",
+        status=ImportRunStatus.COMPLETED,
+        source=ImportSource.PDF_PIPELINE,
+        method=ImportMethod.LLM_CORRECTIVE,
     )
     db_session.add(run)
     await db_session.flush()
@@ -127,7 +133,7 @@ async def test_source_is_pdf_for_non_corpus_run(db_session: AsyncSession) -> Non
 @pytest.mark.asyncio
 @pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
 async def test_source_is_pdf_when_no_pipeline_run(db_session: AsyncSession) -> None:
-    """A job whose linked Argument has no PipelineRun rows at all must report source='pdf'."""
+    """A job whose linked Argument has no ImportRun rows at all must report source='pdf'."""
     from api.models.models import AdminJob, AdminJobStatus, AdminJobStep, Argument, ArgumentStatusEnum
     from api.services.admin_jobs import get_job, list_jobs
 
@@ -178,21 +184,23 @@ async def test_source_is_pdf_when_no_linked_argument(db_session: AsyncSession) -
 
 @pytest.mark.asyncio
 @pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
-async def test_source_is_corpus_and_no_duplicate_row_with_mixed_pipeline_runs(
+async def test_source_is_corpus_and_no_duplicate_row_with_mixed_import_runs(
     db_session: AsyncSession,
 ) -> None:
-    """Guard case: an argument with BOTH a corpus and a non-corpus PipelineRun
+    """Guard case: an argument with BOTH a corpus and a non-corpus ImportRun
     still classifies as 'corpus' and its job appears exactly once in
     list_jobs() output — proves the exists() derivation is duplication-safe
-    over the 1:many Argument -> PipelineRun relationship (no naive join)."""
+    over the 1:many Argument -> ImportRun relationship (no naive join)."""
     from api.models.models import (
         AdminJob,
         AdminJobStatus,
         AdminJobStep,
         Argument,
         ArgumentStatusEnum,
-        PipelineRun,
-        PipelineRunStatus,
+        ImportMethod,
+        ImportRun,
+        ImportRunStatus,
+        ImportSource,
     )
     from api.services.admin_jobs import list_jobs
 
@@ -201,19 +209,21 @@ async def test_source_is_corpus_and_no_duplicate_row_with_mixed_pipeline_runs(
     await db_session.flush()
 
     db_session.add(
-        PipelineRun(
+        ImportRun(
             argument_id=argument.id,
             step="parse",
-            status=PipelineRunStatus.COMPLETED,
-            strategy="rule_based",
+            status=ImportRunStatus.COMPLETED,
+            source=ImportSource.PDF_PIPELINE,
+            method=ImportMethod.RULE_BASED,
         )
     )
     db_session.add(
-        PipelineRun(
+        ImportRun(
             argument_id=argument.id,
             step="parse",
-            status=PipelineRunStatus.COMPLETED,
-            strategy="convokit_import",
+            status=ImportRunStatus.COMPLETED,
+            source=ImportSource.CORPUS,
+            method=ImportMethod.DIRECT,
         )
     )
     await db_session.flush()

@@ -124,7 +124,17 @@ async def test_failed_recovery_neighbor_remains_available(client: AsyncClient) -
 @pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
 async def test_disk_backed_job_pdf_returns_exact_stored_bytes(client: AsyncClient, tmp_path) -> None:
     from api.core.database import AsyncSessionLocal
-    from api.models.models import AdminJob, AdminJobStatus, AdminJobStep, Argument, ArgumentStatusEnum, PipelineRun, PipelineRunStatus
+    from api.models.models import (
+        AdminJob,
+        AdminJobStatus,
+        AdminJobStep,
+        Argument,
+        ArgumentStatusEnum,
+        ImportMethod,
+        ImportRun,
+        ImportRunStatus,
+        ImportSource,
+    )
 
     pdf_bytes = b"%PDF-1.4\nphase-35-source\n%%EOF\n"
     pdf_path = tmp_path / "server-only-name.pdf"
@@ -133,7 +143,14 @@ async def test_disk_backed_job_pdf_returns_exact_stored_bytes(client: AsyncClien
         argument = Argument(status=ArgumentStatusEnum.PIPELINE, question_number=1)
         db.add(argument)
         await db.flush()
-        run = PipelineRun(argument_id=argument.id, step="ingest", status=PipelineRunStatus.COMPLETED, pdf_path=str(pdf_path))
+        run = ImportRun(
+            argument_id=argument.id,
+            step="ingest",
+            status=ImportRunStatus.COMPLETED,
+            source=ImportSource.PDF_PIPELINE,
+            method=ImportMethod.NORMALIZED,
+            pdf_path=str(pdf_path),
+        )
         db.add(run)
         job = AdminJob(status=AdminJobStatus.COMPLETED, current_step=AdminJobStep.RESOLVE, argument_id=argument.id, original_filename='source "brief".pdf')
         db.add(job)
@@ -152,7 +169,7 @@ async def test_disk_backed_job_pdf_returns_exact_stored_bytes(client: AsyncClien
         assert "server-only-name" not in disposition
     finally:
         async with AsyncSessionLocal() as db:
-            stored_run = await db.get(PipelineRun, run_id)
+            stored_run = await db.get(ImportRun, run_id)
             if stored_run is not None:
                 await db.delete(stored_run)
             stored_job = await db.get(AdminJob, job_id)

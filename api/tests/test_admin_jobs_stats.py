@@ -3,7 +3,7 @@ Tests for parse stats in AdminJobResponse (Phase 17, PIPE-21).
 
 Behaviors tested:
   1. get_job for a job whose parse step completed returns parse_stats with
-     utterance_count == COUNT(utterances WHERE pipeline_run_id == latest parse run id)
+     utterance_count == COUNT(utterances WHERE import_run_id == latest parse run id)
      and speaker_count == COUNT(DISTINCT argument_participants.raw_speaker_label
      WHERE argument_id == job.argument_id)
   2. get_job for a job with no parse run (or argument_id is None) returns parse_stats == None
@@ -105,8 +105,10 @@ async def test_get_job_parse_stats_counts_from_latest_parse_run(db_session: Asyn
         AdminJob,
         AdminJobStatus,
         AdminJobStep,
-        PipelineRun,
-        PipelineRunStatus,
+        ImportMethod,
+        ImportRun,
+        ImportRunStatus,
+        ImportSource,
         Utterance,
     )
     from api.services.admin_jobs import get_job
@@ -128,20 +130,24 @@ async def test_get_job_parse_stats_counts_from_latest_parse_run(db_session: Asyn
     db_session.add(job)
     await db_session.flush()
 
-    # Seed an ingest PipelineRun (needed for the job chain)
-    ingest_run = PipelineRun(
+    # Seed an ingest ImportRun (needed for the job chain)
+    ingest_run = ImportRun(
         argument_id=arg.id,
         step="ingest",
-        status=PipelineRunStatus.COMPLETED,
+        status=ImportRunStatus.COMPLETED,
+        source=ImportSource.PDF_PIPELINE,
+        method=ImportMethod.NORMALIZED,
     )
     db_session.add(ingest_run)
     await db_session.flush()
 
-    # Seed a parse PipelineRun
-    parse_run = PipelineRun(
+    # Seed a parse ImportRun
+    parse_run = ImportRun(
         argument_id=arg.id,
         step="parse",
-        status=PipelineRunStatus.COMPLETED,
+        status=ImportRunStatus.COMPLETED,
+        source=ImportSource.PDF_PIPELINE,
+        method=ImportMethod.RULE_BASED,
     )
     db_session.add(parse_run)
     await db_session.flush()
@@ -151,11 +157,10 @@ async def test_get_job_parse_stats_counts_from_latest_parse_run(db_session: Asyn
     for i in range(N):
         utt = Utterance(
             argument_id=arg.id,
-            pipeline_run_id=parse_run.id,
+            import_run_id=parse_run.id,
             sequence=i,
             raw_speaker_label=f"SPEAKER_{i}",
             text=f"Utterance {i} text.",
-            strategy="rule_based",
         )
         db_session.add(utt)
     await db_session.flush()
@@ -203,7 +208,7 @@ async def test_get_job_parse_stats_none_when_no_parse_run(db_session: AsyncSessi
     db_session.add(job)
     await db_session.flush()
 
-    # No parse PipelineRun seeded intentionally
+    # No parse ImportRun seeded intentionally
 
     result = await get_job(db_session, job.id)
 
@@ -250,8 +255,10 @@ async def test_get_job_parse_stats_uses_latest_parse_run_when_two_exist(db_sessi
         AdminJob,
         AdminJobStatus,
         AdminJobStep,
-        PipelineRun,
-        PipelineRunStatus,
+        ImportMethod,
+        ImportRun,
+        ImportRunStatus,
+        ImportSource,
         Utterance,
     )
     from api.services.admin_jobs import get_job
@@ -274,10 +281,12 @@ async def test_get_job_parse_stats_uses_latest_parse_run_when_two_exist(db_sessi
     now = datetime.now(tz=timezone.utc)
 
     # First (older) parse run — 2 utterances
-    old_parse_run = PipelineRun(
+    old_parse_run = ImportRun(
         argument_id=arg.id,
         step="parse",
-        status=PipelineRunStatus.COMPLETED,
+        status=ImportRunStatus.COMPLETED,
+        source=ImportSource.PDF_PIPELINE,
+        method=ImportMethod.RULE_BASED,
         created_at=now - timedelta(hours=2),
     )
     db_session.add(old_parse_run)
@@ -286,19 +295,20 @@ async def test_get_job_parse_stats_uses_latest_parse_run_when_two_exist(db_sessi
     for i in range(2):
         db_session.add(Utterance(
             argument_id=arg.id,
-            pipeline_run_id=old_parse_run.id,
+            import_run_id=old_parse_run.id,
             sequence=i,
             raw_speaker_label=f"OLD_SPEAKER_{i}",
             text=f"Old utterance {i}.",
-            strategy="rule_based",
         ))
     await db_session.flush()
 
     # Second (newer) parse run — 7 utterances (D-09: stats must reflect this run)
-    new_parse_run = PipelineRun(
+    new_parse_run = ImportRun(
         argument_id=arg.id,
         step="parse",
-        status=PipelineRunStatus.COMPLETED,
+        status=ImportRunStatus.COMPLETED,
+        source=ImportSource.PDF_PIPELINE,
+        method=ImportMethod.RULE_BASED,
         created_at=now - timedelta(hours=1),
     )
     db_session.add(new_parse_run)
@@ -307,11 +317,10 @@ async def test_get_job_parse_stats_uses_latest_parse_run_when_two_exist(db_sessi
     for i in range(7):
         db_session.add(Utterance(
             argument_id=arg.id,
-            pipeline_run_id=new_parse_run.id,
+            import_run_id=new_parse_run.id,
             sequence=i,
             raw_speaker_label=f"NEW_SPEAKER_{i}",
             text=f"New utterance {i}.",
-            strategy="rule_based",
         ))
     await db_session.flush()
 

@@ -4,20 +4,20 @@ Business logic for argument and utterance queries.
 Responsibilities:
   - Fetch an Argument row by ID
   - Find the lead Case for that argument (via case_arguments.is_lead)
-  - Filter utterances to the latest pipeline_run_id (PIPE-11: re-running
+  - Filter utterances to the latest import_run_id (PIPE-11: re-running
     parse produces new rows; we show only the most recent run)
   - Return a dict shaped to match ArgumentUtterancesResponse
 
 PIPE-11 policy:
-  Prior pipeline_run rows are never deleted after a new run — the DB accumulates
+  Prior import_run rows are never deleted after a new run — the DB accumulates
   utterances from all runs. The API always shows only the latest completed parse
-  by filtering WHERE pipeline_run_id = (SELECT MAX(pipeline_run_id) ...).
+  by filtering WHERE import_run_id = (SELECT MAX(import_run_id) ...).
 """
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.models.models import Argument, Case, CaseArgument, Person, PipelineRun, PipelineRunStatus, Role, Utterance
+from api.models.models import Argument, Case, CaseArgument, ImportRun, ImportRunStatus, Person, Role, Utterance
 
 
 async def get_argument_with_utterances(
@@ -41,7 +41,7 @@ async def get_argument_with_utterances(
         }
 
     The utterances list is ordered by sequence ASC and filtered to the
-    maximum pipeline_run_id so callers always see the most recent parse results.
+    maximum import_run_id so callers always see the most recent parse results.
     """
     # --- Step 1: Verify the argument exists and is published ---------------
     arg_result = await db.execute(
@@ -82,13 +82,13 @@ async def get_argument_with_utterances(
 
     # --- Step 3: Find the latest completed parse run for this argument ------
     # Users always see the output of the most recent COMPLETED parse run (PIPE-11).
-    # Use the pipeline_runs table (not MAX on utterances) to avoid surfacing
+    # Use the import_run table (not MAX on utterances) to avoid surfacing
     # partial writes from a crashed run with a higher ID.
     max_run_result = await db.execute(
-        select(func.max(PipelineRun.id)).where(
-            PipelineRun.argument_id == argument_id,
-            PipelineRun.step == "parse",
-            PipelineRun.status == PipelineRunStatus.COMPLETED,
+        select(func.max(ImportRun.id)).where(
+            ImportRun.argument_id == argument_id,
+            ImportRun.step == "parse",
+            ImportRun.status == ImportRunStatus.COMPLETED,
         )
     )
     max_run_id = max_run_result.scalar_one_or_none()
@@ -110,7 +110,7 @@ async def get_argument_with_utterances(
             .outerjoin(Role, Person.role_id == Role.id)
             .where(
                 Utterance.argument_id == argument_id,
-                Utterance.pipeline_run_id == max_run_id,
+                Utterance.import_run_id == max_run_id,
             )
             .order_by(Utterance.sequence.asc())
         )

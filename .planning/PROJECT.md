@@ -8,6 +8,19 @@ A website that displays Supreme Court oral arguments as a chat-style interface �
 
 Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
 
+## Current Milestone: v1.8 Import & Provenance Re-model
+
+**Goal:** Make data provenance and trust first-class so every argument is born a labeled *candidate* and promoted to *published* — replacing the PDF-shaped import skeleton with one unified import model where PDF-parse and corpus-import are peer strategies distinguished by declared provenance.
+
+**Target features:**
+- **Provenance foundation** — `import_run` (generalizes `pipeline_run`) with declared `source`/`method`, external-id lineage, and deterministic backfill from today's `strategy` + `oyez_*`.
+- **Trust + lifecycle** — materialized `trust_tier` rollup, `candidate` status, and a publish gate hard-blocked on UNCERTAIN with a logged operator override.
+- **Review model** — four-state `review_state`, discrepancy recording on re-import, and an operator review queue.
+- **Path rework** — corpus import writes `import_run` directly (no fabricated PDF artifacts), PDF path adapts, `admin_job` re-points, re-import stays idempotent.
+- **Noun alignment + design system** — `/cases` → arguments, a shared component library, design tokens, and the arguments listing style (absorbs backlog 999.4 / 999.6 / 999.8).
+
+**Design:** fully worked out ahead of planning in `.planning/notes/` — `import-architecture-diagnosis.md`, `provenance-and-trust-model.md`, `import-entity-sketch.md`.
+
 ## Current State
 
 **v1.7 Corpus Fidelity & Resolve Rework — SHIPPED 2026-08-15.** All 6 phases (41–46) complete and verified. Phase 41 selected and operator-confirmed a 4-fixture set (one structurally-complex ConvoKit conversation plus three publish/pipeline-state-variety fixtures) that every later phase built on. Phase 42 field-by-field diffed the complexity fixture's raw ConvoKit source against its imported DB rows, finding and fixing real gaps (`section_hint` derivation, a bench-tenure mismatch warning) while correctly leaving the apolitical field allow-list's intentional exclusions alone; a Person-dedup mismatch across two justice-import tools was found but deliberately deferred to its own future phase. Phase 43 shipped a dev-only, environment-gated reset-to-fixture tool that reseeds all four fixtures into distinguishable states through the real import/publish pipeline. Phase 44 reworked the Resolve table so Bench/Advocate and Argument Role became independently editable, converging through live Figma-driven design iteration into a leaner 4-column layout with a persistent progress indicator; post-approval code review found and fixed two real data-loss bugs. Phase 45 closed two long-standing UI bugs (unpublished arguments directly accessible via `/cases/`; popover scrollbar rendering outside its card) and surfaced the pytest DB-isolation bug that had twice wiped the shared dev database. Phase 46 was inserted mid-milestone once Windows admin access became available: it closed that DB-isolation bug at its root (rootdir `conftest.py` + fail-closed sibling guards), moved the whole dev stack to WSL-native tooling against a real Windows-hosted PostgreSQL service, relocated the working repository off a Windows-mounted filesystem onto native WSL ext4, shipped a single reliable `dev-start.sh`/`dev-start.ps1` start/stop entry point, and rewrote the README to match — with a post-execution security audit finding and closing 3 real vulnerabilities (2 from code review, 1 reintroduced by the review's own fix and caught by the audit). Full details: `.planning/milestones/v1.7-ROADMAP.md`, `.planning/milestones/v1.7-REQUIREMENTS.md`.
@@ -108,6 +121,16 @@ Anyone can open a SCOTUS oral argument and immediately follow the conversation �
 - ✓ Dev environment made reliable: pytest DB-isolation bug that twice wiped the shared dev database closed at its root (rootdir `conftest.py` + fail-closed sibling guards); WSL-native Python/Postgres stack replacing the admin-rights-constrained portable setup; repository relocated onto native WSL ext4; single `dev-start.sh`/`dev-start.ps1` start/stop entry point; README rewritten to match — v1.7 (D-01–D-04, Phase 46 CONTEXT.md — no formal REQUIREMENTS.md IDs assigned), validated in Phase 46; post-execution security audit found and closed 3 real vulnerabilities
 
 ### Active
+
+**v1.8 — Import & Provenance Re-model**
+
+- [ ] Every import unit carries declared provenance (`source` + `method`) and lineage; existing rows backfilled (PROV)
+- [ ] Every argument is born a candidate with a materialized trust tier; promotion to published is review-gated (TRUST)
+- [ ] Operator review queue with four-state review status and discrepancy surfacing on re-import (REVIEW)
+- [ ] Unified import: corpus and PDF are peer strategies; re-import is idempotent and never clobbers operator work (IMPORT)
+- [ ] Public noun aligned to "arguments" plus a shared design system / component library (UI)
+
+**Carried forward (not in v1.8)**
 
 - [ ] Application deployed to Digital Ocean App Platform (SvelteKit + FastAPI as separate services, managed Postgres) (DEPLOY-01)
 - [ ] Continuous deployment from GitHub main branch (DEPLOY-03)
@@ -229,4 +252,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-15 after v1.7 (Corpus Fidelity & Resolve Rework) milestone completed and archived.*
+*Last updated: 2026-08-17 after v1.8 (Import & Provenance Re-model) milestone started.*

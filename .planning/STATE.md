@@ -1,20 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.7
-milestone_name: Corpus Fidelity & Resolve Rework
-status: Awaiting next milestone
-stopped_at: Completed 46-06-PLAN.md — Phase 46 fully complete
-last_updated: "2026-08-15T18:40:32.295Z"
-last_activity: 2026-08-15
-last_activity_desc: Milestone v1.7 completed and archived
+milestone: v1.8
+milestone_name: Import & Provenance Re-model
+status: planning
+last_updated: "2026-08-17T14:49:12.627Z"
+last_activity: 2026-08-17
 progress:
-  total_phases: 6
-  completed_phases: 6
-  total_plans: 29
-  completed_plans: 29
-  percent: 100
-current_phase: 46
-current_phase_name: dev-environment-reliability
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -28,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-08-15 after v1.7 milestone completed and
 
 ## Current Position
 
-Phase: Milestone v1.7 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-08-15 — Milestone v1.7 completed and archived
+Status: Defining requirements
+Last activity: 2026-08-17 — Milestone v1.8 started
 
 ## Deferred Items
 

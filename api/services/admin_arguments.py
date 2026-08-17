@@ -31,8 +31,8 @@ from api.models.models import (
     Case,
     CaseArgument,
     CourtTenure,
+    ImportRun,
     Person,
-    PipelineRun,
     SideEnum,
     Utterance,
 )
@@ -749,8 +749,8 @@ async def delete_argument(db: AsyncSession, argument_id: int) -> bool | None:
     not found (→ router 404).
 
     FK-ordered cascade (no ORM relationship cascades exist — manual only):
-      1. Utterances (references both pipeline_runs.id AND arguments.id — must go first)
-      2. PipelineRuns (references arguments.id — after utterances)
+      1. Utterances (references both import_run.id AND arguments.id — must go first)
+      2. ImportRuns (references arguments.id — after utterances)
       3. ArgumentParticipants (references arguments.id)
       4. CaseArguments (references arguments.id)
       5. AdminJob.argument_id NULLed (FK nullable, no ondelete — Pitfall 1: RESTRICT default)
@@ -759,9 +759,9 @@ async def delete_argument(db: AsyncSession, argument_id: int) -> bool | None:
     All delete() and update() statements use .execution_options(synchronize_session=False)
     (Pitfall 3 — project-wide critical guard for async SQLAlchemy).
 
-    Critical ordering note (Pitfall 2): Utterance.pipeline_run_id FK references
-    pipeline_runs.id — deleting pipeline_runs before utterances raises ForeignKeyViolation.
-    Utterances MUST be deleted before pipeline_runs.
+    Critical ordering note (Pitfall 2): Utterance.import_run_id FK references
+    import_run.id — deleting import_run rows before utterances raises ForeignKeyViolation.
+    Utterances MUST be deleted before import_run rows.
 
     Only DRAFT arguments are deletable (T-21-01-PUB, T-26-02, T-26-13). PIPELINE
     is blocked because an active AdminJob may still reference it — deleting it
@@ -780,16 +780,16 @@ async def delete_argument(db: AsyncSession, argument_id: int) -> bool | None:
     if argument.status != ArgumentStatusEnum.DRAFT:
         return False
 
-    # Step 1: Delete utterances referencing this argument (must be before pipeline_runs)
+    # Step 1: Delete utterances referencing this argument (must be before import_run rows)
     await db.execute(
         delete(Utterance)
         .where(Utterance.argument_id == argument_id)
         .execution_options(synchronize_session=False)
     )
-    # Step 2: Delete pipeline_run rows for this argument (after utterances)
+    # Step 2: Delete import_run rows for this argument (after utterances)
     await db.execute(
-        delete(PipelineRun)
-        .where(PipelineRun.argument_id == argument_id)
+        delete(ImportRun)
+        .where(ImportRun.argument_id == argument_id)
         .execution_options(synchronize_session=False)
     )
     # Step 3: Delete argument_participants

@@ -114,13 +114,6 @@ from pipeline.db import get_session
 # ConvoKit source files here locally; it is gitignored, not tracked.
 DEFAULT_CORPUS_DIR = Path("data/corpus")
 
-# D-09: every argument imported by this command gets a real import_run
-# row stamped with this strategy value, ahead of any utterance write path
-# (Utterance.import_run_id is NOT NULL, T-29-09). Phase 47 (D-04): this
-# constant and its two consumers are kept in place for now -- plan 47-03
-# owns their deletion together with api/services/admin_jobs.py's
-# strategy== check.
-PIPELINE_RUN_STRATEGY = "convokit_import"
 
 # conversations.json advocate side codes -> SideEnum (RESEARCH.md Standard
 # Stack cross-check / ConvoKit's official Supreme Court Corpus docs; A2).

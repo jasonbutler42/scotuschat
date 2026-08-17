@@ -65,7 +65,7 @@ class AdminJobResponse(BaseModel):
     is_archived: bool = False
     # Phase 30: "pdf" for jobs created via the ingest pipeline, "corpus" for
     # jobs created directly by import-convokit (Phase 30, D-01). Derived via
-    # an exists() subquery on PipelineRun.strategy == "convokit_import" in
+    # an exists() subquery on ImportRun.source == ImportSource.CORPUS in
     # both list_jobs() and get_job() — see api/services/admin_jobs.py.
     source: Literal["pdf", "corpus"] = "pdf"
 

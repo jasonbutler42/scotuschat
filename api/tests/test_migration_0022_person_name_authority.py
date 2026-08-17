@@ -44,6 +44,15 @@ FIXTURES_PATH = Path(__file__).parent / "fixtures" / "person_name_cases.json"
 BASELINE_REVISION = "0021"
 TARGET_REVISION = "0022"
 
+# Phase 47 note: this module is pinned to BASELINE_REVISION="0021"/
+# TARGET_REVISION="0022", both of which predate migration 0026 (the
+# pipeline_runs -> import_run rename). The `_baseline_at_0021` fixture below
+# downgrades the live database back through 0026 before every test in this
+# module, and 0026's own downgrade() recreates the table under its original
+# name — so at the schema state this module actually exercises, the table is
+# genuinely still called `pipeline_runs`. Do not rename this reference to
+# `import_run`; doing so would TRUNCATE a table that does not exist yet at
+# revision 0021.
 _CLEAN_TABLES_SQL = (
     "TRUNCATE TABLE utterances, pipeline_runs, case_arguments, "
     "case_appearances, argument_participants, arguments, cases, "
@@ -137,8 +146,33 @@ def _baseline_at_0021(engine, alembic_config):
     Ensure every test in this module starts from a clean revision-0021
     baseline, downgrading away any 0022 state a prior test in this same
     process left behind.
+
+    Phase 47 note: reaching 0021 from a current revision at or above 0026
+    passes through migration 0026's own downgrade(), which recreates
+    `pipeline_runs` empty and re-adds `utterances.pipeline_run_id`'s FK
+    against it (D-01, clean-rebuild — the migration assumes a disposable
+    database, not one carrying real rows). If any OTHER test module running
+    earlier in this same session committed real `utterances`/`import_run`
+    rows (e.g. api/tests/test_admin_dev_routes.py's corpus-reset fixtures,
+    which are deliberately left populated — that endpoint's whole purpose is
+    to seed, not clean up after itself) and left them uncleaned when this
+    module's tests run, that FK re-add fails with a ForeignKeyViolationError.
+    Truncating those two tables here — scotus_test only, never DATABASE_URL —
+    keeps this module's baseline reachable regardless of what any
+    earlier-collected test module left behind, without touching migration
+    0026 itself or any other test module's own cleanup responsibilities.
     """
     if _current_revision(engine) != BASELINE_REVISION:
+        with engine.connect() as conn:
+            import_run_exists = conn.execute(
+                text(
+                    "SELECT 1 FROM information_schema.tables "
+                    "WHERE table_schema = 'public' AND table_name = 'import_run'"
+                )
+            ).fetchone()
+        if import_run_exists:
+            with engine.begin() as conn:
+                conn.execute(text("TRUNCATE TABLE utterances, import_run CASCADE"))
         command.downgrade(alembic_config, BASELINE_REVISION)
     yield
 

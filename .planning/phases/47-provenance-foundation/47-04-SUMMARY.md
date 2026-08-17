@@ -203,3 +203,12 @@ None — no external service configuration required.
 ---
 *Phase: 47-provenance-foundation*
 *Completed: 2026-08-17*
+
+## Self-Check: PASSED
+
+- FOUND: `pipeline/tests/test_import_run.py`
+- CONFIRMED ABSENT: `pipeline/tests/test_pipeline_run.py`
+- FOUND: `.planning/phases/47-provenance-foundation/47-04-SUMMARY.md`
+- FOUND commit: `b74ae85c0`
+- FOUND commit: `8938da48f`
+- FOUND commit: `b6e9b8968`

@@ -293,9 +293,9 @@ def test_delete_argument_importable() -> None:
     from api.services.admin_arguments import delete_argument  # noqa: F401
 
 
-def test_delete_argument_utterances_before_pipeline_runs() -> None:
-    """delete(Utterance) must appear before delete(PipelineRun) in delete_argument
-    (Pitfall 2 — utterances.pipeline_run_id FK requires utterances deleted first).
+def test_delete_argument_utterances_before_import_run() -> None:
+    """delete(Utterance) must appear before delete(ImportRun) in delete_argument
+    (Pitfall 2 — utterances.import_run_id FK requires utterances deleted first).
     """
     import inspect
 
@@ -310,14 +310,14 @@ def test_delete_argument_utterances_before_pipeline_runs() -> None:
     if next_func == -1:
         next_func = source.find("\ndef ", func_start + 1)
     func_body = source[func_start:next_func] if next_func != -1 else source[func_start:]
-    # Utterance delete must appear before PipelineRun delete
+    # Utterance delete must appear before ImportRun delete
     utterance_pos = func_body.find("delete(Utterance)")
-    pipeline_run_pos = func_body.find("delete(PipelineRun)")
+    import_run_pos = func_body.find("delete(ImportRun)")
     assert utterance_pos != -1, "delete(Utterance) not found in delete_argument body"
-    assert pipeline_run_pos != -1, "delete(PipelineRun) not found in delete_argument body"
-    assert utterance_pos < pipeline_run_pos, (
-        "delete(Utterance) must appear before delete(PipelineRun) "
-        "(Pitfall 2: utterances.pipeline_run_id FK order)"
+    assert import_run_pos != -1, "delete(ImportRun) not found in delete_argument body"
+    assert utterance_pos < import_run_pos, (
+        "delete(Utterance) must appear before delete(ImportRun) "
+        "(Pitfall 2: utterances.import_run_id FK order)"
     )
 
 
@@ -363,7 +363,7 @@ def test_delete_argument_all_deletes_have_synchronize_session_false() -> None:
     func_body = source[func_start:next_func] if next_func != -1 else source[func_start:]
     # Count db.execute(delete(...)) calls — each needs synchronize_session=False
     delete_call_count = func_body.count("delete(")
-    # We expect at least 5 delete() calls (Utterance, PipelineRun, ArgumentParticipant,
+    # We expect at least 5 delete() calls (Utterance, ImportRun, ArgumentParticipant,
     # CaseArgument, Argument) and at least 1 update() call (AdminJob).
     # Every delete() and update() must have execution_options guard.
     exec_opts_count = func_body.count("synchronize_session=False")
@@ -882,9 +882,11 @@ async def test_list_argument_speakers_bench_advocate_and_utterance_counts() -> N
         ArgumentParticipant,
         ArgumentStatusEnum,
         CourtTenure,
+        ImportMethod,
+        ImportRun,
+        ImportRunStatus,
+        ImportSource,
         Person,
-        PipelineRun,
-        PipelineRunStatus,
         SideEnum,
         Utterance,
     )
@@ -936,8 +938,12 @@ async def test_list_argument_speakers_bench_advocate_and_utterance_counts() -> N
         db.add_all([bench_covered, bench_uncovered, advocate_participant])
         await db.flush()
 
-        parse_run = PipelineRun(
-            argument_id=arg.id, step="parse", status=PipelineRunStatus.COMPLETED
+        parse_run = ImportRun(
+            argument_id=arg.id,
+            step="parse",
+            status=ImportRunStatus.COMPLETED,
+            source=ImportSource.PDF_PIPELINE,
+            method=ImportMethod.RULE_BASED,
         )
         db.add(parse_run)
         await db.flush()
@@ -947,23 +953,21 @@ async def test_list_argument_speakers_bench_advocate_and_utterance_counts() -> N
             db.add(
                 Utterance(
                     argument_id=arg.id,
-                    pipeline_run_id=parse_run.id,
+                    import_run_id=parse_run.id,
                     sequence=i,
                     raw_speaker_label="MR. ADVOCATE",
                     text=f"Advocate utterance {i}.",
                     person_id=advocate.id,
-                    strategy="rule_based",
                 )
             )
         db.add(
             Utterance(
                 argument_id=arg.id,
-                pipeline_run_id=parse_run.id,
+                import_run_id=parse_run.id,
                 sequence=3,
                 raw_speaker_label="COVERED JUSTICE",
                 text="Justice utterance.",
                 person_id=covered_justice.id,
-                strategy="rule_based",
             )
         )
         await db.commit()
@@ -1016,7 +1020,7 @@ async def test_list_argument_speakers_bench_advocate_and_utterance_counts() -> N
         )
         for u in utt_result.scalars().all():
             await db.delete(u)
-        run = await db.get(PipelineRun, parse_run_id)
+        run = await db.get(ImportRun, parse_run_id)
         await db.delete(run)
         for pid in (bench_covered_id, bench_uncovered_id, advocate_participant_id):
             p = await db.get(ArgumentParticipant, pid)

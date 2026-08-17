@@ -203,7 +203,7 @@ async def test_utterances_endpoint_returns_200_for_null_argued_date(db_session) 
 
     Does not assert on response.utterances length/contents: whether any
     utterances are returned for a corpus-imported row depends on a separate,
-    out-of-scope PipelineRun.step="ingest" vs. get_argument_with_utterances'
+    out-of-scope ImportRun.step="ingest" vs. get_argument_with_utterances'
     step=="parse" filter mismatch (see this plan's <objective>) — an empty
     utterances list is still a valid 200 response for this test's purpose.
     """

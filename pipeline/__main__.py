@@ -5,7 +5,7 @@ Invoked as: python -m pipeline <command> [args]
 
 Subcommands:
     ingest  — Download a PDF from supremecourt.gov and create case/argument/
-              pipeline_run records in the database.
+              import_run records in the database.
     parse   — Parse a previously ingested transcript into utterance rows.
               (Stub in Plan 03 — fully implemented in Plan 04.)
 
@@ -126,7 +126,7 @@ def main() -> None:
         help="Download PDF and create pipeline records",
         description=(
             "Download a transcript PDF from supremecourt.gov and create "
-            "case, argument, case_arguments, and pipeline_run records in the DB."
+            "case, argument, case_arguments, and import_run records in the DB."
         ),
     )
     ingest_p.add_argument(
@@ -204,7 +204,7 @@ def main() -> None:
         "--run-id",
         required=True,
         type=int,
-        help="pipeline_run.id from a prior ingest step",
+        help="import_run.id from a prior ingest step",
     )
     parse_p.add_argument(
         "--dry-run",
@@ -234,7 +234,7 @@ def main() -> None:
         "--run-id",
         required=True,
         type=int,
-        help="pipeline_run.id from a prior PARSE step (step='parse', status=COMPLETED)",
+        help="import_run.id from a prior PARSE step (step='parse', status=COMPLETED)",
     )
     resolve_p.add_argument(
         "--job-id",
@@ -288,7 +288,7 @@ def main() -> None:
             "Import oral arguments for one October Term, a term range, or "
             "exactly one conversation from the Cornell ConvoKit supreme-"
             "corpus dataset, bypassing PDF/LLM parsing. Scaffolds Case/"
-            "Argument/CaseArgument/PipelineRun rows and resolves bench/"
+            "Argument/CaseArgument/ImportRun rows and resolves bench/"
             "advocate speakers into Person/ArgumentParticipant rows. "
             "Arguments land at status=pipeline, paired with a paused "
             "resolve admin job. Idempotent -- safe to re-run any term or "

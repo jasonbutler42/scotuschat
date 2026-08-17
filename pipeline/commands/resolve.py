@@ -35,10 +35,10 @@ Critical guards:
 
 Usage:
     # Job-driven (Phase 7 admin UI):
-    python -m pipeline resolve --run-id <parse_pipeline_run_id> --job-id <admin_job_id>
+    python -m pipeline resolve --run-id <parse_import_run_id> --job-id <admin_job_id>
 
     # Direct CLI (legacy):
-    python -m pipeline resolve --run-id <parse_pipeline_run_id>
+    python -m pipeline resolve --run-id <parse_import_run_id>
 """
 
 from datetime import datetime, timezone
@@ -52,8 +52,10 @@ from api.models.models import (
     AdminJobStep,
     Argument,
     ArgumentParticipant,
+    ImportMethod,
     ImportRun,
     ImportRunStatus,
+    ImportSource,
     Person,
     Role,
     SpeakerAlias,
@@ -81,7 +83,7 @@ async def run_resolve(args) -> None:
 
     Args:
         args: argparse.Namespace with:
-            - run_id (int): pipeline_run.id from a prior PARSE step
+            - run_id (int): import_run.id from a prior PARSE step
             - job_id (int | None): admin_jobs.id — when set, writes status to admin_jobs
     """
     try:
@@ -146,6 +148,11 @@ async def _run_resolve_inner(args) -> None:
             argument_id=parse_run.argument_id,
             step="resolve",
             status=ImportRunStatus.RUNNING,
+            # Phase 47 (PROV-01): resolve is deterministic normalize_label +
+            # an alias-table lookup with no LLM involvement — `normalized` is
+            # the correct closed-vocabulary member (RESEARCH.md Pattern 2).
+            source=ImportSource.PDF_PIPELINE,
+            method=ImportMethod.NORMALIZED,
         )
         session.add(resolve_run)
         await session.flush()  # get resolve_run.id
@@ -350,7 +357,7 @@ async def _run_resolve_inner(args) -> None:
                 resolve_run.completed_at = datetime.now(timezone.utc)
                 print(
                     f"Resolve complete. {len(resolved_map)} labels auto-resolved. "
-                    f"resolve pipeline_run.id = {resolve_run.id}"
+                    f"resolve import_run.id = {resolve_run.id}"
                 )
 
         except KeyboardInterrupt:

@@ -8,7 +8,7 @@ State machine (PIPE-10):
   pending → running → completed (or failed with failure_reason)
 
 Re-run behavior (PIPE-11):
-  Re-running parse for a new pipeline_run_id creates new utterance rows.
+  Re-running parse for a new import_run_id creates new utterance rows.
   Prior run's utterance rows are NEVER deleted.
 
 Failure classification (PIPE-06):
@@ -17,7 +17,9 @@ Failure classification (PIPE-06):
   - Transient (RateLimitError, APIConnectionError after all tenacity retries):
     same outcome — set failed + failure_reason
 
-PIPE-04: Every utterance row has pipeline_run_id and strategy set.
+PIPE-04: Every utterance row has import_run_id set, and its provenance is
+inherited from the parent import_run's source/method (Phase 47, PROV-01) —
+there is no per-utterance strategy column any more.
 person_id is NULL at parse time — Phase 2 (Resolve) populates it.
 """
 
@@ -37,8 +39,10 @@ from api.models.models import (
     ArgumentParticipant,
     Case,
     CaseArgument,
-    PipelineRun,
-    PipelineRunStatus,
+    ImportMethod,
+    ImportRun,
+    ImportRunStatus,
+    ImportSource,
     SideEnum,
     Utterance,
 )
@@ -69,13 +73,13 @@ async def run_parse(args) -> None:
 
     Args:
         args: argparse.Namespace with:
-            - run_id (int): pipeline_run.id from a prior ingest step
+            - run_id (int): import_run.id from a prior ingest step
             - dry_run (bool): if True, parse but do not write to DB
             - job_id (int | None): admin_jobs.id — when set, writes status to admin_jobs
 
     Sequence:
         0. (job-driven) Mark admin_jobs RUNNING / PARSE
-        1. Load PipelineRun by run_id
+        1. Load ImportRun by run_id
         2. Transition: pending → running (PIPE-10)
         3. Extract pages via pdfplumber
         4. Rule-based parse pass (primary, ~95% coverage)
@@ -128,11 +132,11 @@ async def _run_parse_inner(args) -> None:
     # transaction (RESEARCH.md Pitfall 1).
     # -------------------------------------------------------------------
     async with get_session() as _pre_session:
-        _source_pre: Optional[PipelineRun] = await _pre_session.get(PipelineRun, args.run_id)
+        _source_pre: Optional[ImportRun] = await _pre_session.get(ImportRun, args.run_id)
         if _source_pre is None:
-            raise ValueError(f"No pipeline_run with id={args.run_id}")
+            raise ValueError(f"No import_run with id={args.run_id}")
         if not _source_pre.pdf_path:
-            raise ValueError("pdf_path is null on source pipeline_run — cannot parse")
+            raise ValueError("pdf_path is null on source import_run — cannot parse")
         _pdf_path_str = _source_pre.pdf_path
 
     pdf_path = Path(_pdf_path_str)
@@ -159,13 +163,13 @@ async def _run_parse_inner(args) -> None:
         # -------------------------------------------------------------------
         # Step 1: Load the source run to get argument_id and pdf_path
         # -------------------------------------------------------------------
-        source_run: Optional[PipelineRun] = await session.get(PipelineRun, args.run_id)
+        source_run: Optional[ImportRun] = await session.get(ImportRun, args.run_id)
         if source_run is None:
-            raise ValueError(f"No pipeline_run with id={args.run_id}")
+            raise ValueError(f"No import_run with id={args.run_id}")
 
         # -------------------------------------------------------------------
         # Step 3: Extract pages from PDF
-        # CR-05: extraction uses source_run.pdf_path directly. The PipelineRun
+        # CR-05: extraction uses source_run.pdf_path directly. The ImportRun
         # for this attempt is NOT added to the session until after the dry-run
         # check (step 6) — this ensures dry-run never commits a row to the DB.
         # -------------------------------------------------------------------
@@ -186,7 +190,8 @@ async def _run_parse_inner(args) -> None:
         # Step 5: LLM corrective pass (conditional)
         # -------------------------------------------------------------------
         pages_text = "\n\n".join(pages)
-        # strategy is tracked locally until we create the PipelineRun row
+        # parse_strategy is tracked locally until we create the ImportRun row,
+        # where it is translated onto the closed-vocabulary ImportMethod below.
         parse_strategy = "rule_based"
 
         try:
@@ -239,7 +244,7 @@ async def _run_parse_inner(args) -> None:
             parse_strategy = "rule_based"
 
         # -------------------------------------------------------------------
-        # Step 6: Dry-run exit — checked BEFORE creating PipelineRun row (CR-05)
+        # Step 6: Dry-run exit — checked BEFORE creating ImportRun row (CR-05)
         # The session has not had run added yet so __aexit__ commits nothing
         # meaningful (only the source_run read, which is read-only).
         # -------------------------------------------------------------------
@@ -249,20 +254,31 @@ async def _run_parse_inner(args) -> None:
             return
 
         # -------------------------------------------------------------------
-        # Step 2 (deferred): Create a fresh PipelineRun for this parse attempt
+        # Step 2 (deferred): Create a fresh ImportRun for this parse attempt
         # (PIPE-11). Placed after dry-run check so no row is ever written in
         # dry-run mode.
+        #
+        # Phase 47 (PROV-01/T-47-07): translate the local parse_strategy
+        # string onto the closed ImportMethod vocabulary here — the run's
+        # `method` is derived from the branch actually taken (parse_with_llm
+        # returned vs raised above), never from a caller-supplied value.
         # -------------------------------------------------------------------
-        run = PipelineRun(
+        parse_method = (
+            ImportMethod.LLM_CORRECTIVE
+            if parse_strategy == "llm_corrective"
+            else ImportMethod.RULE_BASED
+        )
+        run = ImportRun(
             argument_id=source_run.argument_id,
             step="parse",
-            status=PipelineRunStatus.RUNNING,
-            strategy=parse_strategy,
+            status=ImportRunStatus.RUNNING,
+            source=ImportSource.PDF_PIPELINE,
+            method=parse_method,
             pdf_path=source_run.pdf_path,
         )
         session.add(run)
         await session.flush()
-        print(f"Created parse pipeline_run id={run.id} (argument_id={run.argument_id})")
+        print(f"Created parse import_run id={run.id} (argument_id={run.argument_id})")
 
         # -------------------------------------------------------------------
         # Step 7: Write utterance rows (PIPE-03, PIPE-04, PIPE-11)
@@ -271,7 +287,7 @@ async def _run_parse_inner(args) -> None:
         for u in utterances:
             utterance = Utterance(
                 argument_id=run.argument_id,
-                pipeline_run_id=run.id,           # PIPE-04: every row links to this run
+                import_run_id=run.id,             # PIPE-04: every row links to this run
                 sequence=u["sequence"],
                 raw_speaker_label=u.get("raw_speaker_label"),
                 text=u["text"],
@@ -279,7 +295,6 @@ async def _run_parse_inner(args) -> None:
                 section_hint=u.get("section_hint"),
                 side=SideEnum(u["side"]),
                 person_id=None,                    # null at parse time; Phase 2 populates
-                strategy=run.strategy,             # PIPE-04: strategy recorded on each row
             )
             session.add(utterance)
 
@@ -427,12 +442,12 @@ async def _run_parse_inner(args) -> None:
         # -------------------------------------------------------------------
         # Step 8: Transition running → completed (PIPE-10)
         # -------------------------------------------------------------------
-        run.status = PipelineRunStatus.COMPLETED
+        run.status = ImportRunStatus.COMPLETED
         run.completed_at = datetime.now(timezone.utc)
 
         print(
             f"Parse complete. {len(utterances)} utterances written. "
-            f"strategy={run.strategy}"
+            f"method={run.method.value}"
         )
 
     # ------------------------------------------------------------------
@@ -546,17 +561,17 @@ async def _update_participant_descriptors(
 
 async def _fail_run(
     session: AsyncSession,
-    run: PipelineRun,
+    run: ImportRun,
     failure_reason: str,
 ) -> None:
     """
-    Transition a running PipelineRun to FAILED and record the failure reason.
+    Transition a running ImportRun to FAILED and record the failure reason.
 
     Called when a non-retryable error occurs during parse (e.g., missing PDF,
     structural LLM failure). The session is flushed but not committed here —
     the caller's context manager commits on exit.
     """
-    run.status = PipelineRunStatus.FAILED
+    run.status = ImportRunStatus.FAILED
     run.failure_reason = failure_reason
     run.completed_at = datetime.now(timezone.utc)
     await session.flush()

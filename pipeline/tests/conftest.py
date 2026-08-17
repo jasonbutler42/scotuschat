@@ -127,7 +127,7 @@ async def clean_db(async_session: AsyncSession) -> None:
             """
             TRUNCATE TABLE
                 utterances,
-                pipeline_runs,
+                import_run,
                 case_arguments,
                 case_appearances,
                 argument_participants,
@@ -214,7 +214,7 @@ async def _reset_test_db(_require_root_conftest_redirect):
                     """
                     TRUNCATE TABLE
                         utterances,
-                        pipeline_runs,
+                        import_run,
                         case_arguments,
                         case_appearances,
                         argument_participants,

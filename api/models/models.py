@@ -43,12 +43,27 @@ class SideEnum(str, enum.Enum):
     AMICUS = "AMICUS"
 
 
-class PipelineRunStatus(str, enum.Enum):
+class ImportRunStatus(str, enum.Enum):
     PENDING = "pending"
     RUNNING = "running"
     COMPLETED = "completed"
     FAILED = "failed"
     NEEDS_REVIEW = "needs_review"
+
+
+class ImportSource(str, enum.Enum):
+    OPERATOR = "operator"
+    CORPUS = "corpus"
+    PDF_PIPELINE = "pdf_pipeline"
+    SEED = "seed"
+
+
+class ImportMethod(str, enum.Enum):
+    MANUAL = "manual"
+    DIRECT = "direct"
+    NORMALIZED = "normalized"
+    RULE_BASED = "rule_based"
+    LLM_CORRECTIVE = "llm_corrective"
 
 
 class AdminJobStatus(str, enum.Enum):
@@ -378,29 +393,46 @@ class ArgumentParticipant(Base):
 
 
 # ---------------------------------------------------------------------------
-# Table 9: pipeline_runs
-# One row per pipeline invocation.  Re-running any step produces a new row.
-# Prior rows are never deleted until the new run is promoted.
+# Table 9: import_run
+# One row per import unit (declared source + method).  Re-running any step
+# produces a new row.  Prior rows are never deleted until the new run is
+# promoted.  Phase 47: generalizes the old PDF-pipeline-only run model —
+# source/method are declared explicitly at write time by every writer
+# (corpus, pdf_pipeline), never defaulted or inferred at read time.
 # ---------------------------------------------------------------------------
 
 
-class PipelineRun(Base):
-    __tablename__ = "pipeline_runs"
+class ImportRun(Base):
+    __tablename__ = "import_run"
 
     id = Column(Integer, primary_key=True)
     argument_id = Column(Integer, ForeignKey("arguments.id"), nullable=False)
     step = Column(String(50), nullable=False)  # "ingest", "parse", "resolve"
     status = Column(
-        SAEnum(PipelineRunStatus, name="pipeline_run_status", values_callable=lambda e: [x.value for x in e]),
+        SAEnum(ImportRunStatus, name="import_run_status", values_callable=lambda e: [x.value for x in e]),
         nullable=False,
-        default=PipelineRunStatus.PENDING,
+        default=ImportRunStatus.PENDING,
     )
+    # Phase 47 (D-02): declared explicitly by every writer, no default —
+    # provenance is correct by construction on every new row, never inferred.
+    source = Column(
+        SAEnum(ImportSource, name="import_source", values_callable=lambda e: [x.value for x in e]),
+        nullable=False,
+    )
+    method = Column(
+        SAEnum(ImportMethod, name="import_method", values_callable=lambda e: [x.value for x in e]),
+        nullable=False,
+    )
+    # Phase 47 (D-04 in provenance-and-trust-model.md / PROV-04): dual-write
+    # of external-source lineage (e.g. the ConvoKit conversation id) for
+    # source=corpus rows. Argument.oyez_transcript_id remains the live
+    # dedup key / public API field — this is an addition, not a relocation.
+    external_id = Column(String(50), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     completed_at = Column(DateTime(timezone=True), nullable=True)
     failure_reason = Column(Text, nullable=True)
     pdf_path = Column(String(500), nullable=True)    # local path to immutable PDF
     pdf_url = Column(String(1000), nullable=True)    # original download URL
-    strategy = Column(String(100), nullable=True)    # "rule_based", "llm_corrective"
     prompt_version = Column(String(50), nullable=True)  # for schema version tracking
 
 
@@ -409,7 +441,9 @@ class PipelineRun(Base):
 # One row per spoken turn or stage direction.
 # BigInteger PK — could accumulate millions of rows over many arguments.
 # person_id is null at parse time; populated by the Resolve step (Phase 2).
-# pipeline_run_id links each row to the pipeline run that produced it (PIPE-04, PIPE-11).
+# import_run_id links each row to the import run that produced it (PIPE-04,
+# PIPE-11). Phase 47 (D-05): the per-row `strategy` column is dropped —
+# utterances inherit provenance from their parent import_run's source/method.
 # ---------------------------------------------------------------------------
 
 
@@ -418,7 +452,7 @@ class Utterance(Base):
 
     id = Column(BigInteger, primary_key=True)
     argument_id = Column(Integer, ForeignKey("arguments.id"), nullable=False)
-    pipeline_run_id = Column(Integer, ForeignKey("pipeline_runs.id"), nullable=False)
+    import_run_id = Column(Integer, ForeignKey("import_run.id"), nullable=False)
     sequence = Column(Integer, nullable=False)
     raw_speaker_label = Column(String(200), nullable=True)   # None for stage directions
     text = Column(Text, nullable=False)
@@ -426,17 +460,16 @@ class Utterance(Base):
     section_hint = Column(String(50), nullable=True)  # "petitioner"|"respondent"|"rebuttal"|"amicus"
     side = Column(SAEnum(SideEnum, name="side", values_callable=lambda e: [x.value for x in e]), nullable=False, default=SideEnum.UNKNOWN)
     person_id = Column(Integer, ForeignKey("people.id"), nullable=True)  # null at parse time
-    strategy = Column(String(100), nullable=False)   # PIPE-04: "rule_based" | "llm_corrective"
 
     __table_args__ = (
         UniqueConstraint(
             "argument_id",
-            "pipeline_run_id",
+            "import_run_id",
             "sequence",
             name="uq_utterance_arg_run_seq",
         ),
         Index("ix_utterances_argument_id", "argument_id"),
-        Index("ix_utterances_pipeline_run_id", "pipeline_run_id"),
+        Index("ix_utterances_import_run_id", "import_run_id"),
     )
 
 

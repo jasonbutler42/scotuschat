@@ -120,7 +120,7 @@ FIXTURE_SET: list[dict] = [
 TRUNCATE_SQL = """
     TRUNCATE TABLE
         utterances,
-        pipeline_runs,
+        import_run,
         case_arguments,
         argument_participants,
         arguments,

@@ -165,10 +165,15 @@ Full phase details: `.planning/milestones/v1.7-ROADMAP.md`
   3. External-source lineage (oyez transcript/case ids) is captured on `import_run.external_id` for corpus-sourced runs.
   4. Every import path stamps provenance at write time, verified by re-seeding a fixture and reading it directly off the rows — a corpus row reads `source=corpus / method=direct`, a rule-parsed PDF row reads `pdf_pipeline / rule_based`, an LLM-corrected row reads `pdf_pipeline / llm_corrective`. The verification fixture must exercise all three combinations.
   5. `pdf_path` / `pdf_url` are nullable and populated only for `pdf_pipeline` runs; corpus runs carry no fabricated PDF artifacts.
-**Plans**: TBD
+**Plans**: 6 plans (4 waves)
 
 Plans:
-- [ ] TBD (planned via `/gsd-plan-phase 47`)
+- [ ] 47-01-PLAN.md — Schema spine + corpus tracer: `ImportRun` model, migration 0026, the three hardcoded table-name sites, corpus writer stamping `corpus`/`direct`/`external_id` (wave 1)
+- [ ] 47-02-PLAN.md — PDF pipeline writers stamp `pdf_pipeline` with `normalized` / `rule_based` / `llm_corrective`; the two PDF legs of the D-06 guardrail (wave 2)
+- [ ] 47-03-PLAN.md — API read layer + public schema; retires the `strategy == "convokit_import"` hack for `ImportRun.source == ImportSource.CORPUS` (wave 2)
+- [ ] 47-04-PLAN.md — `pipeline/tests` conversion; `test_pipeline_run.py` renamed to `test_import_run.py` (wave 3)
+- [ ] 47-05-PLAN.md — `api/tests` and root `tests/` conversion, including the two schema-contract files (wave 3)
+- [ ] 47-06-PLAN.md — Live re-seed, D-06 three-combination evidence, full-suite gate, operator verification (wave 4)
 
 ### Phase 48: Trust & Lifecycle
 

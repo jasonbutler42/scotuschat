@@ -44,3 +44,48 @@ import_run CASCADE` (scotus_test only, never touching migration 0026 itself or
 `DATABASE_URL`) before downgrading, whenever `import_run` currently exists. See
 47-05-SUMMARY.md for the commit. Logged here for visibility since it's a cross-file test
 interaction, not a simple identifier rename.
+
+---
+
+## `api/tests/test_phase44_argument_role_roundtrip.py` fails under the bare full-suite
+`pytest -q` (testpaths order `tests pipeline/tests api/tests`) — pre-existing, unrelated to
+Phase 47
+
+**Found during:** 47-05's final full bare-suite `pytest -q` integration check
+(`.planning/phases/47-provenance-foundation/47-05-PLAN.md`'s `<upstream_state>` explicitly
+asks for this to be run and reported honestly).
+
+**Symptom:** 4 parametrized `test_resolve_row_update_accepts_each_dropdown_value_and_coerces_enum`
+cases fail with `AssertionError: assert False` on `isinstance(body.side, SideEnum)`, even
+though `body.side == SideEnum(value)` passes on the line immediately above.
+
+**Root cause:** `tests/test_admin_router.py` intentionally `del sys.modules[...]`s and
+`importlib.import_module("api.main")`s every `api.*` module mid-suite (a documented pattern —
+`api/tests/conftest.py`'s own docstring names this exact test and explains why several
+fixtures elsewhere use function-local imports to avoid it). `pytest.ini`'s
+`testpaths = tests pipeline/tests api/tests` collects `tests/` (and therefore
+`test_admin_router.py`) before `api/tests/`, so by the time
+`test_phase44_argument_role_roundtrip.py`'s tests run, `api.models.models.SideEnum` has been
+reimported as a NEW class object. `ResolveRowUpdate` (imported at MODULE level in that test
+file, i.e. at collection time, before the reimport happens) is bound to the OLD `SideEnum`
+class for its Pydantic field, while the test body's own `from api.models.models import SideEnum`
+(a function-local import, executed at test-run time, after the reimport) resolves to the NEW
+class object — two distinct class objects with identical values fail `isinstance`.
+
+**Reproduces in isolation**, confirming it has nothing to do with any file this plan touched:
+```
+./.venv/bin/python -m pytest tests/test_admin_router.py api/tests/test_phase44_argument_role_roundtrip.py -q
+# 4 failed, 16 passed
+```
+Neither file references `PipelineRun`/`ImportRun`/`import_run` at all. `tests/test_admin_router.py`
+dates to Phase 5 (`01faf02ee`); `api/tests/test_phase44_argument_role_roundtrip.py` dates to
+Phase 44 (`bbaac48d5`) — both long before Phase 47. It does NOT reproduce when running
+`api/tests tests -q` with explicit paths (as Task 2's own acceptance criteria does) because
+pytest then collects in command-line order (`api/tests` before `tests`), so the reimport
+happens AFTER this file's tests already ran.
+
+**Status:** open — out of scope for 47-05 (neither file is in this plan's `files_modified`,
+and the underlying fix is either changing `test_admin_router.py`'s reimport strategy or
+switching `test_phase44_argument_role_roundtrip.py`'s `ResolveRowUpdate` import to be
+function-local, both unrelated to the provenance/import_run conversion this phase is about).
+Candidate for a follow-up plan or `/gsd-review-backlog`.

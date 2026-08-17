@@ -65,6 +65,8 @@ Requirements for milestone v1.8. Each maps to exactly one roadmap phase.
 
 ## Traceability
 
+Mappings confirmed by the v1.8 roadmap (`.planning/ROADMAP.md`), created 2026-08-17. Every v1 requirement maps to exactly one phase; the five requirement categories map 1:1 onto five dependency-ordered phases (47–51).
+
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | PROV-01 | Phase 47 | Pending |
@@ -100,4 +102,4 @@ Requirements for milestone v1.8. Each maps to exactly one roadmap phase.
 
 ---
 *Requirements defined: 2026-08-17*
-*Last updated: 2026-08-17 after initial definition*
+*Last updated: 2026-08-17 — v1.8 roadmap created; traceability confirmed (25/25 mapped to Phases 47–51, no orphans, no duplicates)*

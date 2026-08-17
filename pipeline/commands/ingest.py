@@ -54,8 +54,10 @@ from api.models.models import (
     Argument,
     Case,
     CaseArgument,
+    ImportMethod,
     ImportRun,
     ImportRunStatus,
+    ImportSource,
 )
 from pipeline.db import get_session
 
@@ -525,18 +527,16 @@ async def _run_ingest_inner(args) -> None:
                 session.add(link)
 
         # ---- d. ImportRun record ----
-        # Phase 47 (D-01 gap-closure): renamed from the old run-model class
-        # so this module remains importable after models.py's rename -- the
-        # source=pdf_pipeline/method=normalized stamping this row needs is
-        # plan 47-02's scoped work (RESEARCH.md Pattern 2); this run
-        # construction is intentionally left without source/method for now
-        # and will fail its NOT NULL constraint if actually invoked before
-        # 47-02 lands, matching 47-01-PLAN.md's <intermediate_state_note>
-        # ("pipeline/commands/{ingest,parse,resolve}.py ... are RED").
+        # Phase 47 (PROV-01/PROV-06): ingest's work here — normalize_docket_value,
+        # docket_number_norm, _derive_slug — is a deterministic transform, which
+        # is the closed vocabulary's own definition of `normalized` (RESEARCH.md
+        # Pattern 2). pdf_path/pdf_url are populated on every pdf_pipeline row.
         run = ImportRun(
             argument_id=argument.id,
             step="ingest",
             status=ImportRunStatus.COMPLETED,
+            source=ImportSource.PDF_PIPELINE,
+            method=ImportMethod.NORMALIZED,
             pdf_path=str(pdf_path),
             pdf_url=args.url,
         )
@@ -548,7 +548,7 @@ async def _run_ingest_inner(args) -> None:
         argument_id = argument.id
 
     # get_session() commits on clean exit
-    print(f"Ingest complete. pipeline_run.id = {run_id}")
+    print(f"Ingest complete. import_run.id = {run_id}")
 
     # ------------------------------------------------------------------
     # Step 6: Mark admin_jobs COMPLETED + argument_id (job-driven path)

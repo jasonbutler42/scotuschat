@@ -167,7 +167,7 @@ Full phase details: `.planning/milestones/v1.7-ROADMAP.md`
   4. Every import path stamps provenance at write time, verified by re-seeding a fixture and reading it directly off the rows — a corpus row reads `source=corpus / method=direct`, a rule-parsed PDF row reads `pdf_pipeline / rule_based`, an LLM-corrected row reads `pdf_pipeline / llm_corrective`. The verification fixture must exercise all three combinations.
   5. `pdf_path` / `pdf_url` are nullable and populated only for `pdf_pipeline` runs; corpus runs carry no fabricated PDF artifacts.
 
-**Plans**: 5/6 plans executed (4 waves)
+**Plans**: 6/6 plans executed (4 waves)
 
 Plans:
 **Wave 1**
@@ -186,7 +186,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 47-06-PLAN.md — Live re-seed, D-06 three-combination evidence, full-suite gate, operator verification (wave 4)
+- [x] 47-06-PLAN.md — Live re-seed, D-06 three-combination evidence, full-suite gate, operator verification (wave 4)
 
 ### Phase 48: Trust & Lifecycle
 
@@ -319,7 +319,7 @@ Plans:
 | 44. Resolve Table Rework | v1.7 | 9/9 | Complete    | 2026-08-11 |
 | 45. Deferred UI Bug Fixes | v1.7 | 2/2 | Complete    | 2026-08-12 |
 | 46. Dev Environment Reliability | v1.7 | 6/6 | Complete    | 2026-08-14 |
-| 47. Provenance Foundation | v1.8 | 5/6 | In Progress|  |
+| 47. Provenance Foundation | v1.8 | 6/6 | In Progress|  |
 | 48. Trust & Lifecycle | v1.8 | 0/TBD | Not started | - |
 | 49. Review Model | v1.8 | 0/TBD | Not started | - |
 | 50. Unified Import Path | v1.8 | 0/TBD | Not started | - |

@@ -50,7 +50,7 @@ coverage:
     description: "Public utterance read path selects the latest completed parse run deterministically by MAX(import_run.id), unchanged step/status semantics"
     requirement: "PROV-01"
     verification:
-      - kind: static
+      - kind: other
         ref: "grep -c func.max(ImportRun.id) / ImportRun.step==\"parse\" / ImportRunStatus.COMPLETED in api/services/arguments.py"
         status: pass
       - kind: integration
@@ -61,10 +61,10 @@ coverage:
     description: "Corpus-vs-pdf Source tag derived from ImportRun.source == ImportSource.CORPUS at both call sites (get_job, list_jobs); PIPELINE_RUN_STRATEGY deleted repo-wide"
     requirement: "PROV-03"
     verification:
-      - kind: static
+      - kind: other
         ref: "grep -c 'ImportRun.source == ImportSource.CORPUS' api/services/admin_jobs.py (returns 2)"
         status: pass
-      - kind: static
+      - kind: other
         ref: "grep -rc PIPELINE_RUN_STRATEGY api/ pipeline/ --include=*.py (returns 0 across all files)"
         status: pass
       - kind: integration
@@ -75,13 +75,13 @@ coverage:
     description: "Public UtteranceResponse carries import_run_id, no strategy/source/method/external_id field; FastAPI app imports cleanly; no frontend file needed modification"
     requirement: "PROV-04"
     verification:
-      - kind: static
+      - kind: other
         ref: "grep -c import_run_id: int / pipeline_run_id / oyez_transcript_id / '^ *(strategy|source|method|external_id):' in api/schemas/utterance.py"
         status: pass
       - kind: integration
         ref: "./.venv/bin/python -c \"import api.main\""
         status: pass
-      - kind: static
+      - kind: other
         ref: "grep -rn pipeline_run_id app/src (no matches)"
         status: pass
     human_judgment: false

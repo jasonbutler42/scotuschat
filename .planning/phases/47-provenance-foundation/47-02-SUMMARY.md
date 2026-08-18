@@ -48,7 +48,7 @@ coverage:
     description: "Ingest stamps source=pdf_pipeline/method=normalized; pdf_path/pdf_url populated"
     requirement: "PROV-06"
     verification:
-      - kind: static
+      - kind: other
         ref: "grep -c ImportSource.PDF_PIPELINE / ImportMethod.NORMALIZED / pdf_path=str(pdf_path) in pipeline/commands/ingest.py"
         status: pass
     human_judgment: false
@@ -56,7 +56,7 @@ coverage:
     description: "Resolve stamps source=pdf_pipeline/method=normalized; still refuses a non-parse source run"
     requirement: "PROV-01/PROV-02"
     verification:
-      - kind: static
+      - kind: other
         ref: "grep -c ImportSource.PDF_PIPELINE / ImportMethod.NORMALIZED in pipeline/commands/resolve.py"
         status: pass
     human_judgment: false
@@ -99,7 +99,7 @@ coverage:
     description: "No live Anthropic API call from the test suite"
     requirement: "T-47-08"
     verification:
-      - kind: static
+      - kind: other
         ref: "grep -c anthropic pipeline/tests/test_import_run_provenance.py returns 0"
         status: pass
     human_judgment: false

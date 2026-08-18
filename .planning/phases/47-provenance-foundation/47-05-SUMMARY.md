@@ -73,7 +73,7 @@ coverage:
       - kind: integration
         ref: "./.venv/bin/python -m pytest api/tests/test_admin_jobs_source.py api/tests/test_admin_jobs_stats.py api/tests/test_admin_jobs_service.py api/tests/test_admin_jobs_phase35.py api/tests/test_admin_dev_routes.py -q -- 33 passed"
         status: pass
-      - kind: static
+      - kind: other
         ref: "grep -c ImportSource.CORPUS / ImportSource.PDF_PIPELINE in api/tests/test_admin_jobs_source.py (3 / 2)"
         status: pass
     human_judgment: false
@@ -84,10 +84,10 @@ coverage:
       - kind: integration
         ref: "./.venv/bin/python -m pytest api/tests tests -q -- 800 passed, 10 skipped, 0 failed"
         status: pass
-      - kind: static
+      - kind: other
         ref: "grep -c import_run_id / strategy-not-in / source-not-in / method-not-in / external_id-not-in assertions in api/tests/test_arguments.py"
         status: pass
-      - kind: static
+      - kind: other
         ref: "grep -c 'assert len(tables) == 13' tests/test_models_import.py (1); grep -c ImportSource/ImportMethod (3 each)"
         status: pass
     human_judgment: false

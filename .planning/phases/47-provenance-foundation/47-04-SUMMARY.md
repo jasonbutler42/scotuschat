@@ -61,7 +61,7 @@ coverage:
       - kind: integration
         ref: "./.venv/bin/python -m pytest pipeline/tests/test_import_run.py pipeline/tests/test_parse.py pipeline/tests/test_ingest.py pipeline/tests/test_resolve.py -q -- 40 passed, 3 xfailed"
         status: pass
-      - kind: static
+      - kind: other
         ref: "git log --follow --oneline -- pipeline/tests/test_import_run.py shows history predating this phase"
         status: pass
     human_judgment: false
@@ -69,7 +69,7 @@ coverage:
     description: "test_run_id_strategy renamed to test_run_id_and_method; the per-utterance strategy assertion moved to the parent run's ImportMethod assertion, not deleted"
     requirement: "PROV-05"
     verification:
-      - kind: static
+      - kind: other
         ref: "grep -c ImportMethod. pipeline/tests/test_parse.py returns 3 (>=2 required)"
         status: pass
     human_judgment: false
@@ -80,10 +80,10 @@ coverage:
       - kind: integration
         ref: "./.venv/bin/python -m pytest pipeline/tests -q -- 239 passed, 5 xfailed"
         status: pass
-      - kind: static
+      - kind: other
         ref: "grep -rc PipelineRun\\|pipeline_run_id\\|pipeline_runs pipeline/tests/ -- 0 for every file"
         status: pass
-      - kind: static
+      - kind: other
         ref: "grep -rc .strategy\\|strategy= pipeline/tests/ -- 0 for every file"
         status: pass
     human_judgment: false
@@ -94,7 +94,7 @@ coverage:
       - kind: integration
         ref: "pipeline/tests/test_import_convokit_core.py::test_creates_case_argument_caseargument_importrun_entities"
         status: pass
-      - kind: static
+      - kind: other
         ref: "grep -c 'def _write_corpus_fixture' pipeline/tests/test_import_convokit_core.py returns 1"
         status: pass
     human_judgment: false

@@ -1,10 +1,30 @@
 ---
 phase: 47-provenance-foundation
 verified: 2026-08-18T14:41:33Z
-status: gaps_found
-score: 4/5 must-haves verified
+status: passed
+score: 5/5 must-haves verified (4 verified + 1 accepted by operator override)
 behavior_unverified: 0
-overrides_applied: 0
+overrides_applied: 1
+overrides:
+  - truth: "Every import path stamps provenance at write time, verified by re-seeding a fixture and reading it directly off the rows — the verification fixture must exercise all three combinations."
+    accepted_by: operator
+    accepted: 2026-08-18
+    rationale: >
+      Operator scope decision: the corpus import path is the priority and the PDF upload
+      route is deferred until corpus import can properly import and reconcile case details.
+      The `corpus/direct` combination is verified literally as worded — a real
+      `reset_to_fixture` re-seed against the live dev database, provenance read directly off
+      the `import_run` rows. The two `pdf_pipeline` legs are verified by real-writer tests
+      driving `run_parse` with `parse_with_llm` monkeypatched, which proves the actual
+      engineering claim (each writer stamps the source/method determined by the branch the
+      code took, never a caller-supplied value) for all three combinations. Only the
+      live-reseed *vehicle* for the two PDF legs is missing, and supplying it would require
+      building a synthetic PDF fixture — work on the deprioritized path. Accepted as a
+      composition rather than closed as a gap.
+    deferred_to: "todos/pending/2026-08-18-pdf-provenance-live-fixture-verification.md"
+    references:
+      - ".planning/PROJECT.md (Key Decisions — corpus-first / PDF-deferred, 2026-08-18)"
+      - ".planning/ROADMAP.md (Phase 47 SC-4 annotation; Phase 50 scope flag)"
 gaps:
   - truth: "Every import path stamps provenance at write time, verified by re-seeding a fixture and reading it directly off the rows — the verification fixture must exercise all three combinations (corpus/direct, pdf_pipeline/rule_based, pdf_pipeline/llm_corrective)."
     status: partial
@@ -49,7 +69,7 @@ fields become nullable and populated only for `pdf_pipeline` runs. Delivered as 
 (drop `pipeline_runs`, create `import_run` fresh, re-seed through updated import code).
 
 **Verified:** 2026-08-18T14:41:33Z
-**Status:** gaps_found
+**Status:** passed (operator override applied 2026-08-18 — see frontmatter `overrides`)
 **Re-verification:** No — initial verification
 
 ## Goal Achievement
@@ -61,7 +81,7 @@ fields become nullable and populated only for `pdf_pipeline` runs. Delivered as 
 | 1 | Every `import_run` row records a declared `source` and `method` from closed vocabularies, readable directly with no join-and-infer step | ✓ VERIFIED | `api/models/models.py:405-425` — `source`/`method` are `SAEnum(..., nullable=False)` with no `default=`; migration `0026` creates both columns `NOT NULL` with no `server_default`. Independently re-queried live DB (see Evidence §1): all 4 `import_run` rows read `source`/`method` directly, no join needed beyond `arguments.id = import_run.argument_id`. `test_import_run_rejects_missing_source_and_method` independently re-run and PASSED, proving the DB itself (not just app code) rejects a missing value. |
 | 2 | `import_run` is the lineage backbone generalizing `pipeline_run`; every utterance references its `import_run` | ✓ VERIFIED | Migration `0026` drops `pipeline_runs` outright (not renamed) and repoints `utterances.pipeline_run_id → import_run_id` with FK `utterances_import_run_id_fkey`. `Utterance.import_run_id` is `nullable=False` (`api/models/models.py:455`). Independently queried live DB: 0 orphan/null-FK utterances out of 1001 total (see Evidence §1). `pipeline_runs` confirmed absent from `information_schema` (grep sweep + `47-PROVENANCE-EVIDENCE.md`). |
 | 3 | External-source lineage (oyez ids) is captured on `import_run.external_id` for corpus-sourced runs | ✓ VERIFIED | `pipeline/commands/import_convokit.py:567-573` constructs `ImportRun(..., external_id=conversation_id)`. Independently queried live DB: all 4 corpus rows read `external_id` equal to their `Argument.oyez_transcript_id` (15169/13015/18897/22372 — see Evidence §1). `Argument.oyez_transcript_id` itself is untouched (still the dedup key, still the public API field per `api/schemas/utterance.py`). |
-| 4 | Every import path stamps provenance at write time, verified by re-seeding a fixture and reading it directly off the rows — all three combinations must be exercised | ✗ FAILED (partial) | **`corpus/direct`:** independently re-verified live against the dev DB (Evidence §1) — matches exactly. **`pdf_pipeline/rule_based`** and **`pdf_pipeline/llm_corrective`:** the writers (`pipeline/commands/parse.py:261-275`) are correctly implemented and independently re-confirmed passing via a fresh run of `test_d06_all_three_combinations_present` (Evidence §2) — but this is pytest-fixture/rolled-back-transaction evidence against `TEST_DATABASE_URL`, not a `reset_to_fixture` re-seed against a live database as the roadmap wording specifies and as the `corpus/direct` leg actually delivered. See gap entry above. |
+| 4 | Every import path stamps provenance at write time, verified by re-seeding a fixture and reading it directly off the rows — all three combinations must be exercised | ◷ ACCEPTED (override) | **`corpus/direct`:** independently re-verified live against the dev DB (Evidence §1) — matches exactly. **`pdf_pipeline/rule_based`** and **`pdf_pipeline/llm_corrective`:** the writers (`pipeline/commands/parse.py:261-275`) are correctly implemented and independently re-confirmed passing via a fresh run of `test_d06_all_three_combinations_present` (Evidence §2) — but this is pytest-fixture/rolled-back-transaction evidence against `TEST_DATABASE_URL`, not a `reset_to_fixture` re-seed against a live database as the roadmap wording specifies and as the `corpus/direct` leg actually delivered. See gap entry above. |
 | 5 | `pdf_path`/`pdf_url` are nullable and populated only for `pdf_pipeline` runs; corpus runs carry no fabricated PDF artifacts | ✓ VERIFIED | `api/models/models.py:434-435` — both columns `nullable=True`. `pipeline/commands/ingest.py:534-541` populates both for `pdf_pipeline` rows; `pipeline/commands/import_convokit.py`'s corpus `ImportRun` construction never sets either. Independently queried live DB: all 4 corpus rows read `pdf_path IS NULL`, `pdf_url IS NULL` (Evidence §1). `test_corpus_import_leaves_pdf_fields_null` and `test_pdf_pipeline_run_populates_pdf_path` both exist and assert the inverse shapes for each source. |
 
 **Score:** 4/5 truths verified (1 partial/failed — see gap)

@@ -146,7 +146,7 @@ Full phase details: `.planning/milestones/v1.7-ROADMAP.md`
 
 **Overview:** A targeted re-model of the import/provenance layer — not a rewrite. Provenance becomes first-class: every import unit declares its `source` and `method`, so trust is a stated attribute of the row rather than archaeology across `strategy` strings and nullable `oyez_*` columns. On that foundation, every argument is born a *candidate* carrying a materialized trust tier and is promoted to *published* through a single review-gated promotion (the gate sits at promotion, not row-creation; status-based staging, no separate staging table), an operator review queue surfaces everything needing attention, and the two import paths (corpus and PDF) collapse into peer strategies of one unified, idempotent, authority-governed import model. The public noun finally aligns to "arguments" and a shared design system lands last, once the corrected domain language is settled. The read model, people, tenures, and utterance display are stable and out of scope. Hard constraints throughout: Alembic is the sole DDL authority, the pipeline stays offline-only, trust is operator-facing and never shown publicly (apolitical framing), and backfill must preserve existing corpus + PDF data. Sequencing is dependency-ordered and load-bearing — provenance (47) is the keystone everything else builds on, then trust/lifecycle (48), then the review model (49), then the unified import path (50), with the design system + noun alignment (51) deliberately last.
 
-- [ ] **Phase 47: Provenance Foundation** - `import_run` generalizes `pipeline_run` with declared `source`/`method` + external-id lineage; PDF-only fields go nullable; every import path stamps provenance at write time (disposable DB → clean rebuild, no legacy backfill)
+- [x] **Phase 47: Provenance Foundation** - `import_run` generalizes `pipeline_run` with declared `source`/`method` + external-id lineage; PDF-only fields go nullable; every import path stamps provenance at write time (disposable DB → clean rebuild, no legacy backfill) (completed 2026-08-18)
 - [ ] **Phase 48: Trust & Lifecycle** - Materialized `trust_tier` rollup, `candidate`-on-arrival status, and a single `published_at` promotion gate hard-blocked on UNCERTAIN with a logged operator override
 - [ ] **Phase 49: Review Model** - Four-state `review_state` on operator-editable rows, discrepancy recording on re-import, and a filterable operator review queue (generalizes `name_needs_review`)
 - [ ] **Phase 50: Unified Import Path** - Corpus and PDF become peer strategies writing `import_run` directly; `admin_job` re-points; re-import is idempotent and authority-governed so it never clobbers operator work
@@ -164,7 +164,7 @@ Full phase details: `.planning/milestones/v1.7-ROADMAP.md`
   1. Every `import_run` row records a declared `source` and a declared `method` from the closed vocabularies, readable directly with no join-and-infer step.
   2. `import_run` is the lineage backbone that generalizes `pipeline_run`, and every utterance references its `import_run`.
   3. External-source lineage (oyez transcript/case ids) is captured on `import_run.external_id` for corpus-sourced runs.
-  4. Every import path stamps provenance at write time, verified by re-seeding a fixture and reading it directly off the rows — a corpus row reads `source=corpus / method=direct`, a rule-parsed PDF row reads `pdf_pipeline / rule_based`, an LLM-corrected row reads `pdf_pipeline / llm_corrective`. The verification fixture must exercise all three combinations.
+  4. Every import path stamps provenance at write time, verified by re-seeding a fixture and reading it directly off the rows — a corpus row reads `source=corpus / method=direct`, a rule-parsed PDF row reads `pdf_pipeline / rule_based`, an LLM-corrected row reads `pdf_pipeline / llm_corrective`. The verification fixture must exercise all three combinations. _(Operator override 2026-08-18: satisfied as a composition — `corpus/direct` proven by a live `reset_to_fixture` re-seed read directly off `import_run` rows; the two `pdf_pipeline` legs proven by real-writer tests driving `run_parse` with `parse_with_llm` monkeypatched. The live-reseed vehicle for the PDF legs is deferred with the PDF route itself — no PDF fixture exists and building one was declined as work on the deprioritized path. See PROJECT.md Key Decisions and `todos/pending/2026-08-18-pdf-provenance-live-fixture-verification.md`.)_
   5. `pdf_path` / `pdf_url` are nullable and populated only for `pdf_pipeline` runs; corpus runs carry no fabricated PDF artifacts.
 
 **Plans**: 6/6 plans executed (4 waves)
@@ -231,6 +231,7 @@ Plans:
 
 **Goal**: The two import paths collapse into peer strategies of one import model, resolving the diagnosis's core finding that "the corpus path is a guest in a house built for the PDF pipeline." Corpus import writes `import_run` directly (`source=corpus`) with no fabricated PDF-pipeline artifacts; the PDF pipeline path adapts to `import_run` as one strategy among peers, keeping its parse/resolve lifecycle; `admin_job` references an existing `import_run` rather than inventing one, and the corpus CLI batch needs no admin_job at all. Re-import is idempotent by construction — re-running yields the same result and never clobbers operator-authored values — governed by the authority ladder (operator > corpus > pdf/rule_based > pdf/llm_corrective) applied at every writer, with disagreements at equal-or-higher authority surfaced as discrepancies (via Phase 49's review model) rather than silent overwrites.
 **Depends on**: Phase 49 (re-import discrepancy recording builds on the review model; requires the full provenance + trust + review schema in place)
+**⚠ Scope flag (2026-08-18)**: this phase's PDF half — success criterion 2 ("the PDF pipeline path reads and writes `import_run` as one strategy among peers") and the `pdf/rule_based` / `pdf/llm_corrective` rungs of criterion 5's authority ladder — sits on the **deferred PDF route**. The corpus half (criteria 1, 3, 4, and the operator/corpus rungs of 5) is unaffected and remains the priority. Re-scope this phase at planning time: either split the PDF half into its own later phase, or confirm the PDF route has been picked back up. See PROJECT.md Key Decisions.
 **Requirements**: IMPORT-01, IMPORT-02, IMPORT-03, IMPORT-04, IMPORT-05
 **Success Criteria** (what must be TRUE):
 
@@ -319,7 +320,7 @@ Plans:
 | 44. Resolve Table Rework | v1.7 | 9/9 | Complete    | 2026-08-11 |
 | 45. Deferred UI Bug Fixes | v1.7 | 2/2 | Complete    | 2026-08-12 |
 | 46. Dev Environment Reliability | v1.7 | 6/6 | Complete    | 2026-08-14 |
-| 47. Provenance Foundation | v1.8 | 6/6 | In Progress|  |
+| 47. Provenance Foundation | v1.8 | 6/6 | Complete    | 2026-08-18 |
 | 48. Trust & Lifecycle | v1.8 | 0/TBD | Not started | - |
 | 49. Review Model | v1.8 | 0/TBD | Not started | - |
 | 50. Unified Import Path | v1.8 | 0/TBD | Not started | - |

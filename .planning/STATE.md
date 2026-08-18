@@ -5,7 +5,7 @@ milestone_name: Import & Provenance Re-model
 current_phase: 48
 current_phase_name: Trust & Lifecycle
 status: planning
-stopped_at: Phase 47 context gathered
+stopped_at: Phase 47 complete and verified; Phase 48 not yet discussed
 last_updated: "2026-08-18T15:35:33.451Z"
 last_activity: 2026-08-18
 last_activity_desc: Phase 47 complete, transitioned to Phase 48
@@ -21,10 +21,10 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-08-15 after v1.7 milestone completed and archived)
+See: .planning/PROJECT.md (updated 2026-08-18 — Phase 47 complete; corpus-first / PDF-deferred scope decision recorded)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** Phase 47 — provenance-foundation
+**Current focus:** Phase 48 — Trust & Lifecycle (Phase 47 complete 2026-08-18)
 
 ## Current Position
 

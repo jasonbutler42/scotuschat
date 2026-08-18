@@ -15,7 +15,7 @@ Requirements for milestone v1.8. Each maps to exactly one roadmap phase.
 - [x] **PROV-02**: Every import unit records a declared `method` (manual / direct / normalized / rule_based / llm_corrective)
 - [x] **PROV-03**: `import_run` generalizes `pipeline_run` as the lineage backbone; utterances reference `import_run`
 - [x] **PROV-04**: External-source lineage (oyez ids) captured on `import_run.external_id`
-- [ ] **PROV-05**: Every import path stamps `source` / `method` / `external_id` at write time (mapping: `convokit_import → corpus/direct`, `rule_based → pdf_pipeline/rule_based`, `llm_corrective → pdf_pipeline/llm_corrective`), verified by re-seeding a fixture and reading provenance directly off the rows _(reframed 2026-08-17: the project DB is disposable/fixture-reseedable, so provenance is guaranteed by write-time stamping rather than in-migration backfill of legacy rows — see `phases/47-provenance-foundation/47-CONTEXT.md` D-03)_
+- [x] **PROV-05**: Every import path stamps `source` / `method` / `external_id` at write time (mapping: `convokit_import → corpus/direct`, `rule_based → pdf_pipeline/rule_based`, `llm_corrective → pdf_pipeline/llm_corrective`), verified by re-seeding a fixture and reading provenance directly off the rows _(reframed 2026-08-17: the project DB is disposable/fixture-reseedable, so provenance is guaranteed by write-time stamping rather than in-migration backfill of legacy rows — see `phases/47-provenance-foundation/47-CONTEXT.md` D-03)_
 - [x] **PROV-06**: PDF-only fields (`pdf_path` / `pdf_url`) are nullable and populated only for `pdf_pipeline` source
 
 ### Trust & Lifecycle (TRUST)
@@ -73,7 +73,7 @@ Mappings confirmed by the v1.8 roadmap (`.planning/ROADMAP.md`), created 2026-08
 | PROV-02 | Phase 47 | Complete |
 | PROV-03 | Phase 47 | Complete |
 | PROV-04 | Phase 47 | Complete |
-| PROV-05 | Phase 47 | Pending |
+| PROV-05 | Phase 47 | Complete |
 | PROV-06 | Phase 47 | Complete |
 | TRUST-01 | Phase 48 | Pending |
 | TRUST-02 | Phase 48 | Pending |

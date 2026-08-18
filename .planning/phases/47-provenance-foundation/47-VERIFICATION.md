@@ -253,3 +253,53 @@ scope) and run the Task 3 checkpoint against the merged main worktree before sta
 
 _Verified: 2026-08-18T14:41:33Z_
 _Verifier: Claude (gsd-verifier)_
+
+---
+
+## Re-validation Addendum — 2026-08-18 (post-UAT)
+
+_Appended by the orchestrator during `/gsd-ship 47`. This does NOT replace the
+`gsd-verifier` findings above; it records why the report went stale and what the
+UAT and security sessions added. Original verdict (`status: passed`, 5/5) stands
+unchanged._
+
+**Why the report went stale.** `gsd-tools query verification.status` compares commit
+times and flagged commit `e9d894e3f` (15:14:36), which postdates this report
+(`e3acf44fb`, 10:36:00), as a summary newer than the verification. That commit
+rewrote 16 `verification[].kind` values from `static` to `other` in
+`47-02/03/04/05-SUMMARY.md`. `static` is outside the classifier's closed vocabulary
+(`unit | integration | e2e | automated_ui | manual_procedural | other`), so it
+raised `invalid_kind` and forced 11 auto-passable deliverables into redundant human
+UAT prompts. **No deliverable, evidence `ref`, or `status` value changed** — the diff
+is the enum token only. Auto-pass routing keys on `human_judgment: false` plus
+all-`pass` verification, never on `kind`, so no routing semantics were altered.
+
+**UAT outcome (`47-UAT.md`, status `complete`).** 28/28 passed, 0 issues, 0 gaps,
+0 blocked. 25 deliverables auto-covered by passing tests; 3 confirmed by the
+operator.
+
+**Partially closes the Task 3 gap flagged above.** This report noted 47-06-PLAN.md
+Task 3's blocking human-verify checkpoint "was never performed." Two of its three
+legs are now covered:
+
+- **Cold-start smoke** — operator-confirmed: `alembic upgrade head` to 0026 on a
+  fresh database with `import_run` and both enums present, fixture re-seed
+  completing, and a primary read resolving utterances through `import_run_id`.
+- **Public-surface provenance absence** — verified by inspection during
+  `/gsd-secure-phase 47` (T-47-19): no `corpus` / `pdf_pipeline` / `rule_based` /
+  `llm_corrective` string reaches `app/src/routes/cases/`. The only public
+  attribution is the pre-existing Phase 29 (D-22/T-29-11) Oyez caption gated on
+  `is_corpus_sourced`, derived from `oyez_transcript_id`.
+- **Still outstanding:** a live operator walkthrough of the running admin surface.
+  Recorded here rather than treated as closed.
+
+**Security (`47-SECURITY.md`, status `verified`).** 20 threats, all closed,
+`threats_open: 0`. Six were `high` under `block_on: high` and each was verified
+against the implementation.
+
+**Unchanged.** The SC-4 operator override and the deferred PDF live-fixture item
+(`todos/pending/2026-08-18-pdf-provenance-live-fixture-verification.md`) stand
+exactly as recorded above. This addendum closes no gap by assertion.
+
+_Re-validated: 2026-08-18 · orchestrator (`/gsd-ship 47` preflight), not an
+independent `gsd-verifier` re-run_

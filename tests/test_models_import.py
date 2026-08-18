@@ -20,7 +20,7 @@ def test_expected_table_names():
     expected = {
         "roles", "people", "court_tenures", "cases", "arguments",
         "case_arguments", "case_appearances", "argument_participants",
-        "pipeline_runs", "utterances", "speaker_alias", "admin_jobs",
+        "import_run", "utterances", "speaker_alias", "admin_jobs",
         "argument_status_log",
     }
     assert tables == expected, f"Table mismatch: {tables.symmetric_difference(expected)}"
@@ -39,15 +39,40 @@ def test_side_enum_values():
     assert len(values) == 6
 
 
-def test_pipeline_run_status_values():
-    """PipelineRunStatus must have exactly 5 values."""
-    from api.models.models import PipelineRunStatus
-    values = [e.value for e in PipelineRunStatus]
+def test_import_run_status_values():
+    """ImportRunStatus must have exactly 5 values."""
+    from api.models.models import ImportRunStatus
+    values = [e.value for e in ImportRunStatus]
     assert "pending" in values
     assert "running" in values
     assert "completed" in values
     assert "failed" in values
     assert "needs_review" in values
+    assert len(values) == 5
+
+
+def test_import_source_values():
+    """ImportSource is a closed vocabulary of exactly 4 values (D-02) — a
+    standing exhaustiveness guard so the enum cannot silently grow or shrink."""
+    from api.models.models import ImportSource
+    values = [e.value for e in ImportSource]
+    assert "operator" in values
+    assert "corpus" in values
+    assert "pdf_pipeline" in values
+    assert "seed" in values
+    assert len(values) == 4
+
+
+def test_import_method_values():
+    """ImportMethod is a closed vocabulary of exactly 5 values (D-02) — a
+    standing exhaustiveness guard so the enum cannot silently grow or shrink."""
+    from api.models.models import ImportMethod
+    values = [e.value for e in ImportMethod]
+    assert "manual" in values
+    assert "direct" in values
+    assert "normalized" in values
+    assert "rule_based" in values
+    assert "llm_corrective" in values
     assert len(values) == 5
 
 
@@ -69,14 +94,14 @@ def test_utterance_unique_constraint():
 
 
 def test_utterance_indexes():
-    """Utterance must have indexes on argument_id and pipeline_run_id."""
+    """Utterance must have indexes on argument_id and import_run_id."""
     from api.models.models import Utterance
     index_names = [i.name for i in Utterance.__table__.indexes]
     assert "ix_utterances_argument_id" in index_names, (
         f"Expected ix_utterances_argument_id in: {index_names}"
     )
-    assert "ix_utterances_pipeline_run_id" in index_names, (
-        f"Expected ix_utterances_pipeline_run_id in: {index_names}"
+    assert "ix_utterances_import_run_id" in index_names, (
+        f"Expected ix_utterances_import_run_id in: {index_names}"
     )
 
 

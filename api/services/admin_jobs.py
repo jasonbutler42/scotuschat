@@ -33,8 +33,9 @@ from api.models.models import (
     ArgumentParticipant,
     ArgumentStatusEnum,
     ArgumentStatusLog,
+    ImportRun,
+    ImportSource,
     Person,
-    PipelineRun,
     Role,
     SideEnum,
     SpeakerAlias,
@@ -48,7 +49,6 @@ from api.schemas.admin_jobs import (
     ResolveRowUpdate,
     RunReadiness,
 )
-from pipeline.commands.import_convokit import PIPELINE_RUN_STRATEGY
 from pipeline.commands.resolve import normalize_label
 
 
@@ -100,8 +100,8 @@ async def delete_job(db: AsyncSession, job_id: int) -> bool:
     """Delete a single AdminJob row by primary key.
 
     CRITICAL — scope: this function deletes ONLY the admin_job row (D-10, D-11, Pitfall 6).
-    It MUST NOT touch Argument, PipelineRun, Utterance, ArgumentParticipant, or CaseArgument.
-    Pipeline runs are disposable scaffolding; the linked argument is the permanent record.
+    It MUST NOT touch Argument, ImportRun, Utterance, ArgumentParticipant, or CaseArgument.
+    Import runs are disposable scaffolding; the linked argument is the permanent record.
 
     Implementation:
       - Single DELETE against AdminJob WHERE id = job_id with synchronize_session=False
@@ -128,7 +128,7 @@ async def get_job(db: AsyncSession, job_id: int) -> AdminJob | None:
     the job's argument_id. parse_stats is None when:
       - The job row does not exist
       - argument_id is None (ingest not yet finished)
-      - No parse PipelineRun exists for this argument
+      - No parse ImportRun exists for this argument
 
     Reuses get_run_id_for_step(db, job_id, "parse") which orders by created_at
     DESC LIMIT 1 — correctly reflects the latest run when re-runs occurred (D-09).
@@ -154,12 +154,12 @@ async def get_job(db: AsyncSession, job_id: int) -> AdminJob | None:
     # directly on job.argument_id (a plain Python value already loaded above)
     # rather than AdminJob.argument_id, since a single-row exists() has no
     # need to join back to AdminJob — argument_id being None (ingest not yet
-    # finished) correctly yields no PipelineRun match (NOT NULL column) → "pdf".
+    # finished) correctly yields no ImportRun match (NOT NULL column) → "pdf".
     is_corpus_result = await db.execute(
         select(
             exists().where(
-                PipelineRun.argument_id == job.argument_id,
-                PipelineRun.strategy == PIPELINE_RUN_STRATEGY,
+                ImportRun.argument_id == job.argument_id,
+                ImportRun.source == ImportSource.CORPUS,
             )
         )
     )
@@ -173,7 +173,7 @@ async def get_job(db: AsyncSession, job_id: int) -> AdminJob | None:
         # COUNT queries always return a row — use scalar_one(), never scalar_one_or_none()
         utt_result = await db.execute(
             select(func.count(Utterance.id)).where(
-                Utterance.pipeline_run_id == parse_run_id
+                Utterance.import_run_id == parse_run_id
             )
         )
         utterance_count = utt_result.scalar_one()
@@ -182,7 +182,7 @@ async def get_job(db: AsyncSession, job_id: int) -> AdminJob | None:
         # do not accumulate stale labels from earlier runs (WR-02).
         spk_result = await db.execute(
             select(func.count(Utterance.raw_speaker_label.distinct()))
-            .where(Utterance.pipeline_run_id == parse_run_id)
+            .where(Utterance.import_run_id == parse_run_id)
             .where(Utterance.raw_speaker_label.isnot(None))
         )
         speaker_count = spk_result.scalar_one()
@@ -257,15 +257,15 @@ async def list_jobs(
     detail page's RunStatusCard.
 
     Phase 30 (PJOB-01): also derives source ("pdf" vs "corpus") via an
-    exists() subquery on PipelineRun.strategy == "convokit_import" — exists()
-    rather than a second outerjoin because Argument -> PipelineRun is 1:many
-    (an argument accumulates multiple PipelineRun rows over reruns/step-
+    exists() subquery on ImportRun.source == ImportSource.CORPUS — exists()
+    rather than a second outerjoin because Argument -> ImportRun is 1:many
+    (an argument accumulates multiple ImportRun rows over reruns/step-
     advances); a naive join would risk duplicate AdminJob rows in the result.
     """
     is_corpus_subq = exists(
-        select(PipelineRun.id).where(
-            PipelineRun.argument_id == AdminJob.argument_id,
-            PipelineRun.strategy == PIPELINE_RUN_STRATEGY,
+        select(ImportRun.id).where(
+            ImportRun.argument_id == AdminJob.argument_id,
+            ImportRun.source == ImportSource.CORPUS,
         )
     )
     query = select(
@@ -374,7 +374,7 @@ async def try_advance_parse_to_resolve(db: AsyncSession, job_id: int) -> bool:
 async def get_run_id_for_step(
     db: AsyncSession, job_id: int, step: str
 ) -> int | None:
-    """Return the most recent pipeline_run.id for (argument_id, step).
+    """Return the most recent import_run.id for (argument_id, step).
 
     This enables resumable re-spawn: when the poll endpoint needs to pass
     `--run-id` to the next subprocess, it calls this with the INPUT step
@@ -385,10 +385,10 @@ async def get_run_id_for_step(
         get_run_id_for_step(db, job_id, "parse")  → run-id resolve consumes
 
     Returns None if the job has no argument_id yet (ingest not yet finished)
-    or if no pipeline_run exists for the given (argument_id, step).
+    or if no import_run exists for the given (argument_id, step).
 
     No admin_jobs columns are added — the run-id is always re-derivable from
-    pipeline_runs by (argument_id, step), so a re-entrant poll after the
+    import_run by (argument_id, step), so a re-entrant poll after the
     operator closed and reopened the browser re-derives the correct run-id.
     """
     # Query argument_id directly — do NOT call get_job() here; get_job() calls
@@ -401,12 +401,12 @@ async def get_run_id_for_step(
         return None
 
     result = await db.execute(
-        select(PipelineRun.id)
+        select(ImportRun.id)
         .where(
-            PipelineRun.argument_id == argument_id,
-            PipelineRun.step == step,
+            ImportRun.argument_id == argument_id,
+            ImportRun.step == step,
         )
-        .order_by(PipelineRun.created_at.desc())
+        .order_by(ImportRun.created_at.desc())
         .limit(1)
     )
     return result.scalar_one_or_none()
@@ -463,7 +463,7 @@ async def resolve_job(
     parse_run_id = await get_run_id_for_step(db, job_id, "parse")
     if parse_run_id is None:
         raise ValueError(
-            f"No parse pipeline_run found for AdminJob {job_id}. "
+            f"No parse import_run found for AdminJob {job_id}. "
             "Cannot scope utterance updates without a parse run id."
         )
 
@@ -500,7 +500,7 @@ async def resolve_job(
                 .where(
                     Utterance.argument_id == job.argument_id,
                     Utterance.raw_speaker_label == match.raw_speaker_label,
-                    Utterance.pipeline_run_id == parse_run_id,
+                    Utterance.import_run_id == parse_run_id,
                 )
                 .values(person_id=match.person_id)
                 .execution_options(synchronize_session=False)

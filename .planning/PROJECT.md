@@ -8,6 +8,21 @@ A website that displays Supreme Court oral arguments as a chat-style interface �
 
 Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
 
+## Current Milestone: v1.8 Import & Provenance Re-model
+
+**Goal:** Make data provenance and trust first-class so every argument is born a labeled *candidate* and promoted to *published* — replacing the PDF-shaped import skeleton with one unified import model where PDF-parse and corpus-import are peer strategies distinguished by declared provenance.
+
+**Target features:**
+- **Provenance foundation** — `import_run` (generalizes `pipeline_run`) with declared `source`/`method`, external-id lineage, and deterministic backfill from today's `strategy` + `oyez_*`.
+- **Trust + lifecycle** — materialized `trust_tier` rollup, `candidate` status, and a publish gate hard-blocked on UNCERTAIN with a logged operator override.
+- **Review model** — four-state `review_state`, discrepancy recording on re-import, and an operator review queue.
+- **Path rework** — corpus import writes `import_run` directly (no fabricated PDF artifacts), PDF path adapts, `admin_job` re-points, re-import stays idempotent.
+- **Noun alignment + design system** — `/cases` → arguments, a shared component library, design tokens, and the arguments listing style (absorbs backlog 999.4 / 999.6 / 999.8).
+
+**Scope focus (operator decision, 2026-08-18):** the **corpus import path is the priority**; the **PDF upload route is deferred**. The unified-import goal above still stands as the destination — PDF-parse and corpus-import as peer strategies distinguished by declared provenance — but until corpus import can properly import *and reconcile* case details, PDF work is not pursued. Provenance vocabulary for the PDF legs (`pdf_pipeline` / `rule_based` / `llm_corrective`) stays in the schema and stays exercised by tests; only new PDF-route *feature* and *verification-vehicle* work is deferred. See Key Decisions and `todos/pending/2026-08-18-pdf-provenance-live-fixture-verification.md`.
+
+**Design:** fully worked out ahead of planning in `.planning/notes/` — `import-architecture-diagnosis.md`, `provenance-and-trust-model.md`, `import-entity-sketch.md`.
+
 ## Current State
 
 **v1.7 Corpus Fidelity & Resolve Rework — SHIPPED 2026-08-15.** All 6 phases (41–46) complete and verified. Phase 41 selected and operator-confirmed a 4-fixture set (one structurally-complex ConvoKit conversation plus three publish/pipeline-state-variety fixtures) that every later phase built on. Phase 42 field-by-field diffed the complexity fixture's raw ConvoKit source against its imported DB rows, finding and fixing real gaps (`section_hint` derivation, a bench-tenure mismatch warning) while correctly leaving the apolitical field allow-list's intentional exclusions alone; a Person-dedup mismatch across two justice-import tools was found but deliberately deferred to its own future phase. Phase 43 shipped a dev-only, environment-gated reset-to-fixture tool that reseeds all four fixtures into distinguishable states through the real import/publish pipeline. Phase 44 reworked the Resolve table so Bench/Advocate and Argument Role became independently editable, converging through live Figma-driven design iteration into a leaner 4-column layout with a persistent progress indicator; post-approval code review found and fixed two real data-loss bugs. Phase 45 closed two long-standing UI bugs (unpublished arguments directly accessible via `/cases/`; popover scrollbar rendering outside its card) and surfaced the pytest DB-isolation bug that had twice wiped the shared dev database. Phase 46 was inserted mid-milestone once Windows admin access became available: it closed that DB-isolation bug at its root (rootdir `conftest.py` + fail-closed sibling guards), moved the whole dev stack to WSL-native tooling against a real Windows-hosted PostgreSQL service, relocated the working repository off a Windows-mounted filesystem onto native WSL ext4, shipped a single reliable `dev-start.sh`/`dev-start.ps1` start/stop entry point, and rewrote the README to match — with a post-execution security audit finding and closing 3 real vulnerabilities (2 from code review, 1 reintroduced by the review's own fix and caught by the audit). Full details: `.planning/milestones/v1.7-ROADMAP.md`, `.planning/milestones/v1.7-REQUIREMENTS.md`.
@@ -108,6 +123,16 @@ Anyone can open a SCOTUS oral argument and immediately follow the conversation �
 - ✓ Dev environment made reliable: pytest DB-isolation bug that twice wiped the shared dev database closed at its root (rootdir `conftest.py` + fail-closed sibling guards); WSL-native Python/Postgres stack replacing the admin-rights-constrained portable setup; repository relocated onto native WSL ext4; single `dev-start.sh`/`dev-start.ps1` start/stop entry point; README rewritten to match — v1.7 (D-01–D-04, Phase 46 CONTEXT.md — no formal REQUIREMENTS.md IDs assigned), validated in Phase 46; post-execution security audit found and closed 3 real vulnerabilities
 
 ### Active
+
+**v1.8 — Import & Provenance Re-model**
+
+- [ ] Every import unit carries declared provenance (`source` + `method`) and lineage; existing rows backfilled (PROV)
+- [ ] Every argument is born a candidate with a materialized trust tier; promotion to published is review-gated (TRUST)
+- [ ] Operator review queue with four-state review status and discrepancy surfacing on re-import (REVIEW)
+- [ ] Unified import: corpus and PDF are peer strategies; re-import is idempotent and never clobbers operator work (IMPORT)
+- [ ] Public noun aligned to "arguments" plus a shared design system / component library (UI)
+
+**Carried forward (not in v1.8)**
 
 - [ ] Application deployed to Digital Ocean App Platform (SvelteKit + FastAPI as separate services, managed Postgres) (DEPLOY-01)
 - [ ] Continuous deployment from GitHub main branch (DEPLOY-03)
@@ -210,6 +235,7 @@ Anyone can open a SCOTUS oral argument and immediately follow the conversation �
 | Working repository relocated off the 9p/DrvFs Windows-mounted filesystem onto native WSL ext4, with the pre-relocation checkout retired in place rather than deleted (D-04, Phase 46) | 9p/DrvFs cross-filesystem access from WSL is the likely root cause of prior file-watching/performance unreliability; deleting the old checkout would destroy the only offline second copy of unpushed history and untracked secrets/data, so the operator chose option-c (leave it in place, marked retired) over immediate deletion | ✓ Good — byte-identical git history and Alembic-head DB reachability proven from the new location; `RETIRED-CHECKOUT.txt` marks the old path; a follow-up todo tracks revisiting deletion after a running-without-incident period |
 | Pytest DB-isolation redirect centralized in the repo-root `conftest.py`, not a subdirectory conftest, with fail-closed sibling guards (D-03, Phase 46) | An invocation-shape-independent hook (like the `TEST_DATABASE_URL` redirect) only fires for every pytest invocation shape when collected from the rootdir — a subdirectory conftest silently skips for explicit-path invocations, which is exactly what let the shared dev database get wiped twice during Phase 45 | ✓ Good — regression test `tests/test_pytest_isolation_invocation_shapes.py` pins all three invocation shapes; the row-count byte-identical proof re-ran the literal Phase-45 wipe command with zero drift; codified in CLAUDE.md as a standing invariant |
 | Two post-hoc code-review security findings (dev-DB-wipe guard gap, command-injection primitive) treated as blocking despite the code-review gate itself being advisory-only (Phase 46) | Both findings reopened the exact bug classes this phase existed to close — a stray `TRUNCATE` reaching the shared dev DB and unvalidated shell interpolation — so shipping them undiscovered would have defeated the phase's own goal even though the workflow's default is to let review findings ship as follow-up work | ✓ Good — both fixed and independently re-verified by the phase's own goal-verification agent; the security audit then caught and closed a third, narrower regression (CR-02-R) the review's own fix had reintroduced in a different code path |
+| Corpus import prioritized; PDF upload route deferred (operator decision, 2026-08-18, during Phase 47 close) | The project began with PDF parsing and will return to it, but corpus-sourced data is where import-and-reconcile correctness has to be established first; splitting attention across both paths spreads the reconciliation work thin. Concretely this accepted Phase 47's SC-4 override rather than building a synthetic PDF fixture purely to satisfy a verification criterion on the deprioritized path | ◷ Active scope constraint — PDF provenance legs remain schema-present and test-covered; revisit when the PDF route is picked up (`todos/pending/2026-08-18-pdf-provenance-live-fixture-verification.md`), which also gates Phase 50's PDF-peer half |
 
 ## Evolution
 
@@ -229,4 +255,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-15 after v1.7 (Corpus Fidelity & Resolve Rework) milestone completed and archived.*
+*Last updated: 2026-08-18 — Phase 47 (Provenance Foundation) complete; corpus-first / PDF-deferred scope decision recorded.*

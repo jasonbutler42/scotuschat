@@ -165,7 +165,7 @@ async def isolated_session(test_db_url):
     pytest-asyncio's function-scoped-event-loop incompatibility — the exact
     same `_ProactorSocketTransport ... AttributeError: 'NoneType' object has
     no attribute 'send'` failure already present, independently of this
-    plan, in pipeline/tests/test_pipeline_run.py::test_rerun_creates_new_rows
+    plan, in pipeline/tests/test_import_run.py::test_rerun_creates_new_rows
     (a documented pre-existing issue: the engine's asyncpg connection pool
     binds to whichever event loop was active on first use, then breaks when
     a later test gets a fresh event loop). Giving each test its own engine

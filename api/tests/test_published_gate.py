@@ -347,8 +347,8 @@ class TestArgumentDetailPublishedGate:
             "ordering clause (BUG-01 EDGE ordering). "
             f"Actual body:\n{arguments_combined}"
         )
-        assert "func.max(PipelineRun.id)" in arguments_combined, (
-            "get_argument_with_utterances() must preserve the max-pipeline_run_id "
+        assert "func.max(ImportRun.id)" in arguments_combined, (
+            "get_argument_with_utterances() must preserve the max-import_run_id "
             "filter (BUG-01 EDGE ordering). "
             f"Actual body:\n{arguments_combined}"
         )

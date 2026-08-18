@@ -38,9 +38,11 @@ from api.models.models import (
     ArgumentStatusLog,
     Case,
     CaseArgument,
+    ImportMethod,
+    ImportRun,
+    ImportRunStatus,
+    ImportSource,
     Person,
-    PipelineRun,
-    PipelineRunStatus,
     SideEnum,
     Utterance,
 )
@@ -152,7 +154,7 @@ async def _seed_argument(session, oyez_transcript_id: str, source_docket: str | 
 async def _seed_full_fixture(session, conversation_id: str, docket: str, term_year: int) -> dict:
     """
     Seeds one Argument with a complete dependent-row set: one Utterance, one
-    PipelineRun, one ArgumentParticipant (linked to a real Person), one
+    ImportRun, one ArgumentParticipant (linked to a real Person), one
     CaseArgument (linked to a real Case), one ArgumentStatusLog row, and one
     AdminJob referencing the argument. Returns every created row so callers
     can assert on ids and re-count afterward.
@@ -161,18 +163,21 @@ async def _seed_full_fixture(session, conversation_id: str, docket: str, term_ye
     case = await _seed_case(session, docket, term_year)
     argument = await _seed_argument(session, conversation_id, source_docket=docket)
 
-    pipeline_run = PipelineRun(
-        argument_id=argument.id, step="parse", status=PipelineRunStatus.COMPLETED
+    import_run = ImportRun(
+        argument_id=argument.id,
+        step="parse",
+        status=ImportRunStatus.COMPLETED,
+        source=ImportSource.PDF_PIPELINE,
+        method=ImportMethod.RULE_BASED,
     )
-    session.add(pipeline_run)
+    session.add(import_run)
     await session.flush()
 
     utterance = Utterance(
         argument_id=argument.id,
-        pipeline_run_id=pipeline_run.id,
+        import_run_id=import_run.id,
         sequence=1,
         text="Hello, Court.",
-        strategy="rule_based",
         side=SideEnum.PETITIONER,
         person_id=person.id,
         raw_speaker_label="MR. TEST",
@@ -201,7 +206,7 @@ async def _seed_full_fixture(session, conversation_id: str, docket: str, term_ye
         "person": person,
         "case": case,
         "argument": argument,
-        "pipeline_run": pipeline_run,
+        "import_run": import_run,
         "utterance": utterance,
         "participant": participant,
         "case_argument": case_argument,
@@ -214,7 +219,7 @@ async def _count_dependents(session, argument_id: int) -> dict[str, int]:
     counts = {}
     for label, model in (
         ("utterances", Utterance),
-        ("pipeline_runs", PipelineRun),
+        ("import_run", ImportRun),
         ("argument_participants", ArgumentParticipant),
         ("case_arguments", CaseArgument),
         ("argument_status_log", ArgumentStatusLog),
@@ -250,7 +255,7 @@ async def test_destructive_delete_clears_full_cascade_no_fk_violation(isolated_s
     counts = await _count_dependents(isolated_session, argument_id)
     assert counts == {
         "utterances": 0,
-        "pipeline_runs": 0,
+        "import_run": 0,
         "argument_participants": 0,
         "case_arguments": 0,
         "argument_status_log": 0,
@@ -279,7 +284,7 @@ async def test_scoping_deleting_one_argument_leaves_the_other_intact(isolated_se
     other_counts = await _count_dependents(isolated_session, other["argument"].id)
     assert other_counts == {
         "utterances": 1,
-        "pipeline_runs": 1,
+        "import_run": 1,
         "argument_participants": 1,
         "case_arguments": 1,
         "argument_status_log": 1,
@@ -303,7 +308,7 @@ async def test_zero_match_returns_nonzero_and_deletes_nothing(isolated_session):
     counts = await _count_dependents(isolated_session, seeded["argument"].id)
     assert counts == {
         "utterances": 1,
-        "pipeline_runs": 1,
+        "import_run": 1,
         "argument_participants": 1,
         "case_arguments": 1,
         "argument_status_log": 1,
@@ -341,7 +346,7 @@ async def test_report_only_default_deletes_nothing(isolated_session):
     counts = await _count_dependents(isolated_session, seeded["argument"].id)
     assert counts == {
         "utterances": 1,
-        "pipeline_runs": 1,
+        "import_run": 1,
         "argument_participants": 1,
         "case_arguments": 1,
         "argument_status_log": 1,
@@ -425,11 +430,11 @@ async def test_single_transaction_rollback_on_mid_cascade_failure(isolated_sessi
     original_execute = isolated_session.execute
 
     async def _execute_with_injected_failure(statement, *args, **kwargs):
-        # Fail on the SECOND delete statement in the cascade (pipeline_runs)
+        # Fail on the SECOND delete statement in the cascade (import_run)
         # -- the FIRST delete statement (utterances) has already succeeded
         # by this point, proving the rollback also undoes earlier steps of
         # the same cascade, not just the one that raised.
-        if isinstance(statement, Delete) and getattr(statement.table, "name", None) == "pipeline_runs":
+        if isinstance(statement, Delete) and getattr(statement.table, "name", None) == "import_run":
             raise RuntimeError("Injected mid-cascade failure for test coverage")
         return await original_execute(statement, *args, **kwargs)
 
@@ -444,7 +449,7 @@ async def test_single_transaction_rollback_on_mid_cascade_failure(isolated_sessi
     counts = await _count_dependents(isolated_session, argument_id)
     assert counts == {
         "utterances": 1,
-        "pipeline_runs": 1,
+        "import_run": 1,
         "argument_participants": 1,
         "case_arguments": 1,
         "argument_status_log": 1,

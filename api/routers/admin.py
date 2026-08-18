@@ -55,7 +55,7 @@ from starlette.responses import FileResponse, RedirectResponse, Response
 from api.core.config import settings
 from api.core.database import get_db
 from api.domain.docket_values import DocketValueError, normalize_docket_value
-from api.models.models import AdminJob, AdminJobStatus, AdminJobStep, PipelineRun
+from api.models.models import AdminJob, AdminJobStatus, AdminJobStep, ImportRun
 from api.schemas.admin_jobs import (
     AdminJobResponse,
     FailedStepRecovery,
@@ -410,7 +410,7 @@ async def get_job(
     - If current_step=PARSE and status=COMPLETED: atomically advance to
       RESOLVE/RUNNING, derive the parse run-id, and spawn resolve.
 
-    The run-id is re-derived on every poll from pipeline_runs (PIPE-17) —
+    The run-id is re-derived on every poll from import_run (PIPE-17) —
     no cached state, so a re-entrant poll after browser close/reopen works.
 
     NEVER advances a job that is PAUSED, FAILED, or COMPLETED (D-16 guard).
@@ -500,7 +500,7 @@ async def get_job_pdf(
     - Spaces-backed (spaces_key set): 302 redirect to a pre-signed DO Spaces URL
       with 15-minute TTL. The redirect is generated synchronously via boto3 and
       wrapped in run_in_executor so it does not block the event loop.
-    - Disk-backed (no spaces_key): stream the PDF from PipelineRun.pdf_path via
+    - Disk-backed (no spaces_key): stream the PDF from ImportRun.pdf_path via
       FileResponse with Content-Disposition: inline.
 
     Auth: inherited from router-level verify_admin_token dependency (T-17-01 mitigated).
@@ -523,11 +523,11 @@ async def get_job_pdf(
         )
         return RedirectResponse(url=url, status_code=302)
     else:
-        # Disk-backed: read pdf_path from the ingest PipelineRun row
+        # Disk-backed: read pdf_path from the ingest ImportRun row
         run_id = await jobs_service.get_run_id_for_step(db, job_id, "ingest")
         if run_id is None:
             raise HTTPException(status_code=404, detail="PDF not available")
-        run_result = await db.execute(select(PipelineRun).where(PipelineRun.id == run_id))
+        run_result = await db.execute(select(ImportRun).where(ImportRun.id == run_id))
         run = run_result.scalar_one_or_none()
         if run is None or run.pdf_path is None:
             raise HTTPException(status_code=404, detail="PDF path not recorded")
@@ -1237,7 +1237,7 @@ async def delete_argument(
     Delete an argument only if it is a DRAFT (ADMIN-01, D-03/AEDIT-09).
 
     Cascades deletion of all dependent rows in FK order:
-    utterances → pipeline_runs → argument_participants → case_arguments → argument.
+    utterances → import_run → argument_participants → case_arguments → argument.
     AdminJob.argument_id rows are NULLed before the argument is deleted (Pitfall 1).
 
     Returns 200 + {"deleted": True} on success.
@@ -1338,7 +1338,7 @@ async def delete_job(
     """
     Delete a pipeline run (admin_job row) by id (ADMIN-02).
 
-    Removes ONLY the admin_jobs row — the linked argument, its pipeline_run step rows,
+    Removes ONLY the admin_jobs row — the linked argument, its import_run step rows,
     and its utterances are all unaffected (D-10, D-11, Pitfall 6).
 
     Returns 200 + {"deleted": True} on success.

@@ -75,7 +75,7 @@ _WATCHED_TABLES = (
     "case_arguments",
     "case_appearances",
     "argument_participants",
-    "pipeline_runs",
+    "import_run",
 )
 
 

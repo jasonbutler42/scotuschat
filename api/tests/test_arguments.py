@@ -53,7 +53,7 @@ def _db_configured() -> bool:
 async def seeded_argument():
     """
     Self-contained Argument + Case + CaseArgument(is_lead) + Person/Role +
-    a COMPLETED parse PipelineRun + 2 Utterances (one resolved to a Person).
+    a COMPLETED parse ImportRun + 2 Utterances (one resolved to a Person).
 
     Phase 31 (TEST-02): Tests 3-5 used to assume a persistent, pre-seeded
     Obergefell Q1 row at argument_id=1 on the shared dev DB. Against the
@@ -71,9 +71,11 @@ async def seeded_argument():
         ArgumentStatusEnum,
         Case,
         CaseArgument,
+        ImportMethod,
+        ImportRun,
+        ImportRunStatus,
+        ImportSource,
         Person,
-        PipelineRun,
-        PipelineRunStatus,
         Role,
         Utterance,
     )
@@ -112,7 +114,13 @@ async def seeded_argument():
 
         db.add(CaseArgument(case_id=case.id, argument_id=arg.id, is_lead=True))
 
-        run = PipelineRun(argument_id=arg.id, step="parse", status=PipelineRunStatus.COMPLETED)
+        run = ImportRun(
+            argument_id=arg.id,
+            step="parse",
+            status=ImportRunStatus.COMPLETED,
+            source=ImportSource.PDF_PIPELINE,
+            method=ImportMethod.RULE_BASED,
+        )
         db.add(run)
         await db.flush()
 
@@ -123,11 +131,10 @@ async def seeded_argument():
                 # utterance has no person_id at Phase 1, before Resolve runs.
                 Utterance(
                     argument_id=arg.id,
-                    pipeline_run_id=run.id,
+                    import_run_id=run.id,
                     sequence=1,
                     raw_speaker_label="TEST FIXTURE SPEAKER",
                     text="First utterance.",
-                    strategy="rule_based",
                     person_id=None,
                 ),
                 # Sequence 2 is resolved — Test 5
@@ -135,11 +142,10 @@ async def seeded_argument():
                 # least one resolved utterance has a non-null speaker_name.
                 Utterance(
                     argument_id=arg.id,
-                    pipeline_run_id=run.id,
+                    import_run_id=run.id,
                     sequence=2,
                     raw_speaker_label="TEST FIXTURE SPEAKER",
                     text="Second utterance.",
-                    strategy="rule_based",
                     person_id=person.id,
                 ),
             ]
@@ -156,7 +162,7 @@ async def seeded_argument():
 
     async with AsyncSessionLocal() as db:
         await db.execute(delete(Utterance).where(Utterance.argument_id == arg_id))
-        await db.execute(delete(PipelineRun).where(PipelineRun.id == run_id))
+        await db.execute(delete(ImportRun).where(ImportRun.id == run_id))
         await db.execute(delete(CaseArgument).where(CaseArgument.argument_id == arg_id))
         case_obj = await db.get(Case, case_id)
         if case_obj is not None:
@@ -247,10 +253,15 @@ async def test_get_utterances_returns_utterances(client: AsyncClient, seeded_arg
     # First utterance starts at sequence 1 and has required fields
     first = utterances[0]
     assert first["sequence"] == 1, "First utterance must have sequence == 1"
-    assert "pipeline_run_id" in first, "Utterances must have pipeline_run_id (PIPE-04)"
-    assert first["pipeline_run_id"] is not None
-    assert "strategy" in first, "Utterances must have strategy (PIPE-04)"
-    assert first["strategy"] is not None
+    assert "import_run_id" in first, "Utterances must have import_run_id (PROV-04)"
+    assert first["import_run_id"] is not None
+    # Phase 47 (T-47-17): provenance is operator-facing lineage only — the
+    # public utterance contract must never leak strategy/source/method/
+    # external_id, and must never be inferred as a quality/trust signal.
+    assert "strategy" not in first, "strategy must not appear on the public utterance contract"
+    assert "source" not in first, "source must not appear on the public utterance contract"
+    assert "method" not in first, "method must not appear on the public utterance contract"
+    assert "external_id" not in first, "external_id must not appear on the public utterance contract"
     # person_id is null at Phase 1 (Phase 2 Resolve populates it)
     assert first.get("person_id") is None, "person_id must be null at Phase 1"
 

@@ -10,6 +10,7 @@
 - ✅ **v1.5 Admin Screens Cleanup** — Phases 22–30, 30.1 (shipped 2026-07-12)
 - ✅ **v1.6 Backlog Cleanup** — Phases 31–40, 40.1 (shipped 2026-07-29)
 - ✅ **v1.7 Corpus Fidelity & Resolve Rework** — Phases 41–46 (shipped 2026-08-15)
+- 🚧 **v1.8 Import & Provenance Re-model** — Phases 47–51 (in progress, started 2026-08-17)
 
 ## Phases
 
@@ -141,7 +142,133 @@ Full phase details: `.planning/milestones/v1.7-ROADMAP.md`
 
 </details>
 
+### 🚧 v1.8 Import & Provenance Re-model (Phases 47–51) — IN PROGRESS
+
+**Overview:** A targeted re-model of the import/provenance layer — not a rewrite. Provenance becomes first-class: every import unit declares its `source` and `method`, so trust is a stated attribute of the row rather than archaeology across `strategy` strings and nullable `oyez_*` columns. On that foundation, every argument is born a *candidate* carrying a materialized trust tier and is promoted to *published* through a single review-gated promotion (the gate sits at promotion, not row-creation; status-based staging, no separate staging table), an operator review queue surfaces everything needing attention, and the two import paths (corpus and PDF) collapse into peer strategies of one unified, idempotent, authority-governed import model. The public noun finally aligns to "arguments" and a shared design system lands last, once the corrected domain language is settled. The read model, people, tenures, and utterance display are stable and out of scope. Hard constraints throughout: Alembic is the sole DDL authority, the pipeline stays offline-only, trust is operator-facing and never shown publicly (apolitical framing), and backfill must preserve existing corpus + PDF data. Sequencing is dependency-ordered and load-bearing — provenance (47) is the keystone everything else builds on, then trust/lifecycle (48), then the review model (49), then the unified import path (50), with the design system + noun alignment (51) deliberately last.
+
+- [x] **Phase 47: Provenance Foundation** - `import_run` generalizes `pipeline_run` with declared `source`/`method` + external-id lineage; PDF-only fields go nullable; every import path stamps provenance at write time (disposable DB → clean rebuild, no legacy backfill) (completed 2026-08-18)
+- [ ] **Phase 48: Trust & Lifecycle** - Materialized `trust_tier` rollup, `candidate`-on-arrival status, and a single `published_at` promotion gate hard-blocked on UNCERTAIN with a logged operator override
+- [ ] **Phase 49: Review Model** - Four-state `review_state` on operator-editable rows, discrepancy recording on re-import, and a filterable operator review queue (generalizes `name_needs_review`)
+- [ ] **Phase 50: Unified Import Path** - Corpus and PDF become peer strategies writing `import_run` directly; `admin_job` re-points; re-import is idempotent and authority-governed so it never clobbers operator work
+- [ ] **Phase 51: Design System & Noun Alignment** - Public noun aligned to "arguments" (`/cases` → arguments, redirects preserved) plus shared component library, design tokens, and listing style (absorbs backlog 999.4 / 999.6 / 999.8)
+
+## Phase Details
+
+### Phase 47: Provenance Foundation
+
+**Goal**: Provenance becomes a first-class, declared attribute of every import unit — the keystone the whole re-model rests on. A new `import_run` table generalizes today's `pipeline_run` as the single lineage backbone, carrying a declared `source` (operator / corpus / pdf_pipeline / seed) and `method` (manual / direct / normalized / rule_based / llm_corrective) plus external-source lineage (`external_id` for oyez ids). Utterances reference `import_run` instead of `pipeline_run`. PDF-only fields (`pdf_path` / `pdf_url`) become nullable and are populated only for `pdf_pipeline` runs, so the corpus path stops fabricating them. Every import path stamps `source`/`method` at write time, so "did this come clean from the corpus or was it LLM-guessed from a smudgy PDF?" is answerable by reading the row, not by archaeology. The project DB is disposable (fixture-reseedable), so this is delivered as a clean rebuild — drop `pipeline_runs`, create `import_run` fresh, and re-seed through the updated import code — rather than an in-migration backfill of legacy rows _(reframed 2026-08-17; see `phases/47-provenance-foundation/47-CONTEXT.md` D-01/D-03)_. Alembic is the sole DDL authority.
+**Depends on**: Nothing (first phase of v1.8; builds on the shipped v1.7 schema)
+**Requirements**: PROV-01, PROV-02, PROV-03, PROV-04, PROV-05, PROV-06
+**Success Criteria** (what must be TRUE):
+
+  1. Every `import_run` row records a declared `source` and a declared `method` from the closed vocabularies, readable directly with no join-and-infer step.
+  2. `import_run` is the lineage backbone that generalizes `pipeline_run`, and every utterance references its `import_run`.
+  3. External-source lineage (oyez transcript/case ids) is captured on `import_run.external_id` for corpus-sourced runs.
+  4. Every import path stamps provenance at write time, verified by re-seeding a fixture and reading it directly off the rows — a corpus row reads `source=corpus / method=direct`, a rule-parsed PDF row reads `pdf_pipeline / rule_based`, an LLM-corrected row reads `pdf_pipeline / llm_corrective`. The verification fixture must exercise all three combinations. _(Operator override 2026-08-18: satisfied as a composition — `corpus/direct` proven by a live `reset_to_fixture` re-seed read directly off `import_run` rows; the two `pdf_pipeline` legs proven by real-writer tests driving `run_parse` with `parse_with_llm` monkeypatched. The live-reseed vehicle for the PDF legs is deferred with the PDF route itself — no PDF fixture exists and building one was declined as work on the deprioritized path. See PROJECT.md Key Decisions and `todos/pending/2026-08-18-pdf-provenance-live-fixture-verification.md`.)_
+  5. `pdf_path` / `pdf_url` are nullable and populated only for `pdf_pipeline` runs; corpus runs carry no fabricated PDF artifacts.
+
+**Plans**: 6/6 plans executed (4 waves)
+
+Plans:
+**Wave 1**
+
+- [x] 47-01-PLAN.md — Schema spine + corpus tracer: `ImportRun` model, migration 0026, the three hardcoded table-name sites, corpus writer stamping `corpus`/`direct`/`external_id` (wave 1)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [x] 47-02-PLAN.md — PDF pipeline writers stamp `pdf_pipeline` with `normalized` / `rule_based` / `llm_corrective`; the two PDF legs of the D-06 guardrail (wave 2)
+- [x] 47-03-PLAN.md — API read layer + public schema; retires the `strategy == "convokit_import"` hack for `ImportRun.source == ImportSource.CORPUS` (wave 2)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [x] 47-04-PLAN.md — `pipeline/tests` conversion; `test_pipeline_run.py` renamed to `test_import_run.py` (wave 3)
+- [x] 47-05-PLAN.md — `api/tests` and root `tests/` conversion, including the two schema-contract files (wave 3)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [x] 47-06-PLAN.md — Live re-seed, D-06 three-combination evidence, full-suite gate, operator verification (wave 4)
+
+### Phase 48: Trust & Lifecycle
+
+**Goal**: Every argument is born a *candidate* carrying a trust verdict and is promoted to *published* through one review-gated promotion. A materialized `trust_tier` (verified / trusted / provisional / uncertain) is derived from `(authority, method, review_state)` via one documented function and stored on the argument as the floor rollup of its utterances and participants, recomputed on every mutation path (import, edit, review). A newly imported argument is `status=candidate` (not public) with its tier set on arrival — the pre-published, tiered row is the holding pen; there is no separate staging table. Promotion is the single `published_at` gate, hard-blocked while any UNCERTAIN element remains, with the operator retaining final authority via a deliberate, logged per-argument override. Trust is operator-facing only — never shown on the public site — preserving the apolitical constraint.
+**Depends on**: Phase 47 (trust tier derives from declared provenance)
+**Requirements**: TRUST-01, TRUST-02, TRUST-03, TRUST-04, TRUST-05
+**Success Criteria** (what must be TRUE):
+
+  1. Every argument carries a `trust_tier` (verified / trusted / provisional / uncertain) derived from provenance + review state by one documented function.
+  2. An argument's `trust_tier` is the floor (minimum) of its utterances and participants, materialized and recomputed whenever a constituent changes.
+  3. A newly imported argument is born a `candidate` (not public) with its tier set on arrival.
+  4. Attempting to publish an argument while any UNCERTAIN element remains is hard-blocked at the single `published_at` promotion gate.
+  5. The operator can override the publish block with a deliberate, per-argument acknowledgment that is logged.
+
+**Plans**: TBD
+
+Plans:
+
+- [ ] TBD (planned via `/gsd-plan-phase 48`)
+
+### Phase 49: Review Model
+
+**Goal**: The operator gets a real review workflow over the candidate pool. Operator-editable rows (person name-parts, argument participants) carry a four-state `review_state` (unreviewed / needs_review / operator_confirmed / operator_edited), generalizing today's `name_needs_review` / `name_extraction_metadata` into the unified review_state + provenance record so no parallel mechanism survives. Re-import records a discrepancy for operator attention instead of overwriting an equal-or-higher-authority value (generalizing today's `admin_jobs.discrepancies`). A new operator review queue lists everything needing attention, filterable by trust tier and review state; resolving an item (confirm or edit) advances its `review_state` and triggers trust recomputation. "Operator work is sacred" is the invariant throughout — a re-import never overwrites a human-confirmed or human-edited value.
+**Depends on**: Phase 48 (the review queue filters by trust tier; resolving items recomputes trust)
+**Requirements**: REVIEW-01, REVIEW-02, REVIEW-03, REVIEW-04, REVIEW-05
+**Success Criteria** (what must be TRUE):
+
+  1. Operator-editable rows (person names, argument participants) carry a four-state `review_state` (unreviewed / needs_review / operator_confirmed / operator_edited).
+  2. A re-import that disagrees with an equal-or-higher-authority value records a discrepancy for operator review instead of silently overwriting it.
+  3. The operator can open a review queue listing every item needing review, filterable by trust tier and review state.
+  4. The operator can resolve a review item (confirm or edit) from the queue, and doing so advances its `review_state` and recomputes the affected argument's trust.
+  5. The legacy `name_needs_review` / `name_extraction_metadata` mechanism is folded into the unified review_state + provenance record, with no parallel mechanism remaining.
+
+**Plans**: TBD
+**UI hint**: yes
+
+Plans:
+
+- [ ] TBD (planned via `/gsd-plan-phase 49`)
+
+### Phase 50: Unified Import Path
+
+**Goal**: The two import paths collapse into peer strategies of one import model, resolving the diagnosis's core finding that "the corpus path is a guest in a house built for the PDF pipeline." Corpus import writes `import_run` directly (`source=corpus`) with no fabricated PDF-pipeline artifacts; the PDF pipeline path adapts to `import_run` as one strategy among peers, keeping its parse/resolve lifecycle; `admin_job` references an existing `import_run` rather than inventing one, and the corpus CLI batch needs no admin_job at all. Re-import is idempotent by construction — re-running yields the same result and never clobbers operator-authored values — governed by the authority ladder (operator > corpus > pdf/rule_based > pdf/llm_corrective) applied at every writer, with disagreements at equal-or-higher authority surfaced as discrepancies (via Phase 49's review model) rather than silent overwrites.
+**Depends on**: Phase 49 (re-import discrepancy recording builds on the review model; requires the full provenance + trust + review schema in place)
+**⚠ Scope flag (2026-08-18)**: this phase's PDF half — success criterion 2 ("the PDF pipeline path reads and writes `import_run` as one strategy among peers") and the `pdf/rule_based` / `pdf/llm_corrective` rungs of criterion 5's authority ladder — sits on the **deferred PDF route**. The corpus half (criteria 1, 3, 4, and the operator/corpus rungs of 5) is unaffected and remains the priority. Re-scope this phase at planning time: either split the PDF half into its own later phase, or confirm the PDF route has been picked back up. See PROJECT.md Key Decisions.
+**Requirements**: IMPORT-01, IMPORT-02, IMPORT-03, IMPORT-04, IMPORT-05
+**Success Criteria** (what must be TRUE):
+
+  1. Corpus import writes an `import_run` directly with `source=corpus` and fabricates no PDF-pipeline artifacts (no synthetic run with meaningless `pdf_path` / `prompt_version`).
+  2. The PDF pipeline path reads and writes `import_run` as one strategy among peers, keeping its parse/resolve lifecycle intact.
+  3. `admin_job` references an existing `import_run`; the corpus CLI batch runs with no admin_job at all.
+  4. Re-running any import is idempotent — the same input yields the same rows and never clobbers operator-authored values.
+  5. The authority ordering (operator > corpus > pdf/rule > pdf/llm) governs the overwrite decision on every writer.
+
+**Plans**: TBD
+
+Plans:
+
+- [ ] TBD (planned via `/gsd-plan-phase 50`)
+
+### Phase 51: Design System & Noun Alignment
+
+**Goal**: With the corrected domain language settled, the public side finally reflects it. The public route/noun aligns to "arguments" (`/cases` → arguments) with redirects preserving every existing shareable URL. A shared component library is extracted for reused UI (absorbs backlog 999.4), design tokens (color / type / spacing) are established as the visual foundation (absorbs backlog 999.8), and the arguments listing style is decided and implemented (absorbs backlog 999.6). Deliberately sequenced last so the UI reflects the corrected domain model and unified import lifecycle rather than being reworked twice.
+**Depends on**: Phase 50 (deliberately last — the UI reflects the fully corrected domain language and unified import model)
+**Requirements**: DS-01, DS-02, DS-03, DS-04
+**Success Criteria** (what must be TRUE):
+
+  1. The public route/noun is aligned to "arguments" (`/cases` → arguments), and every previously shareable URL still resolves via redirects.
+  2. Reused UI is extracted into a shared component library (absorbs backlog 999.4).
+  3. Design tokens (color / type / spacing) are established as the visual foundation (absorbs backlog 999.8).
+  4. The arguments listing style is decided and implemented (absorbs backlog 999.6).
+
+**Plans**: TBD
+**UI hint**: yes
+
+Plans:
+
+- [ ] TBD (planned via `/gsd-plan-phase 51`)
+
 ## Progress
+
+**Execution Order:** Phases execute in numeric order: 47 → 48 → 49 → 50 → 51
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -193,10 +320,17 @@ Full phase details: `.planning/milestones/v1.7-ROADMAP.md`
 | 44. Resolve Table Rework | v1.7 | 9/9 | Complete    | 2026-08-11 |
 | 45. Deferred UI Bug Fixes | v1.7 | 2/2 | Complete    | 2026-08-12 |
 | 46. Dev Environment Reliability | v1.7 | 6/6 | Complete    | 2026-08-14 |
+| 47. Provenance Foundation | v1.8 | 6/6 | Complete    | 2026-08-18 |
+| 48. Trust & Lifecycle | v1.8 | 0/TBD | Not started | - |
+| 49. Review Model | v1.8 | 0/TBD | Not started | - |
+| 50. Unified Import Path | v1.8 | 0/TBD | Not started | - |
+| 51. Design System & Noun Alignment | v1.8 | 0/TBD | Not started | - |
 
 ## Backlog
 
 Standard: all backlog items live here as 999.x entries (`.planning/phases/999.N-slug/`), captured via `/gsd-capture --backlog` and reviewed/promoted via `/gsd-review-backlog`. `.planning/BACKLOG.md` (the flat B-NNN file previously used, 2026-07-01 to 2026-07-09) has been retired and its 14 still-open items migrated below (2026-07-09); 5 items (B-001, B-003, B-004, B-005, B-006) were dropped as already shipped by Phase 24/27, and B-014 was merged into 999.1 as a duplicate capture of the same idea.
+
+**v1.8 note:** backlog items 999.4 (shared component library), 999.6 (arguments listing style), and 999.8 (Figma design system) are absorbed into Phase 51 (DS-02 / DS-04 / DS-03 respectively). They remain listed below for provenance until Phase 51 ships, at which point they are closed as absorbed.
 
 ### Phase 999.2: Share specific utterances via social media (BACKLOG)
 
@@ -218,8 +352,8 @@ Plans:
 
 ### Phase 999.4: Frontend design system: shared component library (BACKLOG)
 
-**Goal:** [Captured for future planning] [Migrated from BACKLOG.md B-007, added 2026-07-01] Refactor the frontend to extract common UI patterns (buttons, badges, cards, form inputs) into a shared component library. Reduces duplication between admin and public pages and makes future changes consistent.
-**Requirements:** TBD
+**Goal:** [Captured for future planning] [Migrated from BACKLOG.md B-007, added 2026-07-01] Refactor the frontend to extract common UI patterns (buttons, badges, cards, form inputs) into a shared component library. Reduces duplication between admin and public pages and makes future changes consistent. **Absorbed into v1.8 Phase 51 (DS-02).**
+**Requirements:** DS-02 (Phase 51)
 **Plans:** 0 plans
 
 Plans:
@@ -238,8 +372,8 @@ Plans:
 
 ### Phase 999.6: Decide on listing style for cases/arguments (BACKLOG)
 
-**Goal:** [Captured for future planning] [Migrated from BACKLOG.md B-009, added 2026-07-01] The current case list is a basic list of links. No decision has been made on whether it should be cards, a table, grouped by term, searchable, etc. Needs a design decision before implementation.
-**Requirements:** TBD
+**Goal:** [Captured for future planning] [Migrated from BACKLOG.md B-009, added 2026-07-01] The current case list is a basic list of links. No decision has been made on whether it should be cards, a table, grouped by term, searchable, etc. Needs a design decision before implementation. **Absorbed into v1.8 Phase 51 (DS-04).**
+**Requirements:** DS-04 (Phase 51)
 **Plans:** 0 plans
 
 Plans:
@@ -258,8 +392,8 @@ Plans:
 
 ### Phase 999.8: Figma design system (BACKLOG)
 
-**Goal:** [Captured for future planning] [Migrated from BACKLOG.md B-011, added 2026-07-01] Implement the design system in Figma to document components, tokens, and layout patterns. Useful before any significant frontend refactor or handoff.
-**Requirements:** TBD
+**Goal:** [Captured for future planning] [Migrated from BACKLOG.md B-011, added 2026-07-01] Implement the design system in Figma to document components, tokens, and layout patterns. Useful before any significant frontend refactor or handoff. **Absorbed into v1.8 Phase 51 (DS-03).**
+**Requirements:** DS-03 (Phase 51)
 **Plans:** 0 plans
 
 Plans:

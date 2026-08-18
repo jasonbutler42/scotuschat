@@ -1090,8 +1090,8 @@ def test_page_passes_source_from_load_data_not_the_polled_copy() -> None:
 
 def test_source_is_not_rederived_client_side() -> None:
     source = _source(RESOLVE_CARD_PATH)
-    assert "PipelineRun" not in source, (
-        "RESOLVE-10: the component must not reference the internal PipelineRun identifier"
+    assert "ImportRun" not in source, (
+        "RESOLVE-10: the component must not reference the internal ImportRun identifier"
     )
     assert "convokit" not in source, (
         "RESOLVE-10: the component must not reference the internal import-strategy vocabulary"

@@ -3,7 +3,7 @@ Structural and behavioral tests for admin_jobs service delete_job function (Phas
 
 Scope:
   - Verify delete_job is importable from admin_jobs service.
-  - Verify delete_job removes only the admin_job row (not argument/pipeline_runs/utterances).
+  - Verify delete_job removes only the admin_job row (not argument/import_run/utterances).
   - Verify delete_job returns False for a non-existent job_id.
   - Structural source assertion: the only table in a delete() call is AdminJob.
   - Structural source assertion: .execution_options(synchronize_session=False) guard present.
@@ -46,7 +46,7 @@ def test_delete_job_importable() -> None:
 def test_delete_job_only_deletes_admin_jobs() -> None:
     """The delete_job function body must contain a delete() call against AdminJob only.
 
-    No other table (Argument, PipelineRun, Utterance, ArgumentParticipant, CaseArgument)
+    No other table (Argument, ImportRun, Utterance, ArgumentParticipant, CaseArgument)
     may appear inside a delete() or update() call within the function (D-10, D-11, Pitfall 6).
     """
     import inspect
@@ -69,7 +69,7 @@ def test_delete_job_only_deletes_admin_jobs() -> None:
     # No other tables may appear in delete() calls
     forbidden_deletes = [
         "delete(Argument)",
-        "delete(PipelineRun)",
+        "delete(ImportRun)",
         "delete(Utterance)",
         "delete(ArgumentParticipant)",
         "delete(CaseArgument)",
@@ -126,7 +126,7 @@ async def test_delete_job_returns_false_for_missing_id() -> None:
 async def test_delete_job_removes_only_admin_job_row() -> None:
     """delete_job removes the admin_job row and returns True.
 
-    The linked argument, its PipelineRun step rows, and its Utterance rows
+    The linked argument, its ImportRun step rows, and its Utterance rows
     must all survive the delete (D-10, D-11).
     """
     import datetime
@@ -140,8 +140,10 @@ async def test_delete_job_removes_only_admin_job_row() -> None:
         AdminJobStep,
         Argument,
         ArgumentStatusEnum,
-        PipelineRun,
-        PipelineRunStatus,
+        ImportMethod,
+        ImportRun,
+        ImportRunStatus,
+        ImportSource,
         Utterance,
     )
     from api.services.admin_jobs import delete_job
@@ -155,26 +157,28 @@ async def test_delete_job_removes_only_admin_job_row() -> None:
         db.add(arg)
         await db.flush()
 
-        # --- seed: pipeline run (ingest) ---
-        run = PipelineRun(
+        # --- seed: import run (ingest) ---
+        run = ImportRun(
             argument_id=arg.id,
             step="ingest",
-            status=PipelineRunStatus.COMPLETED,
+            status=ImportRunStatus.COMPLETED,
+            source=ImportSource.PDF_PIPELINE,
+            method=ImportMethod.NORMALIZED,
             created_at=datetime.datetime.now(datetime.timezone.utc),
         )
         db.add(run)
         await db.flush()
 
-        # --- seed: utterance (linked to argument + pipeline run) ---
+        # --- seed: utterance (linked to argument + import run) ---
         # Utterance has no `raw_text` column — the field is `text` (stale test
-        # assumption). `strategy` is NOT NULL (PIPE-04).
+        # assumption). Provenance now lives on the parent ImportRun row, not
+        # on Utterance.
         utt = Utterance(
             argument_id=arg.id,
-            pipeline_run_id=run.id,
+            import_run_id=run.id,
             sequence=1,
             raw_speaker_label="CHIEF JUSTICE ROBERTS",
             text="We'll hear argument next in this case.",
-            strategy="rule_based",
         )
         db.add(utt)
         await db.flush()
@@ -204,15 +208,15 @@ async def test_delete_job_removes_only_admin_job_row() -> None:
         deleted_job = await db.get(AdminJob, job_id)
         assert deleted_job is None, "AdminJob row must be removed by delete_job"
 
-        # --- assert: argument, pipeline_run, utterance all survive ---
+        # --- assert: argument, import_run, utterance all survive ---
         surviving_arg = await db.get(Argument, arg_id)
         assert surviving_arg is not None, (
             "Argument must NOT be deleted by delete_job (D-10, D-11)"
         )
 
-        surviving_run = await db.get(PipelineRun, run_id)
+        surviving_run = await db.get(ImportRun, run_id)
         assert surviving_run is not None, (
-            "PipelineRun must NOT be deleted by delete_job (D-10, D-11)"
+            "ImportRun must NOT be deleted by delete_job (D-10, D-11)"
         )
 
         surviving_utt = await db.get(Utterance, utt_id)
@@ -224,7 +228,7 @@ async def test_delete_job_removes_only_admin_job_row() -> None:
         # No relationship() is configured between these models (Core-style FK
         # columns only), so the ORM unit-of-work cannot auto-derive delete
         # order from FK dependencies — an explicit flush() after each delete
-        # forces FK-safe ordering (utterances -> pipeline_runs -> arguments),
+        # forces FK-safe ordering (utterances -> import_run -> arguments),
         # matching the manual-ordering convention used elsewhere in this
         # codebase (e.g. admin_arguments.delete_argument's Pitfall 2 comment).
         await db.delete(surviving_utt)

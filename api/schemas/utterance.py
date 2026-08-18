@@ -10,7 +10,7 @@ Key design decisions:
   - ArgumentMetadataResponse carries the metadata the UI heading bar needs:
     case_name, docket_number, argued_date, question_number.
   - person_id is null at Phase 1; Phase 2 Resolve step populates it.
-  - pipeline_run_id is included so callers can confirm which parse run is shown.
+  - import_run_id is included so callers can confirm which parse run is shown.
 """
 
 import datetime
@@ -30,8 +30,7 @@ class UtteranceResponse(BaseModel):
     side: str  # "BENCH" | "ADVOCATE" | "UNKNOWN"
     section_hint: Optional[str] = None
     person_id: Optional[int] = None  # null at Phase 1; populated by Resolve step
-    strategy: str  # "rule_based" | "llm_corrective"
-    pipeline_run_id: int  # which parse run produced this row (PIPE-04)
+    import_run_id: int  # which parse run produced this row (PIPE-04)
     speaker_name: Optional[str] = None   # Phase 2: resolved from people table
     speaker_role: Optional[str] = None   # Phase 2: resolved from roles table
 

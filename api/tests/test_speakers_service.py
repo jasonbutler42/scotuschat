@@ -256,9 +256,11 @@ class TestGetArgumentSpeakersReasonLeft:
             ArgumentParticipant,
             ArgumentStatusEnum,
             CourtTenure,
+            ImportMethod,
+            ImportRun,
+            ImportRunStatus,
+            ImportSource,
             Person,
-            PipelineRun,
-            PipelineRunStatus,
             Role,
             Utterance,
         )
@@ -301,19 +303,24 @@ class TestGetArgumentSpeakersReasonLeft:
         db_session.add(participant)
         await db_session.flush()
 
-        run = PipelineRun(argument_id=arg.id, step="parse", status=PipelineRunStatus.COMPLETED)
+        run = ImportRun(
+            argument_id=arg.id,
+            step="parse",
+            status=ImportRunStatus.COMPLETED,
+            source=ImportSource.PDF_PIPELINE,
+            method=ImportMethod.RULE_BASED,
+        )
         db_session.add(run)
         await db_session.flush()
 
         utterance = Utterance(
             argument_id=arg.id,
-            pipeline_run_id=run.id,
+            import_run_id=run.id,
             sequence=1,
             raw_speaker_label="JUSTICE EXAMPLE",
             text="An example utterance.",
             side=SideEnum.BENCH,
             person_id=person.id,
-            strategy="rule_based",
         )
         db_session.add(utterance)
         await db_session.flush()
@@ -388,7 +395,7 @@ class TestGetArgumentSpeakersWidenedContractShape:
         bio_text: str | None,
     ):
         """Seed a Role/Person/Argument/two-CourtTenure/ArgumentParticipant/
-        PipelineRun/Utterance set, mirroring
+        ImportRun/Utterance set, mirroring
         TestGetArgumentSpeakersReasonLeft's seeding shape, extended with a
         second tenure (different office, dates, appointed_by,
         appointing_president_party and reason_left) and the three new
@@ -401,9 +408,11 @@ class TestGetArgumentSpeakersWidenedContractShape:
             ArgumentParticipant,
             ArgumentStatusEnum,
             CourtTenure,
+            ImportMethod,
+            ImportRun,
+            ImportRunStatus,
+            ImportSource,
             Person,
-            PipelineRun,
-            PipelineRunStatus,
             Role,
             Utterance,
         )
@@ -464,19 +473,24 @@ class TestGetArgumentSpeakersWidenedContractShape:
         db_session.add(participant)
         await db_session.flush()
 
-        run = PipelineRun(argument_id=arg.id, step="parse", status=PipelineRunStatus.COMPLETED)
+        run = ImportRun(
+            argument_id=arg.id,
+            step="parse",
+            status=ImportRunStatus.COMPLETED,
+            source=ImportSource.PDF_PIPELINE,
+            method=ImportMethod.RULE_BASED,
+        )
         db_session.add(run)
         await db_session.flush()
 
         utterance = Utterance(
             argument_id=arg.id,
-            pipeline_run_id=run.id,
+            import_run_id=run.id,
             sequence=1,
             raw_speaker_label="JUSTICE EXAMPLE",
             text="An example utterance.",
             side=SideEnum.BENCH,
             person_id=person.id,
-            strategy="rule_based",
         )
         db_session.add(utterance)
         await db_session.flush()

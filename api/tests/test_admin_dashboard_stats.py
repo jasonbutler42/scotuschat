@@ -178,7 +178,14 @@ async def test_get_recent_drafts_no_marker_rows_when_none_seeded(
 async def test_get_utterance_count_counts_every_status(db_session: AsyncSession) -> None:
     """Utterances under a PIPELINE argument and an UNPUBLISHED argument both count
     toward the total (A3, DASH-01) — the function never filters by argument status."""
-    from api.models.models import Argument, ArgumentStatusEnum, PipelineRun, Utterance
+    from api.models.models import (
+        Argument,
+        ArgumentStatusEnum,
+        ImportMethod,
+        ImportRun,
+        ImportSource,
+        Utterance,
+    )
     from api.services.admin_arguments import get_utterance_count
 
     baseline = await get_utterance_count(db_session)
@@ -186,34 +193,42 @@ async def test_get_utterance_count_counts_every_status(db_session: AsyncSession)
     pipeline_arg = Argument(status=ArgumentStatusEnum.PIPELINE)
     db_session.add(pipeline_arg)
     await db_session.flush()
-    pipeline_run = PipelineRun(argument_id=pipeline_arg.id, step="parse")
+    pipeline_run = ImportRun(
+        argument_id=pipeline_arg.id,
+        step="parse",
+        source=ImportSource.PDF_PIPELINE,
+        method=ImportMethod.RULE_BASED,
+    )
     db_session.add(pipeline_run)
     await db_session.flush()
     for i in range(3):
         db_session.add(
             Utterance(
                 argument_id=pipeline_arg.id,
-                pipeline_run_id=pipeline_run.id,
+                import_run_id=pipeline_run.id,
                 sequence=i,
                 text=f"Pipeline utterance {i}",
-                strategy="rule_based",
             )
         )
 
     unpub_arg = Argument(status=ArgumentStatusEnum.UNPUBLISHED)
     db_session.add(unpub_arg)
     await db_session.flush()
-    unpub_run = PipelineRun(argument_id=unpub_arg.id, step="parse")
+    unpub_run = ImportRun(
+        argument_id=unpub_arg.id,
+        step="parse",
+        source=ImportSource.PDF_PIPELINE,
+        method=ImportMethod.RULE_BASED,
+    )
     db_session.add(unpub_run)
     await db_session.flush()
     for i in range(2):
         db_session.add(
             Utterance(
                 argument_id=unpub_arg.id,
-                pipeline_run_id=unpub_run.id,
+                import_run_id=unpub_run.id,
                 sequence=i,
                 text=f"Unpublished utterance {i}",
-                strategy="rule_based",
             )
         )
     await db_session.flush()

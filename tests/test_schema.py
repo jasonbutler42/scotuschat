@@ -60,7 +60,7 @@ EXPECTED_TABLES = {
     "case_arguments",
     "case_appearances",
     "argument_participants",
-    "pipeline_runs",
+    "import_run",
     "utterances",
     "speaker_alias",
     "argument_status_log",
@@ -70,7 +70,14 @@ EXPECTED_TABLES = {
 @requires_db
 @pytest.mark.asyncio
 async def test_all_tables_exist(db_conn):
-    """All 12 tables must exist in the public schema after alembic upgrade head."""
+    """All 12 tables must exist in the public schema after alembic upgrade head.
+
+    Phase 47 (PROV-01): `import_run` generalizes the retired `pipeline_runs`
+    table — this same test also asserts `pipeline_runs` is gone from the live
+    schema, and that `utterances` carries `import_run_id` (not the dropped
+    per-row `strategy` column), so a future backslide back to the old table
+    name or column shape is caught here, not inferred.
+    """
     rows = await db_conn.fetch(
         """
         SELECT table_name
@@ -85,6 +92,28 @@ async def test_all_tables_exist(db_conn):
     assert not missing, (
         f"Missing tables after migration: {sorted(missing)}\n"
         f"Found tables: {sorted(actual_tables)}"
+    )
+    assert 'pipeline_runs' not in actual_tables, (
+        "The retired pipeline_runs table must not exist after migration 0026 — "
+        "import_run replaces it (D-01 clean rebuild)."
+    )
+
+    column_rows = await db_conn.fetch(
+        """
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'utterances'
+        """
+    )
+    utterance_columns = {row["column_name"] for row in column_rows}
+    assert "import_run_id" in utterance_columns, (
+        "utterances.import_run_id must exist — utterances FK to import_run, "
+        "not the retired pipeline_runs table."
+    )
+    assert "strategy" not in utterance_columns, (
+        "utterances.strategy must be dropped — provenance is now declared on "
+        "the parent import_run row's source/method columns (D-05)."
     )
 
 
@@ -186,6 +215,14 @@ def test_no_create_all_in_codebase():
     offending_files = []
     for search_dir in search_dirs:
         for py_file in pathlib.Path(search_dir).rglob("*.py"):
+            # Skip nested test directories (e.g. api/tests/, pipeline/tests/) —
+            # the docstring above promises "excludes test files", but a bare
+            # rglob() over api/ or pipeline/ also walks their own tests/
+            # subdirectories, where an assertion string can legitimately
+            # contain the literal substring "create_all" without violating
+            # the Alembic-only DDL constraint this test actually guards.
+            if "tests" in py_file.relative_to(search_dir).parts[:-1]:
+                continue
             try:
                 if "create_all" in py_file.read_text(encoding="utf-8", errors="ignore"):
                     offending_files.append(str(py_file))

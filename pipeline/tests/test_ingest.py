@@ -278,15 +278,16 @@ def _make_session_cm(session):
 
 
 @pytest.mark.asyncio
-async def test_ingest_creates_pipeline_run(async_session, tmp_path):
+async def test_ingest_creates_import_run(async_session, tmp_path):
     """
-    Ingest creates exactly 1 PipelineRun row with step='ingest' and status=COMPLETED.
+    Ingest creates exactly 1 ImportRun row with step='ingest', status=COMPLETED,
+    source=PDF_PIPELINE and method=NORMALIZED.
 
     Requires DATABASE_URL (skipped if not configured via conftest.py test_db_url fixture).
     """
     from sqlalchemy import select
 
-    from api.models.models import PipelineRun, PipelineRunStatus
+    from api.models.models import ImportMethod, ImportRun, ImportRunStatus, ImportSource
 
     args = argparse.Namespace(
         url="https://www.supremecourt.gov/oral_arguments/argument_transcripts/2014/14-556q1_l5gm.pdf",
@@ -306,12 +307,14 @@ async def test_ingest_creates_pipeline_run(async_session, tmp_path):
         await run_ingest(args)
 
     result = await async_session.execute(
-        select(PipelineRun).where(PipelineRun.step == "ingest")
+        select(ImportRun).where(ImportRun.step == "ingest")
     )
     runs = result.scalars().all()
-    assert len(runs) == 1, f"Expected 1 PipelineRun, got {len(runs)}"
-    assert runs[0].status == PipelineRunStatus.COMPLETED
+    assert len(runs) == 1, f"Expected 1 ImportRun, got {len(runs)}"
+    assert runs[0].status == ImportRunStatus.COMPLETED
     assert runs[0].step == "ingest"
+    assert runs[0].source == ImportSource.PDF_PIPELINE
+    assert runs[0].method == ImportMethod.NORMALIZED
 
 
 @pytest.mark.asyncio

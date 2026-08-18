@@ -1,37 +1,39 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.7
-milestone_name: Corpus Fidelity & Resolve Rework
-status: Awaiting next milestone
-stopped_at: Completed 46-06-PLAN.md — Phase 46 fully complete
-last_updated: "2026-08-15T18:40:32.295Z"
-last_activity: 2026-08-15
-last_activity_desc: Milestone v1.7 completed and archived
+milestone: v1.8
+milestone_name: Import & Provenance Re-model
+current_phase: 48
+current_phase_name: Trust & Lifecycle
+status: "Phase 47 shipped — PR #1"
+stopped_at: Phase 47 complete and verified; Phase 48 not yet discussed
+last_updated: "2026-08-18T20:43:07.868Z"
+last_activity: 2026-08-18
 progress:
-  total_phases: 6
-  completed_phases: 6
-  total_plans: 29
-  completed_plans: 29
-  percent: 100
-current_phase: 46
-current_phase_name: dev-environment-reliability
+  total_phases: 5
+  completed_phases: 1
+  total_plans: 6
+  completed_plans: 6
+  percent: 20
+last_activity_desc: Phase 47 complete, transitioned to Phase 48
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-08-15 after v1.7 milestone completed and archived)
+See: .planning/PROJECT.md (updated 2026-08-18 — Phase 47 complete; corpus-first / PDF-deferred scope decision recorded)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** Planning next milestone
+**Current focus:** Phase 48 — Trust & Lifecycle (Phase 47 complete 2026-08-18)
 
 ## Current Position
 
-Phase: Milestone v1.7 complete
-Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-08-15 — Milestone v1.7 completed and archived
+Phase: 48 — Trust & Lifecycle
+Plan: Not started
+Status: Phase 47 shipped — PR #1
+Last activity: 2026-08-18
+
+Progress: [░░░░░░░░░░] 0%
 
 ## Deferred Items
 
@@ -48,7 +50,7 @@ Still open from earlier milestones:
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
 | backlog | Phase 999.9 — edit affordance on utterances + speaker popover | backlog (todo file moved to `todos/completed/`, tracked as 999.9) | 2026-07-13 |
-| backlog | Phases 999.2–999.8 | out of v1.7 scope; candidates for `/gsd-review-backlog` | 2026-07-12 |
+| backlog | Phases 999.2–999.8 | 999.4/999.6/999.8 absorbed into v1.8 Phase 51 (DS-02/04/03); rest remain backlog candidates for `/gsd-review-backlog` | 2026-07-12 |
 | verification | 01/03/04-VERIFICATION.md | human_needed (stale — human UAT completed per commits) | 2026-06-15 |
 | verification | 11-VERIFICATION.md | human_needed (v1.2 carry-over — Argument Metadata Editing human UAT never formally closed) | 2026-06-29 |
 | context_question | Phase 999.2 (999.2-CONTEXT.md, 3 open questions) | not started | 2026-07-12 |
@@ -62,14 +64,15 @@ Acknowledged and deferred at v1.7 close on 2026-08-15 (all pre-existing backlog 
 | todo | 2026-08-12-speakers-bench-classification-silent-fallback.md (api, low) | pending — candidate for `/gsd-review-backlog` |
 | todo | 2026-08-14-revisit-pre-relocation-checkout-removal.md (dev-environment, low) | pending — revisit after the relocated repo has run without incident for a period |
 | seed | SEED-001-rework-resolve-table-requirements | dormant — the bulk of this seed was already absorbed into RESOLVE-01–06 (Phase 44); remaining scope, if any, is a candidate for `/gsd-review-backlog` |
-| deferred_item | Phase 43/44 — 4 pre-existing `test_phase38_people_ui_contract.py` Node-subprocess path-concatenation failures (Windows/WSL path glued without separators) | not fixed — confirmed pre-existing and unrelated to both phases; not in either phase's own `files_modified` |
-| deferred_item | Phase 44 — full-suite invocation quirk (`pytest api/tests -q` skips the `tests/conftest.py` DB redirect since `tests/` is a sibling, not ancestor, path) | documented convention note — recommend `pytest tests/conftest.py api/tests -q`; superseded in spirit by Phase 46's rootdir-conftest fix, which closes this class of invocation-shape gap going forward |
+| deferred_item | Phase 43/44 — 4 pre-existing `test_phase38_people_ui_contract.py` Node-subprocess path-concatenation failures (Windows/WSL path glued without separators) | not fixed — confirmed pre-existing and unrelated to both phases; not in either phase's own `files_modified` (tracked as backlog 999.10) |
+| deferred_item | Phase 44 — full-suite invocation quirk (`pytest api/tests -q` skips the `tests/conftest.py` DB redirect since `tests/` is a sibling, not ancestor, path) | documented convention note — superseded in spirit by Phase 46's rootdir-conftest fix, which closes this class of invocation-shape gap going forward |
 
 ## Performance Metrics
 
 - v1.5: 10 phases, 55 plans, 10 days (2026-07-02 → 2026-07-12)
 - v1.6: 11 phases, 51 plans, 17 days (2026-07-12 → 2026-07-29)
-- v1.7: 5 phases, plans TBD — started 2026-07-29
+- v1.7: 6 phases, 29 plans, 18 days (2026-07-29 → 2026-08-15)
+- v1.8: 5 phases (47–51), plans TBD — roadmap created 2026-08-17
 
 *Updated after each plan completion*
 **Per-Plan Metrics:**
@@ -77,109 +80,53 @@ Acknowledged and deferred at v1.7 close on 2026-08-15 (all pre-existing backlog 
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
 | — | — | — | — |
-| Phase 41 P01 | 2h32m | 2 tasks | 1 files |
-| Phase 41 P02 | 9min | 2 tasks | 1 files |
-| Phase 41 P03 | 12min | 2 tasks | 1 files |
-| Phase 42 P01 | 25min | 2 tasks | 5 files |
-| Phase 42 P02 | 26min | 3 tasks | 3 files |
-| Phase 42 P03 | 29min | 3 tasks | 4 files |
-| Phase 42 P04 | 38min | 3 tasks | 6 files |
-| Phase 42 P05 | 35min | 3 tasks | 2 files |
-| Phase 43 P01 | 25min | 3 tasks | 8 files |
-| Phase 43 P02 | 45min | 2 tasks | 2 files |
-| Phase 43 P03 | 40min | 3 tasks | 3 files |
-| Phase 44 P01 | 36min | 3 tasks | 19 files |
-| Phase 44 P02 | 21min | 3 tasks | 2 files |
-| Phase 44 P03 | 25min | 3 tasks | 3 files |
-| Phase 44 P06 | 35min | 3 tasks | 4 files |
-| Phase 44 P07 | 40min | 3 tasks | 5 files |
-| Phase 44 P08 | ~45min | 3 tasks | 2 files |
-| Phase 46 P03 | ~50min | 3 tasks | 3 files |
-| Phase 46 P04 | ~35min | 3 tasks | 1 files |
-| Phase 46 P05 | ~50min+~1h | 3 tasks | 4 files |
-| Phase 46 P06 | ~40min | 3 tasks | 3 files |
 
-v1.5/v1.6 per-plan metrics cleared at this milestone boundary per the standard STATE.md reset; the underlying per-plan SUMMARY files remain in `.planning/milestones/v1.5-phases/` and `.planning/milestones/v1.6-phases/`.
+v1.7 per-plan metrics cleared at this milestone boundary per the standard STATE.md reset; the underlying per-plan SUMMARY files remain in `.planning/milestones/v1.7-phases/`.
 
 ## Accumulated Context
 
 ### Decisions
 
-Full cross-milestone decision log lives in PROJECT.md's Key Decisions table. Per-phase decisions for v1.6 (Phases 31–40.1) are archived in `.planning/milestones/v1.6-phases/*/`-SUMMARY.md and `.planning/milestones/v1.6-ROADMAP.md`; cleared here at milestone close per the standard STATE.md reset.
+Full cross-milestone decision log lives in PROJECT.md's Key Decisions table. Per-phase decisions for v1.7 (Phases 41–46) are archived in `.planning/milestones/v1.7-phases/*/`-SUMMARY.md and `.planning/milestones/v1.7-ROADMAP.md`; cleared here at milestone close per the standard STATE.md reset.
 
-**Carry-forward constraints that v1.7 planning must respect:**
+**Design basis for v1.8 (read before planning any phase):** `.planning/notes/import-architecture-diagnosis.md`, `provenance-and-trust-model.md`, `import-entity-sketch.md`.
 
-- [Phase 29 → affects Phase 42]: The ConvoKit importer applies a *positive apolitical allow-list*, not a blocklist — partisan/outcome fields are dropped by design and SCDB data is never imported. Phase 42's fidelity diff must classify these as intentional exclusions, not as importer defects to "restore."
-- [Phase 29 CR-01 → affects Phase 42/43]: `question_number` is derived per-docket via `select(func.max(...))` against the real `(source_docket, question_number)` UNIQUE constraint. Any reseed or re-import path must preserve that derivation, not hardcode `1`.
-- [Phase 30 → affects Phase 43]: Corpus-imported arguments must land at `status=PIPELINE` paired with a PAUSED/RESOLVE `AdminJob`, or they are unpublishable. A reseed that skips this reproduces the bug Phase 30 fixed.
-- [Phase 27 Plan 11 → affects Phase 44]: Use the write-only `$state` reassignment pattern for any effect-driven reset in Svelte 5 — an effect that both reads and writes the same `$state` inside its own body triggers `effect_update_depth_exceeded`.
-- [Phase 27 CR-01/CR-02 → affects Phase 44]: Keep data-carrying form inputs always present in the DOM (outside `{#if}` blocks); conditionally-rendered inputs silently don't submit and wipe data on save.
-- [Phase 36 + CLAUDE.md Architecture Rule 4 → affects Phase 44/RESOLVE-05]: Extracted-value hints use the shared `CopyableExtractedValue` component (Phase 38 added its stacked provenance mode) — RESOLVE-05's "Extracted: …" hints should reuse it rather than hand-rolling a fifth variant.
-- [Phase 31 → affects every phase]: The test suite runs against `scotus_test` via `TEST_DATABASE_URL`, and a `pytest_sessionfinish` hook fails any run that changes shared-dev-DB `people`/`arguments` row counts. Phase 43's destructive reset must never be exercised against the shared dev DB from a test.
-- [Phase 41 Plan 01 → affects Phase 41 Plan 02/03]: Full-corpus run supersedes RESEARCH.md's exploratory pick: conversation 15169 (Baltimore & Ohio Railroad Co.) is the real 3/4-coverage top candidate, not 14837 (Permian Basin, 2/4); 14969 (Shapiro v. Thompson) ties 15169 at 3/4 as the named runner-up for Plan 03's operator confirmation.
-- [Phase ?]: Phase 41 Plan 02: Recommendation confirmed as conversation 15169 (Baltimore & Ohio Railroad Co. v. United States) at 3/4 coverage, with 14969 (Shapiro v. Thompson) as the named tied runner-up, superseding RESEARCH.md's earlier 14837 pick.
-- [Phase ?]: Phase 41 Plan 02: FIXTURES.md section order deviates from the plan's literal prose listing (evidence/methodology tables moved before the final Fixture Set table) to satisfy a mechanical conflict between the plan's own gate-2 and gate-3 verify commands; no content or scope change.
-- [Phase ?]: Phase 41 Plan 03: Operator confirmed the four-fixture set as proposed (confirm-as-proposed) — complexity fixture 15169 (Baltimore & Ohio Railroad Co. v. United States) and state-variety targets 13015/18897/22372 — no substitutions made.
-- [Phase ?]: Phase 42 Plan 01: --conversation-id joins the existing --term/--term-range mutually-exclusive group rather than a bolt-on flag, so argparse enforces exactly one of the three; the scoped path derives its own October Term from the conversation's case_id and never calls _resolve_terms.
-- [Phase ?]: Phase 42 Plan 02: The fixture delete routine is a wholly separate script from api/services/admin_arguments.py::delete_argument (never imported/subclassed/patched) so that service's DRAFT-only gate stays intact for the admin UI while this offline routine targets status=pipeline corpus fixtures by design.
-- [Phase ?]: Phase 42 Plan 02: --delete-case's other-argument-link check runs strictly after the fixture's own case_arguments row is deleted, so the guard correctly counts only rows belonging to a different argument before deciding to retain or delete the case row.
-- [Phase ?]: Phase 42 Plan 03: Added CASES_FILENAME/CONVERSATIONS_FILENAME/SPEAKERS_FILENAME/UTTERANCES_FILENAME constants to pipeline/corpus/loader.py so the new diff script never hand-rolls a second copy of the four raw corpus filenames.
-- [Phase ?]: Phase 42 Plan 03: court_tenures integrity check cross-references every is_justice=True Person by last_name before falling back to Pitfall 2's timing-anomaly explanation, correctly separating a newly-discovered Person-dedup mismatch (White/Black/Clark/Douglas) from Marshall's known timing anomaly.
-- [Phase ?]: Phase 42 Plan 04: Operator disposition (D-05/D-06 batch review) approved section-hint-derive for item 1 and bench-warn-only (not bench-general) for item 2 -- side is never reassigned for Marshall's fixture row; person-identity/classification-merging work explicitly deferred to a later phase, which also governs item 8's flag-only disposition (Person-dedup mismatch: White/Black/Clark/Douglas).
-- [Phase ?]: Phase 42 Plan 05 Task 1/2: Delete-then-reimport round trip re-verified all counts against Plan 01/02's recorded baseline (arguments=166, people=343, court_tenures=123, cases term_year=1966=1, fixture utterances=480) with zero divergence; Utterance.sequence ordering proven stable (0 differences, 480 rows) across the round trip; section_hint now non-null on exactly 1/480 rows because this fixture's only real raw side transition is the single PETITIONER-side turn -- no RESPONDENT-side advocate exists in the raw advocates dict since Marshall (the real SG/respondent advocate) stays BENCH per item 2's approved bench-warn-only disposition, so the transcript page will show exactly one section-jump link, not three.
-- [Phase ?]: Phase 42 Plan 05 Task 2: Exactness cross-check against FIXTURES.md's independently-derived counts for conversation 15169 found zero divergence (9 advocates, 15 distinct speakers, 8 bench speakers, 479 turns, 2 transcripts). Imported ArgumentParticipant roster (17) = 15 raw distinct speakers minus the <INAUDIBLE> unattributed sentinel, plus 2 advocates (Hugh B. Cox, Joseph Auerbach) listed in conversations.json's advocates dict but who never speak a turn -- correct behavior, not a defect. No backfill occurred: 163 pre-existing convokit_import pipeline_runs all date to 2026-07-10, none created during this phase.
-- [Phase ?]: Phase 43 Plan 01: environment: str given no default, placed directly after admin_token in Settings (D-02); DEVTOOL-01/02 intentionally NOT marked complete in REQUIREMENTS.md — both require the full 4-fixture reseed and frontend gate, delivered in later plans of this phase.
-- [Phase ?]: Phase 43 Plan 01: FastAPI 0.139.2 (installed) wraps include_router() results in _IncludedRouter objects with no .path attribute, breaking the flat app.routes walk RESEARCH.md's code examples assumed; fixed via a version-tolerant _all_route_paths() helper in tests/test_admin_dev_router_gate.py.
-- [Phase ?]: Phase 43 Plan 02: FIXTURE_SET extended to all four confirmed fixtures (15169/13015/18897/22372) in FIXTURES.md declaration order; reseed loop now also checks for a paired AdminJob (not just Argument) and catches run_import_convokit exceptions, re-raising as ResetIncompleteError so a partial reseed never returns a short success list.
-- [Phase ?]: Phase 43 Plan 02: State-realization block drives 13015 to DRAFT via approve_job, 18897 to DRAFT-then-PUBLISHED via approve_job then publish_argument (order load-bearing, publish_argument's resolve-gate requires resolved_at non-null), and 22372's AdminJob to RUNNING via the one documented direct column write (D-04) -- D-03 is scoped to Argument.status, not AdminJob.status.
-- [Phase ?]: Phase 43 Plan 02: Did NOT mark DEVTOOL-01 complete in REQUIREMENTS.md -- its text requires the operator can trigger the reset from the admin panel, which ships in Plan 43-03, not this backend-only plan. Mirrors 43-01-SUMMARY's identical decision.
-- [Phase ?]: Phase 43 Plan 03: ENVIRONMENT read via $env/dynamic/private (not static-private) so the Dev Tools gate is request-time, matching D-07; DEVTOOL-01/02 intentionally NOT marked complete in REQUIREMENTS.md, deferred to Plan 43-04's live production-refusal demonstration.
-- [Phase ?]: Phase 44 Plan 01: api/services/admin_arguments.py and api/routers/admin.py (touched by both Task 1 and Task 2) were edited fully before either task's commit, so their diffs were staged/committed per final per-task scope rather than git-hunk-split — no behavioral difference, documented in both commit messages and the SUMMARY.
-- [Phase ?]: Phase 44 Plan 01: RESOLVE-04 intentionally left un-checked in REQUIREMENTS.md — the phase's Source Coverage Audit splits it across 44-01 (backend rename, this plan) and 44-02 (Descriptor column always renders on Bench rows); marking it complete now would misrepresent state.
-- [Phase ?]: Phase 44 Plan 02: 'Change' link in Resolved As only renders when row.discrepancy is present (matches pre-Phase-44 Action column's row-actions-only-for-discrepancy-rows behavior) — avoids a dead clickable link for cleanly alias-resolved rows.
-- [Phase ?]: Phase 44 Plan 02: rowMatchStates seeding now sets correcting=true/disposition=confirmed/comboQuery=candidate-name for ANY row with a non-null auto_match_id (not just auto_resolved rows), collapsing Confirm/Select/Change into a single openPersonSearch entry point per D-03/D-04.
-- [Phase ?]: Phase 44 Plan 03: toggleSide's already-active no-op check runs before the gated check (matches plan's literal ordering: no-op first, then gate, then onSideChange); argumentRoleCell's four branches key purely on side/missing_tenure/rowEditable, not on gated, per the plan's literal branch order.
-- [Phase ?]: Phase 44 Plan 06: Task 2's descriptor-preservation fix broke test_phase44_argument_role_roundtrip.py's own PJOB-15 re-assertion (outside declared files_modified); fixed inline (Rule 1) since the plan's own verify command requires the full suite green.
-- [Phase ?]: Phase 44 Plan 06: RESOLVE-11/RESOLVE-13 intentionally left un-checked in REQUIREMENTS.md — both split across this plan and 44-08 (client hint suppression + Edit-person new-tab markup), mirroring 44-01's RESOLVE-04 precedent.
-- [Phase ?]: RESOLVE-09/10: is_justice-based side filter (fail-open on unknown side) and source-aware hint prefix derived from data.job.source, both threading existing data with zero backend change
-- [Phase ?]: Phase 44 Plan 08: benchRoleState(row, side) checks person_id==null (unresolved) before !missing_tenure (calculated) — an unresolved bench row reports missing_tenure=false from the service, so the reverse order would render an empty locked box; the three bench branches key only on side/person_id/missing_tenure, never rowEditable, so the read-only card renders them identically (RESOLVE-11).
-- [Phase ?]: Phase 44 Plan 08: re-pointed a plan-unlisted stale 44-02 assertion (test_descriptor_cell_snippet_always_renders_bench_dash_and_editable_input) that banned the literal string "side !== 'BENCH'" anywhere in descriptorCell — widened (not weakened) to assert the data-carrying <input> renders before and outside the new RESOLVE-13 hint wrapper.
-- [Phase ?]: [Phase 46 Plan 03]: Operator approved Task 3's checkpoint on the row-count/fail-closed evidence -- all four row counts (people/arguments/cases/utterances) byte-identical across every pytest invocation shape including the literal Phase 45 wipe command; the fail-closed guard aborted correctly with a genuinely-present TEST_DATABASE_URL.
-- [Phase ?]: [Phase 46 Plan 03]: The 2 pre-existing/unrelated full-suite failures (test_no_create_all_in_codebase false positive; order-dependent Phase 44 argument_role_roundtrip flake) surfaced by the first full-suite run against a reachable dev/test Postgres were explicitly deferred to the backlog by the operator, logged in deferred-items.md, not fixed in this plan.
-- [Phase ?]: [Phase 46 Plan 04]: Operator approved Task 3's cutover checkpoint with a general affirmation ("from what I can tell, everything seems correct") rather than an itemized walkthrough; recorded honestly as general approval, with the orchestrator's independent read-only re-verification at DST (git history match, clean tree, ext4, core.ignorecase=false, data dirs present) recorded distinctly, including a benign racy-git stat-cache false positive on README.md, resolved and explained.
-- [Phase ?]: [Phase 46 Plan 04]: Corrected the plan's anticipated one-commit SRC/DST hand-off gap to the actual two commits observed at DST HEAD (94f178a7, predating both 1bbcba33 and c3c5f30c); does not change the outcome — 46-05 Task 1's fast-forward gate still closes the gap regardless of exact size.
-- [Phase ?]: [Phase 46 Plan 05]: Task 3's live smoke test surfaced two real problems: wait_for_http misread Vite's legitimate 404 on bare '/' as unhealthy (fixed, committed 3443b267) and an orphaned pre-relocation Windows-native node.exe process broke the WSL2 localhost:5173 forwarding relay (documented, flagged for 46-06's README, no code fix needed).
-- [Phase ?]: [Phase 46 Plan 06]: Task 2 decision on the pre-relocation checkout's fate was pre-answered as option-c (leave in place, marked as retired) by the operator via the orchestrator before this plan's execution; Task 3 skipped removal/push and filed a follow-up todo instead, per option-c's own consequence.
-- [Phase ?]: [Phase 46 Plan 06]: 46-VALIDATION.md brought to status validated / nyquist_compliant: true / wave_0_complete: true, closing Phase 46's validation record with the pre-existing 46-01-01 green row left byte-identical.
+**Carry-forward constraints that v1.8 planning must respect:**
+
+- [Diagnosis → affects Phase 47]: This is a targeted re-model of the import/provenance layer, NOT a rewrite. The read model, people, tenures, and utterance display are stable and explicitly out of scope. Do not touch CASE, CASE_ARGUMENT, or the utterance/participant/person read shapes beyond the provenance/review fields the sketch calls out.
+- [Provenance model → affects Phase 47/50]: `import_run` generalizes `pipeline_run`; the corpus path must STOP fabricating PDF-shaped `pipeline_run` artifacts. `pdf_path`/`pdf_url` are nullable and only populated for `source=pdf_pipeline`. Utterances FK to `import_run_id`, not `pipeline_run_id`.
+- [Provenance model → affects Phase 48]: Every argument is born a `candidate` carrying a trust verdict; the gate is at promotion (`published_at`), NOT at row-creation. Status-based staging (candidate rows in `arguments`), NOT a separate staging table.
+- [Trust model → affects Phase 48/49/50]: "Operator work is sacred" is the single most important invariant — a re-import never overwrites a human-confirmed or human-edited value. The authority ladder (operator > corpus > pdf/rule_based > pdf/llm_corrective) governs every writer; equal-or-higher-authority disagreement records a discrepancy rather than silently overwriting.
+- [Trust model + apolitical constraint → affects Phase 48/49/51]: Trust tiers are operator-facing ONLY. Never surface trust/tier on the public site — it risks the apolitical framing hard constraint. Public sees published-or-not, nothing more.
+- [Backfill → affects Phase 47]: Migration must preserve existing corpus + PDF data with zero loss; backfill provenance deterministically from today's `strategy` + `oyez_*` nullability per the documented old→new mapping. Alembic is the sole DDL authority — never `Base.metadata.create_all`.
+- [CLAUDE.md → affects Phase 47/50]: Pipeline is offline-only (CLI, never HTTP endpoints). PG enum values can't be dropped — likely ADD `candidate` and stop using `pipeline` rather than rename.
+- [Phase 29 → affects Phase 50]: The ConvoKit importer applies a positive apolitical allow-list, not a blocklist — partisan/outcome fields are dropped by design and SCDB data is never imported. Preserve this when corpus import moves to writing `import_run` directly.
+- [Phase 29 CR-01 → affects Phase 50]: `question_number` is derived per-docket via `select(func.max(...))` against the real `(source_docket, question_number)` UNIQUE constraint. Any re-import/idempotency path must preserve that derivation, not hardcode `1`.
+- [Phase 31 → affects every phase]: The test suite runs against `scotus_test` via `TEST_DATABASE_URL` with a rootdir `conftest.py` (Phase 46) that fails any run changing shared-dev-DB row counts. New DB-gated tests must respect this isolation.
+- [Phase 44/RESOLVE-05 → affects Phase 49]: `name_needs_review`/`name_extraction_metadata` is the existing pattern REVIEW-05 must generalize into the unified `review_state` + provenance record — generalize it, do not build a parallel mechanism. Extracted-value hints use the shared `CopyableExtractedValue` component (stacked provenance mode from Phase 38).
 
 ### Roadmap Evolution
 
-v1.6's roadmap evolution is archived in `.planning/milestones/v1.6-ROADMAP.md`. Cleared here at milestone close.
+v1.6's roadmap evolution is archived in `.planning/milestones/v1.6-ROADMAP.md`; v1.7's in `.planning/milestones/v1.7-ROADMAP.md`. Cleared here at each milestone close.
 
-2026-07-29: v1.7 roadmap created — Phases 41–45 derived from the milestone's 13 requirements (CORPUS-12–14, DEVTOOL-01–02, RESOLVE-01–06, BUG-01–02). Numbering continues from v1.6's last phase (40.1). Coverage 13/13, no orphans, no duplicates. CORPUS-12 was given its own gate phase (41) rather than folded into the diff work so fixture selection is an explicit operator confirmation, and so Phase 43 can depend on the fixture without depending on Phase 42's importer fixes.
-
-2026-07-29: During Phase 41 discuss-phase, CORPUS-12 widened from a single canonical fixture to a 4-fixture set: 1 structurally-complex argument (unchanged — still the sole target of Phase 42's diff/fix work) plus 3 additional arguments chosen for publish/pipeline-state variety (unpublished/DRAFT, published, mid-pipeline) so Phase 43's reset tool and Phase 45's publish/unpublish bug work have real states to exercise. ROADMAP.md Phase 41/42/43 goals and success criteria updated; REQUIREMENTS.md CORPUS-12/DEVTOOL-01 updated to match. Also surfaced but explicitly deferred: renaming "Case" to "Argument" across DB schema/routes/frontend — logged in REQUIREMENTS.md Out of Scope, not actioned this milestone.
-
-2026-08-04: Phase 44's Wave 4 (44-04) operator visual-acceptance checkpoint surfaced that live Figma design exploration had moved materially past the original `resolve-speakers-panel.png` mockup while Waves 1–3 were executing. Rather than approve/reject the stale checkpoint, the operator ran an iterative design pass directly in Figma (file `9PDECvbdHM2vYVxt3SCwru`, page "screen mockups for GSD") and produced `.planning/phases/44-resolve-table-rework/44-FIGMA-RECONCILE.md`, which locks a new canonical Resolve-table layout and discards the old mockup. RESOLVE-07 through RESOLVE-16 added to REQUIREMENTS.md and ROADMAP.md Phase 44 (superseding RESOLVE-01's 5-column claim and refining RESOLVE-05's hint-prefix wording); 44-04's Task 4 marked superseded rather than complete. Follow-on plan(s) from 44-05 will implement the reconciliation, sequenced structural → data/behavior → copy/visual per the doc's own priority ordering.
-
-2026-08-12: All 5 phases of v1.7 (41–45) complete. Phase 45's own checkpoint verification surfaced a serious dev-environment finding: invoking pytest with explicit paths under `api/tests/`/`pipeline/tests/` skips `tests/conftest.py`'s `TEST_DATABASE_URL` redirect, silently running "DB-gated" tests against the live shared dev database — it wiped the dev DB to 0 rows twice during Phase 45's own execution. Also, the operator has since migrated to a machine with Windows admin access, removing the original admin-less constraint that shaped `scripts/dev-start.ps1`'s portable-Postgres-via-pg_ctl approach. Phase 46 ("Dev Environment Reliability") added to address both, prioritizing the data-loss-causing pytest isolation bug.
+2026-08-17: v1.8 roadmap created — Phases 47–51 derived from the milestone's 25 requirements (PROV-01–06, TRUST-01–05, REVIEW-01–05, IMPORT-01–05, DS-01–04). Numbering continues from v1.7's last phase (46). Coverage 25/25, no orphans, no duplicates — the five requirement categories map 1:1 onto five dependency-ordered phases (granularity `standard`, 5 phases sits in the 4–6 band; each phase carries 4–6 requirements of real scope, so no folding was warranted). Sequencing is load-bearing: PROV (47) is the keystone everything depends on and must come first; TRUST (48) depends on provenance existing; REVIEW (49) depends on trust + provenance; IMPORT (50) depends on the new schema + review model being in place; DS (51) is deliberately last so the UI reflects the corrected domain language, and it absorbs backlog 999.4/999.6/999.8. UI hints flagged on Phase 49 (new operator review queue screen) and Phase 51 (design system / component library / listing). Out of scope confirmed in REQUIREMENTS.md: public trust display, a literal separate staging table, the White/Black/Clark/Douglas person-dedup mismatch (deferred from v1.7 Phase 42), and deployment (DEPLOY-01/03).
 
 ### Pending Todos
 
-- `2026-08-11-create-person-popover-side-and-selection.md` (ui, minor) — unassigned. Create-person popover in the Resolve card should inherit the row's current Bench/Advocate side as its default, and the newly created person should be visibly selected (comboQuery updated) afterward. Found during Phase 44-09 checkpoint live-testing; deferred by the operator, not blocking.
-- `2026-08-12-pytest-explicit-paths-bypass-db-isolation.md` (dev-environment, high) — assigned to Phase 46, priority item.
+- `2026-08-11-create-person-popover-side-and-selection.md` (ui, minor) — unassigned. Create-person popover in the Resolve card should inherit the row's current Bench/Advocate side as its default, and the newly created person should be visibly selected afterward. Found during Phase 44-09 checkpoint live-testing; deferred, not blocking. Candidate for `/gsd-review-backlog`.
 - `2026-08-12-speakers-bench-classification-silent-fallback.md` (api, low) — unassigned, from Phase 45 code review.
 - `2026-08-12-speaker-popover-frontend-duplication-cleanup.md` (ui, low) — unassigned, from Phase 45 code review.
+- `2026-08-14-revisit-pre-relocation-checkout-removal.md` (dev-environment, low) — revisit after the relocated repo has run without incident for a period.
 
 ### Blockers/Concerns
 
-**Directly relevant to v1.7:**
+**Directly relevant to v1.8:**
 
-- **[affects Phase 43 — DEVTOOL-01]** `api/services/admin_arguments.py::delete_argument` omits `argument_status_log` from its FK cascade (found during Phase 31 Plan 04). Deleting a DRAFT argument that has a status-log row likely raises `ForeignKeyViolation`. Phase 43's full wipe will hit this on essentially every argument — expect to fix or work around it as part of that phase, not discover it at execution time.
-- **[affects Phase 42/43]** The real dev DB is believed to be at alembic head `0024` (migrations 0023/0024 were applied there via the Windows `.venv` during Phase 39 Plan 02). Run `alembic current` before assuming a migration needs applying.
-- **[affects Phase 44]** SEED-001's mockup image (`resolve-speakers-panel.png`) lives outside the repo at `C:\workspace\scotuschat\resolve-speakers-panel.png`. Re-request/re-attach it at Phase 44 discuss/plan time if it is no longer on disk — the written deltas in the seed are detailed, but the visual is the acceptance reference.
+- **[affects Phase 47/50]** `api/services/admin_arguments.py::delete_argument` historically omitted `argument_status_log` from its FK cascade (found during Phase 31). Any wipe/re-import/idempotency path that deletes arguments must account for the full FK-ordered cascade or it will raise `ForeignKeyViolation`. Confirm the current cascade order before relying on it.
+- **[affects Phase 47]** Run `alembic current` before assuming a migration needs applying — the dev DB was believed to be at head `0024`/`0025` (v1.7 added migration 0025 for the descriptor rename). Confirm the real head first; Alembic is the sole DDL authority for the new `import_run` schema.
+- **[affects Phase 48/49]** `argument_status` is a PG enum and PG cannot drop enum values — adding `candidate` and ceasing use of `pipeline` is the likely path (per `import-entity-sketch.md` open items), not a rename. Decide `import_run` per-argument vs. a separate `import_batch` grouping at Phase 47 plan time (leaning per-argument to preserve the Utterance FK).
 
-**Deployment blockers (v1.4, unresolved — explicitly out of v1.7 scope):**
+**Deployment blockers (v1.4, unresolved — explicitly out of v1.8 scope, carried to a later milestone):**
 
 - `BODY_SIZE_LIMIT=10M` must be set in DO App Platform env
 - `ORIGIN`, `PROTOCOL_HEADER`, `HOST_HEADER` env vars required on DO
@@ -191,10 +138,11 @@ v1.6's roadmap evolution is archived in `.planning/milestones/v1.6-ROADMAP.md`. 
 
 ## Session Continuity
 
-Last session: 2026-08-15T18:40:32.295Z
-Stopped at: Milestone v1.7 complete and archived, ready to plan next milestone
-Resume file: None
+Last session: 2026-08-17T16:28:10.358Z
+Stopped at: Phase 47 context gathered
+Resume file: .planning/phases/47-provenance-foundation/47-CONTEXT.md
 
 ## Operator Next Steps
 
-- Start the next milestone with /gsd-new-milestone
+- Review the v1.8 roadmap draft in `.planning/ROADMAP.md` (Phases 47–51).
+- When ready, plan the first phase with `/gsd-plan-phase 47`.

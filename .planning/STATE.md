@@ -4,17 +4,17 @@ milestone: v1.8
 milestone_name: Import & Provenance Re-model
 current_phase: 48
 current_phase_name: Trust & Lifecycle
-status: planning
+status: "Phase 47 shipped — PR #1"
 stopped_at: Phase 47 complete and verified; Phase 48 not yet discussed
-last_updated: "2026-08-18T15:35:33.451Z"
+last_updated: "2026-08-18T20:43:07.868Z"
 last_activity: 2026-08-18
-last_activity_desc: Phase 47 complete, transitioned to Phase 48
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 6
   completed_plans: 6
   percent: 20
+last_activity_desc: Phase 47 complete, transitioned to Phase 48
 ---
 
 # Project State
@@ -30,8 +30,8 @@ See: .planning/PROJECT.md (updated 2026-08-18 — Phase 47 complete; corpus-firs
 
 Phase: 48 — Trust & Lifecycle
 Plan: Not started
-Status: Ready to plan
-Last activity: 2026-08-18 — Phase 47 complete, transitioned to Phase 48
+Status: Phase 47 shipped — PR #1
+Last activity: 2026-08-18
 
 Progress: [░░░░░░░░░░] 0%
 

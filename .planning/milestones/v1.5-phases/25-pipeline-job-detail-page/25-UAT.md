@@ -87,8 +87,18 @@ blocked: 0
       issue: "Table <th> headers (lines 375-380) lacked padding-right: 12px that every <td> body cell already had, so narrow/empty columns (Title, when all visible rows are BENCH) let 'Title' and 'Action' header text visually touch."
   missing: []
 
-<!-- Out-of-scope feedback (not a failed-test Gap, needs user decision on where to route):
-- New pipeline-run status "Archived" (grey/neutral color) for runs whose argument is created and are now read-only, distinct from "completed".
-- User intends to write up further requirements for reworking the Resolve table as part of this milestone.
--->
+## Out-of-scope feedback — both routed and delivered (closed 2026-08-18)
+
+Captured during this phase's UAT as feedback needing a routing decision, not as
+failed tests. Both were routed and shipped; recorded here in place of the original
+HTML comment, which the cross-phase UAT audit surfaced as two phantom open items
+(a commented-out bullet list still parses as `## Gaps`-shaped entries).
+
+- status: resolved
+  item: "New pipeline-run status \"Archived\" (grey/neutral) for runs whose argument is created and are now read-only, distinct from \"completed\"."
+  resolution: "Delivered in Phase 26. `is_archived` was added to AdminJobResponse and populated via outerjoin in list_jobs(); the badge renders on both the detail page (RunStatusCard) and the list page. Human-verified in 26-UAT.md Test 27 \"Pipeline list page — Archived badge\" — pass."
+- status: resolved
+  item: "User intends to write up further requirements for reworking the Resolve table as part of this milestone."
+  resolution: "Became SEED-001-rework-resolve-table-requirements, promoted to RESOLVE-01-06 and delivered as Phase 44 (Resolve Table Rework) in v1.7. STATE.md records the seed as dormant, its bulk absorbed."
+
 

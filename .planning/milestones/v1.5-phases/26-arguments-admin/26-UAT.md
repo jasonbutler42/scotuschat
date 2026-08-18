@@ -168,8 +168,11 @@ coverage_id: D1
 
 ### 26. Unresolved advocate side — explicit placeholder + Save disabled
 expected: On the argument edit page, an advocate row whose side is UNKNOWN/unresolved shows an explicit "Unresolved — choose a role" placeholder in the role select, and the Save button for that row is disabled until a real role is chosen.
-result: skipped
+result: waived
 reason: "Resolve/Speakers table is scheduled for rework per project/.planning/seeds/SEED-001-rework-resolve-table-requirements.md — not worth testing ahead of that rework"
+waived_at: 2026-08-18
+waived_by: "operator — instructed to skip the outstanding human UAT items and prepare for Phase 48"
+waiver_reason: "NOT VERIFIED — deliberately not run, not a pass. The original skip reason turned out to be mistaken: the rework it deferred to (SEED-001 → Phase 44) landed on the pipeline job page's Resolve card, not on this argument-editor Speakers card, so the deferral never resolved itself. The 2026-08-18 audit confirmed the code is present and correct-looking — the placeholder at `admin/arguments/[id]/+page.svelte:497` and the Save gate on `speakerSideById[...] === 'UNKNOWN'` at :544 — but no human has exercised it in a browser. Phase 49 (Review Model) touches participant review state and is the natural place to verify it."
 
 ### 27. Pipeline list page — Archived badge (retest of Test 18 gap fix)
 expected: |
@@ -184,8 +187,10 @@ total: 27
 passed: 25
 issues: 0
 pending: 0
-skipped: 1
+skipped: 0
 blocked: 0
+waived: 1
+audit_note: "2026-08-18 audit + operator waiver. Test 26 skipped → waived: NOT verified, deliberately not run. Its original deferral pointed at a rework that landed elsewhere (Phase 44's Resolve card, not this Speakers card); code confirmed present but never exercised in a browser. Phase 49 is the natural place to verify."
 
 ## Gaps
 

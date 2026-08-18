@@ -403,30 +403,95 @@ async def client():
         yield c
 
 
-async def _find_argument_id_by_publish_state(db, published: bool) -> int | None:
+@pytest_asyncio.fixture
+async def publish_state_arguments():
     """
-    Return the id of an Argument row matching the requested publish state,
-    or skip the calling test with an explicit reason if no such row exists.
+    Seed one PUBLISHED and one UNPUBLISHED argument, committed, and delete both
+    afterwards. Yields ``{"published": <id>, "unpublished": <id>}``.
 
-    Phase 41/43 seeded publish-state variety into the dev DB, but this must
-    not hard-fail if the operator's DB lacks a row of the needed state.
+    Replaces an earlier discover-a-row helper that called `pytest.skip()` when
+    the configured DB held no argument of the needed publish state. That was
+    written when the suite ran against the shared dev DB, where Phase 41/43 had
+    seeded publish-state variety. Once Phase 31/46 moved the suite onto the
+    dedicated `TEST_DATABASE_URL` database no such rows existed there, and all
+    six live tests in this module skipped silently — the 2026-08-18 cross-phase
+    UAT audit (finding N-2) caught 45-VERIFICATION.md citing "TestPublishedGate
+    (4 tests, all pass)" as evidence for BUG-01 while the tests were not in fact
+    executing. A publish gate is a public-exposure control; its integration
+    coverage must not evaporate along with the seed data.
+
+    Seeding commits rather than relying on the rolled-back `db_session` fixture:
+    the ASGI client reaches the app through its own `AsyncSessionLocal()`
+    session, which cannot see another session's uncommitted rows. This follows
+    the seed-commit-then-delete-in-`finally` pattern already used by
+    `test_phase44_argument_role_roundtrip.py` and `test_admin_jobs_phase25.py`.
+    The rootdir conftest.py's row-count tripwire guards the real dev DB, not
+    `TEST_DATABASE_URL`, and every row created here is removed in teardown.
+
+    The PUBLISHED argument needs a linked lead Case:
+    `get_argument_with_utterances` returns None (→ 404) when no case is joined,
+    which would make the 200 assertions fail for a bare Argument row.
+    Utterances are deliberately NOT seeded — with no parse `import_run` the
+    service returns an empty utterance list, which is still a 200, and the
+    publish gate is what these tests assert.
     """
-    from sqlalchemy import select
+    from datetime import datetime, timezone
 
-    from api.models.models import Argument
-
-    condition = (
-        Argument.published_at.isnot(None) if published else Argument.published_at.is_(None)
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import (
+        Argument,
+        ArgumentStatusEnum,
+        Case,
+        CaseArgument,
     )
-    result = await db.execute(select(Argument.id).where(condition).limit(1))
-    argument_id = result.scalar_one_or_none()
-    if argument_id is None:
-        state = "published" if published else "unpublished"
-        pytest.skip(
-            f"No {state} argument found in the configured DB — seed data "
-            "required for this integration test."
+
+    async with AsyncSessionLocal() as db:
+        case = Case(
+            docket_number="PG-GATE-1",
+            docket_number_norm="pg-gate-1",
+            case_name="Published Gate Fixture v. Test Harness",
+            term_year=2026,
+            slug="published-gate-fixture-v-test-harness",
         )
-    return argument_id
+        db.add(case)
+        await db.flush()
+
+        published = Argument(
+            status=ArgumentStatusEnum.PUBLISHED,
+            question_number=1,
+            published_at=datetime.now(timezone.utc),
+        )
+        unpublished = Argument(
+            status=ArgumentStatusEnum.DRAFT,
+            question_number=2,
+            published_at=None,
+        )
+        db.add_all([published, unpublished])
+        await db.flush()
+
+        db.add(CaseArgument(case_id=case.id, argument_id=published.id, is_lead=True))
+        await db.commit()
+
+        case_id = case.id
+        published_id = published.id
+        unpublished_id = unpublished.id
+
+    try:
+        yield {"published": published_id, "unpublished": unpublished_id}
+    finally:
+        from sqlalchemy import delete
+
+        async with AsyncSessionLocal() as db:
+            await db.execute(
+                delete(CaseArgument).where(
+                    CaseArgument.argument_id.in_([published_id, unpublished_id])
+                )
+            )
+            await db.execute(
+                delete(Argument).where(Argument.id.in_([published_id, unpublished_id]))
+            )
+            await db.execute(delete(Case).where(Case.id == case_id))
+            await db.commit()
 
 
 @pytest.mark.skipif(not _db_configured(), reason="DATABASE_URL not configured")
@@ -441,21 +506,21 @@ class TestArgumentDetailPublishedGateLive:
     needed publish state isn't present.
     """
 
-    async def test_unpublished_argument_utterances_returns_404(self, client, db_session):
-        argument_id = await _find_argument_id_by_publish_state(db_session, published=False)
+    async def test_unpublished_argument_utterances_returns_404(self, client, publish_state_arguments):
+        argument_id = publish_state_arguments["unpublished"]
         response = await client.get(f"/arguments/{argument_id}/utterances")
         assert response.status_code == 404
         assert response.json() == {"detail": "Argument not found"}
 
-    async def test_published_argument_utterances_returns_200(self, client, db_session):
-        argument_id = await _find_argument_id_by_publish_state(db_session, published=True)
+    async def test_published_argument_utterances_returns_200(self, client, publish_state_arguments):
+        argument_id = publish_state_arguments["published"]
         response = await client.get(f"/arguments/{argument_id}/utterances")
         assert response.status_code == 200
 
-    async def test_unpublished_utterances_404_body_matches_nonexistent_id(self, client, db_session):
+    async def test_unpublished_utterances_404_body_matches_nonexistent_id(self, client, publish_state_arguments):
         """D-01: the 404 for an unpublished argument must be body-identical to
         the 404 for a definitely-nonexistent ID."""
-        argument_id = await _find_argument_id_by_publish_state(db_session, published=False)
+        argument_id = publish_state_arguments["unpublished"]
         unpublished_response = await client.get(f"/arguments/{argument_id}/utterances")
         nonexistent_response = await client.get("/arguments/987654321/utterances")
 
@@ -464,25 +529,25 @@ class TestArgumentDetailPublishedGateLive:
         assert unpublished_response.json() == {"detail": "Argument not found"}
         assert nonexistent_response.json() == {"detail": "Argument not found"}
 
-    async def test_unpublished_argument_speakers_returns_404(self, client, db_session):
+    async def test_unpublished_argument_speakers_returns_404(self, client, publish_state_arguments):
         """BUG-01/D-02 (Task 2): the speakers endpoint gates on published_at
         exactly like the utterances endpoint."""
-        argument_id = await _find_argument_id_by_publish_state(db_session, published=False)
+        argument_id = publish_state_arguments["unpublished"]
         response = await client.get(f"/arguments/{argument_id}/speakers")
         assert response.status_code == 404
         assert response.json() == {"detail": "Argument not found"}
 
-    async def test_published_argument_speakers_returns_200(self, client, db_session):
-        argument_id = await _find_argument_id_by_publish_state(db_session, published=True)
+    async def test_published_argument_speakers_returns_200(self, client, publish_state_arguments):
+        argument_id = publish_state_arguments["published"]
         response = await client.get(f"/arguments/{argument_id}/speakers")
         assert response.status_code == 200
         assert isinstance(response.json(), list)
 
-    async def test_unpublished_speakers_404_body_matches_nonexistent_id(self, client, db_session):
+    async def test_unpublished_speakers_404_body_matches_nonexistent_id(self, client, publish_state_arguments):
         """D-01: the 404 for an unpublished argument's speakers must be
         body-identical to the 404 for a definitely-nonexistent ID — the same
         equality property already proven for the utterances endpoint."""
-        argument_id = await _find_argument_id_by_publish_state(db_session, published=False)
+        argument_id = publish_state_arguments["unpublished"]
         unpublished_response = await client.get(f"/arguments/{argument_id}/speakers")
         nonexistent_response = await client.get("/arguments/987654321/speakers")
 

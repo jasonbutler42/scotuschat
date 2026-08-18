@@ -19,6 +19,8 @@ changes; pre-existing failures in unrelated files are logged here, not fixed).
   `files_modified` list and was last touched in an earlier phase (Phase 38).
   Confirmed pre-existing by running the file in isolation before and after
   44-01's changes with identical failure output.
+  status: resolved
+  resolution: "Verified fixed on 2026-08-18: api/tests/test_phase38_people_ui_contract.py is 23 passed / 0 failed with node on PATH. The mangled C:\workspace path came from the pre-relocation Windows checkout; the WSL relocation resolved it. Backlog 999.10 closed in the same audit. Caveat recorded there: these 4 tests silently SKIP when node is absent from PATH. See .planning/notes/2026-08-18-uat-audit-closure.md"
 
 - **Full-suite invocation quirk (not a code defect):** running
   `./.venv/Scripts/python.exe -m pytest api/tests -q` directly (the plan's
@@ -36,3 +38,5 @@ changes; pre-existing failures in unrelated files are logged here, not fixed).
   runner script, if one exists) rather than `pytest api/tests -q` alone, in
   any phase's `<verification>` block going forward — flagging here rather
   than editing the plan's already-written verification text.
+  status: resolved
+  resolution: "Superseded by Phase 46: conftest.py now lives at the pytest rootdir, so the TEST_DATABASE_URL redirect fires for every invocation shape including 'pytest api/tests -q'. Locked in by tests/test_pytest_isolation_invocation_shapes.py. See .planning/notes/2026-08-18-uat-audit-closure.md"

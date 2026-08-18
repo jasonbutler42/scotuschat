@@ -68,7 +68,9 @@ blocked: 0
 ## Gaps
 
 - truth: "A Resolved participants section appears on completed pipeline job detail pages, listing each participant with their role"
-  status: failed
+  status: resolved
+  resolution: "Behaviour restored, contract deliberately narrowed. The job detail page renders a resolved-participants card again - app/src/routes/admin/pipeline/[job_id]/+page.svelte:407-419, gated on status == completed and participants.length > 0, fed by the /api/admin/jobs/{id}/participants fetch at +page.server.ts:145-159 - so the reported symptom ('there is no resolved participants in a completed job') no longer reproduces. It is now a COUNT plus a 'Review people' link rather than a per-participant listing: per the comment at +page.svelte:403-405, per-participant name/role/side detail moved to the Resolve card above to avoid a duplicate listing (Phase 25 design decision). Closing as superseded - the truth's 'listing each participant with their role' wording describes the pre-Phase-25 layout. Closed by the 2026-08-18 cross-phase UAT audit; see .planning/notes/2026-08-18-uat-audit-closure.md"
+  previous_status: failed
   reason: "User reported: There is no resolved participants in a completed job"
   severity: major
   test: 9

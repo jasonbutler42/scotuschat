@@ -34,12 +34,29 @@ here for a future fix.
   end-to-end); flagged from static FK/migration analysis. Recommend a
   regression test (`test_admin_arguments_service.py`) asserting delete
   succeeds for a DRAFT argument that has at least one status log row.
+- **Re-confirmed STILL OPEN 2026-08-18** (cross-phase UAT audit): read the
+  current source — `delete_argument`'s cascade is Utterance → ImportRun →
+  ArgumentParticipant → CaseArgument → NULL `AdminJob.argument_id` → Argument,
+  with no `ArgumentStatusLog` step. `argument_status_log.argument_id` still has
+  no `ondelete` (`api/models/models.py:507`), and `approve_job` still writes an
+  `ArgumentStatusLog(DRAFT)` row for every argument it creates
+  (`api/services/admin_jobs.py:591`), so every approve-created DRAFT carries
+  one. Also note the comment at `scripts/delete_fixture_argument.py:25` asserts
+  "a DRAFT argument can never have one" — that claim is wrong and should be
+  corrected with the fix. No live repro was run (the audit had no DB access),
+  so this remains static analysis, as originally flagged.
+- **Tracked as:** Phase 48 (Trust & Lifecycle) scope — see `.planning/ROADMAP.md`
+  Phase 48 details and the STATE.md blocker entry. Phase 48's promotion/lifecycle
+  work touches this cascade directly, and Phases 47/50's re-import paths depend
+  on it being correct.
 
 ## Plan 31-05
 
 ### `api/core/config.py::Settings` crashed on every DB-gated test (blocking, auto-fixed — not deferred)
 
 - **Found during:** Task 1, initial verification run.
+  status: resolved
+  resolution: "Applied at the time (this entry documents an auto-fixed blocking issue, not deferred work) and still in force. Confirmed closed by the 2026-08-18 audit: the full suite runs clean through Settings(). See .planning/notes/2026-08-18-uat-audit-closure.md"
 - **Issue:** `Settings` (pydantic-settings, `env_file=".env"`) reads the whole
   `.env` file directly regardless of `os.environ`/`load_dotenv()`. Once
   Plan 31-01/02 added `TEST_DATABASE_URL` to `.env`, every `Settings()`
@@ -47,18 +64,24 @@ here for a future fix.
   Extra inputs are not permitted` — this crashed `_api_lifespan` (autouse) for
   every single api/tests test, DB-gated or not, across the whole api/tests
   suite, not just this plan's 5 files.
+  status: resolved
+  resolution: "Applied at the time (this entry documents an auto-fixed blocking issue, not deferred work) and still in force. Confirmed closed by the 2026-08-18 audit: the full suite runs clean through Settings(). See .planning/notes/2026-08-18-uat-audit-closure.md"
 - **Fix:** Added `test_database_url: str = ""` to `Settings` (declared, unused
   by the running API — solely so `Settings()` doesn't choke on the extra
   `.env` key). Rule 3 (blocking issue) — noted here rather than under a
   separate heading only because it explains why the remaining findings below
   were only now able to surface (this fix is applied, not deferred; see
   SUMMARY.md for the commit).
+  status: resolved
+  resolution: "Applied at the time (this entry documents an auto-fixed blocking issue, not deferred work) and still in force. Confirmed closed by the 2026-08-18 audit: the full suite runs clean through Settings(). See .planning/notes/2026-08-18-uat-audit-closure.md"
 
 ### Out-of-scope test files, now able to execute for the first time, have their own genuine failures
 
 - **Found during:** Task 1, full-suite regression check (`pytest` with no
   path args) after the config.py fix above unblocked every DB-gated test in
   the repo.
+  status: resolved
+  resolution: "Green as of the 2026-08-18 cross-phase UAT audit: full suite is 4 failed / 1039 passed / 6 skipped / 5 xfailed and this test is not among the 4 failures. Root cause (shared lifespan/session-factory state corrupted by combined collection against the shared dev DB) was closed by Phase 46's rootdir conftest.py relocation plus the TEST_DATABASE_URL redirect. See .planning/notes/2026-08-18-uat-audit-closure.md"
 - **Files (none are in this plan's `files_modified`):**
   - `api/tests/test_argument_oyez_field.py::test_utterances_payload_includes_oyez_transcript_id`
     — 404 (owned by Plan 31-06 per its `files_modified` list)
@@ -74,6 +97,8 @@ here for a future fix.
     `test_resolve_resumes_after_interrupt` — `Failed: not implemented` / `AttributeError`
   - `pipeline/tests/test_seed_aliases.py::test_seed_creates_justices`,
     `test_seed_idempotent` — `Failed: not implemented`
+  status: resolved
+  resolution: "Green as of the 2026-08-18 cross-phase UAT audit: full suite is 4 failed / 1039 passed / 6 skipped / 5 xfailed and this test is not among the 4 failures. Root cause (shared lifespan/session-factory state corrupted by combined collection against the shared dev DB) was closed by Phase 46's rootdir conftest.py relocation plus the TEST_DATABASE_URL redirect. See .planning/notes/2026-08-18-uat-audit-closure.md"
 - **Why not fixed here:** All of the above live outside this plan's 5
   `files_modified` (`test_admin_arguments_service.py`, `test_admin_jobs_phase25.py`,
   `test_admin_jobs_service.py`, `test_admin_jobs_stats.py`, `test_arguments.py`).
@@ -84,9 +109,13 @@ here for a future fix.
   test error before reaching its own logic) — the crash's fix is what
   surfaced them for the first time as genuinely-executing failures, matching
   this phase's premise ("silently no-op'd before the 999.17 lifespan fix").
+  status: resolved
+  resolution: "Green as of the 2026-08-18 cross-phase UAT audit: full suite is 4 failed / 1039 passed / 6 skipped / 5 xfailed and this test is not among the 4 failures. Root cause (shared lifespan/session-factory state corrupted by combined collection against the shared dev DB) was closed by Phase 46's rootdir conftest.py relocation plus the TEST_DATABASE_URL redirect. See .planning/notes/2026-08-18-uat-audit-closure.md"
 - **Suggested next step:** Confirm Plan 31-06/31-07 (or whichever plan owns
   `pipeline/tests`) picks these up; do not assume they are already tracked
   just because they're now visible.
+  status: resolved
+  resolution: "Green as of the 2026-08-18 cross-phase UAT audit: full suite is 4 failed / 1039 passed / 6 skipped / 5 xfailed and this test is not among the 4 failures. Root cause (shared lifespan/session-factory state corrupted by combined collection against the shared dev DB) was closed by Phase 46's rootdir conftest.py relocation plus the TEST_DATABASE_URL redirect. See .planning/notes/2026-08-18-uat-audit-closure.md"
 
 ## Plan 31-06
 
@@ -160,3 +189,11 @@ not writing new tests). Marked `xfail(strict=True)` with a documented
 reason so `pytest` reports 0 failures per this plan's acceptance
 criteria; the underlying test coverage gap remains open for a future
 phase/plan.
+
+**STILL OPEN as of 2026-08-18** (cross-phase UAT audit): all 5 remain
+`xfail(strict=True)` stubs today — confirmed by running
+`pytest pipeline/tests/test_resolve.py pipeline/tests/test_seed_aliases.py -rx`
+(3 passed, 5 xfailed, every XFAIL reason still reading "Never implemented").
+The full suite's 5 xfailed count is exactly these. This is a genuine coverage
+gap, not stale documentation, and is deliberately NOT closed by that audit.
+Recorded in STATE.md's deferred-items table so it surfaces at milestone close.

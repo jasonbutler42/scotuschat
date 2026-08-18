@@ -69,27 +69,37 @@ note: Success path confirmed. Failure path not testable without manufacturing a 
 
 ### 13. Failed-state error panel
 expected: For a job where a step failed, /admin/pipeline/{id} shows "This run failed." followed by the verbatim error message in monospace text. There is no Retry button — only a "Start a new run" link back to /admin/pipeline.
-result: skipped
+result: waived
+waived_at: 2026-08-18
+waived_by: "operator — instructed to skip the outstanding human UAT items and prepare for Phase 48"
+waiver_reason: "NOT VERIFIED — deliberately not run, not a pass. Requires deliberately failing a live PDF pipeline run. The implementation is present (`FailedStepGuidance.svelte`, wired at `admin/pipeline/[job_id]/+page.svelte:377`) but its rendered output has never been eyeballed. This exercises the PDF ingest path that Phases 47-50 are re-modelling, so re-test it as part of Phase 50 rather than carrying it as a v1.1 loose end."
 
 ### 14. Pipeline CLI --job-id flag (ingest)
 expected: Running `python -m pipeline ingest --help` in a terminal shows both `--job-id` and `--spaces-key` flags listed. Running `python -m pipeline parse --help` and `python -m pipeline resolve --help` each show `--job-id`.
-result: blocked
-blocked_by: other
-reason: "ModuleNotFoundError: No module named 'sqlalchemy' — venv not activated in test terminal."
+result: pass
+verified_at: 2026-08-18
+verified_by: "automated — not human UAT. Ran all three commands via the project venv (`./.venv/bin/python -m pipeline <cmd> --help`). `ingest` lists both `--spaces-key` and `--job-id`; `parse` and `resolve` each list `--job-id` (all three describe it as `admin_jobs.id — when set, subprocess writes status to ...`). Matches the expectation exactly."
+previous_result: blocked
+previous_blocked_by: other
+previous_reason: "ModuleNotFoundError: No module named 'sqlalchemy' — venv not activated in test terminal. An environment problem in the original test terminal, never a defect — the flags existed all along."
 
 ## Summary
 
 total: 14
-passed: 10
-issues: 2
+passed: 11
+issues: 0
 pending: 0
-skipped: 1
-blocked: 1
+skipped: 0
+blocked: 0
+waived: 1
+audit_note: "2026-08-18 audit + operator waiver. Test 14 blocked → pass (flags verified via `--help`; the original blocker was an unactivated venv). Test 13 skipped → waived (needs a deliberately failed live run; re-test at Phase 50). Both issues resolved: Test 10's gap superseded by Phase 44's Resolve rework, Test 11's fixed by Phase 25 CR-01. The third gap (test: 0, cases visible pre-resolve) closed by the published_at gate."
 
 ## Gaps
 
 - truth: "Auto-matched HIT rows need only a single Change button — no explicit Confirm step. Clicking Change opens a typeahead listing ALL existing people (not just Add New Person) so a wrong auto-match can be corrected."
-  status: failed
+  status: resolved
+  resolution: "Superseded by Phase 44's Resolve-table rework (RESOLVE-01-06). The Confirm/Correct disposition state machine, the Change link and the click-to-reveal search handler were deleted outright (see the comment at app/src/lib/components/ResolveCard.svelte:15-17) and replaced by a single always-rendered searchable combobox backed by the full people list (load-failure guard at ResolveCard.svelte:1308). The reported defect - a wrong auto-match cannot be corrected - is no longer reachable, because every row's person control is editable by default rather than gated behind a disposition. Verified 2026-08-18 by reading current source. Closed by the 2026-08-18 cross-phase UAT audit; see .planning/notes/2026-08-18-uat-audit-closure.md"
+  previous_status: failed
   reason: "User reported: UX has Confirm+Override instead of single Change button; typeahead for HIT rows only shows Add New Person — can't correct a wrong auto-match."
   severity: major
   test: 10
@@ -108,7 +118,9 @@ blocked: 1
   debug_session: ".planning/debug/discrepancy-ux-typeahead.md"
 
 - truth: "Selecting 'Add new person' creates the person server-side, dismisses the inline form, and auto-selects them in that row."
-  status: failed
+  status: resolved
+  resolution: "Fixed in Phase 25 (CR-01) and human-retested: 25-UAT.md Test 1 'Create new person via Resolve card popover, then blur Title on same row' - pass, 2026-07-07. CreatePersonPopover now renders inside the combobox's own open state (ResolveCard.svelte:736, 1203) and the created person is committed onto the row (ResolveCard.svelte:514-532). One residual nit - the popover should default to the row's Bench/Advocate side and show the new person as visibly selected - is tracked separately as pending todo 2026-08-11-create-person-popover-side-and-selection.md. Closed by the 2026-08-18 cross-phase UAT audit; see .planning/notes/2026-08-18-uat-audit-closure.md"
+  previous_status: failed
   reason: "User reported: Save Person button flashes Saving... then nothing — form stays visible, no selection made. Person not persisted after page refresh."
   severity: major
   test: 11
@@ -124,7 +136,9 @@ blocked: 1
   debug_session: ".planning/debug/add-person-silent-fail.md"
 
 - truth: "Cases only appear in /cases/ after resolve is complete with real case metadata (docket number, argued date, title)."
-  status: failed
+  status: resolved
+  resolution: "Closed by the published_at visibility gate. api/services/cases.py carries the D-06 gate, and Phase 45 (BUG-01) re-verified it end to end - 45-VERIFICATION.md truth 1 ('an argument in Draft/Unpublished status does not appear in the public /cases/ list') VERIFIED, operator-confirmed live at 45-01 Task 3. The Case/Argument models gained the status + published_at columns the original root cause said were missing. Closed by the 2026-08-18 cross-phase UAT audit; see .planning/notes/2026-08-18-uat-audit-closure.md"
+  previous_status: failed
   reason: "User reported: newly ingested arguments appear in /cases/ before resolution with placeholder titles like 'Pending review (job 3)' and metadata like 'No. job-3 · Argued June 17, 2026 · Question 1'."
   severity: major
   test: 0

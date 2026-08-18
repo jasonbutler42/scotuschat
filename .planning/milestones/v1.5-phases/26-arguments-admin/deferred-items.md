@@ -17,6 +17,8 @@ not fixed here, tracked for later triage).
   this plan modifies. The plan's own verification command (scoped to
   `test_admin_arguments_service.py`, `test_admin_arguments_routes.py`,
   `test_admin_jobs_service.py`) passes cleanly (24 passed, 20 skipped).
+  status: resolved
+  resolution: "Green as of the 2026-08-18 cross-phase UAT audit: full suite is 4 failed / 1039 passed / 6 skipped / 5 xfailed and this test is not among the 4 failures. Root cause (shared lifespan/session-factory state corrupted by combined collection against the shared dev DB) was closed by Phase 46's rootdir conftest.py relocation plus the TEST_DATABASE_URL redirect. See .planning/notes/2026-08-18-uat-audit-closure.md"
 
 ## Wave 1 post-merge gate (26-01 + 26-03)
 
@@ -58,6 +60,8 @@ not fixed here, tracked for later triage).
   fixture proper per-test lifespan/session teardown (or run `tests`,
   `pipeline/tests`, and `api/tests` as separate pytest invocations in CI)
   so `workflow.test_command` stops reporting false positives.
+  status: resolved
+  resolution: "Green as of the 2026-08-18 cross-phase UAT audit: full suite is 4 failed / 1039 passed / 6 skipped / 5 xfailed and this test is not among the 4 failures. Root cause (shared lifespan/session-factory state corrupted by combined collection against the shared dev DB) was closed by Phase 46's rootdir conftest.py relocation plus the TEST_DATABASE_URL redirect. See .planning/notes/2026-08-18-uat-audit-closure.md"
 
 ## Wave 2 post-merge gate (26-02)
 
@@ -71,6 +75,8 @@ not fixed here, tracked for later triage).
   own new tests, all pass (25 passed, 25 skipped, 0 failed) when the same 3
   files are run scoped instead of collected with `pipeline/tests/`. No net
   regression.
+  status: resolved
+  resolution: "Green as of the 2026-08-18 cross-phase UAT audit: full suite is 4 failed / 1039 passed / 6 skipped / 5 xfailed and this test is not among the 4 failures. Root cause (shared lifespan/session-factory state corrupted by combined collection against the shared dev DB) was closed by Phase 46's rootdir conftest.py relocation plus the TEST_DATABASE_URL redirect. See .planning/notes/2026-08-18-uat-audit-closure.md"
 
 ## Gap-closure post-merge gate (26-05)
 
@@ -93,6 +99,8 @@ not fixed here, tracked for later triage).
   (`test_admin_arguments_service.py` + `test_admin_arguments_routes.py`, no
   `pipeline/tests/` in the same process) passed cleanly: 24 passed, 24
   skipped, 0 failed. No net-new regression.
+  status: resolved
+  resolution: "Green as of the 2026-08-18 cross-phase UAT audit: full suite is 4 failed / 1039 passed / 6 skipped / 5 xfailed and this test is not among the 4 failures. Root cause (shared lifespan/session-factory state corrupted by combined collection against the shared dev DB) was closed by Phase 46's rootdir conftest.py relocation plus the TEST_DATABASE_URL redirect. See .planning/notes/2026-08-18-uat-audit-closure.md"
 
 ## Gap-closure post-merge gate (26-06)
 
@@ -118,3 +126,5 @@ not fixed here, tracked for later triage).
   cleanly: 2 passed, 9 skipped, 0 failed — identical to the executor's
   reported result. `npx svelte-check` independently re-confirmed: 0 errors,
   18 pre-existing warnings. No net-new regression.
+  status: resolved
+  resolution: "Green as of the 2026-08-18 cross-phase UAT audit: full suite is 4 failed / 1039 passed / 6 skipped / 5 xfailed and this test is not among the 4 failures. Root cause (shared lifespan/session-factory state corrupted by combined collection against the shared dev DB) was closed by Phase 46's rootdir conftest.py relocation plus the TEST_DATABASE_URL redirect. See .planning/notes/2026-08-18-uat-audit-closure.md"

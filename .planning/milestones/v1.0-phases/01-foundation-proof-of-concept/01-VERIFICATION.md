@@ -1,7 +1,7 @@
 ---
 phase: 01-foundation-proof-of-concept
 verified: 2026-06-11T00:00:00Z
-status: human_needed
+status: passed
 score: 4/5
 overrides_applied: 0
 gaps:
@@ -26,7 +26,7 @@ human_verification:
 
 **Phase Goal:** An operator can ingest a real SCOTUS transcript PDF, run the parse step, hit a live API endpoint, and see the oral argument rendered as a two-sided chat in a browser — proving the core concept end-to-end on a single hand-picked case.
 **Verified:** 2026-06-11T00:00:00Z
-**Status:** human_needed
+**Status:** passed (see Audit Closure below)
 **Re-verification:** No — initial verification
 
 ## Goal Achievement
@@ -190,3 +190,22 @@ This is classified as a WARNING, not a BLOCKER. The functional goal is met — r
 
 _Verified: 2026-06-11T00:00:00Z_
 _Verifier: Claude (gsd-verifier)_
+
+---
+
+## Audit Closure — 2026-08-18 (cross-phase UAT audit)
+
+`status` flipped `human_needed` → `passed`. Both `human_verification` items are
+superseded rather than newly executed:
+
+| # | Item | Closed by |
+|---|------|-----------|
+| 1 | Argument page renders as a two-sided chat with stage directions | `03-HUMAN-UAT.md` Tests 1–3 (status `complete`, 5/5 pass, 2026-06-12) exercise the same rendered argument view on a live server, and every subsequent milestone re-verified it |
+| 2 | Heading bar shows correct case metadata | Same — `03-HUMAN-UAT.md` Test 1 covers the case-metadata subline; Phase 26/39 UAT re-verified argument metadata end to end |
+
+The `gaps:` entry (ROADMAP SC 1 said `pipeline_run` status `pending`, ingest wrote
+`COMPLETED`) is moot: Phase 47 replaced `pipeline_run` with `import_run` entirely,
+and the v1.0 ROADMAP is archived. Recorded as superseded, not fixed.
+
+The `human_verification` array is retained above for the historical record; it is
+inert once `status` is not `human_needed`.

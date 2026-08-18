@@ -1,7 +1,7 @@
 ---
 phase: 11-argument-metadata-editing
 verified: 2026-06-22T00:00:00Z
-status: human_needed
+status: passed
 score: 15/15 must-haves verified
 behavior_unverified: 3
 overrides_applied: 0
@@ -34,7 +34,7 @@ behavior_unverified_items:
 
 **Phase Goal:** Enable operators to edit argument metadata (case name, docket number, argued date) and control the public visibility of arguments through a publish/unpublish workflow via the admin UI.
 **Verified:** 2026-06-22
-**Status:** human_needed
+**Status:** passed (see Audit Closure below)
 **Re-verification:** No — initial verification
 
 ---
@@ -204,3 +204,31 @@ The ARG-02 requirement is superseded by D-09 (always-editable + publish model), 
 
 _Verified: 2026-06-22_
 _Verifier: Claude (gsd-verifier)_
+
+---
+
+## Audit Closure — 2026-08-18 (cross-phase UAT audit)
+
+`status` flipped `human_needed` → `passed`. All three `human_verification` items
+map 1:1 onto `11-UAT.md` tests that a human ran and passed:
+
+| # | This file's item | 11-UAT.md |
+|---|------------------|-----------|
+| 1 | Status badges + per-row publish toggles + Edit link | Test 1 — pass |
+| 2 | Slug-collision error displays on the edit page | Test 2 — pass |
+| 3 | Publish/unpublish round-trip + public visibility gate | Test 3 — pass |
+
+11-UAT.md's one open Gap ("unpublishing an argument hides it at its direct
+`/cases/{slug}` URL" — `status: failed`, severity major) was closed later as
+**BUG-01 in Phase 45**: `api/services/arguments.py::get_argument_with_utterances`
+and `api/services/speakers.py::get_argument_speakers` now gate on
+`Argument.published_at`, the router raises 404, and 45-VERIFICATION.md records the
+operator confirming the live round-trip. That Gap is marked resolved in 11-UAT.md
+by this audit.
+
+**Caveat on the `behavior_unverified_items` block below:** item 1 (publish /
+unpublish guards) is covered by Phase 26's automated tests (26-UAT Tests 1–2,
+both `[auto]` and passing). Items 2–3 (slug / docket collision → 422) are covered
+at the source-contract level only. Separately, Phase 45's own integration tests in
+`api/tests/test_published_gate.py` currently **skip** for want of seed data — see
+`.planning/notes/2026-08-18-uat-audit-closure.md`, finding N-2.

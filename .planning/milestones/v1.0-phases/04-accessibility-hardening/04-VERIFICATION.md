@@ -1,9 +1,18 @@
 ---
 phase: 04-accessibility-hardening
 verified: 2026-06-15T12:00:00Z
-status: human_needed
+status: passed
 score: 15/15 must-haves verified
-overrides_applied: 0
+overrides_applied: 2
+overrides:
+  - must_have: "Screen-reader walkthrough (NVDA/JAWS/VoiceOver): every chat bubble announced as 'Bench: [Name]' or 'Advocate: [Name]' in article context; stage directions announced as notes."
+    reason: "NOT VERIFIED — human verification waived by operator decision, not executed and not a pass. No assistive technology has ever been run against this codebase. The underlying ARIA markup was verified statically (this phase's 15/15 must-haves) but no announcement has been heard. Risk accepted: an AT-only regression in speaker-side announcement would be invisible to the suite."
+    accepted_by: "operator (2026-08-18, /gsd-audit-uat — instructed to skip the outstanding human UAT items and prepare for Phase 48)"
+    accepted_at: "2026-08-18"
+  - must_have: "axe-core or WAVE scan of the rendered argument view: zero contrast violations, zero landmark-structure errors."
+    reason: "NOT VERIFIED — human verification waived by operator decision, not executed and not a pass. No automated accessibility scan has ever been run against the rendered DOM. Contrast ratios were only ever checked by reading hex tokens in source. Risk accepted: WCAG 2.1 AA contrast/landmark conformance for this phase is asserted, not measured."
+    accepted_by: "operator (2026-08-18, /gsd-audit-uat — instructed to skip the outstanding human UAT items and prepare for Phase 48)"
+    accepted_at: "2026-08-18"
 re_verification:
   previous_status: gaps_found
   previous_score: 13/15
@@ -12,29 +21,23 @@ re_verification:
     - "Mobile nav disappears entirely when no sections are detected"
   gaps_remaining: []
   regressions: []
-human_verification:
-  - test: "Open the argument view in a browser. Resize the viewport to 500px width (< 768px). Confirm the fixed bottom pill nav bar appears. Resize to 1200px width (desktop). Confirm the pill nav bar is not visible."
-    expected: "Pill nav visible only at < 768px — absent on desktop."
-    why_human: "CSS media-query behavior requires a live browser at specific viewport widths; grep cannot simulate responsive rendering."
-  - test: "Open any page. Press Tab repeatedly. Confirm every focused link, button, and interactive element shows a visible 2px blue outline (#93c5fd) with 3px offset."
-    expected: "All focusable elements show the focus ring; no element is skipped or shows the browser default."
-    why_human: "Focus ring visibility and traversal order cannot be fully verified by static analysis."
+human_verification: []
+human_verification_waived:
   - test: "Navigate the argument view with a screen reader (NVDA/JAWS on Windows; VoiceOver on Mac). Move cursor through chat bubbles. Confirm each bubble is announced as 'Bench: [Name]' or 'Advocate: [Name]' in article context. Confirm stage directions are announced as notes."
     expected: "Screen reader announces speaker side and name for every bubble; stage directions are announced as notes, not articles."
     why_human: "Screen reader virtual cursor behavior cannot be verified without an AT running."
-  - test: "Open the argument view with detected sections. Click a section pill in the SectionRail (desktop) or MobileNavBar (mobile, < 768px). Confirm smooth-scroll to the correct anchor. Confirm active state (blue border) updates via scroll-spy as the user scrolls past section anchors."
-    expected: "Pills highlight the current section; clicking scrolls to it; active state updates automatically."
-    why_human: "IntersectionObserver scroll-spy and smooth-scroll behavior requires a live browser."
+    outcome: waived
   - test: "Run axe-core or WAVE accessibility checker against the rendered argument view in a browser."
     expected: "Zero contrast violations; zero landmark structure errors."
     why_human: "Automated contrast tools require the rendered DOM with computed CSS, not static source."
+    outcome: waived
 ---
 
 # Phase 4: Accessibility + Hardening — Verification Report (Re-verification)
 
 **Phase Goal:** WCAG 2.1 AA accessibility compliance — correct ARIA semantics, keyboard focus visibility, screen-reader landmark structure, and mobile section navigation for the argument view.
 **Verified:** 2026-06-15T12:00:00Z
-**Status:** human_needed
+**Status:** passed (2 human items waived — see Audit Closure below)
 **Re-verification:** Yes — after CR-01 bug fix (removed `display: flex` from MobileNavBar.svelte `<nav>` inline style)
 
 ---
@@ -231,10 +234,68 @@ The two previously-blocked truths (T-09, T-12) are now VERIFIED:
 - **T-09 resolved:** `display: flex` removed from MobileNavBar.svelte `<nav>` inline style. The `<style>` block's `nav { display: none; }` now has uncontested control. The `@media (max-width: 768px) { nav { display: flex; } }` rule fires exclusively at mobile widths.
 - **T-12 resolved:** The `{#if sections.length > 0}` guard was already correctly implemented. With the display bug fixed, the visibility contract is now whole: the nav is absent from the DOM when no sections exist, and hidden by CSS at desktop widths when sections do exist.
 
-Five human verification items remain. These are behavioral/runtime checks that require a live browser — they were present in the prior verification and have not changed in scope.
+Five human verification items remain. (Reduced to two on 2026-08-18 — see Audit Closure below.) These are behavioral/runtime checks that require a live browser — they were present in the prior verification and have not changed in scope.
 
 ---
 
 _Verified: 2026-06-15T12:00:00Z_
 _Verifier: Claude (gsd-verifier)_
 _Re-verification: CR-01 bug fix — removed `display: flex` from MobileNavBar.svelte `<nav>` inline style_
+
+---
+
+## Audit Closure — 2026-08-18 (cross-phase UAT audit)
+
+`status` stays `human_needed`: this phase is the ONE audited phase with genuinely
+outstanding human verification. Three of the original five `human_verification`
+items were executed and passed — they are removed from the array above and
+recorded here — leaving two that have never been run.
+
+**Closed (were items 1, 2 and 4):**
+
+| Original item | Closed by |
+|---------------|-----------|
+| Pill nav visible only below 768px | `04-UAT.md` Tests 4–5 ("Mobile Nav Hidden on Desktop", "Mobile Nav Visible on Narrow Viewport") — pass |
+| Tab focus ring, 2px #93c5fd with 3px offset | `04-UAT.md` Test 1 "Keyboard Focus Ring" — pass |
+| Section pill click → smooth scroll + scroll-spy active state | `04-UAT.md` Tests 6 and 8 ("Mobile Nav Pill Scroll", "SectionRail Active Section Highlight") — pass |
+
+`04-UAT.md` is `status: passed`, total 8, passed 8, skipped 0.
+
+**Still outstanding (the two items retained above):**
+
+1. Screen-reader walkthrough (NVDA/JAWS/VoiceOver) — each chat bubble announced as
+   "Bench: [Name]" / "Advocate: [Name]" in article context, stage directions as notes.
+2. axe-core or WAVE scan of the rendered argument view — zero contrast violations,
+   zero landmark-structure errors.
+
+Neither was ever run, and neither is covered by any later phase's UAT. Both are
+carried in STATE.md and are the top two entries of the human test plan in
+`.planning/notes/2026-08-18-uat-audit-closure.md`. Note the accessibility surface
+has changed substantially since 2026-06-15 (Phases 14, 38, 39, 45 all touched the
+popover and argument view), so these should be run against current `main`, not
+treated as a formality.
+
+---
+
+## Human Verification Waived — 2026-08-18
+
+The operator elected to skip the two remaining human UAT items and move to Phase 48. Recorded via
+this file's `overrides` block — the project's existing mechanism for a must-have the operator accepts
+without it being verified as written (the same shape Phase 45 used) — so `status: passed` never
+implies these two were checked.
+
+**What is now asserted rather than measured:**
+
+- No assistive technology has ever been run against the argument view. The ARIA markup was verified
+  statically; no announcement has been heard.
+- No axe-core/WAVE scan has ever been run. Contrast was checked by reading hex tokens in source, not
+  by measuring the rendered DOM.
+
+This is a real, accepted risk for a phase whose stated goal is WCAG 2.1 AA compliance, and it is
+carried forward in STATE.md rather than closed silently. Phases 14, 38, 39 and 45 have all touched
+the popover and argument view since 2026-06-15, so the surface these checks would cover is not the
+surface they were written against.
+
+The cheapest way to retire the risk properly is to make it automatic rather than human: an axe-core
+assertion in a Playwright/Vitest browser test would cover the second item permanently and needs no
+operator time. Worth considering when Phase 51 (Design System & Noun Alignment) reworks this UI.

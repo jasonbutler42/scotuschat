@@ -42,8 +42,11 @@ result: pass
 
 ### 8. Non-resolved utterance — no popover trigger
 expected: An utterance whose speaker was not resolved (no person_id) shows a plain avatar circle that is NOT a button. Clicking the circle does nothing — no popover opens. (Skip this test if all utterances in your test argument are fully resolved.)
-result: skipped
+result: waived
 reason: all utterances in test argument are fully resolved
+waived_at: 2026-08-18
+waived_by: "operator — instructed to skip the outstanding human UAT items and prepare for Phase 48"
+waiver_reason: "NOT VERIFIED — deliberately not run, not a pass. The test's own instructions say to skip it when every utterance is resolved, and no argument with an unresolved speaker has been available since. Genuinely unverifiable without seeding one, so it is closed rather than carried indefinitely. If an unresolved-speaker argument appears during Phase 49's review-queue work, this is a one-click check worth taking then."
 
 ## Summary
 
@@ -51,8 +54,10 @@ total: 8
 passed: 7
 issues: 0
 pending: 0
-skipped: 1
+skipped: 0
 blocked: 0
+waived: 1
+audit_note: "2026-08-18 audit + operator waiver. Test 8 skipped → waived: NOT verified, deliberately not run. Unverifiable without an argument containing an unresolved speaker, which has never been available; closed rather than carried further."
 
 ## Gaps
 

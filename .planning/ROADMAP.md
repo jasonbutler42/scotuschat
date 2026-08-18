@@ -201,6 +201,29 @@ Plans:
   4. Attempting to publish an argument while any UNCERTAIN element remains is hard-blocked at the single `published_at` promotion gate.
   5. The operator can override the publish block with a deliberate, per-argument acknowledgment that is logged.
 
+**Carried defect folded in 2026-08-18** (cross-phase UAT audit): `api/services/admin_arguments.py::delete_argument`
+omits `argument_status_log` from its FK-ordered cascade. Its steps are Utterance → ImportRun →
+ArgumentParticipant → CaseArgument → NULL `AdminJob.argument_id` → Argument, with no
+`ArgumentStatusLog` delete. `argument_status_log.argument_id` is a NOT NULL FK to `arguments.id`
+with no `ondelete` clause (`api/models/models.py:507`, migration
+`0012_unpublished_enum_and_status_log.py:75`), so PostgreSQL applies RESTRICT — and `approve_job`
+writes an `ArgumentStatusLog(DRAFT)` row for every argument it creates
+(`api/services/admin_jobs.py:591`). Every approve-created DRAFT therefore carries a status-log row,
+and the Danger Zone delete on `/admin/arguments/[id]` should raise `ForeignKeyViolation` rather than
+succeed. Originally found in Phase 31 (Plan 31-04) and left open ever since; re-confirmed by reading
+current source on 2026-08-18, still with no live repro (the audit had no DB access), so treat it as
+static analysis until reproduced.
+
+  - Fix is one step: `delete(ArgumentStatusLog).where(ArgumentStatusLog.argument_id == argument_id)`
+    anywhere before the final `Argument` delete — nothing else FKs to `argument_status_log`.
+  - Add the regression test Phase 31 recommended: delete succeeds for a DRAFT argument that has at
+    least one status-log row.
+  - Correct the comment at `scripts/delete_fixture_argument.py:25`, which asserts "a DRAFT argument
+    can never have one" — that claim is wrong and is what let the gap survive three milestones.
+  - Belongs here because Phase 48 owns argument lifecycle and the `published_at` promotion gate, and
+    because Phases 47/50's re-import and idempotency paths depend on this cascade being correct
+    (STATE.md carries the same warning).
+
 **Plans**: TBD
 
 Plans:
@@ -410,14 +433,4 @@ Plans:
 
 - [ ] TBD (promote with /gsd-review-backlog when ready)
 
-### Phase 999.10: Node.js path-mangling failure in api/tests/test_phase38_people_ui_contract.py (WSL environment) (BACKLOG)
-
-**Goal:** [Captured for future planning] Fix a pre-existing Node.js subprocess path-join bug affecting 4 tests (`test_personnames_ts_format_cases_match_shared_fixture`, `test_personnames_ts_normalization_cases_match_shared_fixture`, `test_personnames_ts_invalid_cases_raise_matching_error_codes`, `test_personnames_ts_preview_returns_na_until_first_or_last`) in `api/tests/test_phase38_people_ui_contract.py`. Each spawns a Node.js subprocess that fails with `ENOENT` on a mangled path — the WSL-mounted path and the Windows path appear concatenated instead of joined (e.g. `C:\workspace\scotuschat\project\workspacescotuschatprojectapi\tests\fixtures...`). First observed during Phase 42 (42-02, logged in `.planning/phases/42-corpus-import-fidelity-diff-fix/deferred-items.md`) and reconfirmed during Phase 43 (43-01, logged in `.planning/phases/43-dev-only-reset-to-fixture/deferred-items.md`) — pre-existing both times, unrelated to either phase's actual changes (confirmed via git diff/stash showing the affected test file untouched by either phase). Needs a future phase/session that owns this test file or the WSL/Windows dev split to fix the Node subprocess path-join logic.
-**Requirements:** TBD
-**Plans:** 0 plans
-
-Plans:
-
-- [ ] TBD (promote with /gsd-review-backlog when ready)
-
-**Note:** 999.10 (bulk-import historical justices CSV) was removed 2026-07-12 during backlog review — SUPERSEDED/ABSORBED into Phase 29's `import-justices` command per CONTEXT.md D-01, 2026-07-09. 999.17 (FastAPI test lifespan/session-factory failure) was removed 2026-07-12 — FIXED 2026-07-10 during Phase 30 Wave 1, commits `1a99f28a`/`f7ad3082`. 999.1, the earlier 999.9 (README), 999.11, 999.12, 999.13, 999.14, 999.15, 999.16, 999.18, 999.19 were promoted 2026-07-12 to Phases 36, 40, 39, 35, 34, 33, 38, 37, 32, 31 respectively, and folded into the v1.6 milestone on 2026-07-13. The canonical allocator later reused the now-vacant 999.9 slot for the edit-affordance backlog item captured 2026-07-13, and subsequently reused the now-vacant 999.10 slot for the Node.js path-mangling test backlog item captured 2026-07-31 (unrelated to the original 999.10, bulk-import historical justices CSV). See the Phase Details section above for promoted-item scope.
+**Note:** 999.10 (bulk-import historical justices CSV) was removed 2026-07-12 during backlog review — SUPERSEDED/ABSORBED into Phase 29's `import-justices` command per CONTEXT.md D-01, 2026-07-09. 999.17 (FastAPI test lifespan/session-factory failure) was removed 2026-07-12 — FIXED 2026-07-10 during Phase 30 Wave 1, commits `1a99f28a`/`f7ad3082`. 999.1, the earlier 999.9 (README), 999.11, 999.12, 999.13, 999.14, 999.15, 999.16, 999.18, 999.19 were promoted 2026-07-12 to Phases 36, 40, 39, 35, 34, 33, 38, 37, 32, 31 respectively, and folded into the v1.6 milestone on 2026-07-13. The canonical allocator later reused the now-vacant 999.9 slot for the edit-affordance backlog item captured 2026-07-13, and subsequently reused the now-vacant 999.10 slot for the Node.js path-mangling test backlog item captured 2026-07-31 (unrelated to the original 999.10, bulk-import historical justices CSV). See the Phase Details section above for promoted-item scope. That Node.js path-mangling item (the second 999.10) was itself removed 2026-08-18 by the cross-phase UAT audit — VERIFIED FIXED: `api/tests/test_phase38_people_ui_contract.py` runs 23 passed / 0 failed with `node` on PATH. The mangled `C:\workspace\...` path came from the pre-relocation Windows checkout and the WSL relocation resolved it. One caveat carried forward in STATE.md: those 4 tests SKIP rather than fail when `node` is absent from PATH (the default for a pytest run launched outside an nvm shell), so a future regression there would be invisible. The 999.10 slot is vacant again.

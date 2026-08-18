@@ -36,7 +36,9 @@ blocked: 0
 ## Gaps
 
 - truth: "Unpublishing an argument hides it at its direct /cases/{slug} URL"
-  status: failed
+  status: resolved
+  resolution: "Closed as BUG-01 in Phase 45. api/services/arguments.py::get_argument_with_utterances and api/services/speakers.py::get_argument_speakers both gate on Argument.published_at, and the router raises HTTPException(404) (api/routers/arguments.py:44-45,66-68), so an unpublished argument's direct URL 404s on both client-side nav and hard SSR refresh. 45-VERIFICATION.md truth 2 VERIFIED, operator-confirmed live at 45-01 Task 3 steps 2-3. Closed by the 2026-08-18 cross-phase UAT audit; see .planning/notes/2026-08-18-uat-audit-closure.md"
+  previous_status: failed
   reason: "User reported: after unpublish, argument no longer appears in /cases list but is still accessible directly via slug"
   severity: major
   test: 3

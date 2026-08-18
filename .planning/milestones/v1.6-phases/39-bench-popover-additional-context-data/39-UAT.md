@@ -14,8 +14,9 @@ updated: 2026-07-29T14:04:46Z
 
 ### 1. Migrations applied to real dev database
 expected: `python -m alembic current` names the reason-left revision (0024) as head after `upgrade head`
-result: skipped
+result: superseded
 reason: Not explicitly reported by operator (real dev DB was likely already at head from an accidental early apply during 39-02 — see STATE.md blockers).
+superseded_by: "2026-08-18 cross-phase UAT audit — the assertion is no longer meaningful as written. Head has advanced twice since: 0025 (participant title → descriptor rename, Phase 44) and 0026 (import_run provenance, Phase 47). `alembic/versions/` confirms 0026 is the latest revision. Verifying the dev DB is at the CURRENT head is live Phase 47/48 work and is already carried as a STATE.md blocker (\"Run `alembic current` before assuming a migration needs applying\"), not a Phase 39 retest."
 
 ### 2. Importer backfill + idempotency
 expected: First run backfills birthdate/death date/reason and creates rows as needed; second consecutive run creates 0 people and 0 tenures
@@ -87,10 +88,12 @@ severity: minor
 
 total: 14
 passed: 12
-issues: 1
+issues: 0
 pending: 0
-skipped: 1
+skipped: 0
 blocked: 0
+superseded: 1
+audit_note: "2026-08-18 audit — Test 1 reclassified skipped → superseded (stale alembic head assertion); the one issue (Gap 'scrollbar inside the card') closed as BUG-02 in Phase 45."
 
 ## Gaps
 
@@ -142,7 +145,9 @@ blocked: 0
   resolution: "Tenure rows rebuilt as two-column pairs (semibold office title left, right-aligned month-and-year range), hairline dividers added per section. Deliberately supersedes 39-UI-SPEC.md's year-only copywriting row per the mockup. Operator (39-09): confirmed via bundled \"The rest of the steps all pass\" reply, no issue reported."
 
 - truth: "When popover content exceeds max-height, the scrollbar renders inside the card's visible boundary"
-  status: failed
+  status: resolved
+  resolution: "Closed as BUG-02 in Phase 45, via an operator-approved architecture revision rather than the fix this gap's root_cause proposed. Rather than move overflow onto the card element, the scroll was scoped to the bio paragraph alone (.bio-scroll, max-height 150px, custom thin scrollbar on the #334155 token - SpeakerPopover.svelte:185-200,239-258) and Popover.Content now owns no max-height/overflow-y at all (+page.svelte:139-148). Operator approved in-browser: 'that scrollbar placement is perfect! looks good at all heights. Approved'. Locked in by test_phase45_popover_boxmodel_contract.py (26 assertions). Both affected artifacts listed on this gap were changed accordingly. The follow-on todo 2026-07-29-popover-scrollbar-outside-card.md that this gap was filed as is likewise closed. Closed by the 2026-08-18 cross-phase UAT audit; see .planning/notes/2026-08-18-uat-audit-closure.md"
+  previous_status: failed
   reason: "User reported: 'One minor thing about the longer bios, though. The when the scrollbar appears, it's outside the popover card. I expected the bio section to expand and the scrollbar to stay inside. We may need to style the scrollbar so it's not as jarring.'"
   severity: minor
   test: 14

@@ -57,11 +57,23 @@ def _db_configured() -> bool:
     ["UNKNOWN", "PETITIONER", "RESPONDENT", "AMICUS"],
 )
 def test_resolve_row_update_accepts_each_dropdown_value_and_coerces_enum(value: str) -> None:
-    from api.models.models import SideEnum
+    # Resolve SideEnum from ResolveRowUpdate's OWN field annotation rather than via
+    # a fresh `from api.models.models import SideEnum`. This is the same hazard
+    # `pipeline/tests/test_resolve.py` documents for ImportRun (Phase 31, T-31-19):
+    # `tests/test_admin_router.py::test_api_main_imports_without_error` deletes every
+    # `api.*` entry from sys.modules and re-imports `api.main`, so a fresh import here
+    # yields a NEW SideEnum class object while `ResolveRowUpdate` — bound at this
+    # module's own import time, above — still carries the OLD one. The values stay
+    # equal (str-enum equality is by value) but `isinstance` returns False, which is
+    # exactly how this test failed in full-suite order while passing in isolation.
+    # `model_fields[...].annotation` is the class the model actually coerces to, so
+    # both assertions hold regardless of any mid-session re-import.
+    side_enum = ResolveRowUpdate.model_fields["side"].annotation
+    assert side_enum is not None
 
     body = ResolveRowUpdate(participant_id=1, side=value, descriptor=None)
-    assert body.side == SideEnum(value)
-    assert isinstance(body.side, SideEnum)
+    assert body.side == side_enum(value)
+    assert isinstance(body.side, side_enum)
 
 
 def test_resolve_row_update_rejects_out_of_enum_side_value() -> None:

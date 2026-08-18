@@ -1,7 +1,7 @@
 ---
 phase: 03-full-ui
 verified: 2026-06-12T00:00:00Z
-status: human_needed
+status: passed
 score: 5/5
 overrides_applied: 0
 human_verification:
@@ -26,7 +26,7 @@ human_verification:
 
 **Phase Goal:** A user can browse all loaded cases, open any argument, see a complete argument header with the speaker roster, jump between argument sections, share a stable URL that renders correctly on page refresh, and see speaker avatars with initials fallback
 **Verified:** 2026-06-12T00:00:00Z
-**Status:** human_needed
+**Status:** passed (see Audit Closure below)
 **Re-verification:** No — initial verification
 
 ---
@@ -191,3 +191,23 @@ The 5 human verification items above are all behavioral/visual checks that requi
 
 _Verified: 2026-06-12T00:00:00Z_
 _Verifier: Claude (gsd-verifier)_
+
+---
+
+## Audit Closure — 2026-08-18 (cross-phase UAT audit)
+
+`status` flipped `human_needed` → `passed`. All five `human_verification` items
+were in fact executed by a human at the time — the record lives in
+`03-HUMAN-UAT.md` (`status: complete`, total 5, passed 5) — but this file's
+`status` field was never flipped to match. The mapping is 1:1:
+
+| # | This file's item | 03-HUMAN-UAT.md |
+|---|------------------|-----------------|
+| 1 | `/cases` list renders case cards | Test 1 "Case list page visual render" — pass |
+| 2 | Case card click redirects to the argument URL | Test 2 "Single-argument case navigation" — pass |
+| 3 | Hard refresh renders via SSR | Test 3 "SSR on hard refresh" — pass |
+| 4 | SectionRail active-section highlight updates on scroll | Test 4 "SectionRail scroll-spy" — pass |
+| 5 | Section rail hidden below 768px | Test 5 "Mobile breakpoint" — pass |
+
+This is the exact failure mode PROJECT.md's Phase 40.1 process concern warns
+about: a status field left stale after the work that closes it lands elsewhere.

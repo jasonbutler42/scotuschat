@@ -66,6 +66,8 @@
 		} else if (status === 'unpublished') {
 			color = '#fb923c';
 		} else {
+			// candidate (Phase 48 D-01) and any unrecognised value share the
+			// retired born state's grey token — Phase 51 owns the palette.
 			color = '#94a3b8';
 		}
 		return `border: 1px solid ${color}; border-radius: 4px; padding: 2px 8px; font-size: 14px; font-weight: 400; background-color: #1e293b; color: ${color}; display: inline-block;`;
@@ -75,7 +77,31 @@
 		if (status === 'published') return 'Published';
 		if (status === 'draft') return 'Draft';
 		if (status === 'unpublished') return 'Unpublished';
-		return 'Pipeline';
+		// candidate (Phase 48 D-01) and any unrecognised value get the born
+		// state's own label rather than the retired 'Pipeline' one.
+		return 'Candidate';
+	}
+
+	// Blocked-publish blocker-code -> operator-readable sentence (Phase 48 D-19).
+	// A bare tier name gives the operator nothing to act on; each sentence names
+	// what dragged the tier down, with a count, so they know what to fix. An
+	// unrecognised code (a future blocker added server-side) falls back to
+	// naming the raw code rather than vanishing silently.
+	function blockerSentence(code: string, count: number): string {
+		const plural = count === 1 ? '' : 's';
+		if (code === 'unresolved_utterance_speaker') {
+			return `${count} utterance${plural} ${count === 1 ? 'has' : 'have'} no resolved speaker`;
+		}
+		if (code === 'unresolved_participant') {
+			return `${count} participant${plural} ${count === 1 ? 'is' : 'are'} unresolved`;
+		}
+		if (code === 'llm_corrective_utterance') {
+			return `${count} utterance${plural} came from the LLM corrective pass`;
+		}
+		if (code === 'no_constituents') {
+			return 'this argument has no utterances yet';
+		}
+		return `${count} occurrence${plural} of "${code}"`;
 	}
 
 	// Speakers section — per-participant save state keyed by participant_id.
@@ -307,8 +333,8 @@
 			</h2>
 
 			<div style="margin-bottom: 12px;">
-				<span style={badgeStyle(data.argument.status ?? 'pipeline')}>
-					{badgeLabel(data.argument.status ?? 'pipeline')}
+				<span style={badgeStyle(data.argument.status ?? 'candidate')}>
+					{badgeLabel(data.argument.status ?? 'candidate')}
 				</span>
 			</div>
 
@@ -361,6 +387,109 @@
 						{publishingState ? 'Publishing…' : 'Publish'}
 					</button>
 				</form>
+
+				<!-- Blocked-publish panel (Phase 48 D-19/D-20): the operator's explicit
+				     requirement is that this names WHAT dragged the tier down, with a
+				     count, not a bare tier name — that gives them nothing to act on. -->
+				{#if form?.publishBlocked}
+					<div
+						style="
+							margin-top: 16px;
+							padding: 16px;
+							border: 1px solid #fb923c;
+							border-radius: 6px;
+							background-color: #1e293b;
+						"
+					>
+						<p style="font-size: 16px; font-weight: 600; color: #fb923c; margin: 0 0 8px 0;">
+							Publish blocked
+							{#if form.trustTier}
+								<span
+									style="border: 1px solid #94a3b8; border-radius: 4px; padding: 2px 8px; font-size: 14px; font-weight: 400; background-color: #1e293b; color: #94a3b8; display: inline-block;"
+								>{form.trustTier}</span>
+							{/if}
+						</p>
+
+						{#if form.blockMessage}
+							<p style="font-size: 14px; color: #e2e8f0; margin: 0 0 8px 0;">
+								{form.blockMessage}
+							</p>
+						{/if}
+
+						{#if form.blockers && form.blockers.length > 0}
+							<ul style="margin: 0 0 16px 0; padding-left: 20px;">
+								{#each form.blockers as b}
+									<li style="font-size: 14px; color: #94a3b8; padding: 2px 0;">
+										{blockerSentence(b.code, b.count)}
+									</li>
+								{/each}
+							</ul>
+						{/if}
+
+						{#if form?.overrideReasonRequired}
+							<p role="alert" style="font-size: 14px; font-weight: 600; color: #ef4444; margin: 0 0 12px 0;">
+								A non-empty reason is required — your submission was blank or only whitespace.
+							</p>
+						{/if}
+
+						<form
+							method="POST"
+							action="?/publish"
+							use:enhance={() => {
+								publishingState = true;
+								return async ({ update }) => {
+									publishingState = false;
+									await update();
+								};
+							}}
+						>
+							<label
+								for="override_reason"
+								style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
+							>Reason for publishing anyway</label>
+							<!-- `required` is defense-in-depth only (D-17) — the server's own
+							     .strip() check on override_reason is the single authority;
+							     a whitespace-only submission is still rejected server-side. -->
+							<textarea
+								id="override_reason"
+								name="override_reason"
+								required
+								rows="3"
+								style="
+									display: block;
+									width: 100%;
+									box-sizing: border-box;
+									background-color: #0f1117;
+									border: 1px solid #334155;
+									border-radius: 6px;
+									color: #e2e8f0;
+									font-size: 14px;
+									padding: 8px 12px;
+									margin-bottom: 12px;
+								"
+							></textarea>
+							<button
+								type="submit"
+								disabled={publishingState}
+								style="
+									display: block;
+									width: 100%;
+									min-height: 44px;
+									background-color: #1e293b;
+									border: 1px solid #fb923c;
+									border-radius: 6px;
+									font-size: 16px;
+									font-weight: 600;
+									color: #e2e8f0;
+									cursor: {publishingState ? 'not-allowed' : 'pointer'};
+									opacity: {publishingState ? 0.7 : 1};
+								"
+							>
+								{publishingState ? 'Publishing…' : 'Publish anyway with this reason'}
+							</button>
+						</form>
+					</div>
+				{/if}
 			{:else if data.argument.status === 'published'}
 				<form
 					method="POST"
@@ -412,13 +541,24 @@
 
 			{#if data.argument.status_log && data.argument.status_log.length > 0}
 				{#each data.argument.status_log as entry, index}
-					<div style="padding: 8px 0; display: flex; align-items: center; gap: 8px;">
-						<span style={badgeStyle(entry.status)}>
-							{index === 0 && entry.status === 'draft' ? 'Created' : badgeLabel(entry.status)}
-						</span>
-						<span style="font-size: 14px; color: #94a3b8;">
-							— {formatDateTime(entry.created_at)}
-						</span>
+					<div style="padding: 8px 0;">
+						<div style="display: flex; align-items: center; gap: 8px;">
+							<span style={badgeStyle(entry.status)}>
+								{index === 0 && entry.status === 'draft' ? 'Created' : badgeLabel(entry.status)}
+							</span>
+							<span style="font-size: 14px; color: #94a3b8;">
+								— {formatDateTime(entry.created_at)}
+							</span>
+						</div>
+						<!-- A logged override nobody can read is not an audit trail (Phase 48 D-15). -->
+						{#if entry.override_reason}
+							<p style="font-size: 14px; color: #e2e8f0; margin: 4px 0 0 0;">
+								Override reason: "{entry.override_reason}"
+								{#if entry.trust_tier_at_transition}
+									(tier at the time: {entry.trust_tier_at_transition})
+								{/if}
+							</p>
+						{/if}
 					</div>
 				{/each}
 			{:else}

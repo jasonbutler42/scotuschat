@@ -8,6 +8,7 @@ schema is managed exclusively via migrations in alembic/versions/.
 
 import enum
 
+from api.domain.trust import TrustTier
 from sqlalchemy import (
     BigInteger,
     Boolean,
@@ -81,10 +82,11 @@ class AdminJobStep(str, enum.Enum):
 
 
 class ArgumentStatusEnum(str, enum.Enum):
-    PIPELINE = "pipeline"
+    PIPELINE = "pipeline"  # dead-but-permanent after migration 0027 (PG cannot drop enum values)
     DRAFT = "draft"
     PUBLISHED = "published"
     UNPUBLISHED = "unpublished"
+    CANDIDATE = "candidate"  # Phase 48 (D-01): the new born state, replaces PIPELINE
 
 
 # ---------------------------------------------------------------------------
@@ -308,7 +310,18 @@ class Argument(Base):
         SAEnum(ArgumentStatusEnum, name="argument_status",
                values_callable=lambda e: [x.value for x in e]),
         nullable=False,
-        default=ArgumentStatusEnum.PIPELINE,
+        default=ArgumentStatusEnum.CANDIDATE,
+    )
+    # Phase 48 (D-06/D-07): materialized floor rollup of this argument's
+    # constituent utterances/participants, recomputed in-transaction by
+    # every writer via api.services.trust.recompute_argument_tier. NOT NULL
+    # with server_default='uncertain' (migration 0027) — fail-closed, no
+    # in-migration backfill (the project DB is disposable per operator lean).
+    trust_tier = Column(
+        SAEnum(TrustTier, name="trust_tier", values_callable=lambda e: [x.value for x in e]),
+        nullable=False,
+        server_default="uncertain",
+        default=TrustTier.UNCERTAIN,
     )
     # Phase 19 (D-01): primary docket used at ingest time; NULL when operator did not supply one.
     # Used with question_number for the unique deduplication constraint (see __table_args__).
@@ -494,7 +507,13 @@ class SpeakerAlias(Base):
 # Table 12: argument_status_log
 # Audit log of argument status changes. One row per status transition.
 # Seeded at migration 0012 with one row per existing argument (backfill).
-# Minimal schema (D-06): no previous_status, notes, or triggered_by in v1.5.
+# Minimal schema (D-06 of Phase 15): no previous_status, notes, or
+# triggered_by in v1.5. Phase 48 D-15 deliberately revisits that minimalism:
+# a publish-block override IS a status transition, so its audit fields
+# belong on the row that transition already writes rather than a second
+# table. override_reason/trust_tier_at_transition are both nullable —
+# every non-override transition (CANDIDATE-at-birth, DRAFT, PUBLISHED,
+# UNPUBLISHED without an override) legitimately carries NULL here.
 # The status column binds to the existing argument_status PG enum type
 # (name="argument_status") — it does NOT create a shadow type.
 # ---------------------------------------------------------------------------
@@ -511,6 +530,16 @@ class ArgumentStatusLog(Base):
         nullable=False,
     )
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    # Phase 48 (D-15, D-17): non-empty free text required server-side only
+    # when this row records a publish override past the UNCERTAIN gate.
+    override_reason = Column(Text, nullable=True)
+    # Phase 48 (D-15): the argument's trust_tier at the moment of this
+    # transition, populated only for override rows. Binds to the trust_tier
+    # PG enum type (migration 0027) — does NOT create a shadow type.
+    trust_tier_at_transition = Column(
+        SAEnum(TrustTier, name="trust_tier", values_callable=lambda e: [x.value for x in e]),
+        nullable=True,
+    )
 
 
 # ---------------------------------------------------------------------------

@@ -22,7 +22,11 @@ type TenureGapWarning = {
 type StatusLogEntry = {
 	status: string;
 	created_at: string;
+	override_reason: string | null;
+	trust_tier_at_transition: string | null;
 };
+
+type Blocker = { code: string; count: number };
 
 type SpeakerRow = {
 	participant_id: number;
@@ -48,6 +52,7 @@ type ArgumentDetail = {
 	published_at: string | null;
 	status: string;
 	slug: string;
+	trust_tier: string;
 	consolidated_dockets: ConsolidatedDocket[];
 	participants: AdvocateParticipant[];
 	tenure_gap_warnings: TenureGapWarning[];
@@ -324,20 +329,73 @@ export const actions: Actions = {
 
 	/**
 	 * publish — POST /api/admin/arguments/{id}/publish.
-	 * Backend enforces resolved_at IS NOT NULL (T-11-PUBGATE); UI gating is defense-in-depth.
+	 *
+	 * The backend enforces two gates (Phase 48 D-14/D-19/D-20): a non-overridable
+	 * `resolved_at IS NOT NULL` completeness check, evaluated first, and an
+	 * overridable UNCERTAIN trust-tier check, evaluated only after the first gate
+	 * passes. Only the trust gate accepts `override_reason`. This action relays the
+	 * server's decision — it never re-implements either gate; UI gating (the
+	 * `required` textarea attribute, the disabled-button state) is defense-in-depth
+	 * only, and the server's own `.strip()` check on the override reason is the
+	 * single authority (D-17). A blocked-publish response sets `publishBlocked`
+	 * on the returned form payload so the page can render the block panel; the
+	 * non-overridable resolve gate and the already-published guard never set
+	 * `publishBlocked` and take the plain `error` path instead.
 	 */
-	publish: async ({ params, fetch }) => {
+	publish: async ({ request, params, fetch }) => {
+		const formData = await request.formData();
+		const override_reason = (formData.get('override_reason') as string) ?? '';
+
 		let res: Response;
 		try {
-			res = await fetch(`${FASTAPI_BASE_URL}/api/admin/arguments/${params.id}/publish`, {
-				method: 'POST',
-				headers: { 'X-Admin-Token': ADMIN_TOKEN },
-			});
+			if (override_reason.trim().length > 0) {
+				res = await fetch(`${FASTAPI_BASE_URL}/api/admin/arguments/${params.id}/publish`, {
+					method: 'POST',
+					headers: {
+						'X-Admin-Token': ADMIN_TOKEN,
+						'Content-Type': 'application/json',
+					},
+					body: JSON.stringify({ override_reason }),
+				});
+			} else {
+				res = await fetch(`${FASTAPI_BASE_URL}/api/admin/arguments/${params.id}/publish`, {
+					method: 'POST',
+					headers: { 'X-Admin-Token': ADMIN_TOKEN },
+				});
+			}
 		} catch {
 			return fail(502, { error: 'Could not publish this argument. Try again.' });
 		}
 
 		if (!res.ok) {
+			const payload: unknown = await res.json().catch(() => null);
+			const detail = (payload as { detail?: unknown } | null)?.detail;
+
+			if (typeof detail === 'object' && detail !== null) {
+				const d = detail as Record<string, unknown>;
+				if (d.code === 'uncertain_tier_blocked') {
+					return fail(422, {
+						publishBlocked: true,
+						trustTier: d.trust_tier as string,
+						blockers: (d.blockers as Blocker[]) ?? [],
+						blockMessage: d.message as string,
+					});
+				}
+				if (d.code === 'blank_override_reason') {
+					return fail(422, {
+						publishBlocked: true,
+						overrideReasonRequired: true,
+						blockMessage: d.message as string,
+					});
+				}
+			}
+
+			if (typeof detail === 'string' && detail.length > 0) {
+				// Resolve-gate (not overridable) and already-published messages reach
+				// the operator verbatim — no reason field is offered for either (D-14).
+				return fail(422, { error: detail });
+			}
+
 			return fail(422, { error: 'Could not publish this argument. Try again.' });
 		}
 

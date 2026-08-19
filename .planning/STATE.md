@@ -5,15 +5,15 @@ milestone_name: Import & Provenance Re-model
 current_phase: 48
 current_phase_name: trust-lifecycle
 status: executing
-stopped_at: Completed 48-01-PLAN.md
-last_updated: "2026-08-19T12:35:38.905Z"
+stopped_at: Completed 48-02-PLAN.md
+last_updated: "2026-08-19T12:52:43.809Z"
 last_activity: 2026-08-18
 last_activity_desc: Cross-phase UAT audit closed; human UAT waived; Phase 48 ready to discuss
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 15
-  completed_plans: 7
+  completed_plans: 8
   percent: 20
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-08-18 — Phase 47 complete; corpus-firs
 ## Current Position
 
 Phase: 48 (trust-lifecycle) — EXECUTING
-Plan: 2 of 9
+Plan: 3 of 9
 Status: Ready to execute
 Last activity: 2026-08-18 — Phase 48 execution started
 
@@ -50,7 +50,7 @@ Pre-flight for Phase 48, settled 2026-08-18:
   compare to head `0026` (`0026_import_run_provenance`, Phase 47). The audit could not check this —
   it had no DB credentials. This is the pre-existing STATE.md blocker below, not a new one.
 
-Progress: [█████░░░░░] 47%
+Progress: [█████░░░░░] 53%
 
 ## Deferred Items
 
@@ -136,6 +136,7 @@ items → 14.** Every closure carries its evidence in the file it closes; the co
 |------|----------|-------|-------|
 | — | — | — | — |
 | Phase 48 P01 | 15min | 3 tasks | 7 files |
+| Phase 48 P02 | 20min | 2 tasks | 3 files |
 
 v1.7 per-plan metrics cleared at this milestone boundary per the standard STATE.md reset; the underlying per-plan SUMMARY files remain in `.planning/milestones/v1.7-phases/`.
 
@@ -162,6 +163,8 @@ Full cross-milestone decision log lives in PROJECT.md's Key Decisions table. Per
 - [Phase 44/RESOLVE-05 → affects Phase 49]: `name_needs_review`/`name_extraction_metadata` is the existing pattern REVIEW-05 must generalize into the unified `review_state` + provenance record — generalize it, do not build a parallel mechanism. Extracted-value hints use the shared `CopyableExtractedValue` component (stacked provenance mode from Phase 38).
 - [Phase ?]: derive_tier rule 3 (operator+manual -> VERIFIED) is a flagged planner assumption pending operator confirmation at /gsd-verify-work
 - [Phase ?]: Task 2 corrected the plan's erroneous third fail-closed test case to match derive_tier's actual, locked precedence semantics (unrecognised review_state alone does not override an otherwise-trusted source/method pair)
+- [Phase ?]: Phase 48 Plan 02: cascade regression tests use try/finally cleanup so a failed assertion mid-test still leaves the shared scotus_test DB clean for the row-count tripwire
+- [Phase ?]: Phase 48 Plan 02: kept test_delete_argument_returns_false_for_pipeline as the retired-enum-value fixture and added a distinct test_delete_argument_still_refuses_candidate rather than repurposing it
 
 ### Roadmap Evolution
 
@@ -219,8 +222,8 @@ at close.
 
 ## Session Continuity
 
-Last session: 2026-08-19T12:35:38.869Z
-Stopped at: Completed 48-01-PLAN.md
+Last session: 2026-08-19T12:52:43.668Z
+Stopped at: Completed 48-02-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

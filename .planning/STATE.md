@@ -4,9 +4,9 @@ milestone: v1.8
 milestone_name: Import & Provenance Re-model
 current_phase: 48
 current_phase_name: Trust & Lifecycle
-status: "Phase 47 shipped; cross-phase UAT audit closed — ready for Phase 48 discuss"
-stopped_at: "Phase 47 complete and verified. Cross-phase UAT audit closed 2026-08-18 (72 items → 1 open finding, folded into Phase 48). Outstanding human UAT waived by operator. Next: /gsd-discuss-phase 48"
-last_updated: "2026-08-18T23:10:00.000Z"
+status: Phase 47 shipped; cross-phase UAT audit closed — ready for Phase 48 discuss
+stopped_at: Phase 48 context gathered
+last_updated: "2026-08-19T00:28:06.411Z"
 last_activity: 2026-08-18
 progress:
   total_phases: 5
@@ -14,7 +14,7 @@ progress:
   total_plans: 6
   completed_plans: 6
   percent: 20
-last_activity_desc: "Cross-phase UAT audit closed; human UAT waived; Phase 48 ready to discuss"
+last_activity_desc: Cross-phase UAT audit closed; human UAT waived; Phase 48 ready to discuss
 ---
 
 # Project State
@@ -41,9 +41,11 @@ Pre-flight for Phase 48, settled 2026-08-18:
   `delete_argument` / `argument_status_log` cascade defect — and it is folded into Phase 48's own
   scope (ROADMAP.md → Phase 48 → "Carried defect folded in 2026-08-18"). Nothing else from v1.0–v1.7
   is outstanding.
+
 - All remaining human UAT is waived (see the table below). No operator testing is queued.
 - Test suite is fully green: **1049 passed, 5 xfailed, 0 failed, 0 skipped**. The 5 xfailed are the
   never-implemented Phase 31 stubs, tracked below.
+
 - **Still unverified before planning migrations:** run `alembic current` against the dev DB and
   compare to head `0026` (`0026_import_run_provenance`, Phase 47). The audit could not check this —
   it had no DB credentials. This is the pre-existing STATE.md blocker below, not a new one.
@@ -101,10 +103,12 @@ items → 14.** Every closure carries its evidence in the file it closes; the co
   flipped after the closing work landed elsewhere; a stale `alembic current` assertion (head is now
   0026); and two phantom items from a commented-out bullet list in 25-UAT.md that still parses as
   `## Gaps` entries.
+
 - **12 of the originals remain open**, all genuinely so: 6 facets of the one `delete_argument`
   cascade defect (folded into Phase 48), 4 live UAT items, and Phase 04's 2 never-run accessibility
   checks. The audit query now reports **14** because the audit added two tracking bullets to that
   `delete_argument` entry (the re-confirmation and the Phase 48 pointer).
+
 - **3 findings recorded in no existing file.** Two were fixed during the audit:
   (N-1) 4 tests in `api/tests/test_phase44_argument_role_roundtrip.py` failed in full-suite order —
   `isinstance(body.side, SideEnum)` was False because `tests/test_admin_router.py::test_api_main_imports_without_error`
@@ -115,6 +119,7 @@ items → 14.** Every closure carries its evidence in the file it closes; the co
   seed data, so Phase 45's BUG-01 integration evidence was not actually executing; they now seed and
   tear down their own published/unpublished rows. (N-3) the 4 `test_phase38_people_ui_contract.py`
   node tests skip rather than fail when `node` is off PATH — carried as a caveat above.
+
 - **Test-suite baseline after the audit's fixes:** see the run recorded in the closure note.
 
 ## Performance Metrics
@@ -186,6 +191,7 @@ v1.6's roadmap evolution is archived in `.planning/milestones/v1.6-ROADMAP.md`; 
   the popover and argument view since, so the covered surface has drifted from the verified one. The
   cheap permanent fix is an axe-core assertion inside a browser test rather than a human checklist —
   worth folding into Phase 51 when it reworks this UI.
+
 - **[affects Phase 49/50]** Three UAT behaviours are implemented but have never been observed:
   the failed-run error panel (`FailedStepGuidance.svelte`), the unresolved-advocate role placeholder
   and per-row Save gate on the argument editor, and the non-interactive avatar for an unresolved
@@ -210,9 +216,9 @@ at close.
 
 ## Session Continuity
 
-Last session: 2026-08-17T16:28:10.358Z
-Stopped at: Phase 47 context gathered
-Resume file: .planning/phases/47-provenance-foundation/47-CONTEXT.md
+Last session: 2026-08-19T00:28:06.362Z
+Stopped at: Phase 48 context gathered
+Resume file: .planning/phases/48-trust-lifecycle/48-CONTEXT.md
 
 ## Operator Next Steps
 

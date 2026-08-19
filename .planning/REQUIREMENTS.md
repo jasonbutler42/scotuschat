@@ -23,8 +23,8 @@ Requirements for milestone v1.8. Each maps to exactly one roadmap phase.
 - [x] **TRUST-01**: Every argument carries a `trust_tier` (verified / trusted / provisional / uncertain) derived from provenance + review state
 - [x] **TRUST-02**: An argument's `trust_tier` is the floor rollup of its utterances and participants, materialized and recomputed on change
 - [x] **TRUST-03**: A newly imported argument is born a `candidate` (not public) with its tier set on arrival
-- [ ] **TRUST-04**: Promotion to published is a single gate (`published_at`); publish is hard-blocked while any UNCERTAIN element remains
-- [ ] **TRUST-05**: Operator can override the publish block with a deliberate, logged per-argument acknowledgment
+- [x] **TRUST-04**: Promotion to published is a single gate (`published_at`); publish is hard-blocked while any UNCERTAIN element remains
+- [x] **TRUST-05**: Operator can override the publish block with a deliberate, logged per-argument acknowledgment
 
 ### Review Model (REVIEW)
 
@@ -78,8 +78,8 @@ Mappings confirmed by the v1.8 roadmap (`.planning/ROADMAP.md`), created 2026-08
 | TRUST-01 | Phase 48 | Complete |
 | TRUST-02 | Phase 48 | Complete |
 | TRUST-03 | Phase 48 | Complete |
-| TRUST-04 | Phase 48 | Pending |
-| TRUST-05 | Phase 48 | Pending |
+| TRUST-04 | Phase 48 | Complete |
+| TRUST-05 | Phase 48 | Complete |
 | REVIEW-01 | Phase 49 | Pending |
 | REVIEW-02 | Phase 49 | Pending |
 | REVIEW-03 | Phase 49 | Pending |

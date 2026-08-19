@@ -5,15 +5,15 @@ milestone_name: Import & Provenance Re-model
 current_phase: 48
 current_phase_name: trust-lifecycle
 status: executing
-stopped_at: Completed 48-06-PLAN.md
-last_updated: "2026-08-19T15:29:53.218Z"
+stopped_at: Completed 48-07-PLAN.md
+last_updated: "2026-08-19T16:04:30.274Z"
 last_activity: 2026-08-18
 last_activity_desc: Cross-phase UAT audit closed; human UAT waived; Phase 48 ready to discuss
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 15
-  completed_plans: 12
+  completed_plans: 13
   percent: 20
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-08-18 — Phase 47 complete; corpus-firs
 ## Current Position
 
 Phase: 48 (trust-lifecycle) — EXECUTING
-Plan: 7 of 9
+Plan: 8 of 9
 Status: Ready to execute
 Last activity: 2026-08-18 — Phase 48 execution started
 
@@ -50,7 +50,7 @@ Pre-flight for Phase 48, settled 2026-08-18:
   compare to head `0026` (`0026_import_run_provenance`, Phase 47). The audit could not check this —
   it had no DB credentials. This is the pre-existing STATE.md blocker below, not a new one.
 
-Progress: [████████░░] 80%
+Progress: [█████████░] 87%
 
 ## Deferred Items
 
@@ -141,6 +141,7 @@ items → 14.** Every closure carries its evidence in the file it closes; the co
 | Phase 48 P04 | ~50min | 3 tasks | 13 files |
 | Phase 48 P05 | ~50min | 3 tasks | 7 files |
 | Phase 48 P06 | ~40min | 2 tasks | 3 files |
+| Phase 48 P07 | ~45min | 3 tasks | 6 files |
 
 v1.7 per-plan metrics cleared at this milestone boundary per the standard STATE.md reset; the underlying per-plan SUMMARY files remain in `.planning/milestones/v1.7-phases/`.
 
@@ -177,6 +178,8 @@ Full cross-milestone decision log lives in PROJECT.md's Key Decisions table. Per
 - [Phase ?]: Phase 48 Plan 05: fixed a stale test assumption in api/tests/test_admin_dev_routes.py (test_reset_writes_status_log_rows) that asserted zero status-log rows for candidate arguments -- D-03's birth-log write now produces exactly one row for those arguments, as CONTEXT.md predicted
 - [Phase ?]: Phase 48 Plan 06: test file bootstraps AsyncSessionLocal via a module-local FastAPI-lifespan fixture (mirroring api/tests/conftest.py::_api_lifespan) to reuse plan 48-01's _seed_argument/_teardown_argument helper unmodified
 - [Phase ?]: Phase 48 Plan 06: added a function-scoped, genuinely committed TRUNCATE fixture (mirroring pipeline/tests/conftest.py's _reset_test_db safety guard) since clean_db's rollback-based truncation is invisible to recompute-trust's separate pipeline.db.get_session() engine
+- [Phase ?]: Phase 48 Plan 07: adapted 3 pre-existing zero-constituent publish tests in test_admin_arguments_service.py to pass an override_reason since floor_tier's zero-constituent base case now hits the new UNCERTAIN gate by construction
+- [Phase ?]: Phase 48 Plan 07: blank-reason and pre-existing publish ValueErrors share one except ValueError router handler distinguished by inspecting str(exc), since Python cannot dispatch two handlers on the same exception class
 
 ### Roadmap Evolution
 
@@ -234,8 +237,8 @@ at close.
 
 ## Session Continuity
 
-Last session: 2026-08-19T15:29:53.171Z
-Stopped at: Completed 48-06-PLAN.md
+Last session: 2026-08-19T16:04:30.098Z
+Stopped at: Completed 48-07-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

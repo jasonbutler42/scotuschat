@@ -55,6 +55,92 @@ async def test_metadata_non_target_integrity_error_is_sanitized(monkeypatch) -> 
 
 
 @pytest.mark.asyncio
+async def test_publish_uncertain_tier_blocked_maps_to_structured_422(monkeypatch) -> None:
+    """TrustGateBlocked -> 422 with a structured detail dict carrying the
+    tier and the blocker breakdown (Phase 48 D-19/D-20/T-48-SWALLOW)."""
+    from fastapi import HTTPException
+    from api.domain.trust import TrustTier
+    from api.routers import admin
+    from api.services.trust import TrustGateBlocked
+
+    db = AsyncMock()
+    blockers = [{"code": "unresolved_utterance_speaker", "count": 2}]
+    monkeypatch.setattr(
+        admin.arguments_service,
+        "publish_argument",
+        AsyncMock(side_effect=TrustGateBlocked(TrustTier.UNCERTAIN, blockers)),
+    )
+    with pytest.raises(HTTPException) as exc:
+        await admin.publish_argument(7, None, db)
+    assert exc.value.status_code == 422
+    assert exc.value.detail["code"] == "uncertain_tier_blocked"
+    assert exc.value.detail["trust_tier"] == "uncertain"
+    assert exc.value.detail["blockers"] == blockers
+    assert "message" in exc.value.detail
+
+
+@pytest.mark.asyncio
+async def test_publish_blank_override_reason_maps_to_structured_422(monkeypatch) -> None:
+    """The blank-reason ValueError -> 422 with a distinct structured code so
+    the client can tell "you did not give a reason" from "you have not
+    tried yet" (D-17)."""
+    from fastapi import HTTPException
+    from api.routers import admin
+    from api.schemas.admin_arguments import PublishRequest
+
+    db = AsyncMock()
+    monkeypatch.setattr(
+        admin.arguments_service,
+        "publish_argument",
+        AsyncMock(side_effect=ValueError("blank_override_reason")),
+    )
+    with pytest.raises(HTTPException) as exc:
+        await admin.publish_argument(7, PublishRequest(override_reason="   "), db)
+    assert exc.value.status_code == 422
+    assert exc.value.detail["code"] == "blank_override_reason"
+    assert "message" in exc.value.detail
+
+
+@pytest.mark.asyncio
+async def test_publish_resolve_gate_still_maps_to_plain_string_422(monkeypatch) -> None:
+    """The pre-existing resolve-gate ValueError must still map to a
+    byte-identical plain-string 422 detail — unchanged by the new gate
+    (Phase 48 D-14)."""
+    from fastapi import HTTPException
+    from api.routers import admin
+
+    db = AsyncMock()
+    monkeypatch.setattr(
+        admin.arguments_service,
+        "publish_argument",
+        AsyncMock(side_effect=ValueError("Cannot publish: resolve step not yet complete")),
+    )
+    with pytest.raises(HTTPException) as exc:
+        await admin.publish_argument(7, None, db)
+    assert exc.value.status_code == 422
+    assert exc.value.detail == "Cannot publish: resolve step not yet complete"
+
+
+@pytest.mark.asyncio
+async def test_publish_already_published_still_maps_to_plain_string_422(monkeypatch) -> None:
+    """The pre-existing already-PUBLISHED ValueError must still map to a
+    byte-identical plain-string 422 detail — unchanged by the new gate."""
+    from fastapi import HTTPException
+    from api.routers import admin
+
+    db = AsyncMock()
+    monkeypatch.setattr(
+        admin.arguments_service,
+        "publish_argument",
+        AsyncMock(side_effect=ValueError("Already published")),
+    )
+    with pytest.raises(HTTPException) as exc:
+        await admin.publish_argument(7, None, db)
+    assert exc.value.status_code == 422
+    assert exc.value.detail == "Already published"
+
+
+@pytest.mark.asyncio
 async def test_metadata_target_race_rolls_back_then_returns_winner(monkeypatch) -> None:
     from fastapi import HTTPException
     from sqlalchemy.exc import IntegrityError
@@ -207,6 +293,22 @@ async def test_publish_argument_wrong_token_returns_401(client_no_db: AsyncClien
     """POST /api/admin/arguments/{id}/publish with wrong X-Admin-Token must return 401."""
     response = await client_no_db.post(
         "/api/admin/arguments/1/publish", headers=_WRONG_TOKEN_HEADERS
+    )
+    assert response.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_publish_argument_with_body_wrong_token_returns_401(
+    client_no_db: AsyncClient,
+) -> None:
+    """POST /api/admin/arguments/{id}/publish with a JSON body and wrong
+    X-Admin-Token must still return 401 (Phase 48 Task 2) — the new optional
+    ``body: PublishRequest | None`` route parameter must not move the route
+    outside the router-level verify_admin_token dependency."""
+    response = await client_no_db.post(
+        "/api/admin/arguments/1/publish",
+        json={"override_reason": "trying to sneak past auth"},
+        headers=_WRONG_TOKEN_HEADERS,
     )
     assert response.status_code == 401
 
@@ -451,3 +553,156 @@ async def test_update_participant_route_persists_descriptor_for_advocate(
             if arg is not None:
                 await db.delete(arg)
             await db.commit()
+
+
+# ---------------------------------------------------------------------------
+# POST /arguments/{id}/publish — end-to-end override coverage (Phase 48
+# Task 3, D-14/D-17/D-19/D-20)
+# ---------------------------------------------------------------------------
+
+
+async def _seed_uncertain_draft_with_lead_case():
+    """Seed one DRAFT, resolved argument with a single unresolved-speaker
+    utterance (source=corpus/method=direct, so the only thing dragging it
+    to UNCERTAIN is the unresolved speaker — D-11) and a lead Case, so the
+    argument reaches the publish route in a real UNCERTAIN state. Returns a
+    dict of every id needed for teardown."""
+    import datetime
+    import uuid
+
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import (
+        Argument,
+        ArgumentStatusEnum,
+        Case,
+        CaseArgument,
+        ImportRun,
+        SideEnum,
+        Utterance,
+    )
+
+    suffix = uuid.uuid4().hex[:8]
+    async with AsyncSessionLocal() as db:
+        arg = Argument(
+            status=ArgumentStatusEnum.DRAFT,
+            resolved_at=datetime.datetime.now(datetime.timezone.utc),
+        )
+        db.add(arg)
+        await db.flush()
+
+        case = Case(
+            docket_number=f"RT-OVR-{suffix}",
+            docket_number_norm=f"rt-ovr-{suffix}",
+            case_name="Route Override Fixture v. Test Harness",
+            term_year=2026,
+            slug=f"route-override-fixture-{suffix}",
+        )
+        db.add(case)
+        await db.flush()
+        db.add(CaseArgument(case_id=case.id, argument_id=arg.id, is_lead=True))
+
+        import_run = ImportRun(
+            argument_id=arg.id, step="parse", source="corpus", method="direct"
+        )
+        db.add(import_run)
+        await db.flush()
+
+        utterance = Utterance(
+            argument_id=arg.id,
+            import_run_id=import_run.id,
+            sequence=1,
+            raw_speaker_label=None,
+            text="Test utterance.",
+            is_stage_direction=False,
+            side=SideEnum.PETITIONER,
+            person_id=None,  # unresolved speaker -> UNCERTAIN tier (D-11)
+        )
+        db.add(utterance)
+        await db.commit()
+
+        return {
+            "argument_id": arg.id,
+            "case_id": case.id,
+            "import_run_id": import_run.id,
+            "utterance_id": utterance.id,
+        }
+
+
+async def _teardown_uncertain_draft_with_lead_case(ids: dict) -> None:
+    from sqlalchemy import delete as sa_delete
+
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import (
+        Argument,
+        ArgumentStatusLog,
+        Case,
+        CaseArgument,
+        ImportRun,
+        Utterance,
+    )
+
+    async with AsyncSessionLocal() as db:
+        await db.execute(
+            sa_delete(ArgumentStatusLog).where(
+                ArgumentStatusLog.argument_id == ids["argument_id"]
+            )
+        )
+        await db.execute(sa_delete(Utterance).where(Utterance.id == ids["utterance_id"]))
+        await db.execute(sa_delete(ImportRun).where(ImportRun.id == ids["import_run_id"]))
+        await db.execute(
+            sa_delete(CaseArgument).where(CaseArgument.argument_id == ids["argument_id"])
+        )
+        await db.execute(sa_delete(Case).where(Case.id == ids["case_id"]))
+        await db.execute(sa_delete(Argument).where(Argument.id == ids["argument_id"]))
+        await db.commit()
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_publish_route_with_override_reason_returns_200_and_trust_tier(
+    client: AsyncClient,
+) -> None:
+    """POST /api/admin/arguments/{id}/publish with a valid override_reason
+    succeeds for an UNCERTAIN-tier argument end to end, and the response
+    body includes trust_tier (D-20)."""
+    ids = await _seed_uncertain_draft_with_lead_case()
+    try:
+        response = await client.post(
+            f"/api/admin/arguments/{ids['argument_id']}/publish",
+            json={"override_reason": "operator override for route end-to-end test"},
+            headers=_admin_headers(),
+        )
+        assert response.status_code == 200
+        body = response.json()
+        assert body["trust_tier"] == "uncertain"
+        assert body["status"] == "published"
+        assert body["published_at"] is not None
+    finally:
+        await _teardown_uncertain_draft_with_lead_case(ids)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_publish_route_ignores_extra_body_keys(client: AsyncClient) -> None:
+    """POST /api/admin/arguments/{id}/publish with extra body keys alongside
+    a valid override_reason ignores them — PublishRequest is an allow-list
+    of exactly one field (T-48-MASS); status/trust_tier are never
+    client-settable via this route."""
+    ids = await _seed_uncertain_draft_with_lead_case()
+    try:
+        response = await client.post(
+            f"/api/admin/arguments/{ids['argument_id']}/publish",
+            json={
+                "override_reason": "operator override, extra keys ignored",
+                "status": "published",
+                "trust_tier": "verified",
+            },
+            headers=_admin_headers(),
+        )
+        assert response.status_code == 200
+        body = response.json()
+        # trust_tier reflects the SERVER's recomputed tier (uncertain), not
+        # the client-supplied "verified" — proving the extra key had no effect.
+        assert body["trust_tier"] == "uncertain"
+    finally:
+        await _teardown_uncertain_draft_with_lead_case(ids)

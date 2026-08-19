@@ -386,6 +386,448 @@ class TestArgumentDetailPublishedGate:
         )
 
 
+class TestPublishOverrideGateSourceLevel:
+    """
+    Source-level assertions for the two-gate publish + overridable trust gate
+    (Phase 48 D-14/D-15/D-20). No live database is required for this class —
+    it reuses the module's own _service_function_source_lines AST-extraction
+    helper (comment-stripped, so a docstring/comment mentioning either
+    string cannot satisfy the assertion).
+    """
+
+    def test_resolve_gate_precedes_trust_gate_in_publish_argument(self):
+        """
+        D-14: the non-overridable resolved_at gate must be evaluated before
+        the overridable trust gate, so an incomplete argument is rejected at
+        the wall the operator cannot argue with.
+        """
+        lines = _service_function_source_lines("admin_arguments.py", "publish_argument")
+        assert lines, "Could not extract publish_argument() body from api/services/admin_arguments.py"
+
+        resolve_idx = next(
+            (i for i, line in enumerate(lines) if "resolve step not yet complete" in line),
+            None,
+        )
+        trust_gate_idx = next(
+            (i for i, line in enumerate(lines) if "TrustGateBlocked" in line),
+            None,
+        )
+        assert resolve_idx is not None, (
+            "publish_argument() must still raise the resolve-gate ValueError "
+            f"(T-11-PUBGATE). Actual body:\n{chr(10).join(lines)}"
+        )
+        assert trust_gate_idx is not None, (
+            "publish_argument() must raise TrustGateBlocked for the UNCERTAIN "
+            f"trust gate (D-14/D-20). Actual body:\n{chr(10).join(lines)}"
+        )
+        assert resolve_idx < trust_gate_idx, (
+            "The resolve gate must be evaluated before the trust gate (D-14) "
+            f"— found resolve gate at line index {resolve_idx}, trust gate "
+            f"at {trust_gate_idx}. Actual body:\n{chr(10).join(lines)}"
+        )
+
+    def test_publish_argument_recomputes_tier_before_committing(self):
+        """
+        The trust tier must be recomputed before the transaction commits, so
+        the gate judges a tier consistent with the row's current
+        constituents rather than a possibly stale stored value, and so the
+        tier update lands atomically with the status/published_at change.
+        """
+        lines = _service_function_source_lines("admin_arguments.py", "publish_argument")
+        assert lines, "Could not extract publish_argument() body from api/services/admin_arguments.py"
+
+        recompute_idx = next(
+            (i for i, line in enumerate(lines) if "recompute_argument_tier" in line),
+            None,
+        )
+        commit_idx = next(
+            (i for i, line in enumerate(lines) if "db.commit" in line),
+            None,
+        )
+        assert recompute_idx is not None, (
+            f"publish_argument() must call recompute_argument_tier(). Actual body:\n{chr(10).join(lines)}"
+        )
+        assert commit_idx is not None, (
+            f"publish_argument() must call db.commit(). Actual body:\n{chr(10).join(lines)}"
+        )
+        assert recompute_idx < commit_idx, (
+            "recompute_argument_tier() must run before db.commit() so the "
+            "gate reads a fresh tier and the recompute lands in the same "
+            f"transaction as the publish. Actual body:\n{chr(10).join(lines)}"
+        )
+
+    def test_unpublish_and_participant_side_update_recompute_before_committing(self):
+        """
+        D-08: the tier stays live after unpublish and after a participant
+        edit too — both call sites recompute before their own commit.
+        """
+        for function_name in ("unpublish_argument", "update_participant_side"):
+            lines = _service_function_source_lines("admin_arguments.py", function_name)
+            assert lines, f"Could not extract {function_name}() body from api/services/admin_arguments.py"
+
+            recompute_idx = next(
+                (i for i, line in enumerate(lines) if "recompute_argument_tier" in line),
+                None,
+            )
+            commit_idx = next(
+                (i for i, line in enumerate(lines) if "db.commit" in line),
+                None,
+            )
+            assert recompute_idx is not None, (
+                f"{function_name}() must call recompute_argument_tier() (D-08). "
+                f"Actual body:\n{chr(10).join(lines)}"
+            )
+            assert commit_idx is not None, (
+                f"{function_name}() must call db.commit(). Actual body:\n{chr(10).join(lines)}"
+            )
+            assert recompute_idx < commit_idx, (
+                f"{function_name}() must recompute the tier before its own "
+                f"commit (D-08). Actual body:\n{chr(10).join(lines)}"
+            )
+
+
+# ---------------------------------------------------------------------------
+# DB-gated behavioral coverage — the trust-gate publish/override/audit/
+# non-stickiness rules (Phase 48 D-14/D-15/D-16/D-17/D-20, Task 3).
+# ---------------------------------------------------------------------------
+
+
+async def _mark_resolved(argument_id: int) -> None:
+    """Stamp resolved_at = now() on an already-seeded argument, in its own
+    committed transaction, so a subsequent publish_argument() call clears
+    the non-overridable resolve gate (test_trust_recompute._seed_argument
+    always seeds resolved_at=None, since that module tests recompute, not
+    the publish gate)."""
+    import datetime
+
+    from sqlalchemy import update
+
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import Argument
+
+    async with AsyncSessionLocal() as db:
+        await db.execute(
+            update(Argument)
+            .where(Argument.id == argument_id)
+            .values(resolved_at=datetime.datetime.now(datetime.timezone.utc))
+        )
+        await db.commit()
+
+
+async def _seed_argument_with_lead_case(source, method, utterance_specs, participant_specs=()):
+    """
+    Wrap test_trust_recompute._seed_argument with a lead Case + CaseArgument
+    (unique docket per call), since get_argument_detail — which
+    publish_argument's return value delegates to — returns None when no
+    lead case exists, and these tests assert on publish_argument's return
+    value, not just the raw Argument row.
+    """
+    import uuid
+
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import Case, CaseArgument
+    from api.tests.test_trust_recompute import _seed_argument
+
+    ids = await _seed_argument(source, method, utterance_specs, participant_specs)
+    suffix = uuid.uuid4().hex[:8]
+    async with AsyncSessionLocal() as db:
+        case = Case(
+            docket_number=f"PG-OVR-{suffix}",
+            docket_number_norm=f"pg-ovr-{suffix}",
+            case_name="Trust Gate Override Fixture v. Test Harness",
+            term_year=2026,
+            slug=f"trust-gate-override-fixture-{suffix}",
+        )
+        db.add(case)
+        await db.flush()
+        db.add(CaseArgument(case_id=case.id, argument_id=ids["argument_id"], is_lead=True))
+        await db.commit()
+        ids["case_id"] = case.id
+    return ids
+
+
+async def _teardown_argument_with_lead_case(ids: dict) -> None:
+    """Delete the status-log rows and lead case this module adds on top of
+    test_trust_recompute._teardown_argument's own FK-ordered cleanup —
+    ArgumentStatusLog has a NOT NULL FK with no ondelete (Phase 48 D-22), so
+    every publish/unpublish call in these tests leaves a row that must be
+    removed before the Argument itself can be deleted."""
+    from sqlalchemy import delete as sa_delete
+
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import ArgumentStatusLog, Case, CaseArgument
+    from api.tests.test_trust_recompute import _teardown_argument
+
+    async with AsyncSessionLocal() as db:
+        await db.execute(
+            sa_delete(ArgumentStatusLog).where(
+                ArgumentStatusLog.argument_id == ids["argument_id"]
+            )
+        )
+        await db.execute(
+            sa_delete(CaseArgument).where(CaseArgument.argument_id == ids["argument_id"])
+        )
+        if ids.get("case_id") is not None:
+            await db.execute(sa_delete(Case).where(Case.id == ids["case_id"]))
+        await db.commit()
+    await _teardown_argument(ids)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="DATABASE_URL not configured")
+async def test_publish_blocked_when_resolve_incomplete_even_with_override_reason():
+    """
+    TRUST-04 unclassified edge: when both gates would fail at once (resolve
+    incomplete AND tier uncertain), the non-overridable resolve gate is the
+    one that reports — an override reason supplied in that state changes
+    nothing (D-14).
+    """
+    from api.core.database import AsyncSessionLocal
+    from api.services.admin_arguments import publish_argument
+
+    ids = await _seed_argument_with_lead_case(
+        "corpus", "direct", utterance_specs=[(False, False, "PETITIONER")]
+    )
+    try:
+        # _seed_argument always seeds resolved_at=None — do NOT call
+        # _mark_resolved here; that is the point of this test.
+        async with AsyncSessionLocal() as db:
+            with pytest.raises(ValueError) as exc_info:
+                await publish_argument(
+                    db, ids["argument_id"], override_reason="a perfectly good reason"
+                )
+        assert str(exc_info.value) == "Cannot publish: resolve step not yet complete"
+    finally:
+        await _teardown_argument_with_lead_case(ids)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="DATABASE_URL not configured")
+async def test_publish_blocked_when_uncertain_without_reason():
+    """
+    D-19/D-20: a blocked publish carries the tier plus a structured
+    blocker breakdown — not a bare tier name — and writes nothing.
+    """
+    from sqlalchemy import func, select
+
+    from api.core.database import AsyncSessionLocal
+    from api.domain.trust import TrustTier
+    from api.models.models import Argument, ArgumentStatusEnum, ArgumentStatusLog
+    from api.services.admin_arguments import publish_argument
+    from api.services.trust import TrustGateBlocked
+
+    ids = await _seed_argument_with_lead_case(
+        "corpus", "direct", utterance_specs=[(False, False, "PETITIONER")]
+    )
+    try:
+        await _mark_resolved(ids["argument_id"])
+        async with AsyncSessionLocal() as db:
+            with pytest.raises(TrustGateBlocked) as exc_info:
+                await publish_argument(db, ids["argument_id"])
+        exc = exc_info.value
+        assert exc.tier is TrustTier.UNCERTAIN
+        assert exc.blockers, "blocked publish must carry a non-empty blocker breakdown (D-19)"
+        assert any(
+            b["code"] == "unresolved_utterance_speaker" and b["count"] == 1
+            for b in exc.blockers
+        ), f"expected an unresolved_utterance_speaker blocker with count 1, got {exc.blockers}"
+
+        async with AsyncSessionLocal() as db:
+            arg = await db.get(Argument, ids["argument_id"])
+            assert arg.published_at is None
+            assert arg.status == ArgumentStatusEnum.CANDIDATE
+            log_count = (
+                await db.execute(
+                    select(func.count())
+                    .select_from(ArgumentStatusLog)
+                    .where(ArgumentStatusLog.argument_id == ids["argument_id"])
+                )
+            ).scalar()
+            assert log_count == 0, "a blocked publish must not write a status-log row"
+    finally:
+        await _teardown_argument_with_lead_case(ids)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="DATABASE_URL not configured")
+@pytest.mark.parametrize(
+    "blank_reason",
+    ["   ", "\t\n", " ", "  \t\n"],
+    ids=["spaces", "tab-newline", "nbsp", "nbsp-mixed"],
+)
+async def test_publish_blocked_when_override_reason_is_whitespace_only(blank_reason):
+    """
+    D-17: a whitespace-only reason (including a non-breaking space, which is
+    not visually distinguishable from a real space) is rejected server-side
+    after .strip() — distinguishably from the no-reason-at-all case.
+    """
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import Argument
+    from api.services.admin_arguments import publish_argument
+
+    ids = await _seed_argument_with_lead_case(
+        "corpus", "direct", utterance_specs=[(False, False, "PETITIONER")]
+    )
+    try:
+        await _mark_resolved(ids["argument_id"])
+        async with AsyncSessionLocal() as db:
+            with pytest.raises(ValueError) as exc_info:
+                await publish_argument(db, ids["argument_id"], override_reason=blank_reason)
+        assert str(exc_info.value) == "blank_override_reason"
+
+        async with AsyncSessionLocal() as db:
+            arg = await db.get(Argument, ids["argument_id"])
+            assert arg.published_at is None
+    finally:
+        await _teardown_argument_with_lead_case(ids)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="DATABASE_URL not configured")
+async def test_publish_succeeds_with_override_and_logs_reason_and_tier():
+    """
+    D-15: a successful override writes its ArgumentStatusLog row with
+    override_reason set to the stripped text and trust_tier_at_transition
+    set to the tier at that moment.
+    """
+    from sqlalchemy import select
+
+    from api.core.database import AsyncSessionLocal
+    from api.domain.trust import TrustTier
+    from api.models.models import ArgumentStatusEnum, ArgumentStatusLog
+    from api.services.admin_arguments import publish_argument
+
+    ids = await _seed_argument_with_lead_case(
+        "corpus", "direct", utterance_specs=[(False, False, "PETITIONER")]
+    )
+    try:
+        await _mark_resolved(ids["argument_id"])
+        async with AsyncSessionLocal() as db:
+            result = await publish_argument(
+                db,
+                ids["argument_id"],
+                override_reason="  Publishing despite an unresolved speaker for test coverage.  ",
+            )
+        assert result is not None
+        assert result["status"] == ArgumentStatusEnum.PUBLISHED
+        assert result["published_at"] is not None
+
+        async with AsyncSessionLocal() as db:
+            log_result = await db.execute(
+                select(ArgumentStatusLog)
+                .where(ArgumentStatusLog.argument_id == ids["argument_id"])
+                .order_by(ArgumentStatusLog.id.desc())
+            )
+            newest = log_result.scalars().first()
+            assert newest is not None
+            assert newest.status == ArgumentStatusEnum.PUBLISHED
+            assert newest.override_reason == "Publishing despite an unresolved speaker for test coverage."
+            assert newest.trust_tier_at_transition == TrustTier.UNCERTAIN
+    finally:
+        await _teardown_argument_with_lead_case(ids)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="DATABASE_URL not configured")
+async def test_publish_without_override_leaves_audit_columns_null():
+    """
+    TRUST-05 unclassified edge: a normal publish of an argument that is NOT
+    uncertain succeeds with no reason supplied, and its status-log row
+    leaves both override columns NULL — the override path is not
+    accidentally mandatory (D-16).
+    """
+    from sqlalchemy import select
+
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import ArgumentStatusEnum, ArgumentStatusLog
+    from api.services.admin_arguments import publish_argument
+
+    # A single resolved utterance under (corpus, direct) derives TRUSTED
+    # (test_trust_recompute.SINGLE_PROVENANCE_CASES) — not UNCERTAIN.
+    ids = await _seed_argument_with_lead_case(
+        "corpus", "direct", utterance_specs=[(True, False, "PETITIONER")]
+    )
+    try:
+        await _mark_resolved(ids["argument_id"])
+        async with AsyncSessionLocal() as db:
+            result = await publish_argument(db, ids["argument_id"])
+        assert result is not None
+        assert result["status"] == ArgumentStatusEnum.PUBLISHED
+
+        async with AsyncSessionLocal() as db:
+            log_result = await db.execute(
+                select(ArgumentStatusLog).where(
+                    ArgumentStatusLog.argument_id == ids["argument_id"]
+                )
+            )
+            row = log_result.scalars().one()
+            assert row.override_reason is None
+            assert row.trust_tier_at_transition is None
+    finally:
+        await _teardown_argument_with_lead_case(ids)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="DATABASE_URL not configured")
+async def test_override_is_not_sticky_across_republish():
+    """
+    D-16: the override is per publish attempt, never sticky. After an
+    override publish, unpublishing and republishing the still-uncertain
+    argument is blocked again and requires a fresh reason; each override
+    writes its own distinct log row.
+    """
+    from sqlalchemy import select
+
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import ArgumentStatusEnum, ArgumentStatusLog
+    from api.services.admin_arguments import publish_argument, unpublish_argument
+    from api.services.trust import TrustGateBlocked
+
+    ids = await _seed_argument_with_lead_case(
+        "corpus", "direct", utterance_specs=[(False, False, "PETITIONER")]
+    )
+    try:
+        await _mark_resolved(ids["argument_id"])
+
+        async with AsyncSessionLocal() as db:
+            await publish_argument(db, ids["argument_id"], override_reason="first override reason")
+
+        async with AsyncSessionLocal() as db:
+            await unpublish_argument(db, ids["argument_id"])
+
+        # Still UNCERTAIN, no reason carried over — blocked again.
+        async with AsyncSessionLocal() as db:
+            with pytest.raises(TrustGateBlocked):
+                await publish_argument(db, ids["argument_id"])
+
+        # A fresh, different reason succeeds and writes its own row.
+        async with AsyncSessionLocal() as db:
+            result = await publish_argument(
+                db, ids["argument_id"], override_reason="second, different override reason"
+            )
+        assert result is not None
+        assert result["status"] == ArgumentStatusEnum.PUBLISHED
+
+        async with AsyncSessionLocal() as db:
+            log_result = await db.execute(
+                select(ArgumentStatusLog)
+                .where(
+                    ArgumentStatusLog.argument_id == ids["argument_id"],
+                    ArgumentStatusLog.override_reason.isnot(None),
+                )
+                .order_by(ArgumentStatusLog.id.asc())
+            )
+            override_rows = log_result.scalars().all()
+        assert len(override_rows) == 2, (
+            "each override publish attempt must write its own distinct log "
+            f"row (D-16) — found {len(override_rows)}"
+        )
+        assert override_rows[0].override_reason == "first override reason"
+        assert override_rows[1].override_reason == "second, different override reason"
+    finally:
+        await _teardown_argument_with_lead_case(ids)
+
+
 @pytest_asyncio.fixture
 async def client():
     """

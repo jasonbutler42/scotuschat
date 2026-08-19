@@ -744,17 +744,23 @@ async def check_duplicate_argument(db: AsyncSession, docket: str, question: int)
 async def delete_argument(db: AsyncSession, argument_id: int) -> bool | None:
     """Delete an argument and all dependent data (ADMIN-01).
 
-    Returns True on success, False if argument is not DRAFT — i.e. PIPELINE,
-    PUBLISHED, or UNPUBLISHED (→ router 409, D-03/AEDIT-09), None if argument
-    not found (→ router 404).
+    Returns True on success, False if argument is not DRAFT — i.e. CANDIDATE
+    (the born state as of Phase 48 D-01; the retired PIPELINE value is also
+    rejected, since it is non-DRAFT), PUBLISHED, or UNPUBLISHED
+    (→ router 409, D-03/AEDIT-09), None if argument not found (→ router 404).
 
     FK-ordered cascade (no ORM relationship cascades exist — manual only):
       1. Utterances (references both import_run.id AND arguments.id — must go first)
       2. ImportRuns (references arguments.id — after utterances)
       3. ArgumentParticipants (references arguments.id)
       4. CaseArguments (references arguments.id)
-      5. AdminJob.argument_id NULLed (FK nullable, no ondelete — Pitfall 1: RESTRICT default)
-      6. Argument (last — all children cleared)
+      5. ArgumentStatusLog (the argument_status_log table; references
+         arguments.id, NOT NULL FK with no ondelete — Phase 48 D-22: every
+         argument carries at least one status-log row from birth (D-03),
+         so this step is required, not defensive; PostgreSQL applies
+         RESTRICT without it)
+      6. AdminJob.argument_id NULLed (FK nullable, no ondelete — Pitfall 1: RESTRICT default)
+      7. Argument (last — all children cleared)
 
     All delete() and update() statements use .execution_options(synchronize_session=False)
     (Pitfall 3 — project-wide critical guard for async SQLAlchemy).
@@ -763,7 +769,7 @@ async def delete_argument(db: AsyncSession, argument_id: int) -> bool | None:
     import_run.id — deleting import_run rows before utterances raises ForeignKeyViolation.
     Utterances MUST be deleted before import_run rows.
 
-    Only DRAFT arguments are deletable (T-21-01-PUB, T-26-02, T-26-13). PIPELINE
+    Only DRAFT arguments are deletable (T-21-01-PUB, T-26-02, T-26-13). CANDIDATE
     is blocked because an active AdminJob may still reference it — deleting it
     out from under a running job would permanently strand that job. PUBLISHED
     and UNPUBLISHED are blocked because they represent live/previously-live
@@ -804,7 +810,16 @@ async def delete_argument(db: AsyncSession, argument_id: int) -> bool | None:
         .where(CaseArgument.argument_id == argument_id)
         .execution_options(synchronize_session=False)
     )
-    # Step 5: NULL out AdminJob.argument_id — FK is nullable but has no ondelete clause;
+    # Step 5: Delete argument_status_log rows — FK is NOT NULL with no ondelete
+    # clause, so PostgreSQL applies RESTRICT (Phase 48 D-22). Every argument
+    # carries at least one status-log row from birth (D-03), so this step is
+    # required for every delete, not a defensive edge case.
+    await db.execute(
+        delete(ArgumentStatusLog)
+        .where(ArgumentStatusLog.argument_id == argument_id)
+        .execution_options(synchronize_session=False)
+    )
+    # Step 6: NULL out AdminJob.argument_id — FK is nullable but has no ondelete clause;
     # PostgreSQL default RESTRICT will raise ForeignKeyViolation if not NULLed first (Pitfall 1)
     await db.execute(
         update(AdminJob)
@@ -812,7 +827,7 @@ async def delete_argument(db: AsyncSession, argument_id: int) -> bool | None:
         .values(argument_id=None)
         .execution_options(synchronize_session=False)
     )
-    # Step 6: Delete the argument itself
+    # Step 7: Delete the argument itself
     await db.execute(
         delete(Argument)
         .where(Argument.id == argument_id)

@@ -10,8 +10,9 @@ match already exists, so re-running the importer after a fix silently no-ops
 unless the fixture's rows are cleared first. The admin API's `delete_argument`
 looks like the obvious tool for that, but it hard-gates on `status == DRAFT`
 (see its own docstring), and every corpus-imported argument starts at
-`status == pipeline` and never reaches DRAFT through any normal flow -- so
-that service always refuses to delete a corpus fixture. Weakening that gate
+`status == candidate` (Phase 48 D-01 -- the born state; `pipeline` is
+retired) and never reaches DRAFT through any normal flow -- so that service
+always refuses to delete a corpus fixture. Weakening that gate
 to accommodate this one dev/audit use case would reopen a production safety
 hole for an unrelated reason, so this script is a separate, narrowly-scoped
 routine instead: it mirrors `delete_argument`'s FK-ordered cascade order, but
@@ -22,11 +23,13 @@ Cascade order (single transaction, one session block):
     2. import_run
     3. argument_participants
     4. case_arguments
-    5. argument_status_log   (defensive -- delete_argument never needed this
-                               step since a DRAFT argument can never have one;
-                               this routine has no status gate protecting it
-                               the way delete_argument does, so it deletes
-                               these rows too, just in case)
+    5. argument_status_log   (no longer defensive-only as of Phase 48 --
+                               delete_argument performs this same delete
+                               (D-22), and every argument carries at least
+                               one status-log row from birth (D-03); this
+                               routine also has no status gate protecting
+                               it the way delete_argument does, so it
+                               deletes these rows unconditionally)
     6. admin_jobs.argument_id set NULL (FK nullable, no ondelete -- RESTRICT
        would otherwise raise)
     7. the argument row itself

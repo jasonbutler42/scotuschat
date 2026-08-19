@@ -224,11 +224,33 @@ static analysis until reproduced.
     because Phases 47/50's re-import and idempotency paths depend on this cascade being correct
     (STATE.md carries the same warning).
 
-**Plans**: TBD
+**Plans**: 9 plans
 
 Plans:
 
-- [ ] TBD (planned via `/gsd-plan-phase 48`)
+**Wave 1**
+
+- [ ] 48-01-PLAN.md — Trust derivation foundation + end-to-end tracer: `api/domain/trust.py`, migration 0027 (`candidate` enum value, `arguments.trust_tier`, `argument_status_log` override columns), `recompute_argument_tier`, and the two Wave 0 test modules (wave 1)
+
+**Wave 2** *(all five parallel; blocked on 48-01's migration)*
+
+- [ ] 48-02-PLAN.md — Carried defect: `delete_argument` → `argument_status_log` cascade, failing-then-passing regression test, corrected fixture-script comment (wave 2)
+- [ ] 48-03-PLAN.md — D-23 public trust-leak ban: structural contract over every public response model + live per-endpoint assertions (wave 2)
+- [ ] 48-04-PLAN.md — Candidate status vocabulary across all six admin guard sites (plus the frontend `readonlyMode` literal) + recompute wiring into all four `admin_jobs` writers (wave 2)
+- [ ] 48-05-PLAN.md — Born-candidate pipeline writers: corpus + PDF birth logging, tier on arrival, recompute in parse and resolve (wave 2)
+- [ ] 48-06-PLAN.md — Offline `pipeline recompute-trust` CLI: drift repair and the D-09/D-21 zero-rows-changed verification vehicle (wave 2)
+
+**Wave 3** *(blocked on 48-02 releasing `admin_arguments.py`)*
+
+- [ ] 48-07-PLAN.md — Two-gate publish: the overridable UNCERTAIN block, the required-reason override logged to `argument_status_log`, and `trust_tier` on the admin detail contract (wave 3)
+
+**Wave 4** *(blocked on 48-07's error shape)*
+
+- [ ] 48-08-PLAN.md — Minimal admin UI on `/admin/arguments/[id]`: block-reason panel with per-blocker counts, override prompt, and the UI source contract (wave 4)
+
+**Wave 5**
+
+- [ ] 48-09-PLAN.md — Live fixture reseed, zero-drift proof, full-suite gate, requirement traceability, and operator sign-off (wave 5)
 
 ### Phase 49: Review Model
 

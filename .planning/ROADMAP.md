@@ -216,21 +216,24 @@ static analysis until reproduced.
 
   - Fix is one step: `delete(ArgumentStatusLog).where(ArgumentStatusLog.argument_id == argument_id)`
     anywhere before the final `Argument` delete — nothing else FKs to `argument_status_log`.
+
   - Add the regression test Phase 31 recommended: delete succeeds for a DRAFT argument that has at
     least one status-log row.
+
   - Correct the comment at `scripts/delete_fixture_argument.py:25`, which asserts "a DRAFT argument
     can never have one" — that claim is wrong and is what let the gap survive three milestones.
+
   - Belongs here because Phase 48 owns argument lifecycle and the `published_at` promotion gate, and
     because Phases 47/50's re-import and idempotency paths depend on this cascade being correct
     (STATE.md carries the same warning).
 
-**Plans**: 9 plans
+**Plans**: 1/9 plans executed
 
 Plans:
 
 **Wave 1**
 
-- [ ] 48-01-PLAN.md — Trust derivation foundation + end-to-end tracer: `api/domain/trust.py`, migration 0027 (`candidate` enum value, `arguments.trust_tier`, `argument_status_log` override columns), `recompute_argument_tier`, and the two Wave 0 test modules (wave 1)
+- [x] 48-01-PLAN.md — Trust derivation foundation + end-to-end tracer: `api/domain/trust.py`, migration 0027 (`candidate` enum value, `arguments.trust_tier`, `argument_status_log` override columns), `recompute_argument_tier`, and the two Wave 0 test modules (wave 1)
 
 **Wave 2** *(all five parallel; blocked on 48-01's migration)*
 
@@ -366,7 +369,7 @@ Plans:
 | 45. Deferred UI Bug Fixes | v1.7 | 2/2 | Complete    | 2026-08-12 |
 | 46. Dev Environment Reliability | v1.7 | 6/6 | Complete    | 2026-08-14 |
 | 47. Provenance Foundation | v1.8 | 6/6 | Complete    | 2026-08-18 |
-| 48. Trust & Lifecycle | v1.8 | 0/TBD | Not started | - |
+| 48. Trust & Lifecycle | v1.8 | 1/9 | In Progress|  |
 | 49. Review Model | v1.8 | 0/TBD | Not started | - |
 | 50. Unified Import Path | v1.8 | 0/TBD | Not started | - |
 | 51. Design System & Noun Alignment | v1.8 | 0/TBD | Not started | - |

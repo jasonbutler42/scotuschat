@@ -71,6 +71,7 @@ from api.schemas.admin_arguments import (
     ArgumentUpdate,
     MetadataUpdate,
     ParticipantSideUpdate,
+    PublishRequest,
 )
 from api.schemas.admin_dashboard import (
     ArgumentStats,
@@ -99,6 +100,7 @@ from api.services import admin_jobs as jobs_service
 from api.services import admin_people as people_service
 from api.services import spaces as spaces_service
 from api.services.pipeline_spawn import spawn_pipeline_step
+from api.services.trust import TrustGateBlocked
 
 
 async def verify_admin_token(x_admin_token: str = Header(...)) -> None:
@@ -588,11 +590,12 @@ async def update_resolve_row(
     BENCH by design (T-15-02-BENCH). Argument ownership is derived from job_id
     (never trusted from the client); the target participant must belong to that
     argument (T-25-14 IDOR guard). Rejected once the linked argument has left
-    the 'pipeline' status (D-18, D-19). descriptor is forced to null server-side
-    whenever side == BENCH regardless of what the client sends (PJOB-15).
+    the 'candidate' status (D-18, D-19; the born state as of Phase 48 D-01).
+    descriptor is forced to null server-side whenever side == BENCH
+    regardless of what the client sends (PJOB-15).
 
-    Returns 422 on any guard failure (job/argument not found or not pipeline,
-    participant not found under this job's argument).
+    Returns 422 on any guard failure (job/argument not found or not
+    candidate, participant not found under this job's argument).
     Auth inherited from router-level verify_admin_token dependency.
     """
     try:
@@ -1000,9 +1003,11 @@ async def list_arguments(
 
     Query params:
     - status: optional single-value filter (DASH-02, D-05/D-06) — one of
-      "draft"/"published"/"unpublished". Any other value (including "pipeline",
-      absent, or unrecognized) is ignored by the service and the full list is
-      returned; never interpolated into SQL, never raises 422 (D-05).
+      "draft"/"published"/"unpublished". Any other value (including
+      "candidate", the born state as of Phase 48 D-01 and never a
+      selectable filter — D-04, absent, or unrecognized) is ignored by the
+      service and the full list is returned; never interpolated into SQL,
+      never raises 422 (D-05).
     """
     args = await arguments_service.list_arguments(db, status=status)
     return [ArgumentListItem(**a) for a in args]
@@ -1121,19 +1126,67 @@ async def update_argument(
 @router.post("/arguments/{argument_id}/publish", response_model=ArgumentDetail)
 async def publish_argument(
     argument_id: int,
+    body: PublishRequest | None = None,
     db: AsyncSession = Depends(get_db),
 ) -> ArgumentDetail:
     """
-    Stamp published_at = now(), making the argument publicly visible (D-07, D-08).
+    Stamp published_at = now(), making the argument publicly visible
+    (D-07, D-08, Phase 48 D-14/D-19/D-20).
 
-    Returns 404 if the argument does not exist (T-11-IDOR).
-    Returns 422 if resolved_at IS NULL (T-11-PUBGATE — backend enforces this guard
-    independently of the UI; a direct API call cannot publish an unresolved argument).
-    Returns 422 if already published.
+    An absent request body is valid — the SvelteKit action posts none by
+    default — and is equivalent to ``override_reason=None``.
+
+    Four distinct failure modes, in the order the service evaluates them:
+      - Returns 404 if the argument does not exist (T-11-IDOR).
+      - Returns 422 (plain-string detail, byte-identical to the pre-Phase-48
+        message) if resolved_at IS NULL (T-11-PUBGATE) — this precondition
+        gate is NOT overridable; `body.override_reason` is never consulted
+        before it.
+      - Returns 422 (plain-string detail) if already published.
+      - Returns 422 with a structured ``detail`` dict (code
+        ``uncertain_tier_blocked``, carrying ``trust_tier`` and a
+        ``blockers`` list) if the recomputed trust tier is UNCERTAIN and no
+        usable override reason was supplied.
+      - Returns 422 with a structured ``detail`` dict (code
+        ``blank_override_reason``) if a reason was supplied but is blank
+        after stripping — distinguishable from "no reason was given at all"
+        so the operator knows their submission did not count.
+
+    TrustGateBlocked is caught BEFORE the bare ValueError handler — it
+    subclasses ValueError, so a bare `except ValueError` placed first would
+    silently swallow it (T-48-SWALLOW).
     """
+    override_reason = body.override_reason if body is not None else None
     try:
-        result = await arguments_service.publish_argument(db, argument_id)
+        result = await arguments_service.publish_argument(
+            db, argument_id, override_reason=override_reason
+        )
+    except TrustGateBlocked as exc:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "code": "uncertain_tier_blocked",
+                "trust_tier": exc.tier.value,
+                "blockers": exc.blockers,
+                "message": (
+                    f"This argument's trust tier is {exc.tier.value}. "
+                    "Publishing requires a deliberate override reason "
+                    "(D-14/D-17)."
+                ),
+            },
+        ) from exc
     except ValueError as exc:
+        if str(exc) == "blank_override_reason":
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "code": "blank_override_reason",
+                    "message": (
+                        "A non-empty reason is required to publish an "
+                        "argument with an uncertain trust tier."
+                    ),
+                },
+            ) from exc
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     if result is None:
         raise HTTPException(status_code=404, detail="Argument not found")

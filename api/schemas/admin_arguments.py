@@ -37,6 +37,7 @@ from typing import Optional
 
 from pydantic import BaseModel, field_validator
 
+from api.domain.trust import TrustTier
 from api.models.models import ArgumentStatusEnum, SideEnum
 
 
@@ -59,10 +60,18 @@ class StatusLogEntry(BaseModel):
 
     Surfaced on the argument edit page's Status history list, ordered
     oldest-first by get_argument_detail's query (created_at asc, id asc tiebreak).
+
+    override_reason / trust_tier_at_transition (Phase 48 D-15/D-20): both
+    default to None because every non-override transition (candidate-at-birth,
+    DRAFT, PUBLISHED, UNPUBLISHED without an override) legitimately carries
+    neither — only a publish that overrode the UNCERTAIN trust gate populates
+    them.
     """
 
     status: ArgumentStatusEnum
     created_at: datetime.datetime
+    override_reason: Optional[str] = None  # Phase 48 D-15
+    trust_tier_at_transition: Optional[TrustTier] = None  # Phase 48 D-15
 
     model_config = {"from_attributes": True}
 
@@ -183,6 +192,10 @@ class ArgumentDetail(BaseModel):
     speakers (Phase 26, D-05, AEDIT-05/06/07): unified bench+advocate row set
     from list_argument_speakers, replacing the old advocate-only participants +
     tenure_gap_warnings split for the rebuilt edit page (Plan 26-04).
+    trust_tier (Phase 48 D-20): admin-only — never surfaced on any public
+    schema (apolitical hard constraint, enforced by
+    api/tests/test_trust_public_leak_ban.py). Defaults to UNCERTAIN so a
+    detail dict built before this column existed cannot 500 the endpoint.
     """
 
     id: int
@@ -193,6 +206,7 @@ class ArgumentDetail(BaseModel):
     resolved_at: Optional[datetime.datetime] = None
     published_at: Optional[datetime.datetime] = None
     status: ArgumentStatusEnum = ArgumentStatusEnum.DRAFT  # Phase 15
+    trust_tier: TrustTier = TrustTier.UNCERTAIN  # Phase 48 D-20
     consolidated_dockets: list[ConsolidatedDocket] = []
     tenure_gap_warnings: list[TenureGapWarning] = []       # Phase 15
     participants: list[AdvocateParticipant] = []           # Phase 15 D-12
@@ -235,6 +249,28 @@ class ArgumentUpdate(BaseModel):
         if not normalized:
             raise ValueError("required value must be a non-blank string")
         return normalized
+
+
+class PublishRequest(BaseModel):
+    """POST request body for /arguments/{id}/publish (Phase 48 D-19/D-20).
+
+    Mass-assignment guard (T-48-MASS): this schema is an allow-list of
+    exactly one field. ``status``, ``published_at``, and ``trust_tier`` are
+    deliberately absent and are never settable from a request body — the
+    same discipline ArgumentUpdate documents above.
+
+    No blank-reason validator lives here on purpose: D-17's non-empty-after-
+    strip check is a service-layer concern (api.services.admin_arguments.
+    publish_argument), so it is enforced identically for a direct API call
+    and for the admin UI, and the resulting 422 carries the service's own
+    distinguishable ``blank_override_reason`` code rather than a generic
+    Pydantic validation error.
+
+    An absent body is valid — publish_argument's default (None) is used, and
+    is only ever consulted when the recomputed tier is actually UNCERTAIN.
+    """
+
+    override_reason: Optional[str] = None
 
 
 class MetadataUpdate(BaseModel):

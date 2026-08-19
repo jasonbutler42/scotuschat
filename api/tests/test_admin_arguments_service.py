@@ -458,6 +458,12 @@ async def test_delete_argument_returns_false_for_pipeline() -> None:
     """delete_argument() must return False for a PIPELINE-status argument
     (T-26-13) — a mid-pipeline argument an active AdminJob may still
     reference cannot be stranded via a direct API call.
+
+    PIPELINE is the retired (Phase 48 D-01) born-state enum value — dead but
+    still valid because PostgreSQL cannot drop an enum value. This case is
+    kept as the dead-value regression fixture; the born state going forward
+    is CANDIDATE, locked separately by
+    test_delete_argument_still_refuses_candidate below.
     """
     from api.core.database import AsyncSessionLocal
     from api.models.models import Argument, ArgumentStatusEnum
@@ -477,6 +483,188 @@ async def test_delete_argument_returns_false_for_pipeline() -> None:
         arg = await db.get(Argument, arg_id)
         await db.delete(arg)
         await db.commit()
+
+
+# ---------------------------------------------------------------------------
+# Phase 48 Plan 02 (D-22): delete_argument -> argument_status_log cascade
+#
+# D-03 makes every argument carry an argument_status_log row from birth,
+# which makes the carried cascade defect (delete_argument's FK-ordered
+# cascade never deletes argument_status_log rows, and that FK is NOT NULL
+# with no ondelete clause, so PostgreSQL applies RESTRICT) reachable for
+# every DRAFT argument. These tests prove the defect (pre-fix: red with a
+# foreign-key violation) and then prove the fix (post-fix: green).
+#
+# Live repro captured before Task 2's fix landed (D-22 requires the actual
+# failure output, not an asserted claim) — verbatim from the first run of
+# `pytest api/tests/test_admin_arguments_service.py -q -k "cascade or
+# refuses_candidate"` against the pre-fix service (2 failed, 1 passed):
+#
+#   sqlalchemy.exc.IntegrityError: (sqlalchemy.dialects.postgresql.asyncpg.IntegrityError)
+#   <class 'asyncpg.exceptions.ForeignKeyViolationError'>: update or delete on
+#   table "arguments" violates foreign key constraint
+#   "argument_status_log_argument_id_fkey" on table "argument_status_log"
+#   DETAIL:  Key (id)=(11402) is still referenced from table "argument_status_log".
+#   [SQL: DELETE FROM arguments WHERE arguments.id = $1::INTEGER]
+#   [parameters: (11402,)]
+#
+# Both cascade tests failed with this same error (only the argument id
+# differed); test_delete_argument_still_refuses_candidate passed on this
+# same pre-fix run, confirming D-05's gate is untouched by the defect.
+# (SQLAlchemy wraps asyncpg's ForeignKeyViolationError in IntegrityError, exactly
+# as 48-02-PLAN.md's Task 1 <behavior> predicted.)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_delete_argument_cascades_argument_status_log() -> None:
+    """delete_argument() must delete argument_status_log rows for the
+    argument before deleting the Argument row itself (D-22). A DRAFT
+    argument carrying one status-log row must delete successfully — not
+    raise ForeignKeyViolation — and leave zero argument_status_log rows
+    behind.
+    """
+    from sqlalchemy import delete as sa_delete
+    from sqlalchemy import func, select
+
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import Argument, ArgumentStatusEnum, ArgumentStatusLog
+    from api.services.admin_arguments import delete_argument
+
+    arg_id = None
+    try:
+        async with AsyncSessionLocal() as db:
+            arg = Argument(status=ArgumentStatusEnum.DRAFT, resolved_at=func.now())
+            db.add(arg)
+            await db.commit()
+            arg_id = arg.id
+
+        async with AsyncSessionLocal() as db:
+            db.add(ArgumentStatusLog(argument_id=arg_id, status=ArgumentStatusEnum.DRAFT))
+            await db.commit()
+
+        async with AsyncSessionLocal() as db:
+            result = await delete_argument(db, arg_id)
+        assert result is True
+
+        async with AsyncSessionLocal() as db:
+            assert await db.get(Argument, arg_id) is None
+            remaining = await db.execute(
+                select(func.count())
+                .select_from(ArgumentStatusLog)
+                .where(ArgumentStatusLog.argument_id == arg_id)
+            )
+            assert remaining.scalar_one() == 0
+        arg_id = None  # deleted successfully — nothing left to clean up
+    finally:
+        if arg_id is not None:
+            # Deletion failed or assertion tripped mid-way — clean up so the
+            # rootdir conftest.py row-count tripwire still finds the dev DB
+            # unchanged.
+            async with AsyncSessionLocal() as db:
+                await db.execute(
+                    sa_delete(ArgumentStatusLog).where(ArgumentStatusLog.argument_id == arg_id)
+                )
+                await db.execute(sa_delete(Argument).where(Argument.id == arg_id))
+                await db.commit()
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_delete_argument_cascades_multiple_status_log_rows() -> None:
+    """delete_argument() must delete ALL argument_status_log rows for the
+    argument, not just one — the post-D-03 reality is that every argument
+    accumulates status-log history from birth (candidate, then draft).
+    """
+    from sqlalchemy import delete as sa_delete
+    from sqlalchemy import func, select
+
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import Argument, ArgumentStatusEnum, ArgumentStatusLog
+    from api.services.admin_arguments import delete_argument
+
+    arg_id = None
+    try:
+        async with AsyncSessionLocal() as db:
+            arg = Argument(status=ArgumentStatusEnum.DRAFT, resolved_at=func.now())
+            db.add(arg)
+            await db.commit()
+            arg_id = arg.id
+
+        async with AsyncSessionLocal() as db:
+            db.add(ArgumentStatusLog(argument_id=arg_id, status=ArgumentStatusEnum.CANDIDATE))
+            db.add(ArgumentStatusLog(argument_id=arg_id, status=ArgumentStatusEnum.DRAFT))
+            await db.commit()
+
+        async with AsyncSessionLocal() as db:
+            result = await delete_argument(db, arg_id)
+        assert result is True
+
+        async with AsyncSessionLocal() as db:
+            assert await db.get(Argument, arg_id) is None
+            remaining = await db.execute(
+                select(func.count())
+                .select_from(ArgumentStatusLog)
+                .where(ArgumentStatusLog.argument_id == arg_id)
+            )
+            assert remaining.scalar_one() == 0
+        arg_id = None
+    finally:
+        if arg_id is not None:
+            async with AsyncSessionLocal() as db:
+                await db.execute(
+                    sa_delete(ArgumentStatusLog).where(ArgumentStatusLog.argument_id == arg_id)
+                )
+                await db.execute(sa_delete(Argument).where(Argument.id == arg_id))
+                await db.commit()
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_delete_argument_still_refuses_candidate() -> None:
+    """delete_argument() must still return False for a CANDIDATE-status
+    argument (D-05: this phase does not widen the DRAFT-only delete gate),
+    and both the argument and its status-log row must survive the refused
+    call untouched.
+    """
+    from sqlalchemy import delete as sa_delete
+    from sqlalchemy import func, select
+
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import Argument, ArgumentStatusEnum, ArgumentStatusLog
+    from api.services.admin_arguments import delete_argument
+
+    async with AsyncSessionLocal() as db:
+        arg = Argument(status=ArgumentStatusEnum.CANDIDATE, resolved_at=None)
+        db.add(arg)
+        await db.commit()
+        arg_id = arg.id
+
+    async with AsyncSessionLocal() as db:
+        db.add(ArgumentStatusLog(argument_id=arg_id, status=ArgumentStatusEnum.CANDIDATE))
+        await db.commit()
+
+    try:
+        async with AsyncSessionLocal() as db:
+            result = await delete_argument(db, arg_id)
+        assert result is False
+
+        async with AsyncSessionLocal() as db:
+            assert await db.get(Argument, arg_id) is not None
+            remaining = await db.execute(
+                select(func.count())
+                .select_from(ArgumentStatusLog)
+                .where(ArgumentStatusLog.argument_id == arg_id)
+            )
+            assert remaining.scalar_one() == 1
+    finally:
+        async with AsyncSessionLocal() as db:
+            await db.execute(
+                sa_delete(ArgumentStatusLog).where(ArgumentStatusLog.argument_id == arg_id)
+            )
+            await db.execute(sa_delete(Argument).where(Argument.id == arg_id))
+            await db.commit()
 
 
 # ---------------------------------------------------------------------------

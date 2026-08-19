@@ -8,6 +8,10 @@ Subcommands:
               import_run records in the database.
     parse   — Parse a previously ingested transcript into utterance rows.
               (Stub in Plan 03 — fully implemented in Plan 04.)
+    recompute-trust — Re-derive every argument's trust_tier through the
+              shared api.services.trust.recompute_argument_tier() service
+              and report how many rows changed (Phase 48 D-09 drift-repair
+              tool and falsifiable verification vehicle).
 
 Usage examples:
     python -m pipeline ingest \\
@@ -38,6 +42,7 @@ from pipeline.commands.import_convokit import (
     run_import_convokit,
 )
 from pipeline.commands.parse import run_parse
+from pipeline.commands.recompute_trust import run_recompute_trust
 from pipeline.commands.resolve import run_resolve
 from pipeline.commands.seed_aliases import run_seed_aliases
 from pipeline.db import get_session
@@ -290,7 +295,7 @@ def main() -> None:
             "corpus dataset, bypassing PDF/LLM parsing. Scaffolds Case/"
             "Argument/CaseArgument/ImportRun rows and resolves bench/"
             "advocate speakers into Person/ArgumentParticipant rows. "
-            "Arguments land at status=pipeline, paired with a paused "
+            "Arguments land at status=candidate, paired with a paused "
             "resolve admin job. Idempotent -- safe to re-run any term or "
             "conversation."
         ),
@@ -323,6 +328,42 @@ def main() -> None:
             "Directory containing conversations.json/cases.jsonl/speakers.json "
             f"(default: {DEFAULT_CORPUS_DIR})"
         ),
+    )
+
+    # -----------------------------------------------------------------------
+    # recompute-trust subcommand (Phase 48, D-09)
+    # -----------------------------------------------------------------------
+    recompute_trust_p = sub.add_parser(
+        "recompute-trust",
+        help="Re-derive every argument's trust tier through the shared service",
+        description=(
+            "Re-derives every argument's trust_tier through the same "
+            "api.services.trust.recompute_argument_tier() service every "
+            "writer already calls, and reports how many rows changed. "
+            "Idempotent and safe to re-run any number of times -- a "
+            "zero-changed result after a fresh fixture reseed is this "
+            "phase's positive proof that every writer stamped correctly "
+            "at write time (D-09)."
+        ),
+    )
+    recompute_trust_group = recompute_trust_p.add_mutually_exclusive_group(
+        required=True
+    )
+    recompute_trust_group.add_argument(
+        "--all",
+        action="store_true",
+        help="Recompute every argument's trust tier",
+    )
+    recompute_trust_group.add_argument(
+        "--argument-id",
+        type=int,
+        default=None,
+        help="Recompute exactly one argument by id",
+    )
+    recompute_trust_p.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Report what would change without writing anything",
     )
 
     try:
@@ -360,6 +401,8 @@ def main() -> None:
         asyncio.run(run_import_justices_csv(args))
     elif args.command == "import-convokit":
         asyncio.run(run_import_convokit(args))
+    elif args.command == "recompute-trust":
+        asyncio.run(run_recompute_trust(args))
 
 
 if __name__ == "__main__":

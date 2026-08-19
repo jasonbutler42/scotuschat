@@ -227,7 +227,7 @@ static analysis until reproduced.
     because Phases 47/50's re-import and idempotency paths depend on this cascade being correct
     (STATE.md carries the same warning).
 
-**Plans**: 5/9 plans executed
+**Plans**: 6/9 plans executed
 
 Plans:
 
@@ -241,7 +241,7 @@ Plans:
 - [x] 48-03-PLAN.md — D-23 public trust-leak ban: structural contract over every public response model + live per-endpoint assertions (wave 2)
 - [x] 48-04-PLAN.md — Candidate status vocabulary across all six admin guard sites (plus the frontend `readonlyMode` literal) + recompute wiring into all four `admin_jobs` writers (wave 2)
 - [x] 48-05-PLAN.md — Born-candidate pipeline writers: corpus + PDF birth logging, tier on arrival, recompute in parse and resolve (wave 2)
-- [ ] 48-06-PLAN.md — Offline `pipeline recompute-trust` CLI: drift repair and the D-09/D-21 zero-rows-changed verification vehicle (wave 2)
+- [x] 48-06-PLAN.md — Offline `pipeline recompute-trust` CLI: drift repair and the D-09/D-21 zero-rows-changed verification vehicle (wave 2)
 
 **Wave 3** *(blocked on 48-02 releasing `admin_arguments.py`)*
 
@@ -369,7 +369,7 @@ Plans:
 | 45. Deferred UI Bug Fixes | v1.7 | 2/2 | Complete    | 2026-08-12 |
 | 46. Dev Environment Reliability | v1.7 | 6/6 | Complete    | 2026-08-14 |
 | 47. Provenance Foundation | v1.8 | 6/6 | Complete    | 2026-08-18 |
-| 48. Trust & Lifecycle | v1.8 | 5/9 | In Progress|  |
+| 48. Trust & Lifecycle | v1.8 | 6/9 | In Progress|  |
 | 49. Review Model | v1.8 | 0/TBD | Not started | - |
 | 50. Unified Import Path | v1.8 | 0/TBD | Not started | - |
 | 51. Design System & Noun Alignment | v1.8 | 0/TBD | Not started | - |

@@ -5,15 +5,15 @@ milestone_name: Import & Provenance Re-model
 current_phase: 48
 current_phase_name: trust-lifecycle
 status: executing
-stopped_at: Completed 48-05-PLAN.md
-last_updated: "2026-08-19T15:13:31.910Z"
+stopped_at: Completed 48-06-PLAN.md
+last_updated: "2026-08-19T15:29:53.218Z"
 last_activity: 2026-08-18
 last_activity_desc: Cross-phase UAT audit closed; human UAT waived; Phase 48 ready to discuss
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 15
-  completed_plans: 11
+  completed_plans: 12
   percent: 20
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-08-18 — Phase 47 complete; corpus-firs
 ## Current Position
 
 Phase: 48 (trust-lifecycle) — EXECUTING
-Plan: 6 of 9
+Plan: 7 of 9
 Status: Ready to execute
 Last activity: 2026-08-18 — Phase 48 execution started
 
@@ -50,7 +50,7 @@ Pre-flight for Phase 48, settled 2026-08-18:
   compare to head `0026` (`0026_import_run_provenance`, Phase 47). The audit could not check this —
   it had no DB credentials. This is the pre-existing STATE.md blocker below, not a new one.
 
-Progress: [███████░░░] 73%
+Progress: [████████░░] 80%
 
 ## Deferred Items
 
@@ -140,6 +140,7 @@ items → 14.** Every closure carries its evidence in the file it closes; the co
 | Phase 48 P03 | ~35min | 2 tasks | 2 files |
 | Phase 48 P04 | ~50min | 3 tasks | 13 files |
 | Phase 48 P05 | ~50min | 3 tasks | 7 files |
+| Phase 48 P06 | ~40min | 2 tasks | 3 files |
 
 v1.7 per-plan metrics cleared at this milestone boundary per the standard STATE.md reset; the underlying per-plan SUMMARY files remain in `.planning/milestones/v1.7-phases/`.
 
@@ -174,6 +175,8 @@ Full cross-milestone decision log lives in PROJECT.md's Key Decisions table. Per
 - [Phase ?]: Phase 48 Plan 04: renamed test_approve_job_accepts_freshly_created_argument_and_rejects_second_call to include 'candidate' so the plan's own -k filter matches all three vocabulary-block tests it names
 - [Phase ?]: Phase 48 Plan 05: import_convokit.py's birth-write status kwarg was already flipped to CANDIDATE by plan 48-04's Rule 3 fix; confirmed already-done and WINDOWS.md entry 7 marked fixed
 - [Phase ?]: Phase 48 Plan 05: fixed a stale test assumption in api/tests/test_admin_dev_routes.py (test_reset_writes_status_log_rows) that asserted zero status-log rows for candidate arguments -- D-03's birth-log write now produces exactly one row for those arguments, as CONTEXT.md predicted
+- [Phase ?]: Phase 48 Plan 06: test file bootstraps AsyncSessionLocal via a module-local FastAPI-lifespan fixture (mirroring api/tests/conftest.py::_api_lifespan) to reuse plan 48-01's _seed_argument/_teardown_argument helper unmodified
+- [Phase ?]: Phase 48 Plan 06: added a function-scoped, genuinely committed TRUNCATE fixture (mirroring pipeline/tests/conftest.py's _reset_test_db safety guard) since clean_db's rollback-based truncation is invisible to recompute-trust's separate pipeline.db.get_session() engine
 
 ### Roadmap Evolution
 
@@ -231,8 +234,8 @@ at close.
 
 ## Session Continuity
 
-Last session: 2026-08-19T15:13:31.869Z
-Stopped at: Completed 48-05-PLAN.md
+Last session: 2026-08-19T15:29:53.171Z
+Stopped at: Completed 48-06-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

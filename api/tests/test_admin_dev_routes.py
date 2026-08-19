@@ -578,10 +578,19 @@ async def test_reset_realizes_state_variety(client, tmp_path, db):
 
 @pytest.mark.asyncio
 async def test_reset_writes_status_log_rows(client, tmp_path, db):
-    """argument_status_log has at least one row for 13015's DRAFT transition
-    and at least one for 18897's PUBLISHED transition, and zero rows for
-    15169/22372 (which never left the candidate state) — proof the transitions went
-    through the real service functions, not a column write."""
+    """argument_status_log has at least two rows for 13015 (the CANDIDATE
+    birth log plus its DRAFT transition) and at least two for 18897 (birth
+    plus PUBLISHED), and EXACTLY one row -- the CANDIDATE birth log, no
+    more -- for 15169/22372 (which never left the candidate state) — proof
+    the transitions went through the real service functions, not a column
+    write.
+
+    Phase 48 D-03 changed what "never left the candidate state" means for
+    this assertion: every corpus-imported argument now gets a birth-state
+    ArgumentStatusLog row (import_convokit.py, plan 48-05 Task 1), so
+    15169/22372 carry exactly one row each rather than zero -- this test's
+    original zero-row expectation predates that write site and is now
+    stale, not a sign of a missing DRAFT/PUBLISHED transition."""
     _require_test_db()
 
     corpus_dir = _write_corpus_fixture(tmp_path)
@@ -607,10 +616,10 @@ async def test_reset_writes_status_log_rows(client, tmp_path, db):
             )
         ).scalar_one()
 
-    assert await _log_count(draft_argument_id) >= 1
-    assert await _log_count(published_argument_id) >= 1
-    assert await _log_count(complexity_argument_id) == 0
-    assert await _log_count(mid_argument_id) == 0
+    assert await _log_count(draft_argument_id) >= 2  # birth + DRAFT
+    assert await _log_count(published_argument_id) >= 2  # birth + PUBLISHED
+    assert await _log_count(complexity_argument_id) == 1  # birth only
+    assert await _log_count(mid_argument_id) == 1  # birth only
 
 
 @pytest.mark.asyncio

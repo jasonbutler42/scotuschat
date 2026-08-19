@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 5
+open_count: 4
 waived_count: 0
-fixed_count: 2
+fixed_count: 3
 total_count: 7
-last_updated: 2026-08-19T14:41:22.505Z
+last_updated: 2026-08-19T15:04:51.300Z
 ---
 
 # Broken Windows Ledger
@@ -21,7 +21,7 @@ last_updated: 2026-08-19T14:41:22.505Z
 | 4 | 47 | unrun-verify | tests/test_pytest_isolation_invocation_shapes.py |  | bare-testpaths-driven shape still exits non-zero after 47-03 -- full-tree collection hits ImportError: cannot import name 'PipelineRun' in test-body-only references (api/tests/test_admin_dev_routes.py:331, pipeline/tests/test_delete_fixture_argument.py, test_diff_corpus_fixture.py, test_import_convokit_core.py, test_import_convokit_utterances.py), all owned by 47-04/47-05's test-suite conversion, not 47-03's files_modified. The other 2 of 3 parametrized shapes (explicit-single-file, explicit-multi-path) pass cleanly now that 47-03 converted api/routers/admin.py. | fixed |  | 2026-08-17T21:31:05.797Z | 2026-08-17T22:21:40.026Z |
 | 5 | 47 | deviation | api/tests/test_phase44_argument_role_roundtrip.py |  | Pre-existing SideEnum identity mismatch under bare full-suite pytest -q (testpaths order reimports api.* modules via tests/test_admin_router.py before this file runs) - unrelated to Phase 47 import_run rename, both files predate Phase 47. See deferred-items.md. | open |  | 2026-08-17T22:21:11.348Z |  |
 | 6 | 48 | unmet-truth | api/tests/test_trust_public_leak_ban.py |  | test_admin_detail_contract_does_declare_trust_tier fails until plan 48-07 lands trust_tier on ArgumentDetail (D-20); documented as expected/tracked in 48-03-SUMMARY.md, re-run at 48-07 close | open |  | 2026-08-19T13:05:36.138Z |  |
-| 7 | 48 | deviation | pipeline/commands/import_convokit.py | 515 | 48-04 Task 1 (Rule 3 blocking-fix) flipped this birth-write status kwarg from PIPELINE to CANDIDATE ahead of plan 48-05's own scheduled edit, to keep the phase 48-04 guard swap internally consistent; 48-05 still owns the rest of this file's birth-logging/recompute scope and will find this one line already done. | open |  | 2026-08-19T14:41:22.505Z |  |
+| 7 | 48 | deviation | pipeline/commands/import_convokit.py | 515 | 48-04 Task 1 (Rule 3 blocking-fix) flipped this birth-write status kwarg from PIPELINE to CANDIDATE ahead of plan 48-05's own scheduled edit, to keep the phase 48-04 guard swap internally consistent; 48-05 still owns the rest of this file's birth-logging/recompute scope and will find this one line already done. | fixed |  | 2026-08-19T14:41:22.505Z | 2026-08-19T15:04:51.300Z |
 
 ````json
 [
@@ -104,10 +104,10 @@ last_updated: 2026-08-19T14:41:22.505Z
     "file": "pipeline/commands/import_convokit.py",
     "line": 515,
     "description": "48-04 Task 1 (Rule 3 blocking-fix) flipped this birth-write status kwarg from PIPELINE to CANDIDATE ahead of plan 48-05's own scheduled edit, to keep the phase 48-04 guard swap internally consistent; 48-05 still owns the rest of this file's birth-logging/recompute scope and will find this one line already done.",
-    "status": "open",
+    "status": "fixed",
     "reason": "",
     "recorded_at": "2026-08-19T14:41:22.505Z",
-    "resolved_at": null
+    "resolved_at": "2026-08-19T15:04:51.300Z"
   }
 ]
 ````

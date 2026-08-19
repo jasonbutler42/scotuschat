@@ -38,10 +38,12 @@ def test_collision_counter_only_handles_named_pair_constraint():
         'counters["docket_question_conflict"]'
     )
 
+from api.domain.trust import TrustTier
 from api.models.models import (
     Argument,
     ArgumentParticipant,
     ArgumentStatusEnum,
+    ArgumentStatusLog,
     Case,
     CaseArgument,
     ImportMethod,
@@ -149,8 +151,17 @@ def _write_corpus_fixture(
     conversations: dict,
     cases: list[dict],
     speakers: dict,
+    utterances: list[dict] | None = None,
 ) -> Path:
-    """Write a small synthetic corpus_dir tree (never the real corpus files)."""
+    """Write a small synthetic corpus_dir tree (never the real corpus files).
+
+    `utterances` is optional (default None -> an empty utterances.jsonl,
+    zero turns, the pre-existing behavior every Task 2/3 caller below still
+    relies on). Phase 48 Plan 05's Task 3 tests pass a real turn list so a
+    conversation's speaker gets an actual resolved Utterance row -- needed
+    to exercise trust_tier landing on TRUSTED rather than the zero-
+    constituent UNCERTAIN base case.
+    """
     corpus_dir = tmp_path / "corpus"
     corpus_dir.mkdir()
     (corpus_dir / "conversations.json").write_text(
@@ -160,10 +171,14 @@ def _write_corpus_fixture(
         for case in cases:
             f.write(json.dumps(case) + "\n")
     (corpus_dir / "speakers.json").write_text(json.dumps(speakers), encoding="utf-8")
-    # Plan 05: run_import_convokit now requires utterances.jsonl to exist
-    # (streamed once per term, T-29-03) -- these Task 2/3 tests don't
-    # exercise utterance import, so an empty file (zero turns) is enough.
-    (corpus_dir / "utterances.jsonl").write_text("", encoding="utf-8")
+    # Plan 05 (Phase 29): run_import_convokit now requires utterances.jsonl
+    # to exist (streamed once per term, T-29-03).
+    if utterances is None:
+        (corpus_dir / "utterances.jsonl").write_text("", encoding="utf-8")
+    else:
+        with (corpus_dir / "utterances.jsonl").open("w", encoding="utf-8") as f:
+            for row in utterances:
+                f.write(json.dumps(row) + "\n")
     return corpus_dir
 
 
@@ -407,6 +422,170 @@ async def test_malformed_conversation_flagged_not_aborting_term(
         )
     ).scalar_one_or_none()
     assert missing_argument is None
+
+
+# ===========================================================================
+# Phase 48 Plan 05 (TRUST-02/TRUST-03): born-candidate birth log, tier on
+# arrival, and re-import idempotence
+# ===========================================================================
+
+
+@pytest.mark.asyncio
+async def test_corpus_argument_is_born_candidate(isolated_session, tmp_path):
+    """TRUST-03/D-01: a corpus-imported argument is created with
+    status=candidate -- the explicit kwarg at the corpus write site (Task 1
+    of this plan)."""
+    corpus_dir = _write_corpus_fixture(
+        tmp_path, _CONVERSATION_9999_71, [_CASE_9999_71], _SPEAKERS
+    )
+    args = _args(9999, corpus_dir)
+
+    with patch(
+        "pipeline.commands.import_convokit.get_session",
+        new=_make_session_cm(isolated_session),
+    ):
+        await run_import_convokit(args)
+
+    argument = (
+        await isolated_session.execute(
+            select(Argument).where(Argument.oyez_transcript_id == "9999_71")
+        )
+    ).scalar_one()
+    assert argument.status is ArgumentStatusEnum.CANDIDATE
+
+
+@pytest.mark.asyncio
+async def test_corpus_birth_writes_one_candidate_status_log_row(
+    isolated_session, tmp_path
+):
+    """TRUST-03/D-03: exactly one ArgumentStatusLog row exists for a freshly
+    corpus-imported argument, its status is the born state, and -- the
+    TRUST-03 ordering edge -- it is the OLDEST row when ordered by
+    (created_at, id), the same ordering get_argument_detail's status_log
+    list uses."""
+    corpus_dir = _write_corpus_fixture(
+        tmp_path, _CONVERSATION_9999_71, [_CASE_9999_71], _SPEAKERS
+    )
+    args = _args(9999, corpus_dir)
+
+    with patch(
+        "pipeline.commands.import_convokit.get_session",
+        new=_make_session_cm(isolated_session),
+    ):
+        await run_import_convokit(args)
+
+    argument = (
+        await isolated_session.execute(
+            select(Argument).where(Argument.oyez_transcript_id == "9999_71")
+        )
+    ).scalar_one()
+
+    log_rows = (
+        await isolated_session.execute(
+            select(ArgumentStatusLog)
+            .where(ArgumentStatusLog.argument_id == argument.id)
+            .order_by(ArgumentStatusLog.created_at.asc(), ArgumentStatusLog.id.asc())
+        )
+    ).scalars().all()
+    assert len(log_rows) == 1
+    assert log_rows[0].status is ArgumentStatusEnum.CANDIDATE
+
+
+@pytest.mark.asyncio
+async def test_corpus_argument_tier_is_trusted_on_arrival(isolated_session, tmp_path):
+    """TRUST-02/D-09: the stored trust_tier for a fully resolved corpus
+    conversation is TRUSTED, set at import time -- and specifically NOT
+    UNCERTAIN, so a recompute that silently no-oped and left the column's
+    server default in place cannot pass this test.
+
+    Fixture note: conversation 9999_71's only speaker (adv__john_smith) is
+    a resolvable advocate present in both conversations.json's "advocates"
+    dict and speakers.json, and this test supplies one real utterance turn
+    for that speaker (unlike the Task 2 fixtures above, which pass zero
+    turns to exercise entity creation only) -- every constituent resolves,
+    so the floor is (corpus, direct) -> TRUSTED with no unresolved speaker
+    to drag it to UNCERTAIN.
+    """
+    utterances = [
+        {
+            "id": "u1",
+            "conversation_id": "9999_71",
+            "speaker": "adv__john_smith",
+            "text": "May it please the Court.",
+        }
+    ]
+    corpus_dir = _write_corpus_fixture(
+        tmp_path, _CONVERSATION_9999_71, [_CASE_9999_71], _SPEAKERS, utterances
+    )
+    args = _args(9999, corpus_dir)
+
+    with patch(
+        "pipeline.commands.import_convokit.get_session",
+        new=_make_session_cm(isolated_session),
+    ):
+        await run_import_convokit(args)
+
+    argument = (
+        await isolated_session.execute(
+            select(Argument).where(Argument.oyez_transcript_id == "9999_71")
+        )
+    ).scalar_one()
+    assert argument.trust_tier is TrustTier.TRUSTED
+    assert argument.trust_tier is not TrustTier.UNCERTAIN
+
+
+@pytest.mark.asyncio
+async def test_corpus_reimport_adds_no_second_birth_row(isolated_session, tmp_path):
+    """TRUST-03 (edge: adjacency): re-running the corpus importer for a
+    conversation that already has an argument creates no second Argument
+    row and no second born-state status-log row -- the importer's existing
+    idempotent-SKIP early return (oyez_transcript_id dedup) is preserved,
+    and this is also the Phase 48 proxy for "operator work is sacred":
+    a re-import must never silently duplicate or reset what already exists.
+    """
+    utterances = [
+        {
+            "id": "u1",
+            "conversation_id": "9999_71",
+            "speaker": "adv__john_smith",
+            "text": "May it please the Court.",
+        }
+    ]
+    corpus_dir = _write_corpus_fixture(
+        tmp_path, _CONVERSATION_9999_71, [_CASE_9999_71], _SPEAKERS, utterances
+    )
+    args = _args(9999, corpus_dir)
+    session_cm = _make_session_cm(isolated_session)
+
+    tiers_seen: list[TrustTier] = []
+    for _ in range(2):
+        with patch("pipeline.commands.import_convokit.get_session", new=session_cm):
+            await run_import_convokit(args)
+
+        argument = (
+            await isolated_session.execute(
+                select(Argument).where(Argument.oyez_transcript_id == "9999_71")
+            )
+        ).scalar_one()
+        tiers_seen.append(argument.trust_tier)
+
+    arguments = (
+        await isolated_session.execute(
+            select(Argument).where(Argument.oyez_transcript_id == "9999_71")
+        )
+    ).scalars().all()
+    assert len(arguments) == 1
+
+    log_rows = (
+        await isolated_session.execute(
+            select(ArgumentStatusLog).where(
+                ArgumentStatusLog.argument_id == arguments[0].id
+            )
+        )
+    ).scalars().all()
+    assert len(log_rows) == 1
+
+    assert tiers_seen[0] == tiers_seen[1]
 
 
 # ===========================================================================

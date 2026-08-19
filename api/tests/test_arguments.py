@@ -49,6 +49,35 @@ def _db_configured() -> bool:
     return bool(url) and "sk-ant" not in url and url != "postgresql+asyncpg://user:pass@host/db"
 
 
+def assert_no_key_anywhere(payload, key: str, context: str) -> None:
+    """
+    Recursively walk a decoded JSON payload (dicts/lists, any nesting) and
+    raise an AssertionError naming the exact JSON path if `key` is found at
+    any depth — so a nested leak is caught, not just a top-level one.
+
+    Phase 48 (D-23): trust must never be inferred as a quality/trust signal
+    on any public response, same rationale as the Phase 47 provenance ban
+    below. `context` names the endpoint/response under test so a failure
+    message is actionable without re-deriving which call produced it.
+    """
+
+    def _walk(node, path: str) -> None:
+        if isinstance(node, dict):
+            assert key not in node, (
+                f"'{key}' found at path '{path or '<root>'}' in {context} — "
+                "trust is operator-facing only and must never appear on a "
+                "public response, at any nesting depth (CLAUDE.md apolitical "
+                "hard constraint; D-23)."
+            )
+            for k, v in node.items():
+                _walk(v, f"{path}.{k}" if path else k)
+        elif isinstance(node, list):
+            for i, item in enumerate(node):
+                _walk(item, f"{path}[{i}]")
+
+    _walk(payload, "")
+
+
 @pytest_asyncio.fixture
 async def seeded_argument():
     """
@@ -258,12 +287,23 @@ async def test_get_utterances_returns_utterances(client: AsyncClient, seeded_arg
     # Phase 47 (T-47-17): provenance is operator-facing lineage only — the
     # public utterance contract must never leak strategy/source/method/
     # external_id, and must never be inferred as a quality/trust signal.
+    # Phase 48 (D-23) adds trust_tier to this same ban list for the same
+    # reason provenance was banned: it must never be inferred as a quality
+    # signal on the public site (apolitical hard constraint, CLAUDE.md).
     assert "strategy" not in first, "strategy must not appear on the public utterance contract"
     assert "source" not in first, "source must not appear on the public utterance contract"
     assert "method" not in first, "method must not appear on the public utterance contract"
     assert "external_id" not in first, "external_id must not appear on the public utterance contract"
+    assert "trust_tier" not in first, "trust_tier must not appear on the public utterance contract"
     # person_id is null at Phase 1 (Phase 2 Resolve populates it)
     assert first.get("person_id") is None, "person_id must be null at Phase 1"
+
+    # D-23: recursive check over the whole argument-detail envelope, not
+    # just the first utterance dict inspected above — a nested leak
+    # anywhere in the response must be caught too.
+    assert_no_key_anywhere(
+        body, "trust_tier", "GET /arguments/{id}/utterances response"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -324,3 +364,79 @@ async def test_utterances_have_speaker_name_after_resolve(
         assert len(names) > 0, (
             "At least one resolved utterance must have a non-null speaker_name"
         )
+
+
+# ---------------------------------------------------------------------------
+# Phase 48 (D-23): live per-endpoint trust-tier leak-ban assertions
+#
+# The structural half of the ban (every public Pydantic response model,
+# derived from the live public routers) lives in
+# api/tests/test_trust_public_leak_ban.py. These three tests are the LIVE
+# half — they hit the real endpoints against a seeded row and walk the
+# actual decoded JSON body recursively via assert_no_key_anywhere, so a
+# leak introduced by a service layer bypassing its own schema (e.g. an
+# ORM-row spread instead of the declared allow-list) is also caught, not
+# just a leak visible from the Pydantic model definition alone.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL with parsed data")
+async def test_cases_list_never_leaks_trust_tier(client: AsyncClient) -> None:
+    """
+    GET /cases must never expose trust_tier, on any case item or the
+    response envelope, at any nesting depth (D-23, T-48-LEAK).
+    """
+    response = await client.get("/cases")
+    assert response.status_code == 200
+
+    body = response.json()
+    assert_no_key_anywhere(body, "trust_tier", "GET /cases response")
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL with parsed data")
+async def test_argument_speakers_never_leaks_trust_tier(
+    client: AsyncClient, seeded_argument: int
+) -> None:
+    """
+    GET /arguments/{id}/speakers must never expose trust_tier on any
+    speaker entry, at any nesting depth (D-23, T-48-LEAK).
+    """
+    response = await client.get(f"/arguments/{seeded_argument}/speakers")
+    assert response.status_code == 200
+
+    body = response.json()
+    assert_no_key_anywhere(body, "trust_tier", "GET /arguments/{id}/speakers response")
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL with parsed data")
+async def test_person_detail_never_leaks_trust_tier(
+    client: AsyncClient, seeded_argument: int
+) -> None:
+    """
+    GET /people/{person_id} must never expose trust_tier, at any nesting
+    depth (D-23, T-48-LEAK). Resolves a real person_id from the seeded
+    argument's own speakers response rather than asserting against a
+    guessed id — skips with an explicit reason if the seeded argument has
+    no resolved speaker (it should always have one via `seeded_argument`'s
+    second, resolved utterance, but this guards against a future fixture
+    change silently making the test vacuous-by-skip forever without a
+    visible reason).
+    """
+    speakers_response = await client.get(f"/arguments/{seeded_argument}/speakers")
+    assert speakers_response.status_code == 200
+    speakers = speakers_response.json()
+    if not speakers:
+        pytest.skip(
+            "seeded_argument fixture produced no resolved speaker — "
+            "cannot resolve a real person_id to test against"
+        )
+    person_id = speakers[0]["person_id"]
+
+    response = await client.get(f"/people/{person_id}")
+    assert response.status_code == 200
+
+    body = response.json()
+    assert_no_key_anywhere(body, "trust_tier", "GET /people/{person_id} response")

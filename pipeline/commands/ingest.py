@@ -45,6 +45,7 @@ from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 
 from api.services.argument_uniqueness import is_argument_pair_violation
+from api.services.trust import recompute_argument_tier
 from api.domain.docket_values import DocketValueError, normalize_docket_value
 
 from api.models.models import (
@@ -52,6 +53,8 @@ from api.models.models import (
     AdminJobStatus,
     AdminJobStep,
     Argument,
+    ArgumentStatusEnum,
+    ArgumentStatusLog,
     Case,
     CaseArgument,
     ImportMethod,
@@ -499,6 +502,11 @@ async def _run_ingest_inner(args) -> None:
             question_number=args.question,
             source_docket=primary_docket or (all_dockets[0] if all_dockets else None),
             source_dockets=all_dockets or None,
+            # No explicit status= kwarg here, deliberately (48-RESEARCH.md
+            # Anti-Patterns): this write relies on the model default, which
+            # Phase 48 D-01 changed to ArgumentStatusEnum.CANDIDATE. Adding
+            # an explicit kwarg here would pin this path to the retired
+            # PIPELINE value the next time the default changes.
         )
         session.add(argument)
         try:
@@ -509,6 +517,14 @@ async def _run_ingest_inner(args) -> None:
                     f"Duplicate argument: docket {primary_docket!r} Q{args.question} already exists."
                 ) from None
             raise
+
+        # D-03: log the born-state transition. Genuinely new write site --
+        # this file has never written an ArgumentStatusLog row before.
+        session.add(
+            ArgumentStatusLog(
+                argument_id=argument.id, status=ArgumentStatusEnum.CANDIDATE
+            )
+        )
 
         # ---- c. CaseArgument rows (idempotent) ----
         for case in cases:
@@ -546,6 +562,15 @@ async def _run_ingest_inner(args) -> None:
         await session.flush()
         run_id = run.id
         argument_id = argument.id
+
+        # D-07/writer #2 (48-RESEARCH.md), Pitfall 2: recompute inside this
+        # same get_session() block so the tier commits atomically with the
+        # birth write above -- no explicit commit call is added here, the
+        # context manager owns that. At ingest time this argument has zero
+        # utterances, so this stores UNCERTAIN, the same as the column
+        # default -- deliberate, not redundant: it proves this writer path
+        # is wired (plan 48-09's zero-rows-changed check depends on it).
+        await recompute_argument_tier(session, argument_id)
 
     # get_session() commits on clean exit
     print(f"Ingest complete. import_run.id = {run_id}")

@@ -61,6 +61,7 @@ from api.models.models import (
     SpeakerAlias,
     Utterance,
 )
+from api.services.trust import recompute_argument_tier
 from pipeline.db import get_session
 
 
@@ -359,6 +360,16 @@ async def _run_resolve_inner(args) -> None:
                     f"Resolve complete. {len(resolved_map)} labels auto-resolved. "
                     f"resolve import_run.id = {resolve_run.id}"
                 )
+
+            # D-07/writer #5 (48-RESEARCH.md), Pitfall 2: recompute once,
+            # after every person_id update above and after the outcome
+            # branch (paused-with-misses or completed) has set
+            # resolve_run.status -- not per match, so the floor sees the
+            # complete post-write set. Same session, no explicit commit
+            # call added here; the context manager owns that. Resolved from the
+            # parse run already loaded above, not re-queried.
+            if parse_run.argument_id is not None:
+                await recompute_argument_tier(session, parse_run.argument_id)
 
         except KeyboardInterrupt:
             # Direct CLI interrupt — set NEEDS_REVIEW and exit cleanly

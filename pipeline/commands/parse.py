@@ -50,6 +50,7 @@ from api.services.argument_uniqueness import (
     find_argument_by_pair,
     is_argument_pair_violation,
 )
+from api.services.trust import recompute_argument_tier
 from pipeline.db import get_session
 from pipeline.parser.cover_extractor import extract_cover_metadata, extract_toc_data
 from pipeline.parser.extractor import extract_pages
@@ -449,6 +450,15 @@ async def _run_parse_inner(args) -> None:
             f"Parse complete. {len(utterances)} utterances written. "
             f"method={run.method.value}"
         )
+
+        # D-07/writer #3 (48-RESEARCH.md), Pitfall 2: recompute inside this
+        # same get_session() block, on the success path only (after the
+        # COMPLETED transition, not before) -- the failure-transition helper
+        # that marks a run FAILED must never stamp a tier as though parse
+        # had succeeded. No explicit commit call is added here, the context
+        # manager owns that.
+        if run.argument_id is not None:
+            await recompute_argument_tier(session, run.argument_id)
 
     # ------------------------------------------------------------------
     # Step 9: Mark admin_jobs COMPLETED (job-driven path only)

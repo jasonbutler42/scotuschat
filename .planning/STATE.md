@@ -5,15 +5,15 @@ milestone_name: Import & Provenance Re-model
 current_phase: 48
 current_phase_name: trust-lifecycle
 status: executing
-stopped_at: Completed 48-03-PLAN.md
-last_updated: "2026-08-19T13:07:04.391Z"
+stopped_at: Completed 48-04-PLAN.md
+last_updated: "2026-08-19T14:43:26.817Z"
 last_activity: 2026-08-18
 last_activity_desc: Cross-phase UAT audit closed; human UAT waived; Phase 48 ready to discuss
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 15
-  completed_plans: 9
+  completed_plans: 10
   percent: 20
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-08-18 — Phase 47 complete; corpus-firs
 ## Current Position
 
 Phase: 48 (trust-lifecycle) — EXECUTING
-Plan: 4 of 9
+Plan: 5 of 9
 Status: Ready to execute
 Last activity: 2026-08-18 — Phase 48 execution started
 
@@ -50,7 +50,7 @@ Pre-flight for Phase 48, settled 2026-08-18:
   compare to head `0026` (`0026_import_run_provenance`, Phase 47). The audit could not check this —
   it had no DB credentials. This is the pre-existing STATE.md blocker below, not a new one.
 
-Progress: [██████░░░░] 60%
+Progress: [███████░░░] 67%
 
 ## Deferred Items
 
@@ -138,6 +138,7 @@ items → 14.** Every closure carries its evidence in the file it closes; the co
 | Phase 48 P01 | 15min | 3 tasks | 7 files |
 | Phase 48 P02 | 20min | 2 tasks | 3 files |
 | Phase 48 P03 | ~35min | 2 tasks | 2 files |
+| Phase 48 P04 | ~50min | 3 tasks | 13 files |
 
 v1.7 per-plan metrics cleared at this milestone boundary per the standard STATE.md reset; the underlying per-plan SUMMARY files remain in `.planning/milestones/v1.7-phases/`.
 
@@ -168,6 +169,8 @@ Full cross-milestone decision log lives in PROJECT.md's Key Decisions table. Per
 - [Phase ?]: Phase 48 Plan 02: kept test_delete_argument_returns_false_for_pipeline as the retired-enum-value fixture and added a distinct test_delete_argument_still_refuses_candidate rather than repurposing it
 - [Phase ?]: Phase 48 Plan 03: left the admin-contract false-green guard failing loudly (not xfail) since it resolves automatically once 48-07 lands trust_tier on ArgumentDetail (D-20) -- recorded in WINDOWS.md as kind unmet-truth
 - [Phase ?]: Phase 48 Plan 03: corrected the plan's /api/-prefixed endpoint paths to the actual mounted public routes (/cases, /arguments/{id}/..., /people/{id}) -- only the admin router carries an /api/admin prefix
+- [Phase ?]: Phase 48 Plan 04: Rule 3 fix flipped pipeline/commands/import_convokit.py's birth-write status kwarg from PIPELINE to CANDIDATE ahead of plan 48-05's own scheduled edit, to keep this plan's guard swap internally consistent; recorded in WINDOWS.md (kind=deviation) so 48-05 finds this line already done
+- [Phase ?]: Phase 48 Plan 04: renamed test_approve_job_accepts_freshly_created_argument_and_rejects_second_call to include 'candidate' so the plan's own -k filter matches all three vocabulary-block tests it names
 
 ### Roadmap Evolution
 
@@ -225,8 +228,8 @@ at close.
 
 ## Session Continuity
 
-Last session: 2026-08-19T13:07:04.343Z
-Stopped at: Completed 48-03-PLAN.md
+Last session: 2026-08-19T14:43:26.779Z
+Stopped at: Completed 48-04-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

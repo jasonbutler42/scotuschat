@@ -79,6 +79,7 @@ from sqlalchemy.exc import IntegrityError
 
 from api.domain.person_names import prepare_name_provenance, split_legacy_full_name
 from api.services.argument_uniqueness import is_argument_pair_violation
+from api.services.trust import recompute_argument_tier
 
 from api.models.models import (
     AdminJob,
@@ -87,6 +88,7 @@ from api.models.models import (
     Argument,
     ArgumentParticipant,
     ArgumentStatusEnum,
+    ArgumentStatusLog,
     Case,
     CaseArgument,
     CourtTenure,
@@ -543,6 +545,14 @@ async def _import_conversation(
             "error, counted in docket_question_conflict, skipped."
         )
         return
+    # D-03: log the born-state transition immediately on the flush success
+    # path -- placing it here means the docket/question conflict-rollback
+    # branch above (which returns early) can never orphan a status-log row.
+    # This is a genuinely new write site: neither this file nor ingest.py
+    # wrote an ArgumentStatusLog row before Phase 48.
+    session.add(
+        ArgumentStatusLog(argument_id=argument.id, status=ArgumentStatusEnum.CANDIDATE)
+    )
     counters["arguments_created"] += 1
 
     # ---- CaseArgument (lead-docket-only, D-19) ----
@@ -633,6 +643,14 @@ async def _import_conversation(
             discrepancies=_build_discrepancies(resolved),
         )
     )
+
+    # D-07/writer #1 (48-RESEARCH.md): stamp the tier last, after every
+    # constituent (utterances, participants) for this argument has been
+    # written -- the floor must see the complete set. get_session() commits
+    # on clean exit of run_import_convokit's `async with` block, so this
+    # call is inside the same birth transaction; no session.commit() is
+    # added here (48-RESEARCH.md Pitfall 2).
+    await recompute_argument_tier(session, argument.id)
 
 
 # ---------------------------------------------------------------------------

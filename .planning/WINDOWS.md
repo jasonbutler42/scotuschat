@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 3
+open_count: 4
 waived_count: 0
 fixed_count: 4
-total_count: 7
-last_updated: 2026-08-19T15:55:57.028Z
+total_count: 8
+last_updated: 2026-08-19T23:33:18.102Z
 ---
 
 # Broken Windows Ledger
@@ -22,6 +22,7 @@ last_updated: 2026-08-19T15:55:57.028Z
 | 5 | 47 | deviation | api/tests/test_phase44_argument_role_roundtrip.py |  | Pre-existing SideEnum identity mismatch under bare full-suite pytest -q (testpaths order reimports api.* modules via tests/test_admin_router.py before this file runs) - unrelated to Phase 47 import_run rename, both files predate Phase 47. See deferred-items.md. | open |  | 2026-08-17T22:21:11.348Z |  |
 | 6 | 48 | unmet-truth | api/tests/test_trust_public_leak_ban.py |  | test_admin_detail_contract_does_declare_trust_tier fails until plan 48-07 lands trust_tier on ArgumentDetail (D-20); documented as expected/tracked in 48-03-SUMMARY.md, re-run at 48-07 close | fixed |  | 2026-08-19T13:05:36.138Z | 2026-08-19T15:55:57.028Z |
 | 7 | 48 | deviation | pipeline/commands/import_convokit.py | 515 | 48-04 Task 1 (Rule 3 blocking-fix) flipped this birth-write status kwarg from PIPELINE to CANDIDATE ahead of plan 48-05's own scheduled edit, to keep the phase 48-04 guard swap internally consistent; 48-05 still owns the rest of this file's birth-logging/recompute scope and will find this one line already done. | fixed |  | 2026-08-19T14:41:22.505Z | 2026-08-19T15:04:51.300Z |
+| 8 | 48 | unrun-verify | app/src/routes/admin/arguments/[id]/+page.svelte |  | 48-08 checkpoint step 8 not executed: no argument with an incomplete resolve step was available, so the non-overridable resolved_at gate (D-14) rendering with NO override field offered is unverified in a browser. Steps 1-7 passed. Re-verify when a resolve-incomplete fixture exists. | open |  | 2026-08-19T23:33:18.102Z |  |
 
 ````json
 [
@@ -108,6 +109,18 @@ last_updated: 2026-08-19T15:55:57.028Z
     "reason": "",
     "recorded_at": "2026-08-19T14:41:22.505Z",
     "resolved_at": "2026-08-19T15:04:51.300Z"
+  },
+  {
+    "id": 8,
+    "kind": "unrun-verify",
+    "phase": "48",
+    "file": "app/src/routes/admin/arguments/[id]/+page.svelte",
+    "line": null,
+    "description": "48-08 checkpoint step 8 not executed: no argument with an incomplete resolve step was available, so the non-overridable resolved_at gate (D-14) rendering with NO override field offered is unverified in a browser. Steps 1-7 passed. Re-verify when a resolve-incomplete fixture exists.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-08-19T23:33:18.102Z",
+    "resolved_at": null
   }
 ]
 ````

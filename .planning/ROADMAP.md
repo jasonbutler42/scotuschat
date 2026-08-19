@@ -227,7 +227,7 @@ static analysis until reproduced.
     because Phases 47/50's re-import and idempotency paths depend on this cascade being correct
     (STATE.md carries the same warning).
 
-**Plans**: 7/9 plans executed
+**Plans**: 8/9 plans executed
 
 Plans:
 
@@ -249,7 +249,7 @@ Plans:
 
 **Wave 4** *(blocked on 48-07's error shape)*
 
-- [ ] 48-08-PLAN.md — Minimal admin UI on `/admin/arguments/[id]`: block-reason panel with per-blocker counts, override prompt, and the UI source contract (wave 4)
+- [x] 48-08-PLAN.md — Minimal admin UI on `/admin/arguments/[id]`: block-reason panel with per-blocker counts, override prompt, and the UI source contract (wave 4)
 
 **Wave 5**
 
@@ -369,7 +369,7 @@ Plans:
 | 45. Deferred UI Bug Fixes | v1.7 | 2/2 | Complete    | 2026-08-12 |
 | 46. Dev Environment Reliability | v1.7 | 6/6 | Complete    | 2026-08-14 |
 | 47. Provenance Foundation | v1.8 | 6/6 | Complete    | 2026-08-18 |
-| 48. Trust & Lifecycle | v1.8 | 7/9 | In Progress|  |
+| 48. Trust & Lifecycle | v1.8 | 8/9 | In Progress|  |
 | 49. Review Model | v1.8 | 0/TBD | Not started | - |
 | 50. Unified Import Path | v1.8 | 0/TBD | Not started | - |
 | 51. Design System & Noun Alignment | v1.8 | 0/TBD | Not started | - |

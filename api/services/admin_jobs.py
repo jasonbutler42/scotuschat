@@ -25,6 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import func
 
 from api.domain.person_names import prepare_person_name
+from api.services.trust import recompute_argument_tier
 from api.models.models import (
     AdminJob,
     AdminJobStatus,
@@ -430,7 +431,10 @@ async def resolve_job(
          a. Upsert SpeakerAlias keyed on normalize_label(raw_speaker_label).
          b. UPDATE Utterance.person_id for (argument_id, parse_run_id, raw_label).
          c. UPDATE ArgumentParticipant.person_id for (argument_id, raw_label).
-      3. Set job.status = COMPLETED; commit.
+      3. Set job.status = COMPLETED; stamp resolved_at; recompute trust_tier
+         ONCE for the whole batch (D-07, 48-RESEARCH.md writer #5) — the
+         floor must see the complete post-write utterance/participant set,
+         not an intermediate per-match value; commit.
     """
     # Step 1: Load job
     job = await get_job(db, job_id)
@@ -532,6 +536,13 @@ async def resolve_job(
             .values(resolved_at=func.now())
             .execution_options(synchronize_session=False)
         )
+        # D-07/D-11: this writer directly fills NULL person_id on Utterance
+        # and ArgumentParticipant rows — a direct floor input — so the
+        # recompute is load-bearing, not consistency-only. Called exactly
+        # once for the whole batch (not once per match) so the floor is
+        # computed against the complete post-write constituent set, before
+        # this function's own commit (Pitfall 2).
+        await recompute_argument_tier(db, job.argument_id)
     await db.commit()
 
     # Reload and return the updated job
@@ -558,6 +569,9 @@ async def approve_job(db: AsyncSession, job_id: int) -> AdminJob:
 
     Writes one ArgumentStatusLog row (status=DRAFT) — the "Created" transition
     record (D-08) — in the same transaction as the Argument update.
+
+    Recomputes and stores arguments.trust_tier in the same transaction,
+    before this function's own commit (D-07, 48-RESEARCH.md Pitfall 2).
 
     Uses .execution_options(synchronize_session=False) on every update()
     (critical project-wide guard).
@@ -595,6 +609,10 @@ async def approve_job(db: AsyncSession, job_id: int) -> AdminJob:
         .values(status=AdminJobStatus.COMPLETED)
         .execution_options(synchronize_session=False)
     )
+    # D-07: not itself a constituent change, but every writer recomputes
+    # (48-RESEARCH.md writer #4) — one bounded per-argument query guarantees
+    # the tier is truthful the moment the argument becomes operator-visible.
+    await recompute_argument_tier(db, job.argument_id)
     await db.commit()
     # Phase 31 fix: the bulk update() above uses synchronize_session=False, so
     # the `job` object already loaded into this session's identity map (via
@@ -787,6 +805,9 @@ async def update_resolve_row_for_job(
     reports descriptor/descriptor_hint as null for BENCH rows, rather than by
     clearing it here — "hidden, not shown, not cleared."
 
+    Recomputes and stores arguments.trust_tier in the same transaction,
+    before this function's own commit (D-07, 48-RESEARCH.md Pitfall 2).
+
     Raises ValueError on any guard failure. Returns the updated ArgumentParticipant.
     """
     job = await get_job(db, job_id)
@@ -839,6 +860,13 @@ async def update_resolve_row_for_job(
         .values(**values)
         .execution_options(synchronize_session=False)
     )
+    # D-07: side/descriptor don't currently feed derive_tier (48-RESEARCH.md
+    # Open Question 1), but recompute is called anyway per "every writer
+    # calls recompute" — the cost is one bounded per-argument query, and
+    # Phase 49 adds review_state/method to this exact row, which makes this
+    # call site genuinely tier-relevant with no future phase having to
+    # remember to add it.
+    await recompute_argument_tier(db, argument.id)
     await db.commit()
     await db.refresh(participant)
     return participant
@@ -894,6 +922,11 @@ async def create_person_for_job(
     the validated parts, never trusted from the request.
 
     Full bio/photo/tenure fields remain Phase 27 scope (D-13 deferred).
+
+    Recomputes and stores arguments.trust_tier in the same transaction,
+    before this function's own commit (D-07, 48-RESEARCH.md Pitfall 2) —
+    this path fills in a NULL person_id, a direct D-11 floor input, so the
+    recompute is load-bearing, not consistency-only.
     """
     # Phase 38 (D-09): validate/derive the name FIRST — cheapest possible
     # rejection, before any job/participant lookup or Person row exists.
@@ -987,6 +1020,11 @@ async def create_person_for_job(
             .values(person_id=person.id, side=body.side)
             .execution_options(synchronize_session=False)
         )
+        # D-07/D-11: this fills a NULL ArgumentParticipant.person_id — a
+        # direct floor input — so the recompute is load-bearing, not
+        # consistency-only. Called before this function's own commit
+        # (Pitfall 2).
+        await recompute_argument_tier(db, job.argument_id)
 
     await db.commit()
     await db.refresh(person)

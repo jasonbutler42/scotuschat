@@ -121,7 +121,7 @@ async def test_argument_role_round_trips_for_each_real_advocate_role(
         db.add(person)
         await db.flush()
 
-        arg = Argument(status=ArgumentStatusEnum.PIPELINE, question_number=1)
+        arg = Argument(status=ArgumentStatusEnum.CANDIDATE, question_number=1)
         db.add(arg)
         await db.flush()
 
@@ -246,7 +246,7 @@ async def test_descriptor_and_specific_role_survive_an_immediate_bench_then_back
         db.add(person)
         await db.flush()
 
-        arg = Argument(status=ArgumentStatusEnum.PIPELINE, question_number=1)
+        arg = Argument(status=ArgumentStatusEnum.CANDIDATE, question_number=1)
         db.add(arg)
         await db.flush()
 

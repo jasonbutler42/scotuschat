@@ -540,14 +540,14 @@ async def test_reset_realizes_state_variety(client, tmp_path, db):
 
     # 15169 (Complexity): untouched freshly-imported default.
     complexity_arg = await _fetch_argument(db, "15169")
-    assert complexity_arg.status == ArgumentStatusEnum.PIPELINE
+    assert complexity_arg.status == ArgumentStatusEnum.CANDIDATE
     assert complexity_arg.resolved_at is None
     assert complexity_arg.published_at is None
     complexity_job = await _fetch_admin_job(db, complexity_arg.id)
     assert complexity_job.status == AdminJobStatus.PAUSED
     assert complexity_job.current_step == AdminJobStep.RESOLVE
 
-    # 13015 (Draft): PIPELINE -> DRAFT.
+    # 13015 (Draft): CANDIDATE -> DRAFT.
     draft_arg = await _fetch_argument(db, "13015")
     assert draft_arg.status == ArgumentStatusEnum.DRAFT
     assert draft_arg.resolved_at is not None
@@ -555,7 +555,7 @@ async def test_reset_realizes_state_variety(client, tmp_path, db):
     draft_job = await _fetch_admin_job(db, draft_arg.id)
     assert draft_job.status == AdminJobStatus.COMPLETED
 
-    # 18897 (Published): PIPELINE -> DRAFT -> PUBLISHED.
+    # 18897 (Published): CANDIDATE -> DRAFT -> PUBLISHED.
     published_arg = await _fetch_argument(db, "18897")
     assert published_arg.status == ArgumentStatusEnum.PUBLISHED
     assert published_arg.resolved_at is not None
@@ -563,9 +563,9 @@ async def test_reset_realizes_state_variety(client, tmp_path, db):
     published_job = await _fetch_admin_job(db, published_arg.id)
     assert published_job.status == AdminJobStatus.COMPLETED
 
-    # 22372 (Mid-pipeline): stays PIPELINE, AdminJob flipped to RUNNING.
+    # 22372 (Mid-pipeline): stays CANDIDATE, AdminJob flipped to RUNNING.
     mid_arg = await _fetch_argument(db, "22372")
-    assert mid_arg.status == ArgumentStatusEnum.PIPELINE
+    assert mid_arg.status == ArgumentStatusEnum.CANDIDATE
     assert mid_arg.resolved_at is None
     mid_job = await _fetch_admin_job(db, mid_arg.id)
     assert mid_job.status == AdminJobStatus.RUNNING
@@ -580,7 +580,7 @@ async def test_reset_realizes_state_variety(client, tmp_path, db):
 async def test_reset_writes_status_log_rows(client, tmp_path, db):
     """argument_status_log has at least one row for 13015's DRAFT transition
     and at least one for 18897's PUBLISHED transition, and zero rows for
-    15169/22372 (which never left pipeline) — proof the transitions went
+    15169/22372 (which never left the candidate state) — proof the transitions went
     through the real service functions, not a column write."""
     _require_test_db()
 

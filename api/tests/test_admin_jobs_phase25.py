@@ -186,7 +186,7 @@ def test_get_job_readiness_already_created_short_circuits() -> None:
     func_body = source[func_start:next_func] if next_func != -1 else source[func_start:]
 
     assert "already_created" in func_body
-    assert "ArgumentStatusEnum.PIPELINE" in func_body
+    assert "ArgumentStatusEnum.CANDIDATE" in func_body
 
 
 # ---------------------------------------------------------------------------
@@ -252,7 +252,7 @@ async def test_get_job_readiness_ready_when_all_conditions_met(db_session) -> No
     await db_session.flush()
 
     arg = Argument(
-        status=ArgumentStatusEnum.PIPELINE,
+        status=ArgumentStatusEnum.CANDIDATE,
         question_number=1,
         argued_date=datetime.date(2024, 1, 10),
         source_docket="23-100",
@@ -300,7 +300,7 @@ async def test_get_job_readiness_not_ready_with_strict_blockers(db_session) -> N
     )
     from api.services.admin_jobs import get_job_readiness
 
-    arg = Argument(status=ArgumentStatusEnum.PIPELINE, question_number=1)
+    arg = Argument(status=ArgumentStatusEnum.CANDIDATE, question_number=1)
     db_session.add(arg)
     await db_session.flush()
 
@@ -504,7 +504,7 @@ async def test_create_person_for_job_bench_sets_is_justice_and_participant_side(
     from api.services.admin_jobs import create_person_for_job
 
     async with AsyncSessionLocal() as db:
-        arg = Argument(status=ArgumentStatusEnum.PIPELINE, question_number=1)
+        arg = Argument(status=ArgumentStatusEnum.CANDIDATE, question_number=1)
         db.add(arg)
         await db.flush()
 
@@ -584,7 +584,7 @@ async def test_create_person_for_job_advocate_sets_is_justice_false() -> None:
     from api.services.admin_jobs import create_person_for_job
 
     async with AsyncSessionLocal() as db:
-        arg = Argument(status=ArgumentStatusEnum.PIPELINE, question_number=1)
+        arg = Argument(status=ArgumentStatusEnum.CANDIDATE, question_number=1)
         db.add(arg)
         await db.flush()
 
@@ -661,7 +661,7 @@ async def test_create_person_for_job_rejects_unknown_raw_speaker_label(db_sessio
     from api.schemas.admin_jobs import PersonCreate
     from api.services.admin_jobs import create_person_for_job
 
-    arg = Argument(status=ArgumentStatusEnum.PIPELINE, question_number=1)
+    arg = Argument(status=ArgumentStatusEnum.CANDIDATE, question_number=1)
     db_session.add(arg)
     await db_session.flush()
 
@@ -695,8 +695,8 @@ async def test_create_person_for_job_rejects_participant_outside_job_argument(db
     from api.schemas.admin_jobs import PersonCreate
     from api.services.admin_jobs import create_person_for_job
 
-    other_arg = Argument(status=ArgumentStatusEnum.PIPELINE, question_number=1)
-    job_arg = Argument(status=ArgumentStatusEnum.PIPELINE, question_number=1)
+    other_arg = Argument(status=ArgumentStatusEnum.CANDIDATE, question_number=1)
+    job_arg = Argument(status=ArgumentStatusEnum.CANDIDATE, question_number=1)
     db_session.add_all([other_arg, job_arg])
     await db_session.flush()
 
@@ -774,8 +774,8 @@ def test_update_resolve_row_for_job_does_not_reuse_advocate_side_endpoint() -> N
         "update_resolve_row_for_job must not call update_participant_side — "
         "that path rejects BENCH by design"
     )
-    assert "ArgumentStatusEnum.PIPELINE" in func_body, (
-        "update_resolve_row_for_job must guard on argument.status == pipeline (D-18, D-19)"
+    assert "ArgumentStatusEnum.CANDIDATE" in func_body, (
+        "update_resolve_row_for_job must guard on argument.status == candidate (D-18, D-19)"
     )
     assert "synchronize_session=False" in func_body
 
@@ -817,7 +817,7 @@ async def test_update_resolve_row_bench_side_persists() -> None:
         db.add(person)
         await db.flush()
 
-        arg = Argument(status=ArgumentStatusEnum.PIPELINE, question_number=1)
+        arg = Argument(status=ArgumentStatusEnum.CANDIDATE, question_number=1)
         db.add(arg)
         await db.flush()
 
@@ -894,7 +894,7 @@ async def test_update_resolve_row_advocate_descriptor_persists_bench_descriptor_
         db.add_all([advocate_person, bench_person])
         await db.flush()
 
-        arg = Argument(status=ArgumentStatusEnum.PIPELINE, question_number=1)
+        arg = Argument(status=ArgumentStatusEnum.CANDIDATE, question_number=1)
         db.add(arg)
         await db.flush()
 
@@ -1008,7 +1008,7 @@ async def test_update_resolve_row_descriptor_survives_advocate_bench_advocate_ro
         db.add(person)
         await db.flush()
 
-        arg = Argument(status=ArgumentStatusEnum.PIPELINE, question_number=1)
+        arg = Argument(status=ArgumentStatusEnum.CANDIDATE, question_number=1)
         db.add(arg)
         await db.flush()
 
@@ -1106,8 +1106,8 @@ async def test_update_resolve_row_rejects_participant_outside_job_argument(db_se
     from api.schemas.admin_jobs import ResolveRowUpdate
     from api.services.admin_jobs import update_resolve_row_for_job
 
-    other_arg = Argument(status=ArgumentStatusEnum.PIPELINE, question_number=1)
-    job_arg = Argument(status=ArgumentStatusEnum.PIPELINE, question_number=1)
+    other_arg = Argument(status=ArgumentStatusEnum.CANDIDATE, question_number=1)
+    job_arg = Argument(status=ArgumentStatusEnum.CANDIDATE, question_number=1)
     db_session.add_all([other_arg, job_arg])
     await db_session.flush()
 
@@ -1138,7 +1138,7 @@ async def test_update_resolve_row_rejects_participant_outside_job_argument(db_se
 @pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
 async def test_update_resolve_row_rejects_edit_when_argument_not_pipeline(db_session) -> None:
     """Test 3b: any resolve-row edit is rejected when the linked argument.status
-    is not pipeline (D-18, D-19)."""
+    is not candidate (D-18, D-19)."""
     from api.models.models import (
         AdminJob,
         AdminJobStatus,

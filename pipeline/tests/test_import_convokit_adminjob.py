@@ -183,7 +183,7 @@ async def test_argument_status_is_pipeline_not_draft(isolated_session, tmp_path)
     await _run_import(isolated_session, tmp_path)
     argument = await _fetch_argument(isolated_session)
 
-    assert argument.status == ArgumentStatusEnum.PIPELINE
+    assert argument.status == ArgumentStatusEnum.CANDIDATE
     assert argument.resolved_at is None
 
 

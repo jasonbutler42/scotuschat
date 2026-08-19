@@ -378,7 +378,7 @@ class ResolveRow(BaseModel):
     bench_role, missing_tenure, and person_edit_href are always null/false for
     these rows.
 
-    editable is false once the linked argument has left the 'pipeline' status —
+    editable is false once the linked argument has left the 'candidate' status —
     the Resolve card renders every row read-only in that state (D-18, D-19).
     """
 

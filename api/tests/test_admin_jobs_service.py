@@ -247,7 +247,7 @@ async def test_delete_job_removes_only_admin_job_row() -> None:
 @pytest.mark.asyncio
 @pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
 async def test_approve_job_writes_one_draft_log_row() -> None:
-    """approve_job on a PIPELINE argument sets status=DRAFT, resolved_at=now(),
+    """approve_job on a CANDIDATE argument sets status=DRAFT, resolved_at=now(),
     completes the job, and writes exactly one ArgumentStatusLog row with
     status=DRAFT for that argument_id (the "Created" transition, D-08).
     """
@@ -265,7 +265,7 @@ async def test_approve_job_writes_one_draft_log_row() -> None:
     from api.services.admin_jobs import approve_job
 
     async with AsyncSessionLocal() as db:
-        arg = Argument(status=ArgumentStatusEnum.PIPELINE, resolved_at=None)
+        arg = Argument(status=ArgumentStatusEnum.CANDIDATE, resolved_at=None)
         db.add(arg)
         await db.flush()
 

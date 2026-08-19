@@ -934,7 +934,7 @@ async def list_resolve_rows_for_job(db: AsyncSession, job_id: int) -> list[dict]
     argument_id is always derived from job_id, never trusted from the client).
 
     editable is False for every row once the linked argument has left the
-    'pipeline' status (D-18, D-19) — the Resolve card renders read-only.
+    'candidate' status (D-18, D-19) — the Resolve card renders read-only.
 
     Bench rows (side == BENCH) get bench_role/missing_tenure/person_edit_href
     from a CourtTenure date-window lookup against Argument.argued_date
@@ -965,7 +965,7 @@ async def list_resolve_rows_for_job(db: AsyncSession, job_id: int) -> list[dict]
     if argument is None:
         raise ValueError(f"Argument not found for job {job_id}")
 
-    editable = argument.status == ArgumentStatusEnum.PIPELINE
+    editable = argument.status == ArgumentStatusEnum.CANDIDATE
 
     participants_result = await db.execute(
         select(

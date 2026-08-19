@@ -238,11 +238,11 @@ async def reset_to_fixture(db: AsyncSession, corpus_dir: str | Path | None = Non
     }
 
     # Fixture 15169 (Complexity): no action. It stays exactly as the
-    # importer left it — status=PIPELINE with a PAUSED/RESOLVE AdminJob.
+    # importer left it — status=CANDIDATE with a PAUSED/RESOLVE AdminJob.
     # This is deliberate: it is the reference "freshly imported" state and
     # the Phase 30 invariant's canonical shape.
 
-    # Fixture 13015 (Draft target): PIPELINE -> DRAFT via the real service
+    # Fixture 13015 (Draft target): CANDIDATE -> DRAFT via the real service
     # function (D-03). approve_job stamps resolved_at, marks the AdminJob
     # COMPLETED, and writes the ArgumentStatusLog row — this module performs
     # none of those writes itself.
@@ -253,7 +253,7 @@ async def reset_to_fixture(db: AsyncSession, corpus_dir: str | Path | None = Non
     # order is NOT optional. approve_job must run first to reach DRAFT and
     # stamp resolved_at — publish_argument raises ValueError("Cannot
     # publish: resolve step not yet complete") when resolved_at is still
-    # null, which is exactly the state a freshly-imported PIPELINE argument
+    # null, which is exactly the state a freshly-imported CANDIDATE argument
     # is in. Do not "simplify" these two calls into one.
     published_argument_id, published_job_id = ids_by_conversation["18897"]
     await jobs_service.approve_job(db, published_job_id)
@@ -269,10 +269,10 @@ async def reset_to_fixture(db: AsyncSession, corpus_dir: str | Path | None = Non
     # must not be repurposed here (RESEARCH.md Pitfall 3). The simple flip
     # (rather than partially resolving some ArgumentParticipant rows) is
     # taken because (a) the Complexity fixture already gives Phase 44's
-    # Resolve Table Rework a fully editable PIPELINE argument with a
+    # Resolve Table Rework a fully editable CANDIDATE argument with a
     # PAUSED/RESOLVE job, so partially resolving participants here would add
     # implementation cost without unlocking anything Phase 44 lacks, and
-    # (b) resolve-card editability keys on Argument.status staying PIPELINE,
+    # (b) resolve-card editability keys on Argument.status staying CANDIDATE,
     # which this flip preserves (Argument.resolved_at stays null, unchanged).
     _mid_argument_id, mid_job_id = ids_by_conversation["22372"]
     await db.execute(

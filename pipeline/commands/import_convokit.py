@@ -510,9 +510,14 @@ async def _import_conversation(
         source_docket=case_fields["docket_no"],
         # Phase 30 fix (supersedes Phase 29's D-06 for this write, see
         # 30-RESEARCH.md Pitfall 1): every read path that gates Resolve-card
-        # editability keys on ArgumentStatusEnum.PIPELINE, so a corpus
-        # argument must start there, not DRAFT, to ever become editable.
-        status=ArgumentStatusEnum.PIPELINE,
+        # editability keys on ArgumentStatusEnum.CANDIDATE (Phase 48 D-01
+        # retired PIPELINE as the born state; plan 48-04 swapped those read
+        # paths in this same phase), so a corpus argument must start there,
+        # not DRAFT, to ever become editable. This kwarg is explicit
+        # precisely because an explicit value does not inherit a changed
+        # model default — it must be edited directly (48-RESEARCH.md
+        # Anti-Patterns).
+        status=ArgumentStatusEnum.CANDIDATE,
         oyez_transcript_id=conversation_id,  # D-10
     )
     session.add(argument)

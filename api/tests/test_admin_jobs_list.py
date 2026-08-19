@@ -274,11 +274,11 @@ async def test_list_jobs_endpoint_default_no_param(client: AsyncClient) -> None:
 @pytest.mark.asyncio
 @pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
 async def test_list_jobs_is_archived_false_for_pipeline_argument(db_session: AsyncSession) -> None:
-    """A job linked to a PIPELINE-status argument must report is_archived=False."""
+    """A job linked to a CANDIDATE-status argument must report is_archived=False."""
     from api.models.models import Argument, ArgumentStatusEnum, AdminJob, AdminJobStatus, AdminJobStep
     from api.services.admin_jobs import list_jobs
 
-    argument = Argument(status=ArgumentStatusEnum.PIPELINE, resolved_at=None)
+    argument = Argument(status=ArgumentStatusEnum.CANDIDATE, resolved_at=None)
     db_session.add(argument)
     await db_session.flush()
 

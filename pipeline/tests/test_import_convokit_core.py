@@ -263,10 +263,11 @@ async def test_creates_case_argument_caseargument_importrun_entities(
             select(Argument).where(Argument.oyez_transcript_id == "9999_71")
         )
     ).scalar_one()
-    # Phase 30 fix: corpus arguments now start at PIPELINE (not DRAFT),
+    # Phase 30 fix: corpus arguments now start at CANDIDATE (not DRAFT),
     # matching the state the PDF pipeline's ingest step already produces,
-    # so the Resolve card renders editable (30-RESEARCH.md Pitfall 1).
-    assert argument.status == ArgumentStatusEnum.PIPELINE
+    # so the Resolve card renders editable (30-RESEARCH.md Pitfall 1;
+    # Phase 48 D-01 renamed this born state from PIPELINE to CANDIDATE).
+    assert argument.status == ArgumentStatusEnum.CANDIDATE
     assert argument.source_docket == "55-71"
     assert argument.argued_date.isoformat() == "1956-11-15"  # calendar year != term_year
     # Standing guard (Phase 47 Task 2): import_run.external_id is a
@@ -397,8 +398,8 @@ async def test_malformed_conversation_flagged_not_aborting_term(
             select(Argument).where(Argument.oyez_transcript_id == "9999_71")
         )
     ).scalar_one()
-    # Phase 30 fix: corpus arguments now start at PIPELINE (not DRAFT).
-    assert good_argument.status == ArgumentStatusEnum.PIPELINE
+    # Phase 30 fix: corpus arguments now start at CANDIDATE (not DRAFT).
+    assert good_argument.status == ArgumentStatusEnum.CANDIDATE
 
     missing_argument = (
         await isolated_session.execute(

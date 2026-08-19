@@ -253,7 +253,7 @@ async def list_jobs(
     Phase 26 gap closure (PLIST-05): LEFT OUTER JOINs Argument so each row's
     linked argument status (if any) is available to derive is_archived —
     true only when a linked argument exists and its status is no longer
-    PIPELINE, mirroring RunReadiness's already_created state used by the
+    CANDIDATE, mirroring RunReadiness's already_created state used by the
     detail page's RunStatusCard.
 
     Phase 30 (PJOB-01): also derives source ("pdf" vs "corpus") via an
@@ -281,7 +281,7 @@ async def list_jobs(
     jobs: list[AdminJob] = []
     for job, arg_status, is_corpus in rows:
         job.__dict__["is_archived"] = (
-            arg_status is not None and arg_status != ArgumentStatusEnum.PIPELINE
+            arg_status is not None and arg_status != ArgumentStatusEnum.CANDIDATE
         )
         job.__dict__["source"] = "corpus" if is_corpus else "pdf"
         # Inject parse_stats=None so Pydantic's from_attributes mode can serialize the
@@ -545,7 +545,7 @@ async def resolve_job(
 
 
 async def approve_job(db: AsyncSession, job_id: int) -> AdminJob:
-    """Transition argument from pipeline to draft state (D-09).
+    """Transition argument from candidate to draft state (D-09).
 
     Sets argument.status = 'draft' and argument.resolved_at = now().
     Sets admin_job.status = COMPLETED.
@@ -554,7 +554,7 @@ async def approve_job(db: AsyncSession, job_id: int) -> AdminJob:
       - AdminJob not found
       - AdminJob has no linked argument
       - Argument not found for the job
-      - Argument is not in PIPELINE state (double-approve guard, Pitfall 6)
+      - Argument is not in CANDIDATE state (double-approve guard, Pitfall 6)
 
     Writes one ArgumentStatusLog row (status=DRAFT) — the "Created" transition
     record (D-08) — in the same transaction as the Argument update.
@@ -574,7 +574,7 @@ async def approve_job(db: AsyncSession, job_id: int) -> AdminJob:
     argument = arg_result.scalar_one_or_none()
     if argument is None:
         raise ValueError("Argument not found for this job")
-    if argument.status != ArgumentStatusEnum.PIPELINE:
+    if argument.status != ArgumentStatusEnum.CANDIDATE:
         raise ValueError(
             f"Argument is already in '{argument.status.value}' state; cannot approve again."
         )
@@ -670,7 +670,7 @@ async def get_job_readiness(db: AsyncSession, job_id: int) -> RunReadiness:
     """Derive backend-owned Create Argument readiness for a job (D-01 through D-04, D-18, D-20).
 
     already_created short-circuits every other check: once the linked argument's
-    status is no longer PIPELINE, the run is reported already_created regardless
+    status is no longer CANDIDATE, the run is reported already_created regardless
     of any other blocker state — the argument already exists and the page
     becomes read-only provenance (D-18, D-20). argument_edit_href points at the
     argument editor, never at a pipeline recovery action (D-04).
@@ -698,7 +698,7 @@ async def get_job_readiness(db: AsyncSession, job_id: int) -> RunReadiness:
         )
         argument = arg_result.scalar_one_or_none()
 
-    if argument is not None and argument.status != ArgumentStatusEnum.PIPELINE:
+    if argument is not None and argument.status != ArgumentStatusEnum.CANDIDATE:
         return RunReadiness(
             state="already_created",
             blockers=[],
@@ -775,8 +775,8 @@ async def update_resolve_row_for_job(
 
     Guards, in order (T-25-14, T-25-15):
       1. AdminJob must exist and have a linked argument.
-      2. The linked argument.status must be 'pipeline' — edits are rejected once
-         the argument has left the pipeline lifecycle state (D-18, D-19).
+      2. The linked argument.status must be 'candidate' — edits are rejected once
+         the argument has left the candidate lifecycle state (D-18, D-19).
       3. The target ArgumentParticipant must belong to that argument (IDOR guard)
          — participant_id is never trusted on its own.
 
@@ -801,9 +801,9 @@ async def update_resolve_row_for_job(
     argument = arg_result.scalar_one_or_none()
     if argument is None:
         raise ValueError("Argument not found for this job")
-    if argument.status != ArgumentStatusEnum.PIPELINE:
+    if argument.status != ArgumentStatusEnum.CANDIDATE:
         raise ValueError(
-            f"Argument {argument.id} is no longer in 'pipeline' state "
+            f"Argument {argument.id} is no longer in 'candidate' state "
             f"(current status: {argument.status.value!r}); resolve rows are "
             "read-only once the argument has been created (D-18, D-19)."
         )

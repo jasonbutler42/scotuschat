@@ -288,9 +288,10 @@ export const load: PageServerLoad = async ({ params }) => {
 	}
 
 	// readonlyMode: the page becomes read-only provenance once the linked argument
-	// has left the 'pipeline' lifecycle state (Phase 25, D-18, D-19). No linked
-	// argument yet means the run is still in-progress, never read-only.
-	const readonlyMode = argument != null && argument.status !== 'pipeline';
+	// has left the 'candidate' lifecycle state (Phase 25, D-18, D-19; Phase 48 D-01
+	// renamed the born state from 'pipeline' to 'candidate'). No linked argument
+	// yet means the run is still in-progress, never read-only.
+	const readonlyMode = argument != null && argument.status !== 'candidate';
 
 	return {
 		job,

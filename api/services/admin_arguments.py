@@ -36,10 +36,16 @@ from api.models.models import (
     SideEnum,
     Utterance,
 )
+from api.domain.trust import TrustTier
 from api.schemas.admin_arguments import ArgumentUpdate, MetadataUpdate
 from api.services.admin_people import _bench_role_and_missing_tenure
 from api.services.argument_uniqueness import find_argument_by_pair, is_argument_pair_violation
 from api.services.speakers import ADVOCATE_LABEL_MAP
+from api.services.trust import (
+    TrustGateBlocked,
+    recompute_argument_tier,
+    summarize_tier_blockers,
+)
 from pipeline.commands.ingest import _derive_slug  # noqa: F401 — re-exported for tests
 
 
@@ -71,10 +77,11 @@ async def list_arguments(db: AsyncSession, status: str | None = None) -> list[di
     the list to one of "draft"/"published"/"unpublished" (the exact
     ArgumentStatusEnum.value strings). It is validated against an allow-list
     of those three values BEFORE ever being passed to ArgumentStatusEnum() —
-    any unrecognized value (including "pipeline", which is never a selectable
-    filter — ALIST-02) or None applies no additional filter and the full
-    DRAFT+PUBLISHED+UNPUBLISHED list is returned, matching list_people's
-    established "invalid/unrecognized value produces no filter" convention.
+    any unrecognized value (including "candidate", the born state as of
+    Phase 48 D-01 — never a selectable filter, ALIST-02/D-04) or None applies
+    no additional filter and the full DRAFT+PUBLISHED+UNPUBLISHED list is
+    returned, matching list_people's established "invalid/unrecognized value
+    produces no filter" convention.
     """
     q = (
         select(
@@ -89,9 +96,11 @@ async def list_arguments(db: AsyncSession, status: str | None = None) -> list[di
         .join(CaseArgument, CaseArgument.argument_id == Argument.id)
         .join(Case, CaseArgument.case_id == Case.id)
         .where(CaseArgument.is_lead == True)  # noqa: E712
-        # D-02: exclude pipeline-state arguments from admin list (Pitfall 7);
-        # ALIST-02: DRAFT, PUBLISHED, and UNPUBLISHED are all surfaced — only
-        # PIPELINE-status arguments are hidden.
+        # D-02: exclude candidate-state arguments from admin list (Pitfall 7);
+        # ALIST-02/Phase 48 D-04: DRAFT, PUBLISHED, and UNPUBLISHED are all
+        # surfaced — only CANDIDATE-status arguments (the born state as of
+        # Phase 48 D-01) are hidden. Candidate visibility is Phase 49's
+        # review queue, not this list.
         .where(
             Argument.status.in_(
                 [
@@ -132,9 +141,10 @@ async def get_argument_stats(db: AsyncSession) -> dict:
     """Aggregate stat-card counts for the Arguments card (DASH-01).
 
     One grouped COUNT query keyed on Argument.status, restricted to
-    DRAFT/PUBLISHED/UNPUBLISHED (ALIST-02 parity — PIPELINE-status rows are
-    excluded from total, matching list_arguments' existing status filter).
-    Missing statuses default to 0 (e.g. an empty table returns all zeros).
+    DRAFT/PUBLISHED/UNPUBLISHED (ALIST-02 parity — CANDIDATE-status rows,
+    the born state as of Phase 48 D-01, are excluded from total, matching
+    list_arguments' existing status filter). Missing statuses default to 0
+    (e.g. an empty table returns all zeros).
     """
     q = (
         select(Argument.status, sqlfunc.count())
@@ -435,7 +445,12 @@ async def get_argument_detail(db: AsyncSession, argument_id: int) -> dict | None
         .order_by(ArgumentStatusLog.created_at.asc(), ArgumentStatusLog.id.asc())
     )
     status_log = [
-        {"status": row.status, "created_at": row.created_at}
+        {
+            "status": row.status,
+            "created_at": row.created_at,
+            "override_reason": row.override_reason,  # Phase 48 D-15/D-20
+            "trust_tier_at_transition": row.trust_tier_at_transition,  # Phase 48 D-15/D-20
+        }
         for row in status_log_result.scalars().all()
     ]
 
@@ -453,6 +468,7 @@ async def get_argument_detail(db: AsyncSession, argument_id: int) -> dict | None
         "resolved_at": argument.resolved_at,
         "published_at": argument.published_at,
         "status": argument.status,
+        "trust_tier": argument.trust_tier,  # Phase 48 D-20 — admin-only, never public
         "consolidated_dockets": [
             {"docket_number": row.docket_number} for row in consolidated_rows
         ],
@@ -567,16 +583,47 @@ async def update_argument(
     return await get_argument_detail(db, argument_id)
 
 
-async def publish_argument(db: AsyncSession, argument_id: int) -> dict | None:
+async def publish_argument(
+    db: AsyncSession, argument_id: int, override_reason: str | None = None
+) -> dict | None:
     """Stamp published_at = now() and status = PUBLISHED, making the argument
     publicly visible. Re-publish from UNPUBLISHED is allowed (D-02 / AEDIT-08).
 
-    Returns None if the argument does not exist (router → 404 T-11-IDOR).
-    Raises ValueError if resolved_at IS NULL (publish gate — T-11-PUBGATE, Pitfall 1).
-    Raises ValueError if already published.
+    Two distinct gates, evaluated in this order (Phase 48 D-14):
+      1. `resolved_at IS NULL` — a non-overridable completeness precondition
+         (T-11-PUBGATE, Pitfall 1). An argument whose resolve step never ran
+         is incomplete, not a trust judgment call; `override_reason` is never
+         consulted before this guard.
+      2. Already-PUBLISHED — unchanged, non-overridable.
+      3. The trust gate: the tier is recomputed fresh (so the gate reads the
+         row's current constituents, never a possibly stale stored value) and,
+         if it is `TrustTier.UNCERTAIN`, publishing is blocked unless a
+         non-blank `override_reason` is supplied. This is the only overridable
+         gate. The override authorizes exactly this publish attempt — it is
+         never sticky (D-16): an unpublish then republish while still
+         UNCERTAIN is blocked again and requires a fresh reason.
 
-    Writes one ArgumentStatusLog row (status=PUBLISHED) in the same transaction
-    as the Argument update (T-26-03 — audit trail, D-09).
+    A blank/whitespace-only `override_reason` (after `.strip()`) is rejected
+    server-side with a distinct tagged `ValueError("blank_override_reason")`
+    — this check is authoritative regardless of what the UI does (D-17); a
+    disabled client button is defense-in-depth only.
+
+    Returns None if the argument does not exist (router → 404 T-11-IDOR).
+    Raises ValueError("Cannot publish: resolve step not yet complete") if
+    resolved_at IS NULL.
+    Raises ValueError("Already published") if already published.
+    Raises TrustGateBlocked (api.services.trust) if the tier is UNCERTAIN and
+    no reason (or only a None) was supplied — carries the tier and the
+    blocker breakdown (D-19/D-20) for the caller to render "why blocked".
+    Raises ValueError("blank_override_reason") if a reason was supplied but
+    is empty after stripping.
+
+    Writes one ArgumentStatusLog row (status=PUBLISHED) in the same
+    transaction as the Argument update (T-26-03 — audit trail, D-09). When
+    the trust gate was overridden, that row also carries the stripped
+    `override_reason` and the `trust_tier_at_transition` (D-15); a normal,
+    non-blocked publish leaves both of those columns NULL — the override
+    path is not accidentally mandatory (D-16 edge).
 
     Uses .execution_options(synchronize_session=False) (Pitfall 5).
     """
@@ -587,7 +634,9 @@ async def publish_argument(db: AsyncSession, argument_id: int) -> dict | None:
     if argument is None:
         return None
 
-    # D-07 / T-11-PUBGATE: backend must enforce this independently of the UI
+    # D-07 / T-11-PUBGATE: backend must enforce this independently of the UI.
+    # D-14: this gate is non-overridable — evaluated before override_reason
+    # is ever consulted.
     if argument.resolved_at is None:
         raise ValueError("Cannot publish: resolve step not yet complete")
     # D-02: guard keys on status (not published_at) so re-publish from
@@ -595,13 +644,44 @@ async def publish_argument(db: AsyncSession, argument_id: int) -> dict | None:
     if argument.status == ArgumentStatusEnum.PUBLISHED:
         raise ValueError("Already published")
 
+    # Phase 48 D-14/D-20: recompute before judging, so the trust gate reads a
+    # tier consistent with the row's current constituents (writer row 7).
+    current_tier = await recompute_argument_tier(db, argument_id)
+    override_reason_to_log: str | None = None
+    tier_at_transition: TrustTier | None = None
+    if current_tier is TrustTier.UNCERTAIN:
+        reason = (override_reason or "").strip()
+        if not reason:
+            if override_reason is not None:
+                # A reason was supplied but was blank/whitespace-only — a
+                # distinguishable failure from "no reason was given at all"
+                # (D-17 flagged assumption), so the operator sees their
+                # submission did not count rather than a silently re-shown
+                # block.
+                raise ValueError("blank_override_reason")
+            blockers = await summarize_tier_blockers(db, argument_id)
+            raise TrustGateBlocked(current_tier, blockers)
+        # D-16: the override authorizes exactly this publish attempt; nothing
+        # persistent is written to carry it forward to a future attempt.
+        override_reason_to_log = reason
+        tier_at_transition = current_tier
+    # else: the tier is not UNCERTAIN — override_reason (if any) is simply
+    # unused; the log row's override columns stay NULL (D-16 edge case).
+
     await db.execute(
         update(Argument)
         .where(Argument.id == argument_id)
         .values(status=ArgumentStatusEnum.PUBLISHED, published_at=sqlfunc.now())
         .execution_options(synchronize_session=False)
     )
-    db.add(ArgumentStatusLog(argument_id=argument_id, status=ArgumentStatusEnum.PUBLISHED))
+    db.add(
+        ArgumentStatusLog(
+            argument_id=argument_id,
+            status=ArgumentStatusEnum.PUBLISHED,
+            override_reason=override_reason_to_log,
+            trust_tier_at_transition=tier_at_transition,
+        )
+    )
     await db.commit()
     # Phase 31 fix: the bulk update() above uses synchronize_session=False, so
     # the `argument` object already loaded into this session's identity map
@@ -682,6 +762,12 @@ async def update_participant_side(
         .values(**values_to_set)
         .execution_options(synchronize_session=False)
     )
+    # Phase 48 D-10/48-RESEARCH.md Open Question 1: side/descriptor do not
+    # feed the tier derivation under D-10's current scope, but recompute is
+    # called anyway — Phase 49 adds `review_state` to this exact
+    # ArgumentParticipant row, and this call site is where that signal will
+    # first become live.
+    await recompute_argument_tier(db, argument_id)
     await db.commit()
 
     persisted_descriptor = descriptor if descriptor is not None else participant.descriptor
@@ -720,6 +806,10 @@ async def unpublish_argument(db: AsyncSession, argument_id: int) -> dict | None:
         .execution_options(synchronize_session=False)
     )
     db.add(ArgumentStatusLog(argument_id=argument_id, status=ArgumentStatusEnum.UNPUBLISHED))
+    # Phase 48 D-08: the tier stays live after unpublish too — recompute here
+    # so the stored value never goes stale, though nothing about unpublishing
+    # itself changes the tier's inputs.
+    await recompute_argument_tier(db, argument_id)
     await db.commit()
     # Phase 31 fix: same stale-identity-map issue as publish_argument above —
     # refresh the already-loaded `argument` object so get_argument_detail()'s

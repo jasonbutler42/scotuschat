@@ -771,8 +771,15 @@ async def test_publish_argument_from_draft_writes_one_published_log_row() -> Non
         arg_id = arg.id
         case_id = case.id
 
+    # Zero-constituent arguments floor to UNCERTAIN (Phase 48 D-13's
+    # zero-constituent base case), which this pre-Phase-48 test's seeded
+    # argument is — an override reason is required to reach the same
+    # PUBLISHED outcome this test predates and is not itself testing (that
+    # gate's own behavior is covered by api/tests/test_published_gate.py).
     async with AsyncSessionLocal() as db:
-        result = await publish_argument(db, arg_id)
+        result = await publish_argument(
+            db, arg_id, override_reason="pre-existing test override"
+        )
 
     assert result is not None
     assert result["status"] == ArgumentStatusEnum.PUBLISHED
@@ -859,8 +866,14 @@ async def test_unpublish_then_republish_succeeds_and_preserves_published_at() ->
             await unpublish_argument(db, arg_id)
 
     # --- re-publish from UNPUBLISHED must succeed (not "Already published") ---
+    # Zero-constituent arguments floor to UNCERTAIN (Phase 48 D-13's
+    # zero-constituent base case), which this pre-Phase-48 test's seeded
+    # argument is — an override reason is required here for the same reason
+    # documented in test_publish_argument_from_draft_writes_one_published_log_row.
     async with AsyncSessionLocal() as db:
-        result = await publish_argument(db, arg_id)
+        result = await publish_argument(
+            db, arg_id, override_reason="pre-existing test override"
+        )
 
     assert result is not None
     assert result["status"] == ArgumentStatusEnum.PUBLISHED
@@ -1294,8 +1307,14 @@ async def test_get_argument_detail_includes_status_log_and_speakers() -> None:
         advocate_id = advocate.id
         participant_id = participant.id
 
+    # The single resolved ArgumentParticipant seeded above contributes no
+    # tier (Phase 48 D-13 — a resolved participant has no source/method to
+    # derive one from), and there are no utterances, so this argument floors
+    # to UNCERTAIN (D-13's zero-constituent base case) — an override reason
+    # is required, for the same reason documented in
+    # test_publish_argument_from_draft_writes_one_published_log_row.
     async with AsyncSessionLocal() as db:
-        await publish_argument(db, arg_id)
+        await publish_argument(db, arg_id, override_reason="pre-existing test override")
 
     async with AsyncSessionLocal() as db:
         result = await get_argument_detail(db, arg_id)

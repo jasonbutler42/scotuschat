@@ -108,6 +108,29 @@
 		if (tier === 'uncertain') return 'Uncertain';
 		return tier;
 	}
+
+	// Blocked-publish blocker-code -> operator-readable sentence (Phase 48
+	// D-19), duplicated verbatim from the detail page's own helper
+	// ([id]/+page.svelte, plan 48-08) so both pages degrade identically for
+	// any future blocker code added server-side. A bare tier name gives the
+	// operator nothing to act on; each sentence names what dragged the tier
+	// down, with a count.
+	function blockerSentence(code: string, count: number): string {
+		const plural = count === 1 ? '' : 's';
+		if (code === 'unresolved_utterance_speaker') {
+			return `${count} utterance${plural} ${count === 1 ? 'has' : 'have'} no resolved speaker`;
+		}
+		if (code === 'unresolved_participant') {
+			return `${count} participant${plural} ${count === 1 ? 'is' : 'are'} unresolved`;
+		}
+		if (code === 'llm_corrective_utterance') {
+			return `${count} utterance${plural} came from the LLM corrective pass`;
+		}
+		if (code === 'no_constituents') {
+			return 'this argument has no utterances yet';
+		}
+		return `${count} occurrence${plural} of "${code}"`;
+	}
 </script>
 
 <svelte:head>
@@ -395,6 +418,29 @@
 								</div>
 							</td>
 						</tr>
+							<!-- Row-scoped, visible error for a non-overridable-gate failure or
+							     the already-published guard (Phase 48 plan 10) — Defect 1's
+							     second half. Before this plan, a plain-string 422 (the resolve
+							     gate or already-published) was logged to the server console
+							     only and never reached the operator on this page at all. No
+							     reason field is offered here — form.publishBlocked is unset for
+							     this branch (D-14). -->
+						{#if form?.error && form.argumentId === arg.id && !form.publishBlocked}
+							<tr>
+								<td colspan="6" style="padding: 0 0 12px 0; border-bottom: 1px solid #334155;">
+									<p
+										role="alert"
+										style="
+											margin: 0;
+											padding: 8px 0;
+											color: #ef4444;
+											font-size: 14px;
+											font-weight: 400;
+										"
+									>{form.error}</p>
+								</td>
+							</tr>
+						{/if}
 							<!-- Blocked-publish panel (Phase 48 plan 10, mirroring the detail
 							     page's block panel, plan 48-08) — addressed to THIS row only via
 							     form.argumentId, since this page shares one `form` prop across
@@ -422,6 +468,22 @@
 										{#if form.blockMessage}
 											<p style="font-size: 14px; color: #e2e8f0; margin: 0 0 8px 0;">
 												{form.blockMessage}
+											</p>
+										{/if}
+
+										{#if form.blockers && form.blockers.length > 0}
+											<ul style="margin: 0 0 16px 0; padding-left: 20px;">
+												{#each form.blockers as b}
+													<li style="font-size: 14px; color: #94a3b8; padding: 2px 0;">
+														{blockerSentence(b.code, b.count)}
+													</li>
+												{/each}
+											</ul>
+										{/if}
+
+										{#if form?.overrideReasonRequired && form.argumentId === arg.id}
+											<p role="alert" style="font-size: 14px; font-weight: 600; color: #ef4444; margin: 0 0 12px 0;">
+												A non-empty reason is required — your submission was blank or only whitespace.
 											</p>
 										{/if}
 

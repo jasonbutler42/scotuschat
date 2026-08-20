@@ -5,15 +5,15 @@ milestone_name: Import & Provenance Re-model
 current_phase: 48
 current_phase_name: trust-lifecycle
 status: executing
-stopped_at: Completed 48-08-PLAN.md
-last_updated: "2026-08-19T23:39:31.694Z"
-last_activity: 2026-08-18
-last_activity_desc: Cross-phase UAT audit closed; human UAT waived; Phase 48 ready to discuss
+stopped_at: Completed 48-10-PLAN.md (gap closure + two checkpoint-found defect fixes); 48-09 (wave 6, live fixture reseed and sign-off) remains
+last_updated: "2026-08-20T16:49:28.171Z"
+last_activity: 2026-08-20
+last_activity_desc: Phase 48 Plan 10 closed — list-page publish parity, unpublish visibility fix, two checkpoint-found defect fixes (publish/unpublish error rendering), two operator-requested UI polish items; WINDOWS.md entry #8 marked fixed
 progress:
   total_phases: 5
   completed_phases: 1
-  total_plans: 15
-  completed_plans: 14
+  total_plans: 16
+  completed_plans: 15
   percent: 20
 ---
 
@@ -29,11 +29,11 @@ See: .planning/PROJECT.md (updated 2026-08-18 — Phase 47 complete; corpus-firs
 ## Current Position
 
 Phase: 48 (trust-lifecycle) — EXECUTING
-Plan: 9 of 9
-Status: Ready to execute
-Last activity: 2026-08-18 — Phase 48 execution started
+Plan: 48-10 complete (gap closure, wave 5); 48-09 (wave 6 — live fixture reseed, zero-drift proof, full-suite gate, requirement traceability, operator sign-off) is the phase's remaining plan.
+Status: 9 of 10 plans complete — not yet ready for phase verification (48-09 executes after 48-10 per ROADMAP.md's wave ordering, even though it is numbered lower)
+Last activity: 2026-08-20 — 48-10 closed: list-page publish parity, unpublish visibility fix, two checkpoint-found defect fixes (publish/unpublish error rendering), two operator-requested UI polish items
 
-**Next action:** `/gsd-discuss-phase 48`
+**Next action:** `/gsd-execute-phase 48` (to run 48-09) or `/gsd-plan-phase 48` if 48-09 needs re-planning first
 
 Pre-flight for Phase 48, settled 2026-08-18:
 
@@ -50,7 +50,7 @@ Pre-flight for Phase 48, settled 2026-08-18:
   compare to head `0026` (`0026_import_run_provenance`, Phase 47). The audit could not check this —
   it had no DB credentials. This is the pre-existing STATE.md blocker below, not a new one.
 
-Progress: [█████████░] 93%
+Progress: [█████████░] 94%
 
 ## Deferred Items
 
@@ -143,6 +143,7 @@ items → 14.** Every closure carries its evidence in the file it closes; the co
 | Phase 48 P06 | ~40min | 2 tasks | 3 files |
 | Phase 48 P07 | ~45min | 3 tasks | 6 files |
 | Phase 48 P08 | ~35min | 3 tasks | 3 files |
+| Phase 48 P10 | ~2h across 3 sessions | 4 tasks | 18 files |
 
 v1.7 per-plan metrics cleared at this milestone boundary per the standard STATE.md reset; the underlying per-plan SUMMARY files remain in `.planning/milestones/v1.7-phases/`.
 
@@ -182,6 +183,9 @@ Full cross-milestone decision log lives in PROJECT.md's Key Decisions table. Per
 - [Phase ?]: Phase 48 Plan 07: adapted 3 pre-existing zero-constituent publish tests in test_admin_arguments_service.py to pass an override_reason since floor_tier's zero-constituent base case now hits the new UNCERTAIN gate by construction
 - [Phase ?]: Phase 48 Plan 07: blank-reason and pre-existing publish ValueErrors share one except ValueError router handler distinguished by inspecting str(exc), since Python cannot dispatch two handlers on the same exception class
 - [Phase ?]: Phase 48 Plan 08: reused the static-source-contract shape (test_phase45_popover_boxmodel_contract.py / test_phase39_popover_ui_contract.py) for the publish-override UI contract, since this repo has no frontend test framework and node is not guaranteed on PATH for every pytest invocation
+- [Phase ?]: Phase 48 Plan 10: found and fixed a real defect at the Task 4 checkpoint — the detail page's Status card never rendered publish/unpublish errors (form?.error only rendered in the unrelated case-metadata card); tagged fail() payloads with source and widened the Status-card guard
+- [Phase ?]: Phase 48 Plan 10: unpublish-error rendering fix accepted on static contract test alone, not observed live (failure path requires the backend call itself to fail, unreachable from any UI state)
+- [Phase ?]: Phase 48 Plan 10: WINDOWS.md entry #8 (D-14 non-overridable gate, unrun-verify) marked fixed -- the deferred live check is what surfaced the checkpoint-found defect, not a false alarm
 
 ### Roadmap Evolution
 
@@ -239,8 +243,8 @@ at close.
 
 ## Session Continuity
 
-Last session: 2026-08-19T23:39:19.017Z
-Stopped at: Completed 48-08-PLAN.md
+Last session: 2026-08-20T16:49:28.026Z
+Stopped at: Completed 48-10-PLAN.md (gap closure + two checkpoint-found defect fixes); 48-09 (wave 6, live fixture reseed and sign-off) remains
 Resume file: None
 
 ## Operator Next Steps

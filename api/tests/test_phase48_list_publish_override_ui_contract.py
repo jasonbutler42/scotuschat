@@ -133,10 +133,12 @@ def test_publish_action_still_redirects_on_success() -> None:
 
 def test_page_renders_override_reason_textarea_inside_publish_form_guarded_by_row_match() -> None:
     source = _source(PAGE_PATH)
-    guard = "{#if form?.publishBlocked && form.argumentId === arg.id}"
+    # Widened by the Cancel-affordance follow-up to also exclude a
+    # dismissed panel — the row-addressing prefix is unchanged.
+    guard = "{#if form?.publishBlocked && form.argumentId === arg.id && form !== dismissedForm}"
     assert guard in source
     guard_idx = source.index(guard)
-    following = source[guard_idx : guard_idx + 3000]
+    following = source[guard_idx : guard_idx + 4000]
     assert 'action="?/publish"' in following
     assert 'name="override_reason"' in following
     assert "for={'override_reason_' + arg.id}" in following or 'for="override_reason' in following
@@ -208,6 +210,85 @@ def test_publishing_id_state_and_enhance_wiring_present() -> None:
     source = _source(PAGE_PATH)
     assert "let publishingId = $state<number | null>(null);" in source
     assert source.count("publishingId") >= 2
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Follow-up polish item: the block panel's Cancel affordance
+# ─────────────────────────────────────────────────────────────────────────
+
+
+def test_block_panel_dismissal_uses_a_local_rune_not_form_mutation() -> None:
+    """
+    The panel is driven by server `form` state shared across every row —
+    dismissal must be tracked with its own local Rune (comparing by
+    reference against the current `form`), never by mutating `form` itself,
+    which would either lose the row's identity or bleed into another row.
+    """
+    source = _source(PAGE_PATH)
+    assert "let dismissedForm" in source
+    assert "$state" in source.split("let dismissedForm", 1)[1][:60]
+
+
+def test_block_panel_guard_excludes_dismissed_form() -> None:
+    """
+    The panel's render guard must additionally check the current `form`
+    against the dismissed one, on top of the pre-existing per-row
+    `publishBlocked && argumentId === arg.id` guard — dismissing must not
+    weaken the existing row-addressing contract (T-48-10-ROWMISMATCH).
+    """
+    source = _source(PAGE_PATH)
+    guard = "{#if form?.publishBlocked && form.argumentId === arg.id && form !== dismissedForm}"
+    assert guard in source
+
+
+def test_block_panel_offers_a_keyboard_reachable_cancel_affordance_with_accessible_label() -> None:
+    """
+    A real `<button>` element (never a `<div>`/`<span>` with an onclick) so
+    it is naturally focusable and reachable by tab order, and it must carry
+    an accessible name — either visible text content (e.g. "Cancel") or,
+    if an icon-only "x" is used instead, an explicit `aria-label`.
+    """
+    source = _source(PAGE_PATH)
+    guard_idx = source.index(
+        "{#if form?.publishBlocked && form.argumentId === arg.id && form !== dismissedForm}"
+    )
+    panel = source[guard_idx : guard_idx + 4000]
+
+    # Find a <button ...>...</button> whose onclick sets dismissedForm.
+    match = re.search(
+        r"<button[^>]*onclick=\{[^}]*dismissedForm\s*=[^}]*\}[^>]*>([^<]*)</button>",
+        panel,
+        re.DOTALL,
+    )
+    assert match, "expected a <button> element wiring dismissedForm assignment on click"
+    button_tag_and_text = match.group(0)
+    visible_text = match.group(1).strip()
+    has_aria_label = 'aria-label=' in button_tag_and_text
+    assert visible_text or has_aria_label, (
+        "the Cancel/dismiss button must have an accessible name: either "
+        "non-empty visible text or an aria-label (required if an icon-only "
+        "'x' is used instead of text)"
+    )
+    assert 'type="button"' in button_tag_and_text, (
+        "the dismiss control must be type=\"button\" so it never submits "
+        "the surrounding form"
+    )
+
+
+def test_dismissing_one_rows_panel_cannot_leak_into_another_row() -> None:
+    """
+    Only one row's panel can ever be visible at a time (one shared `form`
+    reflects only the most recently submitted action), so a reference-based
+    dismissal Rune structurally cannot affect a different row — assert the
+    guard is argumentId-scoped (not merely a page-global boolean) so this
+    stays true if the panel logic is ever refactored.
+    """
+    source = _source(PAGE_PATH)
+    guard_idx = source.index(
+        "{#if form?.publishBlocked && form.argumentId === arg.id && form !== dismissedForm}"
+    )
+    following = source[guard_idx : guard_idx + 200]
+    assert "form.argumentId === arg.id" in following
 
 
 # ─────────────────────────────────────────────────────────────────────────

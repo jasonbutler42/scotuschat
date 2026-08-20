@@ -415,6 +415,13 @@ export const actions: Actions = {
 
 	/**
 	 * unpublish — POST /api/admin/arguments/{id}/unpublish.
+	 *
+	 * Both fail(...) payloads carry `source: 'unpublish'` for the same reason
+	 * `publish` carries `source: 'publish'` (see that action's doc comment
+	 * above): this page's `form` prop is shared across every action, and
+	 * `?/save` returns the same `error` key. Without this tag an unpublish
+	 * failure would render in the case-metadata card's unrelated alert slot
+	 * instead of the Status card, where the Unpublish control lives.
 	 */
 	unpublish: async ({ params, fetch }) => {
 		let res: Response;
@@ -424,11 +431,11 @@ export const actions: Actions = {
 				headers: { 'X-Admin-Token': ADMIN_TOKEN },
 			});
 		} catch {
-			return fail(502, { error: 'Could not unpublish this argument. Try again.' });
+			return fail(502, { source: 'unpublish', error: 'Could not unpublish this argument. Try again.' });
 		}
 
 		if (!res.ok) {
-			return fail(422, { error: 'Could not unpublish this argument. Try again.' });
+			return fail(422, { source: 'unpublish', error: 'Could not unpublish this argument. Try again.' });
 		}
 
 		throw redirect(303, '/admin/arguments/' + params.id);

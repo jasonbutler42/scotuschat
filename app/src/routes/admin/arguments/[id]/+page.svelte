@@ -264,11 +264,17 @@
 				{/if}
 
 				<!-- Form-level error slot — role=alert for screen reader announcement (WCAG).
-				     `form` is shared across every action on this page, so a publish error
-				     must NOT leak in here — it is tagged `source: 'publish'` and rendered
-				     in the Status card instead, next to the Publish button, where the
-				     operator is actually looking. -->
-				{#if caseNameRequired || docketRequired || (form?.error && form.source !== 'publish')}
+				     `form` is shared across every action on this page. `?/save` is the
+				     ONLY action that owns this slot and it returns an untagged `error`
+				     (no `source` key) — so this card renders `form?.error` only when
+				     `form.source` is absent. A positive test (`!form.source`) rather than
+				     a growing negative list (`!== 'publish' && !== 'unpublish' && ...`)
+				     is deliberate: it stays correct if a future action is added without
+				     anyone having to remember to extend this exclusion. Publish and
+				     unpublish errors are tagged `source: 'publish'` / `source: 'unpublish'`
+				     and rendered in the Status card instead, next to their own controls,
+				     where the operator is actually looking. -->
+				{#if caseNameRequired || docketRequired || (form?.error && !form.source)}
 					<p
 						id="case-form-alert"
 						role="alert"
@@ -282,7 +288,7 @@
 					>
 						{#if caseNameRequired}<span style="display: block;">Case name is required.</span>{/if}
 						{#if docketRequired}<span style="display: block;">Add at least one docket.</span>{/if}
-						{#if form?.error && form.source !== 'publish'}<span style="display: block;">{form.error}</span>{/if}
+						{#if form?.error && !form.source}<span style="display: block;">{form.error}</span>{/if}
 					</p>
 				{/if}
 
@@ -395,28 +401,6 @@
 						{publishingState ? 'Publishing…' : 'Publish'}
 					</button>
 				</form>
-
-				<!-- Non-overridable publish error (resolve-incomplete gate or the
-				     already-published guard, D-14): the server returns a plain-string
-				     `error` with no `publishBlocked` flag for either case, so NO reason
-				     field is offered here — this branch is structurally not overridable.
-				     Row-scoped to the publish action via `form.source === 'publish'` so
-				     it never renders for an unrelated action's error on this shared
-				     `form` prop, and placed here (next to the Publish button) rather
-				     than in the case-metadata card's alert slot, which is where this
-				     message was previously and silently discarded. -->
-				{#if form?.error && form.source === 'publish' && !form.publishBlocked}
-					<p
-						role="alert"
-						style="
-							color: #ef4444;
-							font-size: 14px;
-							font-weight: 400;
-							line-height: 1.5;
-							margin: 12px 0 0 0;
-						"
-					>{form.error}</p>
-				{/if}
 
 				<!-- Blocked-publish panel (Phase 48 D-19/D-20): the operator's explicit
 				     requirement is that this names WHAT dragged the tier down, with a
@@ -552,6 +536,34 @@
 						{unpublishingState ? 'Unpublishing…' : 'Unpublish'}
 					</button>
 				</form>
+			{/if}
+
+			<!-- Non-overridable publish/unpublish error (resolve-incomplete gate,
+			     the already-published guard, or an unpublish failure, D-14): the
+			     server returns a plain-string `error` with no `publishBlocked` flag
+			     for any of these, so NO reason field is offered here — neither gate
+			     is overridable. Placed AFTER the draft/unpublished-vs-published
+			     branch above (not inside either arm) because it must render next to
+			     whichever control — Publish or Unpublish — is actually visible for
+			     the argument's current status; a publish error can only occur while
+			     the Publish button is shown, and an unpublish error only while the
+			     Unpublish button is shown, but the guard itself doesn't need to
+			     duplicate that branching. Guarded by `form.source` being either tag
+			     so it never renders for an unrelated action's error on this shared
+			     `form` prop, and never renders in the case-metadata card's alert
+			     slot, which is where both messages were previously and silently
+			     discarded. -->
+			{#if form?.error && (form.source === 'publish' || form.source === 'unpublish') && !form.publishBlocked}
+				<p
+					role="alert"
+					style="
+						color: #ef4444;
+						font-size: 14px;
+						font-weight: 400;
+						line-height: 1.5;
+						margin: 12px 0 0 0;
+					"
+				>{form.error}</p>
 			{/if}
 		</div>
 

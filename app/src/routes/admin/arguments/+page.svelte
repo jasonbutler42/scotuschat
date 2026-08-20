@@ -11,6 +11,20 @@
 	// mirrors the detail page's `publishingState` pattern (plan 48-08).
 	let publishingId = $state<number | null>(null);
 
+	// Cancel affordance for the block panel (Phase 48 plan 10 follow-up).
+	// The panel is driven entirely by server `form` state, which this page
+	// shares across every row — mutating `form` itself to "dismiss" it would
+	// either lose the row's identity or affect a different row, so dismissal
+	// is tracked with its own local Rune instead. `form` is a NEW object on
+	// every action result (SvelteKit reassigns it after each submission), so
+	// comparing by reference — rather than by argumentId — means clicking
+	// Publish again on the same row produces a form the dismissal no longer
+	// matches, and the panel reappears correctly without any extra reset
+	// logic. Because only one row's panel can ever be visible at a time (one
+	// shared `form` reflects only the most recent submission), dismissing
+	// one row's panel can never affect a different row's.
+	let dismissedForm: unknown = $state(null);
+
 	// Segmented status filter (DASH-02, D-05, D-06) — one-param goto() round-trip,
 	// same idiom as the People page's Bench/Advocate toggle.
 	function selectStatus(value: 'all' | 'draft' | 'published' | 'unpublished') {
@@ -446,7 +460,7 @@
 							     form.argumentId, since this page shares one `form` prop across
 							     every row (T-48-10-ROWMISMATCH). Rendered as its own full-width
 							     row so it does not distort the table's column layout. -->
-						{#if form?.publishBlocked && form.argumentId === arg.id}
+						{#if form?.publishBlocked && form.argumentId === arg.id && form !== dismissedForm}
 							<tr>
 								<td colspan="6" style="padding: 0 0 12px 0; border-bottom: 1px solid #334155;">
 									<div
@@ -458,11 +472,37 @@
 											background-color: #1e293b;
 										"
 									>
-										<p style="font-size: 16px; font-weight: 600; color: #fb923c; margin: 0 0 8px 0;">
-											Publish blocked
-											{#if form.trustTier}
-												<span style={tierBadgeStyle(form.trustTier)}>{tierLabel(form.trustTier)}</span>
-											{/if}
+										<p style="font-size: 16px; font-weight: 600; color: #fb923c; margin: 0 0 8px 0; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+											<span>
+												Publish blocked
+												{#if form.trustTier}
+													<span style={tierBadgeStyle(form.trustTier)}>{tierLabel(form.trustTier)}</span>
+												{/if}
+											</span>
+											<!-- Dismisses the WHOLE panel, not just the reason textarea —
+											     the operator can always click Publish again to bring it
+											     back, so there's nothing worth preserving in a partial
+											     dismiss. A plain text "Cancel" button (not an icon-only
+											     "x") matches this file's and the detail page's existing
+											     convention (the Danger Zone's two-step delete confirm
+											     uses the same bare "Cancel" wording and styling). Local
+											     Rune only — never mutates `form`. -->
+											<button
+												type="button"
+												onclick={() => { dismissedForm = form; }}
+												style="
+													background: none;
+													border: none;
+													padding: 4px 8px;
+													margin: 0;
+													color: #94a3b8;
+													font-size: 14px;
+													font-weight: 400;
+													text-decoration: underline;
+													cursor: pointer;
+													flex-shrink: 0;
+												"
+											>Cancel</button>
 										</p>
 
 										{#if form.blockMessage}

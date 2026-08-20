@@ -2,7 +2,14 @@
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
 
-	let { data } = $props();
+	type Blocker = { code: string; count: number };
+
+	let { data, form } = $props();
+
+	// Per-row Publish submitting state (Phase 48 plan 10), keyed by argument
+	// id since this page holds many rows behind one shared `form` prop —
+	// mirrors the detail page's `publishingState` pattern (plan 48-08).
+	let publishingId = $state<number | null>(null);
 
 	// Segmented status filter (DASH-02, D-05, D-06) — one-param goto() round-trip,
 	// same idiom as the People page's Bench/Advocate toggle.
@@ -70,6 +77,36 @@
 		if (status === 'draft') return 'Draft';
 		if (status === 'unpublished') return 'Unpublished';
 		return 'Pipeline';
+	}
+
+	// Passive trust-tier badge helpers (Phase 48 plan 10, operator-approved
+	// enhancement, D-19/D-20). Purely informational — never wired to any
+	// control, never disables the Publish button (explicitly rejected
+	// alternative). Colors are visually distinct from the status badge's
+	// palette above; this is inline styling only, not a design-system
+	// dependency (Phase 51 owns the palette).
+	function tierBadgeStyle(tier: string): string {
+		let color: string;
+		if (tier === 'verified') {
+			color = '#38bdf8';
+		} else if (tier === 'trusted') {
+			color = '#34d399';
+		} else if (tier === 'provisional') {
+			color = '#facc15';
+		} else if (tier === 'uncertain') {
+			color = '#f87171';
+		} else {
+			color = '#64748b';
+		}
+		return `border: 1px solid ${color}; border-radius: 4px; padding: 2px 8px; font-size: 12px; font-weight: 400; background-color: #0f1117; color: ${color}; display: inline-block;`;
+	}
+
+	function tierLabel(tier: string): string {
+		if (tier === 'verified') return 'Verified';
+		if (tier === 'trusted') return 'Trusted';
+		if (tier === 'provisional') return 'Provisional';
+		if (tier === 'uncertain') return 'Uncertain';
+		return tier;
 	}
 </script>
 
@@ -249,6 +286,9 @@
 								<span style={badgeStyle(arg.status ?? 'pipeline')}>
 									{badgeLabel(arg.status ?? 'pipeline')}
 								</span>
+								<span style={tierBadgeStyle(arg.trust_tier)} title="Trust tier">
+									{tierLabel(arg.trust_tier)}
+								</span>
 							</td>
 							<td
 								style="
@@ -294,11 +334,25 @@
 							>
 								<div style="display: flex; gap: 8px; justify-content: flex-end; align-items: center;">
 									{#if arg.status === 'draft' || arg.status === 'unpublished'}
-										<!-- Publish toggle — Draft or Unpublished both go to Published -->
-										<form method="POST" action="?/publish" use:enhance>
+										<!-- Publish toggle — Draft or Unpublished both go to Published.
+										     The button is NEVER disabled based on trust tier or block
+										     state (operator-rejected alternative, Phase 48 plan 10) —
+										     only while THIS row's own submission is in flight. -->
+										<form
+											method="POST"
+											action="?/publish"
+											use:enhance={() => {
+												publishingId = arg.id;
+												return async ({ update }) => {
+													publishingId = null;
+													await update();
+												};
+											}}
+										>
 											<input type="hidden" name="argument_id" value={arg.id} />
 											<button
 												type="submit"
+												disabled={publishingId === arg.id}
 												style="
 													min-height: 44px;
 													font-size: 14px;
@@ -308,9 +362,10 @@
 													border: 1px solid #93c5fd;
 													border-radius: 6px;
 													padding: 8px 12px;
-													cursor: pointer;
+													cursor: {publishingId === arg.id ? 'not-allowed' : 'pointer'};
+													opacity: {publishingId === arg.id ? 0.7 : 1};
 												"
-											>Publish</button>
+											>{publishingId === arg.id ? 'Publishing…' : 'Publish'}</button>
 										</form>
 									{:else if arg.status === 'published'}
 										<!-- Unpublish toggle — only when already published -->
@@ -340,7 +395,97 @@
 								</div>
 							</td>
 						</tr>
-					{/each}
+							<!-- Blocked-publish panel (Phase 48 plan 10, mirroring the detail
+							     page's block panel, plan 48-08) — addressed to THIS row only via
+							     form.argumentId, since this page shares one `form` prop across
+							     every row (T-48-10-ROWMISMATCH). Rendered as its own full-width
+							     row so it does not distort the table's column layout. -->
+						{#if form?.publishBlocked && form.argumentId === arg.id}
+							<tr>
+								<td colspan="6" style="padding: 0 0 12px 0; border-bottom: 1px solid #334155;">
+									<div
+										style="
+											margin: 0;
+											padding: 16px;
+											border: 1px solid #fb923c;
+											border-radius: 6px;
+											background-color: #1e293b;
+										"
+									>
+										<p style="font-size: 16px; font-weight: 600; color: #fb923c; margin: 0 0 8px 0;">
+											Publish blocked
+											{#if form.trustTier}
+												<span style={tierBadgeStyle(form.trustTier)}>{tierLabel(form.trustTier)}</span>
+											{/if}
+										</p>
+
+										{#if form.blockMessage}
+											<p style="font-size: 14px; color: #e2e8f0; margin: 0 0 8px 0;">
+												{form.blockMessage}
+											</p>
+										{/if}
+
+										<form
+											method="POST"
+											action="?/publish"
+											use:enhance={() => {
+												publishingId = arg.id;
+												return async ({ update }) => {
+													publishingId = null;
+													await update();
+												};
+											}}
+										>
+											<input type="hidden" name="argument_id" value={arg.id} />
+											<label
+												for={'override_reason_' + arg.id}
+												style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
+											>Reason for publishing anyway</label>
+											<!-- `required` is defense-in-depth only (D-17) — the server's
+											     own .strip() check on override_reason is the single
+											     authority; a whitespace-only submission is still rejected
+											     server-side. -->
+											<textarea
+												id={'override_reason_' + arg.id}
+												name="override_reason"
+												required
+												rows="3"
+												style="
+													display: block;
+													width: 100%;
+													max-width: 480px;
+													box-sizing: border-box;
+													background-color: #0f1117;
+													border: 1px solid #334155;
+													border-radius: 6px;
+													color: #e2e8f0;
+													font-size: 14px;
+													padding: 8px 12px;
+													margin-bottom: 12px;
+												"
+											></textarea>
+											<button
+												type="submit"
+												disabled={publishingId === arg.id}
+												style="
+													min-height: 44px;
+													background-color: #1e293b;
+													border: 1px solid #fb923c;
+													border-radius: 6px;
+													font-size: 14px;
+													font-weight: 600;
+													color: #e2e8f0;
+													padding: 8px 16px;
+													cursor: {publishingId === arg.id ? 'not-allowed' : 'pointer'};
+													opacity: {publishingId === arg.id ? 0.7 : 1};
+												"
+											>{publishingId === arg.id ? 'Publishing…' : 'Publish anyway with this reason'}</button>
+										</form>
+									</div>
+								</td>
+							</tr>
+						{/if}
+						{/each}
 				</tbody>
 			</table>
 		{/if}

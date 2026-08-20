@@ -68,7 +68,8 @@ async def list_arguments(db: AsyncSession, status: str | None = None) -> list[di
     """Return all Argument rows joined to their lead Case, sorted by argued_date DESC.
 
     One dict per argument with keys: id, argued_date, case_name, docket_number,
-    resolved_at, published_at.
+    resolved_at, published_at, status, trust_tier (Phase 48 plan 10 — admin-only,
+    consumed only by the /api/admin/arguments router).
 
     Only joins where CaseArgument.is_lead == True so the result is one row per
     argument regardless of how many consolidated dockets the argument has.
@@ -90,6 +91,7 @@ async def list_arguments(db: AsyncSession, status: str | None = None) -> list[di
             Argument.resolved_at,
             Argument.published_at,
             Argument.status,
+            Argument.trust_tier,
             Case.case_name,
             Case.docket_number,
         )
@@ -132,6 +134,7 @@ async def list_arguments(db: AsyncSession, status: str | None = None) -> list[di
             "resolved_at": row.resolved_at,
             "published_at": row.published_at,
             "status": row.status,
+            "trust_tier": row.trust_tier,
         }
         for row in rows
     ]

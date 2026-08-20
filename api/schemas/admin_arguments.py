@@ -147,6 +147,13 @@ class ArgumentListItem(BaseModel):
     status (Phase 15) is the explicit lifecycle enum value.  The list only
     returns DRAFT and PUBLISHED rows (pipeline-state arguments are excluded, D-02).
     argued_date is Optional[datetime.date] after migration 0011 (D-08 / Phase 19).
+    trust_tier (Phase 48 plan 10): admin-only — never surfaced on any public
+    schema (apolitical hard constraint, enforced by
+    api/tests/test_trust_public_leak_ban.py). This field backs only
+    GET /api/admin/arguments (the admin router), outside that test's
+    derivation scope (which walks only api.routers.cases/arguments/people).
+    Defaults to UNCERTAIN so a list dict built before this column existed
+    cannot 500 the endpoint, mirroring ArgumentDetail.trust_tier's own default.
     """
 
     id: int
@@ -156,6 +163,7 @@ class ArgumentListItem(BaseModel):
     resolved_at: Optional[datetime.datetime] = None
     published_at: Optional[datetime.datetime] = None
     status: ArgumentStatusEnum   # Phase 15 — always DRAFT or PUBLISHED in list results
+    trust_tier: TrustTier = TrustTier.UNCERTAIN  # Phase 48 plan 10, admin-only
 
     model_config = {"from_attributes": True}
 

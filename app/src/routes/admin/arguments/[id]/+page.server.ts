@@ -341,6 +341,13 @@ export const actions: Actions = {
 	 * on the returned form payload so the page can render the block panel; the
 	 * non-overridable resolve gate and the already-published guard never set
 	 * `publishBlocked` and take the plain `error` path instead.
+	 *
+	 * Every fail(...) payload also carries `source: 'publish'`. This page's
+	 * `form` prop is shared across every action (`?/save`, `?/publish`,
+	 * `?/unpublish`, ...), and `?/save` returns the same `error` key. Without
+	 * this discriminator a publish error rendered in the case-metadata card's
+	 * unrelated alert slot instead of the Status card, where the Publish
+	 * button and block panel actually live — the defect this tag fixes.
 	 */
 	publish: async ({ request, params, fetch }) => {
 		const formData = await request.formData();
@@ -364,7 +371,7 @@ export const actions: Actions = {
 				});
 			}
 		} catch {
-			return fail(502, { error: 'Could not publish this argument. Try again.' });
+			return fail(502, { source: 'publish', error: 'Could not publish this argument. Try again.' });
 		}
 
 		if (!res.ok) {
@@ -375,6 +382,7 @@ export const actions: Actions = {
 				const d = detail as Record<string, unknown>;
 				if (d.code === 'uncertain_tier_blocked') {
 					return fail(422, {
+						source: 'publish',
 						publishBlocked: true,
 						trustTier: d.trust_tier as string,
 						blockers: (d.blockers as Blocker[]) ?? [],
@@ -383,6 +391,7 @@ export const actions: Actions = {
 				}
 				if (d.code === 'blank_override_reason') {
 					return fail(422, {
+						source: 'publish',
 						publishBlocked: true,
 						overrideReasonRequired: true,
 						blockMessage: d.message as string,
@@ -393,10 +402,12 @@ export const actions: Actions = {
 			if (typeof detail === 'string' && detail.length > 0) {
 				// Resolve-gate (not overridable) and already-published messages reach
 				// the operator verbatim — no reason field is offered for either (D-14).
-				return fail(422, { error: detail });
+				// `source: 'publish'` discriminates this from ?/save's own `error` key
+				// on this page's shared `form` prop — see the `publish` doc comment above.
+				return fail(422, { source: 'publish', error: detail });
 			}
 
-			return fail(422, { error: 'Could not publish this argument. Try again.' });
+			return fail(422, { source: 'publish', error: 'Could not publish this argument. Try again.' });
 		}
 
 		throw redirect(303, '/admin/arguments/' + params.id);

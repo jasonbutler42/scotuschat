@@ -263,8 +263,12 @@
 					</div>
 				{/if}
 
-				<!-- Form-level error slot — role=alert for screen reader announcement (WCAG) -->
-				{#if caseNameRequired || docketRequired || form?.error}
+				<!-- Form-level error slot — role=alert for screen reader announcement (WCAG).
+				     `form` is shared across every action on this page, so a publish error
+				     must NOT leak in here — it is tagged `source: 'publish'` and rendered
+				     in the Status card instead, next to the Publish button, where the
+				     operator is actually looking. -->
+				{#if caseNameRequired || docketRequired || (form?.error && form.source !== 'publish')}
 					<p
 						id="case-form-alert"
 						role="alert"
@@ -278,7 +282,7 @@
 					>
 						{#if caseNameRequired}<span style="display: block;">Case name is required.</span>{/if}
 						{#if docketRequired}<span style="display: block;">Add at least one docket.</span>{/if}
-						{#if form?.error}<span style="display: block;">{form.error}</span>{/if}
+						{#if form?.error && form.source !== 'publish'}<span style="display: block;">{form.error}</span>{/if}
 					</p>
 				{/if}
 
@@ -346,7 +350,11 @@
 
 			{#if data.argument.published_at}
 				<p style="font-size: 14px; color: #94a3b8; margin: 0 0 8px 0;">
-					Published {formatDate(data.argument.published_at)}
+					<!-- D-02 retains published_at after unpublish for the audit trail;
+					     once status stopped being the sole visibility authority (48-10),
+					     the bare "Published" label became misleading for an argument
+					     that is no longer publicly visible. -->
+					{data.argument.status === 'published' ? 'Published' : 'Last published'} {formatDate(data.argument.published_at)}
 				</p>
 			{/if}
 
@@ -387,6 +395,28 @@
 						{publishingState ? 'Publishing…' : 'Publish'}
 					</button>
 				</form>
+
+				<!-- Non-overridable publish error (resolve-incomplete gate or the
+				     already-published guard, D-14): the server returns a plain-string
+				     `error` with no `publishBlocked` flag for either case, so NO reason
+				     field is offered here — this branch is structurally not overridable.
+				     Row-scoped to the publish action via `form.source === 'publish'` so
+				     it never renders for an unrelated action's error on this shared
+				     `form` prop, and placed here (next to the Publish button) rather
+				     than in the case-metadata card's alert slot, which is where this
+				     message was previously and silently discarded. -->
+				{#if form?.error && form.source === 'publish' && !form.publishBlocked}
+					<p
+						role="alert"
+						style="
+							color: #ef4444;
+							font-size: 14px;
+							font-weight: 400;
+							line-height: 1.5;
+							margin: 12px 0 0 0;
+						"
+					>{form.error}</p>
+				{/if}
 
 				<!-- Blocked-publish panel (Phase 48 D-19/D-20): the operator's explicit
 				     requirement is that this names WHAT dragged the tier down, with a

@@ -350,7 +350,12 @@
 
 			{#if data.argument.resolved_at}
 				<p style="font-size: 14px; color: #94a3b8; margin: 0 0 8px 0;">
-					Created {formatDate(data.argument.resolved_at)}
+					<!-- formatDateTime (not formatDate) — matches the Status History
+					     list further down this same card, which already shows times;
+					     a bare date here read as inconsistent next to it. Label
+					     unchanged: the "Created" label on resolved_at is a separate,
+					     already-tracked mislabel and deliberately out of scope here. -->
+					Created {formatDateTime(data.argument.resolved_at)}
 				</p>
 			{/if}
 
@@ -359,8 +364,9 @@
 					<!-- D-02 retains published_at after unpublish for the audit trail;
 					     once status stopped being the sole visibility authority (48-10),
 					     the bare "Published" label became misleading for an argument
-					     that is no longer publicly visible. -->
-					{data.argument.status === 'published' ? 'Published' : 'Last published'} {formatDate(data.argument.published_at)}
+					     that is no longer publicly visible. formatDateTime (not
+					     formatDate) for the same reason as the Created row above. -->
+					{data.argument.status === 'published' ? 'Published' : 'Last published'} {formatDateTime(data.argument.published_at)}
 				</p>
 			{/if}
 

@@ -227,7 +227,7 @@ static analysis until reproduced.
     because Phases 47/50's re-import and idempotency paths depend on this cascade being correct
     (STATE.md carries the same warning).
 
-**Plans**: 8/9 plans executed
+**Plans**: 8/10 plans executed
 
 Plans:
 
@@ -253,7 +253,11 @@ Plans:
 
 **Wave 5**
 
-- [ ] 48-09-PLAN.md — Live fixture reseed, zero-drift proof, full-suite gate, requirement traceability, and operator sign-off (wave 5)
+- [ ] 48-10-PLAN.md — Gap closure: list-page publish-block/override UI parity, per-row trust-tier indicator, and the unpublish public-visibility fix across three read paths (wave 5)
+
+**Wave 6** *(blocked on 48-10)*
+
+- [ ] 48-09-PLAN.md — Live fixture reseed, zero-drift proof, full-suite gate, requirement traceability, and operator sign-off (wave 6)
 
 ### Phase 49: Review Model
 

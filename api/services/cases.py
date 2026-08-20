@@ -14,7 +14,7 @@ docket_number, term_year, argued_date, argument_id, question_number).
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.models.models import Argument, Case, CaseArgument
+from api.models.models import Argument, ArgumentStatusEnum, Case, CaseArgument
 
 
 async def get_cases(db: AsyncSession) -> list[dict]:
@@ -32,6 +32,13 @@ async def get_cases(db: AsyncSession) -> list[dict]:
         .join(Argument, CaseArgument.argument_id == Argument.id)
         .where(CaseArgument.is_lead == True)  # noqa: E712 — SQLAlchemy requires == True
         .where(Argument.published_at.isnot(None))  # hide unpublished arguments (D-06)
+        # Phase 48 plan 10, Defect 2: unpublish_argument deliberately RETAINS
+        # published_at (D-02, so the Status card can show the last publish
+        # date) — so published_at alone no longer distinguishes PUBLISHED
+        # from UNPUBLISHED. Gate on status too, in ADDITION to the
+        # published_at predicate above (never in place of it — see
+        # test_published_gate.py's exact-substring assertions).
+        .where(Argument.status == ArgumentStatusEnum.PUBLISHED)
         .order_by(Argument.argued_date.desc())
     )
     rows = result.all()

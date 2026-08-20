@@ -26,6 +26,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from api.models.models import (
     Argument,
     ArgumentParticipant,
+    ArgumentStatusEnum,
     CourtTenure,
     Person,
     Role,
@@ -132,15 +133,26 @@ async def get_argument_speakers(
     Returns list[dict] shaped to match SpeakerPopoverEntry (validated by
     the router's response_model), or None per the publish gate above.
     """
-    # Step 0 — Fetch the argument's argued_date + published_at ---------------
+    # Step 0 — Fetch the argument's argued_date + published_at + status ------
     # Gate on published_at (BUG-01/D-02): an absent row or a NULL publish
     # timestamp both return None here, distinct from the legitimate [] case
-    # below (published argument, zero resolved speakers).
+    # below (published argument, zero resolved speakers). Phase 48 plan 10,
+    # Defect 2: published_at alone is insufficient — unpublish_argument
+    # deliberately RETAINS published_at (D-02), so an UNPUBLISHED argument
+    # also gates to None via the status check below, in ADDITION to the
+    # published_at check above (never in place of it — see
+    # test_published_gate.py's exact-substring assertions).
     arg_result = await db.execute(
-        select(Argument.argued_date, Argument.published_at).where(Argument.id == argument_id)
+        select(Argument.argued_date, Argument.published_at, Argument.status).where(
+            Argument.id == argument_id
+        )
     )
     arg_row = arg_result.one_or_none()
-    if arg_row is None or arg_row.published_at is None:
+    if (
+        arg_row is None
+        or arg_row.published_at is None
+        or arg_row.status != ArgumentStatusEnum.PUBLISHED
+    ):
         return None
     argued_date = arg_row.argued_date
 

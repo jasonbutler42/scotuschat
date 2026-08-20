@@ -17,7 +17,17 @@ PIPE-11 policy:
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.models.models import Argument, Case, CaseArgument, ImportRun, ImportRunStatus, Person, Role, Utterance
+from api.models.models import (
+    Argument,
+    ArgumentStatusEnum,
+    Case,
+    CaseArgument,
+    ImportRun,
+    ImportRunStatus,
+    Person,
+    Role,
+    Utterance,
+)
 
 
 async def get_argument_with_utterances(
@@ -48,6 +58,11 @@ async def get_argument_with_utterances(
         select(Argument)
         .where(Argument.id == argument_id)
         .where(Argument.published_at.isnot(None))  # hide unpublished arguments (BUG-01/D-02)
+        # Phase 48 plan 10, Defect 2: unpublish_argument deliberately RETAINS
+        # published_at (D-02) — gate on status too, in ADDITION to the
+        # published_at predicate above (never in place of it — see
+        # test_published_gate.py's exact-substring assertions).
+        .where(Argument.status == ArgumentStatusEnum.PUBLISHED)
     )
     argument = arg_result.scalar_one_or_none()
     if argument is None:

@@ -1199,7 +1199,16 @@ async def unpublish_argument(
     db: AsyncSession = Depends(get_db),
 ) -> ArgumentDetail:
     """
-    Clear published_at, hiding the argument from the public site (D-07, D-08).
+    Set status=UNPUBLISHED, hiding the argument from the public site (D-07, D-08).
+
+    published_at is deliberately RETAINED, not cleared (D-02) — the Status
+    card shows the argument's most recent publish date even after
+    unpublishing. Public visibility is governed by status == PUBLISHED
+    (checked in addition to published_at IS NOT NULL by all three public
+    read paths — api.services.cases.get_cases,
+    api.services.arguments.get_argument_with_utterances,
+    api.services.speakers.get_argument_speakers — Phase 48 plan 10,
+    Defect 2 fix), never by clearing published_at.
 
     Returns 404 if the argument does not exist (T-11-IDOR).
     Returns 422 if the argument is not currently published.

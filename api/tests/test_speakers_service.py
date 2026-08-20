@@ -274,11 +274,13 @@ class TestGetArgumentSpeakersReasonLeft:
         await db_session.flush()
 
         arg = Argument(
-            status=ArgumentStatusEnum.PIPELINE,
+            status=ArgumentStatusEnum.PUBLISHED,
             argued_date=datetime.date(2024, 1, 10),
-            # get_argument_speakers() gates on published_at (BUG-01/D-02) — this
-            # fixture tests payload shape, not the publish gate, so it publishes
-            # the argument to keep the pre-existing assertions meaningful.
+            # get_argument_speakers() gates on published_at AND status ==
+            # PUBLISHED (BUG-01/D-02; Phase 48 plan 10 Defect 2 fix) — this
+            # fixture tests payload shape, not the publish gate, so it
+            # publishes the argument to keep the pre-existing assertions
+            # meaningful.
             published_at=datetime.datetime.now(datetime.timezone.utc),
         )
         db_session.add(arg)
@@ -433,11 +435,13 @@ class TestGetArgumentSpeakersWidenedContractShape:
         await db_session.flush()
 
         arg = Argument(
-            status=ArgumentStatusEnum.PIPELINE,
+            status=ArgumentStatusEnum.PUBLISHED,
             argued_date=datetime.date(2024, 1, 10),
-            # get_argument_speakers() gates on published_at (BUG-01/D-02) — this
-            # fixture tests payload shape, not the publish gate, so it publishes
-            # the argument to keep the pre-existing assertions meaningful.
+            # get_argument_speakers() gates on published_at AND status ==
+            # PUBLISHED (BUG-01/D-02; Phase 48 plan 10 Defect 2 fix) — this
+            # fixture tests payload shape, not the publish gate, so it
+            # publishes the argument to keep the pre-existing assertions
+            # meaningful.
             published_at=datetime.datetime.now(datetime.timezone.utc),
         )
         db_session.add(arg)

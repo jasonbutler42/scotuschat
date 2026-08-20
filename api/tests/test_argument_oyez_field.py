@@ -117,10 +117,12 @@ async def test_utterances_payload_includes_oyez_transcript_id(client: AsyncClien
             argued_date=None,
             question_number=1,
             source_docket="14-556-OYEZ-FIELD-TEST",
-            status=ArgumentStatusEnum.DRAFT,
-            # get_argument_with_utterances() gates on published_at (BUG-01/D-02) —
-            # this fixture tests the oyez_transcript_id field, not the publish
-            # gate, so it publishes the argument to keep the assertion live.
+            status=ArgumentStatusEnum.PUBLISHED,
+            # get_argument_with_utterances() gates on published_at AND
+            # status == PUBLISHED (BUG-01/D-02; Phase 48 plan 10 Defect 2
+            # fix) — this fixture tests the oyez_transcript_id field, not
+            # the publish gate, so it publishes the argument to keep the
+            # assertion live.
             published_at=datetime.datetime.now(datetime.timezone.utc),
         )
         db.add(argument)
@@ -233,11 +235,12 @@ async def test_utterances_endpoint_returns_200_for_null_argued_date(db_session) 
         argued_date=None,
         question_number=1,
         source_docket="1955-99-CR01-TEST",
-        status=ArgumentStatusEnum.DRAFT,
+        status=ArgumentStatusEnum.PUBLISHED,
         oyez_transcript_id="synthetic-null-date-transcript-cr01",
-        # get_argument_with_utterances() gates on published_at (BUG-01/D-02) —
-        # this fixture tests the null-argued_date response shape, not the
-        # publish gate, so it publishes the argument to keep the assertion live.
+        # get_argument_with_utterances() gates on published_at AND status ==
+        # PUBLISHED (BUG-01/D-02; Phase 48 plan 10 Defect 2 fix) — this
+        # fixture tests the null-argued_date response shape, not the publish
+        # gate, so it publishes the argument to keep the assertion live.
         published_at=datetime.datetime.now(datetime.timezone.utc),
     )
     db_session.add(argument)

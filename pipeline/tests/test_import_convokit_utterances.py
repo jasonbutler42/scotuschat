@@ -32,7 +32,7 @@ from unittest.mock import patch
 import pytest
 from sqlalchemy import select
 
-from api.models.models import Argument, ImportRun, SideEnum, Utterance
+from api.models.models import Argument, ArgumentStatusEnum, ImportRun, SideEnum, Utterance
 from api.schemas.utterance import ArgumentUtterancesResponse
 from api.services.arguments import get_argument_with_utterances
 from pipeline.commands.import_convokit import run_import_convokit
@@ -452,14 +452,16 @@ async def test_utterances_readable_via_arguments_service_after_import(
     ]
     argument = await _run_and_fetch_argument(isolated_session, tmp_path, utterances)
 
-    # get_argument_with_utterances() gates on published_at (BUG-01/D-02). This
-    # test proves the corpus-import -> read-path round trip, not the publish
+    # get_argument_with_utterances() gates on published_at AND status ==
+    # PUBLISHED (BUG-01/D-02; Phase 48 plan 10 Defect 2 fix). This test
+    # proves the corpus-import -> read-path round trip, not the publish
     # gate — a freshly imported argument is legitimately unpublished, so
     # publish it here to keep the pre-existing assertions exercising what
     # they were written to test.
     import datetime
 
     argument.published_at = datetime.datetime.now(datetime.timezone.utc)
+    argument.status = ArgumentStatusEnum.PUBLISHED
     isolated_session.add(argument)
     await isolated_session.flush()
 

@@ -267,17 +267,58 @@ genuinely holds; only the **stored timestamp value** is wrong, which matters bec
 of this plan's own acceptance criteria and future audit/reporting logic key on
 `created_at`/`resolved_at` rather than primary-key order.
 
-**Disposition:** a pre-existing latent bug in `api/services/admin_dev.py::reset_to_fixture`'s
-session/transaction reuse, newly exposed by this plan's live verification, not introduced by
-Phase 48's other plans and out of this plan's `files_modified` scope (`48-EVIDENCE.md` only).
-Reported here, not fixed here. A `gsd-tools windows append --kind unmet-truth` entry and a
-todo are the appropriate next step (see Open Items).
+**Disposition — UPDATED after operator direction mid-plan.** This finding has two distinct
+halves, and only one was in scope to fix here:
+
+1. **Display-ordering half — FIXED in this plan.** `api/services/admin_arguments.py`'s
+   `get_argument_detail` (~line 448) built the operator-facing Status History list with
+   `.order_by(ArgumentStatusLog.created_at.asc(), ArgumentStatusLog.id.asc())` — `created_at`
+   as the PRIMARY sort key. Because `created_at` can be stale (as demonstrated live above),
+   this meant the Status History page would have rendered the Draft fixture's transitions
+   **backwards** (draft before candidate) had an operator opened it during this reseed cycle.
+   Fixed to `.order_by(ArgumentStatusLog.id.asc())` — `id` is monotonic by construction
+   (auto-increment primary key) and is the only key that reliably preserves insertion order
+   for this append-only table, regardless of any writer's transaction-timing behavior (not
+   just `reset_to_fixture`'s). A regression test
+   (`api/tests/test_admin_arguments_service.py::test_get_argument_detail_status_log_orders_by_id_not_created_at`)
+   constructs the exact skew explicitly (independent of reset timing — two log rows with
+   `created_at` values deliberately set to disagree with insertion order) and asserts the
+   returned order matches insertion order. Confirmed RED against the old
+   `created_at`-first ordering (assertion failed, returning draft-then-candidate) and GREEN
+   against the fix. Commit: `<see Task Commits in 48-09-SUMMARY.md>`.
+
+   **Other append-only-style queries checked for the same shape** (`grep -rn ".order_by(" |
+   grep -i created_at`, excluding tests): two more call sites in `api/services/admin_jobs.py`
+   order by `created_at` first — `list_jobs` (`AdminJob.created_at.desc()`, line ~279) and
+   `get_run_id_for_step` (`ImportRun.created_at.desc()`, line ~410). Neither was changed:
+   `list_jobs` orders many *distinct* `AdminJob` entities (each normally created in its own
+   separate transaction) for a "most recent first" dashboard list, not a single entity's
+   append-only history, so the specific stale-shared-transaction failure mode demonstrated
+   above does not clearly apply. `get_run_id_for_step` selects the latest `ImportRun` for one
+   `(argument_id, step)` pair — structurally closer to the `ArgumentStatusLog` shape (an
+   argument can accumulate multiple `ImportRun` rows), but each `ImportRun` write in the
+   pipeline's normal operation (`ingest`/`parse`/`resolve` as separate CLI subprocess
+   invocations) runs in its own transaction, so there is no live reproduction of the same
+   defect for this path today. Both are listed here as follow-up candidates for whoever next
+   touches `admin_jobs.py`, not fixed speculatively.
+
+2. **The underlying `reset_to_fixture` stale-transaction cause — NOT fixed, remains open.**
+   The `resolved_at` and `created_at` VALUES STORED for the Draft fixture are still stale
+   (unchanged from §3's table above — this plan did not re-run the reseed and did not modify
+   `api/services/admin_dev.py::reset_to_fixture`'s session/transaction structure, per explicit
+   operator direction: it is dev-only, and the orchestrator is filing it as a separate todo).
+   Any future direct read of `resolved_at` or `argument_status_log.created_at` for a freshly
+   reseeded Draft fixture will still see the transaction-start timestamp, not the real
+   transition time, until that separate fix lands. The `id`-ordering fix above corrects how
+   the data is DISPLAYED; it does not correct what value is STORED.
 
 ---
 
 ## 6. Phase gate
 
 ### 6a. Full suite
+
+First run (before the Finding 2 display-ordering fix below):
 
 ```
 $ ./.venv/bin/python -m pytest
@@ -292,6 +333,20 @@ mentioned in the summary line, which pytest omits when the count is zero — con
 absence of any "skipped" category). This also matches the number the phase's own upstream
 plans (48-01 through 48-10) already recorded as the running total, so this is a
 re-confirmation, not a surprise.
+
+**Second run, after the Finding 2 display-ordering fix** (`api/services/admin_arguments.py`'s
+`get_argument_detail` status-log ordering, plus its one new regression test):
+
+```
+$ ./.venv/bin/python -m pytest
+...
+1209 passed, 5 xfailed, 12 warnings in 239.02s (0:03:59)
+```
+
+1209 = 1208 + the one new regression test
+(`test_get_argument_detail_status_log_orders_by_id_not_created_at`). Still 0 failed, still
+5 xfailed, still 0 skipped. This is the number that stands as this plan's final full-suite
+result.
 
 ### 6b. Build
 
@@ -385,13 +440,22 @@ acceptance criterion verbatim).
 - **The `verification: backstop` truths across the plan set abstain rather than pass** — they
   cannot be discharged by any automated check in this repository (must_haves' own framing).
 - **Finding 1 (two corpus fixtures read `uncertain`)** is not a defect in this phase's
-  delivered code, but it does mean the plan's stated must-have ("every fixture argument's
-  `trust_tier` reads `trusted`") is not literally true of 2 of 4 fixtures — recorded, not
-  silently narrowed to "the ones that matter."
-- **Finding 2 (stale `resolved_at`/`created_at` on the Draft fixture)** is a newly-discovered,
-  pre-existing latent bug in `reset_to_fixture`'s session/transaction handling, out of this
-  plan's scope to fix. Recommend a `gsd-tools windows append --kind unmet-truth` entry and a
-  todo file for a future plan (likely wherever `admin_dev.py` is next touched).
+  delivered code — `derive_tier` is correct and the plan's must-have assumption ("corpus
+  import mints a Person for every corpus speaker") was wrong given ConvoKit's own
+  unattributed-speaker sentinel rows. It does mean the plan's stated must-have ("every
+  fixture argument's `trust_tier` reads `trusted`") is not literally true of 2 of 4
+  fixtures — recorded as an open item to accept, not a defect to fix, and not silently
+  narrowed to "the ones that matter."
+- **Finding 2, display-ordering half, is FIXED** (see §5's updated Disposition) —
+  `get_argument_detail`'s Status History query now orders by `id ASC`, with a regression
+  test locking it. **The underlying cause remains open and unfixed by design**: the STORED
+  `resolved_at` / `argument_status_log.created_at` values for the Draft fixture are still
+  stale (confirmed unchanged after this fix — no reseed was run). `reset_to_fixture`'s
+  session/transaction reuse in `api/services/admin_dev.py` was explicitly left untouched per
+  operator direction (dev-only, being filed as a separate todo by the orchestrator). Two
+  other `created_at`-first queries (`admin_jobs.py`'s `list_jobs` and `get_run_id_for_step`)
+  were checked and NOT changed — see §5 Finding 2 for why each was judged not clearly the
+  same defect; both are flagged as follow-up candidates.
 - **A transient flake** was observed once in `test_published_gate.py`
   (`test_publish_succeeds_with_override_and_logs_reason_and_tier` plus the whitespace-only
   override cases) immediately after an executor run during plan 48-10; three consecutive

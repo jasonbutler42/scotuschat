@@ -1353,6 +1353,127 @@ async def test_get_argument_detail_includes_status_log_and_speakers() -> None:
 
 @pytest.mark.asyncio
 @pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_get_argument_detail_status_log_orders_by_id_not_created_at() -> None:
+    """get_argument_detail's status_log must return insertion order (by `id`)
+    even when `created_at` disagrees with it (Phase 48-09 Finding 2,
+    48-EVIDENCE.md).
+
+    `ArgumentStatusLog.created_at` uses `server_default=func.now()`, and
+    PostgreSQL's `now()` reflects the enclosing TRANSACTION's start time, not
+    per-statement wall-clock time. A writer that opens a transaction earlier
+    (e.g. for an unrelated read) and only later performs a status-log INSERT
+    inside that same transaction can produce a `created_at` value that is
+    *older* than a row inserted before it — exactly what was observed live
+    against `reset_to_fixture`'s Draft fixture (argument 1785, oyez 13015):
+    log_id=105 (candidate, created_at=17:05:09) inserted before
+    log_id=108 (draft, created_at=17:04:20 — 49s EARLIER).
+
+    This test constructs that exact skew explicitly (independent of reset
+    timing) via a raw UPDATE on the second-inserted row's created_at, then
+    asserts the returned order still matches insertion order (`id` ASC), not
+    the corrupted `created_at` order.
+    """
+    import datetime
+
+    from sqlalchemy import select, update
+
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import (
+        Argument,
+        ArgumentStatusEnum,
+        ArgumentStatusLog,
+        Case,
+        CaseArgument,
+    )
+    from api.services.admin_arguments import get_argument_detail
+
+    async with AsyncSessionLocal() as db:
+        arg = Argument(status=ArgumentStatusEnum.DRAFT)
+        db.add(arg)
+        await db.flush()
+
+        case = Case(
+            docket_number="48-09-ORDER-TEST",
+            docket_number_norm="48-09-order-test",
+            case_name="Synthetic Test Case v. Ordering",
+            term_year=2026,
+            slug="synthetic-test-case-v-ordering-48-09",
+        )
+        db.add(case)
+        await db.flush()
+        db.add(CaseArgument(case_id=case.id, argument_id=arg.id, is_lead=True))
+        await db.flush()
+
+        # First inserted (lower id): the "candidate" birth row.
+        candidate_log = ArgumentStatusLog(
+            argument_id=arg.id, status=ArgumentStatusEnum.CANDIDATE
+        )
+        db.add(candidate_log)
+        await db.flush()
+
+        # Second inserted (higher id): the "draft" transition row.
+        draft_log = ArgumentStatusLog(argument_id=arg.id, status=ArgumentStatusEnum.DRAFT)
+        db.add(draft_log)
+        await db.flush()
+
+        arg_id = arg.id
+        case_id = case.id
+        candidate_log_id = candidate_log.id
+        draft_log_id = draft_log.id
+        assert candidate_log_id < draft_log_id  # sanity: true insertion order
+
+        # Force the skew: give the SECOND-inserted (draft) row an EARLIER
+        # created_at than the first-inserted (candidate) row, reproducing the
+        # live anomaly without depending on any transaction/timing behavior.
+        await db.execute(
+            update(ArgumentStatusLog)
+            .where(ArgumentStatusLog.id == draft_log_id)
+            .values(
+                created_at=datetime.datetime(
+                    2026, 8, 20, 17, 4, 20, tzinfo=datetime.timezone.utc
+                )
+            )
+        )
+        await db.execute(
+            update(ArgumentStatusLog)
+            .where(ArgumentStatusLog.id == candidate_log_id)
+            .values(
+                created_at=datetime.datetime(
+                    2026, 8, 20, 17, 5, 9, tzinfo=datetime.timezone.utc
+                )
+            )
+        )
+        await db.commit()
+
+    async with AsyncSessionLocal() as db:
+        result = await get_argument_detail(db, arg_id)
+
+    assert result is not None
+    statuses = [row["status"] for row in result["status_log"]]
+    # Insertion order (candidate first, draft second) must win despite
+    # created_at reading the opposite. Before the fix (ORDER BY created_at
+    # ASC, id ASC) this assertion fails: draft (stale created_at) sorts
+    # first.
+    assert statuses == [ArgumentStatusEnum.CANDIDATE, ArgumentStatusEnum.DRAFT]
+
+    async with AsyncSessionLocal() as db:
+        log_result = await db.execute(
+            select(ArgumentStatusLog).where(ArgumentStatusLog.argument_id == arg_id)
+        )
+        for row in log_result.scalars().all():
+            await db.delete(row)
+        ca = await db.get(CaseArgument, {"case_id": case_id, "argument_id": arg_id})
+        await db.delete(ca)
+        await db.flush()
+        case_row = await db.get(Case, case_id)
+        await db.delete(case_row)
+        arg_row = await db.get(Argument, arg_id)
+        await db.delete(arg_row)
+        await db.commit()
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
 async def test_update_participant_side_persists_descriptor_for_advocate() -> None:
     """update_participant_side writes descriptor when provided, leaves it unchanged
     when omitted, and still raises on side==BENCH (D-06, T-26-04).

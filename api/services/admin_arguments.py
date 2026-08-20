@@ -442,10 +442,23 @@ async def get_argument_detail(db: AsyncSession, argument_id: int) -> dict | None
     ]
 
     # Load the full status log, oldest first (T-26-03 — Status history list).
+    #
+    # Phase 48 finding (48-09-EVIDENCE.md Finding 2): `id` must be the
+    # PRIMARY sort key for an append-only audit trail, not `created_at`.
+    # `created_at` uses `server_default=func.now()`, and PostgreSQL's
+    # `now()` returns the enclosing TRANSACTION's start time, not
+    # per-statement wall-clock time. Any writer that batches more than one
+    # status-log INSERT into a single transaction that was opened earlier
+    # by an unrelated read (e.g. `reset_to_fixture`'s long-lived
+    # verification-loop session) can produce a `created_at` value that is
+    # *older* than a row inserted before it. `id` is monotonic by
+    # construction (auto-increment primary key) and is unaffected by
+    # transaction timing, so it is the only key that reliably preserves
+    # insertion order for this table.
     status_log_result = await db.execute(
         select(ArgumentStatusLog)
         .where(ArgumentStatusLog.argument_id == argument_id)
-        .order_by(ArgumentStatusLog.created_at.asc(), ArgumentStatusLog.id.asc())
+        .order_by(ArgumentStatusLog.id.asc())
     )
     status_log = [
         {

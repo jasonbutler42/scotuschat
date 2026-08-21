@@ -654,6 +654,61 @@ Seven of the eleven keyword matches were reviewed and deliberately not folded:
 
 ---
 
+## Planning-Session Addendum (2026-08-21, `/gsd-plan-phase 49`)
+
+Three items `49-RESEARCH.md` raised as Open Questions / Pitfall 4 were put to the operator
+during planning and are now **locked decisions**, binding on the planner and any replan.
+
+### D-31a (locked) — one authority-checked writer, both existing writers delegate
+
+D-31's "one real authority-checked writer" resolves to a **new domain-gated service** that owns
+the authority gate, the discrepancy record, and the trust recomputation. Both existing writers
+become thin callers of it:
+
+- `api/services/admin_arguments.py::update_participant_side` (no status guard today)
+- `api/services/admin_jobs.py::update_resolve_row_for_job` (CANDIDATE-only guard today —
+  RESEARCH Pitfall 2; this guard is in scope to widen because the writer now delegates)
+
+Rejected alternative: extending `update_resolve_row_for_job` in place and leaving
+`update_participant_side` untouched. It leaves a second, unguarded write path alive, which
+contradicts D-31 outright. The larger diff is the point — one gate, no parallel mechanism,
+consistent with REVIEW-05's own "no parallel mechanism survives" standard applied to writers
+rather than to columns.
+
+The person writer `api/services/admin_people.py::update_person` follows the same rule.
+
+### D-31b (planner's discretion) — authority-ladder return shape
+
+Left to the planner, with one hard constraint: **a single accept/reject boolean is not
+sufficient**, because D-16 requires a discrepancy to be recorded even when the incoming value is
+outright rejected. Two candidate shapes, either acceptable if justified in the plan:
+
+- `(accepted: bool, should_record_discrepancy: bool)` — no new enum; mirrors
+  `api/domain/trust.py`'s plain-value discipline
+- a three-way result (`ACCEPT` / `ACCEPT_AND_RECORD` / `REJECT_AND_RECORD`) — self-documenting
+  at call sites, makes the unreachable combination inexpressible
+
+The function is new: this session confirmed no generic authority-ladder exists (RESEARCH
+Assumption A2 verified — `api/domain/` holds only `trust.py`, `person_names.py`,
+`docket_values.py`, and the latter two are field-specific Phase 38 contracts, not a general
+ladder). It belongs in `api/domain/` beside them.
+
+### D-33a (locked) — dev-only direct-insert mechanism for the unresolved-speaker fixture
+
+RESEARCH Pitfall 4 established that no live corpus path can produce a NULL-`person_id`
+`ArgumentParticipant` today, because `_resolve_person` always resolves-or-creates. D-33's
+fixture gets a **dev-only seeding mechanism that inserts a NULL-`person_id` participant
+directly**, gated the same way `reset_to_fixture` is (`api/services/admin_dev.py` sibling).
+
+Rejected alternatives: a synthetic corpus `FIXTURE_SET` entry (would require `_resolve_person`
+to gain a give-up branch — a production behavior change for a test need), and unit-level-only
+coverage with the live fixture deferred (leaves D-33 unproven end-to-end).
+
+This is new dev tooling with no analog to copy; it is infrastructure that **gates** every test
+needing the unresolved case, so it must land before those tests.
+
+---
+
 *Phase: 49-Review Model*
 *Context gathered: 2026-08-21*
 </content>

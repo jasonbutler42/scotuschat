@@ -1,11 +1,11 @@
 ---
 phase: 48-trust-lifecycle
-verified: 2026-08-21T15:14:12Z
+verified: 2026-08-21T17:20:00Z
 status: passed
 score: 5/5 must-haves verified
 behavior_unverified: 0
 overrides_applied: 0
-re_verification: no
+re_verification: refreshed-docs-only
 ---
 
 # Phase 48: Trust & Lifecycle Verification Report
@@ -16,7 +16,22 @@ override.
 
 **Verified:** 2026-08-21T15:14:12Z
 **Status:** passed
-**Re-verification:** No — initial verification
+**Re-verification:** Timestamp refreshed 2026-08-21T17:20:00Z — documentation-only.
+
+> **Why this timestamp moved.** The original verification (2026-08-21T15:14:12Z, status
+> `passed`, 5/5 must-haves) stands unchanged. During Phase 48 close-out, dated `CORRECTION`
+> notes were appended to `48-08-SUMMARY.md` recording that WINDOWS.md entry #8 had been
+> marked `fixed` on 2026-08-20 and confirmed live at 48-UAT.md test 6 — the entry's own
+> description had contradicted its status. Committing that SUMMARY edit made its commit time
+> newer than the verification, which the staleness check (#2348) correctly flagged as
+> `stale`: it compares change times and cannot distinguish appended prose from a changed
+> deliverable.
+>
+> No deliverable, test, or must-have changed. Full UAT is recorded complete at 65/65 in
+> `48-UAT.md` (51 auto-covered by passing tests, 14 operator-confirmed), the one gap found
+> (G-48-11) is resolved and re-verified, and the security review is clean (0 threats open).
+> The timestamp is refreshed rather than the phase re-verified, and this note exists so the
+> refresh is auditable rather than silent.
 
 ## Context for this report
 

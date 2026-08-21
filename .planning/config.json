@@ -23,7 +23,8 @@
     "code_review_depth": "standard",
     "text_mode": false,
     "research_before_questions": false,
-    "skip_discuss": false
+    "skip_discuss": false,
+    "use_worktrees": false
   },
   "ship": {
     "pr_body_sections": [

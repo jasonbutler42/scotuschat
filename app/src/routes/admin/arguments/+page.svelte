@@ -405,11 +405,26 @@
 											>{publishingId === arg.id ? 'Publishing…' : 'Publish'}</button>
 										</form>
 									{:else if arg.status === 'published'}
-										<!-- Unpublish toggle — only when already published -->
-										<form method="POST" action="?/unpublish" use:enhance>
+										<!-- Unpublish toggle — only when already published. Tracks
+										     the same per-row `publishingId` submitting state as the
+										     Publish button above (CR-03, 48-REVIEW.md) — a double-click
+										     or slow round-trip can no longer submit this action twice
+										     before the first navigation completes. -->
+										<form
+											method="POST"
+											action="?/unpublish"
+											use:enhance={() => {
+												publishingId = arg.id;
+												return async ({ update }) => {
+													publishingId = null;
+													await update();
+												};
+											}}
+										>
 											<input type="hidden" name="argument_id" value={arg.id} />
 											<button
 												type="submit"
+												disabled={publishingId === arg.id}
 												style="
 													min-height: 44px;
 													font-size: 14px;
@@ -419,9 +434,10 @@
 													border: 1px solid #334155;
 													border-radius: 6px;
 													padding: 8px 12px;
-													cursor: pointer;
+													cursor: {publishingId === arg.id ? 'not-allowed' : 'pointer'};
+													opacity: {publishingId === arg.id ? 0.7 : 1};
 												"
-											>Unpublish</button>
+											>{publishingId === arg.id ? 'Unpublishing…' : 'Unpublish'}</button>
 										</form>
 									{/if}
 									<!-- Edit link per row -->
@@ -432,13 +448,17 @@
 								</div>
 							</td>
 						</tr>
-							<!-- Row-scoped, visible error for a non-overridable-gate failure or
-							     the already-published guard (Phase 48 plan 10) — Defect 1's
-							     second half. Before this plan, a plain-string 422 (the resolve
-							     gate or already-published) was logged to the server console
-							     only and never reached the operator on this page at all. No
-							     reason field is offered here — form.publishBlocked is unset for
-							     this branch (D-14). -->
+							<!-- Row-scoped, visible error shared by BOTH mutating actions on
+							     this page: publish's non-overridable-gate failure / already-
+							     published guard (Phase 48 plan 10, Defect 1's second half), and
+							     unpublish's failure path (CR-01, 48-REVIEW.md). Neither action
+							     ever sets form.publishBlocked on this branch, so the guard below
+							     is safe to share — no reason field is offered for either (D-14;
+							     unpublish has no override concept at all). Before plan 10, a
+							     plain-string 422 was logged to the server console only and never
+							     reached the operator on this page; before CR-01's fix, unpublish
+							     didn't even check the response and always redirected as if it
+							     had succeeded. -->
 						{#if form?.error && form.argumentId === arg.id && !form.publishBlocked}
 							<tr>
 								<td colspan="6" style="padding: 0 0 12px 0; border-bottom: 1px solid #334155;">

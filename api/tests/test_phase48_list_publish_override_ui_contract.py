@@ -24,6 +24,9 @@ from pathlib import Path
 ROOT = Path(__file__).parents[2]
 PAGE_SERVER_PATH = ROOT / "app" / "src" / "routes" / "admin" / "arguments" / "+page.server.ts"
 PAGE_PATH = ROOT / "app" / "src" / "routes" / "admin" / "arguments" / "+page.svelte"
+DETAIL_PAGE_SERVER_PATH = (
+    ROOT / "app" / "src" / "routes" / "admin" / "arguments" / "[id]" / "+page.server.ts"
+)
 
 
 def _source(path: Path) -> str:
@@ -305,3 +308,179 @@ def test_no_new_component_import_added() -> None:
     source = _source(PAGE_PATH)
     imports = re.findall(r"from\s+'\$lib/components/[^']+'", source)
     assert imports == [], f"unexpected component import(s) added: {imports}"
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# CR-01 (48-REVIEW.md): the list-page `unpublish` action never checked the
+# fetch response and unconditionally redirected as though it had always
+# succeeded — this file previously had zero references to `unpublish`.
+# These tests give it the same rigor `publish` already has above.
+# ─────────────────────────────────────────────────────────────────────────
+
+
+def test_unpublish_action_checks_response_before_redirecting() -> None:
+    """
+    CR-01's exact defect shape: the pre-fix action never captured the
+    fetch's return value at all (a bare, uncaptured `await fetch(...)`),
+    so nothing could ever be checked before the unconditional redirect.
+    The fixed action must capture the response into `res`, check `res.ok`,
+    and that check must appear (in source order) before the success
+    redirect.
+    """
+    body = _function_body(_source(PAGE_SERVER_PATH), "unpublish")
+    assert "res = await fetch(" in body, (
+        "unpublish must capture the fetch response into `res` — a bare "
+        "`await fetch(...)` discards the response and can never be checked"
+    )
+    assert "res.ok" in body, "unpublish must check res.ok before redirecting"
+    ok_idx = body.index("res.ok")
+    redirect_idx = body.index("redirect(303")
+    assert ok_idx < redirect_idx, (
+        "the res.ok check must appear before the success redirect in "
+        "source order, so the redirect path is only reachable once ok has "
+        "been confirmed"
+    )
+
+
+def test_unpublish_action_never_unconditionally_redirects() -> None:
+    """
+    Neither failure branch (a thrown fetch, or a non-ok response) may fall
+    through to the success redirect — each must return a distinct
+    fail(...) instead. This is CR-01's defect verbatim: before the fix,
+    BOTH the catch block and the (missing) non-ok check fell straight
+    through to `throw redirect(...)`.
+    """
+    body = _function_body(_source(PAGE_SERVER_PATH), "unpublish")
+
+    def _brace_block(start_idx: int) -> str:
+        brace_start = body.index("{", start_idx)
+        depth = 0
+        for i in range(brace_start, len(body)):
+            if body[i] == "{":
+                depth += 1
+            elif body[i] == "}":
+                depth -= 1
+                if depth == 0:
+                    return body[brace_start : i + 1]
+        raise AssertionError("unbalanced braces while extracting block")
+
+    catch_block = _brace_block(body.index("catch"))
+    assert "fail(" in catch_block, "a thrown fetch must return fail(...), not redirect"
+    assert "redirect(" not in catch_block
+
+    not_ok_block = _brace_block(body.index("!res.ok"))
+    assert "fail(" in not_ok_block, "a non-ok response must return fail(...), not redirect"
+    assert "redirect(" not in not_ok_block
+
+
+def test_unpublish_failure_carries_argument_id_for_row_scoped_rendering() -> None:
+    """
+    Same T-48-10-ROWMISMATCH constraint `publish` already honors: every
+    fail(...) payload from `unpublish` must carry `argumentId` so the
+    shared `form` prop renders on the correct row.
+    """
+    body = _function_body(_source(PAGE_SERVER_PATH), "unpublish")
+    assert body.count("fail(") >= 2, (
+        "expected a fail() branch for both the thrown-fetch and non-ok cases"
+    )
+    assert body.count("argumentId") >= body.count("fail(")
+
+
+def test_unpublish_action_surfaces_plain_string_detail_verbatim() -> None:
+    """
+    unpublish_argument's only failure mode (api/services/admin_arguments.py)
+    raises a plain-string ValueError (e.g. "Not currently published"),
+    mapped by the router to a 422 whose `detail` is a bare string. Mirrors
+    `publish`'s own plain-string branch (D-14) — the operator sees the
+    server's message verbatim rather than only a generic fallback.
+    """
+    body = _function_body(_source(PAGE_SERVER_PATH), "unpublish")
+    match = re.search(r"typeof\s+detail\s*===\s*['\"]string['\"]", body)
+    assert match, "expected unpublish to inspect a string-typed `detail` from the response body"
+    following = body[match.end() : match.end() + 200]
+    assert "error: detail" in following
+
+
+def test_unpublish_failure_renders_through_the_existing_row_scoped_error_region() -> None:
+    """
+    CR-01's fix note: rather than adding a parallel error region,
+    `unpublish`'s fail(...) payloads must never set `publishBlocked`, so
+    they fall through the existing `{#if form?.error && form.argumentId
+    === arg.id && !form.publishBlocked}` block (which already renders any
+    bare `form.error` per row) without any template duplication.
+    """
+    server_body = _function_body(_source(PAGE_SERVER_PATH), "unpublish")
+    assert "publishBlocked" not in server_body
+
+    svelte_source = _source(PAGE_PATH)
+    assert "form?.error && form.argumentId === arg.id && !form.publishBlocked" in svelte_source
+
+
+def test_unpublish_button_tracks_the_same_submitting_state_as_publish() -> None:
+    """
+    CR-03 (48-REVIEW.md): the Unpublish button lacked the submitting/
+    disabled state the Publish button already had (publishingId-gated),
+    letting a double-click or slow round-trip submit it twice before the
+    first navigation completed.
+    """
+    source = _source(PAGE_PATH)
+    unpublish_form_idx = source.index('action="?/unpublish"')
+    following = source[unpublish_form_idx : unpublish_form_idx + 1200]
+    assert "publishingId = arg.id" in following
+    assert re.search(r"disabled=\{publishingId === arg\.id\}", following)
+
+
+def _action_names(source: str) -> list[str]:
+    """Every top-level action name from `export const actions: Actions = { ... }`."""
+    start = source.index("export const actions: Actions = {")
+    body = source[start:]
+    return re.findall(r"\n\t(\w+):\s*async\s*\(", body)
+
+
+def test_every_fetch_call_in_admin_arguments_actions_is_captured_into_res() -> None:
+    """
+    Structural generalization of CR-01: the defect's root shape was a
+    bare, uncaptured `await fetch(...)` whose return value could never be
+    checked. Require that every `fetch(` call inside every action, across
+    BOTH admin-arguments pages (list and detail), assigns its result to
+    `res` — a bare, uncaptured `await fetch(...)` inside any action body
+    now fails this test, making a fifth silent instance of this pattern
+    impossible to introduce without a test failure.
+    """
+    for path in (PAGE_SERVER_PATH, DETAIL_PAGE_SERVER_PATH):
+        source = _source(path)
+        for name in _action_names(source):
+            body = _function_body(source, name)
+            fetch_calls = body.count("fetch(")
+            if fetch_calls == 0:
+                continue
+            captured_calls = body.count("res = await fetch(")
+            assert captured_calls == fetch_calls, (
+                f"{path.name}: action `{name}` has {fetch_calls} fetch() "
+                f"call(s) but only {captured_calls} assign the result to "
+                "`res` — every fetch call must be captured so its response "
+                "can be checked before any redirect (CR-01)"
+            )
+
+
+def test_every_redirect_in_admin_arguments_actions_is_gated_on_a_res_ok_check() -> None:
+    """
+    Structural generalization of CR-01: no action in either admin
+    arguments `+page.server.ts` may `throw redirect(...)` on a path
+    reachable from a non-ok response. Every action body that contains a
+    `redirect(` call must also contain a `res.ok` check somewhere in that
+    same body — exactly the invariant CR-01 violated (an unconditional
+    redirect with no res.ok check anywhere in the action at all).
+    """
+    for path in (PAGE_SERVER_PATH, DETAIL_PAGE_SERVER_PATH):
+        source = _source(path)
+        for name in _action_names(source):
+            body = _function_body(source, name)
+            if "redirect(" not in body:
+                continue
+            assert "res.ok" in body, (
+                f"{path.name}: action `{name}` calls redirect(...) but "
+                "never checks res.ok anywhere in its body — this is "
+                "exactly CR-01's shape (unconditional redirect regardless "
+                "of response status)"
+            )

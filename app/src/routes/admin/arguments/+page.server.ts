@@ -136,19 +136,49 @@ export const actions: Actions = {
 	},
 
 	/**
-	 * unpublish — POST to /api/admin/arguments/{id}/unpublish and redirect to list.
+	 * unpublish — POST /api/admin/arguments/{id}/unpublish and redirect to list.
+	 *
+	 * Mirrors this file's own `publish` action above: every returned
+	 * `fail(...)` payload carries `argumentId` so the shared `form` prop can
+	 * address the correct row (T-48-10-ROWMISMATCH) — this page never
+	 * adopted the detail page's `source` tag because, until now, `publish`
+	 * was its only action that ever populated `form.error`; both actions
+	 * still share that untagged key today, matching this page's established
+	 * convention. On success, this still redirects (unchanged); on ANY
+	 * non-2xx response or a thrown fetch, it returns `fail(...)` and never
+	 * redirects — replacing the previous unconditional `console.error` +
+	 * `throw redirect(...)` shape that silently discarded a failed
+	 * unpublish (CR-01, 48-REVIEW.md). `unpublish_argument`
+	 * (api/services/admin_arguments.py) raises a plain-string ValueError
+	 * (e.g. "Not currently published") on its one failure mode — that
+	 * detail is surfaced verbatim when present, exactly like `publish`'s
+	 * plain-string branch. There is no override/reason concept for
+	 * unpublish, so no reason field is ever offered here.
 	 */
 	unpublish: async ({ request, fetch }) => {
 		const formData = await request.formData();
 		const argument_id = formData.get('argument_id') as string;
+		const argumentId = Number(argument_id);
 
+		let res: Response;
 		try {
-			await fetch(`${FASTAPI_BASE_URL}/api/admin/arguments/${argument_id}/unpublish`, {
+			res = await fetch(`${FASTAPI_BASE_URL}/api/admin/arguments/${argument_id}/unpublish`, {
 				method: 'POST',
 				headers: { 'X-Admin-Token': ADMIN_TOKEN },
 			});
-		} catch (err) {
-			console.error('[arguments unpublish] fetch threw:', err instanceof Error ? err.message : String(err));
+		} catch {
+			return fail(502, { argumentId, error: 'Could not unpublish this argument. Try again.' });
+		}
+
+		if (!res.ok) {
+			const payload: unknown = await res.json().catch(() => null);
+			const detail = (payload as { detail?: unknown } | null)?.detail;
+
+			if (typeof detail === 'string' && detail.length > 0) {
+				return fail(422, { argumentId, error: detail });
+			}
+
+			return fail(422, { argumentId, error: 'Could not unpublish this argument. Try again.' });
 		}
 
 		throw redirect(303, '/admin/arguments');

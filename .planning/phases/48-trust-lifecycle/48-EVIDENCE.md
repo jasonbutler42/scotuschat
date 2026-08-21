@@ -435,8 +435,11 @@ acceptance criterion verbatim).
   corpus-first scope decision and the open todo
   `2026-08-18-pdf-provenance-live-fixture-verification.md`.
 - **`derive_tier`'s `("operator", "manual")` rule is unreachable today** (no writer sets
-  `source=operator`) and awaits explicit operator confirmation, flagged in plan 48-01 and
-  re-raised at the Task 3 checkpoint below (step 7).
+  `source=operator`). **CONFIRMED by the operator on 2026-08-21** at the Task 3 checkpoint
+  (step 7) — an operator-authored, unreviewed row derives VERIFIED, per the authority ladder.
+  `api/domain/trust.py`'s module docstring updated to record this as an operator-confirmed
+  derivation rule rather than an outstanding flagged assumption (logic unchanged). This
+  closes plan 48-01's flagged assumption; no longer an open item as of this plan.
 - **The `verification: backstop` truths across the plan set abstain rather than pass** — they
   cannot be discharged by any automated check in this repository (must_haves' own framing).
 - **Finding 1 (two corpus fixtures read `uncertain`)** is not a defect in this phase's
@@ -464,13 +467,74 @@ acceptance criterion verbatim).
 - **The unpublish-error-rendering fix (48-10)** is verified by static contract test only,
   never observed live — the failure path needs the backend call itself to fail. The operator
   accepted this on that basis (48-10-SUMMARY.md); not re-litigated here.
+- **NEW (operator observation, Task 3 checkpoint step 2, 2026-08-21) — requested widening of
+  Resolve-card editability scope, deliberately deferred out of Phase 48, not implemented
+  here.** Operator's own words: *"The Resolve card doesn't have the same functionality once
+  it's out of Candidate status. I should still be able to edit the people in an argument in
+  any state EXCEPT when it's published."*
+
+  - **Current rule:** editability keys on `status == CANDIDATE`. Sites found:
+    `api/services/admin_people.py:968`
+    (`editable = argument.status == ArgumentStatusEnum.CANDIDATE`),
+    `api/services/admin_jobs.py:285`, and the frontend
+    `readonlyMode = argument.status !== 'candidate'` in
+    `app/src/routes/admin/pipeline/[job_id]/+page.server.ts:294`.
+  - **Requested rule:** editable in `candidate`, `draft`, and `unpublished`; read-only only
+    when `published`.
+  - **Critical caveat:** not every `!= CANDIDATE` check in this codebase is an editability
+    guard. `api/services/admin_jobs.py:591` is `approve_job`'s double-approve guard and MUST
+    stay CANDIDATE-only; `admin_jobs.py:719` and `:825` need individual classification too. A
+    mechanical find-and-replace across every `CANDIDATE`-keyed check would break approve
+    semantics.
+  - **Second caveat:** editing participants changes trust-tier inputs, so
+    `recompute_argument_tier` must fire on any newly-reachable edit path. Plan 48-04 wired
+    recompute into the four `admin_jobs` writers under the assumption that those writers only
+    ever ran against a CANDIDATE argument; widening editability makes those same write paths
+    reachable in states (`draft`, `unpublished`) where they previously could not run, so that
+    coverage needs re-checking rather than assumed to already hold.
+  - **Workflow interaction to note:** editing an `unpublished` argument can drop its tier to
+    `uncertain`, which then blocks re-publishing without a fresh override. That is correct
+    behavior per D-16 (the override is never sticky), but it is a real, user-visible workflow
+    consequence of the requested change, worth stating up front rather than discovering later.
+  - **Not an oversight:** the CANDIDATE-only rule is a deliberate pre-existing design
+    decision, not a bug. `api/services/admin_dev.py`'s fixture comments explicitly cite
+    "resolve-card editability keys on Argument.status staying CANDIDATE" as an invariant the
+    Complexity fixture's design preserves. Revising it is a design change requiring its own
+    discussion/plan cycle, not a fix folded into this one.
 
 ---
 
 ## 8. Operator sign-off
 
-Pending. See Task 3 checkpoint.
-
 <!-- OPERATOR-SIGNOFF-BEGIN -->
-<!-- Filled in once the operator responds to the Task 3 checkpoint. -->
+
+**Recorded:** 2026-08-21
+
+The operator completed the live walkthrough against the reseeded dev database (unchanged
+throughout this plan — no reseed was re-run) and returned the following, verbatim:
+
+1. Candidates hidden from `/admin/arguments` — **PASS**.
+2. Resolve card editable on the Complexity (candidate) fixture — **PASS**, with an
+   observation recorded as a new open item above (Resolve-card editability scope), not
+   implemented in this plan.
+3. Status History order (candidate before draft) on the Draft fixture's detail page —
+   **PASS**, confirmed after commit `1b7564a78` (the `id`-ordering fix).
+4. Published fixture publicly visible at its `/cases/...` URL with no mention of trust,
+   tier, or provenance on the public page — **PASS**.
+5. `recompute-trust --all` transcript shows `scanned = 4`, `changed = 0` — **PASS**.
+6. §7's open items (including both new findings from this plan) — **ACCEPTED**, as
+   deliberately deferred rather than overlooked.
+7. `derive_tier`'s `("operator", "manual")` rule (an operator-authored, unreviewed row
+   derives VERIFIED) — **CONFIRMED**. This closes plan 48-01's flagged assumption. Recorded
+   as an operator-confirmed derivation rule in `api/domain/trust.py`'s module docstring
+   (logic unchanged, docstring wording only, commit recorded in 48-09-SUMMARY.md's Task
+   Commits).
+
+**Overall: APPROVED.** All 7 verification steps passed. The phase's central claim — every
+argument is born a candidate with a logged birth transition, a materialized trust tier
+recomputed by every writer at write time, and a promotion gate that is hard-blocked while
+uncertain and overridable only with a deliberate, logged, non-sticky reason — is confirmed
+live, on real corpus data, with the one display-ordering defect this plan's own live
+verification surfaced (Finding 2) fixed and regression-tested before sign-off.
+
 <!-- OPERATOR-SIGNOFF-END -->

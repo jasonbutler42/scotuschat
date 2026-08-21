@@ -23,19 +23,22 @@ Derivation order (TRUST-01/D-07, first match wins — see derive_tier()):
   7. anything else (including (pdf_pipeline, llm_corrective) and any
      unrecognised source/method/review_state) -> UNCERTAIN (fail-closed)
 
-Rule 3 is a planner assumption, not stated verbatim in
+Rule 3 was originally a planner assumption, not stated verbatim in
 provenance-and-trust-model.md's tier table (which keys VERIFIED strictly on
 review_state and never states what an operator-sourced, unreviewed row
-derives). It is recorded as a flagged assumption in
-.planning/phases/48-trust-lifecycle/48-01-PLAN.md's <flagged_assumptions>
-section for operator confirmation at /gsd-verify-work: mapping an
-operator-authored value to VERIFIED follows the authority ladder (operator
-ranks highest) and the note's own worked example, and is necessary so an
-operator-created argument is not unpublishable-without-override by
-construction — the fail-closed fallthrough (rule 7) would otherwise apply,
-which would contradict operator-final-authority. No production code writes
-ImportSource.OPERATOR today, so this rule is currently unreachable; it
-exists so the mapping is total.
+derives). It was flagged in .planning/phases/48-trust-lifecycle/48-01-
+PLAN.md's <flagged_assumptions> section pending operator confirmation, and
+was CONFIRMED by the operator on 2026-08-21 at the plan 48-09 sign-off
+checkpoint (see 48-09-SUMMARY.md) — this is now an operator-confirmed
+derivation rule, not an outstanding assumption. The rationale stands
+unchanged: mapping an operator-authored value to VERIFIED follows the
+authority ladder (operator ranks highest) and the note's own worked
+example, and is necessary so an operator-created argument is not
+unpublishable-without-override by construction — the fail-closed
+fallthrough (rule 7) would otherwise apply, which would contradict
+operator-final-authority. No production code writes ImportSource.OPERATOR
+today, so this rule remains currently unreachable; it exists so the
+mapping is total.
 """
 
 from __future__ import annotations
@@ -96,8 +99,8 @@ def derive_tier(source: str, method: str, review_state: str) -> TrustTier:
       7. anything else, including ("pdf_pipeline", "llm_corrective") and any
          unrecognised source/method/review_state -> UNCERTAIN (fail-closed)
 
-    See this module's docstring for the source of each rule and the flagged
-    assumption behind rule 3.
+    See this module's docstring for the source of each rule and rule 3's
+    operator-confirmed rationale (confirmed 2026-08-21, plan 48-09).
     """
     if review_state in ("operator_confirmed", "operator_edited"):
         return TrustTier.VERIFIED

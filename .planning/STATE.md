@@ -2,19 +2,19 @@
 gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: Import & Provenance Re-model
-current_phase: 48
-current_phase_name: trust-lifecycle
-status: executing
-stopped_at: Completed 48-10-PLAN.md (gap closure + two checkpoint-found defect fixes); 48-09 (wave 6, live fixture reseed and sign-off) remains
-last_updated: "2026-08-20T16:49:28.171Z"
-last_activity: 2026-08-20
-last_activity_desc: Phase 48 Plan 10 closed — list-page publish parity, unpublish visibility fix, two checkpoint-found defect fixes (publish/unpublish error rendering), two operator-requested UI polish items; WINDOWS.md entry #8 marked fixed
+current_phase: 49
+current_phase_name: Review Model
+status: Phase 48 shipped; operator sign-off recorded — ready for Phase 49 discuss
+stopped_at: Completed 48-09-PLAN.md -- Phase 48 (Trust & Lifecycle) COMPLETE, 10/10 plans, operator signed off 2026-08-21
+last_updated: "2026-08-21T14:32:26.169Z"
+last_activity: 2026-08-21
+last_activity_desc: Phase 48 Plan 09 closed — live reseed + zero-drift proof (4 scanned, 0 changed, x2), full-suite gate (1209 passed / 5 xfailed / 0 failed / 0 skipped), a genuine Status History display-ordering bug found via this plan's own live evidence and fixed (commit 1b7564a78), derive_tier rule 3 confirmed by the operator, and operator sign-off recorded. Phase 48 complete; transitioned to Phase 49.
 progress:
   total_phases: 5
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 16
-  completed_plans: 15
-  percent: 20
+  completed_plans: 16
+  percent: 40
 ---
 
 # Project State
@@ -24,33 +24,42 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-18 — Phase 47 complete; corpus-first / PDF-deferred scope decision recorded)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** Phase 48 — trust-lifecycle
+**Current focus:** Phase 49 — review-model (not yet discussed/planned)
 
 ## Current Position
 
-Phase: 48 (trust-lifecycle) — EXECUTING
-Plan: 48-10 complete (gap closure, wave 5); 48-09 (wave 6 — live fixture reseed, zero-drift proof, full-suite gate, requirement traceability, operator sign-off) is the phase's remaining plan.
-Status: 9 of 10 plans complete — not yet ready for phase verification (48-09 executes after 48-10 per ROADMAP.md's wave ordering, even though it is numbered lower)
-Last activity: 2026-08-20 — 48-10 closed: list-page publish parity, unpublish visibility fix, two checkpoint-found defect fixes (publish/unpublish error rendering), two operator-requested UI polish items
+Phase: 48 (trust-lifecycle) — **COMPLETE** (all 10/10 plans done, evidence recorded, operator signed off 2026-08-21)
+Phase: 49 (review-model) — NOT STARTED (no context/plan yet)
+Last activity: 2026-08-21 — 48-09 closed: live reseed + zero-drift proof (recompute-trust --all: 4 scanned, 0 changed, twice), full-suite gate (1209 passed / 5 xfailed / 0 failed / 0 skipped), a genuine Status History display-ordering bug found via this plan's own live evidence and fixed (id-primary ordering, commit `1b7564a78`), `derive_tier` rule 3 confirmed by the operator (closing plan 48-01's flagged assumption), and full operator sign-off recorded in `.planning/phases/48-trust-lifecycle/48-EVIDENCE.md`.
 
-**Next action:** `/gsd-execute-phase 48` (to run 48-09) or `/gsd-plan-phase 48` if 48-09 needs re-planning first
+**Next action:** `/gsd-discuss-phase 49` (Phase 49 — Review Model — has no context session yet)
 
-Pre-flight for Phase 48, settled 2026-08-18:
+Phase 48 close-out notes (2026-08-21):
 
-- Cross-phase UAT audit closed. The audit query now returns exactly one open finding — the
-  `delete_argument` / `argument_status_log` cascade defect — and it is folded into Phase 48's own
-  scope (ROADMAP.md → Phase 48 → "Carried defect folded in 2026-08-18"). Nothing else from v1.0–v1.7
-  is outstanding.
+- All five requirements (TRUST-01 through TRUST-05) traced to named, green, automated checks in
+  `48-EVIDENCE.md`'s requirement-traceability table, plus the carried D-22 cascade-defect fix and
+  the D-23 public-leak-ban contract.
 
-- All remaining human UAT is waived (see the table below). No operator testing is queued.
-- Test suite is fully green: **1049 passed, 5 xfailed, 0 failed, 0 skipped**. The 5 xfailed are the
-  never-implemented Phase 31 stubs, tracked below.
+- Two new open items carried forward as standalone todos (not folded into Phase 48's own scope):
+  `.planning/todos/pending/2026-08-20-reset-to-fixture-stale-created-at-timestamps.md` (the
+  underlying stale-value root cause behind the display-ordering bug this plan fixed — dev-only,
+  `reset_to_fixture`'s session/transaction reuse) and
+  `.planning/todos/pending/2026-08-21-widen-participant-editability-to-all-unpublished-states.md`
+  (operator-requested widening of Resolve-card editability scope, deliberately deferred).
 
-- **Still unverified before planning migrations:** run `alembic current` against the dev DB and
-  compare to head `0026` (`0026_import_run_provenance`, Phase 47). The audit could not check this —
-  it had no DB credentials. This is the pre-existing STATE.md blocker below, not a new one.
+- 14-UAT Test 8 and 26-UAT Test 26 remain open (see Deferred Items below) — Phase 48's Finding 1
+  (48-EVIDENCE.md) shows the reason D-21 gave for not closing them may not fully hold; worth a look
+  before assuming new fixture work is required.
 
-Progress: [█████████░] 94%
+- Three of Phase 48's defects were found by **operator browser testing**, not the automated suite
+  (silent list-page 422 swallow, unpublish/public-visibility across three read paths, shared-`form`
+  error-routing bug on the detail page — all in plan 48-10) — the suite grew from 1114 to 1209 tests
+  across the phase and passed clean over all three fixes.
+
+- Test suite: **1209 passed, 5 xfailed, 0 failed, 0 skipped** (baseline at Phase 48 start was 1049;
+  the 5 xfailed are the never-implemented Phase 31 stubs, tracked below, unchanged).
+
+Progress: [████░░░░░░] 40% (2 of 5 v1.8 phases complete)
 
 ## Deferred Items
 
@@ -186,6 +195,10 @@ Full cross-milestone decision log lives in PROJECT.md's Key Decisions table. Per
 - [Phase ?]: Phase 48 Plan 10: found and fixed a real defect at the Task 4 checkpoint — the detail page's Status card never rendered publish/unpublish errors (form?.error only rendered in the unrelated case-metadata card); tagged fail() payloads with source and widened the Status-card guard
 - [Phase ?]: Phase 48 Plan 10: unpublish-error rendering fix accepted on static contract test alone, not observed live (failure path requires the backend call itself to fail, unreachable from any UI state)
 - [Phase ?]: Phase 48 Plan 10: WINDOWS.md entry #8 (D-14 non-overridable gate, unrun-verify) marked fixed -- the deferred live check is what surfaced the checkpoint-found defect, not a false alarm
+- [Phase ?]: Phase 48 Plan 09: found and fixed a Status History display-ordering bug via live evidence-gathering -- get_argument_detail's argument_status_log query now orders by id ASC only, not created_at first, since PostgreSQL now() reflects transaction-start time not per-statement time
+- [Phase ?]: Phase 48 Plan 09: derive_tier rule 3 (operator+manual -> VERIFIED) confirmed by the operator on 2026-08-21, closing plan 48-01's flagged assumption; api/domain/trust.py docstrings updated to record confirmation, logic unchanged
+- [Phase ?]: Phase 48 Plan 09: two corpus fixtures (15169, 22372) read trust_tier=uncertain not trusted after reseed -- traced to ConvoKit's own unattributed-speaker sentinel rows, not a Phase 48 defect; derive_tier is correct and the plan's must-have assumption was wrong. Accepted by operator as an open item
+- [Phase ?]: Phase 48 Plan 09: operator requested widening Resolve-card editability from CANDIDATE-only to {candidate, draft, unpublished} (published stays read-only) -- recorded as a new open item and standalone todo, deliberately NOT implemented (design-scope change, not a bug)
 
 ### Roadmap Evolution
 
@@ -243,11 +256,12 @@ at close.
 
 ## Session Continuity
 
-Last session: 2026-08-20T16:49:28.026Z
-Stopped at: Completed 48-10-PLAN.md (gap closure + two checkpoint-found defect fixes); 48-09 (wave 6, live fixture reseed and sign-off) remains
+Last session: 2026-08-21T14:32:26.115Z
+Stopped at: Completed 48-09-PLAN.md -- Phase 48 (Trust & Lifecycle) COMPLETE, 10/10 plans, operator signed off 2026-08-21
 Resume file: None
 
 ## Operator Next Steps
 
-- Review the v1.8 roadmap draft in `.planning/ROADMAP.md` (Phases 47–51).
-- When ready, plan the first phase with `/gsd-plan-phase 47`.
+- Phase 48 (Trust & Lifecycle) is complete and signed off. Review `.planning/phases/48-trust-lifecycle/48-EVIDENCE.md` and `48-09-SUMMARY.md` at your convenience.
+- Two standalone todos were filed at Phase 48 close and are candidates for a future plan or `/gsd-review-backlog`: `2026-08-20-reset-to-fixture-stale-created-at-timestamps.md` and `2026-08-21-widen-participant-editability-to-all-unpublished-states.md`.
+- When ready, begin Phase 49 (Review Model) with `/gsd-discuss-phase 49`.

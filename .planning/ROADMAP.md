@@ -147,7 +147,7 @@ Full phase details: `.planning/milestones/v1.7-ROADMAP.md`
 **Overview:** A targeted re-model of the import/provenance layer — not a rewrite. Provenance becomes first-class: every import unit declares its `source` and `method`, so trust is a stated attribute of the row rather than archaeology across `strategy` strings and nullable `oyez_*` columns. On that foundation, every argument is born a *candidate* carrying a materialized trust tier and is promoted to *published* through a single review-gated promotion (the gate sits at promotion, not row-creation; status-based staging, no separate staging table), an operator review queue surfaces everything needing attention, and the two import paths (corpus and PDF) collapse into peer strategies of one unified, idempotent, authority-governed import model. The public noun finally aligns to "arguments" and a shared design system lands last, once the corrected domain language is settled. The read model, people, tenures, and utterance display are stable and out of scope. Hard constraints throughout: Alembic is the sole DDL authority, the pipeline stays offline-only, trust is operator-facing and never shown publicly (apolitical framing), and backfill must preserve existing corpus + PDF data. Sequencing is dependency-ordered and load-bearing — provenance (47) is the keystone everything else builds on, then trust/lifecycle (48), then the review model (49), then the unified import path (50), with the design system + noun alignment (51) deliberately last.
 
 - [x] **Phase 47: Provenance Foundation** - `import_run` generalizes `pipeline_run` with declared `source`/`method` + external-id lineage; PDF-only fields go nullable; every import path stamps provenance at write time (disposable DB → clean rebuild, no legacy backfill) (completed 2026-08-18)
-- [ ] **Phase 48: Trust & Lifecycle** - Materialized `trust_tier` rollup, `candidate`-on-arrival status, and a single `published_at` promotion gate hard-blocked on UNCERTAIN with a logged operator override
+- [x] **Phase 48: Trust & Lifecycle** - Materialized `trust_tier` rollup, `candidate`-on-arrival status, and a single `published_at` promotion gate hard-blocked on UNCERTAIN with a logged operator override (completed 2026-08-21)
 - [ ] **Phase 49: Review Model** - Four-state `review_state` on operator-editable rows, discrepancy recording on re-import, and a filterable operator review queue (generalizes `name_needs_review`)
 - [ ] **Phase 50: Unified Import Path** - Corpus and PDF become peer strategies writing `import_run` directly; `admin_job` re-points; re-import is idempotent and authority-governed so it never clobbers operator work
 - [ ] **Phase 51: Design System & Noun Alignment** - Public noun aligned to "arguments" (`/cases` → arguments, redirects preserved) plus shared component library, design tokens, and listing style (absorbs backlog 999.4 / 999.6 / 999.8)
@@ -227,7 +227,7 @@ static analysis until reproduced.
     because Phases 47/50's re-import and idempotency paths depend on this cascade being correct
     (STATE.md carries the same warning).
 
-**Plans**: 9/10 plans executed
+**Plans**: 10/10 plans executed
 
 Plans:
 
@@ -257,7 +257,7 @@ Plans:
 
 **Wave 6** *(blocked on 48-10)*
 
-- [ ] 48-09-PLAN.md — Live fixture reseed, zero-drift proof, full-suite gate, requirement traceability, and operator sign-off (wave 6)
+- [x] 48-09-PLAN.md — Live fixture reseed, zero-drift proof, full-suite gate, requirement traceability, and operator sign-off (wave 6)
 
 ### Phase 49: Review Model
 
@@ -373,7 +373,7 @@ Plans:
 | 45. Deferred UI Bug Fixes | v1.7 | 2/2 | Complete    | 2026-08-12 |
 | 46. Dev Environment Reliability | v1.7 | 6/6 | Complete    | 2026-08-14 |
 | 47. Provenance Foundation | v1.8 | 6/6 | Complete    | 2026-08-18 |
-| 48. Trust & Lifecycle | v1.8 | 9/10 | In Progress|  |
+| 48. Trust & Lifecycle | v1.8 | 10/10 | In Progress|  |
 | 49. Review Model | v1.8 | 0/TBD | Not started | - |
 | 50. Unified Import Path | v1.8 | 0/TBD | Not started | - |
 | 51. Design System & Noun Alignment | v1.8 | 0/TBD | Not started | - |

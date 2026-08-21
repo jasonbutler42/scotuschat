@@ -23,7 +23,16 @@
 	// logic. Because only one row's panel can ever be visible at a time (one
 	// shared `form` reflects only the most recent submission), dismissing
 	// one row's panel can never affect a different row's.
-	let dismissedForm: unknown = $state(null);
+	//
+	// MUST be `$state.raw`, never plain `$state`: assigning an object to a
+	// `$state` variable wraps it in a deep reactive proxy, so `dismissedForm`
+	// would hold a PROXY of `form` rather than `form` itself and the
+	// `form !== dismissedForm` guard below would always be true — the panel
+	// would never dismiss. `$state.raw` stores the reference as-is, which is
+	// exactly what the reference comparison above depends on. This shipped
+	// broken once (G-48-11); the structural contract tests grep source text
+	// and cannot catch it, so the invariant lives here.
+	let dismissedForm: unknown = $state.raw(null);
 
 	// Segmented status filter (DASH-02, D-05, D-06) — one-param goto() round-trip,
 	// same idiom as the People page's Bench/Advocate toggle.

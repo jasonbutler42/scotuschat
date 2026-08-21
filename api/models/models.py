@@ -89,6 +89,20 @@ class ArgumentStatusEnum(str, enum.Enum):
     CANDIDATE = "candidate"  # Phase 48 (D-01): the new born state, replaces PIPELINE
 
 
+class ReviewState(str, enum.Enum):
+    """Phase 49 (D-09): four-state operator review status. PERMANENT once
+    migration 0028 mints the `review_state` PG enum type — PostgreSQL has
+    no ALTER TYPE ... DROP VALUE, so none of these four values can ever be
+    renamed or removed (operator-confirmed one-way door, plan 49-01
+    checkpoint). `derive_tier` (api/domain/trust.py) already implements all
+    four strings in its documented precedence (rules 1 and 2)."""
+
+    UNREVIEWED = "unreviewed"
+    NEEDS_REVIEW = "needs_review"
+    OPERATOR_CONFIRMED = "operator_confirmed"
+    OPERATOR_EDITED = "operator_edited"
+
+
 # ---------------------------------------------------------------------------
 # Declarative base
 # ---------------------------------------------------------------------------
@@ -403,6 +417,29 @@ class ArgumentParticipant(Base):
     # Phase 22 — migration 0013: TOC subtitle from cover extractor (PJOB-13)
     # Phase 44 D-05 — migration 0025: renamed title -> descriptor (full-stack rename)
     descriptor = Column(String(500), nullable=True)
+    # Phase 49 — migration 0028 (D-09/D-10/D-19): operator review status for
+    # this participant. NOT NULL with server_default='unreviewed' — every
+    # row that existed before migration 0028 reads UNREVIEWED with no
+    # separate backfill UPDATE (PostgreSQL applies the non-volatile
+    # server_default to existing rows as part of ADD COLUMN).
+    review_state = Column(
+        SAEnum(ReviewState, name="review_state", values_callable=lambda e: [x.value for x in e]),
+        nullable=False,
+        server_default="unreviewed",
+        default=ReviewState.UNREVIEWED,
+    )
+    # Phase 49 — migration 0028 (D-20): reuse the EXISTING import_source /
+    # import_method PG enum types verbatim — no new enum, no mapping layer,
+    # because derive_tier already keys on this vocabulary. Both nullable:
+    # not every existing participant row has known provenance.
+    source = Column(
+        SAEnum(ImportSource, name="import_source", values_callable=lambda e: [x.value for x in e]),
+        nullable=True,
+    )
+    method = Column(
+        SAEnum(ImportMethod, name="import_method", values_callable=lambda e: [x.value for x in e]),
+        nullable=True,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -576,3 +613,62 @@ class AdminJob(Base):
     error_message = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+
+# ---------------------------------------------------------------------------
+# Table 14: value_discrepancy
+# Phase 49 (D-13/D-14/D-15): per-value operator-review bookkeeping recorded
+# when a re-import's incoming value disagrees with an existing value of
+# equal-or-higher authority. This is NOT the legacy admin_jobs.discrepancies
+# JSONB blob above (D-14) — that field is unrelated pipeline-resolve batch
+# data; this table is the new, generalized discrepancy record introduced by
+# the review model. Natural key is (target_type, target_id, field,
+# import_run_id) (D-13) but is NOT a UNIQUE constraint — D-15: a repeat
+# import can legitimately disagree on more than one field, so a fresh row
+# must be able to sit alongside an already-resolved one for the same key.
+# ---------------------------------------------------------------------------
+
+
+class ValueDiscrepancy(Base):
+    """Per-value operator-review bookkeeping for a re-import disagreement.
+
+    NOT the legacy `admin_jobs.discrepancies` JSONB blob (D-14) — this is a
+    distinct, structured table introduced by the Phase 49 review model.
+    """
+
+    __tablename__ = "value_discrepancy"
+
+    id = Column(Integer, primary_key=True)
+    target_type = Column(String(40), nullable=False)  # "argument_participant" | "person"
+    target_id = Column(Integer, nullable=False)
+    field = Column(String(60), nullable=False)
+    import_run_id = Column(Integer, ForeignKey("import_run.id"), nullable=True)
+    incoming_value = Column(Text, nullable=True)
+    existing_value = Column(Text, nullable=True)
+    incoming_source = Column(
+        SAEnum(ImportSource, name="import_source", values_callable=lambda e: [x.value for x in e]),
+        nullable=True,
+    )
+    incoming_method = Column(
+        SAEnum(ImportMethod, name="import_method", values_callable=lambda e: [x.value for x in e]),
+        nullable=True,
+    )
+    existing_source = Column(
+        SAEnum(ImportSource, name="import_source", values_callable=lambda e: [x.value for x in e]),
+        nullable=True,
+    )
+    existing_method = Column(
+        SAEnum(ImportMethod, name="import_method", values_callable=lambda e: [x.value for x in e]),
+        nullable=True,
+    )
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    resolved_at = Column(DateTime(timezone=True), nullable=True)
+
+    __table_args__ = (
+        Index(
+            "ix_value_discrepancy_target",
+            "target_type",
+            "target_id",
+            "resolved_at",
+        ),
+    )

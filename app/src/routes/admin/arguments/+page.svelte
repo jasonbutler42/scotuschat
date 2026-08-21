@@ -149,6 +149,9 @@
 		if (code === 'llm_corrective_utterance') {
 			return `${count} utterance${plural} came from the LLM corrective pass`;
 		}
+		if (code === 'uncertain_participant') {
+			return `${count} participant${plural} ${count === 1 ? 'has' : 'have'} unverified provenance`;
+		}
 		if (code === 'no_constituents') {
 			return 'this argument has no utterances yet';
 		}

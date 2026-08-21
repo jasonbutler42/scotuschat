@@ -391,12 +391,19 @@ async def test_unresolved_participant_drags_tier_to_uncertain():
 
 @pytest.mark.asyncio
 @pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
-async def test_resolved_participant_contributes_no_additional_tier():
+async def test_resolved_participant_with_unset_provenance_drags_tier_to_uncertain():
     """
-    D-13: a resolved ArgumentParticipant (person_id NOT NULL) contributes no
-    tier of its own — no per-participant source/method column exists yet —
-    so an otherwise-trusted argument stays trusted with a resolved
-    participant present.
+    Phase 49 (D-18) supersedes D-13's Phase 48 placeholder: a resolved
+    ArgumentParticipant (person_id NOT NULL) now contributes a REAL tier
+    derived from its own (source, method, review_state) columns instead of
+    contributing nothing. `_seed_argument`'s `participant_specs=[True]` sets
+    person_id but leaves source/method NULL and review_state at its
+    migration-0028 default (UNREVIEWED) — derive_tier("", "", "unreviewed")
+    matches none of rules 1-6 and fail-closes to UNCERTAIN (rule 7), which
+    now floors an otherwise-TRUSTED argument down to UNCERTAIN. This is the
+    intended, fail-closed direction (TRUST-02): a participant with no
+    recorded provenance no longer rides along for free — it now surfaces as
+    needing review, which is the whole point of the Phase 49 review model.
     """
     from api.core.database import AsyncSessionLocal
     from api.domain.trust import TrustTier
@@ -412,12 +419,12 @@ async def test_resolved_participant_contributes_no_additional_tier():
     try:
         async with AsyncSessionLocal() as db:
             result = await recompute_argument_tier(db, ids["argument_id"])
-            assert result is TrustTier.TRUSTED
+            assert result is TrustTier.UNCERTAIN
             await db.commit()
 
         async with AsyncSessionLocal() as db:
             argument = await db.get(Argument, ids["argument_id"])
-            assert argument.trust_tier is TrustTier.TRUSTED
+            assert argument.trust_tier is TrustTier.UNCERTAIN
     finally:
         await _teardown_argument(ids)
 

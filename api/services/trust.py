@@ -16,9 +16,13 @@ D-11: a NULL person_id (unresolved speaker/participant) contributes
 TrustTier.UNCERTAIN to the floor. D-12: is_stage_direction=true utterance
 rows are excluded from the floor entirely (no speaker to attribute); this is
 NOT extended to side=UNKNOWN rows, which still contribute normally.
-D-13: every constituent's review_state is supplied as the literal
-api.domain.trust.UNREVIEWED in Phase 48 — no per-argument review signal
-exists yet (ArgumentParticipant has no review_state/method column today).
+D-13: every utterance constituent's review_state is still supplied as the
+literal api.domain.trust.UNREVIEWED — no per-utterance review signal
+exists. Phase 49 (D-18) fills this module's own participant-branch slot:
+`_load_constituents` now reads each ArgumentParticipant's real
+`(source, method, review_state)` triple and calls derive_tier() with it,
+in place of the Phase 48 placeholder that contributed nothing for a
+resolved participant. derive_tier's three-argument signature is unchanged.
 """
 
 from __future__ import annotations
@@ -77,9 +81,12 @@ async def _load_constituents(
     ).all()
     participant_rows = (
         await db.execute(
-            select(ArgumentParticipant.person_id).where(
-                ArgumentParticipant.argument_id == argument_id
-            )
+            select(
+                ArgumentParticipant.person_id,
+                ArgumentParticipant.review_state,
+                ArgumentParticipant.source,
+                ArgumentParticipant.method,
+            ).where(ArgumentParticipant.argument_id == argument_id)
         )
     ).all()
 
@@ -101,12 +108,23 @@ async def _load_constituents(
         if tier is TrustTier.UNCERTAIN:
             _bump("llm_corrective_utterance")
 
-    for (person_id,) in participant_rows:
+    for person_id, review_state, source, method in participant_rows:
         if person_id is None:
             tiers.append(TrustTier.UNCERTAIN)
             _bump("unresolved_participant")
-        # A resolved participant contributes no additional tier — D-13, no
-        # per-participant source/method exists yet to derive one from.
+            continue
+        # D-18: a resolved participant now contributes a real tier —
+        # Pitfall 1: pass .value for every enum-typed column, mirroring the
+        # utterance branch above. source/method are nullable; review_state
+        # is NOT NULL (always present) as of migration 0028.
+        tier = derive_tier(
+            source.value if source else "",
+            method.value if method else "",
+            review_state.value,
+        )
+        tiers.append(tier)
+        if tier is TrustTier.UNCERTAIN:
+            _bump("uncertain_participant")
 
     if not utterance_rows and not participant_rows:
         _bump("no_constituents")

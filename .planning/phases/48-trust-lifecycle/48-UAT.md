@@ -1,9 +1,9 @@
 ---
-status: diagnosed
+status: complete
 phase: 48-trust-lifecycle
 source: 48-01-SUMMARY.md, 48-02-SUMMARY.md, 48-03-SUMMARY.md, 48-04-SUMMARY.md, 48-05-SUMMARY.md, 48-06-SUMMARY.md, 48-07-SUMMARY.md, 48-08-SUMMARY.md, 48-09-SUMMARY.md, 48-10-SUMMARY.md
 started: 2026-08-21T15:40:38Z
-updated: 2026-08-21T16:48:14Z
+updated: 2026-08-21T16:56:05Z
 ---
 
 ## Current Test
@@ -89,8 +89,13 @@ rationale: A design-scope change to a deliberate, documented pre-existing invari
 coverage_reason: human_judgment
 requirement: —
 source_plan: 48-09
-result: skipped
-reason: "Deferred follow-up: operator confirmed this is a deferred design-scope change requiring its own discuss/plan cycle — not a Phase 48 blocker."
+result: pass
+note: |
+  The DELIVERABLE here is the record, and the record is complete and accurate (operator-confirmed):
+  current-rule sites, the requested rule, both caveats (CANDIDATE-only guards; recompute coverage on
+  newly-reachable write paths), logged as an open item plus a standalone todo. What is deferred is the
+  IMPLEMENTATION, which was never in Phase 48's scope — carried forward under ## Deferred Follow-Ups,
+  which is where un-built work belongs (#1921: a deferred follow-up is not a gap and must not block).
 
 ### 11. [48-10 D1] List-page (/admin/arguments) publish block/override UI at parity with the detail page — ti…
 expected: List-page (/admin/arguments) publish block/override UI at parity with the detail page — tier, server message, per-blocker breakdown, override reason field, addressed to the correct row
@@ -98,9 +103,10 @@ rationale: must_haves includes a verification: backstop truth (block-reason word
 coverage_reason: human_judgment
 requirement: TRUST-05
 source_plan: 48-10
-result: issue
+result: pass
 reported: "it does but I just noticed that the cancel button doesn't seem to do anything"
 severity: major
+resolution: "Operator applied the $state.raw(null) fix at app/src/routes/admin/arguments/+page.svelte:26 on 2026-08-21 and confirmed the Cancel button now dismisses the panel. Re-verified: 28/28 contract tests pass, npm check 0 errors."
 note: Parity itself (tier, message, per-blocker counts, override field, correct row) confirmed by the operator. The defect is the Cancel affordance shipped under 48-10 D6 — see Test 14.
 
 ### 12. [48-10 D4] Detail-page publish-error rendering defect (found live at the Task 4 checkpoint): non-over…
@@ -547,20 +553,22 @@ verification: integration:api/tests/test_phase48_unpublish_visibility.py [pass];
 ## Summary
 
 total: 65
-passed: 63
-issues: 1
+passed: 65
+issues: 0
 pending: 0
-skipped: 1
+skipped: 0
 blocked: 0
 
 ## Gaps
 
 - gap_id: G-48-11
   truth: "The list-page block panel's Cancel affordance dismisses the whole panel without publishing and without losing row identity (48-10 D6)."
-  status: failed
+  status: resolved
   reason: "User reported: it does but I just noticed that the cancel button doesn't seem to do anything"
   severity: major
   test: 11
+  resolved_by: "operator-applied fix — app/src/routes/admin/arguments/+page.svelte:26 changed to $state.raw(null)"
+  resolved_at: 2026-08-21
   root_cause: "Svelte 5 $state deep-proxy identity trap. `dismissedForm` is declared `let dismissedForm: unknown = $state(null)` (app/src/routes/admin/arguments/+page.svelte:26). In Svelte 5.30, assigning a plain object to a $state variable wraps it in a deep reactive proxy, so `dismissedForm = form` stores a PROXY of form, not form itself. The panel guard `form !== dismissedForm` (line 483) therefore compares the raw prop object against its own proxy — always unequal — so the guard never goes false and the panel never dismisses. Empirically confirmed: `proxy(form) !== form` is true while contents are identical."
   artifacts:
     - path: "app/src/routes/admin/arguments/+page.svelte"

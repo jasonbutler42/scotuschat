@@ -1,12 +1,15 @@
+completed: 2026-08-21
 ---
 created: 2026-08-19T00:00:00.000Z
 title: Unpublishing an argument does not hide it from /cases or direct view
 area: api
 severity: major
 files:
+
   - api/services/admin_arguments.py (unpublish_argument, ~line 777)
   - api/services/cases.py (line 34)
   - api/services/arguments.py (line 50)
+
 ---
 
 ## Problem
@@ -45,6 +48,7 @@ one: the operator's only "take this down" control does not take anything down.
    both). Preserves the D-02 audit date, single-line change per query. Safer,
    and preferred — `status` is the explicit lifecycle enum and is already what
    every admin guard keys on since Phase 48-04.
+
 2. Clear `published_at` on unpublish and store the last-published date in a
    separate column. Larger change; requires a migration; loses nothing but
    costs more.
@@ -60,3 +64,25 @@ Checked `.planning/WINDOWS.md`, `.planning/todos/`, `.planning/debug/`, and
 `ROADMAP.md` — no existing entry. The `# hide unpublished arguments (BUG-01/D-02)`
 comment in `arguments.py:50` refers to the *original* filter being added, not to
 this interaction with the unpublish path.
+
+---
+
+## Resolution (2026-08-21)
+
+Closed by **Phase 48 plan 10 (Defect 2)**, verified at 48-UAT.md test 65 (48-10 D3).
+
+Root cause was as diagnosed: `unpublish_argument` deliberately retains `published_at`
+(D-02, so the Status card can still show the last publish date), so `published_at`
+alone stopped distinguishing PUBLISHED from UNPUBLISHED. The fix adds a
+`status == ArgumentStatusEnum.PUBLISHED` predicate **in addition to** the existing
+`published_at IS NOT NULL` gate — never in place of it — across all three public
+read paths:
+
+- `api/services/cases.py:41` (`get_cases`)
+- `api/services/arguments.py:65` (`get_argument_with_utterances`)
+- `api/services/speakers.py:154` (`get_argument_speakers`)
+
+`api/tests/test_published_gate.py` pins both predicates by exact substring, and
+`api/tests/test_phase48_unpublish_visibility.py` covers the behavior.
+
+Marked complete during Phase 48 close-out; the todo had gone stale in `pending/`.

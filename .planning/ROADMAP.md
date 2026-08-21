@@ -276,12 +276,25 @@ Plans:
 **UI hint**: yes
 
 Plans:
+**Wave 1**
 
 - [ ] 49-01-PLAN.md — Tracer: migration 0028 (`review_state` enum + participant provenance columns + `value_discrepancy`), real per-participant trust, and an end-to-end inline-confirm slice on `/admin/review` (wave 1)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 49-02-PLAN.md — Legacy fold (REVIEW-05): migration 0029 swaps the two `people` columns, every consumer re-points, and a structural test proves no parallel mechanism survives (wave 2)
 - [ ] 49-03-PLAN.md — Folded-todo cleanup: create-person popover side inheritance and selection, Status-card label fix, and a new `/admin/help` status × tier × review-state page (wave 2)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 49-04-PLAN.md — Authority ladder (`api/domain/authority.py`), the `value_discrepancy` record, the one gated writer all three existing writers delegate to, the four resolve actions, and the extended public-leak ban (wave 3)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 49-05-PLAN.md — Full `/admin/review` screen: tabs, tier × review-state × status filters, expandable rows with discrepancy detail, subnav entry, and the dashboard StatCard (wave 4)
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
 - [ ] 49-06-PLAN.md — Dev-only unresolved-speaker seeder, the D-32 live authority-conflict walkthrough, closure of 26-UAT Test 26 and 14-UAT Test 8, and requirement traceability (wave 5)
 
 ### Phase 50: Unified Import Path

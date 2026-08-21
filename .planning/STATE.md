@@ -4,16 +4,16 @@ milestone: v1.8
 milestone_name: Import & Provenance Re-model
 current_phase: 49
 current_phase_name: Review Model
-status: Phase 48 shipped; operator sign-off recorded — ready for Phase 49 discuss
-stopped_at: Phase 49 context gathered
-last_updated: "2026-08-21T18:33:05.260Z"
+status: Phase 49 planned — 6 plans across 5 waves; ready to execute
+stopped_at: Phase 49 planned (research + plans + checker verification complete)
+last_updated: "2026-08-21T20:12:08.012Z"
 last_activity: 2026-08-21
-last_activity_desc: Phase 48 Plan 09 closed — live reseed + zero-drift proof (4 scanned, 0 changed, x2), full-suite gate (1209 passed / 5 xfailed / 0 failed / 0 skipped), a genuine Status History display-ordering bug found via this plan's own live evidence and fixed (commit 1b7564a78), derive_tier rule 3 confirmed by the operator, and operator sign-off recorded. Phase 48 complete; transitioned to Phase 49.
-state_head: 9b50a6281fd9a6f5183d058880b06afec5041252
+last_activity_desc: Phase 49 planned — research (49-RESEARCH.md), validation strategy, pattern map (21/21 analogs), and 6 PLAN.md files across 5 waves. Three research open questions were put to the operator and locked into CONTEXT.md as D-31a (one authority-gated writer; all three existing writers delegate), D-31b (ladder return shape at planner discretion but no bare boolean), and D-33a (dev-only direct-insert for the unresolved-speaker fixture). Gates: 5/5 requirements, 34/34 decisions, plan-checker VERIFICATION PASSED. Two migrations (0028 tracer, 0029 legacy fold) so people columns never drop ahead of their consumers.
+state_head: 61b24a7096c5fa5012a2320396b6a55979da372c
 progress:
   total_phases: 5
   completed_phases: 2
-  total_plans: 16
+  total_plans: 22
   completed_plans: 16
   percent: 40
 ---
@@ -25,15 +25,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-18 — Phase 47 complete; corpus-first / PDF-deferred scope decision recorded)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** Phase 49 — review-model (not yet discussed/planned)
+**Current focus:** Phase 49 — review-model (planned; ready to execute)
 
 ## Current Position
 
-Phase: 49 — Review Model
-Phase: 49 (review-model) — NOT STARTED (no context/plan yet)
-Last activity: 2026-08-21 — Phase 48 complete, transitioned to Phase 49
+Phase: 49 (Review Model) — READY TO EXECUTE
+Last activity: 2026-08-21 — Phase 49 planned: 6 plans, 5 waves, checker passed
 
-**Next action:** `/gsd-discuss-phase 49` (Phase 49 — Review Model — has no context session yet)
+**Next action:** `/gsd-execute-phase 49` (6 plans across 5 waves; wave 1 and wave 2's 49-02 each open with a one-way-door checkpoint)
 
 Phase 48 close-out notes (2026-08-21):
 
@@ -257,9 +256,9 @@ at close.
 
 ## Session Continuity
 
-Last session: 2026-08-21T18:33:04.807Z
-Stopped at: Phase 49 context gathered
-Resume file: .planning/phases/49-review-model/49-CONTEXT.md
+Last session: 2026-08-21T19:17:48.797Z
+Stopped at: Phase 49 UI-SPEC approved
+Resume file: .planning/phases/49-review-model/49-UI-SPEC.md
 
 ## Operator Next Steps
 

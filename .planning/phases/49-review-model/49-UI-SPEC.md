@@ -1,7 +1,7 @@
 ---
 phase: 49
 slug: review-model
-status: draft
+status: approved
 shadcn_initialized: false
 preset: none
 created: 2026-08-21
@@ -166,9 +166,9 @@ Top-level row columns, exact order: **Tier badge + Status badge | Case name | Do
 
 Top-level row columns, exact order: **review_state badge | Full name | Provenance note | Actions.**
 
-- No tier badge, no status badge (Person carries neither) and no trust-tier filter (see filter row above) — this is a direct, reasoned extension of D-02's own logic ("a person spans many arguments... the two entity shapes need different columns"), applied here to *filters* as well as columns, since `trust_tier`/`status` are argument-level concepts that have no meaning on a bare `Person` row (48 D-10's no-fan-out rule). **This is this spec's own inference, not a verbatim CONTEXT.md decision — flagged for planner confirmation rather than silently assumed.**
+- No tier badge, no status badge (Person carries neither) and no trust-tier filter (see filter row above) — this is a direct, reasoned extension of D-02's own logic ("a person spans many arguments... the two entity shapes need different columns"), applied here to *filters* as well as columns, since `trust_tier`/`status` are argument-level concepts that have no meaning on a bare `Person` row (48 D-10's no-fan-out rule). **LOCKED — confirmed by the operator during the step 9.5 probe pass (2026-08-21); no longer an open inference.**
 - No expand/collapse — a `Person` row has nothing to fan out to (no constituents-of-a-constituent); the row is already a single item, matching D-02's flat-columns reasoning.
-- Sort order: `needs_review` first, then `unreviewed`, then alphabetical by full name (a reasoned default extending D-03's "worst state first" principle to a screen with no tier axis — same flag as above: this spec's inference, confirm at planning time if it needs to change).
+- Sort order: `needs_review` first, then `unreviewed`, then alphabetical by full name — extends D-03's "worst state first" principle to a screen with no tier axis. **LOCKED — confirmed by the operator during the step 9.5 probe pass (2026-08-21).**
 - "Provenance note" cell: a short, non-interactive line reading the row's `source`/`method` (e.g. "Corpus · direct") in 14px muted text — **not** wrapped in `CopyableExtractedValue` (that component's copy-to-clipboard affordance has no purpose here; there is nothing to paste this value into) — plain `<span>` only.
 - Actions: **Confirm**, **Edit** (deep-links to `/admin/people/{id}`), **Re-flag for review** (when already reviewed) — no "Confirm as unattributable" on this tab (D-17 is specifically about the unresolved-speaker floor, an `ArgumentParticipant` concept; a bare `Person` row has no analogous "unattributable" state).
 
@@ -188,21 +188,129 @@ When a constituent or person row carries one or more open discrepancies, render 
 - The admin dashboard (`admin/+page.svelte`) gains a fifth `StatCard` (title "Review queue"), using the exact `StatCard` snippet-body pattern already shown for "Arguments"/"People"/"Utterances"/"Pipeline runs" — a large count (`formatCount`, N/A-on-failure) plus one link ("{N} items need review →", accent, 44px) to `/admin/review`. Backed by a dedicated `COUNT` query (this spec's discretion-lean, matching `49-CONTEXT.md`'s own lean) — never derived from fetching the unbounded queue list just to produce a number.
 
 ---
-
 ## UI Considerations
 
-Applicable state considerations resolved: 6 covered, 1 backstop, 1 flagged-as-inference (of 8 taxonomy categories — this screen's elements classify as `list-collection` (the queue table, both tabs) + `form`/`interactive-control` (filters, Confirm/Edit/Re-flag actions) + `nav` (tabs, AdminSubNav link); `media` does not apply).
+> Produced by the `ui-consideration-probe` state-coverage pass (workflow step 9.5), run
+> AFTER checker approval over the 10 described surfaces below. **Element kinds were
+> hand-authored, not heuristic** — the prose classifier tripped `nav` on the queue tables
+> and `list-collection` on the discrepancy lines, button row, and empty-state card, while
+> missing `interactive-control` on most surfaces; the corrected classification was
+> confirmed by the operator before resolution.
 
-| Category | Element(s) | Status | Resolution / Reason |
-|----------|------------|--------|---------------------|
-| empty | Queue table, both tabs (list-collection) | ✅ covered | "All caught up" heading + tab-specific body copy, reusing the Dashboard's own empty-state heading and the Arguments page's bordered-card empty-state shape — see Copywriting Contract and Screen Contract §4. |
-| loading | Filter change / tab switch (interactive-control, nav) | ✅ covered (by precedent) | Every existing filter/tab control on this codebase (`selectStatus`, `switchTab`, `togglePillFilter`, `handleTenureGapsToggle`) is a plain `goto()` full-page navigation with no client-side loading indicator — this screen matches that precedent exactly rather than introducing a new spinner pattern only here. |
-| error | Page load failure (list-collection) | ✅ covered (by precedent, flagged) | Matches the existing `admin/arguments`/`admin/people` load-failure precedent — fail silently to an empty list, log server-side only. Deliberately not treated as a gap this phase must close; flagged in the Copywriting Contract's Error state row so it is a recorded, honest decision rather than an unnoticed weak point. |
-| populated | Queue table, both tabs (list-collection) | ✅ covered | Screen Contract §"Arguments tab"/"People tab" table shapes above fully specify column order, sort order, and per-row content for the normal populated case. |
-| partial | Person row (no `trust_tier`/`status`); Argument row with 0 flagged constituents but a sub-TRUSTED tier (form/list-collection) | ✅ covered | Both partial states are named explicitly: the People tab's filter row hides (not disables) the trust-tier `<select>` since it has no meaning for a `Person`; the Attention-count copy rule explicitly handles the "0 constituents, tier-only reason for inclusion" case without a false "0 need review" claim. |
-| overflow | Case name / person full name, long values (static-content within list-collection) | ✅ covered (by precedent) | Matches every existing admin table's cell treatment (`admin/arguments/+page.svelte`, `admin/people/+page.svelte`) — no `white-space: nowrap` on the name cell, natural wrap, `white-space: nowrap` only on the short docket/date/badge cells. No new overflow behavior needed. |
-| zero-one-many | Attention-count text; discrepancy count | 🧪 backstop | The Copywriting Contract locks singular/plural wording for the count ("{N} constituent{s} need review") but no fixture with exactly 1 vs exactly many flagged constituents on one argument exists yet in the corpus fixtures — recommend a held-out test (or the D-33 unresolved-speaker fixture, extended) asserting both the singular and plural strings render correctly, not just asserted from this spec. |
-| long-text | Discrepancy incoming/existing value lines (static-content) | 🧪 backstop | A `last_name`/`name_suffix` or `full_name` discrepancy could carry an unusually long incoming value (e.g. a malformed corpus string). No wrapping/truncation rule is prescribed beyond "plain text, natural wrap" (Screen Contract's Discrepancy detail) — recommend the same treatment Phase 44 gave the Raw Label badge (wrap, never truncate, since truncating a discrepancy value could hide the very disagreement the operator needs to see) but this needs an explicit test at verify time, not just this spec's say-so. |
+**Coverage: 60 applicable considerations across 10 surfaces — 56 resolved (52 explicit, 4 backstop), 4 unresolved.**
+
+### Surfaces and element kinds
+
+| id | Surface | Element kinds | Considerations raised |
+|----|---------|---------------|----------------------|
+| E1 | Arguments tab queue table | `list-collection`, `interactive-control` | 8 |
+| E2 | People tab queue table | `list-collection`, `interactive-control` | 8 |
+| E3 | Filter row (status / tier / review-state) | `form`, `interactive-control`, `static-content` | 6 |
+| E4 | Tabs + AdminSubNav "Review" link | `nav`, `interactive-control` | 4 |
+| E5 | Expanded constituent blocks | `list-collection`, `interactive-control`, `static-content` | 8 |
+| E6 | Discrepancy detail lines | `static-content`, `list-collection` | 8 |
+| E7 | Row action buttons | `interactive-control`, `static-content` | 4 |
+| E8 | Dashboard "Review queue" StatCard | `list-collection`, `static-content`, `interactive-control` | 8 |
+| E9 | Empty-state card | `static-content` | 2 |
+| E10 | Active-filter indicator | `static-content`, `interactive-control` | 4 |
+
+### ⚠ Unresolved — planner must treat as assumption
+
+These are genuine gaps the probe surfaced that this spec does not answer. Each is a real
+state the implementation will hit. The planner must either resolve it in a task or record
+it as an explicit assumption — it must not be treated as specified.
+
+- **⚠ unresolved — planner must treat as assumption** · `empty` (Empty / no data) on **Expanded constituent blocks** (E5)
+  An argument queued SOLELY because its `trust_tier` is below TRUSTED (D-06's published-but-degraded leg) has zero flagged constituents, so the expanded panel has no constituent blocks to render. The spec does not say what that expanded panel shows — nor whether the "Show details" toggle should render on such a row at all.
+- **⚠ unresolved — planner must treat as assumption** · `overflow` (Overflow / truncation) on **Row action buttons** (E7)
+  All four actions (Confirm / Confirm as unattributable / Edit / Re-flag for review) can co-render in a single dense table cell — an unresolved-speaker constituent that has already been confirmed hits exactly that case. `display: flex; gap: 8px` with 36px buttons is specified, but no wrap or narrow-viewport behavior is, so the action row can overflow the 860px container.
+- **⚠ unresolved — planner must treat as assumption** · `empty` (Empty / no data) on **Dashboard "Review queue" StatCard** (E8)
+  At N=0 the StatCard link renders "0 items need review →", inviting the operator into an empty queue. The spec defines no zero-state variant — whether to suppress the link, or render a non-link "No items need review" — so the dashboard advertises work that does not exist.
+- **⚠ unresolved — planner must treat as assumption** · `zero-one-many` (Zero / one / many) on **Dashboard "Review queue" StatCard** (E8)
+  The link template "{N} items need review →" renders "1 items need review" at N=1. Singular/plural handling is locked for the per-row attention count but NOT for this StatCard link.
+
+### 🧪 Backstop — resolved, but verified only by an explicit test
+
+Each carries `verification: backstop`: a statement the spec asserts but no shipped fixture
+exercises. At verify time, one with no wired evidence routes to
+`insufficient_spec → human_needed` rather than silently passing.
+
+- `zero-one-many` on **Arguments tab queue table** (E1) — { statement: "The Copywriting Contract locks the plural wording '{N} constituent{s} need review', but no corpus fixture with exactly 1 versus many flagged constituents on a single argument exists yet. Backstop: a held-out test asserting both the singular and the plural string render correctly.", verification: backstop }
+- `zero-one-many` on **Expanded constituent blocks** (E5) — { statement: "A single argument may expand to one constituent block or to many; block spacing is specified as 16px (`md`) but no fixture exercises the one-block versus many-block layout. Backstop: the same held-out test as E1's count assertion, extended to the expanded-panel layout.", verification: backstop }
+- `partial` on **Discrepancy detail lines** (E6) — { statement: "A discrepancy where either side is absent — a newly-populated field has no existing value, or a cleared field has no incoming value — would render as `existing '' — incoming '…'`. The line template assumes both sides are present. Backstop: a test asserting the one-sided-discrepancy rendering is legible and does not print an empty pair of quotes.", verification: backstop }
+- `long-text` on **Discrepancy detail lines** (E6) — { statement: "A `last_name` / `name_suffix` / `full_name` discrepancy can carry an unusually long incoming value (e.g. a malformed corpus string). The wrap-never-truncate rule above is prescribed but untested. Backstop: a test asserting a long discrepancy value wraps within the expanded panel without breaking the row layout.", verification: backstop }
+
+### ✅ Resolved — explicit
+
+Concrete truths, grouped where one decision covers several surfaces. Empty-state and
+error-state COPY is owned by `## Copywriting Contract` and referenced here, not restated.
+
+- **`empty`** on Arguments tab queue table (E1)
+  "All caught up" heading plus tab-specific body "No arguments currently need review." in the bordered empty-state card (`#1e293b` / 1px `#334155` / 8px radius / 24px padding), reusing the Dashboard's own empty-state heading verbatim. Filtered-empty renders the same copy — no separate no-results string.
+- **`loading`** on Arguments tab queue table (E1), People tab queue table (E2), Filter row (status / tier / review-state) (E3), Tabs + AdminSubNav "Review" link (E4), Expanded constituent blocks (E5), Discrepancy detail lines (E6), Row action buttons (E7), Dashboard "Review queue" StatCard (E8), Active-filter indicator (E10)
+  No client-side loading indicator anywhere on this screen. Every filter change, tab switch, and row action is a full-page `goto()` navigation; SvelteKit's own navigation state is the only in-flight signal — matches the `selectStatus` / `switchTab` / `togglePillFilter` / `handleTenureGapsToggle` precedent verbatim (Screen Contract §2).
+- **`error`** on Arguments tab queue table (E1), People tab queue table (E2), Filter row (status / tier / review-state) (E3), Tabs + AdminSubNav "Review" link (E4), Expanded constituent blocks (E5), Discrepancy detail lines (E6), Row action buttons (E7), Active-filter indicator (E10)
+  Inherits the existing `admin/arguments/+page.server.ts` / `admin/people/+page.server.ts` load-failure precedent: a failed FastAPI fetch is logged server-side (`console.error`) and the page renders an empty list. ACCEPTED WEAKNESS, recorded rather than overlooked — a real fetch failure is visually indistinguishable from a genuinely empty queue (Copywriting Contract, Error state row).
+- **`populated`** on Arguments tab queue table (E1)
+  Screen Contract §"Arguments tab" fully specifies column order (Tier+Status badge | Case name | Docket | Argued date | Needs-attention | Expand), server-side sort (worst tier first, then oldest `argued_date` within tier), and per-row content.
+- **`partial`** on Arguments tab queue table (E1)
+  An argument with 0 flagged constituents but a sub-TRUSTED tier (D-06's published-but-degraded leg) renders the tier badge and NO attention-count text at all, so the row never claims "0 constituents need review" while still being queued for a real reason.
+- **`overflow`** on Arguments tab queue table (E1), People tab queue table (E2), Expanded constituent blocks (E5)
+  Name/text cells wrap naturally (no `white-space: nowrap`); `nowrap` is applied only to the short docket / date / badge cells — matches every existing admin table's cell treatment.
+- **`long-text`** on Arguments tab queue table (E1), People tab queue table (E2), Expanded constituent blocks (E5)
+  Long values wrap and are never truncated — the same treatment Phase 44 gave the Raw Label badge. Truncation is specifically rejected here because it could hide the very content the operator is being asked to review.
+- **`empty`** on People tab queue table (E2)
+  "All caught up" heading plus "No people currently need review." in the same bordered empty-state card. Filtered-empty reuses the same copy.
+- **`populated`** on People tab queue table (E2)
+  Screen Contract §"People tab" specifies column order (review_state badge | Full name | Provenance note | Actions) and sort (needs_review, then unreviewed, then alphabetical by full name) — CONFIRMED this session as a locked decision, no longer an inference.
+- **`partial`** on People tab queue table (E2)
+  A `Person` row carries neither `trust_tier` nor `status`, so the People tab omits both badge columns and HIDES (not disables) the trust-tier select, and offers no expand/collapse — a Person row has nothing to fan out to. CONFIRMED this session as locked, per Phase 48 D-10's no-fan-out rule.
+- **`zero-one-many`** on People tab queue table (E2)
+  A People row is always exactly one item — there is no per-row count copy on this tab, so no singular/plural surface exists. Zero items is the empty state above.
+- **`empty`** on Filter row (status / tier / review-state) (E3)
+  The unfilled state is all three controls at their default option — the "All" status segment active, "All tiers", and "All review states" — and the active-filter indicator renders nothing.
+- **`partial`** on Filter row (status / tier / review-state) (E3)
+  Any subset of the three filters may be set. The active-filter indicator names whichever are active, e.g. "Showing: Uncertain tier, Needs review · Clear filter", reusing the `admin/arguments/+page.svelte:206-226` pattern. Filters compose as URL query params (`?status=&tier=&review_state=`) so partial selections are back-button-safe and linkable.
+- **`overflow`** on Filter row (status / tier / review-state) (E3)
+  The filter row is `display: flex; flex-wrap: wrap; gap: 16px; align-items: center`, so controls wrap onto a second line rather than overflowing the 860px container (Screen Contract §2).
+- **`long-text`** on Filter row (status / tier / review-state) (E3)
+  All filter labels and option strings are fixed, short values enumerated in the Copywriting Contract — no dynamic text enters this surface.
+- **`overflow`** on Tabs + AdminSubNav "Review" link (E4)
+  `AdminSubNav.svelte` gains exactly one link ("Review", between "Arguments" and "People Editor") with styling identical to its siblings; the subnav's existing wrap behavior is unchanged and not re-litigated. The Arguments|People tab pair reuses the People page header's existing flex-wrap treatment.
+- **`long-text`** on Tabs + AdminSubNav "Review" link (E4)
+  "Review" is a fixed six-character label; the tab labels "Arguments" and "People" are likewise fixed.
+- **`populated`** on Expanded constituent blocks (E5)
+  One block per flagged constituent, each carrying: constituent identity (person full name, or "Unresolved speaker"), the Bench/Advocate side-role hint, the `review_state` badge, an optional Discrepancy badge, and the fixed-order action row.
+- **`partial`** on Expanded constituent blocks (E5)
+  A constituent with `person_id IS NULL` renders "Unresolved speaker" as its identity and gains the "Confirm as unattributable" action in muted/secondary styling (D-17), distinct from the accent "Confirm".
+- **`empty`** on Discrepancy detail lines (E6)
+  When a row carries no open (`resolved_at IS NULL`) discrepancy, neither the Discrepancy badge nor any discrepancy line renders — the surface is absent, not empty.
+- **`populated`** on Discrepancy detail lines (E6)
+  One line per open discrepancy, formatted `{field}: existing "{existing_value}" ({existing_source}/{existing_method}) — incoming "{incoming_value}" ({incoming_source}/{incoming_method})`, at 14px with primary text for values and muted text for field name and parentheticals.
+- **`overflow`** on Discrepancy detail lines (E6)
+  Discrepancy values wrap and are never truncated or clipped — truncating a discrepancy value could hide the exact disagreement the operator is being asked to adjudicate, so `text-overflow: ellipsis` is specifically forbidden on this surface.
+- **`zero-one-many`** on Discrepancy detail lines (E6)
+  The badge label is the singular "Discrepancy" regardless of count; the expanded detail carries one line per open discrepancy and states the count and field(s), so the singular badge never has to agree with a number.
+- **`long-text`** on Row action buttons (E7)
+  Every action label is a fixed string from the Copywriting Contract ("Confirm", "Confirm as unattributable", "Edit", "Re-flag for review") — no dynamic content enters a button label.
+- **`error`** on Dashboard "Review queue" StatCard (E8)
+  `formatCount` renders "N/A" when the backing COUNT query fails, per the existing StatCard convention already shipped for Arguments / People / Utterances / Pipeline runs — unchanged by this phase.
+- **`populated`** on Dashboard "Review queue" StatCard (E8)
+  A large count via `formatCount` plus one accent 44px link to `/admin/review`, using the exact StatCard snippet-body pattern of the four existing cards. Backed by a dedicated COUNT query — never by fetching the unbounded queue list to derive a number.
+- **`partial`** on Dashboard "Review queue" StatCard (E8)
+  The N/A-on-failure path above IS the partial state: the card renders its title and link even when the count is unavailable.
+- **`overflow`** on Dashboard "Review queue" StatCard (E8)
+  Count and link copy are short and fixed-shape; StatCard's existing grid layout (32px gap) absorbs the fifth card without change.
+- **`long-text`** on Dashboard "Review queue" StatCard (E8)
+  "Review queue" is a fixed title; the only dynamic value is a formatted integer.
+- **`overflow`** on Empty-state card (E9)
+  The empty-state card is a fixed-height centered bordered card with two short fixed strings; it cannot overflow. Shape reused verbatim from `admin/arguments/+page.svelte:230-248`.
+- **`long-text`** on Empty-state card (E9)
+  Both the heading ("All caught up") and the four possible body strings are fixed literals enumerated in the Copywriting Contract.
+- **`overflow`** on Active-filter indicator (E10)
+  The indicator names at most three active filters on one line and wraps naturally; "Clear filter" stays with the line. Pattern and copy shape reused from `admin/arguments/+page.svelte:206-226`.
+- **`long-text`** on Active-filter indicator (E10)
+  Filter names substituted into the line come from the fixed option sets in the Copywriting Contract — the longest is "All review states", so the line length is bounded.
 
 ---
 
@@ -219,11 +327,15 @@ Not applicable — no shadcn, no component registry of any kind is in use by thi
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
-- [ ] Dimension 5 Spacing: PASS
-- [ ] Dimension 6 Registry Safety: PASS
+- [x] Dimension 1 Copywriting: PASS
+- [x] Dimension 2 Visuals: PASS
+- [x] Dimension 3 Color: PASS
+- [x] Dimension 4 Typography: PASS
+- [x] Dimension 5 Spacing: PASS
+- [x] Dimension 6 Registry Safety: PASS
 
-**Approval:** pending
+**Approval:** VERIFIED by `gsd-ui-checker` — 6/6 dimensions PASS, 0 BLOCK, 0 FLAG.
+
+**State coverage:** `ui-consideration-probe` run post-verification over 10 surfaces — 60 applicable
+considerations, 56 resolved (52 explicit, 4 backstop), 4 unresolved and recorded as planner
+assumptions. See `## UI Considerations`.

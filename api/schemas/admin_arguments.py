@@ -59,7 +59,8 @@ class StatusLogEntry(BaseModel):
     """One ArgumentStatusLog row (Phase 26, T-26-03).
 
     Surfaced on the argument edit page's Status history list, ordered
-    oldest-first by get_argument_detail's query (created_at asc, id asc tiebreak).
+    oldest-first by get_argument_detail's query (ArgumentStatusLog.id.asc() —
+    id, not created_at, is the sort key; see that function's own comment for why).
 
     override_reason / trust_tier_at_transition (Phase 48 D-15/D-20): both
     default to None because every non-override transition (candidate-at-birth,

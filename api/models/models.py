@@ -153,17 +153,27 @@ class Person(Base):
     death_date = Column(Date, nullable=True)
     # Phase 29 — migration 0017: Oyez/ConvoKit external speaker ID (historical corpus import)
     oyez_speaker_id = Column(String(100), nullable=True)
-    # Phase 38 — migration 0022: durable review flag + independently-persisted
-    # extraction provenance for the Full Name vs. name-parts authority rework
-    # (D-04, D-10-D-12, D-14-D-18). name_needs_review surfaces the People
-    # directory's `Name review` attention filter for any full_name this
-    # migration (or later pipeline/import extraction) could not confidently
-    # split into structured parts. name_extraction_metadata persists
-    # independently of operator-edited name parts — an operator edit never
-    # clears or rewrites it, and it is never used to overwrite an existing
-    # operator value.
-    name_needs_review = Column(Boolean, nullable=False, server_default=false())
-    name_extraction_metadata = Column(JSONB, nullable=True)
+    # Phase 49 — migration 0029 (D-08, D-09, D-12): unified review record,
+    # folding the Phase 38 name_needs_review/name_extraction_metadata pair
+    # (migration 0022) into the shared record used across the review model.
+    # review_state is the SAME four-value `review_state` PG enum type
+    # `ArgumentParticipant.review_state` uses (D-09 — one vocabulary, not
+    # two lookalikes) — NOT NULL with server_default='unreviewed', so every
+    # row that existed before migration 0029 reads UNREVIEWED with no
+    # separate backfill beyond the one deterministic legacy mapping
+    # migration 0029 performs. provenance_metadata is a durable,
+    # independently-persisted extraction/migration audit trail — an
+    # operator edit (D-11) never clears, rewrites, or appends to it (D-12);
+    # only a fresh extraction/migration pass ever replaces it. There is no
+    # compatibility alias for either legacy name — REVIEW-05 removes the
+    # parallel mechanism outright.
+    review_state = Column(
+        SAEnum(ReviewState, name="review_state", values_callable=lambda e: [x.value for x in e]),
+        nullable=False,
+        server_default="unreviewed",
+        default=ReviewState.UNREVIEWED,
+    )
+    provenance_metadata = Column(JSONB, nullable=True)
 
 
 # ---------------------------------------------------------------------------

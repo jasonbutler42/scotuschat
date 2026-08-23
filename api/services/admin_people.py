@@ -36,6 +36,7 @@ from api.models.models import (
     CaseAppearance,
     CourtTenure,
     Person,
+    ReviewState,
     Role,
     SideEnum,
     SpeakerAlias,
@@ -63,14 +64,15 @@ def _missing_fields(person: Person, tenure_count: int) -> list[str]:
     Bench rows (is_justice is True, D-06): the same four, plus "birthdate"
     when birthdate is None, plus "no tenures" when tenure_count == 0.
 
-    Phase 38 addition (D-12): "name review" is appended for EITHER tab
-    whenever person.name_needs_review is true — unlike every other label
-    here it does not indicate a NULL field, it flags an ambiguous legacy
-    full_name this row's structured parts could not be confidently derived
-    from (migration 0022 or later extraction). Reusing this same list/pill
-    mechanism (rather than a new UI surface) is the explicit Phase 38 D-12/
-    D-13 decision: the existing People-directory attention pattern is tried
-    first instead of a new cross-feature dashboard queue.
+    "name review" is appended for EITHER tab whenever person.review_state is
+    NEEDS_REVIEW (Phase 49 D-08, D-11 — carrying Phase 38 D-12 forward
+    unchanged) — unlike every other label here it does not indicate a NULL
+    field, it flags an ambiguous legacy full_name this row's structured
+    parts could not be confidently derived from (migration 0022/0029 or
+    later extraction). Reusing this same list/pill mechanism (rather than a
+    new UI surface) is the explicit Phase 38 D-12/D-13 decision: the
+    existing People-directory attention pattern is tried first instead of a
+    new cross-feature dashboard queue.
 
     tenure_count is a pre-fetched count (built once by the caller across all
     rows in a single query) — this function never issues its own tenure
@@ -94,7 +96,7 @@ def _missing_fields(person: Person, tenure_count: int) -> list[str]:
             missing.append("birthdate")
         if tenure_count == 0:
             missing.append("no tenures")
-    if person.name_needs_review:
+    if person.review_state == ReviewState.NEEDS_REVIEW:
         missing.append("name review")
     return missing
 
@@ -238,10 +240,13 @@ async def list_people(
         "bio": Person.bio_text.is_(None),
         "birthdate": Person.birthdate.is_(None),
         "no tenures": not_(exists().where(CourtTenure.person_id == Person.id)),
-        # Phase 38 (D-12) — fixed, non-interpolated predicate for the "Name
-        # review" filter pill; applies to either tab (unlike "birthdate"/
-        # "no tenures", which are bench-only in practice via _missing_fields).
-        "name review": Person.name_needs_review.is_(True),
+        # Phase 49 (D-08, D-11) — fixed, non-interpolated predicate for the
+        # "Name review" filter pill, re-pointed from the Phase 38 boolean
+        # to the unified review_state enum; applies to either tab (unlike
+        # "birthdate"/"no tenures", which are bench-only in practice via
+        # _missing_fields). The dictionary key and operator-visible label
+        # stay the literal string "name review" — unchanged (D-08).
+        "name review": Person.review_state == ReviewState.NEEDS_REVIEW,
     }
     if missing in missing_filters:
         q = q.where(missing_filters[missing])
@@ -336,8 +341,8 @@ async def list_people(
                 ),
                 "tenure_coverage": _tenure_coverage(person_tenures),
                 "has_tenure_gap": person.id in gap_person_ids,
-                # Phase 38 addition — migration 0022 (D-12)
-                "name_needs_review": person.name_needs_review,
+                # Phase 49 addition — migration 0029 (D-08, D-11)
+                "review_state": person.review_state.value,
             }
         )
     return rows
@@ -427,14 +432,14 @@ async def get_person_detail(db: AsyncSession, person_id: int) -> dict | None:
         # foreign key and its display name have been dropped entirely (D-10) —
         # role now lives on argument_participants, not on Person.
         "birthdate": person.birthdate.isoformat() if person.birthdate else None,
-        # Phase 38 additions — migration 0022 (D-12, D-14, D-15, D-18): must be
+        # Phase 49 additions — migration 0029 (D-08, D-11, D-12): must be
         # explicit so PersonDetail(**p) in the router does not silently
         # default them on reload (same Pitfall 2 discipline as the fields
-        # above). name_extraction_metadata is returned as-is (already a plain
-        # dict from JSONB) — PersonDetail's typed NameExtractionMetadata field
-        # validates/coerces it at the response boundary.
-        "name_needs_review": person.name_needs_review,
-        "name_extraction_metadata": person.name_extraction_metadata,
+        # above). provenance_metadata is returned as-is (already a plain
+        # dict from JSONB) — PersonDetail's typed PersonProvenanceMetadata
+        # field validates/coerces it at the response boundary.
+        "review_state": person.review_state.value,
+        "provenance_metadata": person.provenance_metadata,
         # Phase 39 addition — migration 0023 (PUB-04): must be explicit, same
         # Pitfall 2 discipline as birthdate above.
         "death_date": person.death_date.isoformat() if person.death_date else None,
@@ -471,12 +476,13 @@ async def update_person(
     last (PersonNameError -> 422, D-09), and derives the canonical
     `full_name` — assigned atomically alongside the four structured columns
     in the same in-memory Person object, committed together with everything
-    else below. A successful authoritative name edit also clears
-    `name_needs_review` (D-12) — the operator has just confirmed/corrected
-    the name, so the legacy ambiguity this flag exists for no longer
-    applies — but `name_extraction_metadata` is deliberately left untouched:
-    it is an independent audit trail of a prior extraction/migration
-    decision (D-15), not something an edit erases.
+    else below. A successful authoritative name edit sets
+    `review_state = OPERATOR_EDITED` (Phase 49 D-11 — an edit always means
+    *edited*; no value-diffing, no normalization guesswork) — but
+    `provenance_metadata` is deliberately left untouched: it is an
+    independent audit trail of a prior extraction/migration decision
+    (D-12, carrying Phase 38 D-15 forward unchanged), not something an
+    edit erases.
     """
     result = await db.execute(select(Person).where(Person.id == person_id))
     person = result.scalar_one_or_none()
@@ -539,10 +545,11 @@ async def update_person(
         person.last_name = prepared.last_name
         person.name_suffix = prepared.name_suffix
         person.full_name = prepared.full_name
-        # An authoritative edit resolves whatever ambiguity flagged this row
-        # for review (D-12) — but never touches name_extraction_metadata,
-        # which stays as an independent, durable audit trail (D-15).
-        person.name_needs_review = False
+        # An authoritative edit always means *edited* (D-11) — no
+        # value-diffing, no normalization guesswork — but never touches
+        # provenance_metadata, which stays as an independent, durable audit
+        # trail (D-12, carrying Phase 38 D-15 forward unchanged).
+        person.review_state = ReviewState.OPERATOR_EDITED
 
     # Phase 22 — migration 0013: appointment writes removed from Person (PEDIT-10)
     # Phase 27 addition — migration 0016 (PEDIT-02): normalize empty string to
@@ -601,8 +608,8 @@ async def create_person(db: AsyncSession, body: PersonCreateRequest) -> dict:
     PersonCreateRequest, so no additional server-side guard is needed for it.
 
     A freshly operator-created person is never ambiguous by construction —
-    name_needs_review defaults false and name_extraction_metadata defaults
-    None (column defaults), matching every other never-migrated row.
+    review_state defaults to `unreviewed` and provenance_metadata defaults
+    to NULL (column defaults), matching every other never-migrated row.
     bio_text, photo_url, and birthdate remain unset at create (column
     defaults / None), and no tenure rows are created — those are filled in
     later via the existing PATCH /people/{id} update flow (D-08).

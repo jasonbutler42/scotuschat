@@ -94,21 +94,22 @@ class PersonListItem(BaseModel):
     missing: list of field labels that are NULL on this person record.
     Possible values: "first name", "last name", "photo", "bio", "birthdate",
     "no tenures", "name review" — the exact vocabulary _missing_fields
-    produces (see D-04, D-06). "name review" (Phase 38, D-12) is included
-    for ANY person (bench or advocate) whose `name_needs_review` flag is set
-    — unlike the other labels it does not indicate a NULL field, but an
-    ambiguous legacy `full_name` this row's structured parts could not be
-    confidently derived from; it shares the same click-to-filter allow-list
-    mechanism (T-27-03 vocabulary) rather than introducing a new UI pattern.
+    produces (see D-04, D-06). "name review" is included for ANY person
+    (bench or advocate) whose `review_state` is `needs_review` (Phase 49
+    D-08, carrying Phase 38 D-12 forward unchanged) — unlike the other
+    labels it does not indicate a NULL field, but an ambiguous legacy
+    `full_name` this row's structured parts could not be confidently
+    derived from; it shares the same click-to-filter allow-list mechanism
+    (T-27-03 vocabulary) rather than introducing a new UI pattern.
     Phase 18 addition: is_justice for directory badge (D-10 — migration 0010).
     Phase 27 (D-10): role_id/role_name removed — the list no longer shows a
     Role column (person-level Role is superseded; role now lives on
     argument_participants). Phase 27 additions: argument_count (Advocate-tab
     column, PDIR-04), tenure_coverage and has_tenure_gap (Bench-tab display
-    string and gap indicator, PDIR-03). Phase 38 addition: name_needs_review
-    (D-12) — a typed boolean indicator mirroring the "name review" entry in
-    `missing`, for a consumer that prefers an explicit field over array
-    membership.
+    string and gap indicator, PDIR-03). Phase 49 addition: review_state
+    (D-08, D-11) — the unified review status string, mirroring the "name
+    review" entry in `missing` for a consumer that prefers an explicit
+    field over array membership.
     """
 
     id: int
@@ -120,25 +121,28 @@ class PersonListItem(BaseModel):
     argument_count: Optional[int] = None
     tenure_coverage: Optional[str] = None
     has_tenure_gap: bool = False
-    # Phase 38 addition — migration 0022 (D-12)
-    name_needs_review: bool = False
+    # Phase 49 addition — migration 0029 (D-08, D-11), replacing Phase 38's
+    # name_needs_review boolean
+    review_state: str = "unreviewed"
 
     model_config = {"from_attributes": True}
 
 
-class NameExtractionMetadata(BaseModel):
-    """Typed provenance envelope for `Person.name_extraction_metadata` (D-14, D-18).
+class PersonProvenanceMetadata(BaseModel):
+    """Typed provenance envelope for `Person.provenance_metadata` (Phase 49
+    D-08, D-12; carrying Phase 38 D-14/D-18 forward unchanged).
 
-    Mirrors the exact JSONB shape written by migration 0022's legacy backfill
-    (`source`, `raw`, `confidence`, `reason`, `auto_applied` — see
-    alembic/versions/0022_person_name_authority.py) and the same shape later
-    pipeline/import extraction paths (Plan 38-04) persist for freshly-
-    extracted names. This is a whole-record envelope (one decision per
-    Person row, not per name part) describing how the current split/
+    Mirrors the exact JSONB shape originally written by migration 0022's
+    legacy backfill (`source`, `raw`, `confidence`, `reason`,
+    `auto_applied` — see alembic/versions/0022_person_name_authority.py),
+    carried straight across into `provenance_metadata` by migration 0029,
+    and the same shape pipeline/import extraction paths persist for
+    freshly-extracted names. This is a whole-record envelope (one decision
+    per Person row, not per name part) describing how the current split/
     unsplit state of `full_name` came to be. It is intentionally read-only
-    on every request schema — an operator's own edit never rewrites this
-    value; only a fresh extraction/migration pass ever replaces it (D-15,
-    D-17).
+    on every request schema — an operator's own edit never clears,
+    rewrites, or appends to this value (D-12); only a fresh extraction/
+    migration pass ever replaces it.
     """
 
     source: Optional[str] = None
@@ -163,10 +167,11 @@ class PersonDetail(BaseModel):
     Phase 38 (D-01, D-04): full_name is a server-derived, read-only
     compatibility value — it is never accepted on PersonCreateRequest or
     PersonUpdate (see below), but it is still returned here so existing
-    display/sort/dedup consumers keep working unchanged. Phase 38 additions:
-    name_needs_review (D-12) and name_extraction_metadata (D-14, D-15, D-18)
-    surface the People directory's `Name review` attention state and the
-    typed provenance envelope for the editor's extracted-value hint.
+    display/sort/dedup consumers keep working unchanged. Phase 49 additions
+    (D-08, D-11, D-12): review_state and provenance_metadata surface the
+    People directory's `Name review` attention state and the typed
+    provenance envelope for the editor's extracted-value hint, replacing
+    Phase 38's name_needs_review/name_extraction_metadata pair outright.
     """
 
     id: int
@@ -184,9 +189,10 @@ class PersonDetail(BaseModel):
     is_justice: bool = False
     # Phase 27 addition — migration 0016
     birthdate: Optional[str] = None
-    # Phase 38 additions — migration 0022 (D-12, D-14, D-15, D-18)
-    name_needs_review: bool = False
-    name_extraction_metadata: Optional[NameExtractionMetadata] = None
+    # Phase 49 additions — migration 0029 (D-08, D-11, D-12), replacing
+    # Phase 38's name_needs_review/name_extraction_metadata pair
+    review_state: str = "unreviewed"
+    provenance_metadata: Optional[PersonProvenanceMetadata] = None
     # Phase 39 addition — migration 0023 (PUB-04); mirrors birthdate's exact
     # ISO-date-string shape.
     death_date: Optional[str] = None

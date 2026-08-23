@@ -574,8 +574,20 @@ async def test_update_resolve_row_for_job_succeeds_on_draft_and_unpublished_but_
         finally:
             from sqlalchemy import delete as sa_delete
 
+            from api.models.models import ValueDiscrepancy
+
             async with AsyncSessionLocal() as db:
                 await db.execute(sa_delete(AdminJob).where(AdminJob.id == job_id))
+                # A successful update_resolve_row_for_job call routes through
+                # the authority gate, which may record a value_discrepancy —
+                # no real FK to argument_participants.id, so clean it up
+                # explicitly before the participant row is deleted.
+                await db.execute(
+                    sa_delete(ValueDiscrepancy).where(
+                        ValueDiscrepancy.target_type == "argument_participant",
+                        ValueDiscrepancy.target_id == participant_id,
+                    )
+                )
                 await db.execute(
                     sa_delete(ArgumentParticipant).where(ArgumentParticipant.id == participant_id)
                 )

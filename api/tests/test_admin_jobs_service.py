@@ -353,6 +353,7 @@ async def _teardown_rows(
         ImportRun,
         Person,
         Utterance,
+        ValueDiscrepancy,
     )
 
     async with AsyncSessionLocal() as db:
@@ -370,6 +371,19 @@ async def _teardown_rows(
             row = await db.get(Utterance, utterance_id)
             if row is not None:
                 await db.delete(row)
+        # Phase 49 (D-31/D-31a): the authority-gated writer may have
+        # recorded a value_discrepancy for a participant this test touched
+        # via update_resolve_row_for_job/apply_participant_value_change —
+        # value_discrepancy.target_id has no real FK to
+        # argument_participants.id, so it would otherwise leak past the
+        # participant's own delete below.
+        if participant_ids:
+            await db.execute(
+                _delete(ValueDiscrepancy).where(
+                    ValueDiscrepancy.target_type == "argument_participant",
+                    ValueDiscrepancy.target_id.in_(list(participant_ids)),
+                )
+            )
         for participant_id in participant_ids:
             row = await db.get(ArgumentParticipant, participant_id)
             if row is not None:

@@ -128,9 +128,25 @@ async def _teardown_needs_review_participant(ids: dict) -> None:
     from sqlalchemy import delete as sa_delete
 
     from api.core.database import AsyncSessionLocal
-    from api.models.models import Argument, ArgumentParticipant, Case, CaseArgument, Person
+    from api.models.models import (
+        Argument,
+        ArgumentParticipant,
+        Case,
+        CaseArgument,
+        Person,
+        ValueDiscrepancy,
+    )
 
     async with AsyncSessionLocal() as db:
+        # Phase 49 (D-31/D-31a): a resolve action against this participant
+        # may have recorded (and closed) a value_discrepancy row — no real
+        # FK to argument_participants.id, so clean it up explicitly.
+        await db.execute(
+            sa_delete(ValueDiscrepancy).where(
+                ValueDiscrepancy.target_type == "argument_participant",
+                ValueDiscrepancy.target_id == ids["participant_id"],
+            )
+        )
         await db.execute(
             sa_delete(ArgumentParticipant).where(ArgumentParticipant.id == ids["participant_id"])
         )

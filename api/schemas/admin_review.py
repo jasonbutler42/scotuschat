@@ -44,6 +44,12 @@ class ReviewQueueArgumentItem(BaseModel):
     ``attention_count`` counts constituents whose review_state is
     ``needs_review`` OR whose ``person_id IS NULL`` — see
     ``api/services/admin_review.py::list_review_queue_arguments``.
+
+    ``admin_job_id`` is the argument's most recently linked ``AdminJob``
+    id, or None when no job is linked. It exists so the frontend can build
+    the "Resolve speaker" deep link (`/admin/pipeline/{admin_job_id}`) for
+    an unresolved (person_id IS NULL) constituent, since Confirm cannot
+    clear that leg (tracer feedback gate defect 2).
     """
 
     id: int
@@ -53,6 +59,7 @@ class ReviewQueueArgumentItem(BaseModel):
     status: str
     trust_tier: str
     attention_count: int
+    admin_job_id: Optional[int] = None
     constituents: list[ReviewQueueConstituent]
 
 

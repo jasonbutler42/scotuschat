@@ -18,6 +18,18 @@ Covers the plan's six `<behavior>` bullets:
   6. Given nothing flagged, the list endpoint returns 200 (never 404) and
      excludes a healthy (trusted, fully resolved, unflagged) argument.
 
+Also covers the two defects found at the Task 1 tracer feedback gate
+(human browser test of /admin/review):
+  - Defect 1: constituent order is stable across a write to one row (a
+    deterministic ordering on ArgumentParticipant.side/id, not physical
+    write order).
+  - Defect 2a: Confirm is rejected (422) on a participant whose person_id
+    IS NULL — it can never clear that leg, so allowing it would be a
+    permanent no-op.
+  - Defect 2b: the queue payload carries admin_job_id (nullable, and never
+    a row-multiplying join) so the frontend can route an unresolved
+    speaker to the real resolve flow.
+
 Follows this repo's established DB-gated integration pattern
 (api/tests/test_admin_arguments_routes.py's publish-route tests): seed via
 a bare AsyncSessionLocal (uncommitted state is invisible to the app's own
@@ -363,3 +375,286 @@ async def test_list_review_queue_returns_200_and_excludes_healthy_argument(
         assert all(item["id"] != ids["argument_id"] for item in body)
     finally:
         await _teardown_healthy_trusted_argument(ids)
+
+
+# ---------------------------------------------------------------------------
+# Tracer feedback gate defect 1 — deterministic constituent ordering.
+# A write to one constituent must not change the returned order (PostgreSQL
+# writes an UPDATEd row as a new heap tuple; without an explicit ordering on
+# the participant, a sequential scan returns the just-written row last).
+# ---------------------------------------------------------------------------
+
+
+async def _seed_three_unresolved_constituents():
+    """One CANDIDATE argument with three person_id-IS-NULL participants
+    (all flagged via the unresolved-participant leg), seeded in a known id
+    order. Used to prove ordering is stable regardless of write recency."""
+    import uuid as _uuid
+
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import (
+        Argument,
+        ArgumentParticipant,
+        ArgumentStatusEnum,
+        Case,
+        CaseArgument,
+        SideEnum,
+    )
+
+    suffix = _uuid.uuid4().hex[:8]
+    async with AsyncSessionLocal() as db:
+        arg = Argument(status=ArgumentStatusEnum.CANDIDATE)
+        db.add(arg)
+        await db.flush()
+
+        case = Case(
+            docket_number=f"RV-03-{suffix}",
+            docket_number_norm=f"rv-03-{suffix}",
+            case_name="Review Fixture v. Ordering",
+            term_year=2026,
+            slug=f"review-fixture-ordering-{suffix}",
+        )
+        db.add(case)
+        await db.flush()
+        db.add(CaseArgument(case_id=case.id, argument_id=arg.id, is_lead=True))
+
+        participant_ids: list[int] = []
+        for i, side in enumerate((SideEnum.PETITIONER, SideEnum.PETITIONER, SideEnum.RESPONDENT)):
+            participant = ArgumentParticipant(
+                argument_id=arg.id,
+                person_id=None,
+                raw_speaker_label=f"UNKNOWN SPEAKER {i}",
+                side=side,
+            )
+            db.add(participant)
+            await db.flush()
+            participant_ids.append(participant.id)
+        await db.commit()
+
+        return {
+            "argument_id": arg.id,
+            "case_id": case.id,
+            "participant_ids": participant_ids,
+        }
+
+
+async def _teardown_three_unresolved_constituents(ids: dict) -> None:
+    from sqlalchemy import delete as sa_delete
+
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import Argument, ArgumentParticipant, Case, CaseArgument
+
+    async with AsyncSessionLocal() as db:
+        await db.execute(
+            sa_delete(ArgumentParticipant).where(
+                ArgumentParticipant.argument_id == ids["argument_id"]
+            )
+        )
+        await db.execute(
+            sa_delete(CaseArgument).where(CaseArgument.argument_id == ids["argument_id"])
+        )
+        await db.execute(sa_delete(Case).where(Case.id == ids["case_id"]))
+        await db.execute(sa_delete(Argument).where(Argument.id == ids["argument_id"]))
+        await db.commit()
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_constituent_order_is_stable_across_an_update(review_client) -> None:
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import ArgumentParticipant
+
+    ids = await _seed_three_unresolved_constituents()
+    try:
+        response = await review_client.get(
+            "/api/admin/review/arguments", headers=_admin_headers()
+        )
+        assert response.status_code == 200
+        item = next(i for i in response.json() if i["id"] == ids["argument_id"])
+        order_before = [c["participant_id"] for c in item["constituents"]]
+        assert order_before == sorted(order_before)
+        assert set(order_before) == set(ids["participant_ids"])
+
+        # Write to the FIRST constituent in the returned order — PostgreSQL
+        # rewrites it as a new heap tuple. Without the participant-level
+        # ordering fix this would surface last on the next scan.
+        target_id = order_before[0]
+        async with AsyncSessionLocal() as db:
+            from sqlalchemy import update as sa_update
+
+            await db.execute(
+                sa_update(ArgumentParticipant)
+                .where(ArgumentParticipant.id == target_id)
+                .values(raw_speaker_label="UNKNOWN SPEAKER (rewritten)")
+            )
+            await db.commit()
+
+        response_after = await review_client.get(
+            "/api/admin/review/arguments", headers=_admin_headers()
+        )
+        item_after = next(
+            i for i in response_after.json() if i["id"] == ids["argument_id"]
+        )
+        order_after = [c["participant_id"] for c in item_after["constituents"]]
+        assert order_after == order_before, (
+            "constituent order must not change when one row is rewritten"
+        )
+    finally:
+        await _teardown_three_unresolved_constituents(ids)
+
+
+# ---------------------------------------------------------------------------
+# Tracer feedback gate defect 2a — Confirm is rejected on a participant
+# whose person_id IS NULL (an unresolved speaker). resolve_participant_review
+# only ever writes review_state, never person_id, so allowing a confirm here
+# would be a permanent no-op that silently pretends to succeed.
+# ---------------------------------------------------------------------------
+
+
+async def _seed_unresolved_participant():
+    """One CANDIDATE argument with a single person_id-IS-NULL participant."""
+    import uuid as _uuid
+
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import (
+        Argument,
+        ArgumentParticipant,
+        ArgumentStatusEnum,
+        Case,
+        CaseArgument,
+        SideEnum,
+    )
+
+    suffix = _uuid.uuid4().hex[:8]
+    async with AsyncSessionLocal() as db:
+        arg = Argument(status=ArgumentStatusEnum.CANDIDATE)
+        db.add(arg)
+        await db.flush()
+
+        case = Case(
+            docket_number=f"RV-04-{suffix}",
+            docket_number_norm=f"rv-04-{suffix}",
+            case_name="Review Fixture v. Unresolved Speaker",
+            term_year=2026,
+            slug=f"review-fixture-unresolved-speaker-{suffix}",
+        )
+        db.add(case)
+        await db.flush()
+        db.add(CaseArgument(case_id=case.id, argument_id=arg.id, is_lead=True))
+
+        participant = ArgumentParticipant(
+            argument_id=arg.id,
+            person_id=None,
+            raw_speaker_label="MR. UNKNOWN",
+            side=SideEnum.PETITIONER,
+        )
+        db.add(participant)
+        await db.commit()
+
+        return {
+            "argument_id": arg.id,
+            "case_id": case.id,
+            "participant_id": participant.id,
+        }
+
+
+async def _teardown_unresolved_participant(ids: dict) -> None:
+    from sqlalchemy import delete as sa_delete
+
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import Argument, ArgumentParticipant, Case, CaseArgument
+
+    async with AsyncSessionLocal() as db:
+        await db.execute(
+            sa_delete(ArgumentParticipant).where(ArgumentParticipant.id == ids["participant_id"])
+        )
+        await db.execute(
+            sa_delete(CaseArgument).where(CaseArgument.argument_id == ids["argument_id"])
+        )
+        await db.execute(sa_delete(Case).where(Case.id == ids["case_id"]))
+        await db.execute(sa_delete(Argument).where(Argument.id == ids["argument_id"]))
+        await db.commit()
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_patch_confirm_rejects_unresolved_speaker(review_client) -> None:
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import ArgumentParticipant
+
+    ids = await _seed_unresolved_participant()
+    try:
+        response = await review_client.patch(
+            f"/api/admin/review/participants/{ids['participant_id']}",
+            json={"action": "confirm"},
+            headers=_admin_headers(),
+        )
+        assert response.status_code == 422
+
+        async with AsyncSessionLocal() as db:
+            participant = await db.get(ArgumentParticipant, ids["participant_id"])
+            # Confirm must be rejected before any write — review_state stays
+            # whatever it started as (server_default 'unreviewed'), and
+            # person_id remains untouched.
+            assert participant.review_state.value == "unreviewed"
+            assert participant.person_id is None
+    finally:
+        await _teardown_unresolved_participant(ids)
+
+
+# ---------------------------------------------------------------------------
+# Tracer feedback gate defect 2b — the queue payload carries the argument's
+# admin_job_id (nullable), populated from the most recently linked AdminJob
+# without multiplying the argument's constituent rows.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_queue_payload_admin_job_id_none_when_unlinked(review_client) -> None:
+    ids = await _seed_needs_review_participant()
+    try:
+        response = await review_client.get(
+            "/api/admin/review/arguments", headers=_admin_headers()
+        )
+        assert response.status_code == 200
+        item = next(i for i in response.json() if i["id"] == ids["argument_id"])
+        assert item["admin_job_id"] is None
+    finally:
+        await _teardown_needs_review_participant(ids)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_queue_payload_admin_job_id_populated_and_does_not_duplicate_constituents(
+    review_client,
+) -> None:
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import AdminJob, AdminJobStatus
+
+    ids = await _seed_needs_review_participant()
+    job_id: int | None = None
+    try:
+        async with AsyncSessionLocal() as db:
+            job = AdminJob(status=AdminJobStatus.PAUSED, argument_id=ids["argument_id"])
+            db.add(job)
+            await db.commit()
+            job_id = job.id
+
+        response = await review_client.get(
+            "/api/admin/review/arguments", headers=_admin_headers()
+        )
+        assert response.status_code == 200
+        item = next(i for i in response.json() if i["id"] == ids["argument_id"])
+        assert item["admin_job_id"] == job_id
+        # The AdminJob join is a correlated scalar subquery, not a join —
+        # confirm it never multiplied the constituent rows.
+        assert len(item["constituents"]) == 1
+    finally:
+        if job_id is not None:
+            async with AsyncSessionLocal() as db:
+                from sqlalchemy import delete as sa_delete
+
+                await db.execute(sa_delete(AdminJob).where(AdminJob.id == job_id))
+                await db.commit()
+        await _teardown_needs_review_participant(ids)

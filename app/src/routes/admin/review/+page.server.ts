@@ -19,6 +19,7 @@ type ReviewQueueArgumentItem = {
 	status: string;
 	trust_tier: string;
 	attention_count: number;
+	admin_job_id: number | null;
 	constituents: ReviewQueueConstituent[];
 };
 
@@ -49,6 +50,18 @@ export const actions: Actions = {
 	 * unpublish actions: on ANY non-2xx response or a thrown fetch, returns
 	 * fail(...) and never redirects; on success, redirects back to
 	 * /admin/review so the confirmed row drops off the queue.
+	 *
+	 * Only applies to a constituent flagged via the needs_review leg
+	 * (review_state === 'needs_review') — +page.svelte renders the Confirm
+	 * button only for those, and the API's own guard rejects a confirm on
+	 * a person_id-IS-NULL participant with a 422 as defense-in-depth
+	 * (tracer feedback gate defect 2). An unresolved (person_id === null)
+	 * constituent has no Confirm button at all; it instead gets a
+	 * "Resolve speaker" link to /admin/pipeline/{admin_job_id} (falling
+	 * back to /admin/arguments/{argument_id} when unlinked), which is
+	 * where the real person-search/assign/create flow lives. Clearing an
+	 * unresolved row via Confirm is plan 49-04's "confirm as
+	 * unattributable" action, not this one.
 	 */
 	confirm: async ({ request, fetch }) => {
 		const formData = await request.formData();

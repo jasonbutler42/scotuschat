@@ -114,23 +114,43 @@
 									{#each item.constituents as constituent (constituent.participant_id)}
 										<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
 											<span style="color: #e2e8f0; font-size: 14px;">{constituent.display_name}</span>
-											<form method="POST" action="?/confirm" use:enhance>
-												<input type="hidden" name="participant_id" value={constituent.participant_id} />
-												<button
-													type="submit"
+											{#if constituent.person_id === null}
+												<!--
+													Unresolved speaker (person_id IS NULL) — Confirm cannot
+													clear this leg (tracer feedback gate defect 2), so this
+													links to the real person-search/assign flow instead of
+													rendering a Confirm button.
+												-->
+												<a
+													href={item.admin_job_id !== null
+														? `/admin/pipeline/${item.admin_job_id}`
+														: `/admin/arguments/${item.id}`}
 													style="
-														min-height: 36px;
-														padding: 4px 12px;
 														font-size: 14px;
 														font-weight: 600;
-														cursor: pointer;
-														border: 1px solid #93c5fd;
-														background-color: transparent;
 														color: #93c5fd;
-														border-radius: 6px;
+														text-decoration: none;
 													"
-												>Confirm</button>
-											</form>
+												>Resolve speaker &rarr;</a>
+											{:else if constituent.review_state === 'needs_review'}
+												<form method="POST" action="?/confirm" use:enhance>
+													<input type="hidden" name="participant_id" value={constituent.participant_id} />
+													<button
+														type="submit"
+														style="
+															min-height: 36px;
+															padding: 4px 12px;
+															font-size: 14px;
+															font-weight: 600;
+															cursor: pointer;
+															border: 1px solid #93c5fd;
+															background-color: transparent;
+															color: #93c5fd;
+															border-radius: 6px;
+														"
+													>Confirm</button>
+												</form>
+											{/if}
 										</div>
 									{/each}
 								{/if}

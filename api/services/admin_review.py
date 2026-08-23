@@ -29,6 +29,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.domain.trust import TrustTier
 from api.models.models import (
+    AdminJob,
     Argument,
     ArgumentParticipant,
     Case,
@@ -58,7 +59,17 @@ async def list_review_queue_arguments(db: AsyncSession) -> list[dict]:
 
     Unbounded (D-04). Sorted server-side: argued_date ASC NULLS LAST, then
     Argument.id ASC (the tier-rank / published-degraded-first ordering is
-    plan 49-05's).
+    plan 49-05's), THEN ArgumentParticipant.side ASC, then
+    ArgumentParticipant.id ASC.
+
+    That trailing pair of keys (tracer feedback gate defect 1) exists so
+    that confirming a constituent can never move it within its argument's
+    row: PostgreSQL writes an UPDATEd row as a new heap tuple, so without an
+    explicit ordering on the participant a sequential scan returns the
+    just-confirmed row last, and the confirmed constituent visibly jumps to
+    the bottom of the list on the very next load. Ordering by (side, id) —
+    both immutable for a given participant — pins every constituent's
+    position regardless of write order.
 
     Only flagged constituent rows are attached to each argument's
     `constituents` list — a participant row that does not itself satisfy
@@ -68,6 +79,17 @@ async def list_review_queue_arguments(db: AsyncSession) -> list[dict]:
 
     attention_count counts constituents whose review_state == needs_review
     OR whose person_id IS NULL.
+
+    Each argument also carries `admin_job_id` — the id of its most
+    recently created linked `AdminJob`, or None when the argument has no
+    linked job. An argument may legitimately have zero or more than one
+    `AdminJob` row; this is a correlated scalar subquery (not a join) so
+    picking "most recent by id" never multiplies the outer argument rows
+    (tracer feedback gate defect 2b). Used by the frontend to build the
+    "Resolve speaker" deep link for an unresolved (person_id IS NULL)
+    constituent — see 49-05-PLAN.md's already-decided routing, pulled
+    forward here because the tracer would otherwise be a dead end on the
+    only unresolved data that exists.
     """
     unresolved_participant_leg = and_(
         ArgumentParticipant.id.is_not(None),
@@ -76,6 +98,15 @@ async def list_review_queue_arguments(db: AsyncSession) -> list[dict]:
     needs_review_leg = ArgumentParticipant.review_state == ReviewState.NEEDS_REVIEW
     degraded_tier_leg = Argument.trust_tier.in_(
         [TrustTier.UNCERTAIN, TrustTier.PROVISIONAL]
+    )
+
+    latest_admin_job_id = (
+        select(AdminJob.id)
+        .where(AdminJob.argument_id == Argument.id)
+        .order_by(AdminJob.id.desc())
+        .limit(1)
+        .correlate(Argument)
+        .scalar_subquery()
     )
 
     q = (
@@ -92,6 +123,7 @@ async def list_review_queue_arguments(db: AsyncSession) -> list[dict]:
             ArgumentParticipant.review_state,
             ArgumentParticipant.raw_speaker_label,
             Person.full_name,
+            latest_admin_job_id.label("admin_job_id"),
         )
         .join(CaseArgument, CaseArgument.argument_id == Argument.id)
         .join(Case, CaseArgument.case_id == Case.id)
@@ -99,7 +131,12 @@ async def list_review_queue_arguments(db: AsyncSession) -> list[dict]:
         .outerjoin(Person, Person.id == ArgumentParticipant.person_id)
         .where(CaseArgument.is_lead == True)  # noqa: E712
         .where(or_(needs_review_leg, unresolved_participant_leg, degraded_tier_leg))
-        .order_by(Argument.argued_date.asc().nulls_last(), Argument.id.asc())
+        .order_by(
+            Argument.argued_date.asc().nulls_last(),
+            Argument.id.asc(),
+            ArgumentParticipant.side.asc(),
+            ArgumentParticipant.id.asc(),
+        )
     )
     rows = (await db.execute(q)).all()
 
@@ -115,6 +152,7 @@ async def list_review_queue_arguments(db: AsyncSession) -> list[dict]:
                 "argued_date": row.argued_date.isoformat() if row.argued_date else None,
                 "status": row.status.value,
                 "trust_tier": row.trust_tier.value,
+                "admin_job_id": row.admin_job_id,
                 "constituents": [],
             }
             order.append(arg_id)
@@ -162,6 +200,19 @@ async def resolve_participant_review(
     callers to this value; the guard below is defense-in-depth against any
     future caller that bypasses the schema.
 
+    Unresolved-speaker guard (tracer feedback gate defect 2a): raises
+    ValueError when the participant's person_id IS NULL. Confirm only
+    advances review_state — it never touches person_id — so confirming an
+    unresolved speaker would be a permanent no-op that silently pretends to
+    succeed while never clearing the row from the queue. Mirrors
+    ``api/services/admin_arguments.py::update_participant_side``'s
+    established unresolved-row rejection idiom (raise ValueError, router
+    maps to 422). Clearing an unresolved row is plan 49-04's
+    "confirm-as-unattributable" action (D-17 floor lift) — NOT this one;
+    the real fix for an unresolved speaker is the person-search/assign
+    flow at `/admin/pipeline/{admin_job_id}` (see
+    ``list_review_queue_arguments``'s docstring).
+
     This is the module's single public commit entry point (see module
     docstring) — recompute_argument_tier never commits; this function
     commits exactly once, as the last statement before refresh+return.
@@ -175,6 +226,12 @@ async def resolve_participant_review(
     participant = result.scalar_one_or_none()
     if participant is None:
         return None  # router -> 404
+
+    if participant.person_id is None:
+        raise ValueError(
+            "Cannot confirm a participant whose speaker is unresolved; "
+            "resolve the speaker first"
+        )
 
     await db.execute(
         update(ArgumentParticipant)

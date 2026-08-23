@@ -39,9 +39,17 @@ from types import SimpleNamespace
 from sqlalchemy import select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.models.models import AdminJob, AdminJobStatus, Argument
+from api.models.models import (
+    AdminJob,
+    AdminJobStatus,
+    Argument,
+    ArgumentParticipant,
+    ReviewState,
+    SideEnum,
+)
 from api.services import admin_arguments as arguments_service
 from api.services import admin_jobs as jobs_service
+from api.services.trust import recompute_argument_tier
 from pipeline.commands.import_convokit import DEFAULT_CORPUS_DIR, run_import_convokit
 from pipeline.corpus.loader import (
     CASES_FILENAME,
@@ -68,6 +76,14 @@ class ResetIncompleteError(Exception):
     inferred from the mere absence of an exception — this module always
     verifies both rows exist for every fixture before ever returning a
     success response. A short `fixtures` list is never a valid 200."""
+
+
+class FixtureNotSeededError(Exception):
+    """Raised by seed_unresolved_speaker_fixture when the target fixture
+    argument does not exist, or exists but has no eligible participant to
+    null. An un-reset database is the expected cause — mirrors
+    ResetIncompleteError's own reasoning: this function never returns
+    success with nothing done."""
 
 
 # Single source of truth for both the reseed loop and the response
@@ -316,3 +332,155 @@ async def reset_to_fixture(db: AsyncSession, corpus_dir: str | Path | None = Non
         )
 
     return {"fixtures": fixtures}
+
+
+# Default target for seed_unresolved_speaker_fixture: the Complexity fixture
+# (conversation 15169), the same "freshly imported" reference argument
+# reset_to_fixture leaves at CANDIDATE with no state-realization applied.
+DEFAULT_UNRESOLVED_SPEAKER_CONVERSATION_ID = "15169"
+
+
+async def seed_unresolved_speaker_fixture(
+    db: AsyncSession,
+    conversation_id: str = DEFAULT_UNRESOLVED_SPEAKER_CONVERSATION_ID,
+) -> dict:
+    """
+    Dev-only mechanism (D-33a) that nulls the person_id of one advocate-side
+    ArgumentParticipant on a fixture argument (the Complexity fixture,
+    conversation 15169, by default) and sets its review_state to
+    needs_review, so the unresolved-speaker case -- the main thing the
+    review queue exists for -- can be produced on demand in a browser.
+
+    This exists because no live corpus path can produce a NULL-person_id
+    participant today: `_resolve_person` in
+    pipeline/commands/import_convokit.py always resolves-or-creates a
+    Person for every speaker label it sees (verified 2026-08-21). That has
+    made 26-UAT Test 26 (the unresolved-advocate placeholder and per-row
+    Save gate) and 14-UAT Test 8 (an argument containing an unresolved
+    speaker) unreachable in a browser since they were written in June
+    2026 -- this seeder closes that gap.
+
+    It does not fabricate a synthetic participant from nothing: it takes
+    an existing fixture argument's own advocate participant and nulls its
+    person_id, producing the same row shape a future PDF-pipeline MISS
+    would, so the fixture stays representative rather than invented.
+
+    Dev-only for the same reason reset_to_fixture is (D-07): the router
+    this is mounted on (api/routers/admin_dev.py) is only ever registered
+    on the FastAPI app when settings.environment == "development" -- see
+    api/main.py's guarded include_router call. There is no handler-level
+    check in this function or its route; the gate is the router never
+    existing outside development.
+
+    Idempotent: if a NULL-person_id participant already exists on the
+    target argument, returns its id unchanged (already_seeded=True)
+    rather than nulling a second row -- no write, no recompute, no commit
+    on that path.
+
+    Raises FixtureNotSeededError if the target argument does not exist, or
+    if it exists but has no eligible (non-BENCH) participant to null --
+    either case means the database was never reset to the fixture set,
+    and this function never returns success with nothing done (mirrors
+    ResetIncompleteError's own reasoning).
+
+    Returns a dict shaped for
+    api.schemas.admin_dev.SeedUnresolvedSpeakerResponse.
+    """
+    argument = (
+        await db.execute(
+            select(Argument).where(Argument.oyez_transcript_id == conversation_id)
+        )
+    ).scalar_one_or_none()
+    if argument is None:
+        raise FixtureNotSeededError(
+            f"Conversation {conversation_id!r} has no Argument row -- "
+            "reset to fixture before seeding an unresolved speaker."
+        )
+
+    already_seeded = (
+        (
+            await db.execute(
+                select(ArgumentParticipant)
+                .where(
+                    ArgumentParticipant.argument_id == argument.id,
+                    ArgumentParticipant.person_id.is_(None),
+                )
+                .order_by(ArgumentParticipant.id.asc())
+            )
+        )
+        .scalars()
+        .first()
+    )
+    if already_seeded is not None:
+        return {
+            "argument_id": argument.id,
+            "participant_id": already_seeded.id,
+            "raw_speaker_label": already_seeded.raw_speaker_label,
+            "trust_tier": argument.trust_tier.value,
+            "already_seeded": True,
+        }
+
+    # Deterministic — the same row every time — never a random/first-scan
+    # pick. "Non-BENCH" per D-33a's action text: BENCH participants are
+    # justices, not the advocate-side speaker this fixture is meant to
+    # represent.
+    target = (
+        (
+            await db.execute(
+                select(ArgumentParticipant)
+                .where(
+                    ArgumentParticipant.argument_id == argument.id,
+                    ArgumentParticipant.side != SideEnum.BENCH,
+                )
+                .order_by(ArgumentParticipant.id.asc())
+            )
+        )
+        .scalars()
+        .first()
+    )
+    if target is None:
+        raise FixtureNotSeededError(
+            f"Conversation {conversation_id!r}'s Argument row has no "
+            "non-BENCH participant to seed -- reset to fixture before "
+            "seeding an unresolved speaker."
+        )
+
+    # Captured as plain ints BEFORE the commit/expire below — accessing an
+    # ORM attribute on an expired instance triggers a synchronous lazy
+    # reload that MissingGreenlet's under AsyncSession, so `target`/
+    # `argument` themselves must never be touched again after expire_all().
+    target_id = target.id
+    argument_id = argument.id
+
+    await db.execute(
+        update(ArgumentParticipant)
+        .where(
+            ArgumentParticipant.id == target_id,
+            ArgumentParticipant.argument_id == argument_id,
+        )
+        .values(person_id=None, review_state=ReviewState.NEEDS_REVIEW)
+        .execution_options(synchronize_session=False)
+    )
+    await recompute_argument_tier(db, argument_id)
+    await db.commit()
+
+    # Never build the response from what this function intended to write
+    # -- read both rows back after the commit (reset_to_fixture's own step
+    # 6 discipline).
+    db.expire_all()
+    participant = (
+        await db.execute(
+            select(ArgumentParticipant).where(ArgumentParticipant.id == target_id)
+        )
+    ).scalar_one()
+    argument = (
+        await db.execute(select(Argument).where(Argument.id == argument_id))
+    ).scalar_one()
+
+    return {
+        "argument_id": argument.id,
+        "participant_id": participant.id,
+        "raw_speaker_label": participant.raw_speaker_label,
+        "trust_tier": argument.trust_tier.value,
+        "already_seeded": False,
+    }

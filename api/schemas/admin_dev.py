@@ -28,3 +28,14 @@ class ResetFixtureItem(BaseModel):
 
 class ResetToFixtureResponse(BaseModel):
     fixtures: list[ResetFixtureItem]
+
+
+class SeedUnresolvedSpeakerResponse(BaseModel):
+    """Phase 49 (D-33a). Mirrors ResetToFixtureResponse's plain-BaseModel,
+    hand-built-dict convention -- no from_attributes, no ORM row."""
+
+    argument_id: int
+    participant_id: int
+    raw_speaker_label: str
+    trust_tier: str
+    already_seeded: bool

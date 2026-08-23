@@ -718,6 +718,11 @@
 		const enriched: Candidate = { ...person, is_justice: side === 'BENCH' };
 		s.extraCandidates = [...s.extraCandidates, enriched];
 		s.personId = enriched.id;
+		// Mirrors the existing-person pick path in personDropdown (click/Enter
+		// handlers set s.comboQuery before calling handleSelectPerson) — without
+		// this, the row is internally resolved but the Resolved As box still
+		// shows whatever text was typed (or blank) before the popover opened.
+		s.comboQuery = enriched.full_name;
 		// Task 4 checkpoint remediation (item 6): record the baseline bucket for
 		// the side the person was just created on, so a later genuine switch
 		// away from it is still detected (clearPersonOnSideBucketChange is not
@@ -1204,6 +1209,7 @@
 							rawSpeakerLabel={label}
 							triggerLabel={side === 'BENCH' ? 'Create new bench person' : 'Create new advocate'}
 							defaultAdvocateSide={side !== 'BENCH' ? side : 'UNKNOWN'}
+							initialSide={side === 'BENCH' ? 'BENCH' : 'ADVOCATE'}
 							onCreated={(person, createdSide) =>
 								handlePersonCreated(label, row.participant_id, person, createdSide)}
 						/>

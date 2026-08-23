@@ -19,6 +19,8 @@
 		disabled?: boolean;
 		/** Side sent to the backend when the operator picks "Advocate" (defaults to Counsel/UNKNOWN). */
 		defaultAdvocateSide?: string;
+		/** Sets the popover's *initial* Bench/Advocate selection only — the operator can still change it inside the popover. */
+		initialSide?: 'BENCH' | 'ADVOCATE';
 		onCreated: (person: CreatedPerson, side: string) => void;
 	}
 
@@ -27,6 +29,7 @@
 		triggerLabel = 'Create new person',
 		disabled = false,
 		defaultAdvocateSide = 'UNKNOWN',
+		initialSide = 'ADVOCATE',
 		onCreated,
 	}: CreatePersonPopoverProps = $props();
 
@@ -42,7 +45,7 @@
 	// happens later in People Admin.
 	let firstName = $state('');
 	let lastName = $state('');
-	let side = $state<'BENCH' | 'ADVOCATE'>('ADVOCATE');
+	let side = $state<'BENCH' | 'ADVOCATE'>(initialSide);
 	let submitting = $state(false);
 	let errorMessage = $state<string | null>(null);
 
@@ -53,7 +56,7 @@
 	function resetForm() {
 		firstName = '';
 		lastName = '';
-		side = 'ADVOCATE';
+		side = initialSide;
 		errorMessage = null;
 	}
 </script>

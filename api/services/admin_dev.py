@@ -46,6 +46,7 @@ from api.models.models import (
     ArgumentParticipant,
     ReviewState,
     SideEnum,
+    Utterance,
 )
 from api.services import admin_arguments as arguments_service
 from api.services import admin_jobs as jobs_service
@@ -361,9 +362,17 @@ async def seed_unresolved_speaker_fixture(
     2026 -- this seeder closes that gap.
 
     It does not fabricate a synthetic participant from nothing: it takes
-    an existing fixture argument's own advocate participant and nulls its
-    person_id, producing the same row shape a future PDF-pipeline MISS
-    would, so the fixture stays representative rather than invented.
+    an existing fixture argument's own advocate participant -- preferring
+    one whose `side` is already SideEnum.UNKNOWN, so the Speakers card's
+    "Unresolved -- choose a role" placeholder (26-UAT Test 26) is also
+    reachable, not just the review queue -- and nulls its person_id, and
+    the person_id of every Utterance row carrying that same
+    raw_speaker_label on this argument (14-UAT Test 8's "non-resolved
+    utterance" state; the participant and its utterances are independent
+    columns, exactly as api/services/admin_jobs.py's own resolve flow
+    writes them separately). This produces the same row shape a future
+    PDF-pipeline MISS would, so the fixture stays representative rather
+    than invented.
 
     Dev-only for the same reason reset_to_fixture is (D-07): the router
     this is mounted on (api/routers/admin_dev.py) is only ever registered
@@ -424,13 +433,29 @@ async def seed_unresolved_speaker_fixture(
     # pick. "Non-BENCH" per D-33a's action text: BENCH participants are
     # justices, not the advocate-side speaker this fixture is meant to
     # represent.
+    #
+    # Prefer a participant whose side is ALREADY SideEnum.UNKNOWN (the
+    # Complexity fixture's real corpus data has several — a residual
+    # state from before the Resolve-table rework, per 26-UAT Test 26's
+    # own waiver note) over an arbitrary resolved-side one. Verified
+    # against the source of both consumers this seeder must satisfy:
+    # api.services.admin_arguments.list_argument_speakers returns
+    # `side: participant.side.value` unchanged regardless of person_id,
+    # and the Speakers card's "Unresolved — choose a role" placeholder /
+    # Save gate (26-UAT Test 26) key on that value collapsing to the
+    # literal string "UNKNOWN" — nulling person_id alone on an
+    # already-resolved PETITIONER/RESPONDENT/AMICUS row would leave that
+    # placeholder unreachable, silently failing this task's own must-have
+    # truth. Falls back to the plan's original "first non-BENCH ordered
+    # by id" pick when no UNKNOWN-side participant exists, so this still
+    # terminates deterministically on a fixture that lacks one.
     target = (
         (
             await db.execute(
                 select(ArgumentParticipant)
                 .where(
                     ArgumentParticipant.argument_id == argument.id,
-                    ArgumentParticipant.side != SideEnum.BENCH,
+                    ArgumentParticipant.side == SideEnum.UNKNOWN,
                 )
                 .order_by(ArgumentParticipant.id.asc())
             )
@@ -439,17 +464,33 @@ async def seed_unresolved_speaker_fixture(
         .first()
     )
     if target is None:
+        target = (
+            (
+                await db.execute(
+                    select(ArgumentParticipant)
+                    .where(
+                        ArgumentParticipant.argument_id == argument.id,
+                        ArgumentParticipant.side != SideEnum.BENCH,
+                    )
+                    .order_by(ArgumentParticipant.id.asc())
+                )
+            )
+            .scalars()
+            .first()
+        )
+    if target is None:
         raise FixtureNotSeededError(
             f"Conversation {conversation_id!r}'s Argument row has no "
             "non-BENCH participant to seed -- reset to fixture before "
             "seeding an unresolved speaker."
         )
 
-    # Captured as plain ints BEFORE the commit/expire below — accessing an
-    # ORM attribute on an expired instance triggers a synchronous lazy
+    # Captured as plain values BEFORE the commit/expire below — accessing
+    # an ORM attribute on an expired instance triggers a synchronous lazy
     # reload that MissingGreenlet's under AsyncSession, so `target`/
     # `argument` themselves must never be touched again after expire_all().
     target_id = target.id
+    target_raw_speaker_label = target.raw_speaker_label
     argument_id = argument.id
 
     await db.execute(
@@ -459,6 +500,26 @@ async def seed_unresolved_speaker_fixture(
             ArgumentParticipant.argument_id == argument_id,
         )
         .values(person_id=None, review_state=ReviewState.NEEDS_REVIEW)
+        .execution_options(synchronize_session=False)
+    )
+    # Also null the matching Utterance rows (D-33a correction): the
+    # participant and its utterances are independent columns —
+    # api/services/admin_jobs.py's own real resolve flow writes both
+    # separately, scoped by (argument_id, raw_speaker_label) for the
+    # utterance leg. Nulling ONLY the participant would leave every
+    # utterance this speaker gave still reading a resolved person_id, so
+    # the public ChatBubble avatar would still render as a clickable,
+    # resolved speaker (api/services/arguments.py joins on
+    # Utterance.person_id directly, never through ArgumentParticipant) —
+    # silently failing to reproduce 14-UAT Test 8's "non-resolved
+    # utterance" state, which is this seeder's other named purpose.
+    await db.execute(
+        update(Utterance)
+        .where(
+            Utterance.argument_id == argument_id,
+            Utterance.raw_speaker_label == target_raw_speaker_label,
+        )
+        .values(person_id=None)
         .execution_options(synchronize_session=False)
     )
     await recompute_argument_tier(db, argument_id)

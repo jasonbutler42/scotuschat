@@ -70,9 +70,18 @@ def _admin_headers() -> dict:
 
 
 async def _seed_fixture_argument(conversation_id: str) -> dict:
-    """One CANDIDATE argument carrying two resolved participants: a BENCH
-    justice and an advocate-side speaker — so a test can confirm the
-    seeder selects the non-BENCH row and leaves the BENCH row untouched."""
+    """One CANDIDATE argument carrying three resolved participants: a BENCH
+    justice, a resolved-side (PETITIONER) advocate decoy, and a
+    SideEnum.UNKNOWN-side advocate — mirroring the real Complexity
+    fixture's own shape (verified against the live dev DB: conversation
+    15169 has several already-resolved participants whose `side` is
+    still UNKNOWN, a residual pre-Resolve-rework state). The seeder must
+    prefer the UNKNOWN-side row: api.services.admin_arguments.
+    list_argument_speakers returns `side` unchanged regardless of
+    person_id, and the Speakers card's "Unresolved — choose a role"
+    placeholder / Save gate (26-UAT Test 26) key on that value being the
+    literal string "UNKNOWN" — nulling person_id on the PETITIONER decoy
+    would leave that placeholder unreachable."""
     from api.core.database import AsyncSessionLocal
     from api.models.models import (
         Argument,
@@ -81,10 +90,13 @@ async def _seed_fixture_argument(conversation_id: str) -> dict:
         Case,
         CaseArgument,
         ImportMethod,
+        ImportRun,
+        ImportRunStatus,
         ImportSource,
         Person,
         ReviewState,
         SideEnum,
+        Utterance,
     )
 
     suffix = _uuid.uuid4().hex[:8]
@@ -122,28 +134,88 @@ async def _seed_fixture_argument(conversation_id: str) -> dict:
         db.add(bench_participant)
         await db.flush()
 
-        advocate_person = Person(full_name="Seed Fixture Advocate")
-        db.add(advocate_person)
+        # Decoy — a resolved-side advocate that must be left untouched, so
+        # a test can prove the UNKNOWN-side row below is genuinely
+        # preferred, not merely "the first non-BENCH row by id".
+        resolved_person = Person(full_name="Seed Fixture Resolved Advocate")
+        db.add(resolved_person)
         await db.flush()
-        advocate_participant = ArgumentParticipant(
+        resolved_participant = ArgumentParticipant(
             argument_id=arg.id,
-            person_id=advocate_person.id,
-            raw_speaker_label="MR. SEED FIXTURE",
+            person_id=resolved_person.id,
+            raw_speaker_label="MR. SEED FIXTURE RESOLVED",
             side=SideEnum.PETITIONER,
             source=ImportSource.CORPUS,
             method=ImportMethod.DIRECT,
             review_state=ReviewState.UNREVIEWED,
         )
-        db.add(advocate_participant)
+        db.add(resolved_participant)
+        await db.flush()
+
+        # The seeder's real target.
+        unknown_person = Person(full_name="Seed Fixture Unknown-Side Advocate")
+        db.add(unknown_person)
+        await db.flush()
+        unknown_participant = ArgumentParticipant(
+            argument_id=arg.id,
+            person_id=unknown_person.id,
+            raw_speaker_label="MR. SEED FIXTURE UNKNOWN SIDE",
+            side=SideEnum.UNKNOWN,
+            source=ImportSource.CORPUS,
+            method=ImportMethod.DIRECT,
+            review_state=ReviewState.UNREVIEWED,
+        )
+        db.add(unknown_participant)
+        await db.flush()
+
+        # One ImportRun (Utterance.import_run_id is NOT NULL) plus two
+        # Utterance rows — one carrying the target's raw_speaker_label
+        # (must be nulled), one carrying the decoy's (must NOT be nulled)
+        # — proving the seeder's utterance-level null is scoped by
+        # raw_speaker_label, not a blanket sweep of the whole argument.
+        import_run = ImportRun(
+            argument_id=arg.id,
+            step="parse",
+            status=ImportRunStatus.COMPLETED,
+            source=ImportSource.CORPUS,
+            method=ImportMethod.DIRECT,
+        )
+        db.add(import_run)
+        await db.flush()
+        target_utterance = Utterance(
+            argument_id=arg.id,
+            import_run_id=import_run.id,
+            sequence=1,
+            raw_speaker_label="MR. SEED FIXTURE UNKNOWN SIDE",
+            text="Seed fixture utterance text for the unknown-side speaker.",
+            side=SideEnum.UNKNOWN,
+            person_id=unknown_person.id,
+        )
+        db.add(target_utterance)
+        decoy_utterance = Utterance(
+            argument_id=arg.id,
+            import_run_id=import_run.id,
+            sequence=2,
+            raw_speaker_label="MR. SEED FIXTURE RESOLVED",
+            text="Seed fixture utterance text for the resolved decoy speaker.",
+            side=SideEnum.PETITIONER,
+            person_id=resolved_person.id,
+        )
+        db.add(decoy_utterance)
         await db.commit()
 
         return {
             "argument_id": arg.id,
             "case_id": case.id,
+            "import_run_id": import_run.id,
             "bench_person_id": bench_person.id,
             "bench_participant_id": bench_participant.id,
-            "advocate_person_id": advocate_person.id,
-            "advocate_participant_id": advocate_participant.id,
+            "resolved_person_id": resolved_person.id,
+            "resolved_participant_id": resolved_participant.id,
+            "unknown_person_id": unknown_person.id,
+            "unknown_participant_id": unknown_participant.id,
+            "target_utterance_id": target_utterance.id,
+            "decoy_utterance_id": decoy_utterance.id,
         }
 
 
@@ -217,7 +289,9 @@ async def _teardown_fixture_argument(ids: dict) -> None:
         ArgumentParticipant,
         Case,
         CaseArgument,
+        ImportRun,
         Person,
+        Utterance,
         ValueDiscrepancy,
     )
 
@@ -226,7 +300,7 @@ async def _teardown_fixture_argument(ids: dict) -> None:
         # this fixture's shape, but clean up defensively (no real FK from
         # value_discrepancy.target_id, mirroring the established teardown
         # convention in test_admin_review_service.py).
-        for key in ("bench_participant_id", "advocate_participant_id"):
+        for key in ("bench_participant_id", "resolved_participant_id", "unknown_participant_id"):
             if key in ids:
                 await db.execute(
                     sa_delete(ValueDiscrepancy).where(
@@ -234,6 +308,9 @@ async def _teardown_fixture_argument(ids: dict) -> None:
                         ValueDiscrepancy.target_id == ids[key],
                     )
                 )
+        await db.execute(
+            sa_delete(Utterance).where(Utterance.argument_id == ids["argument_id"])
+        )
         await db.execute(
             sa_delete(ArgumentParticipant).where(
                 ArgumentParticipant.argument_id == ids["argument_id"]
@@ -243,10 +320,11 @@ async def _teardown_fixture_argument(ids: dict) -> None:
             sa_delete(CaseArgument).where(CaseArgument.argument_id == ids["argument_id"])
         )
         await db.execute(sa_delete(Case).where(Case.id == ids["case_id"]))
-        if "bench_person_id" in ids:
-            await db.execute(sa_delete(Person).where(Person.id == ids["bench_person_id"]))
-        if "advocate_person_id" in ids:
-            await db.execute(sa_delete(Person).where(Person.id == ids["advocate_person_id"]))
+        for key in ("bench_person_id", "resolved_person_id", "unknown_person_id"):
+            if key in ids:
+                await db.execute(sa_delete(Person).where(Person.id == ids[key]))
+        if "import_run_id" in ids:
+            await db.execute(sa_delete(ImportRun).where(ImportRun.id == ids["import_run_id"]))
         await db.execute(sa_delete(Argument).where(Argument.id == ids["argument_id"]))
         await db.commit()
 
@@ -281,14 +359,24 @@ async def test_seeder_nulls_person_id_of_one_advocate_participant_and_flags_need
         async with AsyncSessionLocal() as db:
             result = await seed_unresolved_speaker_fixture(db, conversation_id=conversation_id)
 
-        assert result["participant_id"] == ids["advocate_participant_id"]
+        # The UNKNOWN-side participant is selected — NOT the resolved-side
+        # (PETITIONER) decoy — even though the decoy has the lower id and
+        # would win a plain "first non-BENCH by id" pick.
+        assert result["participant_id"] == ids["unknown_participant_id"]
         assert result["already_seeded"] is False
 
         async with AsyncSessionLocal() as db:
-            advocate = (
+            unknown = (
                 await db.execute(
                     select(ArgumentParticipant).where(
-                        ArgumentParticipant.id == ids["advocate_participant_id"]
+                        ArgumentParticipant.id == ids["unknown_participant_id"]
+                    )
+                )
+            ).scalar_one()
+            resolved = (
+                await db.execute(
+                    select(ArgumentParticipant).where(
+                        ArgumentParticipant.id == ids["resolved_participant_id"]
                     )
                 )
             ).scalar_one()
@@ -300,12 +388,54 @@ async def test_seeder_nulls_person_id_of_one_advocate_participant_and_flags_need
                 )
             ).scalar_one()
 
-        assert advocate.person_id is None
-        assert advocate.review_state == ReviewState.NEEDS_REVIEW
-        # The BENCH row is untouched — the seeder must never null a
-        # justice's person_id.
+        assert unknown.person_id is None
+        assert unknown.review_state == ReviewState.NEEDS_REVIEW
+        # The decoy and the BENCH row are both untouched.
+        assert resolved.person_id == ids["resolved_person_id"]
+        assert resolved.review_state == ReviewState.UNREVIEWED
         assert bench.person_id == ids["bench_person_id"]
         assert bench.review_state == ReviewState.UNREVIEWED
+    finally:
+        await _teardown_fixture_argument(ids)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_seeder_also_nulls_matching_utterances_scoped_by_raw_speaker_label():
+    """Not one of the plan's six named <behavior> bullets — a Rule 2 fix
+    found while implementing them: nulling ONLY the ArgumentParticipant
+    row leaves every Utterance this speaker gave still reading a
+    resolved person_id (an independent column), so the public ChatBubble
+    avatar would still render as clickable/resolved and 14-UAT Test 8
+    would remain unreachable even after this seeder ran. The seeder must
+    also null the matching Utterance rows, scoped by raw_speaker_label so
+    the decoy speaker's own utterance is left untouched."""
+    from sqlalchemy import select
+
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import Utterance
+    from api.services.admin_dev import seed_unresolved_speaker_fixture
+
+    conversation_id = f"test-seed-{_uuid.uuid4().hex[:10]}"
+    ids = await _seed_fixture_argument(conversation_id)
+    try:
+        async with AsyncSessionLocal() as db:
+            await seed_unresolved_speaker_fixture(db, conversation_id=conversation_id)
+
+        async with AsyncSessionLocal() as db:
+            target_utterance = (
+                await db.execute(
+                    select(Utterance).where(Utterance.id == ids["target_utterance_id"])
+                )
+            ).scalar_one()
+            decoy_utterance = (
+                await db.execute(
+                    select(Utterance).where(Utterance.id == ids["decoy_utterance_id"])
+                )
+            ).scalar_one()
+
+        assert target_utterance.person_id is None
+        assert decoy_utterance.person_id == ids["resolved_person_id"]
     finally:
         await _teardown_fixture_argument(ids)
 
@@ -381,7 +511,7 @@ async def test_seeded_argument_appears_in_review_queue_with_null_person_id_const
             c for c in constituents if c["person_id"] is None
         ]
         assert len(null_person_constituents) == 1
-        assert null_person_constituents[0]["participant_id"] == ids["advocate_participant_id"]
+        assert null_person_constituents[0]["participant_id"] == ids["unknown_participant_id"]
     finally:
         await _teardown_fixture_argument(ids)
 

@@ -1153,6 +1153,31 @@ async def create_person_for_job(
             incoming_source="operator",
             incoming_method="manual",
         )
+
+        # Gap fix (49-VERIFICATION.md): creating a person and assigning it
+        # to this participant IS an operator edit — same D-11 rule
+        # update_participant_side (api/services/admin_arguments.py) and
+        # update_resolve_row_for_job (this module, above) already apply.
+        # Advance review_state to OPERATOR_EDITED and close this
+        # participant's open discrepancies in the SAME transaction (D-15),
+        # exactly as those two reference implementations do. Without this,
+        # the two apply_participant_value_change calls above each open a
+        # value_discrepancy row (first-time fill is ACCEPT_AND_RECORD) that
+        # never closes, and review_state never leaves UNREVIEWED — leaving a
+        # permanently stuck, unactionable review-queue row.
+        await db.execute(
+            update(ArgumentParticipant)
+            .where(
+                ArgumentParticipant.id == participant.id,
+                ArgumentParticipant.argument_id == job.argument_id,
+            )
+            .values(review_state=ReviewState.OPERATOR_EDITED)
+            .execution_options(synchronize_session=False)
+        )
+        await close_open_discrepancies(
+            db, target_type="argument_participant", target_id=participant.id
+        )
+
         # D-07/D-11: this fills a NULL ArgumentParticipant.person_id — a
         # direct floor input — so the recompute is load-bearing, not
         # consistency-only. Called before this function's own commit

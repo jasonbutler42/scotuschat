@@ -636,6 +636,131 @@ async def test_create_person_for_job_advocate_sets_is_justice_false() -> None:
 
 @pytest.mark.asyncio
 @pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_create_person_for_job_closes_discrepancies_and_advances_review_state() -> None:
+    """Gap-closure regression test (49-VERIFICATION.md): create_person_for_job
+    routes person_id and side through apply_participant_value_change (the
+    D-31 authority gate), but must ALSO advance review_state to
+    OPERATOR_EDITED and close the value_discrepancy rows those two gated
+    writes open — exactly like update_participant_side
+    (api/services/admin_arguments.py) and update_resolve_row_for_job
+    (api/services/admin_jobs.py) already do. Before the fix, a
+    previously-UNREVIEWED participant resolved via "create new person"
+    stayed UNREVIEWED with two permanently open value_discrepancy rows
+    (person_id, side), and the review queue kept the argument stuck with no
+    row action able to clear it.
+
+    Asserts against state RE-FETCHED from the database in a fresh session,
+    not the function's returned dict — the participant row is never part of
+    create_person_for_job's return value at all, only the created Person is.
+
+    Uses AsyncSessionLocal() directly rather than the shared db_session
+    fixture — create_person_for_job commits internally (see the bench test
+    above for the full explanation).
+    """
+    from sqlalchemy import select as sa_select
+
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import (
+        AdminJob,
+        AdminJobStatus,
+        AdminJobStep,
+        Argument,
+        ArgumentParticipant,
+        ArgumentStatusEnum,
+        Person,
+        ReviewState,
+        SideEnum,
+        ValueDiscrepancy,
+    )
+    from api.schemas.admin_jobs import PersonCreate
+    from api.services.admin_jobs import create_person_for_job
+
+    async with AsyncSessionLocal() as db:
+        arg = Argument(status=ArgumentStatusEnum.CANDIDATE, question_number=1)
+        db.add(arg)
+        await db.flush()
+
+        # UNREVIEWED + never-stamped person_id/side is the ordinary state of
+        # a first-time-unresolved speaker reaching the "create new person"
+        # path — the exact live-consequence scenario in the gap report.
+        participant = ArgumentParticipant(
+            argument_id=arg.id,
+            person_id=None,
+            raw_speaker_label="MS. GAP",
+            side=SideEnum.UNKNOWN,
+            review_state=ReviewState.UNREVIEWED,
+        )
+        db.add(participant)
+        await db.flush()
+
+        job = AdminJob(
+            status=AdminJobStatus.PAUSED,
+            current_step=AdminJobStep.RESOLVE,
+            argument_id=arg.id,
+        )
+        db.add(job)
+        await db.commit()
+
+        arg_id = arg.id
+        participant_id = participant.id
+        job_id = job.id
+
+    body = PersonCreate(
+        first_name="Gap",
+        last_name="Closer",
+        raw_speaker_label="MS. GAP",
+        side=SideEnum.PETITIONER,
+    )
+
+    async with AsyncSessionLocal() as db:
+        person = await create_person_for_job(db, job_id, body)
+        person_id = person.id
+
+    async with AsyncSessionLocal() as db:
+        refreshed = await db.get(ArgumentParticipant, participant_id)
+        assert refreshed.person_id == person_id
+        assert refreshed.side == SideEnum.PETITIONER
+        # The gap: review_state must advance off UNREVIEWED.
+        assert refreshed.review_state == ReviewState.OPERATOR_EDITED
+
+        open_discrepancies = (
+            await db.execute(
+                sa_select(ValueDiscrepancy).where(
+                    ValueDiscrepancy.target_type == "argument_participant",
+                    ValueDiscrepancy.target_id == participant_id,
+                    ValueDiscrepancy.resolved_at.is_(None),
+                )
+            )
+        ).scalars().all()
+        # The gap: both the person_id and side writes each opened a
+        # value_discrepancy row (ACCEPT_AND_RECORD on first-time fill) that
+        # must be closed in the same transaction as the value write.
+        assert len(open_discrepancies) == 0
+
+        # cleanup — create_person_for_job commits internally, so nothing here
+        # is protected by a rollback; must delete explicitly.
+        stale_discrepancies = (
+            await db.execute(
+                sa_select(ValueDiscrepancy).where(
+                    ValueDiscrepancy.target_type == "argument_participant",
+                    ValueDiscrepancy.target_id == participant_id,
+                )
+            )
+        ).scalars().all()
+        for row in stale_discrepancies:
+            await db.delete(row)
+        await db.delete(refreshed)
+        job = await db.get(AdminJob, job_id)
+        await db.delete(job)
+        arg = await db.get(Argument, arg_id)
+        await db.delete(arg)
+        person = await db.get(Person, person_id)
+        await db.delete(person)
+        await db.commit()
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
 async def test_create_person_for_job_rejects_wrong_job_state(db_session) -> None:
     """Test 3a: a non-PAUSED job rejects the mini create-person request."""
     from api.models.models import AdminJob, AdminJobStatus, AdminJobStep

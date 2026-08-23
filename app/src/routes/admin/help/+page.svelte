@@ -132,28 +132,28 @@
 			</p>
 
 			<div style="display: flex; flex-direction: column; gap: 12px; margin-top: 16px;">
-				<div style="display: flex; align-items: baseline; gap: 12px;">
+				<div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;">
 					<span style={statusBadgeStyle('candidate')}>{statusBadgeLabel('candidate')}</span>
 					<span style="font-size: 16px; color: #cbd5e1;">
 						Just resolved from a pipeline run, not yet reviewed by an operator. The born
 						state every newly resolved argument starts in.
 					</span>
 				</div>
-				<div style="display: flex; align-items: baseline; gap: 12px;">
+				<div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;">
 					<span style={statusBadgeStyle('draft')}>{statusBadgeLabel('draft')}</span>
 					<span style="font-size: 16px; color: #cbd5e1;">
 						An operator has started editing the argument (case metadata, participant
 						links, etc.) but has not yet published it.
 					</span>
 				</div>
-				<div style="display: flex; align-items: baseline; gap: 12px;">
+				<div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;">
 					<span style={statusBadgeStyle('published')}>{statusBadgeLabel('published')}</span>
 					<span style="font-size: 16px; color: #cbd5e1;">
 						Publicly visible on the site. An operator moves an argument here by
 						publishing it, subject to the two gates below.
 					</span>
 				</div>
-				<div style="display: flex; align-items: baseline; gap: 12px;">
+				<div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;">
 					<span style={statusBadgeStyle('unpublished')}>{statusBadgeLabel('unpublished')}</span>
 					<span style="font-size: 16px; color: #cbd5e1;">
 						An operator took a previously published argument back down. It keeps its
@@ -184,28 +184,28 @@
 			</p>
 
 			<div style="display: flex; flex-direction: column; gap: 12px; margin: 16px 0;">
-				<div style="display: flex; align-items: baseline; gap: 12px;">
+				<div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;">
 					<span style={tierBadgeStyle('verified')}>{tierBadgeLabel('verified')}</span>
 					<span style="font-size: 16px; color: #cbd5e1;">
 						A human has explicitly confirmed or edited this attribution, or it was
 						entered directly by an operator.
 					</span>
 				</div>
-				<div style="display: flex; align-items: baseline; gap: 12px;">
+				<div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;">
 					<span style={tierBadgeStyle('trusted')}>{tierBadgeLabel('trusted')}</span>
 					<span style="font-size: 16px; color: #cbd5e1;">
 						Matched directly against an authoritative identifier from the corpus or a
 						seed dataset — no operator review yet, but a strong automatic match.
 					</span>
 				</div>
-				<div style="display: flex; align-items: baseline; gap: 12px;">
+				<div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;">
 					<span style={tierBadgeStyle('provisional')}>{tierBadgeLabel('provisional')}</span>
 					<span style="font-size: 16px; color: #cbd5e1;">
 						Matched through a normalization or rule-based step — a weaker, heuristic
 						match than a direct identifier lookup.
 					</span>
 				</div>
-				<div style="display: flex; align-items: baseline; gap: 12px;">
+				<div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;">
 					<span style={tierBadgeStyle('uncertain')}>{tierBadgeLabel('uncertain')}</span>
 					<span style="font-size: 16px; color: #cbd5e1;">
 						Flagged for operator attention, unresolved, or matched by a method with no
@@ -247,13 +247,13 @@
 			</p>
 
 			<div style="display: flex; flex-direction: column; gap: 12px; margin: 16px 0;">
-				<div style="display: flex; align-items: baseline; gap: 12px;">
+				<div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;">
 					<span style={reviewBadgeStyle('unreviewed')}>{reviewBadgeLabel('unreviewed')}</span>
 					<span style="font-size: 16px; color: #cbd5e1;">
 						The default state. No operator has acted on this value yet.
 					</span>
 				</div>
-				<div style="display: flex; align-items: baseline; gap: 12px;">
+				<div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;">
 					<span style={reviewBadgeStyle('needs_review')}>{reviewBadgeLabel('needs_review')}</span>
 					<span style="font-size: 16px; color: #cbd5e1;">
 						Flagged for operator attention — either by an importer that could not
@@ -261,14 +261,14 @@
 						decision.
 					</span>
 				</div>
-				<div style="display: flex; align-items: baseline; gap: 12px;">
+				<div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;">
 					<span style={reviewBadgeStyle('operator_confirmed')}>{reviewBadgeLabel('operator_confirmed')}</span>
 					<span style="font-size: 16px; color: #cbd5e1;">
 						An operator looked at this specific value and confirmed it is correct, with
 						no change needed.
 					</span>
 				</div>
-				<div style="display: flex; align-items: baseline; gap: 12px;">
+				<div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;">
 					<span style={reviewBadgeStyle('operator_edited')}>{reviewBadgeLabel('operator_edited')}</span>
 					<span style="font-size: 16px; color: #cbd5e1;">
 						An operator changed this value directly (for example, correcting a name or

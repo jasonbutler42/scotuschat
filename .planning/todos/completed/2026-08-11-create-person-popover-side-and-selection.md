@@ -1,3 +1,5 @@
+completed: 2026-08-23
+---
 ---
 created: 2026-08-11T14:22:12.986Z
 title: Create-person popover should inherit row's side and auto-select the new person

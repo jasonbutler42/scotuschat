@@ -1,3 +1,5 @@
+completed: 2026-08-23
+---
 ---
 created: 2026-08-19T00:00:00.000Z
 title: Admin Help page with a diagram explaining statuses, tiers, and publish gates

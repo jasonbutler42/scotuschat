@@ -1,3 +1,5 @@
+completed: 2026-08-23
+---
 ---
 created: 2026-08-20T00:00:00.000Z
 title: Argument Status card labels resolved_at as "Created"; Argument has no created_at column

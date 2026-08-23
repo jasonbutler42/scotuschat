@@ -282,7 +282,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 49-02-PLAN.md — Legacy fold (REVIEW-05): migration 0029 swaps the two `people` columns, every consumer re-points, and a structural test proves no parallel mechanism survives (wave 2)
+- [x] 49-02-PLAN.md — Legacy fold (REVIEW-05): migration 0029 swaps the two `people` columns, every consumer re-points, and a structural test proves no parallel mechanism survives (wave 2)
 - [ ] 49-03-PLAN.md — Folded-todo cleanup: create-person popover side inheritance and selection, Status-card label fix, and a new `/admin/help` status × tier × review-state page (wave 2)
 
 **Wave 3** *(blocked on Wave 2 completion)*

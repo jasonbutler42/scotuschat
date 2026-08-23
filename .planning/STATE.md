@@ -5,16 +5,16 @@ milestone_name: Import & Provenance Re-model
 current_phase: 49
 current_phase_name: Review Model
 status: Phase 49 planned — 6 plans across 5 waves; ready to execute
-stopped_at: Completed 49-01-PLAN.md (tracer + defect fixes + REVIEW-01 schema test)
-last_updated: "2026-08-23T11:34:09.871Z"
+stopped_at: Completed 49-02-PLAN.md (migration 0029 Person review-model fold; REVIEW-05 structural contract; two pre-existing 49-01 trust-tier regressions triaged)
+last_updated: "2026-08-23T12:49:51.440Z"
 last_activity: 2026-08-21
 last_activity_desc: Phase 49 execution started
-state_head: ce4943f8a4eb1e1ae4f391a3fd03282def6f5dfc
+state_head: 3231ded56a0dcaff5db7b2fa72d1cb8f849d8499
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 22
-  completed_plans: 17
+  completed_plans: 18
   percent: 40
 ---
 
@@ -154,6 +154,7 @@ items → 14.** Every closure carries its evidence in the file it closes; the co
 | Phase 48 P08 | ~35min | 3 tasks | 3 files |
 | Phase 48 P10 | ~2h across 3 sessions | 4 tasks | 18 files |
 | Phase 49-review-model P01 | 45min | 2 tasks | 14 files |
+| Phase 49-review-model P02 | 2h | 3 tasks | 20 files |
 
 v1.7 per-plan metrics cleared at this milestone boundary per the standard STATE.md reset; the underlying per-plan SUMMARY files remain in `.planning/milestones/v1.7-phases/`.
 
@@ -200,6 +201,8 @@ Full cross-milestone decision log lives in PROJECT.md's Key Decisions table. Per
 - [Phase ?]: Phase 48 Plan 09: derive_tier rule 3 (operator+manual -> VERIFIED) confirmed by the operator on 2026-08-21, closing plan 48-01's flagged assumption; api/domain/trust.py docstrings updated to record confirmation, logic unchanged
 - [Phase ?]: Phase 48 Plan 09: two corpus fixtures (15169, 22372) read trust_tier=uncertain not trusted after reseed -- traced to ConvoKit's own unattributed-speaker sentinel rows, not a Phase 48 defect; derive_tier is correct and the plan's must-have assumption was wrong. Accepted by operator as an open item
 - [Phase ?]: Phase 48 Plan 09: operator requested widening Resolve-card editability from CANDIDATE-only to {candidate, draft, unpublished} (published stays read-only) -- recorded as a new open item and standalone todo, deliberately NOT implemented (design-scope change, not a bug)
+- [Phase 49]: 49-02 checkpoint decision (human, resolved): migration 0029's downgrade() is clean-reverse — reconstructs no data from review_state/provenance_metadata, matching migration 0027's precedent.
+- [Phase 49]: 49-02: fixed a pre-existing 49-01 regression (import_convokit.py ArgumentParticipant rows never stamped source/method, flooring trust tier to UNCERTAIN under D-18) — in scope, implements D-20's locked mapping. A second, analogous regression in admin_jobs.py/resolve_job was left open and documented (deferred-items.md, WINDOWS.md #11) since D-20 has no locked mapping for that path and fixing it requires a new architectural decision.
 
 ### Roadmap Evolution
 
@@ -247,6 +250,7 @@ v1.6's roadmap evolution is archived in `.planning/milestones/v1.6-ROADMAP.md`; 
 **Process concern carried from Phase 40.1 (PROJECT.md Key Decisions, ⚠️ Revisit):**
 
 - When a fix for a previously-diagnosed issue lands via a commit outside the formal plan sequence, flip the source debug session's / verification's `status` field in that same commit. v1.6 lost a phase slot (40.1) to a stale `diagnosed` status; no structural fix shipped.
+- api/tests/test_admin_jobs_service.py: 2 failing tests (resolve_job/update_resolve_row_for_job never stamp ArgumentParticipant.source/method, floored to UNCERTAIN by 49-01's D-18 change). Out of 49-02 scope — see .planning/phases/49-review-model/deferred-items.md and WINDOWS.md entry 11.
 
 ### Milestone-close queue (not Phase 48 blockers)
 
@@ -257,8 +261,8 @@ at close.
 
 ## Session Continuity
 
-Last session: 2026-08-23T11:34:09.675Z
-Stopped at: Completed 49-01-PLAN.md (tracer + defect fixes + REVIEW-01 schema test)
+Last session: 2026-08-23T12:49:51.113Z
+Stopped at: Completed 49-02-PLAN.md (migration 0029 Person review-model fold; REVIEW-05 structural contract; two pre-existing 49-01 trust-tier regressions triaged)
 Resume file: None
 
 ## Operator Next Steps

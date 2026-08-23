@@ -32,7 +32,7 @@ Requirements for milestone v1.8. Each maps to exactly one roadmap phase.
 - [ ] **REVIEW-02**: Re-import records a discrepancy for operator review instead of overwriting an equal-or-higher-authority value
 - [ ] **REVIEW-03**: Operator review queue lists items needing review, filterable by trust tier / review state
 - [ ] **REVIEW-04**: Operator can resolve a review item (confirm or edit), advancing its `review_state` and recomputing trust
-- [ ] **REVIEW-05**: `name_needs_review` / `name_extraction_metadata` generalized into the unified review_state + provenance record (no parallel mechanism)
+- [x] **REVIEW-05**: `name_needs_review` / `name_extraction_metadata` generalized into the unified review_state + provenance record (no parallel mechanism)
 
 ### Unified Import Path (IMPORT)
 
@@ -84,7 +84,7 @@ Mappings confirmed by the v1.8 roadmap (`.planning/ROADMAP.md`), created 2026-08
 | REVIEW-02 | Phase 49 | Pending |
 | REVIEW-03 | Phase 49 | Pending (shared with 49-05/49-06; not all declaring plans complete) |
 | REVIEW-04 | Phase 49 | Pending (shared with 49-04/49-05/49-06; not all declaring plans complete) |
-| REVIEW-05 | Phase 49 | Pending |
+| REVIEW-05 | Phase 49 | Complete |
 | IMPORT-01 | Phase 50 | Pending |
 | IMPORT-02 | Phase 50 | Pending |
 | IMPORT-03 | Phase 50 | Pending |

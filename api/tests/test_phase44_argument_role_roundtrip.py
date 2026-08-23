@@ -166,24 +166,10 @@ async def test_argument_role_round_trips_for_each_real_advocate_role(
             assert row["argument_role"] == expected_label
             assert row["descriptor"] == "Counsel of Record"
 
-        # RESOLVE-13 re-assertion at the round-trip level, WITH a documented
-        # CR-01 caveat (49-REVIEW.md): a BENCH payload carrying a different
-        # descriptor must NOT overwrite the value the row already has
-        # ("Counsel of Record", set above). Before CR-01, the side write
-        # here also succeeded (UNKNOWN-authority review_state never
-        # advanced). After CR-01, this participant's review_state is
-        # already OPERATOR_EDITED from the write above, so THIS second
-        # side write now ties in authority and is rejected by
-        # api.domain.authority.decide_write ("equal authority rejects" —
-        # OPERATOR is the ladder's ceiling, so no later operator write can
-        # ever outrank it). The side therefore stays at side_value, not
-        # BENCH — see
-        # test_update_resolve_row_descriptor_survives_advocate_bench_advocate_round_trip
-        # (api/tests/test_admin_jobs_phase25.py) for the full explanation
-        # of this known, unfixed gap. What THIS assertion still correctly
-        # proves: the descriptor is untouched either way (both because
-        # RESOLVE-13 skips the descriptor gate entirely on a BENCH request,
-        # and because the side write itself was rejected).
+        # RESOLVE-13 re-assertion at the round-trip level: a BENCH payload
+        # carrying a different descriptor must NOT overwrite the value the
+        # row already has ("Counsel of Record", set above) — the client's
+        # bench descriptor is ignored, and the stored value is preserved.
         bench_body = ResolveRowUpdate(
             participant_id=participant_id,
             side=SideEnum.BENCH,
@@ -191,7 +177,7 @@ async def test_argument_role_round_trips_for_each_real_advocate_role(
         )
         async with AsyncSessionLocal() as db:
             updated_bench = await update_resolve_row_for_job(db, job_id, bench_body)
-            assert updated_bench.side == SideEnum(side_value)  # rejected — unchanged
+            assert updated_bench.side == SideEnum.BENCH
             assert updated_bench.descriptor == "Counsel of Record"
     finally:
         async with AsyncSessionLocal() as db:
@@ -240,22 +226,7 @@ async def test_descriptor_and_specific_role_survive_an_immediate_bench_then_back
     source contract in api/tests/test_phase44_resolve_table_contract.py
     (`test_descriptor_input_uses_a_client_memory_that_survives_side_toggles`);
     together the two tests cover what a live browser session would otherwise
-    be needed to prove.
-
-    CR-01 caveat (49-REVIEW.md): step (a)'s write advances this
-    participant's review_state to OPERATOR_EDITED. Every subsequent write
-    through this same gate now ties in authority with that state (OPERATOR
-    is the ladder's ceiling — api.domain.authority.decide_write's "equal
-    authority rejects") and is REJECTED, so step (b)'s side write to BENCH
-    never actually applies — the row never leaves PETITIONER. This changes
-    what steps (b)/(c) can prove: they no longer exercise a genuine
-    Bench transition (that data path is now blocked by the same known,
-    unfixed gap documented in
-    test_admin_jobs_phase25.py::test_update_resolve_row_descriptor_survives_advocate_bench_advocate_round_trip),
-    so their assertions below verify the rejection itself, not a completed
-    round trip. The client-memory fix this test was written to prove is
-    still fully covered by the static source contract cited above.
-    """
+    be needed to prove."""
     from api.core.database import AsyncSessionLocal
     from api.models.models import (
         AdminJob,
@@ -324,10 +295,6 @@ async def test_descriptor_and_specific_role_survive_an_immediate_bench_then_back
         # the server drops a client-supplied descriptor whenever side==BENCH
         # (44-06/RESOLVE-13), so the stored "Attorney" survives regardless of
         # what the client sends here.
-        #
-        # CR-01 caveat (see docstring): this participant is already
-        # OPERATOR_EDITED from step (a), so this side write ties in
-        # authority and is REJECTED — the row never actually reaches BENCH.
         step_b = ResolveRowUpdate(
             participant_id=participant_id,
             side=SideEnum.BENCH,
@@ -335,24 +302,25 @@ async def test_descriptor_and_specific_role_survive_an_immediate_bench_then_back
         )
         async with AsyncSessionLocal() as db:
             updated_b = await update_resolve_row_for_job(db, job_id, step_b)
-            assert updated_b.side == SideEnum.PETITIONER  # rejected — never reached BENCH
+            assert updated_b.side == SideEnum.BENCH
             assert updated_b.descriptor == "Attorney"
 
         async with AsyncSessionLocal() as db:
             rows = await list_resolve_rows_for_job(db, job_id)
             row_b = next(r for r in rows if r["raw_speaker_label"] == "MR. IMMEDIATE TOGGLE")
-            # Since the side write above was rejected, the row is still
-            # PETITIONER — 44-06/RESOLVE-13's "descriptor: null while BENCH"
-            # read-path behavior does not apply here at all, because this
-            # row genuinely never became BENCH.
-            assert row_b["side"] == "PETITIONER"
-            assert row_b["descriptor"] == "Attorney"
+            assert row_b["side"] == "BENCH"
+            # 44-06/RESOLVE-13: the read path reports descriptor: null while
+            # BENCH by design ("hidden, not shown") — this is exactly the
+            # null read-back the client-side fix (lastDescriptorValue) exists
+            # to survive.
+            assert row_b["descriptor"] is None
 
-        # Step (c): send the identical (PETITIONER, "Attorney") payload
-        # again. Since neither value differs from what is already stored,
-        # api.domain.authority.decide_write returns ACCEPT (not a rank
-        # comparison at all) regardless of the CR-01 caveat above — this is
-        # the one case in this sequence unaffected by the known gap.
+        # Step (c): toggle back to Advocate, immediately (same session, no
+        # manual reload). A client with the fixed `lastDescriptorValue`
+        # memory resubmits "Attorney" (its last-known value) in the SAME
+        # request as the side change, rather than the empty string the
+        # now-null `row.descriptor` prop would otherwise have bound the
+        # reappearing <input> to.
         step_c = ResolveRowUpdate(
             participant_id=participant_id,
             side=SideEnum.PETITIONER,
@@ -366,6 +334,11 @@ async def test_descriptor_and_specific_role_survive_an_immediate_bench_then_back
         async with AsyncSessionLocal() as db:
             rows = await list_resolve_rows_for_job(db, job_id)
             row_c = next(r for r in rows if r["raw_speaker_label"] == "MR. IMMEDIATE TOGGLE")
+            # Both halves of item 9 verified in one immediate round trip: the
+            # specific advocate role (a pure client-memory restore,
+            # lastAdvocateRole, already correct pre-remediation) and the
+            # descriptor (the confirmed data-loss bug, now fixed) both
+            # survive Bench -> Advocate with no manual reload.
             assert row_c["side"] == "PETITIONER"
             assert row_c["argument_role"] == "Petitioner's Counsel"
             assert row_c["descriptor"] == "Attorney"

@@ -487,6 +487,24 @@ async def resolve_job(
     parse_run_provenance = parse_run_provenance_result.one_or_none()
     parse_run_source = parse_run_provenance.source if parse_run_provenance else None
     parse_run_method = parse_run_provenance.method if parse_run_provenance else None
+    # Part A/Part B fix (authority-ceiling defect): the authority gate call
+    # below must NOT claim incoming_source="operator" — resolve_job is a
+    # pipeline match application, not a human authoring a value, and
+    # authority_rank's rule 2 reads "operator" as the ladder's OPERATOR
+    # ceiling. Passing "operator" here let a pipeline write silently
+    # out-tie an operator's own prior decision on the OPERATOR/OPERATOR
+    # equal-rank carve-out (decide_write) once that carve-out existed to
+    # let a human's own repeat edit through. Use the same parse-step
+    # ImportRun provenance already read above for the source/method
+    # backfill — CORPUS (per this run's ImportSource), not OPERATOR — so
+    # a pipeline write can still never outrank an existing operator
+    # decision (CORPUS < OPERATOR -> REJECT_AND_RECORD, closing
+    # CR-02/CR-04). `.value` per authority.py's "plain strings only"
+    # discipline; "" when the provenance row is unexpectedly missing
+    # (authority_rank's fail-closed UNKNOWN default, same as every other
+    # blank-provenance caller in this codebase).
+    incoming_authority_source = parse_run_source.value if parse_run_source else ""
+    incoming_authority_method = parse_run_method.value if parse_run_method else ""
 
     # Step 2: Apply each match
     for match in matches:
@@ -553,8 +571,8 @@ async def resolve_job(
                     participant=matched_participant,
                     field="person_id",
                     incoming_value=match.person_id,
-                    incoming_source="operator",
-                    incoming_method="manual",
+                    incoming_source=incoming_authority_source,
+                    incoming_method=incoming_authority_method,
                 )
                 if matched_participant.source is None:
                     await db.execute(

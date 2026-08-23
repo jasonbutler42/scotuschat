@@ -34,10 +34,21 @@ _REPRESENTATIVE = {
 
 def _expected_decision(incoming_rank: AuthorityRank, stored_rank: AuthorityRank, differs: bool) -> WriteDecision:
     """Expectation derived from rank comparison, not hardcoded per case, so
-    adding a rung cannot leave a hole (D-32)."""
+    adding a rung cannot leave a hole (D-32).
+
+    Authority-ceiling fix: OPERATOR/OPERATOR is the ONE equal-rank pair
+    that accepts-and-records rather than rejecting — OPERATOR is the
+    ladder's ceiling, so without this carve-out a human's second
+    correction to their own earlier correction could never be strictly
+    outranked and would be silently rejected forever (the defect this
+    fix restores). Every other equal-rank pair (including CORPUS/CORPUS,
+    REVIEW-02's own boundary case) still rejects-and-records unchanged.
+    """
     if not differs:
         return WriteDecision.ACCEPT
     if incoming_rank > stored_rank:
+        return WriteDecision.ACCEPT_AND_RECORD
+    if incoming_rank == stored_rank == AuthorityRank.OPERATOR:
         return WriteDecision.ACCEPT_AND_RECORD
     return WriteDecision.REJECT_AND_RECORD
 
@@ -165,6 +176,24 @@ def test_strictly_lower_incoming_authority_rejects_and_records() -> None:
         values_differ=True,
     )
     assert decision == WriteDecision.REJECT_AND_RECORD
+
+
+def test_operator_over_operator_accepts_and_records() -> None:
+    """Authority-ceiling fix: a second operator edit superseding the
+    operator's own first edit is the ONE equal-rank pair that accepts
+    (and records) rather than rejecting — OPERATOR is the ladder's
+    ceiling, so a strictly-higher rank can never exist to let a repeat
+    human correction through under the plain "equal rejects" rule."""
+    decision = decide_write(
+        incoming_source="operator",
+        incoming_method="manual",
+        incoming_review_state="unreviewed",
+        existing_source="operator",
+        existing_method="manual",
+        existing_review_state="operator_edited",
+        values_differ=True,
+    )
+    assert decision == WriteDecision.ACCEPT_AND_RECORD
 
 
 def test_decide_write_never_writes_without_recording_when_values_differ() -> None:
@@ -389,6 +418,16 @@ async def test_manual_check_corpus_write_against_operator_edited_participant_rej
 @pytest.mark.asyncio
 @pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
 async def test_equal_authority_differing_value_leaves_column_untouched_and_records_one_discrepancy() -> None:
+    """Equal-authority-rejects boundary case, using CORPUS/CORPUS (not
+    OPERATOR/OPERATOR) as the representative pair — this is REVIEW-02's
+    own boundary case: a fresh corpus re-import disagreeing with an
+    existing corpus value must still be rejected and recorded. The
+    authority-ceiling fix (decide_write) carves out ONLY OPERATOR/OPERATOR
+    from "equal authority rejects" (see
+    test_operator_over_operator_accepts_and_records and
+    test_second_operator_edit_persists_and_records_first_value below for
+    that carve-out's own coverage); every other equal-rank pair,
+    including this one, is unaffected."""
     from sqlalchemy import select as sa_select
 
     from api.core.database import AsyncSessionLocal
@@ -403,7 +442,10 @@ async def test_equal_authority_differing_value_leaves_column_untouched_and_recor
     from api.services.admin_review import apply_participant_value_change
 
     ids = await _make_argument_with_participant(
-        review_state=ReviewState.OPERATOR_EDITED, side=SideEnum.PETITIONER
+        review_state=ReviewState.UNREVIEWED,
+        source=ImportSource.CORPUS,
+        method=ImportMethod.DIRECT,
+        side=SideEnum.PETITIONER,
     )
     try:
         async with AsyncSessionLocal() as db:
@@ -413,8 +455,8 @@ async def test_equal_authority_differing_value_leaves_column_untouched_and_recor
                 participant=participant,
                 field="side",
                 incoming_value=SideEnum.RESPONDENT,
-                incoming_source="operator",
-                incoming_method="manual",
+                incoming_source="corpus",
+                incoming_method="direct",
             )
             await db.commit()
 
@@ -437,6 +479,68 @@ async def test_equal_authority_differing_value_leaves_column_untouched_and_recor
             ).scalars().all()
             assert len(rows) == 1
             assert rows[0].field == "side"
+    finally:
+        await _teardown_argument_with_participant(ids)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_second_operator_edit_persists_and_records_first_value() -> None:
+    """Direct regression test for the authority-ceiling defect: a second
+    operator edit to a participant already at OPERATOR_EDITED (from a
+    first operator edit) must ACTUALLY WRITE the new value — not be
+    silently rejected-and-discarded. Before the fix, this exact sequence
+    (existing OPERATOR_EDITED, incoming operator, differing value) hit
+    decide_write's "equal authority rejects" rule (OPERATOR == OPERATOR)
+    and the second edit never persisted, with no visible error anywhere
+    (the caller's own close_open_discrepancies immediately closes the
+    discrepancy the rejection just recorded)."""
+    from sqlalchemy import select as sa_select
+
+    from api.core.database import AsyncSessionLocal
+    from api.domain.authority import WriteDecision
+    from api.models.models import ArgumentParticipant, ReviewState, SideEnum, ValueDiscrepancy
+    from api.services.admin_review import apply_participant_value_change
+
+    ids = await _make_argument_with_participant(
+        review_state=ReviewState.OPERATOR_EDITED, side=SideEnum.PETITIONER
+    )
+    try:
+        async with AsyncSessionLocal() as db:
+            participant = await db.get(ArgumentParticipant, ids["participant_id"])
+            # The operator's SECOND correction to their own earlier edit.
+            decision = await apply_participant_value_change(
+                db,
+                participant=participant,
+                field="side",
+                incoming_value=SideEnum.RESPONDENT,
+                incoming_source="operator",
+                incoming_method="manual",
+            )
+            await db.commit()
+
+        assert decision == WriteDecision.ACCEPT_AND_RECORD
+
+        async with AsyncSessionLocal() as db:
+            refreshed = await db.get(ArgumentParticipant, ids["participant_id"])
+            # The second edit actually persisted — this is the defect's
+            # core assertion.
+            assert refreshed.side == SideEnum.RESPONDENT
+
+            rows = (
+                await db.execute(
+                    sa_select(ValueDiscrepancy).where(
+                        ValueDiscrepancy.target_type == "argument_participant",
+                        ValueDiscrepancy.target_id == ids["participant_id"],
+                    )
+                )
+            ).scalars().all()
+            assert len(rows) == 1
+            assert rows[0].field == "side"
+            # The superseded first value survives in the discrepancy record
+            # (D-16) even though the write itself succeeded.
+            assert rows[0].existing_value == SideEnum.PETITIONER.value
+            assert rows[0].incoming_value == SideEnum.RESPONDENT.value
     finally:
         await _teardown_argument_with_participant(ids)
 

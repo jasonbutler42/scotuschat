@@ -139,15 +139,36 @@ def decide_write(
         nothing to record).
       - `values_differ` is True and the incoming rank is STRICTLY greater
         than the stored rank -> ACCEPT_AND_RECORD.
-      - `values_differ` is True and the incoming rank is EQUAL to or LESS
-        than the stored rank -> REJECT_AND_RECORD.
+      - `values_differ` is True and the incoming rank EQUALS the stored
+        rank and BOTH are OPERATOR -> ACCEPT_AND_RECORD (see "OPERATOR
+        supersedes OPERATOR" below).
+      - `values_differ` is True and the incoming rank is EQUAL to (and not
+        the OPERATOR/OPERATOR case above) or LESS than the stored rank ->
+        REJECT_AND_RECORD.
 
-    **Equal authority rejects.** This is the boundary the whole requirement
-    rests on: a same-rank incoming value (e.g. a fresh corpus re-import
-    disagreeing with an existing corpus value) does NOT silently overwrite
-    — it is rejected and recorded, exactly like a strictly-lower-authority
-    value. Only a STRICTLY higher incoming rank may overwrite a disagreeing
-    stored value.
+    **Equal authority rejects — except OPERATOR vs OPERATOR.** This is the
+    boundary the whole requirement rests on: a same-rank incoming value
+    (e.g. a fresh corpus re-import disagreeing with an existing corpus
+    value) does NOT silently overwrite — it is rejected and recorded,
+    exactly like a strictly-lower-authority value. Only a STRICTLY higher
+    incoming rank may overwrite a disagreeing stored value.
+
+    The ONE carve-out is when both the incoming and the stored rank are
+    OPERATOR. OPERATOR is the ladder's ceiling (`AuthorityRank.OPERATOR`),
+    so a strictly-higher rank can never exist above it — under the plain
+    "equal rejects" rule, a human's SECOND correction to a value they
+    themselves already corrected would be rejected forever, silently
+    discarding every edit after the first. That is not a disagreement
+    between two independent authorities; it is the same authority (an
+    operator) revising their own earlier decision, which is the single
+    most ordinary action this subsystem supports and must always succeed.
+    So OPERATOR/OPERATOR is ACCEPT_AND_RECORD, not REJECT_AND_RECORD — the
+    write applies and the superseded value is still recorded (D-16). Every
+    other equal-rank pair (CORPUS/CORPUS, PDF_RULE_BASED/PDF_RULE_BASED,
+    PDF_LLM/PDF_LLM, UNKNOWN/UNKNOWN) keeps the plain "equal rejects" rule
+    unchanged — CORPUS/CORPUS in particular is REVIEW-02's own boundary
+    case (a fresh corpus re-import disagreeing with an existing corpus
+    value must still be rejected and recorded).
     """
     if not values_differ:
         return WriteDecision.ACCEPT
@@ -156,5 +177,7 @@ def decide_write(
     existing_rank = authority_rank(existing_source, existing_method, existing_review_state)
 
     if incoming_rank > existing_rank:
+        return WriteDecision.ACCEPT_AND_RECORD
+    if incoming_rank == existing_rank == AuthorityRank.OPERATOR:
         return WriteDecision.ACCEPT_AND_RECORD
     return WriteDecision.REJECT_AND_RECORD

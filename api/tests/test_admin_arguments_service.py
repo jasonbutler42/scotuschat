@@ -1551,6 +1551,102 @@ async def test_update_participant_side_persists_descriptor_for_advocate() -> Non
 
 
 @pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_update_participant_side_second_operator_edit_persists() -> None:
+    """Direct regression test for the authority-ceiling defect: TWO
+    consecutive operator edits to the SAME participant through
+    update_participant_side must BOTH actually persist.
+
+    Before the fix: the first edit (existing rank UNKNOWN -> incoming
+    OPERATOR) accepted and advanced review_state to OPERATOR_EDITED. The
+    second edit (existing rank now OPERATOR -> incoming OPERATOR) hit
+    decide_write's "equal authority rejects" rule and was silently
+    REJECT_AND_RECORDed — the column never changed — and this function's
+    own close_open_discrepancies call immediately closed the discrepancy
+    the rejection had just recorded, leaving no trace anywhere. Critically,
+    update_participant_side's return dict echoes back the REQUESTED side
+    value regardless of whether the write was actually accepted (`"side":
+    side.value`), so a test that only inspects the return value — like
+    test_update_participant_side_persists_descriptor_for_advocate above —
+    cannot detect this defect. This test re-fetches the row from the
+    database after the second edit, which is the only way to prove the
+    write genuinely took effect.
+    """
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import (
+        Argument,
+        ArgumentParticipant,
+        ArgumentStatusEnum,
+        Person,
+        ReviewState,
+        SideEnum,
+    )
+    from api.services.admin_arguments import update_participant_side
+
+    async with AsyncSessionLocal() as db:
+        arg = Argument(status=ArgumentStatusEnum.DRAFT)
+        db.add(arg)
+        await db.flush()
+
+        advocate = Person(full_name="Second Edit Advocate")
+        db.add(advocate)
+        await db.flush()
+
+        participant = ArgumentParticipant(
+            argument_id=arg.id,
+            person_id=advocate.id,
+            raw_speaker_label="MR. SECOND EDIT ADVOCATE",
+            side=SideEnum.UNKNOWN,
+        )
+        db.add(participant)
+        await db.commit()
+
+        arg_id = arg.id
+        advocate_id = advocate.id
+        participant_id = participant.id
+
+    # First operator edit: UNKNOWN existing authority -> OPERATOR incoming
+    # authority. Always accepted, even before the fix.
+    async with AsyncSessionLocal() as db:
+        result_1 = await update_participant_side(
+            db, arg_id, participant_id, SideEnum.PETITIONER
+        )
+    assert result_1 is not None
+
+    async with AsyncSessionLocal() as db:
+        p = await db.get(ArgumentParticipant, participant_id)
+        assert p.side == SideEnum.PETITIONER
+        assert p.review_state == ReviewState.OPERATOR_EDITED
+
+    # Second operator edit to the SAME participant: existing authority is
+    # now OPERATOR (from the first edit) and the incoming write is also
+    # OPERATOR — this is the defect's exact trigger.
+    async with AsyncSessionLocal() as db:
+        result_2 = await update_participant_side(
+            db, arg_id, participant_id, SideEnum.RESPONDENT
+        )
+    assert result_2 is not None
+    assert result_2["write_decision"] == "accept_and_record"
+
+    async with AsyncSessionLocal() as db:
+        p = await db.get(ArgumentParticipant, participant_id)
+        # The genuine round-trip assertion: the second edit actually
+        # persisted to the database, not just echoed back in the response.
+        assert p.side == SideEnum.RESPONDENT
+        assert p.review_state == ReviewState.OPERATOR_EDITED
+
+    # Cleanup
+    async with AsyncSessionLocal() as db:
+        p = await db.get(ArgumentParticipant, participant_id)
+        await db.delete(p)
+        person = await db.get(Person, advocate_id)
+        await db.delete(person)
+        arg = await db.get(Argument, arg_id)
+        await db.delete(arg)
+        await db.commit()
+
+
+@pytest.mark.asyncio
 async def test_update_participant_side_rejects_unresolved_side() -> None:
     """update_participant_side must raise ValueError for both UNKNOWN and the
     legacy ADVOCATE side, before touching the database (T-26-14, CLAUDE.md

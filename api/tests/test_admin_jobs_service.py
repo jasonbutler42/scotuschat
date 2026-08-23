@@ -457,23 +457,11 @@ async def test_approve_job_accepts_freshly_created_candidate_and_rejects_second_
 @pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
 async def test_update_resolve_row_accepts_candidate_draft_and_rejects_published() -> None:
     """update_resolve_row_for_job accepts an edit pre-approval (CANDIDATE),
-    STILL runs (raises no status-guard error) once the argument has moved to
-    DRAFT (Phase 49 folded todo: 2026-08-21-widen-participant-editability-to-
-    all-unpublished-states — supersedes the prior CANDIDATE-only T-48-GUARD),
-    and only rejects with a status-guard ValueError once the argument is
-    PUBLISHED, naming 'published' in the error.
-
-    CR-01 fix note (49-REVIEW.md): the DRAFT-state call's OWN value write is
-    a SEPARATE matter from the status guard this test names — by DRAFT time
-    the participant is already OPERATOR_EDITED from the first (CANDIDATE)
-    call, so its second value write is rejected by the authority gate
-    (api.domain.authority.decide_write's "equal authority rejects" — see
-    test_update_resolve_row_descriptor_survives_advocate_bench_advocate_round_trip
-    for the full explanation of this known, unfixed gap). What this test
-    actually proves about DRAFT is narrower than its original assertion: DRAFT
-    does not itself raise a status-guard error (unlike PUBLISHED below) —
-    it does not prove the second value change persists.
-    """
+    STILL accepts it once the argument has moved to DRAFT (Phase 49 folded
+    todo: 2026-08-21-widen-participant-editability-to-all-unpublished-
+    states — supersedes the prior CANDIDATE-only T-48-GUARD), and only
+    rejects once the argument is PUBLISHED, naming 'published' in the
+    error."""
     from api.core.database import AsyncSessionLocal
     from api.models.models import (
         AdminJob,
@@ -529,13 +517,8 @@ async def test_update_resolve_row_accepts_candidate_draft_and_rejects_published(
         async with AsyncSessionLocal() as db:
             await approve_job(db, admin_job_id)
 
-        # Post-approval (DRAFT): the call still RUNS (no status-guard
-        # ValueError) under the widened editability rule — that is what this
-        # test names and is what DRAFT alone controls. The value itself is
-        # rejected by the authority gate (CR-01's documented, unfixed
-        # consequence — the participant is already OPERATOR_EDITED from the
-        # CANDIDATE-time call above, and a second operator write ties with
-        # it), so the descriptor stays exactly what the first call set.
+        # Post-approval (DRAFT): the edit STILL succeeds under the widened
+        # editability rule.
         async with AsyncSessionLocal() as db:
             updated = await update_resolve_row_for_job(
                 db,
@@ -546,7 +529,7 @@ async def test_update_resolve_row_accepts_candidate_draft_and_rejects_published(
                     descriptor="Counsel for Respondent",
                 ),
             )
-        assert updated.descriptor == "Counsel for Petitioner"  # rejected — unchanged from CANDIDATE-time call
+        assert updated.descriptor == "Counsel for Respondent"
 
         # Once PUBLISHED, the same edit is rejected, naming 'published'.
         async with AsyncSessionLocal() as db:

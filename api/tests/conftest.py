@@ -78,6 +78,48 @@ async def _api_lifespan(_require_root_conftest_redirect):
         yield
 
 
+@pytest_asyncio.fixture(autouse=True)
+async def _sweep_orphaned_value_discrepancies(_api_lifespan):
+    """
+    Sweep orphaned value_discrepancy rows after every api/tests test.
+
+    Phase 49 (D-31/D-31a): `value_discrepancy.target_id` is a plain integer
+    with no real foreign key to `argument_participants.id` or `people.id`
+    (by design — a discrepancy must be able to outlive a deleted/merged
+    target row). Many existing tests seed a participant/person, exercise
+    the authority-gated writer (which may record a discrepancy), then
+    delete the seeded row directly without also deleting the discrepancy —
+    that row has no CASCADE to catch it and would otherwise silently
+    accumulate in the shared `scotus_test` database across every pytest
+    run. This is a general orphan sweep (not test-specific): it runs after
+    every test regardless of which one created the orphan, so no
+    individual test's teardown needs to know about this table.
+    """
+    yield
+    if not _db_configured():
+        return
+    from sqlalchemy import delete as sa_delete, select as sa_select
+
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import ArgumentParticipant, Person, ValueDiscrepancy
+
+    async with AsyncSessionLocal() as db:
+        rows = (await db.execute(sa_select(ValueDiscrepancy))).scalars().all()
+        orphan_ids = []
+        for row in rows:
+            if row.target_type == "argument_participant":
+                still_exists = await db.get(ArgumentParticipant, row.target_id)
+            elif row.target_type == "person":
+                still_exists = await db.get(Person, row.target_id)
+            else:
+                still_exists = True  # unknown target_type — leave it alone
+            if still_exists is None:
+                orphan_ids.append(row.id)
+        if orphan_ids:
+            await db.execute(sa_delete(ValueDiscrepancy).where(ValueDiscrepancy.id.in_(orphan_ids)))
+            await db.commit()
+
+
 @pytest_asyncio.fixture
 async def db_session():
     """

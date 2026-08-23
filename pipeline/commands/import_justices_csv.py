@@ -309,7 +309,23 @@ async def run_import_justices_csv(args) -> None:
                 # Phase 49 (D-08, D-11, D-24): this is UNREVIEWED, not a
                 # human-only operator review state — only a human action
                 # ever produces one; an importer must never mint one.
-                person.review_state = ReviewState.UNREVIEWED
+                # CR-03 fix (49-REVIEW.md): an importer must also never
+                # ERASE a human-only review state. Every other field this
+                # branch touches is a blank-only prefill (never overwrite a
+                # part an operator has already saved) — mirroring
+                # pipeline/commands/import_convokit.py's
+                # _apply_extracted_name_provenance, which returns before
+                # touching review_state whenever the person already carries
+                # any saved data. review_state was the one exception here,
+                # unconditionally resetting to UNREVIEWED on every rerun and
+                # silently discarding OPERATOR_CONFIRMED/OPERATOR_EDITED.
+                # Guard it the same way: only set UNREVIEWED when the row
+                # does not already carry an operator-authored state.
+                if person.review_state not in (
+                    ReviewState.OPERATOR_CONFIRMED,
+                    ReviewState.OPERATOR_EDITED,
+                ):
+                    person.review_state = ReviewState.UNREVIEWED
             else:
                 person = Person(
                     full_name=full_name,

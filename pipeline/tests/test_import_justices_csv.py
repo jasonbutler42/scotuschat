@@ -575,6 +575,75 @@ async def test_rerun_preserves_operator_edited_parts_blank_only_prefill(
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "operator_state",
+    [ReviewState.OPERATOR_CONFIRMED, ReviewState.OPERATOR_EDITED],
+)
+async def test_rerun_preserves_operator_review_state(
+    isolated_session, tmp_path, operator_state
+):
+    """
+    CR-03 fix (49-REVIEW.md): a rerun of this (explicitly rerunnable)
+    importer must never discard an operator-authored review_state.
+    review_state was the ONE field in the "person already exists" branch
+    that was NOT blank-only-prefill-guarded — it was unconditionally reset
+    to UNREVIEWED on every rerun, silently re-injecting an already-reviewed
+    Justice back into the People review queue
+    (`_person_attention_predicate` includes UNREVIEWED). Mirrors
+    pipeline/commands/import_convokit.py's
+    `_apply_extracted_name_provenance`, which never mints OR erases a
+    human-only review state.
+    """
+    existing = Person(
+        full_name="Testcase Q. Preserve",
+        is_justice=False,
+        review_state=operator_state,
+    )
+    isolated_session.add(existing)
+    await isolated_session.flush()
+    existing_id = existing.id
+
+    csv_path = _write_justices_csv(
+        tmp_path,
+        chief_rows=[],
+        associate_rows=[
+            [
+                "Testcase",
+                "Q.",
+                "Preserve",
+                "",
+                "Fictional President",
+                "Republican",
+                "1980-01-01",
+                "",
+                "Still in Office",
+                "1930-01-01",
+                "",
+            ],
+        ],
+    )
+    args = argparse.Namespace(csv=str(csv_path))
+
+    with patch(
+        "pipeline.commands.import_justices_csv.get_session",
+        new=_make_session_cm(isolated_session),
+    ):
+        await run_import_justices_csv(args)
+
+    result = await isolated_session.execute(
+        select(Person).where(Person.id == existing_id)
+    )
+    person = result.scalar_one()
+
+    # The operator-authored review_state survives the rerun byte-for-byte —
+    # never reset to UNREVIEWED — even though every other eligible field
+    # (is_justice, blank name parts, provenance_metadata) is still updated.
+    assert person.review_state == operator_state
+    assert person.is_justice is True
+    assert person.provenance_metadata["source"] == "import_justices_csv"
+
+
+@pytest.mark.asyncio
 async def test_rerun_refreshes_provenance_metadata_on_second_run(
     isolated_session, tmp_path
 ):

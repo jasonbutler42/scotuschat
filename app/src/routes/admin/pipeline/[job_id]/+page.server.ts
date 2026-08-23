@@ -287,11 +287,30 @@ export const load: PageServerLoad = async ({ params }) => {
 		};
 	}
 
-	// readonlyMode: the page becomes read-only provenance once the linked argument
-	// has left the 'candidate' lifecycle state (Phase 25, D-18, D-19; Phase 48 D-01
-	// renamed the born state from 'pipeline' to 'candidate'). No linked argument
-	// yet means the run is still in-progress, never read-only.
-	const readonlyMode = argument != null && argument.status !== 'candidate';
+	// Phase 49 (D-33a follow-up): this was one shared `readonlyMode` boolean
+	// gating two DIFFERENT editability concerns on this page — flagged as a
+	// carried-forward open item by plans 49-04 and 49-05, closed here rather
+	// than passed along a third time.
+	//
+	// metadataReadonly (ArgumentDetailsCard): UNCHANGED behavior — read-only
+	// once the linked argument has left the 'candidate' lifecycle state
+	// (Phase 25, D-18, D-19; Phase 48 D-01 renamed the born state from
+	// 'pipeline' to 'candidate'). No linked argument yet means the run is
+	// still in-progress, never read-only. This concern predates Phase 49 and
+	// nothing in this phase's scope changes it — `update_argument_metadata`
+	// (api/services/admin_arguments.py) has no status guard of its own, so
+	// this remains a deliberate frontend-only restriction, not a backend one.
+	//
+	// resolveCardReadonly (ResolveCard): WIDENED to match the backend's own
+	// widened guard (Phase 49 plan 49-04) — `update_resolve_row_for_job` and
+	// `list_resolve_rows_for_job`'s `editable` flag both accept every
+	// unpublished state (candidate/draft/unpublished); only PUBLISHED is
+	// read-only. Before this fix, the shared `readonlyMode` flag still keyed
+	// on `!== 'candidate'`, so the UI showed DRAFT/UNPUBLISHED as read-only
+	// even though the backend had already started accepting those writes —
+	// a real UI/backend inconsistency, not just an unsplit variable name.
+	const metadataReadonly = argument != null && argument.status !== 'candidate';
+	const resolveCardReadonly = argument != null && argument.status === 'published';
 
 	return {
 		job,
@@ -304,7 +323,8 @@ export const load: PageServerLoad = async ({ params }) => {
 		readiness,
 		failedRecovery,
 		resolveRows,
-		readonlyMode,
+		metadataReadonly,
+		resolveCardReadonly,
 	};
 };
 

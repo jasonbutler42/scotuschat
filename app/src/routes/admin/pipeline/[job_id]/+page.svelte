@@ -232,7 +232,7 @@
 				savedValues={data.savedValues!}
 				hints={data.hints!}
 				action="?/saveJobMetadata"
-				readonly={data.readonlyMode}
+				readonly={data.metadataReadonly}
 				form={form}
 			/>
 		{/if}
@@ -394,7 +394,7 @@
 				people={data.people ?? []}
 				peopleLoadError={data.peopleLoadError}
 				jobStatus={liveJob.status}
-				readonlyMode={data.readonlyMode}
+				readonlyMode={data.resolveCardReadonly}
 				resolveFormError={form?.error}
 				source={data.job.source ?? 'pdf'}
 				jobId={liveJob.id}

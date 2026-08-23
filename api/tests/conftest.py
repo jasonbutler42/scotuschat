@@ -94,30 +94,59 @@ async def _sweep_orphaned_value_discrepancies(_api_lifespan):
     run. This is a general orphan sweep (not test-specific): it runs after
     every test regardless of which one created the orphan, so no
     individual test's teardown needs to know about this table.
+
+    HARD SAFETY / HERMETICITY GUARD: no-ops unless TEST_DATABASE_URL is set
+    AND its resolved database name is exactly "scotus_test" — mirroring
+    pipeline/tests/conftest.py::_reset_test_db's guard. `_db_configured()`
+    alone is NOT sufficient here: it accepts any non-placeholder DSN,
+    including tests/test_pytest_isolation_invocation_shapes.py's
+    deliberately-unreachable synthetic probe URL
+    (postgresql+asyncpg://probe:probe@127.0.0.1:1/scotus_probe_isolation).
+    That probe's own docstring requires it to run with NO real database
+    I/O; issuing a query here against that address would raise
+    ConnectionRefusedError from fixture teardown and fail the probe for a
+    reason that has nothing to do with what it is testing.
     """
     yield
+    test_url = os.environ.get("TEST_DATABASE_URL", "")
+    if not test_url:
+        return
+    from sqlalchemy.engine import make_url
+
+    if make_url(test_url).database != "scotus_test":
+        return
     if not _db_configured():
         return
     from sqlalchemy import delete as sa_delete, select as sa_select
+    from sqlalchemy.exc import DBAPIError
 
     from api.core.database import AsyncSessionLocal
     from api.models.models import ArgumentParticipant, Person, ValueDiscrepancy
 
-    async with AsyncSessionLocal() as db:
-        rows = (await db.execute(sa_select(ValueDiscrepancy))).scalars().all()
-        orphan_ids = []
-        for row in rows:
-            if row.target_type == "argument_participant":
-                still_exists = await db.get(ArgumentParticipant, row.target_id)
-            elif row.target_type == "person":
-                still_exists = await db.get(Person, row.target_id)
-            else:
-                still_exists = True  # unknown target_type — leave it alone
-            if still_exists is None:
-                orphan_ids.append(row.id)
-        if orphan_ids:
-            await db.execute(sa_delete(ValueDiscrepancy).where(ValueDiscrepancy.id.in_(orphan_ids)))
-            await db.commit()
+    try:
+        async with AsyncSessionLocal() as db:
+            rows = (await db.execute(sa_select(ValueDiscrepancy))).scalars().all()
+            orphan_ids = []
+            for row in rows:
+                if row.target_type == "argument_participant":
+                    still_exists = await db.get(ArgumentParticipant, row.target_id)
+                elif row.target_type == "person":
+                    still_exists = await db.get(Person, row.target_id)
+                else:
+                    still_exists = True  # unknown target_type — leave it alone
+                if still_exists is None:
+                    orphan_ids.append(row.id)
+            if orphan_ids:
+                await db.execute(sa_delete(ValueDiscrepancy).where(ValueDiscrepancy.id.in_(orphan_ids)))
+                await db.commit()
+    except DBAPIError:
+        # Best-effort cleanup only. A handful of tests (e.g.
+        # test_migration_0022_person_name_authority.py) deliberately
+        # downgrade the schema mid-test to a revision before migration
+        # 0028 minted value_discrepancy at all — this sweep must never
+        # turn that legitimate schema state into a failure of an unrelated
+        # test via a fixture-teardown error.
+        pass
 
 
 @pytest_asyncio.fixture

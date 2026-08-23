@@ -232,12 +232,16 @@
 		</section>
 
 		<!-- ═══════════════════════════════════════════════════════════════════
-		     STAT-CARD GRID (Arguments / People / Utterances / Pipeline runs)
+		     STAT-CARD GRID (Arguments / People / Utterances / Pipeline runs /
+		     Review queue) — Phase 49 (D-30) widens this from 4 to 5 columns;
+		     the UI-SPEC's claim that the existing grid "absorbs the fifth
+		     card without change" is contradicted by the four-column literal
+		     this grid used to declare — source wins (RESEARCH Pitfall 3).
 		     ═══════════════════════════════════════════════════════════════════ -->
 		<div
 			style="
 				display: grid;
-				grid-template-columns: repeat(4, 1fr);
+				grid-template-columns: repeat(5, 1fr);
 				gap: 32px;
 				margin-top: 32px;
 			"
@@ -307,6 +311,33 @@
 					>
 						View all runs →
 					</a>
+				{/snippet}
+			</StatCard>
+
+			<!-- Phase 49 (D-30) — the review queue's dashboard entry point.
+			     At exactly 0 the card renders non-link muted text instead of
+			     an accent link (49-05 <planner_decisions> E8 empty) — the
+			     dashboard never advertises work that does not exist. The
+			     link text pluralizes (E8 zero-one-many). -->
+			<StatCard title="Review queue">
+				{#snippet children()}
+					<p style="font-size: 32px; font-weight: 600; color: #e2e8f0; margin: 0 0 16px 0; line-height: 1.2;">
+						{formatCount(data.reviewStats.total)}
+					</p>
+					{#if data.reviewStats.total === 0}
+						<p style="font-size: 16px; color: #94a3b8; margin: 0;">
+							No items need review
+						</p>
+					{:else}
+						<a
+							href="/admin/review"
+							style="display: inline-flex; align-items: center; min-height: 44px; font-size: 16px; color: #93c5fd; text-decoration: none;"
+						>
+							{data.reviewStats.total === 1
+								? '1 item needs review'
+								: `${formatCount(data.reviewStats.total)} items need review`} →
+						</a>
+					{/if}
 				{/snippet}
 			</StatCard>
 		</div>

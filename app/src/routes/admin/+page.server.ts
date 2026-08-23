@@ -48,6 +48,13 @@ interface PipelineStats {
 	last_activity_at: string | null;
 }
 
+// Phase 49 (D-30) — the fifth StatCard's backing counts.
+interface ReviewStats {
+	arguments: number | null;
+	people: number | null;
+	total: number | null;
+}
+
 interface UtteranceCount {
 	total: number | null;
 }
@@ -120,6 +127,22 @@ export const load: PageServerLoad = async ({ fetch }) => {
 		console.error('[load] utterances/count fetch threw:', err instanceof Error ? err.message : String(err));
 	}
 
+	// 4b. Review queue stat-card counts (Phase 49, D-30) — dedicated COUNT
+	// endpoint, never derived by fetching the unbounded queue list.
+	let reviewStats: ReviewStats = { arguments: null, people: null, total: null };
+	try {
+		const res = await fetch(`${FASTAPI_BASE_URL}/api/admin/review/stats`, {
+			headers: { 'X-Admin-Token': ADMIN_TOKEN },
+		});
+		if (res.ok) {
+			reviewStats = await res.json();
+		} else {
+			console.error(`[load] review/stats fetch failed: returned ${res.status}`);
+		}
+	} catch (err) {
+		console.error('[load] review/stats fetch threw:', err instanceof Error ? err.message : String(err));
+	}
+
 	// 5. Needs Attention — Drafts sub-list (DASH-03, D-01, D-02, D-03). Degrades to [].
 	let draftsList: RecentDraft[] = [];
 	try {
@@ -179,6 +202,7 @@ export const load: PageServerLoad = async ({ fetch }) => {
 		peopleStats,
 		pipelineStats,
 		utteranceCount,
+		reviewStats,
 		draftsList,
 		incompletePeople,
 		tenureGapJustices,

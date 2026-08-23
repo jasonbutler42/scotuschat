@@ -25,7 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import func
 
 from api.domain.person_names import prepare_person_name
-from api.services.admin_review import apply_participant_value_change
+from api.services.admin_review import apply_participant_value_change, close_open_discrepancies
 from api.services.trust import recompute_argument_tier
 from api.models.models import (
     AdminJob,
@@ -38,6 +38,7 @@ from api.models.models import (
     ImportRun,
     ImportSource,
     Person,
+    ReviewState,
     Role,
     SideEnum,
     SpeakerAlias,
@@ -901,6 +902,28 @@ async def update_resolve_row_for_job(
             incoming_source="operator",
             incoming_method="manual",
         )
+
+    # CR-01 fix (49-REVIEW.md): this is an operator edit through the same
+    # authority gate as update_participant_side's sibling path — advance
+    # review_state to OPERATOR_EDITED and close this participant's open
+    # discrepancies in the SAME transaction (D-15), exactly as
+    # update_participant_side (api/services/admin_arguments.py) does. Without
+    # this, an ordinary first-time side resolution (UNKNOWN -> a real side)
+    # records a value_discrepancy via apply_participant_value_change above
+    # that never closes, leaving a permanently stuck, unactionable
+    # review-queue row.
+    await db.execute(
+        update(ArgumentParticipant)
+        .where(
+            ArgumentParticipant.id == participant.id,
+            ArgumentParticipant.argument_id == argument.id,
+        )
+        .values(review_state=ReviewState.OPERATOR_EDITED)
+        .execution_options(synchronize_session=False)
+    )
+    await close_open_discrepancies(
+        db, target_type="argument_participant", target_id=participant.id
+    )
 
     # Phase 49 gap fix (WINDOWS.md entry 11 / deferred-items.md): this
     # admin-assisted resolve action never stamped ArgumentParticipant.source

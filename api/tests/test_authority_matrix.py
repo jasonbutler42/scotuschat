@@ -520,7 +520,9 @@ async def test_update_resolve_row_for_job_succeeds_on_draft_and_unpublished_but_
         ArgumentStatusEnum,
         Case,
         CaseArgument,
+        ReviewState,
         SideEnum,
+        ValueDiscrepancy,
     )
     from api.schemas.admin_jobs import ResolveRowUpdate
     from api.services.admin_jobs import update_resolve_row_for_job
@@ -567,27 +569,43 @@ async def test_update_resolve_row_for_job_succeeds_on_draft_and_unpublished_but_
             )
             async with AsyncSessionLocal() as db:
                 if should_succeed:
-                    await update_resolve_row_for_job(db, job_id, body)
+                    updated = await update_resolve_row_for_job(db, job_id, body)
+                    # CR-01 regression (49-REVIEW.md): a successful
+                    # resolve-row save must advance review_state to
+                    # OPERATOR_EDITED and close its own value_discrepancy in
+                    # the SAME transaction (D-15) — no more permanently
+                    # stuck, unactionable review-queue row.
+                    assert updated.review_state == ReviewState.OPERATOR_EDITED
+                    from sqlalchemy import select as sa_select
+
+                    open_discrepancies = (
+                        await db.execute(
+                            sa_select(ValueDiscrepancy).where(
+                                ValueDiscrepancy.target_type == "argument_participant",
+                                ValueDiscrepancy.target_id == participant_id,
+                                ValueDiscrepancy.resolved_at.is_(None),
+                            )
+                        )
+                    ).scalars().all()
+                    assert open_discrepancies == []
                 else:
                     with pytest.raises(ValueError):
                         await update_resolve_row_for_job(db, job_id, body)
         finally:
             from sqlalchemy import delete as sa_delete
 
-            from api.models.models import ValueDiscrepancy
-
             async with AsyncSessionLocal() as db:
                 await db.execute(sa_delete(AdminJob).where(AdminJob.id == job_id))
-                # A successful update_resolve_row_for_job call routes through
-                # the authority gate, which may record a value_discrepancy —
-                # no real FK to argument_participants.id, so clean it up
-                # explicitly before the participant row is deleted.
-                await db.execute(
-                    sa_delete(ValueDiscrepancy).where(
-                        ValueDiscrepancy.target_type == "argument_participant",
-                        ValueDiscrepancy.target_id == participant_id,
-                    )
-                )
+                # CR-01 fix (49-REVIEW.md): update_resolve_row_for_job now
+                # closes its own value_discrepancy rows in the same
+                # transaction as the write, so a successful call never
+                # leaves an open one behind. value_discrepancy.target_id has
+                # no real FK to argument_participants.id (by design — see
+                # api/tests/conftest.py's _sweep_orphaned_value_discrepancies
+                # docstring), and that autouse fixture sweeps any (now
+                # resolved) row left pointing at the participant deleted
+                # below — this teardown no longer needs its own explicit
+                # ValueDiscrepancy delete.
                 await db.execute(
                     sa_delete(ArgumentParticipant).where(ArgumentParticipant.id == participant_id)
                 )

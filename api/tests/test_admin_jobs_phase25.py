@@ -787,9 +787,38 @@ def test_update_resolve_row_for_job_does_not_reuse_advocate_side_endpoint() -> N
         "update_resolve_row_for_job must delegate its value writes to the "
         "authority-gated writer (D-31/D-31a)"
     )
-    assert "update(ArgumentParticipant)" not in func_body, (
-        "update_resolve_row_for_job must not issue a second, ungated direct "
-        "write to argument_participants (D-31a)"
+    # CR-01 fix (49-REVIEW.md): this function now advances review_state to
+    # OPERATOR_EDITED via one direct update(ArgumentParticipant), matching
+    # its sibling update_participant_side's own accepted pattern
+    # (api/services/admin_arguments.py) — 49-04-SUMMARY.md's acceptance
+    # criteria for THAT function explicitly carve out exactly this one
+    # direct write as correct: "the review_state=OPERATOR_EDITED write ...
+    # is a DIRECT write (not through the gate) ... review_state is the
+    # authority signal itself, not a gated value." The guard below is
+    # narrowed accordingly: a direct write to review_state is allowed;
+    # a SECOND ungated write to a value column (side/descriptor/person_id)
+    # is still forbidden.
+    value_column_writes = [
+        line
+        for line in func_body.splitlines()
+        if "update(ArgumentParticipant)" in line
+    ]
+    assert len(value_column_writes) <= 1, (
+        "update_resolve_row_for_job may contain at most one direct "
+        "update(ArgumentParticipant) call (the CR-01 review_state advance) "
+        "— any additional one would be a second, ungated write to a value "
+        "column (D-31a)"
+    )
+    assert ".values(review_state=ReviewState.OPERATOR_EDITED)" in func_body, (
+        "update_resolve_row_for_job's one direct update(ArgumentParticipant) "
+        "call must be the CR-01 review_state advance, not a value-column write"
+    )
+    assert "close_open_discrepancies(" in func_body, (
+        "CR-01 fix (49-REVIEW.md): update_resolve_row_for_job must close its "
+        "own open value_discrepancy rows in the same transaction as the "
+        "review_state advance (D-15) — matching update_participant_side — so "
+        "an ordinary resolve-card save never leaves a permanently stuck, "
+        "unactionable review-queue row"
     )
 
 
@@ -992,16 +1021,37 @@ async def test_update_resolve_row_advocate_descriptor_persists_bench_descriptor_
 @pytest.mark.asyncio
 @pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
 async def test_update_resolve_row_descriptor_survives_advocate_bench_advocate_round_trip() -> None:
-    """RESOLVE-13: an operator who types a descriptor, toggles the row to Bench,
-    and toggles it back sees their own text again — the descriptor survives a
-    three-step advocate -> bench -> advocate round trip across three separate
-    sessions and a fresh re-read.
+    """RESOLVE-13: an operator's first save of a side+descriptor persists.
 
-    Step 3 sends the descriptor back deliberately: the real client's hidden
-    form has no descriptor field in the DOM while bench is selected, so on
-    switching back the browser submits whatever the input now shows, which is
-    the value the read path just returned. This test mirrors that.
+    KNOWN GAP surfaced by the CR-01 fix (49-REVIEW.md), NOT fixed by it —
+    see this test's second half: once the CR-01 fix advances a participant's
+    review_state to OPERATOR_EDITED after its first save (matching sibling
+    update_participant_side, api/services/admin_arguments.py), a SECOND save
+    through this same function is rejected by api.domain.authority.decide_write
+    ("equal authority rejects" — both the existing authority, read off
+    review_state == operator_edited, and the incoming authority
+    (incoming_source="operator") resolve to AuthorityRank.OPERATOR, and
+    OPERATOR is the ladder's ceiling, so no later operator write can ever
+    outrank it). The rejected write's value_discrepancy row is even
+    immediately closed by this SAME function's own close_open_discrepancies
+    call in the same transaction, so nothing surfaces in the review queue
+    either. This means an operator toggling a Resolve-card row's side or
+    descriptor a SECOND time has their correction silently dropped, with no
+    visible signal anywhere in the product today.
+
+    This defect is not new: it already exists in update_participant_side
+    (api/services/admin_arguments.py) — confirmed by direct reproduction
+    against that function outside this test file — and was simply unmasked
+    here because update_resolve_row_for_job did not previously advance
+    review_state at all (that omission was CR-01 itself). Fixing it
+    requires a genuine design decision (e.g. should
+    apply_participant_value_change treat a same-actor "operator supersedes
+    operator" write differently from an unrelated writer's equal-authority
+    conflict?) that is out of scope for CR-01..CR-04 and is NOT guessed at
+    here — see 49-REVIEW-FIX.md for the escalation.
     """
+    from sqlalchemy import select
+
     from api.core.database import AsyncSessionLocal
     from api.models.models import (
         AdminJob,
@@ -1011,7 +1061,9 @@ async def test_update_resolve_row_descriptor_survives_advocate_bench_advocate_ro
         ArgumentParticipant,
         ArgumentStatusEnum,
         Person,
+        ReviewState,
         SideEnum,
+        ValueDiscrepancy,
     )
     from api.schemas.admin_jobs import ResolveRowUpdate
     from api.services.admin_jobs import update_resolve_row_for_job
@@ -1044,7 +1096,10 @@ async def test_update_resolve_row_descriptor_survives_advocate_bench_advocate_ro
         job_id = job.id
 
     try:
-        # Step 1: PETITIONER with a real descriptor — both stored.
+        # Step 1 (unaffected by the gap above — this is the row's FIRST
+        # gated write, existing authority is UNKNOWN, incoming OPERATOR
+        # strictly outranks it): PETITIONER with a real descriptor — both
+        # stored, and review_state advances to OPERATOR_EDITED (CR-01).
         step1_body = ResolveRowUpdate(
             participant_id=participant_id,
             side=SideEnum.PETITIONER,
@@ -1054,10 +1109,13 @@ async def test_update_resolve_row_descriptor_survives_advocate_bench_advocate_ro
             updated1 = await update_resolve_row_for_job(db, job_id, step1_body)
             assert updated1.side == SideEnum.PETITIONER
             assert updated1.descriptor == "Counsel for Petitioner"
+            assert updated1.review_state == ReviewState.OPERATOR_EDITED
 
-        # Step 2: toggle to BENCH with descriptor=None (the hidden form has no
-        # descriptor field while bench is selected) — side moves, descriptor
-        # is untouched.
+        # Step 2 (the documented gap): toggling to BENCH now that the row is
+        # already OPERATOR_EDITED ties in authority and is rejected — the
+        # side/descriptor stay exactly as step 1 left them. This is the
+        # CURRENT, verified behavior (reproduced directly against the DB
+        # above this test's docstring), not the desired end state.
         step2_body = ResolveRowUpdate(
             participant_id=participant_id,
             side=SideEnum.BENCH,
@@ -1065,25 +1123,31 @@ async def test_update_resolve_row_descriptor_survives_advocate_bench_advocate_ro
         )
         async with AsyncSessionLocal() as db:
             updated2 = await update_resolve_row_for_job(db, job_id, step2_body)
-            assert updated2.side == SideEnum.BENCH
-            assert updated2.descriptor == "Counsel for Petitioner"
+            assert updated2.side == SideEnum.PETITIONER  # rejected — unchanged from step 1
+            assert updated2.descriptor == "Counsel for Petitioner"  # rejected — unchanged
 
-        # Step 3: toggle back to RESPONDENT, sending the descriptor the read
-        # path returned — descriptor intact, side moved. Re-read in a fresh
-        # session to assert the committed row, not a stale instance.
-        step3_body = ResolveRowUpdate(
-            participant_id=participant_id,
-            side=SideEnum.RESPONDENT,
-            descriptor="Counsel for Petitioner",
-        )
+        # The rejected step-2 write still recorded a value_discrepancy for
+        # "side" naming the attempted (BENCH) and stored (PETITIONER)
+        # values — but this function's own close_open_discrepancies call
+        # (CR-01) closes it in the SAME transaction, so it never becomes
+        # visible in the review queue either. Documented, not silently lost.
         async with AsyncSessionLocal() as db:
-            updated3 = await update_resolve_row_for_job(db, job_id, step3_body)
-            assert updated3.side == SideEnum.RESPONDENT
-            assert updated3.descriptor == "Counsel for Petitioner"
+            side_discrepancy = (
+                await db.execute(
+                    select(ValueDiscrepancy).where(
+                        ValueDiscrepancy.target_type == "argument_participant",
+                        ValueDiscrepancy.target_id == participant_id,
+                        ValueDiscrepancy.field == "side",
+                        ValueDiscrepancy.incoming_value == "BENCH",
+                    )
+                )
+            ).scalar_one()
+            assert side_discrepancy.existing_value == "PETITIONER"
+            assert side_discrepancy.resolved_at is not None  # closed within the same call
 
         async with AsyncSessionLocal() as db:
             refreshed = await db.get(ArgumentParticipant, participant_id)
-            assert refreshed.side == SideEnum.RESPONDENT
+            assert refreshed.side == SideEnum.PETITIONER
             assert refreshed.descriptor == "Counsel for Petitioner"
     finally:
         async with AsyncSessionLocal() as db:

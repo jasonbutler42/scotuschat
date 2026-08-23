@@ -352,14 +352,21 @@ async def seed_unresolved_speaker_fixture(
     needs_review, so the unresolved-speaker case -- the main thing the
     review queue exists for -- can be produced on demand in a browser.
 
-    This exists because no live corpus path can produce a NULL-person_id
-    participant today: `_resolve_person` in
-    pipeline/commands/import_convokit.py always resolves-or-creates a
-    Person for every speaker label it sees (verified 2026-08-21). That has
-    made 26-UAT Test 26 (the unresolved-advocate placeholder and per-row
-    Save gate) and 14-UAT Test 8 (an argument containing an unresolved
-    speaker) unreachable in a browser since they were written in June
-    2026 -- this seeder closes that gap.
+    This exists to make the unresolved-speaker state reachable
+    *deterministically and on demand*. A live corpus path CAN produce a
+    NULL-person_id participant -- a pipeline job parked at the resolve
+    step has created participant rows but has not run `_resolve_person`
+    yet, so pre-resolve NULLs are a normal, reachable state (verified
+    2026-08-23 against argument 1788 / job 1147, which carried 11 such
+    rows). What that path cannot give is repeatability: it depends on
+    hand-parking a real job and on whatever the corpus happens to hold.
+    26-UAT Test 26 (the unresolved-advocate placeholder and per-row Save
+    gate) and 14-UAT Test 8 (an argument containing an unresolved
+    speaker) need a fixture that reproduces the state the same way every
+    run -- that is the gap this seeder closes.
+
+    NOTE: 49-RESEARCH.md Pitfall 4 claims no live corpus path can produce
+    an unresolved speaker. That claim is false; do not propagate it.
 
     It does not fabricate a synthetic participant from nothing: it takes
     an existing fixture argument's own advocate participant -- preferring

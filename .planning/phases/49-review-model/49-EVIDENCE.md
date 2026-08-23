@@ -301,12 +301,12 @@ closed. Recorded in `.planning/WINDOWS.md` entry 12 (kind `deviation`, status `f
 **Methodology note, worth recording precisely:** an earlier full-suite run in this same
 session reported 2 spurious failures (`test_admin_dev_routes.py::test_reset_against_empty_database`,
 `::test_reset_incomplete_reseed_raises`), both `asyncpg.exceptions.DeadlockDetectedError` on the
-same database OID (17111) — because this executor was concurrently running direct scripts
-against `DATABASE_URL` (the D-32/seeder verification above) while the pytest suite was
-concurrently running against `TEST_DATABASE_URL` in the background. In this sandbox the two
-resolve to the same underlying Postgres database, so the two processes' TRUNCATEs/locks
-collided — an artifact of running verification scripts and the suite at the same time, not a
-code defect. Re-running the two named tests in isolation (`pytest api/tests/test_admin_dev_routes.py`)
+same database OID (17111) — because two processes were contending on `scotus_test` at
+once (the pytest suite plus concurrent verification activity), so their TRUNCATEs/locks
+collided — an artifact of running work concurrently, not a code defect.
+**Correction (orchestrator, 2026-08-23):** the original text of this note attributed the
+collision to `DATABASE_URL` and `TEST_DATABASE_URL` resolving to the same database. That is
+false — `scotus` is OID 16388 and `scotus_test` is OID 17111. See §11. Re-running the two named tests in isolation (`pytest api/tests/test_admin_dev_routes.py`)
 passed cleanly (9/9). The number below is from a subsequent **fully isolated** run — nothing else
 touching either database while it ran.
 
@@ -483,10 +483,21 @@ assumptions — neither auto-resolved nor dropped):
   blocks this phase's own delivered behavior.
 - **`.planning/todos/pending/2026-08-18-pdf-provenance-live-fixture-verification.md`** — unrelated
   to this phase, still deferred per the corpus-first scope decision.
-- **This session's discovery that `TEST_DATABASE_URL` and `DATABASE_URL` resolve to the same
-  underlying Postgres database in this sandbox** (both hit database OID 17111 — see §6's
-  methodology note) is worth a look before Phase 50: running a direct verification script against
-  the "dev" database while a pytest run is also in flight against "the test database" is NOT
-  isolated here the way the codebase's own conftest.py comments assume it is elsewhere. Not a
-  code defect; a sandbox-environment fact future executors should know before repeating the
-  concurrency mistake this plan made once.
+- **CORRECTED (orchestrator, 2026-08-23): the claim that `TEST_DATABASE_URL` and
+  `DATABASE_URL` resolve to the same database is FALSE.** Measured directly:
+  `DATABASE_URL` → `scotus`, OID **16388**; `TEST_DATABASE_URL` → `scotus_test`, OID **17111**.
+  They are two distinct databases on the same host. OID 17111 is `scotus_test` alone, so the
+  deadlock recorded in §6 was contention between two processes on `scotus_test` — concurrent
+  pytest activity — NOT dev/test bleed. Test isolation behaves exactly as `conftest.py`
+  assumes. Do NOT carry the original claim into Phase 50: it would cast doubt on the one
+  isolation guard this project has already been burned by twice (Phase 45 D-03), and could
+  prompt someone to "fix" a mechanism that is working.
+  The real, narrower lesson stands: do not run direct verification scripts and a pytest
+  suite concurrently, because both contend on `scotus_test`.
+- **Dev-database contents were reset during this plan.** The executor invoked
+  `reset-to-fixture` against `DATABASE_URL` while verifying the seeder, which wiped and
+  reseeded the fixture set by design (Phase 43 DEVTOOL-01/02). Argument 1788 / job 1147 and
+  their 11 pre-resolve NULL-`person_id` rows are gone; arguments are now 1797–1800. Nothing
+  irreplaceable was lost — it was fixture data, and this plan's own seeder reproduces the
+  unresolved state deterministically. Recorded so the ID change is not mistaken later for
+  data corruption.

@@ -291,7 +291,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 49-05-PLAN.md — Full `/admin/review` screen: tabs, tier × review-state × status filters, expandable rows with discrepancy detail, subnav entry, and the dashboard StatCard (wave 4)
+- [x] 49-05-PLAN.md — Full `/admin/review` screen: tabs, tier × review-state × status filters, expandable rows with discrepancy detail, subnav entry, and the dashboard StatCard (wave 4)
 
 **Wave 5** *(blocked on Wave 4 completion)*
 

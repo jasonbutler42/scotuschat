@@ -4,17 +4,17 @@ milestone: v1.8
 milestone_name: Import & Provenance Re-model
 current_phase: 49
 current_phase_name: Review Model
-status: Phase 49 executing — 4/6 plans complete (wave 3 authority ladder done; 49-05 review UI, 49-06 remain)
-stopped_at: Completed 49-04-PLAN.md
-last_updated: "2026-08-23T14:33:38.479Z"
+status: Phase 49 executing — 5/6 plans complete (wave 4 review UI done; 49-06 remains)
+stopped_at: Completed 49-05-PLAN.md
+last_updated: "2026-08-23T15:14:48.464Z"
 last_activity: 2026-08-23
-last_activity_desc: Completed 49-04-PLAN.md (authority ladder, one gated writer, D-17 floor lift, full resolve-action set, D-34 leak-ban extension)
-state_head: b2160980f1b70005426b0d37dca68fa9ffb15bab
+last_activity_desc: Completed 49-05-PLAN.md (full /admin/review queue screen — filters/sort/dashboard COUNT, tabs, expand/collapse, resolve actions, source contract + 4 held-out backstop tests)
+state_head: e731fb38e100f1eacf299acbeff5e8c5572236b3
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 22
-  completed_plans: 20
+  completed_plans: 21
   percent: 40
 ---
 
@@ -30,9 +30,19 @@ See: .planning/PROJECT.md (updated 2026-08-18 — Phase 47 complete; corpus-firs
 ## Current Position
 
 Phase: 49 (Review Model) — EXECUTING
-Last activity: 2026-08-23 — Completed 49-01, 49-02, 49-03, 49-04 (wave 1 tracer, wave 2 legacy fold + cleanup pass, wave 3 authority ladder)
+Last activity: 2026-08-23 — Completed 49-01, 49-02, 49-03, 49-04, 49-05 (wave 1 tracer, wave 2 legacy fold + cleanup pass, wave 3 authority ladder, wave 4 review UI)
 
-**Next action:** `/gsd-execute-phase 49` (49-05 review UI, 49-06 remain; 49-03's two live-browser human-checks are still open — see Blockers/Concerns)
+**Next action:** `/gsd-execute-phase 49` (49-06 remains; 49-01/49-03/49-05's live-browser human-checks are still open — see Blockers/Concerns)
+
+Phase 49-05 close-out notes (2026-08-23):
+
+- Full `/admin/review` screen shipped: Arguments|People tabs, the trust-tier × review-state × status filter set with a fully specified server-side sort (published-degraded first, tier rank, argued_date ASC NULLS LAST, Argument.id ASC tie-break — never created_at), expandable argument rows with discrepancy detail and the fixed-order Confirm/Confirm-as-unattributable/Edit/Re-flag action row, and the zero-constituent blockers fallback.
+- Dashboard COUNT (`get_review_queue_stats`/`GET /api/admin/review/stats`) shares its inclusion predicate with the list queries by construction (`_argument_attention_predicate`/`_person_attention_predicate`), so the card and the screen can never disagree. AdminSubNav gained a Review link; the dashboard grid widened to 5 columns with a fifth StatCard.
+- 27 new tests (11 query-behavior + 2 backstop in `test_admin_review_service.py`, 14 in new `test_phase49_review_ui_contract.py`). Full suite: 1403 passed, 5 xfailed, 0 failed (up from 1376/5/0).
+- **Open for a human:** the Task 2 seven-item browser `<human-check>` walkthrough was not completed — same `.env`-credential-access constraint as 49-01/49-03. See `49-05-SUMMARY.md` coverage D4/D5.
+- Person's provenance-note format deviates from the plan's literal `"{Source} · {method}"` spec (Person has no `method` field anywhere in `provenance_metadata`) — implemented as `"{Source} · {confidence}"` instead; documented in 49-05-SUMMARY.md Deviations.
+- The frontend `readonlyMode` split (flagged by 49-04) remains open — not this plan's scope; left for 49-06 or a follow-up.
+- REVIEW-03/REVIEW-04 remain `Pending` — both shared with 49-06 (not yet complete); shared-ID gate correctly held both back.
 
 Phase 49-04 close-out notes (2026-08-23):
 
@@ -164,6 +174,7 @@ items → 14.** Every closure carries its evidence in the file it closes; the co
 | Phase 49-review-model P02 | 2h | 3 tasks | 20 files |
 | Phase 49-review-model P03 | 25min | 3 tasks | 6 files |
 | Phase 49-review-model P04 | 100min | 3 tasks | 15 files |
+| Phase 49-review-model P05 | 50min | 3 tasks | 10 files |
 
 v1.7 per-plan metrics cleared at this milestone boundary per the standard STATE.md reset; the underlying per-plan SUMMARY files remain in `.planning/milestones/v1.7-phases/`.
 
@@ -265,6 +276,7 @@ v1.6's roadmap evolution is archived in `.planning/milestones/v1.6-ROADMAP.md`; 
 - When a fix for a previously-diagnosed issue lands via a commit outside the formal plan sequence, flip the source debug session's / verification's `status` field in that same commit. v1.6 lost a phase slot (40.1) to a stale `diagnosed` status; no structural fix shipped.
 - api/tests/test_admin_jobs_service.py: 2 failing tests (resolve_job/update_resolve_row_for_job never stamp ArgumentParticipant.source/method, floored to UNCERTAIN by 49-01's D-18 change). Out of 49-02 scope — see .planning/phases/49-review-model/deferred-items.md and WINDOWS.md entry 11.
 - 49-03: two live-browser human-check walkthroughs (popover side inheritance/selection; /admin/help visual + apolitical read-through) remain unverified in a browser -- executor lacked admin credentials in this sandbox. See 49-03-SUMMARY.md coverage D1/D2/D4.
+- 49-05: the Task 2 seven-item browser walkthrough of the full /admin/review screen (tabs, filter composition, expand/collapse, resolve actions, dashboard StatCards) remains unverified in a browser for the same admin-credential reason. See 49-05-SUMMARY.md coverage D4/D5.
 
 ### Milestone-close queue (not Phase 48 blockers)
 
@@ -276,8 +288,8 @@ at close.
 
 ## Session Continuity
 
-Last session: 2026-08-23T14:33:37.915Z
-Stopped at: Completed 49-04-PLAN.md
+Last session: 2026-08-23T15:14:48.254Z
+Stopped at: Completed 49-05-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

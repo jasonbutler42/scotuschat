@@ -272,7 +272,7 @@ Plans:
   4. The operator can resolve a review item (confirm or edit) from the queue, and doing so advances its `review_state` and recomputes the affected argument's trust.
   5. The legacy `name_needs_review` / `name_extraction_metadata` mechanism is folded into the unified review_state + provenance record, with no parallel mechanism remaining.
 
-**Plans**: 6 plans
+**Plans**: 3/6 plans executed
 **UI hint**: yes
 
 Plans:
@@ -283,7 +283,7 @@ Plans:
 **Wave 2** *(blocked on Wave 1 completion)*
 
 - [x] 49-02-PLAN.md — Legacy fold (REVIEW-05): migration 0029 swaps the two `people` columns, every consumer re-points, and a structural test proves no parallel mechanism survives (wave 2)
-- [ ] 49-03-PLAN.md — Folded-todo cleanup: create-person popover side inheritance and selection, Status-card label fix, and a new `/admin/help` status × tier × review-state page (wave 2)
+- [x] 49-03-PLAN.md — Folded-todo cleanup: create-person popover side inheritance and selection, Status-card label fix, and a new `/admin/help` status × tier × review-state page (wave 2)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -392,7 +392,7 @@ Plans:
 | 46. Dev Environment Reliability | v1.7 | 6/6 | Complete    | 2026-08-14 |
 | 47. Provenance Foundation | v1.8 | 6/6 | Complete    | 2026-08-18 |
 | 48. Trust & Lifecycle | v1.8 | 10/10 | Complete    | 2026-08-21 |
-| 49. Review Model | v1.8 | 0/TBD | Not started | - |
+| 49. Review Model | v1.8 | 3/6 | In Progress|  |
 | 50. Unified Import Path | v1.8 | 0/TBD | Not started | - |
 | 51. Design System & Noun Alignment | v1.8 | 0/TBD | Not started | - |
 

@@ -4,18 +4,18 @@ milestone: v1.8
 milestone_name: Import & Provenance Re-model
 current_phase: 49
 current_phase_name: Review Model
-status: Phase 49 executing — 5/6 plans complete (wave 4 review UI done; 49-06 remains)
-stopped_at: Completed 49-05-PLAN.md
-last_updated: "2026-08-23T15:14:48.464Z"
+status: Phase 49 complete — all 6 plans done; REVIEW-01..05 all Complete
+stopped_at: Completed 49-06-PLAN.md
+last_updated: "2026-08-23T16:25:00.000Z"
 last_activity: 2026-08-23
-last_activity_desc: Completed 49-05-PLAN.md (full /admin/review queue screen — filters/sort/dashboard COUNT, tabs, expand/collapse, resolve actions, source contract + 4 held-out backstop tests)
-state_head: e731fb38e100f1eacf299acbeff5e8c5572236b3
+last_activity_desc: Completed 49-06-PLAN.md (dev-only unresolved-speaker seeder; D-32 live authority-conflict walkthrough, found+fixed a review-queue discrepancy-inclusion gap; readonlyMode split; full suite 1414/5/0)
+state_head: c1eabbdd1
 progress:
   total_phases: 5
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 22
-  completed_plans: 21
-  percent: 40
+  completed_plans: 22
+  percent: 60
 ---
 
 # Project State
@@ -29,10 +29,20 @@ See: .planning/PROJECT.md (updated 2026-08-18 — Phase 47 complete; corpus-firs
 
 ## Current Position
 
-Phase: 49 (Review Model) — EXECUTING
-Last activity: 2026-08-23 — Completed 49-01, 49-02, 49-03, 49-04, 49-05 (wave 1 tracer, wave 2 legacy fold + cleanup pass, wave 3 authority ladder, wave 4 review UI)
+Phase: 49 (Review Model) — COMPLETE (all 6 plans done)
+Last activity: 2026-08-23 — Completed 49-06 (dev-only unresolved-speaker seeder, live D-32 authority-conflict walkthrough, readonlyMode split, full-suite gate, requirement traceability)
 
-**Next action:** `/gsd-execute-phase 49` (49-06 remains; 49-01/49-03/49-05's live-browser human-checks are still open — see Blockers/Concerns)
+**Next action:** `/gsd-verify-work 49` then `/gsd-discuss-phase 50` — all eight outstanding live-browser human-checks across the whole phase (49-01/49-03/49-05/49-06) are consolidated into one ordered list in `.planning/phases/49-review-model/49-EVIDENCE.md` §9 for a single sitting; see Blockers/Concerns below.
+
+Phase 49-06 close-out notes (2026-08-23):
+
+- Dev-only `seed_unresolved_speaker_fixture` (D-33a) ships: nulls one deterministically-selected `ArgumentParticipant.person_id` (preferring a participant whose `side` is already `UNKNOWN`, traced against the real consumer code rather than the plan's literal pick) plus its matching `Utterance.person_id` rows — closing the data-layer blocker for 26-UAT Test 26 and 14-UAT Test 8, both reclassified `waived -> blocked` (not `pass`) with dated, script-verified observations.
+- **D-32's live authority-conflict walkthrough performed end to end via a repeatable script against the real dev DB** — found and fixed a real, phase-central gap in the same session: `_argument_attention_predicate` had no leg for "a constituent has an open discrepancy," so an operator-edited, already-resolved participant that a lower-authority re-import disagreed with (exactly REVIEW-02/REVIEW-04's central claim) was invisible in `/admin/review`. Fixed, tested, verified by re-running the same script.
+- Corrected `49-RESEARCH.md` Pitfall 4's false premise ("no live corpus path can produce an unresolved speaker") — verified false against the live dev DB (argument 1788 had 11 `person_id IS NULL` rows from a job parked pre-resolve) before this plan started; not restated anywhere in the seeder's code/docstrings.
+- The frontend `readonlyMode` split (flagged and deferred by both 49-04 and 49-05) is closed: `resolveCardReadonly` (`status === 'published'`) / `metadataReadonly` (unchanged).
+- All five REVIEW-0X requirements now `Complete` in REQUIREMENTS.md.
+- Full suite: **1414 passed, 5 xfailed, 0 failed** (up from 1403 at phase start). Confirmed in a fully isolated run — an earlier concurrent run (this plan's own dev-DB scripts running alongside a background pytest process) produced 2 spurious `DeadlockDetectedError` failures, an environment artifact (TEST_DATABASE_URL and DATABASE_URL resolve to the same physical database in this sandbox), not a regression.
+- `.planning/WINDOWS.md` gained 9 entries this plan (2 deviations found+fixed, 1 corrected-premise deviation, 8 unrun-verify browser items covering the whole phase).
 
 Phase 49-05 close-out notes (2026-08-23):
 
@@ -175,6 +185,7 @@ items → 14.** Every closure carries its evidence in the file it closes; the co
 | Phase 49-review-model P03 | 25min | 3 tasks | 6 files |
 | Phase 49-review-model P04 | 100min | 3 tasks | 15 files |
 | Phase 49-review-model P05 | 50min | 3 tasks | 10 files |
+| Phase 49-review-model P06 | ~100min | 3 tasks | 15 files |
 
 v1.7 per-plan metrics cleared at this milestone boundary per the standard STATE.md reset; the underlying per-plan SUMMARY files remain in `.planning/milestones/v1.7-phases/`.
 
@@ -228,6 +239,11 @@ Full cross-milestone decision log lives in PROJECT.md's Key Decisions table. Per
 - [Phase 49]: 49-03: could not complete the plan's live-browser human-check walkthroughs (Task 1 popover, Task 3 Help page) -- authenticating to /admin/** requires ADMIN_USERNAME/ADMIN_PASSWORD or SESSION_SECRET from .env, and this sandbox's permission policy denied reading .env. Recorded as human_judgment:true in 49-03-SUMMARY.md coverage; a human should complete both walkthroughs before UAT sign-off.
 - [Phase 49]: 49-04: D-18 provenance-gap fix backfills source/method from the job's parse-step ImportRun (corpus/direct), not by routing incoming writes as operator/manual authority as the environment note's prose suggested — verified against derive_tier's actual rule table (only rule 4 reaches TRUSTED, which both failing tests assert).
 - [Phase 49]: 49-04: participant editability widened from CANDIDATE-only to every unpublished state (candidate/draft/unpublished); only PUBLISHED stays read-only. Backend/API complete; frontend readonlyMode flag deliberately not widened (conflates two different editability concerns) — left for 49-05.
+- [Phase 49]: 49-06: 49-RESEARCH.md Pitfall 4's premise ("no live corpus path can produce an unresolved speaker") is false — verified against the live dev DB before this plan started. The dev-only seeder was built anyway, justified by its own standalone value (a deterministic, repeatable fixture), not by the false claim.
+- [Phase 49]: 49-06: the seeder prefers a participant whose side is already UNKNOWN (traced against list_argument_speakers/ChatBubble.svelte's real source) over the plan's literal "first non-BENCH participant" pick, and also nulls the matching Utterance rows — both required to actually reproduce 26-UAT Test 26 and 14-UAT Test 8's states, not just an unresolved-participant row.
+- [Phase 49]: 49-06: found and fixed a real gap during D-32's own live walkthrough — _argument_attention_predicate had no leg for "a constituent has an open discrepancy" (the People-tab predicate already did), so the review queue never surfaced exactly the scenario REVIEW-02/REVIEW-04 exist to prove. Fixed same-plan.
+- [Phase 49]: 49-06: readonlyMode split into resolveCardReadonly (status===published) / metadataReadonly (unchanged) — closes the item 49-04/49-05 both flagged and deferred.
+- [Phase 49]: 49-06: discovered TEST_DATABASE_URL and DATABASE_URL resolve to the same physical Postgres database in this sandbox — running a full-suite pytest run and a direct dev-DB verification script concurrently produced 2 spurious DeadlockDetectedError failures (confirmed as an artifact, not a regression, by re-running in isolation). Future work in this sandbox should not run both at once.
 
 ### Roadmap Evolution
 
@@ -274,9 +290,8 @@ v1.6's roadmap evolution is archived in `.planning/milestones/v1.6-ROADMAP.md`; 
 **Process concern carried from Phase 40.1 (PROJECT.md Key Decisions, ⚠️ Revisit):**
 
 - When a fix for a previously-diagnosed issue lands via a commit outside the formal plan sequence, flip the source debug session's / verification's `status` field in that same commit. v1.6 lost a phase slot (40.1) to a stale `diagnosed` status; no structural fix shipped.
-- api/tests/test_admin_jobs_service.py: 2 failing tests (resolve_job/update_resolve_row_for_job never stamp ArgumentParticipant.source/method, floored to UNCERTAIN by 49-01's D-18 change). Out of 49-02 scope — see .planning/phases/49-review-model/deferred-items.md and WINDOWS.md entry 11.
-- 49-03: two live-browser human-check walkthroughs (popover side inheritance/selection; /admin/help visual + apolitical read-through) remain unverified in a browser -- executor lacked admin credentials in this sandbox. See 49-03-SUMMARY.md coverage D1/D2/D4.
-- 49-05: the Task 2 seven-item browser walkthrough of the full /admin/review screen (tabs, filter composition, expand/collapse, resolve actions, dashboard StatCards) remains unverified in a browser for the same admin-credential reason. See 49-05-SUMMARY.md coverage D4/D5.
+- api/tests/test_admin_jobs_service.py's 2 failing tests (resolve_job/update_resolve_row_for_job never stamp ArgumentParticipant.source/method) — **RESOLVED by plan 49-04** (WINDOWS.md entry 11, status `fixed`).
+- **All eight outstanding live-browser human-check items across Phase 49 (49-01, 49-03, 49-05, 49-06) are consolidated into one ordered list in `.planning/phases/49-review-model/49-EVIDENCE.md` §9** — every underlying data/API layer has been verified by script; only the actual on-screen render is unconfirmed, blocked on this sandbox denying `.env` read access for admin credentials. Each item is also recorded in `.planning/WINDOWS.md` (kind `unrun-verify`).
 
 ### Milestone-close queue (not Phase 48 blockers)
 
@@ -288,12 +303,13 @@ at close.
 
 ## Session Continuity
 
-Last session: 2026-08-23T15:14:48.254Z
-Stopped at: Completed 49-05-PLAN.md
+Last session: 2026-08-23T16:25:00.000Z
+Stopped at: Completed 49-06-PLAN.md — Phase 49 (Review Model) complete
 Resume file: None
 
 ## Operator Next Steps
 
-- Phase 48 (Trust & Lifecycle) is complete and signed off. Review `.planning/phases/48-trust-lifecycle/48-EVIDENCE.md` and `48-09-SUMMARY.md` at your convenience.
-- Two standalone todos were filed at Phase 48 close and are candidates for a future plan or `/gsd-review-backlog`: `2026-08-20-reset-to-fixture-stale-created-at-timestamps.md` and `2026-08-21-widen-participant-editability-to-all-unpublished-states.md`.
-- When ready, begin Phase 49 (Review Model) with `/gsd-discuss-phase 49`.
+- **Phase 49 (Review Model) is complete.** All five REVIEW-0X requirements are `Complete`. Review `.planning/phases/49-review-model/49-EVIDENCE.md` and `49-06-SUMMARY.md` at your convenience.
+- **Recommended single-sitting browser pass** (see `49-EVIDENCE.md` §9 for the exact order): open `/admin`, click Reset to Fixture then Seed unresolved speaker; open the Complexity fixture's argument edit page (26-UAT Test 26); open `/admin/review` (49-01/49-05's items, D-32's visual rendering); exercise `CreatePersonPopover`/`/admin/help` (49-03's items); optionally publish the Complexity fixture to check 14-UAT Test 8's public-page rendering.
+- One standalone todo remains open from Phase 48: `2026-08-20-reset-to-fixture-stale-created-at-timestamps.md` — candidate for a future plan or `/gsd-review-backlog`. (`2026-08-21-widen-participant-editability-to-all-unpublished-states.md` is now closed — see `.planning/todos/completed/`.)
+- When ready, begin Phase 50 (Import Unification) with `/gsd-discuss-phase 50`.

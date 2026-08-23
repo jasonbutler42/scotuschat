@@ -148,7 +148,7 @@ Full phase details: `.planning/milestones/v1.7-ROADMAP.md`
 
 - [x] **Phase 47: Provenance Foundation** - `import_run` generalizes `pipeline_run` with declared `source`/`method` + external-id lineage; PDF-only fields go nullable; every import path stamps provenance at write time (disposable DB → clean rebuild, no legacy backfill) (completed 2026-08-18)
 - [x] **Phase 48: Trust & Lifecycle** - Materialized `trust_tier` rollup, `candidate`-on-arrival status, and a single `published_at` promotion gate hard-blocked on UNCERTAIN with a logged operator override (completed 2026-08-21)
-- [ ] **Phase 49: Review Model** - Four-state `review_state` on operator-editable rows, discrepancy recording on re-import, and a filterable operator review queue (generalizes `name_needs_review`)
+- [x] **Phase 49: Review Model** - Four-state `review_state` on operator-editable rows, discrepancy recording on re-import, and a filterable operator review queue (generalizes `name_needs_review`) (completed 2026-08-23)
 - [ ] **Phase 50: Unified Import Path** - Corpus and PDF become peer strategies writing `import_run` directly; `admin_job` re-points; re-import is idempotent and authority-governed so it never clobbers operator work
 - [ ] **Phase 51: Design System & Noun Alignment** - Public noun aligned to "arguments" (`/cases` → arguments, redirects preserved) plus shared component library, design tokens, and listing style (absorbs backlog 999.4 / 999.6 / 999.8)
 
@@ -272,7 +272,7 @@ Plans:
   4. The operator can resolve a review item (confirm or edit) from the queue, and doing so advances its `review_state` and recomputes the affected argument's trust.
   5. The legacy `name_needs_review` / `name_extraction_metadata` mechanism is folded into the unified review_state + provenance record, with no parallel mechanism remaining.
 
-**Plans**: 4/6 plans executed
+**Plans**: 6/6 plans executed
 **UI hint**: yes
 
 Plans:
@@ -295,7 +295,7 @@ Plans:
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
-- [ ] 49-06-PLAN.md — Dev-only unresolved-speaker seeder, the D-32 live authority-conflict walkthrough, closure of 26-UAT Test 26 and 14-UAT Test 8, and requirement traceability (wave 5)
+- [x] 49-06-PLAN.md — Dev-only unresolved-speaker seeder, the D-32 live authority-conflict walkthrough, closure of 26-UAT Test 26 and 14-UAT Test 8, and requirement traceability (wave 5)
 
 ### Phase 50: Unified Import Path
 
@@ -392,7 +392,7 @@ Plans:
 | 46. Dev Environment Reliability | v1.7 | 6/6 | Complete    | 2026-08-14 |
 | 47. Provenance Foundation | v1.8 | 6/6 | Complete    | 2026-08-18 |
 | 48. Trust & Lifecycle | v1.8 | 10/10 | Complete    | 2026-08-21 |
-| 49. Review Model | v1.8 | 4/6 | In Progress|  |
+| 49. Review Model | v1.8 | 6/6 | In Progress|  |
 | 50. Unified Import Path | v1.8 | 0/TBD | Not started | - |
 | 51. Design System & Noun Alignment | v1.8 | 0/TBD | Not started | - |
 

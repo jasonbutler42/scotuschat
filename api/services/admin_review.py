@@ -24,9 +24,14 @@ never commits and stays that way.
 
 from __future__ import annotations
 
+import enum
+
 from sqlalchemy import and_, or_, select, update
+from sqlalchemy import func as sqlfunc
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from api.domain.authority import WriteDecision, decide_write
+from api.domain.person_names import normalize_name_part
 from api.domain.trust import TrustTier
 from api.models.models import (
     AdminJob,
@@ -34,10 +39,251 @@ from api.models.models import (
     ArgumentParticipant,
     Case,
     CaseArgument,
+    ImportMethod,
+    ImportSource,
     Person,
     ReviewState,
+    ValueDiscrepancy,
 )
 from api.services.trust import recompute_argument_tier
+
+# Four name-part fields route through the shared normalize_name_part
+# contract (REVIEW-01/encoding); every other field routes through a
+# generic strip-and-blank-to-None normalization.
+_NAME_PART_FIELDS = frozenset({"first_name", "middle_name", "last_name", "name_suffix"})
+
+
+def _stringify(value) -> str | None:
+    """Stringify a value for value_discrepancy storage. None stays None;
+    an enum member is stored as its `.value`, never its repr."""
+    if value is None:
+        return None
+    if isinstance(value, enum.Enum):
+        return value.value
+    return str(value)
+
+
+def _normalize_generic(value) -> str | None:
+    """Non-name-part normalization: str(...).strip(), with None/"" (and an
+    enum's blank .value) collapsing to None on both sides."""
+    if value is None:
+        return None
+    if isinstance(value, enum.Enum):
+        value = value.value
+    stripped = str(value).strip()
+    return stripped if stripped else None
+
+
+def _values_differ(field: str, incoming, existing) -> bool:
+    """
+    The single named home of the REVIEW-01/encoding normalization contract.
+
+    The four name-part fields route through
+    `api.domain.person_names.normalize_name_part` on BOTH sides; every
+    other field routes through `str(...).strip()` with None/"" collapsing
+    to None on both sides. The two normalized values are compared with
+    plain Python `==` — case-sensitive, punctuation-preserving, with no
+    Unicode NFC folding. A pure-whitespace difference is NOT a
+    disagreement; a letter-case difference IS.
+    """
+    if field in _NAME_PART_FIELDS:
+        norm_incoming = normalize_name_part(incoming, field_name=field) if incoming else None
+        norm_existing = normalize_name_part(existing, field_name=field) if existing else None
+    else:
+        norm_incoming = _normalize_generic(incoming)
+        norm_existing = _normalize_generic(existing)
+    return norm_incoming != norm_existing
+
+
+async def record_value_discrepancy(
+    db: AsyncSession,
+    *,
+    target_type: str,
+    target_id: int,
+    field: str,
+    import_run_id: int | None,
+    incoming_value,
+    existing_value,
+    incoming_source: str,
+    incoming_method: str,
+    existing_source: str | None,
+    existing_method: str | None,
+) -> ValueDiscrepancy:
+    """
+    Record one open (unresolved) value_discrepancy row. Never commits — the
+    caller (a public service entry point) owns the transaction boundary.
+
+    Both values are stringified for storage (Text columns); an enum member
+    is stored as its `.value`. Provenance strings are converted to their
+    ImportSource/ImportMethod enum members when non-blank, else NULL — the
+    column type is the PG enum, not free text, and a blank string (e.g. an
+    ArgumentParticipant with source=NULL) is never a valid enum member.
+    """
+    discrepancy = ValueDiscrepancy(
+        target_type=target_type,
+        target_id=target_id,
+        field=field,
+        import_run_id=import_run_id,
+        incoming_value=_stringify(incoming_value),
+        existing_value=_stringify(existing_value),
+        incoming_source=ImportSource(incoming_source) if incoming_source else None,
+        incoming_method=ImportMethod(incoming_method) if incoming_method else None,
+        existing_source=ImportSource(existing_source) if existing_source else None,
+        existing_method=ImportMethod(existing_method) if existing_method else None,
+    )
+    db.add(discrepancy)
+    return discrepancy
+
+
+async def close_open_discrepancies(db: AsyncSession, *, target_type: str, target_id: int) -> int:
+    """
+    Close every currently-open value_discrepancy row for one target in ONE
+    UPDATE statement — a single shared `resolved_at` timestamp across every
+    closed row, so the close order is unobservable (edge REVIEW-04/
+    ordering). Never commits.
+    """
+    result = await db.execute(
+        update(ValueDiscrepancy)
+        .where(
+            ValueDiscrepancy.target_type == target_type,
+            ValueDiscrepancy.target_id == target_id,
+            ValueDiscrepancy.resolved_at.is_(None),
+        )
+        .values(resolved_at=sqlfunc.now())
+        .execution_options(synchronize_session=False)
+    )
+    return result.rowcount
+
+
+async def apply_participant_value_change(
+    db: AsyncSession,
+    *,
+    participant: ArgumentParticipant,
+    field: str,
+    incoming_value,
+    incoming_source: str,
+    incoming_method: str,
+    import_run_id: int | None = None,
+) -> WriteDecision:
+    """
+    The ONE authority gate for `argument_participants` (D-31/D-31a). Every
+    write to a value-bearing column on this table must go through this
+    function — no second, ungated write path may survive.
+
+    Reads the stored authority off `participant.review_state.value` plus
+    `participant.source`/`.method` (`.value` when present, `""` when NULL —
+    the same Pitfall 1 `.value` rule `derive_tier` callers already follow).
+    Never commits, never recomputes the trust tier — the caller (a public
+    service entry point) owns both.
+    """
+    existing_value = getattr(participant, field)
+    values_differ = _values_differ(field, incoming_value, existing_value)
+
+    existing_source_value = participant.source.value if participant.source else ""
+    existing_method_value = participant.method.value if participant.method else ""
+    existing_review_state_value = participant.review_state.value
+
+    decision = decide_write(
+        incoming_source=incoming_source,
+        incoming_method=incoming_method,
+        # The incoming write is not itself review-stated — its authority is
+        # fully determined by incoming_source (rule 2/3 of authority_rank),
+        # so an empty review_state here never changes the outcome.
+        incoming_review_state="",
+        existing_source=existing_source_value,
+        existing_method=existing_method_value,
+        existing_review_state=existing_review_state_value,
+        values_differ=values_differ,
+    )
+
+    if decision in (WriteDecision.ACCEPT, WriteDecision.ACCEPT_AND_RECORD):
+        await db.execute(
+            update(ArgumentParticipant)
+            .where(
+                ArgumentParticipant.id == participant.id,
+                ArgumentParticipant.argument_id == participant.argument_id,
+            )
+            .values(**{field: incoming_value})
+            .execution_options(synchronize_session=False)
+        )
+
+    if decision in (WriteDecision.ACCEPT_AND_RECORD, WriteDecision.REJECT_AND_RECORD):
+        await record_value_discrepancy(
+            db,
+            target_type="argument_participant",
+            target_id=participant.id,
+            field=field,
+            import_run_id=import_run_id,
+            incoming_value=incoming_value,
+            existing_value=existing_value,
+            incoming_source=incoming_source,
+            incoming_method=incoming_method,
+            existing_source=existing_source_value or None,
+            existing_method=existing_method_value or None,
+        )
+
+    return decision
+
+
+async def apply_person_value_change(
+    db: AsyncSession,
+    *,
+    person: Person,
+    field: str,
+    incoming_value,
+    incoming_source: str,
+    incoming_method: str,
+    import_run_id: int | None = None,
+) -> WriteDecision:
+    """
+    The same authority gate, shaped for `people` (D-31/D-31a). `Person` has
+    no `source`/`method` columns at all (D-08's fold left the person-level
+    authority record entirely on `review_state`) — so the existing
+    provenance passed to `decide_write` is always `("", "")`, and existing
+    authority is OPERATOR only when `review_state` is already
+    operator_confirmed/operator_edited, else UNKNOWN. `Person` has no
+    parent scope, so the scoped-SELECT guard is the primary-key lookup the
+    caller already performed. Never commits.
+    """
+    existing_value = getattr(person, field)
+    values_differ = _values_differ(field, incoming_value, existing_value)
+
+    existing_review_state_value = person.review_state.value
+
+    decision = decide_write(
+        incoming_source=incoming_source,
+        incoming_method=incoming_method,
+        incoming_review_state="",
+        existing_source="",
+        existing_method="",
+        existing_review_state=existing_review_state_value,
+        values_differ=values_differ,
+    )
+
+    if decision in (WriteDecision.ACCEPT, WriteDecision.ACCEPT_AND_RECORD):
+        await db.execute(
+            update(Person)
+            .where(Person.id == person.id)
+            .values(**{field: incoming_value})
+            .execution_options(synchronize_session=False)
+        )
+
+    if decision in (WriteDecision.ACCEPT_AND_RECORD, WriteDecision.REJECT_AND_RECORD):
+        await record_value_discrepancy(
+            db,
+            target_type="person",
+            target_id=person.id,
+            field=field,
+            import_run_id=import_run_id,
+            incoming_value=incoming_value,
+            existing_value=existing_value,
+            incoming_source=incoming_source,
+            incoming_method=incoming_method,
+            existing_source=None,
+            existing_method=None,
+        )
+
+    return decision
 
 
 async def list_review_queue_arguments(db: AsyncSession) -> list[dict]:
@@ -175,14 +421,137 @@ async def list_review_queue_arguments(db: AsyncSession) -> list[dict]:
                 "side": row.side.value,
                 "review_state": row.review_state.value,
                 "has_open_discrepancy": False,
+                "discrepancies": [],
             }
         )
+
+    # Attach each constituent's open discrepancies (plan 49-04) — one query
+    # over every flagged participant id already collected above, never a
+    # per-row query. Ordered by id ASC (edge REVIEW-04/ordering) for a
+    # stable, repeatable render regardless of the close order.
+    all_participant_ids = [
+        constituent["participant_id"]
+        for arg in arguments.values()
+        for constituent in arg["constituents"]
+    ]
+    discrepancies_by_participant: dict[int, list[dict]] = {}
+    if all_participant_ids:
+        disc_rows = (
+            await db.execute(
+                select(ValueDiscrepancy)
+                .where(
+                    ValueDiscrepancy.target_type == "argument_participant",
+                    ValueDiscrepancy.target_id.in_(all_participant_ids),
+                    ValueDiscrepancy.resolved_at.is_(None),
+                )
+                .order_by(ValueDiscrepancy.id.asc())
+            )
+        ).scalars().all()
+        for d in disc_rows:
+            discrepancies_by_participant.setdefault(d.target_id, []).append(
+                {
+                    "id": d.id,
+                    "field": d.field,
+                    "existing_value": d.existing_value,
+                    "existing_source": d.existing_source.value if d.existing_source else None,
+                    "existing_method": d.existing_method.value if d.existing_method else None,
+                    "incoming_value": d.incoming_value,
+                    "incoming_source": d.incoming_source.value if d.incoming_source else None,
+                    "incoming_method": d.incoming_method.value if d.incoming_method else None,
+                    "created_at": d.created_at.isoformat(),
+                }
+            )
 
     items: list[dict] = []
     for arg_id in order:
         arg = arguments[arg_id]
+        for constituent in arg["constituents"]:
+            open_discs = discrepancies_by_participant.get(constituent["participant_id"], [])
+            constituent["discrepancies"] = open_discs
+            constituent["has_open_discrepancy"] = len(open_discs) > 0
         arg["attention_count"] = len(arg["constituents"])
         items.append(arg)
+    return items
+
+
+async def list_review_queue_people(db: AsyncSession) -> list[dict]:
+    """
+    Return every Person needing operator attention (D-02's People tab).
+
+    Filtered to `review_state IN (needs_review, unreviewed)` OR having an
+    open `value_discrepancy` row — matching `list_review_queue_arguments`'s
+    inclusion philosophy at the person level. Unbounded (D-04), sorted by
+    `full_name` for a stable, deterministic render.
+    """
+    discrepant_person_ids_subq = (
+        select(ValueDiscrepancy.target_id)
+        .where(
+            ValueDiscrepancy.target_type == "person",
+            ValueDiscrepancy.resolved_at.is_(None),
+        )
+        .distinct()
+    )
+
+    q = (
+        select(Person)
+        .where(
+            or_(
+                Person.review_state.in_([ReviewState.NEEDS_REVIEW, ReviewState.UNREVIEWED]),
+                Person.id.in_(discrepant_person_ids_subq),
+            )
+        )
+        .order_by(Person.full_name.asc(), Person.id.asc())
+    )
+    people = (await db.execute(q)).scalars().all()
+    if not people:
+        return []
+
+    person_ids = [p.id for p in people]
+    disc_rows = (
+        await db.execute(
+            select(ValueDiscrepancy)
+            .where(
+                ValueDiscrepancy.target_type == "person",
+                ValueDiscrepancy.target_id.in_(person_ids),
+                ValueDiscrepancy.resolved_at.is_(None),
+            )
+            .order_by(ValueDiscrepancy.id.asc())
+        )
+    ).scalars().all()
+    discrepancies_by_person: dict[int, list[dict]] = {}
+    for d in disc_rows:
+        discrepancies_by_person.setdefault(d.target_id, []).append(
+            {
+                "id": d.id,
+                "field": d.field,
+                "existing_value": d.existing_value,
+                "existing_source": d.existing_source.value if d.existing_source else None,
+                "existing_method": d.existing_method.value if d.existing_method else None,
+                "incoming_value": d.incoming_value,
+                "incoming_source": d.incoming_source.value if d.incoming_source else None,
+                "incoming_method": d.incoming_method.value if d.incoming_method else None,
+                "created_at": d.created_at.isoformat(),
+            }
+        )
+
+    items: list[dict] = []
+    for person in people:
+        open_discs = discrepancies_by_person.get(person.id, [])
+        items.append(
+            {
+                "id": person.id,
+                "full_name": person.full_name,
+                "review_state": person.review_state.value,
+                "provenance_note": (
+                    "operator-confirmed" if person.review_state == ReviewState.OPERATOR_CONFIRMED
+                    else "operator-edited" if person.review_state == ReviewState.OPERATOR_EDITED
+                    else "needs review" if person.review_state == ReviewState.NEEDS_REVIEW
+                    else "unreviewed"
+                ),
+                "has_open_discrepancy": len(open_discs) > 0,
+                "discrepancies": open_discs,
+            }
+        )
     return items
 
 
@@ -194,32 +563,37 @@ async def resolve_participant_review(
     Scoped select-then-update (T-49-idor) — a missing participant_id
     returns None (router -> 404), never a silent no-op.
 
-    This plan (49-01) implements exactly one action, "confirm" — advances
-    review_state to OPERATOR_CONFIRMED. The schema-level
-    ``ReviewActionRequest.action: Literal["confirm"]`` already restricts
-    callers to this value; the guard below is defense-in-depth against any
-    future caller that bypasses the schema.
+    Three actions (plan 49-04; "edit" is a deep link, D-23, not a fourth
+    action here — see api/schemas/admin_review.py::ReviewActionRequest):
 
-    Unresolved-speaker guard (tracer feedback gate defect 2a): raises
-    ValueError when the participant's person_id IS NULL. Confirm only
-    advances review_state — it never touches person_id — so confirming an
-    unresolved speaker would be a permanent no-op that silently pretends to
-    succeed while never clearing the row from the queue. Mirrors
-    ``api/services/admin_arguments.py::update_participant_side``'s
-    established unresolved-row rejection idiom (raise ValueError, router
-    maps to 422). Clearing an unresolved row is plan 49-04's
-    "confirm-as-unattributable" action (D-17 floor lift) — NOT this one;
-    the real fix for an unresolved speaker is the person-search/assign
-    flow at `/admin/pipeline/{admin_job_id}` (see
-    ``list_review_queue_arguments``'s docstring).
+      - "confirm": advances review_state to OPERATOR_CONFIRMED on an
+        already-resolved participant (person_id IS NOT NULL). Raises a
+        tagged ValueError("unresolved_requires_unattributable") when
+        person_id IS NULL (tracer feedback gate defect 2a) — an ordinary
+        confirm never lifts the D-11 unresolved-speaker floor as a side
+        effect (D-17); the real fix for an unresolved speaker is either
+        the person-search/assign flow at `/admin/pipeline/{admin_job_id}`
+        or "confirm_unattributable" below.
+      - "confirm_unattributable": advances review_state to
+        OPERATOR_CONFIRMED on an UNRESOLVED participant (person_id IS
+        NULL) — the operator's explicit judgment that no further speaker
+        resolution is possible. Raises a tagged
+        ValueError("participant_is_resolved") when person_id IS NOT NULL
+        (this is not the action for an already-resolved row). Lifts the
+        D-11 floor via api.services.trust._load_constituents' D-17
+        qualification.
+      - "reflag": sets review_state back to NEEDS_REVIEW on an
+        operator_confirmed or operator_edited row. Raises a tagged
+        ValueError("row_not_yet_reviewed") when the row is still
+        UNREVIEWED — reflag is the only backward transition (D-25); no
+        action here ever writes UNREVIEWED.
 
-    This is the module's single public commit entry point (see module
-    docstring) — recompute_argument_tier never commits; this function
-    commits exactly once, as the last statement before refresh+return.
+    Every action closes this participant's open discrepancies (D-15: same
+    transaction as the state advance and the trust recompute — one shared
+    resolved_at across every closed row, see close_open_discrepancies) and
+    recomputes the argument's tier before this function's single commit
+    (the module's one public commit entry point — see module docstring).
     """
-    if action != "confirm":
-        raise ValueError(f"unsupported review action: {action!r}")
-
     result = await db.execute(
         select(ArgumentParticipant).where(ArgumentParticipant.id == participant_id)
     )
@@ -227,18 +601,30 @@ async def resolve_participant_review(
     if participant is None:
         return None  # router -> 404
 
-    if participant.person_id is None:
-        raise ValueError(
-            "Cannot confirm a participant whose speaker is unresolved; "
-            "resolve the speaker first"
-        )
+    if action == "confirm":
+        if participant.person_id is None:
+            raise ValueError("unresolved_requires_unattributable")
+        new_review_state = ReviewState.OPERATOR_CONFIRMED
+    elif action == "confirm_unattributable":
+        if participant.person_id is not None:
+            raise ValueError("participant_is_resolved")
+        new_review_state = ReviewState.OPERATOR_CONFIRMED
+    elif action == "reflag":
+        if participant.review_state == ReviewState.UNREVIEWED:
+            raise ValueError("row_not_yet_reviewed")
+        new_review_state = ReviewState.NEEDS_REVIEW
+    else:
+        raise ValueError(f"unsupported review action: {action!r}")
 
+    # D-25: no action above ever assigns ReviewState.UNREVIEWED — the only
+    # backward transition is reflag, which lands on NEEDS_REVIEW.
     await db.execute(
         update(ArgumentParticipant)
         .where(ArgumentParticipant.id == participant_id)
-        .values(review_state=ReviewState.OPERATOR_CONFIRMED)
+        .values(review_state=new_review_state)
         .execution_options(synchronize_session=False)
     )
+    await close_open_discrepancies(db, target_type="argument_participant", target_id=participant_id)
     await recompute_argument_tier(db, participant.argument_id)
     await db.commit()
     await db.refresh(participant)
@@ -247,4 +633,49 @@ async def resolve_participant_review(
         "id": participant.id,
         "argument_id": participant.argument_id,
         "review_state": participant.review_state.value,
+    }
+
+
+async def resolve_person_review(db: AsyncSession, person_id: int, action: str) -> dict | None:
+    """Advance one Person's review_state (D-02's People-tab resolve action).
+
+    Same shape as resolve_participant_review, minus
+    "confirm_unattributable" (D-17 is an ArgumentParticipant-only concept —
+    a bare Person has no unattributable state) and minus any recompute
+    call (Phase 48 D-10's no-fan-out rule: a person-level review never
+    reaches an argument's trust floor).
+
+    Scoped select-then-update (T-49-idor) — a missing person_id returns
+    None (router -> 404).
+    """
+    result = await db.execute(select(Person).where(Person.id == person_id))
+    person = result.scalar_one_or_none()
+    if person is None:
+        return None  # router -> 404
+
+    if action == "confirm":
+        new_review_state = ReviewState.OPERATOR_CONFIRMED
+    elif action == "reflag":
+        if person.review_state == ReviewState.UNREVIEWED:
+            raise ValueError("row_not_yet_reviewed")
+        new_review_state = ReviewState.NEEDS_REVIEW
+    elif action == "confirm_unattributable":
+        raise ValueError("confirm_unattributable_not_applicable_to_person")
+    else:
+        raise ValueError(f"unsupported review action: {action!r}")
+
+    # D-25: no action above ever assigns ReviewState.UNREVIEWED.
+    await db.execute(
+        update(Person)
+        .where(Person.id == person_id)
+        .values(review_state=new_review_state)
+        .execution_options(synchronize_session=False)
+    )
+    await close_open_discrepancies(db, target_type="person", target_id=person_id)
+    await db.commit()
+    await db.refresh(person)
+
+    return {
+        "id": person.id,
+        "review_state": person.review_state.value,
     }

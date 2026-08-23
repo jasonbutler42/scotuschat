@@ -336,6 +336,58 @@ async def test_equal_value_updates_row_and_creates_no_discrepancy() -> None:
 
 @pytest.mark.asyncio
 @pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_manual_check_corpus_write_against_operator_edited_participant_rejects_and_records() -> None:
+    """Task 2's plan-mandated manual check: with an operator-edited
+    participant in the DB, calling apply_participant_value_change with
+    incoming_source='corpus' and a differing value leaves the column
+    unchanged and inserts exactly one open value_discrepancy row (D-16's
+    worked example: incoming corpus < existing operator)."""
+    from sqlalchemy import select as sa_select
+
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import ArgumentParticipant, ReviewState, SideEnum, ValueDiscrepancy
+    from api.services.admin_review import apply_participant_value_change
+
+    ids = await _make_argument_with_participant(
+        review_state=ReviewState.OPERATOR_EDITED, side=SideEnum.PETITIONER
+    )
+    try:
+        async with AsyncSessionLocal() as db:
+            participant = await db.get(ArgumentParticipant, ids["participant_id"])
+            decision = await apply_participant_value_change(
+                db,
+                participant=participant,
+                field="side",
+                incoming_value=SideEnum.RESPONDENT,
+                incoming_source="corpus",
+                incoming_method="direct",
+            )
+            await db.commit()
+
+        from api.domain.authority import WriteDecision
+
+        assert decision == WriteDecision.REJECT_AND_RECORD
+
+        async with AsyncSessionLocal() as db:
+            refreshed = await db.get(ArgumentParticipant, ids["participant_id"])
+            assert refreshed.side == SideEnum.PETITIONER  # unchanged
+
+            rows = (
+                await db.execute(
+                    sa_select(ValueDiscrepancy).where(
+                        ValueDiscrepancy.target_type == "argument_participant",
+                        ValueDiscrepancy.target_id == ids["participant_id"],
+                    )
+                )
+            ).scalars().all()
+            assert len(rows) == 1
+            assert rows[0].resolved_at is None
+    finally:
+        await _teardown_argument_with_participant(ids)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
 async def test_equal_authority_differing_value_leaves_column_untouched_and_records_one_discrepancy() -> None:
     from sqlalchemy import select as sa_select
 

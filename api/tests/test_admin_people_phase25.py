@@ -179,9 +179,10 @@ async def test_list_resolve_rows_scoped_to_job_argument(db_session) -> None:
 
 @pytest.mark.asyncio
 @pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
-async def test_list_resolve_rows_editable_false_when_argument_not_pipeline(db_session) -> None:
-    """Test 3: editable is false when linked argument.status is not pipeline
-    (D-18, D-19)."""
+async def test_list_resolve_rows_editable_false_when_argument_published(db_session) -> None:
+    """Test 3: editable is false only when linked argument.status is
+    PUBLISHED (Phase 49 folded todo widened editability to every other
+    unpublished lifecycle state — DRAFT now reports editable=True)."""
     from api.models.models import (
         AdminJob,
         AdminJobStatus,
@@ -198,7 +199,7 @@ async def test_list_resolve_rows_editable_false_when_argument_not_pipeline(db_se
     db_session.add(person)
     await db_session.flush()
 
-    arg = Argument(status=ArgumentStatusEnum.DRAFT, question_number=1)
+    arg = Argument(status=ArgumentStatusEnum.PUBLISHED, question_number=1)
     db_session.add(arg)
     await db_session.flush()
 
@@ -219,6 +220,50 @@ async def test_list_resolve_rows_editable_false_when_argument_not_pipeline(db_se
 
     assert len(rows) == 1
     assert rows[0]["editable"] is False
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_list_resolve_rows_editable_true_when_argument_draft(db_session) -> None:
+    """Companion case: DRAFT (a not-yet-published, non-candidate state) is
+    editable under the widened rule — only PUBLISHED is read-only."""
+    from api.models.models import (
+        AdminJob,
+        AdminJobStatus,
+        AdminJobStep,
+        Argument,
+        ArgumentParticipant,
+        ArgumentStatusEnum,
+        Person,
+        SideEnum,
+    )
+    from api.services.admin_people import list_resolve_rows_for_job
+
+    person = Person(full_name="Already Created Example Draft")
+    db_session.add(person)
+    await db_session.flush()
+
+    arg = Argument(status=ArgumentStatusEnum.DRAFT, question_number=1)
+    db_session.add(arg)
+    await db_session.flush()
+
+    participant = ArgumentParticipant(
+        argument_id=arg.id,
+        person_id=person.id,
+        raw_speaker_label="ALREADY RESOLVED DRAFT",
+        side=SideEnum.PETITIONER,
+    )
+    db_session.add(participant)
+    await db_session.flush()
+
+    job = AdminJob(status=AdminJobStatus.COMPLETED, current_step=AdminJobStep.RESOLVE, argument_id=arg.id)
+    db_session.add(job)
+    await db_session.flush()
+
+    rows = await list_resolve_rows_for_job(db_session, job.id)
+
+    assert len(rows) == 1
+    assert rows[0]["editable"] is True
 
 
 @pytest.mark.asyncio

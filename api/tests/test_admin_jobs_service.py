@@ -441,10 +441,13 @@ async def test_approve_job_accepts_freshly_created_candidate_and_rejects_second_
 
 @pytest.mark.asyncio
 @pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
-async def test_update_resolve_row_accepts_candidate_and_rejects_draft() -> None:
-    """update_resolve_row_for_job accepts an edit pre-approval and raises
-    ValueError naming the born state ('candidate', not the retired
-    'pipeline') once the argument has moved to DRAFT (T-48-GUARD)."""
+async def test_update_resolve_row_accepts_candidate_draft_and_rejects_published() -> None:
+    """update_resolve_row_for_job accepts an edit pre-approval (CANDIDATE),
+    STILL accepts it once the argument has moved to DRAFT (Phase 49 folded
+    todo: 2026-08-21-widen-participant-editability-to-all-unpublished-
+    states — supersedes the prior CANDIDATE-only T-48-GUARD), and only
+    rejects once the argument is PUBLISHED, naming 'published' in the
+    error."""
     from api.core.database import AsyncSessionLocal
     from api.models.models import (
         AdminJob,
@@ -500,8 +503,31 @@ async def test_update_resolve_row_accepts_candidate_and_rejects_draft() -> None:
         async with AsyncSessionLocal() as db:
             await approve_job(db, admin_job_id)
 
-        # Post-approval: the same edit is rejected, and the message names
-        # the born state ('candidate'), not the retired 'pipeline' value.
+        # Post-approval (DRAFT): the edit STILL succeeds under the widened
+        # editability rule.
+        async with AsyncSessionLocal() as db:
+            updated = await update_resolve_row_for_job(
+                db,
+                admin_job_id,
+                ResolveRowUpdate(
+                    participant_id=participant_id,
+                    side=SideEnum.RESPONDENT,
+                    descriptor="Counsel for Respondent",
+                ),
+            )
+        assert updated.descriptor == "Counsel for Respondent"
+
+        # Once PUBLISHED, the same edit is rejected, naming 'published'.
+        async with AsyncSessionLocal() as db:
+            from sqlalchemy import update as sa_update
+
+            await db.execute(
+                sa_update(Argument)
+                .where(Argument.id == argument_id)
+                .values(status=ArgumentStatusEnum.PUBLISHED)
+            )
+            await db.commit()
+
         with pytest.raises(ValueError) as exc_info:
             async with AsyncSessionLocal() as db:
                 await update_resolve_row_for_job(
@@ -513,8 +539,7 @@ async def test_update_resolve_row_accepts_candidate_and_rejects_draft() -> None:
                         descriptor="Should not persist",
                     ),
                 )
-        assert "candidate" in str(exc_info.value)
-        assert "'pipeline'" not in str(exc_info.value)
+        assert "published" in str(exc_info.value)
     finally:
         await _teardown_rows(
             argument_id=argument_id,
@@ -525,10 +550,10 @@ async def test_update_resolve_row_accepts_candidate_and_rejects_draft() -> None:
 
 @pytest.mark.asyncio
 @pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
-async def test_list_resolve_rows_editable_flag_tracks_candidate_state() -> None:
-    """list_resolve_rows_for_job reports editable=True pre-approval and
-    editable=False once the linked argument has left the candidate state
-    (T-48-GUARD)."""
+async def test_list_resolve_rows_editable_flag_tracks_published_state() -> None:
+    """list_resolve_rows_for_job reports editable=True pre-approval AND
+    post-approval (DRAFT) under the widened editability rule (Phase 49
+    folded todo), and editable=False only once the argument is PUBLISHED."""
     from api.core.database import AsyncSessionLocal
     from api.models.models import (
         AdminJob,
@@ -575,6 +600,23 @@ async def test_list_resolve_rows_editable_flag_tracks_candidate_state() -> None:
 
         async with AsyncSessionLocal() as db:
             await approve_job(db, admin_job_id)
+
+        # Post-approval (DRAFT): still editable under the widened rule.
+        async with AsyncSessionLocal() as db:
+            rows = await list_resolve_rows_for_job(db, admin_job_id)
+        assert len(rows) == 1
+        assert rows[0]["editable"] is True
+
+        # PUBLISHED: read-only.
+        async with AsyncSessionLocal() as db:
+            from sqlalchemy import update as sa_update
+
+            await db.execute(
+                sa_update(Argument)
+                .where(Argument.id == argument_id)
+                .values(status=ArgumentStatusEnum.PUBLISHED)
+            )
+            await db.commit()
 
         async with AsyncSessionLocal() as db:
             rows = await list_resolve_rows_for_job(db, admin_job_id)

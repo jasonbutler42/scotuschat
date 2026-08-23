@@ -27,7 +27,8 @@ from typing import Optional
 from sqlalchemy import and_, delete, exists, func as sqlfunc, not_, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.domain.person_names import prepare_person_name
+from api.domain.authority import WriteDecision
+from api.domain.person_names import format_full_name, prepare_person_name
 from api.models.models import (
     AdminJob,
     Argument,
@@ -45,6 +46,7 @@ from api.models.models import (
     office_title,
 )
 from api.schemas.admin_people import PersonCreateRequest, PersonUpdate, TenureWrite
+from api.services.admin_review import apply_person_value_change, close_open_discrepancies
 from api.services.speakers import ADVOCATE_LABEL_MAP
 
 
@@ -540,11 +542,52 @@ async def update_person(
         prepared = prepare_person_name(
             merged_first, merged_middle, merged_last, merged_suffix
         )
-        person.first_name = prepared.first_name
-        person.middle_name = prepared.middle_name
-        person.last_name = prepared.last_name
-        person.name_suffix = prepared.name_suffix
-        person.full_name = prepared.full_name
+        # Phase 49 (D-31/D-31a): each structured name-part column routes
+        # through the ONE authority-gated writer — no second, ungated write
+        # path to these columns survives. incoming_source/incoming_method
+        # are "operator"/"manual": this is an operator-facing edit path.
+        # A field whose write is REJECT_AND_RECORD (equal-or-lower incoming
+        # authority disagreeing with an already-authoritative value) keeps
+        # its ORIGINAL stored value — final_parts tracks the ACTUAL
+        # post-gate value per field so full_name is re-derived from what
+        # was really persisted, never from the caller's raw request.
+        final_parts: dict[str, str | None] = {}
+        for field, incoming_value in (
+            ("first_name", prepared.first_name),
+            ("middle_name", prepared.middle_name),
+            ("last_name", prepared.last_name),
+            ("name_suffix", prepared.name_suffix),
+        ):
+            decision = await apply_person_value_change(
+                db,
+                person=person,
+                field=field,
+                incoming_value=incoming_value,
+                incoming_source="operator",
+                incoming_method="manual",
+            )
+            if decision in (WriteDecision.ACCEPT, WriteDecision.ACCEPT_AND_RECORD):
+                final_parts[field] = incoming_value
+            else:
+                final_parts[field] = getattr(person, field)
+
+        # full_name is server-derived from the accepted parts (never
+        # client-authored, T-38-07) — assigned directly rather than gated
+        # separately, since it is not an independently-authored value.
+        # Also re-assigned onto the structured columns so the in-memory
+        # object (whose attributes the gate's own raw UPDATEs never sync,
+        # execution_options(synchronize_session=False)) matches what was
+        # actually persisted.
+        person.first_name = final_parts["first_name"]
+        person.middle_name = final_parts["middle_name"]
+        person.last_name = final_parts["last_name"]
+        person.name_suffix = final_parts["name_suffix"]
+        person.full_name = format_full_name(
+            final_parts["first_name"],
+            final_parts["middle_name"],
+            final_parts["last_name"],
+            final_parts["name_suffix"],
+        )
         # An authoritative edit always means *edited* (D-11) — no
         # value-diffing, no normalization guesswork — but never touches
         # provenance_metadata, which stays as an independent, durable audit
@@ -584,6 +627,7 @@ async def update_person(
         # May raise ValueError on malformed date — caller catches and returns 422
         await _replace_tenures(db, person_id, body.tenures)
 
+    await close_open_discrepancies(db, target_type="person", target_id=person_id)
     await db.commit()
     return await get_person_detail(db, person_id)
 
@@ -940,8 +984,12 @@ async def list_resolve_rows_for_job(db: AsyncSession, job_id: int) -> list[dict]
     this to a 4xx response rather than a 500 (T-25-06 IDOR/scoping guard:
     argument_id is always derived from job_id, never trusted from the client).
 
-    editable is False for every row once the linked argument has left the
-    'candidate' status (D-18, D-19) — the Resolve card renders read-only.
+    editable is False only once the linked argument has been PUBLISHED —
+    every other lifecycle state (candidate, draft, unpublished) renders
+    editable, matching the write-side guard in
+    api.services.admin_jobs.update_resolve_row_for_job (Phase 49 folded
+    todo: 2026-08-21-widen-participant-editability-to-all-unpublished-
+    states; supersedes the prior candidate-only guard, D-18/D-19).
 
     Bench rows (side == BENCH) get bench_role/missing_tenure/person_edit_href
     from a CourtTenure date-window lookup against Argument.argued_date
@@ -972,7 +1020,7 @@ async def list_resolve_rows_for_job(db: AsyncSession, job_id: int) -> list[dict]
     if argument is None:
         raise ValueError(f"Argument not found for job {job_id}")
 
-    editable = argument.status == ArgumentStatusEnum.CANDIDATE
+    editable = argument.status != ArgumentStatusEnum.PUBLISHED
 
     participants_result = await db.execute(
         select(

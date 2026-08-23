@@ -33,12 +33,15 @@ from api.models.models import (
     CourtTenure,
     ImportRun,
     Person,
+    ReviewState,
     SideEnum,
     Utterance,
 )
+from api.domain.authority import WriteDecision
 from api.domain.trust import TrustTier
 from api.schemas.admin_arguments import ArgumentUpdate, MetadataUpdate
 from api.services.admin_people import _bench_role_and_missing_tenure
+from api.services.admin_review import apply_participant_value_change, close_open_discrepancies
 from api.services.argument_uniqueness import find_argument_by_pair, is_argument_pair_violation
 from api.services.speakers import ADVOCATE_LABEL_MAP
 from api.services.trust import (
@@ -765,19 +768,43 @@ async def update_participant_side(
     if participant is None:
         return None  # router → 404
 
-    values_to_set: dict = {"side": side}
+    # Phase 49 (D-31/D-31a): every value write to this table routes through
+    # the ONE authority-gated writer — no second, ungated write path
+    # survives. incoming_source/incoming_method are always "operator"/
+    # "manual" here: this function is an operator-facing edit path.
+    side_decision = await apply_participant_value_change(
+        db,
+        participant=participant,
+        field="side",
+        incoming_value=side,
+        incoming_source="operator",
+        incoming_method="manual",
+    )
+    descriptor_decision: WriteDecision | None = None
     if descriptor is not None:
-        values_to_set["descriptor"] = descriptor
+        descriptor_decision = await apply_participant_value_change(
+            db,
+            participant=participant,
+            field="descriptor",
+            incoming_value=descriptor,
+            incoming_source="operator",
+            incoming_method="manual",
+        )
 
+    # An operator write through this path is an edit (D-11's rule applied
+    # to participants) — advance review_state to OPERATOR_EDITED. Per D-22,
+    # source/method are NOT written: the row keeps its original provenance,
+    # and its operator authority is carried entirely by review_state.
     await db.execute(
         update(ArgumentParticipant)
         .where(
             ArgumentParticipant.id == participant_id,
             ArgumentParticipant.argument_id == argument_id,
         )
-        .values(**values_to_set)
+        .values(review_state=ReviewState.OPERATOR_EDITED)
         .execution_options(synchronize_session=False)
     )
+    await close_open_discrepancies(db, target_type="argument_participant", target_id=participant_id)
     # Phase 48 D-10/48-RESEARCH.md Open Question 1: side/descriptor do not
     # feed the tier derivation under D-10's current scope, but recompute is
     # called anyway — Phase 49 adds `review_state` to this exact
@@ -787,7 +814,13 @@ async def update_participant_side(
     await db.commit()
 
     persisted_descriptor = descriptor if descriptor is not None else participant.descriptor
-    return {"id": participant_id, "side": side.value, "descriptor": persisted_descriptor}
+    return {
+        "id": participant_id,
+        "side": side.value,
+        "descriptor": persisted_descriptor,
+        "write_decision": side_decision.value,
+        "descriptor_write_decision": descriptor_decision.value if descriptor_decision else None,
+    }
 
 
 async def unpublish_argument(db: AsyncSession, argument_id: int) -> dict | None:

@@ -774,10 +774,23 @@ def test_update_resolve_row_for_job_does_not_reuse_advocate_side_endpoint() -> N
         "update_resolve_row_for_job must not call update_participant_side — "
         "that path rejects BENCH by design"
     )
-    assert "ArgumentStatusEnum.CANDIDATE" in func_body, (
-        "update_resolve_row_for_job must guard on argument.status == candidate (D-18, D-19)"
+    assert "ArgumentStatusEnum.PUBLISHED" in func_body, (
+        "update_resolve_row_for_job must guard on argument.status == PUBLISHED "
+        "(Phase 49 folded todo: widened editability to every unpublished state)"
     )
-    assert "synchronize_session=False" in func_body
+    # Phase 49 (D-31/D-31a): side/descriptor now route through the ONE
+    # authority-gated writer in api.services.admin_review — which is where
+    # the project-wide synchronize_session=False guard now lives for this
+    # write path — rather than a direct update(ArgumentParticipant) call
+    # inside this function.
+    assert "apply_participant_value_change(" in func_body, (
+        "update_resolve_row_for_job must delegate its value writes to the "
+        "authority-gated writer (D-31/D-31a)"
+    )
+    assert "update(ArgumentParticipant)" not in func_body, (
+        "update_resolve_row_for_job must not issue a second, ungated direct "
+        "write to argument_participants (D-31a)"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -1136,9 +1149,10 @@ async def test_update_resolve_row_rejects_participant_outside_job_argument(db_se
 
 @pytest.mark.asyncio
 @pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
-async def test_update_resolve_row_rejects_edit_when_argument_not_pipeline(db_session) -> None:
-    """Test 3b: any resolve-row edit is rejected when the linked argument.status
-    is not candidate (D-18, D-19)."""
+async def test_update_resolve_row_rejects_edit_when_argument_published(db_session) -> None:
+    """Test 3b: any resolve-row edit is rejected once the linked
+    argument.status is PUBLISHED (Phase 49 folded todo widened editability
+    to every OTHER unpublished lifecycle state — DRAFT is now editable)."""
     from api.models.models import (
         AdminJob,
         AdminJobStatus,
@@ -1156,7 +1170,7 @@ async def test_update_resolve_row_rejects_edit_when_argument_not_pipeline(db_ses
     db_session.add(person)
     await db_session.flush()
 
-    arg = Argument(status=ArgumentStatusEnum.DRAFT, question_number=1)
+    arg = Argument(status=ArgumentStatusEnum.PUBLISHED, question_number=1)
     db_session.add(arg)
     await db_session.flush()
 
@@ -1179,5 +1193,5 @@ async def test_update_resolve_row_rejects_edit_when_argument_not_pipeline(db_ses
 
     await db_session.refresh(participant)
     assert participant.side == SideEnum.PETITIONER, (
-        "No mutation may occur once the argument has left the pipeline state"
+        "No mutation may occur once the argument has been published"
     )

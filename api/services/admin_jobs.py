@@ -19,12 +19,13 @@ Critical guards (mirroring pipeline/commands/resolve.py):
 import datetime
 from typing import Optional
 
-from sqlalchemy import delete, exists, select, update
+from sqlalchemy import case, delete, exists, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from sqlalchemy import func
 
 from api.domain.person_names import prepare_person_name
+from api.services.admin_review import apply_participant_value_change
 from api.services.trust import recompute_argument_tier
 from api.models.models import (
     AdminJob,
@@ -471,6 +472,21 @@ async def resolve_job(
             "Cannot scope utterance updates without a parse run id."
         )
 
+    # Phase 49 gap fix (WINDOWS.md entry 11 / deferred-items.md): resolve_job
+    # never stamped ArgumentParticipant.source/.method, so plan 49-01's D-18
+    # change floors a freshly-resolved participant to UNCERTAIN even when
+    # its underlying import is corpus-sourced. Read the same parse-step
+    # ImportRun's provenance the utterance branch of _load_constituents
+    # already keys on, so step 2c below can backfill it for a participant
+    # that has never been stamped (source IS NULL) — never clobbering an
+    # already-recorded provenance.
+    parse_run_provenance_result = await db.execute(
+        select(ImportRun.source, ImportRun.method).where(ImportRun.id == parse_run_id)
+    )
+    parse_run_provenance = parse_run_provenance_result.one_or_none()
+    parse_run_source = parse_run_provenance.source if parse_run_provenance else None
+    parse_run_method = parse_run_provenance.method if parse_run_provenance else None
+
     # Step 2: Apply each match
     for match in matches:
         normalized = normalize_label(match.raw_speaker_label)
@@ -510,14 +526,28 @@ async def resolve_job(
                 .execution_options(synchronize_session=False)
             )
 
-            # Step 2c: UPDATE ArgumentParticipant.person_id
+            # Step 2c: UPDATE ArgumentParticipant.person_id. source/method
+            # are backfilled in the SAME statement via a conditional CASE —
+            # only when the row has never been stamped (source IS NULL) —
+            # so this stays the one write to this row for this match, not a
+            # second ungated statement.
             await db.execute(
                 update(ArgumentParticipant)
                 .where(
                     ArgumentParticipant.argument_id == job.argument_id,
                     ArgumentParticipant.raw_speaker_label == match.raw_speaker_label,
                 )
-                .values(person_id=match.person_id)
+                .values(
+                    person_id=match.person_id,
+                    source=case(
+                        (ArgumentParticipant.source.is_(None), parse_run_source),
+                        else_=ArgumentParticipant.source,
+                    ),
+                    method=case(
+                        (ArgumentParticipant.source.is_(None), parse_run_method),
+                        else_=ArgumentParticipant.method,
+                    ),
+                )
                 .execution_options(synchronize_session=False)
             )
 
@@ -793,8 +823,10 @@ async def update_resolve_row_for_job(
 
     Guards, in order (T-25-14, T-25-15):
       1. AdminJob must exist and have a linked argument.
-      2. The linked argument.status must be 'candidate' — edits are rejected once
-         the argument has left the candidate lifecycle state (D-18, D-19).
+      2. The linked argument.status must not be PUBLISHED — resolve rows are
+         editable across every unpublished lifecycle state (CANDIDATE, DRAFT,
+         UNPUBLISHED); a PUBLISHED argument's resolve rows are read-only
+         (Phase 49 folded todo, widening the prior CANDIDATE-only guard).
       3. The target ArgumentParticipant must belong to that argument (IDOR guard)
          — participant_id is never trusted on its own.
 
@@ -822,11 +854,12 @@ async def update_resolve_row_for_job(
     argument = arg_result.scalar_one_or_none()
     if argument is None:
         raise ValueError("Argument not found for this job")
-    if argument.status != ArgumentStatusEnum.CANDIDATE:
+    if argument.status == ArgumentStatusEnum.PUBLISHED:
         raise ValueError(
-            f"Argument {argument.id} is no longer in 'candidate' state "
-            f"(current status: {argument.status.value!r}); resolve rows are "
-            "read-only once the argument has been created (D-18, D-19)."
+            f"Argument {argument.id} is published (current status: "
+            f"{argument.status.value!r}); resolve rows are read-only once "
+            "an argument has been published (Phase 49 folded todo: "
+            "2026-08-21-widen-participant-editability-to-all-unpublished-states)."
         )
 
     participant_result = await db.execute(
@@ -842,24 +875,55 @@ async def update_resolve_row_for_job(
             f"AdminJob {job_id}'s linked argument"
         )
 
-    # RESOLVE-13: the descriptor key is included only when the side is not
-    # BENCH, so a BENCH write never appears in the generated SQL for that
-    # column at all — the stored value is preserved, not overwritten with
-    # null, and a client-supplied bench descriptor is ignored rather than
-    # written.
-    values: dict[str, object] = {"side": body.side}
-    if body.side != SideEnum.BENCH:
-        values["descriptor"] = body.descriptor
-
-    await db.execute(
-        update(ArgumentParticipant)
-        .where(
-            ArgumentParticipant.id == body.participant_id,
-            ArgumentParticipant.argument_id == argument.id,
-        )
-        .values(**values)
-        .execution_options(synchronize_session=False)
+    # Phase 49 (D-31/D-31a): side/descriptor route through the ONE
+    # authority-gated writer (api.services.admin_review) — no second,
+    # ungated write path to this table survives. incoming_source/
+    # incoming_method are "operator"/"manual": an admin resolving a row via
+    # the Resolve card is an operator action.
+    await apply_participant_value_change(
+        db,
+        participant=participant,
+        field="side",
+        incoming_value=body.side,
+        incoming_source="operator",
+        incoming_method="manual",
     )
+    # RESOLVE-13: the descriptor gate is applied ONLY when the side is not
+    # BENCH, so a BENCH write never touches that column at all — the
+    # stored value is preserved, not overwritten with null, and a
+    # client-supplied bench descriptor is ignored rather than written.
+    if body.side != SideEnum.BENCH:
+        await apply_participant_value_change(
+            db,
+            participant=participant,
+            field="descriptor",
+            incoming_value=body.descriptor,
+            incoming_source="operator",
+            incoming_method="manual",
+        )
+
+    # Phase 49 gap fix (WINDOWS.md entry 11 / deferred-items.md): this
+    # admin-assisted resolve action never stamped ArgumentParticipant.source
+    # /.method, so plan 49-01's D-18 change (deriving a real per-participant
+    # tier) floors a freshly-resolved participant to UNCERTAIN even when
+    # its underlying import is corpus-sourced. Backfill from the job's own
+    # "parse" step ImportRun — the SAME provenance the utterance branch of
+    # _load_constituents already reads for this exact argument — only when
+    # the row has never been stamped (source IS NULL); never clobber an
+    # already-recorded provenance. Set via ORM attribute assignment on the
+    # already-scoped object (no second bulk UPDATE statement against this
+    # table) — a metadata backfill, not a second ungated write path.
+    if participant.source is None:
+        parse_run_id = await get_run_id_for_step(db, job_id, "parse")
+        if parse_run_id is not None:
+            parse_run_result = await db.execute(
+                select(ImportRun.source, ImportRun.method).where(ImportRun.id == parse_run_id)
+            )
+            parse_run_row = parse_run_result.one_or_none()
+            if parse_run_row is not None:
+                participant.source = parse_run_row.source
+                participant.method = parse_run_row.method
+
     # D-07: side/descriptor don't currently feed derive_tier (48-RESEARCH.md
     # Open Question 1), but recompute is called anyway per "every writer
     # calls recompute" — the cost is one bounded per-argument query, and

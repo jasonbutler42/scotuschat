@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 6
+open_count: 5
 waived_count: 0
-fixed_count: 5
+fixed_count: 6
 total_count: 11
-last_updated: 2026-08-23T12:43:33.463Z
+last_updated: 2026-08-23T14:10:35.664Z
 ---
 
 # Broken Windows Ledger
@@ -25,7 +25,7 @@ last_updated: 2026-08-23T12:43:33.463Z
 | 8 | 48 | unrun-verify | app/src/routes/admin/arguments/[id]/+page.svelte |  | 48-08 checkpoint step 8 not executed: no argument with an incomplete resolve step was available, so the non-overridable resolved_at gate (D-14) rendering with NO override field offered is unverified in a browser. Steps 1-7 passed. Re-verify when a resolve-incomplete fixture exists. | fixed |  | 2026-08-19T23:33:18.102Z | 2026-08-20T16:43:58.653Z |
 | 9 | 48 | deviation | api/services/admin_arguments.py | 448 | get_argument_detail's status-log query ordered by created_at first, which can invert insertion order for a writer that reuses a long-lived session/transaction (found live via 48-09's reseed evidence); fixed to order by id ASC in commit 1b7564a78, regression-tested. Underlying stale-created_at STORAGE cause in reset_to_fixture remains open, tracked separately. | open |  | 2026-08-21T14:27:04.542Z |  |
 | 10 | 48 | unmet-truth | .planning/phases/48-trust-lifecycle/48-09-PLAN.md |  | Finding 1 (48-EVIDENCE.md): must_haves.truths expected all four corpus fixtures to read trust_tier=trusted after reseed; 15169 and 22372 read uncertain due to ConvoKit's own unattributed-speaker sentinel rows. derive_tier is correct -- the plan's 'corpus mints a Person for every speaker' assumption does not hold universally. Accepted by operator as an open item, not a defect, at the Task 3 checkpoint (2026-08-21). | open |  | 2026-08-21T14:27:06.606Z |  |
-| 11 | 49 | deviation | api/services/admin_jobs.py |  | resolve_job/update_resolve_row_for_job never stamp ArgumentParticipant.source/method; 49-01's D-18 change now floors these to UNCERTAIN. 2 test failures in api/tests/test_admin_jobs_service.py, out of 49-02 scope — see .planning/phases/49-review-model/deferred-items.md | open |  | 2026-08-23T12:43:33.463Z |  |
+| 11 | 49 | deviation | api/services/admin_jobs.py |  | resolve_job/update_resolve_row_for_job never stamp ArgumentParticipant.source/method; 49-01's D-18 change now floors these to UNCERTAIN. 2 test failures in api/tests/test_admin_jobs_service.py, out of 49-02 scope — see .planning/phases/49-review-model/deferred-items.md | fixed |  | 2026-08-23T12:43:33.463Z | 2026-08-23T14:10:35.664Z |
 
 ````json
 [
@@ -156,10 +156,10 @@ last_updated: 2026-08-23T12:43:33.463Z
     "file": "api/services/admin_jobs.py",
     "line": null,
     "description": "resolve_job/update_resolve_row_for_job never stamp ArgumentParticipant.source/method; 49-01's D-18 change now floors these to UNCERTAIN. 2 test failures in api/tests/test_admin_jobs_service.py, out of 49-02 scope — see .planning/phases/49-review-model/deferred-items.md",
-    "status": "open",
+    "status": "fixed",
     "reason": "",
     "recorded_at": "2026-08-23T12:43:33.463Z",
-    "resolved_at": null
+    "resolved_at": "2026-08-23T14:10:35.664Z"
   }
 ]
 ````

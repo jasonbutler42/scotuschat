@@ -4,17 +4,17 @@ milestone: v1.8
 milestone_name: Import & Provenance Re-model
 current_phase: 49
 current_phase_name: Review Model
-status: Phase 49 planned — 6 plans across 5 waves; ready to execute
-stopped_at: Completed 49-03-PLAN.md (popover side inheritance/selection, Status card resolved-at label fix, /admin/help page; REVIEW-01 now Complete — last of its three declaring plans)
-last_updated: "2026-08-23T13:09:24.605Z"
+status: Phase 49 executing — 4/6 plans complete (wave 3 authority ladder done; 49-05 review UI, 49-06 remain)
+stopped_at: Completed 49-04-PLAN.md
+last_updated: "2026-08-23T14:33:38.479Z"
 last_activity: 2026-08-23
-last_activity_desc: Completed 49-03-PLAN.md (cleanup pass — popover, Status card label, Admin Help page)
-state_head: 396ed31b10df788afe2314f8ac874c5ef8f26e9c
+last_activity_desc: Completed 49-04-PLAN.md (authority ladder, one gated writer, D-17 floor lift, full resolve-action set, D-34 leak-ban extension)
+state_head: b2160980f1b70005426b0d37dca68fa9ffb15bab
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 22
-  completed_plans: 19
+  completed_plans: 20
   percent: 40
 ---
 
@@ -30,9 +30,16 @@ See: .planning/PROJECT.md (updated 2026-08-18 — Phase 47 complete; corpus-firs
 ## Current Position
 
 Phase: 49 (Review Model) — EXECUTING
-Last activity: 2026-08-23 — Completed 49-01, 49-02, 49-03 (wave 1 tracer, wave 2 legacy fold + cleanup pass)
+Last activity: 2026-08-23 — Completed 49-01, 49-02, 49-03, 49-04 (wave 1 tracer, wave 2 legacy fold + cleanup pass, wave 3 authority ladder)
 
-**Next action:** `/gsd-execute-phase 49` (49-04 authority ladder, 49-05 review UI, 49-06 remain; 49-03's two live-browser human-checks are still open — see Blockers/Concerns)
+**Next action:** `/gsd-execute-phase 49` (49-05 review UI, 49-06 remain; 49-03's two live-browser human-checks are still open — see Blockers/Concerns)
+
+Phase 49-04 close-out notes (2026-08-23):
+
+- Authority ladder (`api/domain/authority.py`) + the ONE gated writer (`api/services/admin_review.py`) shipped and exhaustively tested; all three named writers (`update_participant_side`, `update_resolve_row_for_job`, `update_person`) delegate — no ungated write path to `argument_participants`/`people` value columns survives.
+- Fixed the D-18 regression deferred at plan 49-02 (`WINDOWS.md` #11, now marked `fixed`): `resolve_job`/`update_resolve_row_for_job` backfill `ArgumentParticipant.source`/`.method` from the job's parse-step `ImportRun` when never stamped. Full suite: 1376 passed, 5 xfailed, 0 failed (up from 1252/2 failed/5 xfailed baseline).
+- REVIEW-02 and REVIEW-04 remain `Pending` in REQUIREMENTS.md — both shared with 49-05/49-06 (not yet complete); shared-ID gate correctly held both back.
+- Participant editability widened to every unpublished state (candidate/draft/unpublished) — backend/API complete; the frontend `readonlyMode` flag at `app/src/routes/admin/pipeline/[job_id]/+page.server.ts:294` deliberately NOT widened (conflates Resolve-card editability with an unrelated ArgumentDetailsCard metadata form) — left for 49-05 or a follow-up. Folded todo `2026-08-21-widen-participant-editability-to-all-unpublished-states.md` stays in `pending/` (backend half done, frontend half open).
 
 Phase 48 close-out notes (2026-08-21):
 
@@ -156,6 +163,7 @@ items → 14.** Every closure carries its evidence in the file it closes; the co
 | Phase 49-review-model P01 | 45min | 2 tasks | 14 files |
 | Phase 49-review-model P02 | 2h | 3 tasks | 20 files |
 | Phase 49-review-model P03 | 25min | 3 tasks | 6 files |
+| Phase 49-review-model P04 | 100min | 3 tasks | 15 files |
 
 v1.7 per-plan metrics cleared at this milestone boundary per the standard STATE.md reset; the underlying per-plan SUMMARY files remain in `.planning/milestones/v1.7-phases/`.
 
@@ -207,6 +215,8 @@ Full cross-milestone decision log lives in PROJECT.md's Key Decisions table. Per
 - [Phase 49]: 49-03: Status-card label fix took option 1 (relabel to 'Resolved', no schema change) per the plan's pre-made decision.
 - [Phase 49]: 49-03: review_state badge on the new /admin/help page sized like the 14px status badge (not the 12px passive tier badge), since review_state is a primary operator-actionable axis per the UI-SPEC screen contract -- this page's own presentational choice, not binding on plan 49-05's real queue screen.
 - [Phase 49]: 49-03: could not complete the plan's live-browser human-check walkthroughs (Task 1 popover, Task 3 Help page) -- authenticating to /admin/** requires ADMIN_USERNAME/ADMIN_PASSWORD or SESSION_SECRET from .env, and this sandbox's permission policy denied reading .env. Recorded as human_judgment:true in 49-03-SUMMARY.md coverage; a human should complete both walkthroughs before UAT sign-off.
+- [Phase 49]: 49-04: D-18 provenance-gap fix backfills source/method from the job's parse-step ImportRun (corpus/direct), not by routing incoming writes as operator/manual authority as the environment note's prose suggested — verified against derive_tier's actual rule table (only rule 4 reaches TRUSTED, which both failing tests assert).
+- [Phase 49]: 49-04: participant editability widened from CANDIDATE-only to every unpublished state (candidate/draft/unpublished); only PUBLISHED stays read-only. Backend/API complete; frontend readonlyMode flag deliberately not widened (conflates two different editability concerns) — left for 49-05.
 
 ### Roadmap Evolution
 
@@ -266,8 +276,8 @@ at close.
 
 ## Session Continuity
 
-Last session: 2026-08-23T13:09:09.000Z
-Stopped at: Completed 49-03-PLAN.md (popover side inheritance/selection, Status card resolved-at label fix, /admin/help page; REVIEW-01 now Complete — last of its three declaring plans)
+Last session: 2026-08-23T14:33:37.915Z
+Stopped at: Completed 49-04-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

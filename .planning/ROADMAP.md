@@ -272,7 +272,7 @@ Plans:
   4. The operator can resolve a review item (confirm or edit) from the queue, and doing so advances its `review_state` and recomputes the affected argument's trust.
   5. The legacy `name_needs_review` / `name_extraction_metadata` mechanism is folded into the unified review_state + provenance record, with no parallel mechanism remaining.
 
-**Plans**: 3/6 plans executed
+**Plans**: 4/6 plans executed
 **UI hint**: yes
 
 Plans:
@@ -287,7 +287,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 49-04-PLAN.md — Authority ladder (`api/domain/authority.py`), the `value_discrepancy` record, the one gated writer all three existing writers delegate to, the four resolve actions, and the extended public-leak ban (wave 3)
+- [x] 49-04-PLAN.md — Authority ladder (`api/domain/authority.py`), the `value_discrepancy` record, the one gated writer all three existing writers delegate to, the four resolve actions, and the extended public-leak ban (wave 3)
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
@@ -392,7 +392,7 @@ Plans:
 | 46. Dev Environment Reliability | v1.7 | 6/6 | Complete    | 2026-08-14 |
 | 47. Provenance Foundation | v1.8 | 6/6 | Complete    | 2026-08-18 |
 | 48. Trust & Lifecycle | v1.8 | 10/10 | Complete    | 2026-08-21 |
-| 49. Review Model | v1.8 | 3/6 | In Progress|  |
+| 49. Review Model | v1.8 | 4/6 | In Progress|  |
 | 50. Unified Import Path | v1.8 | 0/TBD | Not started | - |
 | 51. Design System & Noun Alignment | v1.8 | 0/TBD | Not started | - |
 

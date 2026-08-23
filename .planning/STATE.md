@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: Import & Provenance Re-model
-current_phase: 49
-current_phase_name: Review Model
+current_phase: 50
+current_phase_name: Unified Import Path
 status: Phase 49 complete — all 6 plans done; REVIEW-01..05 all Complete
-stopped_at: Completed 49-06-PLAN.md
-last_updated: "2026-08-23T16:25:00.000Z"
+stopped_at: Phase 49 complete, ready to plan Phase 50
+last_updated: "2026-08-23T21:47:00.945Z"
 last_activity: 2026-08-23
-last_activity_desc: Completed 49-06-PLAN.md (dev-only unresolved-speaker seeder; D-32 live authority-conflict walkthrough, found+fixed a review-queue discrepancy-inclusion gap; readonlyMode split; full suite 1414/5/0)
-state_head: c1eabbdd1
+last_activity_desc: Phase 49 complete, transitioned to Phase 50
+state_head: 6c7a0f7cb0b857dc81356563a23c8962b85d7417
 progress:
   total_phases: 5
   completed_phases: 3
@@ -29,8 +29,8 @@ See: .planning/PROJECT.md (updated 2026-08-18 — Phase 47 complete; corpus-firs
 
 ## Current Position
 
-Phase: 49 (Review Model) — COMPLETE (all 6 plans done)
-Last activity: 2026-08-23 — Completed 49-06 (dev-only unresolved-speaker seeder, live D-32 authority-conflict walkthrough, readonlyMode split, full-suite gate, requirement traceability)
+Phase: 50 — Unified Import Path
+Last activity: 2026-08-23 — Phase 49 complete, transitioned to Phase 50
 
 **Next action:** `/gsd-verify-work 49` then `/gsd-discuss-phase 50` — all eight outstanding live-browser human-checks across the whole phase (49-01/49-03/49-05/49-06) are consolidated into one ordered list in `.planning/phases/49-review-model/49-EVIDENCE.md` §9 for a single sitting; see Blockers/Concerns below.
 
@@ -304,7 +304,7 @@ at close.
 ## Session Continuity
 
 Last session: 2026-08-23T16:25:00.000Z
-Stopped at: Completed 49-06-PLAN.md — Phase 49 (Review Model) complete
+Stopped at: Phase 49 complete, ready to plan Phase 50
 Resume file: None
 
 ## Operator Next Steps

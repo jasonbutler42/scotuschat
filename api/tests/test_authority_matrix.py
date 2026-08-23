@@ -645,3 +645,221 @@ async def test_each_public_writer_commits_exactly_once_helpers_never_commit() ->
             await db.commit()
     finally:
         await _teardown_argument_with_participant(ids)
+
+
+# ---------------------------------------------------------------------------
+# CR-02/CR-04 (49-REVIEW.md): resolve_job's person_id write is now gated,
+# and this closes CR-04's false-VERIFIED walkthrough as a structural
+# consequence — see the test docstring below for the full chain of
+# reasoning.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_resolve_job_cannot_overwrite_confirmed_unattributable_participant() -> None:
+    """CR-02/CR-04 (49-REVIEW.md): the exact 3-step sequence CR-02's
+    write-up and CR-04's walkthrough both describe.
+
+    1. A paused job has an unresolved participant (person_id IS NULL). An
+       operator uses "Confirm as unattributable"
+       (resolve_participant_review's confirm_unattributable action) —
+       review_state becomes OPERATOR_CONFIRMED, person_id stays NULL. This
+       is a genuine, recorded operator judgment (D-17 lifts the floor to
+       VERIFIED for this row specifically because a human confirmed no
+       attribution is possible).
+    2. The SAME still-PAUSED job is later resolved with a match for that
+       exact raw_speaker_label (resolve_job) — before CR-02, this silently
+       overwrote person_id via a raw ungated UPDATE, no discrepancy
+       recorded, review_state left stale at OPERATOR_CONFIRMED.
+    3. CR-04's concern: does the argument's trust_tier now read VERIFIED
+       for a person_id assignment nobody actually reviewed?
+
+    CR-02's fix (routing person_id through apply_participant_value_change
+    with incoming_source="operator") closes CR-04 STRUCTURALLY, not by
+    accident: authority_rank's rule 1 reads OPERATOR_CONFIRMED/
+    OPERATOR_EDITED as AuthorityRank.OPERATOR, which is the ladder's
+    ceiling (api/domain/authority.py) — no incoming write can ever
+    strictly outrank it, so decide_write's "equal authority rejects" rule
+    means this write is ALWAYS REJECT_AND_RECORD (never
+    ACCEPT_AND_RECORD) whenever the existing review_state is already an
+    operator state. person_id therefore stays NULL — untouched — and the
+    resulting VERIFIED tier is for the value the operator ACTUALLY
+    confirmed (unattributable), not a value that was silently swapped out
+    from under that confirmation. The conflict is also visible: a
+    value_discrepancy row is recorded and left OPEN (resolve_job does not
+    call close_open_discrepancies — unlike the direct single-participant
+    editors CR-01 fixes, this bulk pipeline write must not silently
+    resolve a conflict it did not arbitrate).
+    """
+    import uuid as _uuid
+
+    from sqlalchemy import delete as sa_delete, select as sa_select
+
+    from api.core.database import AsyncSessionLocal
+    from api.domain.trust import TrustTier
+    from api.models.models import (
+        AdminJob,
+        AdminJobStatus,
+        AdminJobStep,
+        Argument,
+        ArgumentParticipant,
+        ArgumentStatusEnum,
+        Case,
+        CaseArgument,
+        ImportMethod,
+        ImportRun,
+        ImportSource,
+        ImportRun as _ImportRun,
+        Person,
+        ReviewState,
+        SideEnum,
+        ValueDiscrepancy,
+    )
+    from api.schemas.admin_jobs import ResolveMatch
+    from api.services.admin_jobs import resolve_job
+    from api.services.admin_review import resolve_participant_review
+
+    suffix = _uuid.uuid4().hex[:8]
+    async with AsyncSessionLocal() as db:
+        arg = Argument(status=ArgumentStatusEnum.CANDIDATE, resolved_at=None)
+        db.add(arg)
+        await db.flush()
+        case = Case(
+            docket_number=f"CR02-{suffix}",
+            docket_number_norm=f"cr02-{suffix}",
+            case_name="CR-02/CR-04 Fixture",
+            term_year=2026,
+            slug=f"cr-02-cr-04-fixture-{suffix}",
+        )
+        db.add(case)
+        await db.flush()
+        db.add(CaseArgument(case_id=case.id, argument_id=arg.id, is_lead=True))
+
+        run = ImportRun(
+            argument_id=arg.id, step="parse",
+            source=ImportSource.CORPUS, method=ImportMethod.DIRECT,
+        )
+        db.add(run)
+        await db.flush()
+
+        # Deliberately NO Utterance row here — this test's floor is scoped
+        # to the ArgumentParticipant branch only (D-10 never mixes them
+        # meaningfully for this purpose); a NULL-person_id Utterance would
+        # floor the argument to UNCERTAIN unconditionally (D-11, no D-17
+        # analog on that branch) and mask the participant-level VERIFIED
+        # signal CR-04's walkthrough is specifically about.
+        participant = ArgumentParticipant(
+            argument_id=arg.id,
+            raw_speaker_label="MR. UNATTRIBUTABLE",
+            side=SideEnum.PETITIONER,
+            person_id=None,
+        )
+        db.add(participant)
+        await db.flush()
+
+        job = AdminJob(
+            status=AdminJobStatus.PAUSED,
+            current_step=AdminJobStep.RESOLVE,
+            argument_id=arg.id,
+        )
+        db.add(job)
+
+        candidate_person = Person(full_name="CR-02 Candidate Person")
+        db.add(candidate_person)
+        await db.commit()
+
+        arg_id = arg.id
+        case_id = case.id
+        run_id = run.id
+        participant_id = participant.id
+        job_id = job.id
+        candidate_person_id = candidate_person.id
+
+    try:
+        # Step 1: operator confirms this participant as unattributable —
+        # person_id stays NULL, review_state -> OPERATOR_CONFIRMED.
+        async with AsyncSessionLocal() as db:
+            result = await resolve_participant_review(
+                db, participant_id, "confirm_unattributable"
+            )
+        assert result["review_state"] == "operator_confirmed"
+
+        async with AsyncSessionLocal() as db:
+            arg_after_confirm = await db.get(Argument, arg_id)
+            # D-17: the confirmed-unattributable participant lifts the
+            # NULL-person_id floor to VERIFIED for this row.
+            assert arg_after_confirm.trust_tier == TrustTier.VERIFIED
+
+        # Step 2: the same still-PAUSED job is resolved, matching the exact
+        # raw_speaker_label to a real person — CR-02's fix routes this
+        # through the authority gate instead of a raw UPDATE.
+        async with AsyncSessionLocal() as db:
+            await resolve_job(
+                db,
+                job_id,
+                [ResolveMatch(raw_speaker_label="MR. UNATTRIBUTABLE", person_id=candidate_person_id)],
+            )
+
+        # Step 3 (CR-04 verification): person_id was NOT silently
+        # overwritten — the write tied in authority (existing
+        # OPERATOR_CONFIRMED vs incoming operator) and was rejected.
+        async with AsyncSessionLocal() as db:
+            refreshed_participant = await db.get(ArgumentParticipant, participant_id)
+            assert refreshed_participant.person_id is None
+            assert refreshed_participant.review_state == ReviewState.OPERATOR_CONFIRMED
+
+            # The rejected write left an OPEN discrepancy — visible, not
+            # silently dropped (unlike the direct single-participant
+            # editors CR-01 fixes, resolve_job never calls
+            # close_open_discrepancies for this bulk write).
+            open_discrepancy = (
+                await db.execute(
+                    sa_select(ValueDiscrepancy).where(
+                        ValueDiscrepancy.target_type == "argument_participant",
+                        ValueDiscrepancy.target_id == participant_id,
+                        ValueDiscrepancy.field == "person_id",
+                        ValueDiscrepancy.resolved_at.is_(None),
+                    )
+                )
+            ).scalar_one()
+            assert open_discrepancy.existing_value is None
+            assert open_discrepancy.incoming_value == str(candidate_person_id)
+
+            # CR-04: the argument's tier is still VERIFIED — but now
+            # correctly so, because person_id genuinely never changed. This
+            # is NOT the false-VERIFIED bug CR-04 describes (a person_id
+            # overwrite silently inheriting a stale operator_confirmed
+            # state) — nothing was overwritten.
+            arg_after_resolve = await db.get(Argument, arg_id)
+            assert arg_after_resolve.trust_tier == TrustTier.VERIFIED
+    finally:
+        from api.models.models import SpeakerAlias
+        from pipeline.commands.resolve import normalize_label
+
+        async with AsyncSessionLocal() as db:
+            alias_result = await db.execute(
+                sa_select(SpeakerAlias).where(
+                    SpeakerAlias.normalized_label == normalize_label("MR. UNATTRIBUTABLE")
+                )
+            )
+            alias = alias_result.scalar_one_or_none()
+            if alias is not None:
+                await db.delete(alias)
+                await db.commit()
+
+        async with AsyncSessionLocal() as db:
+            await db.execute(sa_delete(AdminJob).where(AdminJob.id == job_id))
+            await db.execute(
+                sa_delete(ValueDiscrepancy).where(
+                    ValueDiscrepancy.target_type == "argument_participant",
+                    ValueDiscrepancy.target_id == participant_id,
+                )
+            )
+            await db.execute(sa_delete(ArgumentParticipant).where(ArgumentParticipant.id == participant_id))
+            await db.execute(sa_delete(_ImportRun).where(_ImportRun.id == run_id))
+            await db.execute(sa_delete(CaseArgument).where(CaseArgument.argument_id == arg_id))
+            await db.execute(sa_delete(Case).where(Case.id == case_id))
+            await db.execute(sa_delete(Argument).where(Argument.id == arg_id))
+            await db.execute(sa_delete(Person).where(Person.id == candidate_person_id))
+            await db.commit()

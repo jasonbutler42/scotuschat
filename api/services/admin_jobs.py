@@ -19,7 +19,7 @@ Critical guards (mirroring pipeline/commands/resolve.py):
 import datetime
 from typing import Optional
 
-from sqlalchemy import case, delete, exists, select, update
+from sqlalchemy import delete, exists, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from sqlalchemy import func
@@ -527,30 +527,45 @@ async def resolve_job(
                 .execution_options(synchronize_session=False)
             )
 
-            # Step 2c: UPDATE ArgumentParticipant.person_id. source/method
-            # are backfilled in the SAME statement via a conditional CASE —
-            # only when the row has never been stamped (source IS NULL) —
-            # so this stays the one write to this row for this match, not a
-            # second ungated statement.
-            await db.execute(
-                update(ArgumentParticipant)
-                .where(
+            # Step 2c (CR-02 fix, 49-REVIEW.md): person_id is a
+            # D-31/D-31a-protected value column — route it through the ONE
+            # authority gate (apply_participant_value_change) instead of a
+            # raw ungated UPDATE, so an incoming write that would silently
+            # overwrite an operator's own decision (e.g. a prior
+            # "confirm_unattributable") is rejected-and-recorded instead of
+            # applied. This is keyed on raw_speaker_label, which may match
+            # more than one ArgumentParticipant row (unlike the single-row
+            # admin writers in this module) — select the matching rows
+            # first, then gate each one individually; a match with zero
+            # rows is a no-op, same as the prior bulk UPDATE. source/method
+            # backfill is preserved UNCHANGED: still applied only when the
+            # row has never been stamped (source IS NULL), independent of
+            # the person_id gate's own decision.
+            matched_participants_result = await db.execute(
+                select(ArgumentParticipant).where(
                     ArgumentParticipant.argument_id == job.argument_id,
                     ArgumentParticipant.raw_speaker_label == match.raw_speaker_label,
                 )
-                .values(
-                    person_id=match.person_id,
-                    source=case(
-                        (ArgumentParticipant.source.is_(None), parse_run_source),
-                        else_=ArgumentParticipant.source,
-                    ),
-                    method=case(
-                        (ArgumentParticipant.source.is_(None), parse_run_method),
-                        else_=ArgumentParticipant.method,
-                    ),
-                )
-                .execution_options(synchronize_session=False)
             )
+            for matched_participant in matched_participants_result.scalars().all():
+                await apply_participant_value_change(
+                    db,
+                    participant=matched_participant,
+                    field="person_id",
+                    incoming_value=match.person_id,
+                    incoming_source="operator",
+                    incoming_method="manual",
+                )
+                if matched_participant.source is None:
+                    await db.execute(
+                        update(ArgumentParticipant)
+                        .where(
+                            ArgumentParticipant.id == matched_participant.id,
+                            ArgumentParticipant.argument_id == job.argument_id,
+                        )
+                        .values(source=parse_run_source, method=parse_run_method)
+                        .execution_options(synchronize_session=False)
+                    )
 
     # Step 3: Mark job COMPLETED and stamp arguments.resolved_at
     await db.execute(
@@ -1098,14 +1113,27 @@ async def create_person_for_job(
     await db.flush()
 
     if participant is not None and body.side is not None:
-        await db.execute(
-            update(ArgumentParticipant)
-            .where(
-                ArgumentParticipant.id == participant.id,
-                ArgumentParticipant.argument_id == job.argument_id,
-            )
-            .values(person_id=person.id, side=body.side)
-            .execution_options(synchronize_session=False)
+        # CR-02 fix (49-REVIEW.md): person_id AND side are both
+        # D-31/D-31a-protected value columns on ArgumentParticipant — route
+        # both through the ONE authority gate (apply_participant_value_change)
+        # instead of a raw ungated UPDATE, so a write that would silently
+        # overwrite an operator's own prior decision is rejected-and-recorded
+        # instead of applied.
+        await apply_participant_value_change(
+            db,
+            participant=participant,
+            field="person_id",
+            incoming_value=person.id,
+            incoming_source="operator",
+            incoming_method="manual",
+        )
+        await apply_participant_value_change(
+            db,
+            participant=participant,
+            field="side",
+            incoming_value=body.side,
+            incoming_source="operator",
+            incoming_method="manual",
         )
         # D-07/D-11: this fills a NULL ArgumentParticipant.person_id — a
         # direct floor input — so the recompute is load-bearing, not

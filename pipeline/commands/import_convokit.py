@@ -97,6 +97,7 @@ from api.models.models import (
     ImportRunStatus,
     ImportSource,
     Person,
+    ReviewState,
     SideEnum,
     Utterance,
 )
@@ -695,7 +696,7 @@ def _apply_extracted_name_provenance(person: Person, full_name: str) -> None:
     alembic/versions/0022_person_name_authority.py's legacy backfill
     already established.
 
-    Every call refreshes `name_extraction_metadata` unconditionally (D-17 --
+    Every call refreshes `provenance_metadata` unconditionally (D-17 --
     "if extraction/reprocessing occurs later, replace the extracted
     reference with the latest result"). Structured parts are only ever
     written when the row currently carries NO structured part at all
@@ -705,13 +706,18 @@ def _apply_extracted_name_provenance(person: Person, full_name: str) -> None:
     split (`auto_apply=True`, D-11) -- an ambiguous/uncertain interpretation
     (Low/Medium) is still recorded in the provenance envelope so the
     operator can see what the extractor thought it saw (D-18), but is never
-    silently written into the authoritative saved columns, and the row is
-    flagged `name_needs_review` for the People directory's Name review
-    filter (D-12).
+    silently written into the authoritative saved columns, and the row's
+    `review_state` is set to NEEDS_REVIEW for the People directory's Name
+    review filter (D-12).
+
+    Note the asymmetry deliberately (Phase 49 D-08, D-11, D-24): the
+    confident branch below sets UNREVIEWED, never a human-only operator
+    review state -- only a human action ever produces one; an importer
+    must never mint one.
     """
     split = split_legacy_full_name(full_name)
     provenance = prepare_name_provenance(None, full_name, split.confidence)
-    person.name_extraction_metadata = {
+    person.provenance_metadata = {
         "source": _EXTRACTION_SOURCE,
         "raw": provenance.raw,
         "confidence": provenance.confidence,
@@ -732,9 +738,9 @@ def _apply_extracted_name_provenance(person: Person, full_name: str) -> None:
         person.middle_name = split.middle_name
         person.last_name = split.last_name
         person.name_suffix = split.name_suffix
-        person.name_needs_review = False
+        person.review_state = ReviewState.UNREVIEWED
     else:
-        person.name_needs_review = True
+        person.review_state = ReviewState.NEEDS_REVIEW
 
 
 async def _resolve_person(
@@ -749,7 +755,7 @@ async def _resolve_person(
 
     Phase 38 (D-14-D-18, T-38-10/T-38-11): every resolution path -- brand
     new, oyez_speaker_id match, or full_name-only match -- also runs
-    `_apply_extracted_name_provenance` so name_extraction_metadata is always
+    `_apply_extracted_name_provenance` so provenance_metadata is always
     refreshed and blank rows get a conservative interpreted-parts prefill.
     `full_name` itself is never touched by this function on any matched
     path -- only `_get_or_create_case`-style ID matching decides identity,
@@ -915,6 +921,14 @@ async def _resolve_and_link_participant(
         person_id=person.id,
         raw_speaker_label=raw_speaker_label,
         side=side,
+        # Phase 49 D-20's locked mapping: every corpus-resolution mechanism
+        # (oyez_speaker_id match, full_name fallback, or brand-new person)
+        # gets source=CORPUS/method=DIRECT -> TRUSTED, mirroring the
+        # ImportRun stamp this same module already writes above. Without
+        # this, source/method stay NULL and derive_tier floors every
+        # freshly-resolved corpus participant to UNCERTAIN (D-18).
+        source=ImportSource.CORPUS,
+        method=ImportMethod.DIRECT,
     )
     session.add(participant)
     await session.flush()

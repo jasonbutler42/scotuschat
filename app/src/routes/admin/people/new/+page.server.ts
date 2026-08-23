@@ -15,8 +15,8 @@ import type { Actions, PageServerLoad } from './$types';
  * all — Full Name is a generated, read-only preview computed client-side
  * from name parts (app/src/lib/personNames.ts) and is never client-owned
  * data, so there is nothing to preload here. A brand-new person also has
- * no extraction provenance yet (name_needs_review/name_extraction_metadata
- * are only meaningful once a person row exists — see the [id] route).
+ * no extraction provenance yet (review_state/provenance_metadata, Phase 49
+ * D-08, are only meaningful once a person row exists — see the [id] route).
  */
 interface BlankPerson {
 	id: null;

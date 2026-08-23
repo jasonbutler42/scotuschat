@@ -29,7 +29,13 @@ from dateutil import parser as dateutil_parser
 from sqlalchemy import select
 
 from api.domain.person_names import prepare_name_provenance, prepare_person_name
-from api.models.models import CourtTenure, OFFICE_ASSOCIATE, OFFICE_CHIEF, Person
+from api.models.models import (
+    CourtTenure,
+    OFFICE_ASSOCIATE,
+    OFFICE_CHIEF,
+    Person,
+    ReviewState,
+)
 from pipeline.db import get_session
 
 # Phase 39 (D-01 through D-07): CSV "Reason Left" raw cell value -> canonical
@@ -59,10 +65,11 @@ _REASON_LEFT_CSV_MAP: dict[str, str | None] = {
     "": None,
 }
 
-# Phase 38 (D-14-D-18): every Person row this command creates or upgrades
-# gets a Person.name_extraction_metadata envelope stamped with this source
-# tag, matching the shape alembic/versions/0022_person_name_authority.py
-# already established: {source, raw, confidence, reason, auto_applied}.
+# Phase 38 (D-14-D-18), carried forward unchanged by Phase 49 D-08: every
+# Person row this command creates or upgrades gets a
+# Person.provenance_metadata envelope stamped with this source tag,
+# matching the shape alembic/versions/0022_person_name_authority.py already
+# established: {source, raw, confidence, reason, auto_applied}.
 _EXTRACTION_SOURCE = "import_justices_csv"
 
 # ---------------------------------------------------------------------------
@@ -129,14 +136,14 @@ def reconstruct_full_name(first: str, middle: str, last: str, suffix: str) -> st
 
 def _build_extraction_metadata(full_name: str) -> dict:
     """
-    Build a `Person.name_extraction_metadata` envelope for a CSV-derived
+    Build a `Person.provenance_metadata` envelope for a CSV-derived
     justice row (D-14, D-18), matching the exact shape
     alembic/versions/0022_person_name_authority.py's legacy backfill already
     persists — {source, raw, confidence, reason, auto_applied} — so both the
     migration and this import path write one consistent, mergeable audit
     trail. `value` is intentionally validated as None here (whole-record
     envelope, not a per-part value — see api/schemas/admin_people.py's
-    NameExtractionMetadata docstring); `raw` is the exact reconstructed
+    PersonProvenanceMetadata docstring); `raw` is the exact reconstructed
     full_name text CSV columns produced. Every CSV row is structured,
     per-column ground truth (not an inferred split), so confidence is always
     "High" and auto_applied is always True.
@@ -292,15 +299,17 @@ async def run_import_justices_csv(args) -> None:
                 if person.death_date is None and death_date is not None:
                     person.death_date = death_date
                     people_death_dates_backfilled += 1
-                # Phase 38 (D-17): every rerun refreshes the extraction
-                # provenance envelope, regardless of whether any part was
-                # actually blank this time — the reference metadata always
-                # reflects the latest extraction pass.
-                person.name_extraction_metadata = extraction_metadata
-                # This row is now backed by confident, structured CSV data —
-                # clear whatever ambiguity a prior legacy-migration/import
-                # pass may have flagged it with (D-12).
-                person.name_needs_review = False
+                # Phase 38 (D-17), carried forward unchanged: every rerun
+                # refreshes the extraction provenance envelope, regardless
+                # of whether any part was actually blank this time — the
+                # reference metadata always reflects the latest extraction
+                # pass.
+                person.provenance_metadata = extraction_metadata
+                # This row is now backed by confident, structured CSV data.
+                # Phase 49 (D-08, D-11, D-24): this is UNREVIEWED, not a
+                # human-only operator review state — only a human action
+                # ever produces one; an importer must never mint one.
+                person.review_state = ReviewState.UNREVIEWED
             else:
                 person = Person(
                     full_name=full_name,
@@ -311,7 +320,8 @@ async def run_import_justices_csv(args) -> None:
                     is_justice=True,
                     birthdate=birthdate,
                     death_date=death_date,
-                    name_extraction_metadata=extraction_metadata,
+                    provenance_metadata=extraction_metadata,
+                    review_state=ReviewState.UNREVIEWED,
                     # oyez_speaker_id intentionally left NULL — the corpus
                     # importer backfills it later (D-11).
                 )

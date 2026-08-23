@@ -829,7 +829,7 @@ def _build_people_rows(people_by_id: dict) -> list[dict]:
         _row(
             "full_name (provenance bookkeeping only)",
             "(derived envelope, not a 1:1 raw field)",
-            "Person.name_needs_review, Person.name_extraction_metadata",
+            "Person.review_state, Person.provenance_metadata",
             "Faithful",
             "",
             "Provenance/audit bookkeeping written by _apply_extracted_name_provenance.",

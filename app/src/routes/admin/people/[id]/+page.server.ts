@@ -44,16 +44,18 @@ interface PersonDetail {
 	// Phase 22 — migration 0013: appointment fields removed from person (PEDIT-10)
 	// Phase 18 addition
 	is_justice: boolean;
-	// Phase 38 additions (D-12, D-14, D-15, D-18): name_needs_review drives the
-	// People directory's "Name review" attention state (not used on this page
-	// directly, but part of the same PersonDetail response shape);
-	// name_extraction_metadata is the single whole-record provenance envelope
-	// this page's per-part extracted-value hints read from — one shared
-	// {confidence, raw} pair rendered independently beneath each of the four
-	// name-part fields (D-15, D-19), since the backend does not persist a
+	// Phase 49 additions (D-08, D-11, D-12), replacing Phase 38's
+	// name_needs_review/name_extraction_metadata pair outright:
+	// review_state drives the People directory's "Name review" attention
+	// state (not used on this page directly, but part of the same
+	// PersonDetail response shape); provenance_metadata is the single
+	// whole-record provenance envelope this page's per-part extracted-value
+	// hints read from — one shared {confidence, raw} pair rendered
+	// independently beneath each of the four name-part fields (D-15, D-19,
+	// carried forward unchanged), since the backend does not persist a
 	// separate guessed value per part.
-	name_needs_review: boolean;
-	name_extraction_metadata: {
+	review_state: string;
+	provenance_metadata: {
 		source: string | null;
 		raw: string | null;
 		confidence: 'High' | 'Medium' | 'Low' | null;

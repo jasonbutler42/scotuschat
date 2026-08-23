@@ -392,7 +392,7 @@
 				     shared invariant (D-09) communicated once above the group rather
 				     than marking both fields individually required. Each field's
 				     independent extracted-value stack (D-14, D-15, D-19) renders below
-				     its own input, sharing the person's single name_extraction_metadata
+				     its own input, sharing the person's single provenance_metadata
 				     envelope (confidence + raw source text) — the backend persists one
 				     whole-record provenance decision, not a separate guess per part, so
 				     every populated field's own current value is what "was extracted"
@@ -418,13 +418,13 @@
 								bind:value={firstName}
 								style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
 							/>
-							{#if data.person.name_extraction_metadata}
+							{#if data.person.provenance_metadata}
 								<div style="margin-top: 8px;">
 									<CopyableExtractedValue
 										value={data.person.first_name}
 										copyLabel="Copy extracted first name"
-										confidence={data.person.name_extraction_metadata.confidence}
-										raw={data.person.name_extraction_metadata.raw}
+										confidence={data.person.provenance_metadata.confidence}
+										raw={data.person.provenance_metadata.raw}
 									/>
 								</div>
 							{/if}
@@ -443,13 +443,13 @@
 								bind:value={middleName}
 								style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
 							/>
-							{#if data.person.name_extraction_metadata}
+							{#if data.person.provenance_metadata}
 								<div style="margin-top: 8px;">
 									<CopyableExtractedValue
 										value={data.person.middle_name}
 										copyLabel="Copy extracted middle name"
-										confidence={data.person.name_extraction_metadata.confidence}
-										raw={data.person.name_extraction_metadata.raw}
+										confidence={data.person.provenance_metadata.confidence}
+										raw={data.person.provenance_metadata.raw}
 									/>
 								</div>
 							{/if}
@@ -468,13 +468,13 @@
 								bind:value={lastName}
 								style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
 							/>
-							{#if data.person.name_extraction_metadata}
+							{#if data.person.provenance_metadata}
 								<div style="margin-top: 8px;">
 									<CopyableExtractedValue
 										value={data.person.last_name}
 										copyLabel="Copy extracted last name"
-										confidence={data.person.name_extraction_metadata.confidence}
-										raw={data.person.name_extraction_metadata.raw}
+										confidence={data.person.provenance_metadata.confidence}
+										raw={data.person.provenance_metadata.raw}
 									/>
 								</div>
 							{/if}
@@ -493,13 +493,13 @@
 								bind:value={nameSuffix}
 								style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
 							/>
-							{#if data.person.name_extraction_metadata}
+							{#if data.person.provenance_metadata}
 								<div style="margin-top: 8px;">
 									<CopyableExtractedValue
 										value={data.person.name_suffix}
 										copyLabel="Copy extracted suffix"
-										confidence={data.person.name_extraction_metadata.confidence}
-										raw={data.person.name_extraction_metadata.raw}
+										confidence={data.person.provenance_metadata.confidence}
+										raw={data.person.provenance_metadata.raw}
 									/>
 								</div>
 							{/if}

@@ -29,9 +29,9 @@ Requirements for milestone v1.8. Each maps to exactly one roadmap phase.
 ### Review Model (REVIEW)
 
 - [x] **REVIEW-01**: Operator-editable rows (person names, argument participants) carry a four-state `review_state` (unreviewed / needs_review / operator_confirmed / operator_edited)
-- [ ] **REVIEW-02**: Re-import records a discrepancy for operator review instead of overwriting an equal-or-higher-authority value
-- [ ] **REVIEW-03**: Operator review queue lists items needing review, filterable by trust tier / review state
-- [ ] **REVIEW-04**: Operator can resolve a review item (confirm or edit), advancing its `review_state` and recomputing trust
+- [x] **REVIEW-02**: Re-import records a discrepancy for operator review instead of overwriting an equal-or-higher-authority value
+- [x] **REVIEW-03**: Operator review queue lists items needing review, filterable by trust tier / review state
+- [x] **REVIEW-04**: Operator can resolve a review item (confirm or edit), advancing its `review_state` and recomputing trust
 - [x] **REVIEW-05**: `name_needs_review` / `name_extraction_metadata` generalized into the unified review_state + provenance record (no parallel mechanism)
 
 ### Unified Import Path (IMPORT)
@@ -81,9 +81,9 @@ Mappings confirmed by the v1.8 roadmap (`.planning/ROADMAP.md`), created 2026-08
 | TRUST-04 | Phase 48 | Complete |
 | TRUST-05 | Phase 48 | Complete |
 | REVIEW-01 | Phase 49 | Complete |
-| REVIEW-02 | Phase 49 | Pending |
-| REVIEW-03 | Phase 49 | Pending (shared with 49-05/49-06; not all declaring plans complete) |
-| REVIEW-04 | Phase 49 | Pending (shared with 49-04/49-05/49-06; not all declaring plans complete) |
+| REVIEW-02 | Phase 49 | Complete |
+| REVIEW-03 | Phase 49 | Complete |
+| REVIEW-04 | Phase 49 | Complete |
 | REVIEW-05 | Phase 49 | Complete |
 | IMPORT-01 | Phase 50 | Pending |
 | IMPORT-02 | Phase 50 | Pending |

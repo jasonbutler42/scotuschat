@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 5
+open_count: 6
 waived_count: 0
 fixed_count: 5
-total_count: 10
-last_updated: 2026-08-21T14:27:06.606Z
+total_count: 11
+last_updated: 2026-08-23T12:43:33.463Z
 ---
 
 # Broken Windows Ledger
@@ -22,9 +22,10 @@ last_updated: 2026-08-21T14:27:06.606Z
 | 5 | 47 | deviation | api/tests/test_phase44_argument_role_roundtrip.py |  | Pre-existing SideEnum identity mismatch under bare full-suite pytest -q (testpaths order reimports api.* modules via tests/test_admin_router.py before this file runs) - unrelated to Phase 47 import_run rename, both files predate Phase 47. See deferred-items.md. | open |  | 2026-08-17T22:21:11.348Z |  |
 | 6 | 48 | unmet-truth | api/tests/test_trust_public_leak_ban.py |  | test_admin_detail_contract_does_declare_trust_tier fails until plan 48-07 lands trust_tier on ArgumentDetail (D-20); documented as expected/tracked in 48-03-SUMMARY.md, re-run at 48-07 close | fixed |  | 2026-08-19T13:05:36.138Z | 2026-08-19T15:55:57.028Z |
 | 7 | 48 | deviation | pipeline/commands/import_convokit.py | 515 | 48-04 Task 1 (Rule 3 blocking-fix) flipped this birth-write status kwarg from PIPELINE to CANDIDATE ahead of plan 48-05's own scheduled edit, to keep the phase 48-04 guard swap internally consistent; 48-05 still owns the rest of this file's birth-logging/recompute scope and will find this one line already done. | fixed |  | 2026-08-19T14:41:22.505Z | 2026-08-19T15:04:51.300Z |
-| 8 | 48 | unrun-verify | app/src/routes/admin/arguments/[id]/+page.svelte |  | 48-08 checkpoint step 8 not executed: no argument with an incomplete resolve step was available, so the non-overridable resolved_at gate (D-14) rendering with NO override field offered is unverified in a browser. Steps 1-7 passed. Re-verify when a resolve-incomplete fixture exists. RESOLVED 2026-08-21 (48-UAT.md test 6): the operator forced the resolve-incomplete state via manual SQL during development and confirmed live that both branches render as specified — the non-overridable resolved_at gate with NO override field, visibly distinct from the overridable UNCERTAIN trust gate which does offer one. | fixed |  | 2026-08-19T23:33:18.102Z | 2026-08-20T16:43:58.653Z |
+| 8 | 48 | unrun-verify | app/src/routes/admin/arguments/[id]/+page.svelte |  | 48-08 checkpoint step 8 not executed: no argument with an incomplete resolve step was available, so the non-overridable resolved_at gate (D-14) rendering with NO override field offered is unverified in a browser. Steps 1-7 passed. Re-verify when a resolve-incomplete fixture exists. | fixed |  | 2026-08-19T23:33:18.102Z | 2026-08-20T16:43:58.653Z |
 | 9 | 48 | deviation | api/services/admin_arguments.py | 448 | get_argument_detail's status-log query ordered by created_at first, which can invert insertion order for a writer that reuses a long-lived session/transaction (found live via 48-09's reseed evidence); fixed to order by id ASC in commit 1b7564a78, regression-tested. Underlying stale-created_at STORAGE cause in reset_to_fixture remains open, tracked separately. | open |  | 2026-08-21T14:27:04.542Z |  |
 | 10 | 48 | unmet-truth | .planning/phases/48-trust-lifecycle/48-09-PLAN.md |  | Finding 1 (48-EVIDENCE.md): must_haves.truths expected all four corpus fixtures to read trust_tier=trusted after reseed; 15169 and 22372 read uncertain due to ConvoKit's own unattributed-speaker sentinel rows. derive_tier is correct -- the plan's 'corpus mints a Person for every speaker' assumption does not hold universally. Accepted by operator as an open item, not a defect, at the Task 3 checkpoint (2026-08-21). | open |  | 2026-08-21T14:27:06.606Z |  |
+| 11 | 49 | deviation | api/services/admin_jobs.py |  | resolve_job/update_resolve_row_for_job never stamp ArgumentParticipant.source/method; 49-01's D-18 change now floors these to UNCERTAIN. 2 test failures in api/tests/test_admin_jobs_service.py, out of 49-02 scope — see .planning/phases/49-review-model/deferred-items.md | open |  | 2026-08-23T12:43:33.463Z |  |
 
 ````json
 [
@@ -146,6 +147,18 @@ last_updated: 2026-08-21T14:27:06.606Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-08-21T14:27:06.606Z",
+    "resolved_at": null
+  },
+  {
+    "id": 11,
+    "kind": "deviation",
+    "phase": "49",
+    "file": "api/services/admin_jobs.py",
+    "line": null,
+    "description": "resolve_job/update_resolve_row_for_job never stamp ArgumentParticipant.source/method; 49-01's D-18 change now floors these to UNCERTAIN. 2 test failures in api/tests/test_admin_jobs_service.py, out of 49-02 scope — see .planning/phases/49-review-model/deferred-items.md",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-08-23T12:43:33.463Z",
     "resolved_at": null
   }
 ]

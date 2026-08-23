@@ -25,7 +25,7 @@ from unittest.mock import patch
 import pytest
 from sqlalchemy import select
 
-from api.models.models import CourtTenure, Person, SpeakerAlias
+from api.models.models import CourtTenure, Person, ReviewState, SpeakerAlias
 from pipeline.commands.import_justices_csv import (
     reconstruct_full_name,
     run_import_justices_csv,
@@ -459,10 +459,10 @@ async def test_new_person_gets_structured_parts_and_provenance(
     """
     Phase 38 (D-14, D-18): a brand-new justice created by this command gets
     its structured parts populated directly from the CSV row (not left
-    blank), plus a name_extraction_metadata envelope stamped
+    blank), plus a provenance_metadata envelope stamped
     source="import_justices_csv", confidence="High", auto_applied=True — and
-    is never left flagged for review, since CSV columns are authoritative
-    per-column ground truth, not an inferred split.
+    review_state is never left needs_review, since CSV columns are
+    authoritative per-column ground truth, not an inferred split.
     """
     csv_path = _write_justices_csv(
         tmp_path,
@@ -500,13 +500,13 @@ async def test_new_person_gets_structured_parts_and_provenance(
     assert person.middle_name == "P."
     assert person.last_name == "Provenance"
     assert person.name_suffix == "Jr."
-    assert person.name_needs_review is False
-    assert person.name_extraction_metadata is not None
-    assert person.name_extraction_metadata["source"] == "import_justices_csv"
-    assert person.name_extraction_metadata["confidence"] == "High"
-    assert person.name_extraction_metadata["auto_applied"] is True
+    assert person.review_state == ReviewState.UNREVIEWED
+    assert person.provenance_metadata is not None
+    assert person.provenance_metadata["source"] == "import_justices_csv"
+    assert person.provenance_metadata["confidence"] == "High"
+    assert person.provenance_metadata["auto_applied"] is True
     assert (
-        person.name_extraction_metadata["raw"] == "Testcase P. Provenance, Jr."
+        person.provenance_metadata["raw"] == "Testcase P. Provenance, Jr."
     )
 
 
@@ -570,8 +570,8 @@ async def test_rerun_preserves_operator_edited_parts_blank_only_prefill(
     assert person.last_name == "Preserve"
     assert person.is_justice is True
     # Provenance still refreshed even though no CSV-authoritative part won.
-    assert person.name_extraction_metadata["source"] == "import_justices_csv"
-    assert person.name_needs_review is False
+    assert person.provenance_metadata["source"] == "import_justices_csv"
+    assert person.review_state == ReviewState.UNREVIEWED
 
 
 @pytest.mark.asyncio
@@ -580,7 +580,7 @@ async def test_rerun_refreshes_provenance_metadata_on_second_run(
 ):
     """
     Phase 38 (D-17): a second run against an already-imported justice row
-    still replaces name_extraction_metadata with a fresh envelope (never
+    still replaces provenance_metadata with a fresh envelope (never
     leaves the first run's envelope stale), even though no new part is
     written the second time.
     """
@@ -616,10 +616,10 @@ async def test_rerun_refreshes_provenance_metadata_on_second_run(
         select(Person).where(Person.full_name == "Testcase R. Refresh")
     )
     person = result.scalar_one()
-    assert person.name_extraction_metadata is not None
-    assert person.name_extraction_metadata["source"] == "import_justices_csv"
-    assert person.name_extraction_metadata["confidence"] == "High"
-    assert person.name_extraction_metadata["auto_applied"] is True
+    assert person.provenance_metadata is not None
+    assert person.provenance_metadata["source"] == "import_justices_csv"
+    assert person.provenance_metadata["confidence"] == "High"
+    assert person.provenance_metadata["auto_applied"] is True
 
 
 @pytest.mark.asyncio

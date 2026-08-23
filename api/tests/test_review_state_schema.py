@@ -21,10 +21,15 @@ Asserts, against the live test database after `alembic upgrade head`:
      enum's `.value` set equals the `pg_enum` set (catches model/migration
      drift).
 
-NOTE: this file asserts only the `argument_participants` half of REVIEW-01.
-The `people` half (review_state on `people`) is asserted by this same file
-after plan 49-02 lands migration 0029 — this file is knowingly incomplete
-until then.
+Plan 49-02 (migration 0029) extends this module with the `people` half of
+REVIEW-01:
+  5. `people.review_state` exists, is NOT NULL, defaults to
+     `'unreviewed'::review_state`, and is the SAME PG type
+     (`udt_name`) as `argument_participants.review_state` — proving D-09's
+     "one shared enum" rather than two lookalike types.
+  6. `people.provenance_metadata` exists and is `jsonb`.
+  7. Neither Phase 38 legacy column (`name_needs_review`,
+     `name_extraction_metadata`) exists on `people` anymore.
 
 Follows this repo's DB-gated integration pattern (`_db_configured()` guard,
 same as `api/tests/test_admin_review_service.py`) and the live-engine
@@ -240,3 +245,85 @@ async def test_python_review_state_enum_matches_pg_enum() -> None:
 
     python_values = {member.value for member in ReviewState}
     assert python_values == pg_values
+
+
+# ---------------------------------------------------------------------------
+# 5-7. The `people` half of REVIEW-01 (plan 49-02, migration 0029): same
+# shared review_state enum, provenance_metadata jsonb, and neither Phase 38
+# legacy column survives.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_people_review_state_and_provenance_metadata_columns() -> None:
+    from sqlalchemy import text
+
+    from api.core.database import AsyncSessionLocal
+
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(
+            text(
+                """
+                SELECT column_name, is_nullable, column_default, udt_name
+                FROM information_schema.columns
+                WHERE table_name = 'people'
+                  AND column_name IN (
+                      'review_state', 'provenance_metadata',
+                      'name_needs_review', 'name_extraction_metadata'
+                  )
+                """
+            )
+        )
+        columns = {row.column_name: row for row in result.all()}
+
+    # Neither Phase 38 legacy column survives on the live schema (D-08) —
+    # proven by exact set equality below: if either legacy column still
+    # existed, this WHERE...IN query would have picked it up and the set
+    # would carry more than the two expected keys.
+    assert set(columns) == {"review_state", "provenance_metadata"}
+
+    review_state = columns["review_state"]
+    assert review_state.is_nullable == "NO"
+    assert review_state.column_default is not None
+    assert "unreviewed" in review_state.column_default
+    # Same udt_name as argument_participants.review_state — proves D-09's
+    # "one shared enum" rather than two lookalike types.
+    assert review_state.udt_name == "review_state"
+
+    provenance_metadata = columns["provenance_metadata"]
+    assert provenance_metadata.is_nullable == "YES"
+    assert provenance_metadata.udt_name == "jsonb"
+
+    # Model-level metadata check, distinct from the live-DB introspection
+    # above: catches a server_default/nullable regression directly in
+    # api/models/models.py, even before a new migration would ever apply
+    # it.
+    from api.models.models import Person
+
+    model_review_state_col = Person.__table__.columns["review_state"]
+    assert model_review_state_col.server_default is not None
+    assert not model_review_state_col.nullable
+
+
+@pytest.mark.asyncio
+async def test_people_review_state_shares_udt_with_argument_participants() -> None:
+    """Explicit udt_name equality check (D-09) — the same PG enum type, not
+    two independently-created lookalikes with the same value set."""
+    from sqlalchemy import text
+
+    from api.core.database import AsyncSessionLocal
+
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(
+            text(
+                """
+                SELECT table_name, udt_name
+                FROM information_schema.columns
+                WHERE column_name = 'review_state'
+                  AND table_name IN ('people', 'argument_participants')
+                """
+            )
+        )
+        udt_names = {row.table_name: row.udt_name for row in result.all()}
+
+    assert udt_names == {"people": "review_state", "argument_participants": "review_state"}

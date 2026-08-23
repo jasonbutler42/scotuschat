@@ -457,14 +457,16 @@ async def test_update_person_name_edit_rejects_clearing_both_first_and_last(
 
 @pytest.mark.asyncio
 @pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
-async def test_update_person_authoritative_name_edit_clears_name_needs_review(
+async def test_update_person_authoritative_name_edit_sets_operator_edited(
     client: AsyncClient,
 ) -> None:
-    """An authoritative name-part edit clears name_needs_review (D-12) but
-    leaves name_extraction_metadata untouched (D-15 — independent audit
-    trail, never erased by an edit). Directly flips the DB flag/metadata
-    (mirroring migration 0022's own review state) since create_person always
-    creates an unambiguous, never-reviewed row."""
+    """An authoritative name-part edit sets review_state = operator_edited
+    (Phase 49 D-11 — an edit always means *edited*) but leaves
+    provenance_metadata untouched (D-12, carrying Phase 38 D-15 forward
+    unchanged — independent audit trail, never erased by an edit). Directly
+    flips the DB review_state/metadata (mirroring migration 0022's legacy
+    review state, now folded into the unified record) since create_person
+    always creates an unambiguous, never-reviewed row."""
     import json
 
     from sqlalchemy import text
@@ -491,8 +493,8 @@ async def test_update_person_authoritative_name_edit_clears_name_needs_review(
         async with AsyncSessionLocal() as db:
             await db.execute(
                 text(
-                    "UPDATE people SET name_needs_review = true, "
-                    "name_extraction_metadata = CAST(:metadata AS JSONB) "
+                    "UPDATE people SET review_state = 'needs_review', "
+                    "provenance_metadata = CAST(:metadata AS JSONB) "
                     "WHERE id = :id"
                 ),
                 {"metadata": json.dumps(metadata), "id": person_id},
@@ -500,8 +502,8 @@ async def test_update_person_authoritative_name_edit_clears_name_needs_review(
             await db.commit()
 
         pre_res = await client.get(f"/api/admin/people/{person_id}", headers=headers)
-        assert pre_res.json()["name_needs_review"] is True
-        assert pre_res.json()["name_extraction_metadata"]["confidence"] == "Low"
+        assert pre_res.json()["review_state"] == "needs_review"
+        assert pre_res.json()["provenance_metadata"] == metadata
 
         response = await client.patch(
             f"/api/admin/people/{person_id}",
@@ -510,11 +512,12 @@ async def test_update_person_authoritative_name_edit_clears_name_needs_review(
         )
         assert response.status_code == 200
         detail = response.json()
-        assert detail["name_needs_review"] is False, (
-            "authoritative name edit did not clear name_needs_review (D-12)"
+        assert detail["review_state"] == "operator_edited", (
+            "authoritative name edit did not set review_state=operator_edited (D-11)"
         )
-        assert detail["name_extraction_metadata"]["confidence"] == "Low", (
-            "name_extraction_metadata was erased by an operator edit (D-15)"
+        assert detail["provenance_metadata"] == metadata, (
+            "provenance_metadata was erased/rewritten by an operator edit (D-12) — "
+            "expected the envelope to be byte-identical to what was seeded"
         )
     finally:
         await client.delete(f"/api/admin/people/{person_id}", headers=headers)

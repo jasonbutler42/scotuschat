@@ -44,8 +44,8 @@ interface PersonDetail {
 	// Phase 22 — migration 0013: appointment fields removed from person (PEDIT-10)
 	// Phase 18 addition
 	is_justice: boolean;
-	// Phase 49 additions (D-08, D-11, D-12), replacing Phase 38's
-	// name_needs_review/name_extraction_metadata pair outright:
+	// Phase 49 additions (D-08, D-11, D-12), replacing the Phase 38 legacy
+	// review flag/envelope pair outright:
 	// review_state drives the People directory's "Name review" attention
 	// state (not used on this page directly, but part of the same
 	// PersonDetail response shape); provenance_metadata is the single

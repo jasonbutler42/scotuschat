@@ -7,14 +7,14 @@ import pytest
 
 
 def test_all_tables_count():
-    """All 13 ORM model tables must be importable from api.models.models."""
+    """All 14 ORM model tables must be importable from api.models.models."""
     from api.models.models import Base
     tables = list(Base.metadata.tables.keys())
-    assert len(tables) == 13, f"Expected 13 tables, got {len(tables)}: {tables}"
+    assert len(tables) == 14, f"Expected 14 tables, got {len(tables)}: {tables}"
 
 
 def test_expected_table_names():
-    """All 13 exact table names must be present."""
+    """All 14 exact table names must be present."""
     from api.models.models import Base
     tables = set(Base.metadata.tables.keys())
     expected = {
@@ -22,6 +22,10 @@ def test_expected_table_names():
         "case_arguments", "case_appearances", "argument_participants",
         "import_run", "utterances", "speaker_alias", "admin_jobs",
         "argument_status_log",
+        # Phase 49 — migration 0028 (plan 49-01): per-value operator-review
+        # bookkeeping table (D-13), unrelated to the legacy
+        # admin_jobs.discrepancies JSONB blob (D-14).
+        "value_discrepancy",
     }
     assert tables == expected, f"Table mismatch: {tables.symmetric_difference(expected)}"
 

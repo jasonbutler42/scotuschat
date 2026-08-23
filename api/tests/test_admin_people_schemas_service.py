@@ -45,11 +45,11 @@ import pytest
 def test_schemas_import() -> None:
     """All required Pydantic schemas must import without error."""
     from api.schemas.admin_people import (  # noqa: F401
-        NameExtractionMetadata,
         ParticipantItem,
         PersonCreateRequest,
         PersonDetail,
         PersonListItem,
+        PersonProvenanceMetadata,
         PersonUpdate,
         RoleCreate,
         RoleResponse,
@@ -93,15 +93,17 @@ class _FakePerson:
         bio_text: str | None,
         is_justice: bool = False,
         birthdate: str | None = None,
-        name_needs_review: bool = False,
+        review_state=None,
     ) -> None:
+        from api.models.models import ReviewState
+
         self.first_name = first_name
         self.last_name = last_name
         self.photo_url = photo_url
         self.bio_text = bio_text
         self.is_justice = is_justice
         self.birthdate = birthdate
-        self.name_needs_review = name_needs_review
+        self.review_state = review_state if review_state is not None else ReviewState.UNREVIEWED
 
 
 def test_missing_fields_advocate_all_missing() -> None:
@@ -201,8 +203,9 @@ def test_missing_fields_bench_birthdate_only() -> None:
 
 
 def test_missing_fields_appends_name_review_when_flagged_advocate() -> None:
-    """An otherwise-complete Advocate flagged name_needs_review=True gets
+    """An otherwise-complete Advocate flagged review_state=needs_review gets
     'name review' appended — not a NULL-field label, an ambiguity flag."""
+    from api.models.models import ReviewState
     from api.services.admin_people import _missing_fields
 
     person = _FakePerson(
@@ -211,7 +214,7 @@ def test_missing_fields_appends_name_review_when_flagged_advocate() -> None:
         photo_url="https://example.com/photo.jpg",
         bio_text="Some bio",
         is_justice=False,
-        name_needs_review=True,
+        review_state=ReviewState.NEEDS_REVIEW,
     )
     result = _missing_fields(person, tenure_count=0)
     assert result == ["name review"]
@@ -219,6 +222,7 @@ def test_missing_fields_appends_name_review_when_flagged_advocate() -> None:
 
 def test_missing_fields_appends_name_review_when_flagged_bench() -> None:
     """Bench rows also surface 'name review' — not gated by is_justice (D-12)."""
+    from api.models.models import ReviewState
     from api.services.admin_people import _missing_fields
 
     person = _FakePerson(
@@ -228,14 +232,14 @@ def test_missing_fields_appends_name_review_when_flagged_bench() -> None:
         bio_text="Chief Justice",
         is_justice=True,
         birthdate="1955-01-27",
-        name_needs_review=True,
+        review_state=ReviewState.NEEDS_REVIEW,
     )
     result = _missing_fields(person, tenure_count=1)
     assert result == ["name review"]
 
 
 def test_missing_fields_omits_name_review_by_default() -> None:
-    """name_needs_review defaults False — 'name review' never appears unasked."""
+    """review_state defaults to unreviewed — 'name review' never appears unasked."""
     from api.services.admin_people import _missing_fields
 
     person = _FakePerson(
@@ -553,15 +557,16 @@ def test_person_list_item_shape() -> None:
     )
     assert item.id == 42
     assert item.missing == []
-    assert item.name_needs_review is False
+    assert item.review_state == "unreviewed"
     assert "role_id" not in PersonListItem.model_fields
     assert "role_name" not in PersonListItem.model_fields
 
 
 def test_person_detail_shape() -> None:
     """PersonDetail has tenures list (no person-level role — D-10) plus the
-    Phase 38 review/provenance fields (D-12, D-14, D-15, D-18)."""
-    from api.schemas.admin_people import NameExtractionMetadata, PersonDetail, TenureRow
+    unified review/provenance fields (Phase 49 D-08, D-11, D-12, carrying
+    Phase 38 D-14/D-15/D-18 forward unchanged)."""
+    from api.schemas.admin_people import PersonDetail, PersonProvenanceMetadata, TenureRow
 
     detail = PersonDetail(
         id=1,
@@ -569,8 +574,8 @@ def test_person_detail_shape() -> None:
         bio_text=None,
         photo_url=None,
         tenures=[TenureRow(office="chief", start_date="2005-09-29")],
-        name_needs_review=True,
-        name_extraction_metadata={
+        review_state="needs_review",
+        provenance_metadata={
             "source": "legacy_migration_0022",
             "raw": "John Roberts",
             "confidence": "Low",
@@ -579,9 +584,9 @@ def test_person_detail_shape() -> None:
         },
     )
     assert len(detail.tenures) == 1
-    assert detail.name_needs_review is True
-    assert isinstance(detail.name_extraction_metadata, NameExtractionMetadata)
-    assert detail.name_extraction_metadata.confidence == "Low"
+    assert detail.review_state == "needs_review"
+    assert isinstance(detail.provenance_metadata, PersonProvenanceMetadata)
+    assert detail.provenance_metadata.confidence == "Low"
     assert "role_id" not in PersonDetail.model_fields
     assert "role_name" not in PersonDetail.model_fields
 
@@ -723,7 +728,7 @@ async def test_create_person_persists_name_parts_when_supplied() -> None:
             assert detail["last_name"] == "Person"
             assert detail["name_suffix"] == "Jr."
             assert detail["full_name"] == "Gap Closure Person, Jr."
-            assert detail["name_needs_review"] is False
+            assert detail["review_state"] == "unreviewed"
 
         async with async_session() as db:
             refetched = await get_person_detail(db, person_id)

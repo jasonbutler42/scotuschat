@@ -50,6 +50,7 @@ from api.models.models import (
     ImportRun,
     ImportSource,
     Person,
+    ReviewState,
     SideEnum,
     Utterance,
 )
@@ -1144,12 +1145,12 @@ async def test_brand_new_speaker_confident_split_gets_parts_and_high_provenance(
     assert person.last_name == "Roe"
     assert person.middle_name is None
     assert person.name_suffix is None
-    assert person.name_needs_review is False
-    assert person.name_extraction_metadata is not None
-    assert person.name_extraction_metadata["source"] == "import_convokit"
-    assert person.name_extraction_metadata["confidence"] == "High"
-    assert person.name_extraction_metadata["auto_applied"] is True
-    assert person.name_extraction_metadata["raw"] == "Jane Roe"
+    assert person.review_state == ReviewState.UNREVIEWED
+    assert person.provenance_metadata is not None
+    assert person.provenance_metadata["source"] == "import_convokit"
+    assert person.provenance_metadata["confidence"] == "High"
+    assert person.provenance_metadata["auto_applied"] is True
+    assert person.provenance_metadata["raw"] == "Jane Roe"
 
 
 @pytest.mark.asyncio
@@ -1160,9 +1161,9 @@ async def test_brand_new_speaker_ambiguous_name_gets_provenance_without_parts(
     A brand-new speaker whose corpus full_name is structurally ambiguous
     (single-part -- D-11/D-18) never gets a guessed structured part, but its
     Low-confidence interpretation is still persisted as provenance so an
-    operator can see what the extractor thought it saw, and the row is
-    flagged name_needs_review (D-12) for the People directory's Name review
-    filter.
+    operator can see what the extractor thought it saw, and the row's
+    review_state is set to needs_review (D-12) for the People directory's
+    Name review filter.
     """
     counters = {}
     person = await _resolve_person(
@@ -1172,12 +1173,12 @@ async def test_brand_new_speaker_ambiguous_name_gets_provenance_without_parts(
 
     assert person.first_name is None
     assert person.last_name is None
-    assert person.name_needs_review is True
-    assert person.name_extraction_metadata is not None
-    assert person.name_extraction_metadata["source"] == "import_convokit"
-    assert person.name_extraction_metadata["confidence"] == "Low"
-    assert person.name_extraction_metadata["auto_applied"] is False
-    assert person.name_extraction_metadata["raw"] == "Cher"
+    assert person.review_state == ReviewState.NEEDS_REVIEW
+    assert person.provenance_metadata is not None
+    assert person.provenance_metadata["source"] == "import_convokit"
+    assert person.provenance_metadata["confidence"] == "Low"
+    assert person.provenance_metadata["auto_applied"] is False
+    assert person.provenance_metadata["raw"] == "Cher"
 
 
 @pytest.mark.asyncio
@@ -1188,7 +1189,7 @@ async def test_matched_person_with_operator_edited_parts_never_overwritten(
     T-38-11 (tampering mitigation): a Person row an operator has already
     given structured parts (that don't even agree with what the splitter
     would derive from full_name) is matched by full_name and never has
-    those parts overwritten on reimport -- only name_extraction_metadata is
+    those parts overwritten on reimport -- only provenance_metadata is
     refreshed (D-17), demonstrating the operator-edit-then-reimport
     regression this task requires.
     """
@@ -1214,8 +1215,8 @@ async def test_matched_person_with_operator_edited_parts_never_overwritten(
     assert person.last_name == "OperatorLast"
     assert person.oyez_speaker_id == "adv__jane_roe"  # D-11 backfill still happens
     # Metadata still refreshes even though no saved part was eligible to change.
-    assert person.name_extraction_metadata is not None
-    assert person.name_extraction_metadata["source"] == "import_convokit"
+    assert person.provenance_metadata is not None
+    assert person.provenance_metadata["source"] == "import_convokit"
 
 
 @pytest.mark.asyncio
@@ -1242,7 +1243,7 @@ async def test_matched_person_with_blank_parts_gets_confident_prefill_on_reimpor
     assert person.id == existing_id
     assert person.first_name == "Jane"
     assert person.last_name == "Roe"
-    assert person.name_needs_review is False
+    assert person.review_state == ReviewState.UNREVIEWED
 
 
 @pytest.mark.asyncio
@@ -1270,7 +1271,7 @@ async def test_oyez_id_matched_person_metadata_refreshes_full_name_never_touched
 
     assert person.id == existing_id
     assert person.full_name == "Some Other Name"  # never touched
-    assert person.name_extraction_metadata["raw"] == "Some Other Name"
+    assert person.provenance_metadata["raw"] == "Some Other Name"
 
 
 # ===========================================================================

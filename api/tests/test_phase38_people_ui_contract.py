@@ -254,8 +254,8 @@ def test_id_page_server_save_action_enforces_first_or_last_minimum() -> None:
 
 def test_id_page_server_person_detail_exposes_name_review_and_provenance() -> None:
     source = _source(ID_PAGE_SERVER_PATH)
-    assert "name_needs_review: boolean;" in source
-    assert "name_extraction_metadata:" in source
+    assert "review_state: string;" in source
+    assert "provenance_metadata:" in source
 
 
 def test_id_page_svelte_renders_generated_preview_not_editable_input() -> None:
@@ -278,14 +278,14 @@ def test_id_page_svelte_renders_independent_provenance_per_name_part() -> None:
     assert 'copyLabel="Copy extracted middle name"' in source
     assert 'copyLabel="Copy extracted last name"' in source
     assert 'copyLabel="Copy extracted suffix"' in source
-    assert source.count("{#if data.person.name_extraction_metadata}") == 4
+    assert source.count("{#if data.person.provenance_metadata}") == 4
 
 
 def test_id_page_svelte_provenance_never_overwrites_operator_value_on_edit() -> None:
     """The stacked hints are read-only reference material — there is no
     click-to-fill/autofill wiring for name parts in this plan (D-15)."""
     source = _source(ID_PAGE_SVELTE_PATH)
-    assert "firstName = data.person.name_extraction_metadata" not in source
+    assert "firstName = data.person.provenance_metadata" not in source
     assert "onclick={() => (firstName" not in source
 
 
@@ -296,9 +296,9 @@ def test_id_page_svelte_provenance_never_overwrites_operator_value_on_edit() -> 
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def test_list_page_server_threads_name_needs_review_field() -> None:
+def test_list_page_server_threads_review_state_field() -> None:
     source = _source(LIST_PAGE_SERVER_PATH)
-    assert "name_needs_review: boolean;" in source
+    assert "review_state: string;" in source
 
 
 def test_list_page_svelte_declares_pill_label_helper_for_name_review() -> None:

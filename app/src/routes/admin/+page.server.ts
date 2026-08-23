@@ -216,6 +216,13 @@ const RESET_ENV_ERROR = 'Reset failed: this action is not available in this envi
 const RESET_MID_ERROR =
 	'Reset failed partway through — the database may be in an inconsistent state. Check server logs before retrying.';
 
+// Phase 49 (D-33a): the seeder's own two copies — deliberately NOT the reset
+// action's RESET_ENV_ERROR/RESET_MID_ERROR literals above. This action never
+// truncates or reseeds the database, so it must not claim to risk leaving it
+// "in an inconsistent state" the way RESET_MID_ERROR does.
+const SEED_ENV_ERROR = 'Seed failed: this action is not available in this environment.';
+const SEED_GENERIC_ERROR = 'Seed failed — check server logs for details.';
+
 export const actions: Actions = {
 	logout: async ({ cookies }) => {
 		// Delete the session cookie using path '/' — must match sessionCookieOptions.path
@@ -288,5 +295,60 @@ export const actions: Actions = {
 		}
 
 		return { resetFixtures: body.fixtures };
+	},
+
+	/**
+	 * seedUnresolvedSpeaker — proxies to the dev-only unresolved-speaker
+	 * seeder below (Phase 49, D-33a).
+	 *
+	 * Takes no form data — the target conversation is the backend service's
+	 * own default constant, never a request surface (mirrors resetToFixture's
+	 * own no-request-surface discipline).
+	 *
+	 * Re-checks the gate first — defense in depth; the control is already
+	 * omitted from the DOM when not development, so this branch should be
+	 * unreachable. The real enforcement is the backend's unmounted router
+	 * (D-07), the same gate resetToFixture relies on.
+	 *
+	 * Maps every failure to exactly one of two copies, distinct from
+	 * resetToFixture's pair:
+	 *   - 404 from the backend -> SEED_ENV_ERROR (environment refusal)
+	 *   - every other non-ok status, a thrown fetch (network failure), or a
+	 *     response body that fails to parse as JSON -> SEED_GENERIC_ERROR
+	 *
+	 * On success, returns the parsed body under `seedResult` (not a
+	 * redirect) — renders inline on the same page, mirroring resetToFixture.
+	 */
+	seedUnresolvedSpeaker: async ({ fetch }) => {
+		if (env.ENVIRONMENT !== 'development') {
+			return fail(404, { seedError: SEED_ENV_ERROR });
+		}
+
+		let res: Response;
+		try {
+			res = await fetch(`${FASTAPI_BASE_URL}/api/admin/dev/seed-unresolved-speaker`, {
+				method: 'POST',
+				headers: { 'X-Admin-Token': ADMIN_TOKEN },
+			});
+		} catch {
+			return fail(502, { seedError: SEED_GENERIC_ERROR });
+		}
+
+		if (res.status === 404) {
+			return fail(404, { seedError: SEED_ENV_ERROR });
+		}
+
+		if (!res.ok) {
+			return fail(502, { seedError: SEED_GENERIC_ERROR });
+		}
+
+		let body: unknown;
+		try {
+			body = await res.json();
+		} catch {
+			return fail(502, { seedError: SEED_GENERIC_ERROR });
+		}
+
+		return { seedResult: body };
 	},
 };

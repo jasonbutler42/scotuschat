@@ -168,11 +168,34 @@ coverage_id: D1
 
 ### 26. Unresolved advocate side — explicit placeholder + Save disabled
 expected: On the argument edit page, an advocate row whose side is UNKNOWN/unresolved shows an explicit "Unresolved — choose a role" placeholder in the role select, and the Save button for that row is disabled until a real role is chosen.
-result: waived
+result: blocked
 reason: "Resolve/Speakers table is scheduled for rework per project/.planning/seeds/SEED-001-rework-resolve-table-requirements.md — not worth testing ahead of that rework"
 waived_at: 2026-08-18
 waived_by: "operator — instructed to skip the outstanding human UAT items and prepare for Phase 48"
 waiver_reason: "NOT VERIFIED — deliberately not run, not a pass. The original skip reason turned out to be mistaken: the rework it deferred to (SEED-001 → Phase 44) landed on the pipeline job page's Resolve card, not on this argument-editor Speakers card, so the deferral never resolved itself. The 2026-08-18 audit confirmed the code is present and correct-looking — the placeholder at `admin/arguments/[id]/+page.svelte:497` and the Save gate on `speakerSideById[...] === 'UNKNOWN'` at :544 — but no human has exercised it in a browser. Phase 49 (Review Model) touches participant review state and is the natural place to verify it."
+phase_49_06_update: |
+  2026-08-23 (Phase 49 plan 49-06): the blocking precondition this test actually needed — a real
+  argument with an advocate participant whose `side` is UNKNOWN — did not exist anywhere in the
+  corpus until now, closing the loop this test has been waiting on since 2026-08-18.
+  `api.services.admin_dev.seed_unresolved_speaker_fixture` (D-33a) makes it reachable on demand.
+  Run once against the live dev database (not synthetic — conversation 15169, "Baltimore & Ohio
+  Railroad Company v. United States", argument id 1784), it selected participant 3500 (Lloyd N.
+  Cutler), whose `side` was ALREADY SideEnum.UNKNOWN in the real corpus data (a residual
+  pre-Resolve-rework state, not something this seeder invented), and nulled its `person_id`.
+  Confirmed by direct query immediately afterward: participant 3500 now reads
+  side=UNKNOWN, person_id=NULL, review_state=needs_review, and the argument appears on
+  `GET /api/admin/review/arguments` with exactly that constituent. A second call confirmed
+  idempotence (`already_seeded: true`, same participant id, no second row touched).
+  **This is a data-layer observation only** — a direct query and an in-process API call, not a
+  browser. The visual claim this test actually makes (the placeholder text renders, the Save
+  button is genuinely disabled) has NOT been observed: this sandbox's permission policy denies
+  reading `.env` (where ADMIN_USERNAME/ADMIN_PASSWORD/SESSION_SECRET live), so no authenticated
+  `/admin/**` browser session was reachable by this executor, and no workaround was attempted.
+  **STILL NOT VERIFIED — do not read this note as a pass.** A human must run `Reset to Fixture`
+  then `Seed unresolved speaker` from `/admin` (or confirm the state above is already live),
+  open `/admin/arguments/1784`, confirm the placeholder and Save-gate render exactly as expected,
+  and flip this `result` to `pass` or `issue` based on what they actually see.
+blocking_reason_now: "authenticated /admin/** browser session unavailable to the automated executor (this sandbox denies reading .env for admin credentials) — no longer a missing-state blocker"
 
 ### 27. Pipeline list page — Archived badge (retest of Test 18 gap fix)
 expected: |
@@ -188,9 +211,10 @@ passed: 25
 issues: 0
 pending: 0
 skipped: 0
-blocked: 0
-waived: 1
+blocked: 1
+waived: 0
 audit_note: "2026-08-18 audit + operator waiver. Test 26 skipped → waived: NOT verified, deliberately not run. Its original deferral pointed at a rework that landed elsewhere (Phase 44's Resolve card, not this Speakers card); code confirmed present but never exercised in a browser. Phase 49 is the natural place to verify."
+phase_49_06_note: "2026-08-23 (plan 49-06): Test 26's original blocking reason (no state to test) is resolved — see the test's own phase_49_06_update. Reclassified waived -> blocked (blocked on authenticated-browser access in this sandbox, not on a missing state) rather than waived (an operator's deliberate skip) or pass (unobserved). A human must complete the browser check before this can become pass/issue."
 
 ## Gaps
 

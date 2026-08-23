@@ -18,6 +18,15 @@
 		admin_job_status: string;
 	}
 
+	// Phase 49 (D-33a) — mirrors api/schemas/admin_dev.py::SeedUnresolvedSpeakerResponse.
+	interface SeedUnresolvedSpeakerResult {
+		argument_id: number;
+		participant_id: number;
+		raw_speaker_label: string;
+		trust_tier: string;
+		already_seeded: boolean;
+	}
+
 	interface RecentDraft {
 		id: number;
 		case_name: string;
@@ -71,6 +80,13 @@
 	let resetConfirming = $state(false);
 	let resetRunning = $state(false);
 	let resetResult = $state<ResetFixtureItem[] | null>(null);
+
+	// ──────────────────────────────────────────────────────────────────────────
+	// Dev-tools unresolved-speaker seeder control (Phase 49, D-33a). Single-step —
+	// no confirm gate, since this is additive and single-row, not destructive.
+	// ──────────────────────────────────────────────────────────────────────────
+	let seedSubmitting = $state(false);
+	let seedResult = $state<SeedUnresolvedSpeakerResult | null>(null);
 </script>
 
 <svelte:head>
@@ -549,6 +565,70 @@
 						style="color: #ef4444; font-size: 14px; font-weight: 400; margin: 8px 0 0 0;"
 					>{form.resetError}</p>
 				{/if}
+
+				<!-- Unresolved-speaker seeder (Phase 49, D-33a): additive, single-row, not
+				     destructive — secondary/muted treatment, no two-step confirm. -->
+				<div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #334155;">
+					<p style="font-size: 14px; color: #94a3b8; margin: 0 0 8px 0;">
+						Nulls the resolved speaker on one advocate row of the Complexity fixture, so the
+						unresolved-speaker case can be produced on demand.
+					</p>
+					<form
+						method="POST"
+						action="?/seedUnresolvedSpeaker"
+						use:enhance={() => {
+							seedSubmitting = true;
+							return async ({ result, update }) => {
+								seedSubmitting = false;
+								if (
+									result.type === 'success' &&
+									result.data &&
+									(result.data as { seedResult?: unknown }).seedResult
+								) {
+									seedResult = (result.data as { seedResult: SeedUnresolvedSpeakerResult })
+										.seedResult;
+									await invalidateAll();
+								} else {
+									seedResult = null;
+									await update();
+								}
+							};
+						}}
+					>
+						<button
+							type="submit"
+							disabled={seedSubmitting}
+							style="
+								display: block;
+								width: 100%;
+								min-height: 44px;
+								background: transparent;
+								border: 1px solid #334155;
+								border-radius: 6px;
+								font-size: 16px;
+								font-weight: 600;
+								color: #94a3b8;
+								cursor: pointer;
+							"
+						>
+							{seedSubmitting ? 'Seeding…' : 'Seed unresolved speaker'}
+						</button>
+					</form>
+
+					{#if seedResult}
+						<p style="font-size: 16px; color: #e2e8f0; margin: 8px 0 0 0;">
+							Argument #{seedResult.argument_id} — "{seedResult.raw_speaker_label}" — trust tier:
+							{seedResult.trust_tier}{seedResult.already_seeded ? ' (already seeded)' : ''}
+						</p>
+					{/if}
+
+					{#if form?.seedError}
+						<p
+							role="alert"
+							style="color: #ef4444; font-size: 14px; font-weight: 400; margin: 8px 0 0 0;"
+						>{form.seedError}</p>
+					{/if}
+				</div>
 			</section>
 		{/if}
 	</div>

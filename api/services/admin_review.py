@@ -290,9 +290,9 @@ async def apply_person_value_change(
 def _argument_attention_predicate():
     """
     The D-05 OR-composed inclusion predicate for the Arguments tab — a
-    single expression covering all three legs, never three separate
-    per-leg queries combined afterward, so an argument satisfying more
-    than one leg at once still appears exactly once:
+    single expression covering all four legs, never combined afterward
+    from separate per-leg queries, so an argument satisfying more than
+    one leg at once still appears exactly once:
       1. a constituent's review_state == NEEDS_REVIEW
       2. a constituent participant row exists whose person_id IS NULL
          (an *existing* unresolved participant row — deliberately guarded
@@ -302,6 +302,21 @@ def _argument_attention_predicate():
          surfaces via leg 3 whenever its zero-constituent trust_tier is
          genuinely degraded, per floor_tier's own empty-sequence rule)
       3. the argument's own trust_tier is UNCERTAIN or PROVISIONAL
+      4. a constituent participant has an open value_discrepancy row
+         (Phase 49 plan 49-06 fix — this leg was missing from the
+         original three, even though `_person_attention_predicate` below
+         already has its own discrepancy leg and this function's own
+         docstring calls that "the same inclusion philosophy at the
+         person level." Verified against the live dev DB during D-32's
+         walkthrough: an operator-edited, already-resolved participant
+         that a lower-authority re-import disagrees with satisfies NONE
+         of legs 1-3 — its review_state is operator_edited, not
+         needs_review; person_id is NOT NULL; and this single edit does
+         not necessarily move the argument's own trust_tier — so the
+         exact scenario D-32 exists to surface (equal-or-lower-authority
+         disagreement records a discrepancy, operator value survives)
+         was invisible in the queue entirely. This is REVIEW-02/REVIEW-04
+         must_haves' central claim, not a peripheral case.)
 
     Factored out (plan 49-05) so list_review_queue_arguments and
     get_review_queue_stats share the IDENTICAL expression — the dashboard
@@ -315,7 +330,24 @@ def _argument_attention_predicate():
     degraded_tier_leg = Argument.trust_tier.in_(
         [TrustTier.UNCERTAIN, TrustTier.PROVISIONAL]
     )
-    return or_(needs_review_leg, unresolved_participant_leg, degraded_tier_leg)
+    discrepant_participant_ids_subq = (
+        select(ValueDiscrepancy.target_id)
+        .where(
+            ValueDiscrepancy.target_type == "argument_participant",
+            ValueDiscrepancy.resolved_at.is_(None),
+        )
+        .distinct()
+    )
+    discrepant_participant_leg = and_(
+        ArgumentParticipant.id.is_not(None),
+        ArgumentParticipant.id.in_(discrepant_participant_ids_subq),
+    )
+    return or_(
+        needs_review_leg,
+        unresolved_participant_leg,
+        degraded_tier_leg,
+        discrepant_participant_leg,
+    )
 
 
 def _person_attention_predicate():
@@ -426,11 +458,12 @@ async def list_review_queue_arguments(
 
     Only flagged constituent rows are attached to each argument's
     `constituents` list — a participant row that does not itself satisfy
-    leg 1 or leg 2 is not included, even when its sibling row on the same
-    argument pulled the argument in via leg 3.
+    leg 1, leg 2, or leg 4 (has an open discrepancy) is not included, even
+    when its sibling row on the same argument pulled the argument in via
+    leg 3.
 
-    attention_count counts constituents whose review_state == needs_review
-    OR whose person_id IS NULL.
+    attention_count counts constituents whose review_state == needs_review,
+    OR whose person_id IS NULL, OR who carry an open discrepancy.
 
     Each argument also carries `admin_job_id` — the id of its most
     recently created linked `AdminJob`, or None when the argument has no
@@ -541,6 +574,23 @@ async def list_review_queue_arguments(
     )
     rows = (await db.execute(q)).all()
 
+    # Pre-fetch the set of participant ids carrying an open discrepancy
+    # (Phase 49 plan 49-06 fix) — a constituent must be listed whenever it
+    # has one, mirroring _argument_attention_predicate's new leg 4 above.
+    # Fetched once, before the row loop, rather than per-row.
+    discrepant_participant_ids: set[int] = set(
+        (
+            await db.execute(
+                select(ValueDiscrepancy.target_id).where(
+                    ValueDiscrepancy.target_type == "argument_participant",
+                    ValueDiscrepancy.resolved_at.is_(None),
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+
     arguments: dict[int, dict] = {}
     order: list[int] = []
     for row in rows:
@@ -562,7 +612,9 @@ async def list_review_queue_arguments(
             continue  # no participant row on this joined line — nothing to list
 
         is_flagged = (
-            row.review_state == ReviewState.NEEDS_REVIEW or row.person_id is None
+            row.review_state == ReviewState.NEEDS_REVIEW
+            or row.person_id is None
+            or row.participant_id in discrepant_participant_ids
         )
         if not is_flagged:
             continue

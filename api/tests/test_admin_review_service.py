@@ -1550,3 +1550,173 @@ async def test_backstop_E6_long_text_discrepancy_value_round_trips_untruncated(
         assert "width:" not in discrepancy_block
     finally:
         await _teardown_needs_review_participant(ids)
+
+
+# ---------------------------------------------------------------------------
+# Phase 49 plan 49-06 fix — an open discrepancy on an otherwise-healthy
+# participant (review_state != needs_review, person_id NOT NULL) must, on
+# its own, satisfy _argument_attention_predicate's leg 4 and be listed as a
+# flagged constituent. Found live during D-32's own walkthrough: an
+# operator-edited row that a lower-authority re-import disagreed with
+# (exactly D-32's described scenario) was invisible in the queue before
+# this fix, because it satisfied none of the original three legs.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_discrepancy_alone_includes_argument_and_lists_constituent(review_client):
+    from sqlalchemy import select
+
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import ArgumentParticipant
+    from api.services.admin_review import record_value_discrepancy
+
+    ids = await _seed_healthy_trusted_argument()
+    try:
+        async with AsyncSessionLocal() as db:
+            participant = (
+                await db.execute(
+                    select(ArgumentParticipant).where(
+                        ArgumentParticipant.argument_id == ids["argument_id"]
+                    )
+                )
+            ).scalar_one()
+            participant_id = participant.id
+
+            await record_value_discrepancy(
+                db,
+                target_type="argument_participant",
+                target_id=participant_id,
+                field="descriptor",
+                import_run_id=None,
+                incoming_value="Corpus re-import value",
+                existing_value="Operator value",
+                incoming_source="corpus",
+                incoming_method="direct",
+                existing_source="operator",
+                existing_method="manual",
+            )
+            await db.commit()
+
+        response = await review_client.get(
+            "/api/admin/review/arguments", headers=_admin_headers()
+        )
+        assert response.status_code == 200
+        matches = [item for item in response.json() if item["id"] == ids["argument_id"]]
+        assert len(matches) == 1, (
+            "an argument whose ONLY issue is an open participant discrepancy "
+            "must still appear in the queue"
+        )
+        item = matches[0]
+        constituent = next(
+            c for c in item["constituents"] if c["participant_id"] == participant_id
+        )
+        assert constituent["has_open_discrepancy"] is True
+        assert constituent["review_state"] == "unreviewed"
+        assert constituent["person_id"] is not None
+
+        stats_resp = await review_client.get(
+            "/api/admin/review/stats", headers=_admin_headers()
+        )
+        assert stats_resp.status_code == 200
+        # get_review_queue_stats must share the exact same inclusion
+        # predicate (D-30) — the dashboard card and the list can never
+        # disagree about whether this argument counts.
+        assert stats_resp.json()["arguments"] >= 1
+    finally:
+        from sqlalchemy import delete as sa_delete
+
+        from api.models.models import ValueDiscrepancy
+
+        async with AsyncSessionLocal() as db:
+            await db.execute(
+                sa_delete(ValueDiscrepancy).where(
+                    ValueDiscrepancy.target_type == "argument_participant",
+                    ValueDiscrepancy.target_id.in_(
+                        select(ArgumentParticipant.id).where(
+                            ArgumentParticipant.argument_id == ids["argument_id"]
+                        )
+                    ),
+                )
+            )
+            await db.commit()
+        await _teardown_healthy_trusted_argument(ids)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_argument_no_longer_listed_once_its_only_discrepancy_closes(review_client):
+    """Confirms leg 4 is genuinely scoped to OPEN discrepancies, not sticky
+    once resolved — mirrors close_open_discrepancies' own resolved_at
+    semantics."""
+    from sqlalchemy import select
+
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import ArgumentParticipant
+    from api.services.admin_review import close_open_discrepancies, record_value_discrepancy
+
+    ids = await _seed_healthy_trusted_argument()
+    try:
+        async with AsyncSessionLocal() as db:
+            participant = (
+                await db.execute(
+                    select(ArgumentParticipant).where(
+                        ArgumentParticipant.argument_id == ids["argument_id"]
+                    )
+                )
+            ).scalar_one()
+            participant_id = participant.id
+
+            await record_value_discrepancy(
+                db,
+                target_type="argument_participant",
+                target_id=participant_id,
+                field="descriptor",
+                import_run_id=None,
+                incoming_value="Corpus re-import value",
+                existing_value="Operator value",
+                incoming_source="corpus",
+                incoming_method="direct",
+                existing_source="operator",
+                existing_method="manual",
+            )
+            await db.commit()
+
+        response = await review_client.get(
+            "/api/admin/review/arguments", headers=_admin_headers()
+        )
+        assert any(item["id"] == ids["argument_id"] for item in response.json())
+
+        async with AsyncSessionLocal() as db:
+            closed_count = await close_open_discrepancies(
+                db, target_type="argument_participant", target_id=participant_id
+            )
+            await db.commit()
+        assert closed_count == 1
+
+        response_after = await review_client.get(
+            "/api/admin/review/arguments", headers=_admin_headers()
+        )
+        assert not any(item["id"] == ids["argument_id"] for item in response_after.json()), (
+            "once the participant's only discrepancy is closed and it has no "
+            "other qualifying condition, the argument must drop out of the queue"
+        )
+    finally:
+        from sqlalchemy import delete as sa_delete
+
+        from api.models.models import ValueDiscrepancy
+
+        async with AsyncSessionLocal() as db:
+            await db.execute(
+                sa_delete(ValueDiscrepancy).where(
+                    ValueDiscrepancy.target_type == "argument_participant",
+                    ValueDiscrepancy.target_id.in_(
+                        select(ArgumentParticipant.id).where(
+                            ArgumentParticipant.argument_id == ids["argument_id"]
+                        )
+                    ),
+                )
+            )
+            await db.commit()
+        await _teardown_healthy_trusted_argument(ids)

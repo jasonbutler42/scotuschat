@@ -278,7 +278,7 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 49-01-PLAN.md — Tracer: migration 0028 (`review_state` enum + participant provenance columns + `value_discrepancy`), real per-participant trust, and an end-to-end inline-confirm slice on `/admin/review` (wave 1)
+- [x] 49-01-PLAN.md — Tracer: migration 0028 (`review_state` enum + participant provenance columns + `value_discrepancy`), real per-participant trust, and an end-to-end inline-confirm slice on `/admin/review` (wave 1)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 

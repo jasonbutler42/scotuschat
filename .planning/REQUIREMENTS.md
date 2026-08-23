@@ -80,10 +80,10 @@ Mappings confirmed by the v1.8 roadmap (`.planning/ROADMAP.md`), created 2026-08
 | TRUST-03 | Phase 48 | Complete |
 | TRUST-04 | Phase 48 | Complete |
 | TRUST-05 | Phase 48 | Complete |
-| REVIEW-01 | Phase 49 | Pending |
+| REVIEW-01 | Phase 49 | Pending (shared with 49-02/49-03; not all declaring plans complete) |
 | REVIEW-02 | Phase 49 | Pending |
-| REVIEW-03 | Phase 49 | Pending |
-| REVIEW-04 | Phase 49 | Pending |
+| REVIEW-03 | Phase 49 | Pending (shared with 49-05/49-06; not all declaring plans complete) |
+| REVIEW-04 | Phase 49 | Pending (shared with 49-04/49-05/49-06; not all declaring plans complete) |
 | REVIEW-05 | Phase 49 | Pending |
 | IMPORT-01 | Phase 50 | Pending |
 | IMPORT-02 | Phase 50 | Pending |

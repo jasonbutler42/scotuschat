@@ -5,16 +5,16 @@ milestone_name: Import & Provenance Re-model
 current_phase: 49
 current_phase_name: Review Model
 status: Phase 49 planned — 6 plans across 5 waves; ready to execute
-stopped_at: Phase 49 planned (research + plans + checker verification complete)
-last_updated: "2026-08-21T20:12:08.012Z"
+stopped_at: Completed 49-01-PLAN.md (tracer + defect fixes + REVIEW-01 schema test)
+last_updated: "2026-08-23T11:34:09.871Z"
 last_activity: 2026-08-21
-last_activity_desc: Phase 49 planned — research (49-RESEARCH.md), validation strategy, pattern map (21/21 analogs), and 6 PLAN.md files across 5 waves. Three research open questions were put to the operator and locked into CONTEXT.md as D-31a (one authority-gated writer; all three existing writers delegate), D-31b (ladder return shape at planner discretion but no bare boolean), and D-33a (dev-only direct-insert for the unresolved-speaker fixture). Gates: 5/5 requirements, 34/34 decisions, plan-checker VERIFICATION PASSED. Two migrations (0028 tracer, 0029 legacy fold) so people columns never drop ahead of their consumers.
-state_head: 61b24a7096c5fa5012a2320396b6a55979da372c
+last_activity_desc: Phase 49 execution started
+state_head: ce4943f8a4eb1e1ae4f391a3fd03282def6f5dfc
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 22
-  completed_plans: 16
+  completed_plans: 17
   percent: 40
 ---
 
@@ -25,12 +25,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-18 — Phase 47 complete; corpus-first / PDF-deferred scope decision recorded)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** Phase 49 — review-model (planned; ready to execute)
+**Current focus:** Phase 49 — Review Model
 
 ## Current Position
 
-Phase: 49 (Review Model) — READY TO EXECUTE
-Last activity: 2026-08-21 — Phase 49 planned: 6 plans, 5 waves, checker passed
+Phase: 49 (Review Model) — EXECUTING
+Last activity: 2026-08-21 — Phase 49 execution started
 
 **Next action:** `/gsd-execute-phase 49` (6 plans across 5 waves; wave 1 and wave 2's 49-02 each open with a one-way-door checkpoint)
 
@@ -153,6 +153,7 @@ items → 14.** Every closure carries its evidence in the file it closes; the co
 | Phase 48 P07 | ~45min | 3 tasks | 6 files |
 | Phase 48 P08 | ~35min | 3 tasks | 3 files |
 | Phase 48 P10 | ~2h across 3 sessions | 4 tasks | 18 files |
+| Phase 49-review-model P01 | 45min | 2 tasks | 14 files |
 
 v1.7 per-plan metrics cleared at this milestone boundary per the standard STATE.md reset; the underlying per-plan SUMMARY files remain in `.planning/milestones/v1.7-phases/`.
 
@@ -256,9 +257,9 @@ at close.
 
 ## Session Continuity
 
-Last session: 2026-08-21T19:17:48.797Z
-Stopped at: Phase 49 UI-SPEC approved
-Resume file: .planning/phases/49-review-model/49-UI-SPEC.md
+Last session: 2026-08-23T11:34:09.675Z
+Stopped at: Completed 49-01-PLAN.md (tracer + defect fixes + REVIEW-01 schema test)
+Resume file: None
 
 ## Operator Next Steps
 

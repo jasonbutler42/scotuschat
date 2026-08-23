@@ -28,7 +28,7 @@ Requirements for milestone v1.8. Each maps to exactly one roadmap phase.
 
 ### Review Model (REVIEW)
 
-- [ ] **REVIEW-01**: Operator-editable rows (person names, argument participants) carry a four-state `review_state` (unreviewed / needs_review / operator_confirmed / operator_edited)
+- [x] **REVIEW-01**: Operator-editable rows (person names, argument participants) carry a four-state `review_state` (unreviewed / needs_review / operator_confirmed / operator_edited)
 - [ ] **REVIEW-02**: Re-import records a discrepancy for operator review instead of overwriting an equal-or-higher-authority value
 - [ ] **REVIEW-03**: Operator review queue lists items needing review, filterable by trust tier / review state
 - [ ] **REVIEW-04**: Operator can resolve a review item (confirm or edit), advancing its `review_state` and recomputing trust
@@ -80,7 +80,7 @@ Mappings confirmed by the v1.8 roadmap (`.planning/ROADMAP.md`), created 2026-08
 | TRUST-03 | Phase 48 | Complete |
 | TRUST-04 | Phase 48 | Complete |
 | TRUST-05 | Phase 48 | Complete |
-| REVIEW-01 | Phase 49 | Pending (shared with 49-02/49-03; not all declaring plans complete) |
+| REVIEW-01 | Phase 49 | Complete |
 | REVIEW-02 | Phase 49 | Pending |
 | REVIEW-03 | Phase 49 | Pending (shared with 49-05/49-06; not all declaring plans complete) |
 | REVIEW-04 | Phase 49 | Pending (shared with 49-04/49-05/49-06; not all declaring plans complete) |

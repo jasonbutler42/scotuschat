@@ -43,9 +43,15 @@ test_admin_arguments_service.py's publish_argument tests do the same.
 """
 
 import os
+import re
+from pathlib import Path
 
 import pytest
 import pytest_asyncio
+
+_REVIEW_PAGE_PATH = (
+    Path(__file__).parents[2] / "app" / "src" / "routes" / "admin" / "review" / "+page.svelte"
+)
 
 
 def _db_configured() -> bool:
@@ -1409,3 +1415,138 @@ async def test_zero_constituent_degraded_argument_carries_real_blockers(
         assert any(b["code"] == "no_constituents" for b in item["blockers"])
     finally:
         await _teardown_bare_argument(ids)
+
+
+# ---------------------------------------------------------------------------
+# Plan 49-05, Task 3 — data-shape backstop statements (E6 partial, E6
+# long-text). The rendering-shape backstops (E1, E5 zero-one-many) live in
+# api/tests/test_phase49_review_ui_contract.py per the plan's own split.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_backstop_E6_partial_one_sided_discrepancy_serializes_null_not_empty_string(
+    review_client,
+) -> None:
+    """Backstop E6 partial: a discrepancy with a NULL existing_value, and
+    one with a NULL incoming_value, each serialize as an explicit JSON
+    null (never an empty string), and the page source formats an absent
+    side as the literal "(none)" rather than emitting an empty pair of
+    quotes."""
+    from api.core.database import AsyncSessionLocal
+    from api.services.admin_review import record_value_discrepancy
+
+    ids = await _seed_needs_review_participant()
+    try:
+        async with AsyncSessionLocal() as db:
+            await record_value_discrepancy(
+                db,
+                target_type="argument_participant",
+                target_id=ids["participant_id"],
+                field="descriptor",
+                import_run_id=None,
+                incoming_value="Senior Counsel",
+                existing_value=None,  # newly-populated field, no prior value
+                incoming_source="corpus",
+                incoming_method="direct",
+                existing_source=None,
+                existing_method=None,
+            )
+            await record_value_discrepancy(
+                db,
+                target_type="argument_participant",
+                target_id=ids["participant_id"],
+                field="raw_speaker_label",
+                import_run_id=None,
+                incoming_value=None,  # cleared field, no incoming value
+                existing_value="MR. FIXTURE",
+                incoming_source="corpus",
+                incoming_method="direct",
+                existing_source="operator",
+                existing_method="manual",
+            )
+            await db.commit()
+
+        response = await review_client.get(
+            "/api/admin/review/arguments", headers=_admin_headers()
+        )
+        assert response.status_code == 200
+        item = next(i for i in response.json() if i["id"] == ids["argument_id"])
+        constituent = next(
+            c for c in item["constituents"] if c["participant_id"] == ids["participant_id"]
+        )
+        discs_by_field = {d["field"]: d for d in constituent["discrepancies"]}
+
+        assert discs_by_field["descriptor"]["existing_value"] is None
+        assert discs_by_field["descriptor"]["incoming_value"] == "Senior Counsel"
+        assert discs_by_field["raw_speaker_label"]["incoming_value"] is None
+        assert discs_by_field["raw_speaker_label"]["existing_value"] == "MR. FIXTURE"
+
+        # Page-source half of the backstop: an absent side renders the
+        # literal "(none)", never an empty pair of quotes.
+        page_source = _REVIEW_PAGE_PATH.read_text(encoding="utf-8")
+        assert "'(none)'" in page_source
+        assert 'value === null ? \'(none)\'' in page_source or "value === null ? '(none)'" in page_source
+    finally:
+        await _teardown_needs_review_participant(ids)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_backstop_E6_long_text_discrepancy_value_round_trips_untruncated(
+    review_client,
+) -> None:
+    """Backstop E6 long-text: a 300-character incoming_value round-trips
+    untruncated through the API, and the page source applies no
+    text-overflow, white-space: nowrap, or fixed width: rule to the
+    discrepancy-line block specifically (scoped, not a blanket file scan —
+    other surfaces on this screen legitimately use `width:` for unrelated
+    spacer elements)."""
+    from api.core.database import AsyncSessionLocal
+    from api.services.admin_review import record_value_discrepancy
+
+    long_value = "A" * 300
+    ids = await _seed_needs_review_participant()
+    try:
+        async with AsyncSessionLocal() as db:
+            await record_value_discrepancy(
+                db,
+                target_type="argument_participant",
+                target_id=ids["participant_id"],
+                field="last_name",
+                import_run_id=None,
+                incoming_value=long_value,
+                existing_value="Fixture",
+                incoming_source="corpus",
+                incoming_method="direct",
+                existing_source="operator",
+                existing_method="manual",
+            )
+            await db.commit()
+
+        response = await review_client.get(
+            "/api/admin/review/arguments", headers=_admin_headers()
+        )
+        assert response.status_code == 200
+        item = next(i for i in response.json() if i["id"] == ids["argument_id"])
+        constituent = next(
+            c for c in item["constituents"] if c["participant_id"] == ids["participant_id"]
+        )
+        disc = next(d for d in constituent["discrepancies"] if d["field"] == "last_name")
+        assert disc["incoming_value"] == long_value
+        assert len(disc["incoming_value"]) == 300
+
+        page_source = _REVIEW_PAGE_PATH.read_text(encoding="utf-8")
+        match = re.search(
+            r"\{#each constituent\.discrepancies as d \(d\.id\)\}.*?\{/each\}",
+            page_source,
+            re.DOTALL,
+        )
+        assert match, "could not find the discrepancy-line {#each} block in the page source"
+        discrepancy_block = match.group(0)
+        assert "text-overflow" not in discrepancy_block
+        assert "white-space: nowrap" not in discrepancy_block
+        assert "width:" not in discrepancy_block
+    finally:
+        await _teardown_needs_review_participant(ids)

@@ -354,11 +354,17 @@
 			{#if data.argument.resolved_at}
 				<p style="font-size: 14px; color: #94a3b8; margin: 0 0 8px 0;">
 					<!-- formatDateTime (not formatDate) — matches the Status History
-					     list further down this same card, which already shows times;
-					     a bare date here read as inconsistent next to it. Label
-					     unchanged: the "Created" label on resolved_at is a separate,
-					     already-tracked mislabel and deliberately out of scope here. -->
-					Created {formatDateTime(data.argument.resolved_at)}
+					     list further down this same card, which already shows times.
+					     Label: `Argument` has no creation-timestamp column (see
+					     .planning/todos/pending/2026-08-20-argument-status-card-labels-resolved-at-as-created.md).
+					     This value is when the resolve pipeline step completed, not
+					     when the argument was created — labelled "Resolved" so it
+					     states what it actually is. The Status History list further
+					     down this same card already carries the authoritative birth
+					     record (every writer has logged a birth transition since
+					     plan 48-05), so no second, differently-sourced date is added
+					     here. -->
+					Resolved {formatDateTime(data.argument.resolved_at)}
 				</p>
 			{/if}
 

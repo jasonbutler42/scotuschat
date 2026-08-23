@@ -45,7 +45,20 @@ PUBLIC_SCHEMA_MODULE_PATHS = [
     ROOT / "api" / "schemas" / "speakers.py",
 ]
 
-BANNED_KEY = "trust_tier"
+# D-34 (plan 49-04): the ban widens from a single key to the whole Phase 49
+# review-model vocabulary — trust tier, review state, provenance, and every
+# value_discrepancy field name. A public response must never carry any of
+# these; review state records an internal transcription-attribution
+# workflow, never a public credibility judgment about a speaker.
+BANNED_KEYS = (
+    "trust_tier",
+    "review_state",
+    "source",
+    "method",
+    "incoming_value",
+    "existing_value",
+    "resolved_at",
+)
 
 
 def _unwrap_annotation_types(annotation):
@@ -132,14 +145,16 @@ PUBLIC_RESPONSE_MODELS: list[type[BaseModel]] = sorted(
 
 def _model_graph_cases():
     """
-    Build (root_model, reachable_model) pairs for parametrization, so a
-    leak one level down names both the offending model and the public
-    route it is reachable from.
+    Build (root_model, reachable_model, banned_key) triples for
+    parametrization — one case per banned key per reachable model — so a
+    leak one level down names both the offending model, the public route
+    it is reachable from, and the specific banned key.
     """
     cases = []
     for root_model in PUBLIC_RESPONSE_MODELS:
         for reachable in sorted(collect_model_graph(root_model), key=lambda m: m.__name__):
-            cases.append((root_model, reachable))
+            for banned_key in BANNED_KEYS:
+                cases.append((root_model, reachable, banned_key))
     return cases
 
 
@@ -147,27 +162,31 @@ _MODEL_GRAPH_CASES = _model_graph_cases()
 
 
 @pytest.mark.parametrize(
-    "root_model,reachable_model",
+    "root_model,reachable_model,banned_key",
     _MODEL_GRAPH_CASES,
-    ids=[reachable.__name__ for _root, reachable in _MODEL_GRAPH_CASES],
+    ids=[
+        f"{reachable.__name__}-{banned_key}"
+        for _root, reachable, banned_key in _MODEL_GRAPH_CASES
+    ],
 )
 def test_public_response_model_never_declares_trust_tier(
-    root_model: type[BaseModel], reachable_model: type[BaseModel]
+    root_model: type[BaseModel], reachable_model: type[BaseModel], banned_key: str
 ) -> None:
     """
     For every public response model, and every model reachable from it
-    through nested field annotations, `trust_tier` must be absent from
-    `model_fields`. Trust is operator-facing only (CLAUDE.md apolitical
-    hard constraint) — a public response carrying it is an information
-    disclosure, not a cosmetic slip. The assertion message names both the
-    offending model and the public route (root response model) it is
-    reachable from.
+    through nested field annotations, none of BANNED_KEYS may be present
+    in `model_fields`. Trust and review-state are operator-facing only
+    (CLAUDE.md apolitical hard constraint; D-23/D-34) — a public response
+    carrying any of them is an information disclosure, not a cosmetic
+    slip. The assertion message names the offending model, the public
+    route (root response model) it is reachable from, and the specific
+    banned key.
     """
-    assert BANNED_KEY not in reachable_model.model_fields, (
+    assert banned_key not in reachable_model.model_fields, (
         f"{reachable_model.__name__} (reachable from public response model "
-        f"{root_model.__name__}) declares '{BANNED_KEY}' — trust is "
-        "operator-facing only and must never reach a public response "
-        "(CLAUDE.md apolitical hard constraint; D-23)."
+        f"{root_model.__name__}) declares '{banned_key}' — trust/review-state "
+        "data is operator-facing only and must never reach a public response "
+        "(CLAUDE.md apolitical hard constraint; D-23/D-34)."
     )
 
 
@@ -223,12 +242,22 @@ def test_admin_detail_contract_does_declare_trust_tier() -> None:
     turn green with no further changes needed here.
     """
     from api.schemas.admin_arguments import ArgumentDetail
+    from api.schemas.admin_review import ReviewQueueConstituent
 
-    assert BANNED_KEY in ArgumentDetail.model_fields, (
+    assert "trust_tier" in ArgumentDetail.model_fields, (
         "ArgumentDetail (admin-only) is expected to carry 'trust_tier' per D-20 — "
         "if this assertion fails, plan 48-07 has not yet landed the field. This "
         "is a known, tracked, currently-expected failure (see 48-03-SUMMARY.md); "
         "it does not indicate the public leak-ban itself is broken."
+    )
+    # D-34 (plan 49-04): the same false-green guard for the widened
+    # vocabulary — ReviewQueueConstituent (admin-only) is expected to carry
+    # 'review_state'. If it did not, Test 1's review_state cases would pass
+    # for the wrong reason (nothing to leak in the first place).
+    assert "review_state" in ReviewQueueConstituent.model_fields, (
+        "ReviewQueueConstituent (admin-only) is expected to carry "
+        "'review_state' — if this assertion fails, the D-34 leak-ban "
+        "extension is vacuous for that key."
     )
 
 
@@ -237,12 +266,19 @@ def test_admin_detail_contract_does_declare_trust_tier() -> None:
 # ---------------------------------------------------------------------------
 
 
+# D-34 (plan 49-04): a public schema module must also never import the
+# authority-ladder domain module or the admin_review schema module — both
+# carry the review-model vocabulary this ban exists to keep off public
+# responses.
+_BANNED_IMPORT_MODULES = ("api.domain.trust", "api.domain.authority", "api.schemas.admin_review")
+
+
 def test_public_schema_modules_never_import_trust_tier() -> None:
     """
     The prohibition's second half, encoded as an executable check rather
     than a comment someone has to remember: no module under api/schemas/
-    OTHER THAN the admin_* modules may import TrustTier (or the
-    api.domain.trust module at all) from api.domain.trust. Uses `ast` over
+    OTHER THAN the admin_* modules may import from api.domain.trust,
+    api.domain.authority, or api.schemas.admin_review. Uses `ast` over
     the schema files rather than grepping, so a `# TrustTier` comment
     cannot produce a false positive.
     """
@@ -251,21 +287,21 @@ def test_public_schema_modules_never_import_trust_tier() -> None:
         source = path.read_text(encoding="utf-8")
         tree = ast.parse(source, filename=str(path))
         for node in ast.walk(tree):
-            if isinstance(node, ast.ImportFrom) and node.module == "api.domain.trust":
+            if isinstance(node, ast.ImportFrom) and node.module in _BANNED_IMPORT_MODULES:
                 imported_names = {alias.name for alias in node.names}
                 if imported_names:
                     violations.append(
                         f"{path.name} imports {sorted(imported_names)} from "
-                        "api.domain.trust — public schema modules must never "
-                        "reference the trust vocabulary (D-23)."
+                        f"{node.module} — public schema modules must never "
+                        "reference the trust/review-model vocabulary (D-23/D-34)."
                     )
             elif isinstance(node, ast.Import):
                 for alias in node.names:
-                    if alias.name == "api.domain.trust" or alias.name.startswith(
-                        "api.domain.trust."
+                    if alias.name in _BANNED_IMPORT_MODULES or any(
+                        alias.name.startswith(f"{banned}.") for banned in _BANNED_IMPORT_MODULES
                     ):
                         violations.append(
-                            f"{path.name} imports api.domain.trust directly — "
-                            "banned on public schemas (D-23)."
+                            f"{path.name} imports {alias.name} directly — "
+                            "banned on public schemas (D-23/D-34)."
                         )
     assert not violations, "\n".join(violations)

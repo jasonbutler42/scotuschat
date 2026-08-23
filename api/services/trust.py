@@ -13,9 +13,15 @@ calls recompute_argument_tier before its own commit.
 D-10: reads only per-argument `utterances` and `argument_participants` rows
 scoped to exactly one argument_id — it never queries the `people` table.
 D-11: a NULL person_id (unresolved speaker/participant) contributes
-TrustTier.UNCERTAIN to the floor. D-12: is_stage_direction=true utterance
-rows are excluded from the floor entirely (no speaker to attribute); this is
-NOT extended to side=UNKNOWN rows, which still contribute normally.
+TrustTier.UNCERTAIN to the floor — QUALIFIED by Phase 49 D-17: an
+ArgumentParticipant with person_id IS NULL AND review_state ==
+operator_confirmed (the "confirm as unattributable" resolve action)
+contributes VERIFIED instead, lifting this floor. An ORDINARY confirm (on
+an already-resolved participant) never touches this NULL-person_id branch,
+so it can never trigger the lift as a side effect. D-12:
+is_stage_direction=true utterance rows are excluded from the floor
+entirely (no speaker to attribute); this is NOT extended to side=UNKNOWN
+rows, which still contribute normally.
 D-13: every utterance constituent's review_state is still supplied as the
 literal api.domain.trust.UNREVIEWED — no per-utterance review signal
 exists. Phase 49 (D-18) fills this module's own participant-branch slot:
@@ -31,7 +37,7 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.domain.trust import UNREVIEWED, TrustTier, derive_tier, floor_tier
-from api.models.models import Argument, ArgumentParticipant, ImportRun, Utterance
+from api.models.models import Argument, ArgumentParticipant, ImportRun, ReviewState, Utterance
 
 
 class TrustGateBlocked(ValueError):
@@ -110,8 +116,24 @@ async def _load_constituents(
 
     for person_id, review_state, source, method in participant_rows:
         if person_id is None:
-            tiers.append(TrustTier.UNCERTAIN)
-            _bump("unresolved_participant")
+            # D-17: an unresolved speaker (person_id IS NULL) still floors
+            # to UNCERTAIN by default (D-11) — EXCEPT when the operator has
+            # explicitly confirmed this participant as unattributable
+            # (review_state == operator_confirmed via
+            # resolve_participant_review's "confirm_unattributable"
+            # action). That is a deliberate human judgment that no further
+            # speaker resolution is possible or needed for this row, and it
+            # lifts the D-11 floor — derive_tier's rule 1 already returns
+            # VERIFIED for operator_confirmed; this branch is what lets
+            # that rule apply on the previously short-circuited NULL-
+            # person_id path. An ORDINARY confirm (on a resolved
+            # participant) never reaches this branch at all, so it can
+            # never lift this floor as a side effect.
+            if review_state == ReviewState.OPERATOR_CONFIRMED:
+                tiers.append(TrustTier.VERIFIED)
+            else:
+                tiers.append(TrustTier.UNCERTAIN)
+                _bump("unresolved_participant")
             continue
         # D-18: a resolved participant now contributes a real tier —
         # Pitfall 1: pass .value for every enum-typed column, mirroring the

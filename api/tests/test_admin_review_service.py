@@ -658,3 +658,252 @@ async def test_queue_payload_admin_job_id_populated_and_does_not_duplicate_const
                 await db.execute(sa_delete(AdminJob).where(AdminJob.id == job_id))
                 await db.commit()
         await _teardown_needs_review_participant(ids)
+
+
+# ---------------------------------------------------------------------------
+# Plan 49-04, Task 3 — the full resolve-action set, D-17's unattributable
+# floor lift, and D-15's shared-timestamp discrepancy close.
+# ---------------------------------------------------------------------------
+
+
+async def _seed_unresolved_participant_task3():
+    """One CANDIDATE argument with a single person_id-IS-NULL participant,
+    review_state defaulting to unreviewed."""
+    import uuid as _uuid
+
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import (
+        Argument,
+        ArgumentParticipant,
+        ArgumentStatusEnum,
+        Case,
+        CaseArgument,
+        SideEnum,
+    )
+
+    suffix = _uuid.uuid4().hex[:8]
+    async with AsyncSessionLocal() as db:
+        arg = Argument(status=ArgumentStatusEnum.CANDIDATE)
+        db.add(arg)
+        await db.flush()
+
+        case = Case(
+            docket_number=f"RV-05-{suffix}",
+            docket_number_norm=f"rv-05-{suffix}",
+            case_name="Review Fixture v. Unattributable",
+            term_year=2026,
+            slug=f"review-fixture-unattributable-{suffix}",
+        )
+        db.add(case)
+        await db.flush()
+        db.add(CaseArgument(case_id=case.id, argument_id=arg.id, is_lead=True))
+
+        participant = ArgumentParticipant(
+            argument_id=arg.id,
+            person_id=None,
+            raw_speaker_label="MR. NEVER RESOLVED",
+            side=SideEnum.PETITIONER,
+        )
+        db.add(participant)
+        await db.commit()
+
+        return {
+            "argument_id": arg.id,
+            "case_id": case.id,
+            "participant_id": participant.id,
+        }
+
+
+async def _teardown_task3_participant(ids: dict) -> None:
+    from sqlalchemy import delete as sa_delete
+
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import Argument, ArgumentParticipant, Case, CaseArgument, ValueDiscrepancy
+
+    async with AsyncSessionLocal() as db:
+        await db.execute(
+            sa_delete(ValueDiscrepancy).where(
+                ValueDiscrepancy.target_type == "argument_participant",
+                ValueDiscrepancy.target_id == ids["participant_id"],
+            )
+        )
+        await db.execute(
+            sa_delete(ArgumentParticipant).where(ArgumentParticipant.id == ids["participant_id"])
+        )
+        await db.execute(
+            sa_delete(CaseArgument).where(CaseArgument.argument_id == ids["argument_id"])
+        )
+        await db.execute(sa_delete(Case).where(Case.id == ids["case_id"]))
+        await db.execute(sa_delete(Argument).where(Argument.id == ids["argument_id"]))
+        await db.commit()
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_confirm_unattributable_lifts_uncertain_floor(review_client) -> None:
+    """confirm_unattributable on a person_id-IS-NULL participant sets
+    operator_confirmed, and the argument's recomputed tier is no longer
+    floored to UNCERTAIN by that participant (D-17)."""
+    from api.core.database import AsyncSessionLocal
+    from api.domain.trust import TrustTier
+    from api.models.models import Argument, ArgumentParticipant
+
+    ids = await _seed_unresolved_participant_task3()
+    try:
+        response = await review_client.patch(
+            f"/api/admin/review/participants/{ids['participant_id']}",
+            json={"action": "confirm_unattributable"},
+            headers=_admin_headers(),
+        )
+        assert response.status_code == 200
+        body = response.json()
+        assert body["review_state"] == "operator_confirmed"
+
+        async with AsyncSessionLocal() as db:
+            participant = await db.get(ArgumentParticipant, ids["participant_id"])
+            argument = await db.get(Argument, ids["argument_id"])
+            assert participant.review_state.value == "operator_confirmed"
+            assert participant.person_id is None  # confirm_unattributable never sets person_id
+            assert argument.trust_tier == TrustTier.VERIFIED
+    finally:
+        await _teardown_task3_participant(ids)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_confirm_on_unresolved_participant_rejected_with_distinct_error(review_client) -> None:
+    """confirm (not confirm_unattributable) on a person_id-IS-NULL
+    participant is rejected with a distinct tagged error — an ordinary
+    confirm never lifts the unresolved-speaker floor as a side effect
+    (D-17)."""
+    ids = await _seed_unresolved_participant_task3()
+    try:
+        response = await review_client.patch(
+            f"/api/admin/review/participants/{ids['participant_id']}",
+            json={"action": "confirm"},
+            headers=_admin_headers(),
+        )
+        assert response.status_code == 422
+        assert response.json()["detail"] == "unresolved_requires_unattributable"
+    finally:
+        await _teardown_task3_participant(ids)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_confirm_unattributable_on_resolved_participant_rejected(review_client) -> None:
+    """confirm_unattributable on an already-resolved participant
+    (person_id IS NOT NULL) is rejected with a distinct tagged error — it
+    is not the action for a resolved row."""
+    ids = await _seed_needs_review_participant()
+    try:
+        response = await review_client.patch(
+            f"/api/admin/review/participants/{ids['participant_id']}",
+            json={"action": "confirm_unattributable"},
+            headers=_admin_headers(),
+        )
+        assert response.status_code == 422
+        assert response.json()["detail"] == "participant_is_resolved"
+    finally:
+        await _teardown_needs_review_participant(ids)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_reflag_sets_needs_review_on_operator_confirmed_row(review_client) -> None:
+    """reflag on an operator_confirmed row sets needs_review — the only
+    backward transition available (D-25)."""
+    ids = await _seed_needs_review_participant()
+    try:
+        confirm_response = await review_client.patch(
+            f"/api/admin/review/participants/{ids['participant_id']}",
+            json={"action": "confirm"},
+            headers=_admin_headers(),
+        )
+        assert confirm_response.status_code == 200
+
+        reflag_response = await review_client.patch(
+            f"/api/admin/review/participants/{ids['participant_id']}",
+            json={"action": "reflag"},
+            headers=_admin_headers(),
+        )
+        assert reflag_response.status_code == 200
+        assert reflag_response.json()["review_state"] == "needs_review"
+    finally:
+        await _teardown_needs_review_participant(ids)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_reflag_rejected_on_never_reviewed_row(review_client) -> None:
+    """reflag on a row that is still unreviewed is rejected — no action
+    ever writes a row back to unreviewed (D-25), and reflag only makes
+    sense on a row a human has already touched."""
+    ids = await _seed_unresolved_participant_task3()
+    try:
+        # This participant's review_state is still the server default
+        # (unreviewed) — reflag should reject rather than accept.
+        response = await review_client.patch(
+            f"/api/admin/review/participants/{ids['participant_id']}",
+            json={"action": "reflag"},
+            headers=_admin_headers(),
+        )
+        assert response.status_code == 422
+        assert response.json()["detail"] == "row_not_yet_reviewed"
+    finally:
+        await _teardown_task3_participant(ids)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_multiple_open_discrepancies_close_with_identical_resolved_at(review_client) -> None:
+    """A resolve action on a row with three open discrepancies stamps the
+    identical resolved_at on all three (D-15: one UPDATE, one shared
+    timestamp, so the close order is unobservable)."""
+    from sqlalchemy import select as sa_select
+
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import ArgumentParticipant, ValueDiscrepancy
+    from api.services.admin_review import record_value_discrepancy
+
+    ids = await _seed_needs_review_participant()
+    try:
+        async with AsyncSessionLocal() as db:
+            for field in ("side", "descriptor", "raw_speaker_label"):
+                await record_value_discrepancy(
+                    db,
+                    target_type="argument_participant",
+                    target_id=ids["participant_id"],
+                    field=field,
+                    import_run_id=None,
+                    incoming_value="incoming",
+                    existing_value="existing",
+                    incoming_source="corpus",
+                    incoming_method="direct",
+                    existing_source="operator",
+                    existing_method="manual",
+                )
+            await db.commit()
+
+        response = await review_client.patch(
+            f"/api/admin/review/participants/{ids['participant_id']}",
+            json={"action": "confirm"},
+            headers=_admin_headers(),
+        )
+        assert response.status_code == 200
+
+        async with AsyncSessionLocal() as db:
+            rows = (
+                await db.execute(
+                    sa_select(ValueDiscrepancy).where(
+                        ValueDiscrepancy.target_type == "argument_participant",
+                        ValueDiscrepancy.target_id == ids["participant_id"],
+                    )
+                )
+            ).scalars().all()
+            assert len(rows) == 3
+            resolved_ats = {r.resolved_at for r in rows}
+            assert None not in resolved_ats
+            assert len(resolved_ats) == 1, "all three rows must share the identical resolved_at"
+    finally:
+        await _teardown_needs_review_participant(ids)

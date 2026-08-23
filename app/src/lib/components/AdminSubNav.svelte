@@ -22,6 +22,9 @@
 	<a href="/admin/people" style="font-size: 14px; font-weight: 400; color: #94a3b8; text-decoration: none;">
 		People Editor
 	</a>
+	<a href="/admin/help" style="font-size: 14px; font-weight: 400; color: #94a3b8; text-decoration: none;">
+		Help
+	</a>
 
 	<form method="POST" action="/admin?/logout" style="margin-left: auto;">
 		<button

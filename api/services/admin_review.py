@@ -26,7 +26,7 @@ from __future__ import annotations
 
 import enum
 
-from sqlalchemy import and_, or_, select, update
+from sqlalchemy import and_, case, or_, select, update
 from sqlalchemy import func as sqlfunc
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -37,6 +37,7 @@ from api.models.models import (
     AdminJob,
     Argument,
     ArgumentParticipant,
+    ArgumentStatusEnum,
     Case,
     CaseArgument,
     ImportMethod,
@@ -45,7 +46,7 @@ from api.models.models import (
     ReviewState,
     ValueDiscrepancy,
 )
-from api.services.trust import recompute_argument_tier
+from api.services.trust import recompute_argument_tier, summarize_tier_blockers
 
 # Four name-part fields route through the shared normalize_name_part
 # contract (REVIEW-01/encoding); every other field routes through a
@@ -286,13 +287,12 @@ async def apply_person_value_change(
     return decision
 
 
-async def list_review_queue_arguments(db: AsyncSession) -> list[dict]:
-    """Return every argument needing operator attention, one dict per argument.
-
-    D-05 inclusion predicate — a single OR-composed WHERE over three legs,
-    never three separate per-leg queries combined afterward, so an
-    argument satisfying more than one leg at once still appears exactly
-    once:
+def _argument_attention_predicate():
+    """
+    The D-05 OR-composed inclusion predicate for the Arguments tab — a
+    single expression covering all three legs, never three separate
+    per-leg queries combined afterward, so an argument satisfying more
+    than one leg at once still appears exactly once:
       1. a constituent's review_state == NEEDS_REVIEW
       2. a constituent participant row exists whose person_id IS NULL
          (an *existing* unresolved participant row — deliberately guarded
@@ -303,25 +303,131 @@ async def list_review_queue_arguments(db: AsyncSession) -> list[dict]:
          genuinely degraded, per floor_tier's own empty-sequence rule)
       3. the argument's own trust_tier is UNCERTAIN or PROVISIONAL
 
-    Unbounded (D-04). Sorted server-side: argued_date ASC NULLS LAST, then
-    Argument.id ASC (the tier-rank / published-degraded-first ordering is
-    plan 49-05's), THEN ArgumentParticipant.side ASC, then
-    ArgumentParticipant.id ASC.
+    Factored out (plan 49-05) so list_review_queue_arguments and
+    get_review_queue_stats share the IDENTICAL expression — the dashboard
+    card's count and the screen's own list can never disagree (D-30).
+    """
+    unresolved_participant_leg = and_(
+        ArgumentParticipant.id.is_not(None),
+        ArgumentParticipant.person_id.is_(None),
+    )
+    needs_review_leg = ArgumentParticipant.review_state == ReviewState.NEEDS_REVIEW
+    degraded_tier_leg = Argument.trust_tier.in_(
+        [TrustTier.UNCERTAIN, TrustTier.PROVISIONAL]
+    )
+    return or_(needs_review_leg, unresolved_participant_leg, degraded_tier_leg)
 
-    That trailing pair of keys (tracer feedback gate defect 1) exists so
-    that confirming a constituent can never move it within its argument's
-    row: PostgreSQL writes an UPDATEd row as a new heap tuple, so without an
-    explicit ordering on the participant a sequential scan returns the
-    just-confirmed row last, and the confirmed constituent visibly jumps to
-    the bottom of the list on the very next load. Ordering by (side, id) —
-    both immutable for a given participant — pins every constituent's
-    position regardless of write order.
+
+def _person_attention_predicate():
+    """
+    The People-tab inclusion predicate: review_state IN (needs_review,
+    unreviewed) OR an open value_discrepancy row exists for this person.
+    Factored out (plan 49-05) for the same reason as
+    _argument_attention_predicate above — shared verbatim between
+    list_review_queue_people and get_review_queue_stats.
+    """
+    discrepant_person_ids_subq = (
+        select(ValueDiscrepancy.target_id)
+        .where(
+            ValueDiscrepancy.target_type == "person",
+            ValueDiscrepancy.resolved_at.is_(None),
+        )
+        .distinct()
+    )
+    return or_(
+        Person.review_state.in_([ReviewState.NEEDS_REVIEW, ReviewState.UNREVIEWED]),
+        Person.id.in_(discrepant_person_ids_subq),
+    )
+
+
+def _person_provenance_note(metadata: dict | None) -> str:
+    """
+    Render `Person.provenance_metadata` as a short, plain-text note for the
+    People-tab "Provenance note" column.
+
+    Plan 49-05's action text specifies the format `"{Source} · {method}"`,
+    but `Person` has no `method` field anywhere in its
+    `provenance_metadata` JSONB shape — verified against every writer:
+    `pipeline/commands/import_convokit.py`,
+    `pipeline/commands/import_justices_csv.py`, and
+    `alembic/versions/0022_person_name_authority.py`'s legacy backfill all
+    write exactly `{source, raw, confidence, reason, auto_applied}`, never
+    `method` (that field exists only on `ArgumentParticipant`, which DOES
+    have `source`/`method` columns — Person's D-08 fold deliberately left
+    person-level authority entirely on `review_state` instead). `confidence`
+    (a short, controlled "High"/"Medium"/"Low" vocabulary) is the closest
+    verified analog to a compact second field; `reason` is a full sentence
+    and is not used here. Source wins over spec prose — same precedent as
+    this plan's own `<planner_decisions>` for the StatCard grid and the
+    Edit deep-link target.
+    """
+    metadata = metadata or {}
+    source = metadata.get("source")
+    confidence = metadata.get("confidence")
+    if not source and not confidence:
+        return "—"
+    source_display = source.replace("_", " ").title() if source else None
+    if source_display and confidence:
+        return f"{source_display} · {confidence}"
+    return source_display or confidence
+
+
+async def list_review_queue_arguments(
+    db: AsyncSession,
+    *,
+    status: str | None = None,
+    tier: str | None = None,
+    review_state: str | None = None,
+) -> list[dict]:
+    """Return every argument needing operator attention, one dict per argument.
+
+    D-05 inclusion is `_argument_attention_predicate()` above (unaffected
+    by the filters below — filters narrow WITHIN the attention-worthy set,
+    they do not widen it).
+
+    Filters (D-07) — each an allow-list dict mirroring
+    `api/services/admin_people.py::missing_filters`'s named-predicate-dict
+    idiom: an unrecognised value applies NO additional filter, matching
+    `list_arguments`'/`list_people`'s established "invalid/unrecognized
+    value produces no filter" convention.
+      - `status`: candidate/draft/published/unpublished — deliberately
+        wider than `list_arguments`' three-value allow-list (D-07/D-28);
+        the two allow-lists are independent and `list_arguments` is
+        untouched by this plan.
+      - `tier`: uncertain/provisional/trusted/verified.
+      - `review_state`: unreviewed/needs_review/operator_confirmed/
+        operator_edited — narrows to arguments HAVING AT LEAST ONE
+        constituent in that exact state (a correlated `IN` over argument
+        ids, not a row-level `WHERE`, so an argument's OTHER flagged
+        constituents — flagged via a different leg — are still returned
+        once the argument itself qualifies).
+
+    Sort (D-03, plan 49-05), in this exact key order:
+      1. published-but-degraded floats to the very top: 0 when
+         `status == PUBLISHED` AND `trust_tier IN (UNCERTAIN, PROVISIONAL)`,
+         else 1 — regardless of date or anything else.
+      2. tier rank: uncertain=0, provisional=1, trusted=2, verified=3.
+      3. `argued_date` ASC, NULLS LAST.
+      4. `Argument.id` ASC — the deterministic tie-break. `Argument` has NO
+         `created_at` column, and
+         `.planning/todos/pending/2026-08-20-reset-to-fixture-stale-created-at-timestamps.md`
+         documents that stored timestamps are unreliable on reset
+         fixtures anyway (this is exactly what produced Phase 48's
+         display-ordering bug) — the primary key is the only safe,
+         always-present, monotonic tie-break.
+      5/6. `ArgumentParticipant.side` ASC, `ArgumentParticipant.id` ASC —
+         UNCHANGED from plan 49-01's tracer feedback gate fix (defect 1):
+         pins each constituent's position within its argument's row
+         regardless of write order (a just-confirmed row must not jump).
+
+    Unbounded (D-04) — known tension, recorded deliberately: this is the
+    one screen guaranteed to be large on a real corpus; paging is
+    deliberately deferred.
 
     Only flagged constituent rows are attached to each argument's
     `constituents` list — a participant row that does not itself satisfy
     leg 1 or leg 2 is not included, even when its sibling row on the same
-    argument pulled the argument in via leg 3. Full multi-leg constituent
-    presentation is plan 49-05's scope.
+    argument pulled the argument in via leg 3.
 
     attention_count counts constituents whose review_state == needs_review
     OR whose person_id IS NULL.
@@ -333,19 +439,13 @@ async def list_review_queue_arguments(db: AsyncSession) -> list[dict]:
     picking "most recent by id" never multiplies the outer argument rows
     (tracer feedback gate defect 2b). Used by the frontend to build the
     "Resolve speaker" deep link for an unresolved (person_id IS NULL)
-    constituent — see 49-05-PLAN.md's already-decided routing, pulled
-    forward here because the tracer would otherwise be a dead end on the
-    only unresolved data that exists.
-    """
-    unresolved_participant_leg = and_(
-        ArgumentParticipant.id.is_not(None),
-        ArgumentParticipant.person_id.is_(None),
-    )
-    needs_review_leg = ArgumentParticipant.review_state == ReviewState.NEEDS_REVIEW
-    degraded_tier_leg = Argument.trust_tier.in_(
-        [TrustTier.UNCERTAIN, TrustTier.PROVISIONAL]
-    )
+    constituent.
 
+    Each argument also carries `blockers` — the `summarize_tier_blockers`
+    breakdown for that argument, so an argument queued solely via the
+    degraded-tier leg (zero flagged constituents) has something real to
+    show in the expanded panel (49-05 `<planner_decisions>` E5 empty).
+    """
     latest_admin_job_id = (
         select(AdminJob.id)
         .where(AdminJob.argument_id == Argument.id)
@@ -376,13 +476,68 @@ async def list_review_queue_arguments(db: AsyncSession) -> list[dict]:
         .outerjoin(ArgumentParticipant, ArgumentParticipant.argument_id == Argument.id)
         .outerjoin(Person, Person.id == ArgumentParticipant.person_id)
         .where(CaseArgument.is_lead == True)  # noqa: E712
-        .where(or_(needs_review_leg, unresolved_participant_leg, degraded_tier_leg))
-        .order_by(
-            Argument.argued_date.asc().nulls_last(),
-            Argument.id.asc(),
-            ArgumentParticipant.side.asc(),
-            ArgumentParticipant.id.asc(),
+        .where(_argument_attention_predicate())
+    )
+
+    # D-07 filters — allow-list dicts, unrecognised value applies no filter.
+    status_filters = {
+        "candidate": ArgumentStatusEnum.CANDIDATE,
+        "draft": ArgumentStatusEnum.DRAFT,
+        "published": ArgumentStatusEnum.PUBLISHED,
+        "unpublished": ArgumentStatusEnum.UNPUBLISHED,
+    }
+    if status in status_filters:
+        q = q.where(Argument.status == status_filters[status])
+
+    tier_filters = {
+        "uncertain": TrustTier.UNCERTAIN,
+        "provisional": TrustTier.PROVISIONAL,
+        "trusted": TrustTier.TRUSTED,
+        "verified": TrustTier.VERIFIED,
+    }
+    if tier in tier_filters:
+        q = q.where(Argument.trust_tier == tier_filters[tier])
+
+    review_state_filters = {
+        "unreviewed": ReviewState.UNREVIEWED,
+        "needs_review": ReviewState.NEEDS_REVIEW,
+        "operator_confirmed": ReviewState.OPERATOR_CONFIRMED,
+        "operator_edited": ReviewState.OPERATOR_EDITED,
+    }
+    if review_state in review_state_filters:
+        matching_argument_ids = select(ArgumentParticipant.argument_id).where(
+            ArgumentParticipant.review_state == review_state_filters[review_state]
         )
+        q = q.where(Argument.id.in_(matching_argument_ids))
+
+    # D-03/plan 49-05 sort — see docstring for the exact key order and why
+    # Argument.id (never created_at, which does not exist on this table)
+    # is the deterministic tie-break.
+    published_degraded_rank = case(
+        (
+            and_(
+                Argument.status == ArgumentStatusEnum.PUBLISHED,
+                Argument.trust_tier.in_([TrustTier.UNCERTAIN, TrustTier.PROVISIONAL]),
+            ),
+            0,
+        ),
+        else_=1,
+    )
+    tier_rank = case(
+        (Argument.trust_tier == TrustTier.UNCERTAIN, 0),
+        (Argument.trust_tier == TrustTier.PROVISIONAL, 1),
+        (Argument.trust_tier == TrustTier.TRUSTED, 2),
+        (Argument.trust_tier == TrustTier.VERIFIED, 3),
+        else_=4,
+    )
+
+    q = q.order_by(
+        published_degraded_rank,
+        tier_rank,
+        Argument.argued_date.asc().nulls_last(),
+        Argument.id.asc(),
+        ArgumentParticipant.side.asc(),
+        ArgumentParticipant.id.asc(),
     )
     rows = (await db.execute(q)).all()
 
@@ -470,38 +625,49 @@ async def list_review_queue_arguments(db: AsyncSession) -> list[dict]:
             constituent["discrepancies"] = open_discs
             constituent["has_open_discrepancy"] = len(open_discs) > 0
         arg["attention_count"] = len(arg["constituents"])
+        arg["blockers"] = await summarize_tier_blockers(db, arg_id)
         items.append(arg)
     return items
 
 
-async def list_review_queue_people(db: AsyncSession) -> list[dict]:
+async def list_review_queue_people(db: AsyncSession, *, review_state: str | None = None) -> list[dict]:
     """
     Return every Person needing operator attention (D-02's People tab).
 
-    Filtered to `review_state IN (needs_review, unreviewed)` OR having an
-    open `value_discrepancy` row — matching `list_review_queue_arguments`'s
-    inclusion philosophy at the person level. Unbounded (D-04), sorted by
-    `full_name` for a stable, deterministic render.
-    """
-    discrepant_person_ids_subq = (
-        select(ValueDiscrepancy.target_id)
-        .where(
-            ValueDiscrepancy.target_type == "person",
-            ValueDiscrepancy.resolved_at.is_(None),
-        )
-        .distinct()
-    )
+    D-05-style inclusion is `_person_attention_predicate()` above:
+    `review_state IN (needs_review, unreviewed)` OR having an open
+    `value_discrepancy` row — matching `list_review_queue_arguments`'s
+    inclusion philosophy at the person level. Unbounded (D-04).
 
-    q = (
-        select(Person)
-        .where(
-            or_(
-                Person.review_state.in_([ReviewState.NEEDS_REVIEW, ReviewState.UNREVIEWED]),
-                Person.id.in_(discrepant_person_ids_subq),
-            )
-        )
-        .order_by(Person.full_name.asc(), Person.id.asc())
+    `review_state` (D-07) is an optional allow-list filter narrowing
+    WITHIN that inclusion set — an unrecognised value applies no filter,
+    same convention as the Arguments query.
+
+    Sort (plan 49-05): a CASE ranking needs_review=0, unreviewed=1,
+    everything else=2 (matches the People tab's own Screen Contract, since
+    a Person can carry any of the four review_state values even though
+    only needs_review/unreviewed drive base inclusion), then `full_name`
+    ASC, then `people.id` ASC — the deterministic tie-break (mirrors the
+    Arguments query's own reasoning for why a primary key, not a
+    timestamp, is the safe tie-break).
+    """
+    q = select(Person).where(_person_attention_predicate())
+
+    review_state_filters = {
+        "unreviewed": ReviewState.UNREVIEWED,
+        "needs_review": ReviewState.NEEDS_REVIEW,
+        "operator_confirmed": ReviewState.OPERATOR_CONFIRMED,
+        "operator_edited": ReviewState.OPERATOR_EDITED,
+    }
+    if review_state in review_state_filters:
+        q = q.where(Person.review_state == review_state_filters[review_state])
+
+    review_state_rank = case(
+        (Person.review_state == ReviewState.NEEDS_REVIEW, 0),
+        (Person.review_state == ReviewState.UNREVIEWED, 1),
+        else_=2,
     )
+    q = q.order_by(review_state_rank, Person.full_name.asc(), Person.id.asc())
     people = (await db.execute(q)).scalars().all()
     if not people:
         return []
@@ -542,17 +708,48 @@ async def list_review_queue_people(db: AsyncSession) -> list[dict]:
                 "id": person.id,
                 "full_name": person.full_name,
                 "review_state": person.review_state.value,
-                "provenance_note": (
-                    "operator-confirmed" if person.review_state == ReviewState.OPERATOR_CONFIRMED
-                    else "operator-edited" if person.review_state == ReviewState.OPERATOR_EDITED
-                    else "needs review" if person.review_state == ReviewState.NEEDS_REVIEW
-                    else "unreviewed"
-                ),
+                "provenance_note": _person_provenance_note(person.provenance_metadata),
                 "has_open_discrepancy": len(open_discs) > 0,
                 "discrepancies": open_discs,
             }
         )
     return items
+
+
+async def get_review_queue_stats(db: AsyncSession) -> dict:
+    """
+    Summary counts for the dashboard StatCard (D-30) — `{"arguments": int,
+    "people": int, "total": int}`, derived from two dedicated COUNT
+    queries that reuse the EXACT SAME inclusion predicates as
+    `list_review_queue_arguments`/`list_review_queue_people`
+    (`_argument_attention_predicate`/`_person_attention_predicate`), never
+    by fetching either unbounded list just to produce a number — D-04's
+    unbounded lean makes that expensive, and sharing the predicate is what
+    guarantees the card's count and the screen's own list can never
+    disagree.
+    """
+    arguments_count_q = (
+        select(sqlfunc.count(sqlfunc.distinct(Argument.id)))
+        .select_from(Argument)
+        .join(CaseArgument, CaseArgument.argument_id == Argument.id)
+        .outerjoin(ArgumentParticipant, ArgumentParticipant.argument_id == Argument.id)
+        .where(CaseArgument.is_lead == True)  # noqa: E712
+        .where(_argument_attention_predicate())
+    )
+    arguments_count = (await db.execute(arguments_count_q)).scalar_one()
+
+    people_count_q = (
+        select(sqlfunc.count(sqlfunc.distinct(Person.id)))
+        .select_from(Person)
+        .where(_person_attention_predicate())
+    )
+    people_count = (await db.execute(people_count_q)).scalar_one()
+
+    return {
+        "arguments": arguments_count,
+        "people": people_count,
+        "total": arguments_count + people_count,
+    }
 
 
 async def resolve_participant_review(

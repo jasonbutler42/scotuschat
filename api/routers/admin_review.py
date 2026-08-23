@@ -15,6 +15,8 @@ and widens the participant action set to the full three-action resolve
 set (confirm, confirm_unattributable, reflag).
 """
 
+from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -24,6 +26,7 @@ from api.schemas.admin_review import (
     ReviewActionRequest,
     ReviewQueueArgumentItem,
     ReviewQueuePersonItem,
+    ReviewQueueStats,
 )
 from api.services import admin_review as admin_review_service
 
@@ -35,21 +38,42 @@ router = APIRouter(
 
 
 @router.get("/arguments", response_model=list[ReviewQueueArgumentItem])
-async def get_review_queue_arguments(db: AsyncSession = Depends(get_db)):
+async def get_review_queue_arguments(
+    status: Optional[str] = None,
+    tier: Optional[str] = None,
+    review_state: Optional[str] = None,
+    db: AsyncSession = Depends(get_db),
+):
     """Return every argument needing operator attention (D-05).
 
     Returns an empty list (never 404) when nothing currently needs review.
+
+    ``status``/``tier``/``review_state`` (D-07) are optional filters
+    passed straight through to the service — validation is the service's
+    own allow-list (an unrecognised value applies no filter), matching
+    ``list_arguments``'s established router shape.
     """
-    return await admin_review_service.list_review_queue_arguments(db)
+    return await admin_review_service.list_review_queue_arguments(
+        db, status=status, tier=tier, review_state=review_state
+    )
 
 
 @router.get("/people", response_model=list[ReviewQueuePersonItem])
-async def get_review_queue_people(db: AsyncSession = Depends(get_db)):
+async def get_review_queue_people(
+    review_state: Optional[str] = None,
+    db: AsyncSession = Depends(get_db),
+):
     """Return every Person needing operator attention (D-02).
 
     Returns an empty list (never 404) when nothing currently needs review.
     """
-    return await admin_review_service.list_review_queue_people(db)
+    return await admin_review_service.list_review_queue_people(db, review_state=review_state)
+
+
+@router.get("/stats", response_model=ReviewQueueStats)
+async def get_review_queue_stats(db: AsyncSession = Depends(get_db)):
+    """Dedicated COUNT-based summary for the dashboard StatCard (D-30)."""
+    return await admin_review_service.get_review_queue_stats(db)
 
 
 @router.patch("/participants/{participant_id}", response_model=dict)

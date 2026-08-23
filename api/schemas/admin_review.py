@@ -80,6 +80,11 @@ class ReviewQueueArgumentItem(BaseModel):
     attention_count: int
     admin_job_id: Optional[int] = None
     constituents: list[ReviewQueueConstituent]
+    # Plan 49-05: the summarize_tier_blockers breakdown for this argument
+    # (list of {"code": str, "count": int} dicts) — populated even when
+    # constituents is empty, so a row queued solely via the degraded-tier
+    # leg still has something real to show in the expanded panel.
+    blockers: list[dict] = []
 
 
 class ReviewQueuePersonItem(BaseModel):
@@ -94,10 +99,16 @@ class ReviewQueuePersonItem(BaseModel):
 
 
 class ReviewQueueStats(BaseModel):
-    """Summary counts for the review queue's header/badges."""
+    """Summary counts for the dashboard StatCard (D-30) — plan 49-05.
 
-    arguments_needing_attention: int
-    people_needing_attention: int
+    Backed by ``get_review_queue_stats``'s two dedicated COUNT queries,
+    which share the exact inclusion predicates the list endpoints use, so
+    this can never disagree with what the screen itself would show.
+    """
+
+    arguments: int
+    people: int
+    total: int
 
 
 class ReviewActionRequest(BaseModel):

@@ -923,3 +923,489 @@ async def test_multiple_open_discrepancies_close_with_identical_resolved_at(revi
             assert len(resolved_ats) == 1, "all three rows must share the identical resolved_at"
     finally:
         await _teardown_needs_review_participant(ids)
+
+
+# ---------------------------------------------------------------------------
+# Plan 49-05, Task 1 — filterable, deterministically sorted queue queries
+# and the dashboard COUNT. One named test per <behavior> bullet.
+# ---------------------------------------------------------------------------
+
+
+async def _seed_bare_argument(*, status, trust_tier, argued_date=None):
+    """A minimal argument + lead case, no participants — for filter/sort
+    behavior tests that don't need a flagged constituent. `trust_tier` is
+    stamped directly (bypassing recompute_argument_tier) since these tests
+    exercise the QUERY's filter/sort, not the trust-recompute pipeline."""
+    import uuid as _uuid
+
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import Argument, Case, CaseArgument
+
+    suffix = _uuid.uuid4().hex[:8]
+    async with AsyncSessionLocal() as db:
+        arg = Argument(status=status, argued_date=argued_date, trust_tier=trust_tier)
+        db.add(arg)
+        await db.flush()
+
+        case = Case(
+            docket_number=f"RV-06-{suffix}",
+            docket_number_norm=f"rv-06-{suffix}",
+            case_name=f"Review Fixture v. Bare {suffix}",
+            term_year=2026,
+            slug=f"review-fixture-bare-{suffix}",
+        )
+        db.add(case)
+        await db.flush()
+        db.add(CaseArgument(case_id=case.id, argument_id=arg.id, is_lead=True))
+        await db.commit()
+
+        return {"argument_id": arg.id, "case_id": case.id}
+
+
+async def _teardown_bare_argument(ids: dict) -> None:
+    from sqlalchemy import delete as sa_delete
+
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import Argument, ArgumentParticipant, Case, CaseArgument
+
+    async with AsyncSessionLocal() as db:
+        await db.execute(
+            sa_delete(ArgumentParticipant).where(ArgumentParticipant.argument_id == ids["argument_id"])
+        )
+        await db.execute(
+            sa_delete(CaseArgument).where(CaseArgument.argument_id == ids["argument_id"])
+        )
+        await db.execute(sa_delete(Case).where(Case.id == ids["case_id"]))
+        await db.execute(sa_delete(Argument).where(Argument.id == ids["argument_id"]))
+        await db.commit()
+
+
+async def _seed_argument_satisfying_all_three_legs():
+    """One PUBLISHED argument, trust_tier UNCERTAIN (leg 3), with two
+    participants: one flagged needs_review (leg 1) and one unresolved,
+    person_id IS NULL (leg 2) — proves the D-05 OR-composition returns the
+    argument exactly once even when all three legs independently match."""
+    import uuid as _uuid
+
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import (
+        Argument,
+        ArgumentParticipant,
+        ArgumentStatusEnum,
+        Case,
+        CaseArgument,
+        Person,
+        ReviewState,
+        SideEnum,
+    )
+    from api.domain.trust import TrustTier
+
+    suffix = _uuid.uuid4().hex[:8]
+    async with AsyncSessionLocal() as db:
+        arg = Argument(status=ArgumentStatusEnum.PUBLISHED, trust_tier=TrustTier.UNCERTAIN)
+        db.add(arg)
+        await db.flush()
+
+        case = Case(
+            docket_number=f"RV-07-{suffix}",
+            docket_number_norm=f"rv-07-{suffix}",
+            case_name="Review Fixture v. All Three Legs",
+            term_year=2026,
+            slug=f"review-fixture-all-three-legs-{suffix}",
+        )
+        db.add(case)
+        await db.flush()
+        db.add(CaseArgument(case_id=case.id, argument_id=arg.id, is_lead=True))
+
+        person = Person(full_name="Review Fixture All-Three-Legs Advocate")
+        db.add(person)
+        await db.flush()
+
+        needs_review_participant = ArgumentParticipant(
+            argument_id=arg.id,
+            person_id=person.id,
+            raw_speaker_label="MR. THREE LEGS",
+            side=SideEnum.PETITIONER,
+            review_state=ReviewState.NEEDS_REVIEW,
+        )
+        unresolved_participant = ArgumentParticipant(
+            argument_id=arg.id,
+            person_id=None,
+            raw_speaker_label="UNKNOWN THREE LEGS",
+            side=SideEnum.RESPONDENT,
+        )
+        db.add_all([needs_review_participant, unresolved_participant])
+        await db.commit()
+
+        return {
+            "argument_id": arg.id,
+            "case_id": case.id,
+            "person_id": person.id,
+            "participant_ids": [needs_review_participant.id, unresolved_participant.id],
+        }
+
+
+async def _teardown_argument_satisfying_all_three_legs(ids: dict) -> None:
+    from sqlalchemy import delete as sa_delete
+
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import Argument, ArgumentParticipant, Case, CaseArgument, Person
+
+    async with AsyncSessionLocal() as db:
+        await db.execute(
+            sa_delete(ArgumentParticipant).where(ArgumentParticipant.argument_id == ids["argument_id"])
+        )
+        await db.execute(
+            sa_delete(CaseArgument).where(CaseArgument.argument_id == ids["argument_id"])
+        )
+        await db.execute(sa_delete(Case).where(Case.id == ids["case_id"]))
+        await db.execute(sa_delete(Person).where(Person.id == ids["person_id"]))
+        await db.execute(sa_delete(Argument).where(Argument.id == ids["argument_id"]))
+        await db.commit()
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_argument_satisfying_all_three_inclusion_legs_appears_exactly_once(
+    review_client,
+) -> None:
+    """<behavior> bullet 1: an argument satisfying all three inclusion legs
+    appears exactly once."""
+    ids = await _seed_argument_satisfying_all_three_legs()
+    try:
+        response = await review_client.get(
+            "/api/admin/review/arguments", headers=_admin_headers()
+        )
+        assert response.status_code == 200
+        matches = [item for item in response.json() if item["id"] == ids["argument_id"]]
+        assert len(matches) == 1
+        assert len(matches[0]["constituents"]) == 2
+    finally:
+        await _teardown_argument_satisfying_all_three_legs(ids)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_published_uncertain_argument_sorts_above_non_published_regardless_of_date(
+    review_client,
+) -> None:
+    """<behavior> bullet 2: a published argument whose tier is uncertain
+    sorts above every candidate/draft row regardless of date."""
+    import datetime
+
+    from api.models.models import ArgumentStatusEnum
+    from api.domain.trust import TrustTier
+
+    ids_published = await _seed_bare_argument(
+        status=ArgumentStatusEnum.PUBLISHED,
+        trust_tier=TrustTier.UNCERTAIN,
+        argued_date=datetime.date(2025, 6, 1),
+    )
+    ids_draft_old = await _seed_bare_argument(
+        status=ArgumentStatusEnum.DRAFT,
+        trust_tier=TrustTier.PROVISIONAL,
+        argued_date=datetime.date(1950, 1, 1),
+    )
+    try:
+        response = await review_client.get(
+            "/api/admin/review/arguments", headers=_admin_headers()
+        )
+        ids_order = [item["id"] for item in response.json()]
+        pos_published = ids_order.index(ids_published["argument_id"])
+        pos_draft = ids_order.index(ids_draft_old["argument_id"])
+        assert pos_published < pos_draft, (
+            "published-but-degraded must float above every non-published "
+            "row regardless of argued_date"
+        )
+    finally:
+        await _teardown_bare_argument(ids_published)
+        await _teardown_bare_argument(ids_draft_old)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_same_tier_same_date_arguments_return_in_stable_id_order_across_calls(
+    review_client,
+) -> None:
+    """<behavior> bullet 3: two arguments with the same tier and the same
+    argued_date always come back in the same order across repeated calls
+    (id ASC)."""
+    import datetime
+
+    from api.models.models import ArgumentStatusEnum
+    from api.domain.trust import TrustTier
+
+    same_date = datetime.date(2021, 5, 5)
+    ids_a = await _seed_bare_argument(
+        status=ArgumentStatusEnum.DRAFT, trust_tier=TrustTier.UNCERTAIN, argued_date=same_date
+    )
+    ids_b = await _seed_bare_argument(
+        status=ArgumentStatusEnum.DRAFT, trust_tier=TrustTier.UNCERTAIN, argued_date=same_date
+    )
+    try:
+        response_1 = await review_client.get(
+            "/api/admin/review/arguments", headers=_admin_headers()
+        )
+        wanted = {ids_a["argument_id"], ids_b["argument_id"]}
+        order_1 = [item["id"] for item in response_1.json() if item["id"] in wanted]
+
+        response_2 = await review_client.get(
+            "/api/admin/review/arguments", headers=_admin_headers()
+        )
+        order_2 = [item["id"] for item in response_2.json() if item["id"] in wanted]
+
+        assert order_1 == order_2, "repeated calls must return an identical order"
+        assert order_1 == sorted(order_1), "the tie-break must be Argument.id ASC"
+    finally:
+        await _teardown_bare_argument(ids_a)
+        await _teardown_bare_argument(ids_b)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_null_argued_date_sorts_after_dated_arguments_in_same_tier(
+    review_client,
+) -> None:
+    """<behavior> bullet 4: an argument with a NULL argued_date sorts
+    after every dated argument in its tier group."""
+    import datetime
+
+    from api.models.models import ArgumentStatusEnum
+    from api.domain.trust import TrustTier
+
+    ids_dated = await _seed_bare_argument(
+        status=ArgumentStatusEnum.DRAFT,
+        trust_tier=TrustTier.UNCERTAIN,
+        argued_date=datetime.date(2020, 1, 1),
+    )
+    ids_null = await _seed_bare_argument(
+        status=ArgumentStatusEnum.DRAFT, trust_tier=TrustTier.UNCERTAIN, argued_date=None
+    )
+    try:
+        response = await review_client.get(
+            "/api/admin/review/arguments", headers=_admin_headers()
+        )
+        ids_order = [item["id"] for item in response.json()]
+        pos_dated = ids_order.index(ids_dated["argument_id"])
+        pos_null = ids_order.index(ids_null["argument_id"])
+        assert pos_dated < pos_null, "NULLS LAST within the same tier group"
+    finally:
+        await _teardown_bare_argument(ids_dated)
+        await _teardown_bare_argument(ids_null)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_tier_filter_narrows_and_unrecognized_value_applies_no_filter(
+    review_client,
+) -> None:
+    """<behavior> bullet 5: ?tier=uncertain narrows to uncertain arguments;
+    an unrecognised tier value applies no filter."""
+    from api.models.models import ArgumentStatusEnum
+    from api.domain.trust import TrustTier
+
+    ids_uncertain = await _seed_bare_argument(
+        status=ArgumentStatusEnum.DRAFT, trust_tier=TrustTier.UNCERTAIN
+    )
+    ids_provisional = await _seed_bare_argument(
+        status=ArgumentStatusEnum.DRAFT, trust_tier=TrustTier.PROVISIONAL
+    )
+    try:
+        narrowed = await review_client.get(
+            "/api/admin/review/arguments?tier=uncertain", headers=_admin_headers()
+        )
+        narrowed_ids = {item["id"] for item in narrowed.json()}
+        assert ids_uncertain["argument_id"] in narrowed_ids
+        assert ids_provisional["argument_id"] not in narrowed_ids
+
+        unrecognized = await review_client.get(
+            "/api/admin/review/arguments?tier=banana", headers=_admin_headers()
+        )
+        unrecognized_ids = {item["id"] for item in unrecognized.json()}
+        assert ids_uncertain["argument_id"] in unrecognized_ids
+        assert ids_provisional["argument_id"] in unrecognized_ids
+    finally:
+        await _teardown_bare_argument(ids_uncertain)
+        await _teardown_bare_argument(ids_provisional)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_review_state_filter_narrows_arguments_to_matching_constituent(
+    review_client,
+) -> None:
+    """<behavior> bullet 6 (arguments half): ?review_state=needs_review
+    narrows to arguments having at least one such constituent."""
+    ids_needs = await _seed_needs_review_participant()
+    ids_unresolved = await _seed_unresolved_participant()
+    try:
+        response = await review_client.get(
+            "/api/admin/review/arguments?review_state=needs_review", headers=_admin_headers()
+        )
+        returned_ids = {item["id"] for item in response.json()}
+        assert ids_needs["argument_id"] in returned_ids
+        assert ids_unresolved["argument_id"] not in returned_ids
+    finally:
+        await _teardown_needs_review_participant(ids_needs)
+        await _teardown_unresolved_participant(ids_unresolved)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_status_filter_accepts_candidate_independent_of_arguments_list_allowlist(
+    review_client,
+) -> None:
+    """<behavior> bullet 7: ?status=candidate is accepted here even though
+    /admin/arguments excludes candidates — the two allow-lists are
+    independent."""
+    ids = await _seed_needs_review_participant()  # seeded as CANDIDATE
+    try:
+        candidate_response = await review_client.get(
+            "/api/admin/review/arguments?status=candidate", headers=_admin_headers()
+        )
+        candidate_ids = {item["id"] for item in candidate_response.json()}
+        assert ids["argument_id"] in candidate_ids
+
+        draft_response = await review_client.get(
+            "/api/admin/review/arguments?status=draft", headers=_admin_headers()
+        )
+        draft_ids = {item["id"] for item in draft_response.json()}
+        assert ids["argument_id"] not in draft_ids
+    finally:
+        await _teardown_needs_review_participant(ids)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_get_review_queue_stats_counts_via_dedicated_count_queries(
+    review_client,
+) -> None:
+    """<behavior> bullet 8: get_review_queue_stats returns argument, people,
+    and total counts from COUNT queries and never materializes the
+    unbounded list."""
+    from api.core.database import AsyncSessionLocal
+    from api.services.admin_review import get_review_queue_stats
+
+    async with AsyncSessionLocal() as db:
+        before = await get_review_queue_stats(db)
+
+    ids = await _seed_needs_review_participant()
+    try:
+        async with AsyncSessionLocal() as db:
+            after = await get_review_queue_stats(db)
+
+        # +1 flagged argument, +1 unreviewed Person (the fixture's advocate
+        # defaults to review_state=UNREVIEWED, so it enters the People-tab
+        # inclusion set too).
+        assert after["arguments"] == before["arguments"] + 1
+        assert after["people"] == before["people"] + 1
+        assert after["total"] == after["arguments"] + after["people"]
+    finally:
+        await _teardown_needs_review_participant(ids)
+
+
+async def _seed_people_for_sort():
+    """Two review_state=UNREVIEWED people (distinct names) plus one
+    review_state=NEEDS_REVIEW person, for the People-tab sort/filter
+    tests."""
+    import uuid as _uuid
+
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import Person, ReviewState
+
+    suffix = _uuid.uuid4().hex[:8]
+    async with AsyncSessionLocal() as db:
+        p_needs = Person(full_name=f"Bbb Needs {suffix}", review_state=ReviewState.NEEDS_REVIEW)
+        p_unreviewed_a = Person(
+            full_name=f"Aaa Unreviewed {suffix}", review_state=ReviewState.UNREVIEWED
+        )
+        p_unreviewed_b = Person(
+            full_name=f"Ccc Unreviewed {suffix}", review_state=ReviewState.UNREVIEWED
+        )
+        db.add_all([p_needs, p_unreviewed_a, p_unreviewed_b])
+        await db.commit()
+
+        return {
+            "needs_id": p_needs.id,
+            "unreviewed_a_id": p_unreviewed_a.id,
+            "unreviewed_b_id": p_unreviewed_b.id,
+        }
+
+
+async def _teardown_people_for_sort(ids: dict) -> None:
+    from sqlalchemy import delete as sa_delete
+
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import Person
+
+    async with AsyncSessionLocal() as db:
+        await db.execute(
+            sa_delete(Person).where(
+                Person.id.in_(
+                    [ids["needs_id"], ids["unreviewed_a_id"], ids["unreviewed_b_id"]]
+                )
+            )
+        )
+        await db.commit()
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_people_query_orders_needs_review_then_unreviewed_then_name(
+    review_client,
+) -> None:
+    """<behavior> bullet 9: the people query orders needs_review, then
+    unreviewed, then full_name ASC, then id ASC."""
+    ids = await _seed_people_for_sort()
+    try:
+        response = await review_client.get(
+            "/api/admin/review/people", headers=_admin_headers()
+        )
+        assert response.status_code == 200
+        wanted = {ids["needs_id"], ids["unreviewed_a_id"], ids["unreviewed_b_id"]}
+        order = [item["id"] for item in response.json() if item["id"] in wanted]
+        assert order == [ids["needs_id"], ids["unreviewed_a_id"], ids["unreviewed_b_id"]]
+    finally:
+        await _teardown_people_for_sort(ids)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_review_state_filter_narrows_people_to_matching_state(review_client) -> None:
+    """<behavior> bullet 6 (people half): ?review_state=needs_review
+    narrows the People tab to people in that state."""
+    ids = await _seed_people_for_sort()
+    try:
+        response = await review_client.get(
+            "/api/admin/review/people?review_state=needs_review", headers=_admin_headers()
+        )
+        returned_ids = {item["id"] for item in response.json()}
+        assert ids["needs_id"] in returned_ids
+        assert ids["unreviewed_a_id"] not in returned_ids
+        assert ids["unreviewed_b_id"] not in returned_ids
+    finally:
+        await _teardown_people_for_sort(ids)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_zero_constituent_degraded_argument_carries_real_blockers(
+    review_client,
+) -> None:
+    """Supports the E5-empty planner decision: an argument queued solely
+    via the degraded-tier leg (zero flagged constituents) carries a real
+    `blockers` breakdown (`no_constituents`), not an empty list with
+    nothing for the expanded panel to render."""
+    from api.models.models import ArgumentStatusEnum
+    from api.domain.trust import TrustTier
+
+    ids = await _seed_bare_argument(status=ArgumentStatusEnum.DRAFT, trust_tier=TrustTier.UNCERTAIN)
+    try:
+        response = await review_client.get(
+            "/api/admin/review/arguments", headers=_admin_headers()
+        )
+        item = next(i for i in response.json() if i["id"] == ids["argument_id"])
+        assert item["constituents"] == []
+        assert any(b["code"] == "no_constituents" for b in item["blockers"])
+    finally:
+        await _teardown_bare_argument(ids)

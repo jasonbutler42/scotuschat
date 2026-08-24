@@ -2,20 +2,20 @@
 gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: Import & Provenance Re-model
-current_phase: 50
-current_phase_name: Unified Import Path
-status: Phase 49 complete — all 6 plans done; REVIEW-01..05 all Complete
-stopped_at: Phase 49 complete, ready to plan Phase 50
-last_updated: "2026-08-23T21:47:00.945Z"
-last_activity: 2026-08-23
-last_activity_desc: Phase 49 complete, transitioned to Phase 50
+current_phase: 49
+current_phase_name: Review Model
+status: Phase 49 REOPENED 2026-08-24 — UAT found 4 open gaps; verification status passed -> gaps_found
+stopped_at: Phase 49 UAT complete (31 pass / 3 issues); planning gap-closure plans
+last_updated: "2026-08-24T14:20:00Z"
+last_activity: 2026-08-24
+last_activity_desc: Phase 49 UAT completed; 4 gaps open, 1 fixed in-session; phase reopened
 state_head: 6c7a0f7cb0b857dc81356563a23c8962b85d7417
 progress:
   total_phases: 5
-  completed_phases: 3
+  completed_phases: 2
   total_plans: 22
   completed_plans: 22
-  percent: 60
+  percent: 40
 ---
 
 # Project State
@@ -25,14 +25,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-18 — Phase 47 complete; corpus-first / PDF-deferred scope decision recorded)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** Phase 49 — Review Model
+**Current focus:** Phase 49 — Review Model (REOPENED — gap closure)
 
 ## Current Position
 
-Phase: 50 — Unified Import Path
-Last activity: 2026-08-23 — Phase 49 complete, transitioned to Phase 50
+Phase: 49 — Review Model (reopened for gap closure)
+Last activity: 2026-08-24 — Phase 49 UAT completed (31 pass / 3 issues / 0 pending); phase reopened for gap closure
 
-**Next action:** `/gsd-verify-work 49` then `/gsd-discuss-phase 50` — all eight outstanding live-browser human-checks across the whole phase (49-01/49-03/49-05/49-06) are consolidated into one ordered list in `.planning/phases/49-review-model/49-EVIDENCE.md` §9 for a single sitting; see Blockers/Concerns below.
+**Next action:** `/gsd-plan-phase 49 --gaps` then `/gsd-execute-phase 49 --gaps-only` — the 2026-08-24 UAT session (`49-UAT.md`) closed all 34 tests and left 4 open gaps (`G-49-3` major, `G-49-4a`/`G-49-4b`/`G-49-5a` minor, plus cosmetic `G-49-5b`); `G-49-9a` was fixed in-session (commit `690d51e20`, needs a visual re-check). WR-01 remains open — UAT test 7 passed only because the common path masks it. Phase 50 is NOT started; the earlier advance to it was premature.
 
 Phase 49-06 close-out notes (2026-08-23):
 

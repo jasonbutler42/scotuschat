@@ -1,7 +1,7 @@
 ---
 phase: 49-review-model
 verified: 2026-08-23T18:00:00Z
-status: passed
+status: gaps_found
 score: 5/5 roadmap success criteria verified
 behavior_unverified: 0
 overrides_applied: 0
@@ -9,26 +9,56 @@ re_verification:
   previous_status: gaps_found
   previous_score: 4/5
   gaps_closed:
+
     - "Resolving a review item (confirm or edit) advances its review_state and recomputes the affected argument's trust (ROADMAP SC4 / REVIEW-04) — the 'create new person' branch of the resolve flow (create_person_for_job) now advances review_state to OPERATOR_EDITED and closes its own open value_discrepancy rows, matching its sibling writers."
   gaps_remaining: []
   regressions: []
 human_verification:
+
   - test: "Toggle a Resolve-card row to Bench, open 'Create new bench person,' confirm Bench is pre-selected in the popover; close and reopen without toggling again; repeat on an Advocate row."
     expected: "The popover's radio pre-selection always matches the row's CURRENT side at the moment it opens."
     why_human: "Known, code-confirmed defect (WR-01, 49-REVIEW.md), left unfixed by explicit human scope decision (Criticals only this pass) — CreatePersonPopover.svelte initializes `side = $state(initialSide)` once at mount and only resyncs on close (resetForm), not on open or on a later prop change. Needs a human to confirm the visual/interactive symptom and to decide whether to fix it in this phase or defer."
+
   - test: "Full /admin/review screen walkthrough: tab switching; filter composition surviving back-button; expand/collapse including zero-constituent blockers fallback; Confirm/Confirm-as-unattributable/Re-flag acting on the correct row; five StatCards in one row; no horizontal scroll at 375px."
     expected: "Matches 49-05's UI-SPEC/must_haves exactly."
     why_human: "Browser-only visual/interactive verification; this sandbox cannot authenticate to /admin/** (denied .env read for ADMIN_USERNAME/ADMIN_PASSWORD/SESSION_SECRET), consistent with 49-EVIDENCE.md §9 item 4."
+
   - test: "26-UAT Test 26 (Speakers card 'Unresolved — choose a role' placeholder + disabled Save) and 14-UAT Test 8 (non-interactive avatar for an unresolved utterance), on the seeded live data state."
     expected: "Placeholder/disabled-Save render for 26-UAT; plain non-clickable avatar circle for 14-UAT (second precondition: the fixture must also be published, which the seeder deliberately does not do)."
     why_human: "Data/API layer confirmed by source trace and live query in 49-EVIDENCE.md §2/§3; the actual browser rendering was never observed, for the same credential reason."
+
   - test: "D-32's authority-conflict walkthrough's Discrepancy badge — actual visual rendering on /admin/review."
     expected: "A visible 'Discrepancy' badge on the flagged constituent, matching 49-05's E6 spec."
     why_human: "Fully verified end-to-end at the data/API layer (49-EVIDENCE.md §5); the badge's own rendering was never observed in a browser."
+
   - test: "The Dev Tools 'Seed unresolved speaker' button and its success line on /admin."
     expected: "Clicking the button calls the seeder and displays a success line naming the Complexity fixture and 'uncertain'."
     why_human: "Backend and form action fully tested; the button's own rendering/behavior was never observed in a browser."
 ---
+
+> **REOPENED 2026-08-24 — status changed `passed` -> `gaps_found`.** The 5/5 score above
+> reflects the 2026-08-23 automated/code verification and remains accurate for what it
+> measured. It was superseded by the human UAT session completed 2026-08-24
+> (`49-UAT.md`, 31 passed / 3 issues / 0 pending), which found **4 open gaps** that the
+> code-level pass could not see because they are operator-facing defects:
+>
+> | Gap | Severity | Summary |
+> |-----|----------|---------|
+> | `G-49-3`  | major    | No bench<->advocate control on the Speakers card; `is_bench` arrives derived and is not operator-correctable |
+> | `G-49-4a` | minor    | Review-queue action link reads a bare "Edit"; one static label cannot cover both `argumentEditHref` branches |
+> | `G-49-4b` | minor    | "constituent" leaked from an internal adjective into operator copy; plus `1 constituent need review` agreement bug |
+> | `G-49-5a` | minor    | Horizontal scroll at 375px from two independent causes; UAT sub-items 5 and 7 are in direct tension |
+>
+> One further gap, `G-49-9a` (unresolved-avatar footprint asymmetry), was found and
+> **fixed in-session** (commit `690d51e20`) and is already closed.
+>
+> Also still open from the original pass, unchanged by the UAT: **WR-01**. UAT test 7
+> passed, but only because the common interaction path masks the stale-`$state` bug —
+> `CreatePersonPopover.svelte:48` still captures `initialSide` once at mount. Do not tick
+> `human_verification` item 1 below on the strength of that pass.
+>
+> UAT sub-item 5.6 (StatCard singular/zero-state copy) was never observed — it needs the
+> review queue at exactly 1 and at 0 — and is recorded as NOT OBSERVED, not as a pass.
 
 # Phase 49: Review Model Verification Report
 

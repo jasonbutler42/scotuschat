@@ -272,7 +272,7 @@ Plans:
   4. The operator can resolve a review item (confirm or edit) from the queue, and doing so advances its `review_state` and recomputes the affected argument's trust.
   5. The legacy `name_needs_review` / `name_extraction_metadata` mechanism is folded into the unified review_state + provenance record, with no parallel mechanism remaining.
 
-**Plans**: 6/6 plans executed
+**Plans**: 9 plans (6/9 executed; 3 gap-closure plans added 2026-08-24 after UAT reopened the phase)
 **UI hint**: yes
 
 Plans:
@@ -296,6 +296,12 @@ Plans:
 **Wave 5** *(blocked on Wave 4 completion)*
 
 - [x] 49-06-PLAN.md — Dev-only unresolved-speaker seeder, the D-32 live authority-conflict walkthrough, closure of 26-UAT Test 26 and 14-UAT Test 8, and requirement traceability (wave 5)
+
+**Gap closure** *(added 2026-08-24; UAT `49-UAT.md` reopened the phase with 4 open gaps)*
+
+- [ ] 49-07-PLAN.md — Operator-facing copy: the destination-naming action-verb link label, the domain-noun rename in rendered copy only, and the zero-one-many agreement fix — closes `G-49-4a`, `G-49-4b`, `G-49-5b` (wave 1)
+- [ ] 49-09-PLAN.md — WR-01 popover open-time side resync, plus a blocking decision checkpoint on whether bench/advocate classification becomes editable on the Speakers card and by which mechanism — closes `G-49-3` (wave 1)
+- [ ] 49-08-PLAN.md — Narrow-viewport containment: overflow containers for both queue tables and the status segment group, and an auto-fit dashboard grid with an executable track-fit gate — closes `G-49-5a` (wave 2, blocked on 49-07 releasing `admin/review/+page.svelte`)
 
 ### Phase 50: Unified Import Path
 

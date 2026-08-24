@@ -317,7 +317,19 @@
 		<!-- Filter row (E3) -->
 		<div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: center; margin-bottom: 16px;">
 			{#if data.tab === 'arguments'}
-				<div style="display: flex; gap: 0;">
+				<!-- G-49-5a: the status segment group's ~480px min-content width
+				     (five 44px-min-height, 16px-font buttons with no flex-wrap)
+				     overflows the 327px inner content width at a 375px viewport
+				     independently of the queue tables. min-width: 0 on this outer
+				     wrapper is load-bearing: a flex item's default min-width: auto
+				     resolves to its content's min-content size, so without it the
+				     horizontal-scroll declaration below never engages. width:
+				     max-content on the inner group keeps the five segments at their natural
+				     widths (no flex-wrap — a wrapped second line would show a
+				     detached, half-rounded fragment given the first/last button's
+				     one-sided border-radius and the middle four's border-left: none). -->
+				<div style="min-width: 0; overflow-x: auto;">
+				<div style="display: flex; gap: 0; width: max-content;">
 					<button
 						type="button"
 						aria-pressed={!data.status}
@@ -353,6 +365,7 @@
 						onclick={() => selectStatus('unpublished')}
 						style="{filterButtonStyle(data.status === 'unpublished', '#fb923c')} border-left: none; border-radius: 0 6px 6px 0;"
 					>Unpublished</button>
+				</div>
 				</div>
 
 				<label style="display: flex; align-items: center; gap: 8px; font-size: 14px; color: #94a3b8;">
@@ -431,6 +444,13 @@
 				</p>
 			</div>
 		{:else if data.tab === 'arguments'}
+			<!-- G-49-5a: this table's twelve no-wrap cells pin a min-content
+			     width wider than the 327px inner content width at a 375px
+			     viewport, so it scrolls inside this container rather than
+			     pushing the page body sideways. Those cells and the
+			     no-truncation rule (49-UI-SPEC E1/E2 long-text) are deliberately
+			     left intact — nothing here is clipped or ellipsised. -->
+			<div style="overflow-x: auto;">
 			<table style="width: 100%; border-collapse: collapse;">
 				<thead>
 					<tr>
@@ -571,7 +591,11 @@
 					{/each}
 				</tbody>
 			</table>
+			</div>
 		{:else}
+			<!-- G-49-5a: same horizontal-scroll containment as the Arguments
+			     table above. -->
+			<div style="overflow-x: auto;">
 			<table style="width: 100%; border-collapse: collapse;">
 				<thead>
 					<tr>
@@ -629,6 +653,7 @@
 					{/each}
 				</tbody>
 			</table>
+			</div>
 		{/if}
 	</div>
 </main>

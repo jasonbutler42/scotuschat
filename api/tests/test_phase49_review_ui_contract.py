@@ -243,3 +243,70 @@ def test_backstop_E5_constituent_blocks_share_one_each_loop_with_16px_gap() -> N
         "{#each item.constituents} loop — one layout path for one block "
         "or many"
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# G-49-5a (49-08): horizontal-scroll containment. Three overflow-x: auto
+# wrappers — the two queue tables and the status segment group's outer
+# wrapper — so wide content scrolls inside itself instead of pushing the
+# page body sideways at a 375px viewport. Source-text structural
+# assertions only; the behavioural evidence is Task 3's <human-check>
+# browser pass.
+# ─────────────────────────────────────────────────────────────────────────
+
+
+def test_both_queue_tables_are_wrapped_in_an_overflow_container() -> None:
+    """
+    Exactly three overflow-x: auto declarations exist in the file (the two
+    queue tables plus the status segment group's outer wrapper), and each
+    <table opening tag is immediately preceded — modulo whitespace and an
+    optional HTML comment — by a div whose inline style declares
+    overflow-x: auto.
+    """
+    assert REVIEW_SOURCE.count("overflow-x: auto") == 3
+    table_wrapper_pattern = re.compile(
+        r'<div style="overflow-x: auto;">\s*(?:<!--.*?-->\s*)?<table',
+        re.DOTALL,
+    )
+    matches = table_wrapper_pattern.findall(REVIEW_SOURCE)
+    assert len(matches) == 2, (
+        f"expected both <table> elements to be immediately preceded by an "
+        f"overflow-x: auto wrapper div, found {len(matches)}"
+    )
+
+
+def test_status_segment_group_can_shrink_and_scroll() -> None:
+    """
+    A flex item's default min-width: auto resolves to its content's
+    min-content size — without min-width: 0 on the outer wrapper, the
+    overflow-x: auto declaration on that same wrapper never engages
+    because the item refuses to shrink below the five buttons' combined
+    natural width. width: max-content on the inner group keeps the five
+    segments at their natural widths so the group scrolls as a unit
+    instead of the buttons compressing. The outer wrapper's min-width: 0
+    must appear before the inner group's width: max-content in source.
+    """
+    assert "min-width: 0" in REVIEW_SOURCE
+    assert "width: max-content" in REVIEW_SOURCE
+    assert REVIEW_SOURCE.index("min-width: 0") < REVIEW_SOURCE.index("width: max-content"), (
+        "expected the outer wrapper's min-width: 0 to appear before the "
+        "inner group's width: max-content"
+    )
+
+
+def test_no_truncation_or_media_query_introduced_on_the_review_page() -> None:
+    """
+    49-UI-SPEC E1/E2 long-text and E6 overflow forbid truncation outright —
+    truncating a discrepancy value could hide the exact disagreement the
+    operator is being asked to adjudicate. D-29 locks the inline-style-only
+    idiom; re-asserted here at the point of change since the new overflow
+    containers are one small step from a clipping container. Note: unlike
+    the two tests above, this assertion is a negative-space regression
+    guard — it holds both before and after the G-49-5a edit because the
+    forbidden patterns are being avoided, not introduced, so it cannot be
+    observed RED the way the two structural tests above can.
+    """
+    assert "text-overflow" not in REVIEW_SOURCE
+    assert "overflow: hidden" not in REVIEW_SOURCE
+    assert "@media" not in REVIEW_SOURCE
+    assert "class=" not in REVIEW_SOURCE

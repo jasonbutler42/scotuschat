@@ -272,7 +272,7 @@ Plans:
   4. The operator can resolve a review item (confirm or edit) from the queue, and doing so advances its `review_state` and recomputes the affected argument's trust.
   5. The legacy `name_needs_review` / `name_extraction_metadata` mechanism is folded into the unified review_state + provenance record, with no parallel mechanism remaining.
 
-**Plans**: 7/9 plans executed (6/9 executed; 3 gap-closure plans added 2026-08-24 after UAT reopened the phase)
+**Plans**: 7/10 plans executed (4 gap-closure plans added 2026-08-24 after UAT reopened the phase; 49-09 split into 49-09 + 49-10 when operator decision D-35 replaced the G-49-3 checkpoint with a convergence mandate)
 **UI hint**: yes
 
 Plans:
@@ -300,8 +300,9 @@ Plans:
 **Gap closure** *(added 2026-08-24; UAT `49-UAT.md` reopened the phase with 4 open gaps)*
 
 - [x] 49-07-PLAN.md — Operator-facing copy: the destination-naming action-verb link label, the domain-noun rename in rendered copy only, and the zero-one-many agreement fix — closes `G-49-4a`, `G-49-4b`, `G-49-5b` (wave 1)
-- [ ] 49-09-PLAN.md — WR-01 popover open-time side resync, plus a blocking decision checkpoint on whether bench/advocate classification becomes editable on the Speakers card and by which mechanism — closes `G-49-3` (wave 1)
 - [ ] 49-08-PLAN.md — Narrow-viewport containment: overflow containers for both queue tables and the status segment group, and an auto-fit dashboard grid with an executable track-fit gate — closes `G-49-5a` (wave 2, blocked on 49-07 releasing `admin/review/+page.svelte`)
+- [ ] 49-09-PLAN.md — WR-01 popover open-time side resync, plus the published lock on `update_participant_side` (D-35 half one) made visible on the Speakers card and a full inventory of the write paths still unlocked (wave 4)
+- [ ] 49-10-PLAN.md — Convergence (D-35 half two): one shared side module, a single Speakers row template reaching every stored side value behind a boundary confirm, and `T-15-02-BENCH` retired as satisfied — closes `G-49-3` (wave 5, blocked on 49-09)
 
 ### Phase 50: Unified Import Path
 

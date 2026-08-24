@@ -5,16 +5,16 @@ milestone_name: Import & Provenance Re-model
 current_phase: 49
 current_phase_name: Review Model
 status: Phase 49 REOPENED 2026-08-24 — UAT found 4 open gaps; verification status passed -> gaps_found
-stopped_at: Completed 49-08-PLAN.md (G-49-5a narrow-viewport containment closed structurally; wave 2 of gap closure)
-last_updated: "2026-08-24T19:22:22.768Z"
+stopped_at: Completed 49-09-PLAN.md (D-35 published lock + WR-01; wave 4 of gap closure; 49-10 remains — converges the second half of D-35 and retires T-15-02-BENCH)
+last_updated: "2026-08-24T20:01:15.167Z"
 last_activity: 2026-08-24
 last_activity_desc: Planned 3 gap-closure plans (49-07 copy, 49-08 narrow-viewport, 49-09 decision+WR-01)
-state_head: fae386261d9d55abce925b323356d172b4df7be4
+state_head: b00ea59c3257bc40f9e83e9989f60a1655e01bbc
 progress:
   total_phases: 5
   completed_phases: 2
-  total_plans: 26
-  completed_plans: 24
+  total_plans: 27
+  completed_plans: 25
   percent: 40
 ---
 
@@ -32,7 +32,7 @@ See: .planning/PROJECT.md (updated 2026-08-18 — Phase 47 complete; corpus-firs
 Phase: 49 — Review Model (reopened for gap closure)
 Last activity: 2026-08-24 — Phase 49 UAT completed (31 pass / 3 issues / 0 pending); phase reopened for gap closure
 
-**Next action:** Wave 2 (49-08, narrow-viewport containment for G-49-5a) is now **complete** — see `49-08-SUMMARY.md`. G-49-5a's three horizontal-overflow causes are structurally closed (source-contract tests green: `overflow-x: auto` containment on both queue tables + the status segment group, plus the dashboard's `repeat(auto-fit, minmax(120px, 1fr))` grid track floor proven by an executable arithmetic gate to preserve UAT sub-item 5 while fixing sub-item 7); the visual browser re-confirmation remains outstanding, same `.env`-credential blocker as every other Phase 49 browser check. `49-09` was replanned (D-35, convergence split) into `49-09` + `49-10` — check those PLAN.md files and any SUMMARYs for current status before resuming; not otherwise touched by this plan. Still open and NOT in any gap_ids: G-49-9a needs a visual re-check (49-08 confirmed all three fix sites still present by grep; browser look still outstanding), and UAT sub-item 5.6 was never observed.
+**Next action:** Wave 4 (49-09, D-35's published lock + WR-01) is now **complete** — see `49-09-SUMMARY.md`. `update_participant_side` now refuses a write against a PUBLISHED argument (mirroring `update_resolve_row_for_job`'s existing guard, proved live by non-persistence + no discrepancy residue; UNPUBLISHED/DRAFT remain fully editable), the Speakers card visibly discloses the lock with honest rejection copy, and `CreatePersonPopover`'s Bench/Advocate radio resyncs on open (WR-01). Full suite: 1104 passed (baseline 1094, clean +10). `deferred-items.md` now carries the full D-35 write-path inventory and the one NEW question for the operator (does the lock extend to the Case/Argument-Details cards?). **`49-10` remains** — it implements D-35's SECOND half (the converged side/pool control) and retires `T-15-02-BENCH`; `gap_ids` was deliberately left empty in 49-09 so G-49-3 attributes entirely to 49-10. Two new human-checks (WR-01 browser walkthrough; Speakers-card visual lock) are NOT OBSERVED, same `.env`-credential blocker as every other Phase 49 browser check — logged to `WINDOWS.md`. Still open and NOT in any gap_ids: G-49-9a needs a visual re-check (49-08 confirmed all three fix sites still present by grep; browser look still outstanding), and UAT sub-item 5.6 was never observed.
 
 Phase 49-06 close-out notes (2026-08-23):
 
@@ -188,6 +188,7 @@ items → 14.** Every closure carries its evidence in the file it closes; the co
 | Phase 49-review-model P06 | ~100min | 3 tasks | 15 files |
 | Phase 49 P07 | 45min | 2 tasks | 4 files |
 | Phase 49-review-model P08 | ~55min | 3 tasks | 5 files |
+| Phase 49 P09 | 1h 5m | 3 tasks | 6 files |
 
 v1.7 per-plan metrics cleared at this milestone boundary per the standard STATE.md reset; the underlying per-plan SUMMARY files remain in `.planning/milestones/v1.7-phases/`.
 
@@ -248,6 +249,8 @@ Full cross-milestone decision log lives in PROJECT.md's Key Decisions table. Per
 - [Phase 49]: 49-06: discovered TEST_DATABASE_URL and DATABASE_URL resolve to the same physical Postgres database in this sandbox — running a full-suite pytest run and a direct dev-DB verification script concurrently produced 2 spurious DeadlockDetectedError failures (confirmed as an artifact, not a regression, by re-running in isolation). Future work in this sandbox should not run both at once.
 - [Phase 49]: 49-07: rename stopped at operator-facing copy; no_constituents/ReviewQueueConstituent/constituents field left unchanged (wire code + D-34 security guard)
 - [Phase 49]: 49-08: closed G-49-5a's three horizontal-overflow causes (two queue tables + the previously-undiagnosed status segment group) with overflow-x: auto containers and a repeat(auto-fit, minmax(120px, 1fr)) grid track floor; the 120px floor resolves the UAT sub-item 5 vs 7 conflict without trading one for the other, proven by an executable _tracks_that_fit arithmetic gate. Structural closure only — browser visual re-confirmation remains blocked by the same denied .env credential access as 49-01/49-03/49-05.
+- [Phase 49]: 49-09: published-status guard on update_participant_side placed after the pre-existing BENCH/unresolved-side input checks (not literally first), to keep a sentinel-session unit test's no-DB-touch contract intact — still runs before the participant SELECT and both authority-gate calls, satisfying D-16's no-residue requirement.
+- [Phase 49]: 49-09: two new contract assertions (test_update_participant_side_still_accepts_unpublished_and_draft, test_popover_does_not_resync_side_on_every_prop_change) were green from the start of the RED phase — documented as negative-space/continuity checks, not presented as red-then-green.
 
 ### Roadmap Evolution
 
@@ -307,8 +310,8 @@ at close.
 
 ## Session Continuity
 
-Last session: 2026-08-24T19:22:21.756Z
-Stopped at: Completed 49-08-PLAN.md (G-49-5a narrow-viewport containment closed structurally; wave 2 of gap closure)
+Last session: 2026-08-24T20:01:14.867Z
+Stopped at: Completed 49-09-PLAN.md (D-35 published lock + WR-01; wave 4 of gap closure; 49-10 remains — converges the second half of D-35 and retires T-15-02-BENCH)
 Resume file: None
 
 ## Operator Next Steps

@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 14
+open_count: 16
 waived_count: 0
 fixed_count: 7
-total_count: 21
-last_updated: 2026-08-23T16:19:42.185Z
+total_count: 23
+last_updated: 2026-08-24T20:00:46.273Z
 ---
 
 # Broken Windows Ledger
@@ -36,6 +36,8 @@ last_updated: 2026-08-23T16:19:42.185Z
 | 19 | 49 | unrun-verify | app/src/lib/components/ChatBubble.svelte |  | 14-UAT Test 8 (non-resolved-utterance avatar) -- 49-06's seeder now also nulls the matching Utterance.person_id rows, script/API-confirmed live on the dev DB, but the argument must also be PUBLISHED to reach the public chat page (a step this seeder deliberately does not perform) and the actual on-screen non-interactive-avatar render was never observed -- credential-access denial. See 14-UAT.md Test 8's phase_49_06_update. | open |  | 2026-08-23T16:19:41.608Z |  |
 | 20 | 49 | unrun-verify | app/src/routes/admin/review/+page.svelte |  | D-32's live authority-conflict walkthrough -- fully verified end-to-end via a repeatable script against the live dev DB (operator edit survives, corpus re-import rejected+recorded, discrepancy visible via the API, reflag closes it) in 49-EVIDENCE.md, including finding and fixing a real gap (WINDOWS #12). The actual browser rendering (Discrepancy badge color/placement, click behavior) was never observed -- credential-access denial. | open |  | 2026-08-23T16:19:41.894Z |  |
 | 21 | 49 | unrun-verify | app/src/routes/admin/+page.svelte |  | The new 'Seed unresolved speaker' Dev Tools button and its success line were never observed in a browser -- credential-access denial. Backend endpoint and the form action's error-mapping are fully tested; only the button's rendering/behavior is unconfirmed. | open |  | 2026-08-23T16:19:42.185Z |  |
+| 22 | 49 | unrun-verify | app/src/lib/components/CreatePersonPopover.svelte |  | WR-01 browser walkthrough (49-09 Task 1 human-check) NOT OBSERVED — sandbox denied .env access for ADMIN_USERNAME/ADMIN_PASSWORD/SESSION_SECRET | open |  | 2026-08-24T20:00:45.872Z |  |
+| 23 | 49 | unrun-verify | app/src/routes/admin/arguments/[id]/+page.svelte |  | Speakers-card published-lock visual verification (49-09 Task 3 human-check) NOT OBSERVED — sandbox denied .env access for ADMIN_USERNAME/ADMIN_PASSWORD/SESSION_SECRET | open |  | 2026-08-24T20:00:46.273Z |  |
 
 ````json
 [
@@ -289,6 +291,30 @@ last_updated: 2026-08-23T16:19:42.185Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-08-23T16:19:42.185Z",
+    "resolved_at": null
+  },
+  {
+    "id": 22,
+    "kind": "unrun-verify",
+    "phase": "49",
+    "file": "app/src/lib/components/CreatePersonPopover.svelte",
+    "line": null,
+    "description": "WR-01 browser walkthrough (49-09 Task 1 human-check) NOT OBSERVED — sandbox denied .env access for ADMIN_USERNAME/ADMIN_PASSWORD/SESSION_SECRET",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-08-24T20:00:45.872Z",
+    "resolved_at": null
+  },
+  {
+    "id": 23,
+    "kind": "unrun-verify",
+    "phase": "49",
+    "file": "app/src/routes/admin/arguments/[id]/+page.svelte",
+    "line": null,
+    "description": "Speakers-card published-lock visual verification (49-09 Task 3 human-check) NOT OBSERVED — sandbox denied .env access for ADMIN_USERNAME/ADMIN_PASSWORD/SESSION_SECRET",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-08-24T20:00:46.273Z",
     "resolved_at": null
   }
 ]

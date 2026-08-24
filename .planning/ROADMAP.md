@@ -272,7 +272,7 @@ Plans:
   4. The operator can resolve a review item (confirm or edit) from the queue, and doing so advances its `review_state` and recomputes the affected argument's trust.
   5. The legacy `name_needs_review` / `name_extraction_metadata` mechanism is folded into the unified review_state + provenance record, with no parallel mechanism remaining.
 
-**Plans**: 8/11 plans executed (5 gap-closure plans added 2026-08-24 after UAT reopened the phase; 49-09 split into 49-09 + 49-10 when operator decision D-35 replaced the G-49-3 checkpoint with a convergence mandate; 49-11 added when the operator scoped D-35 to the whole argument, not just participant data — D-35a)
+**Plans**: 9/11 plans executed (5 gap-closure plans added 2026-08-24 after UAT reopened the phase; 49-09 split into 49-09 + 49-10 when operator decision D-35 replaced the G-49-3 checkpoint with a convergence mandate; 49-11 added when the operator scoped D-35 to the whole argument, not just participant data — D-35a)
 **UI hint**: yes
 
 Plans:
@@ -301,7 +301,7 @@ Plans:
 
 - [x] 49-07-PLAN.md — Operator-facing copy: the destination-naming action-verb link label, the domain-noun rename in rendered copy only, and the zero-one-many agreement fix — closes `G-49-4a`, `G-49-4b`, `G-49-5b` (wave 1)
 - [x] 49-08-PLAN.md — Narrow-viewport containment: overflow containers for both queue tables and the status segment group, and an auto-fit dashboard grid with an executable track-fit gate — closes `G-49-5a` (wave 2, blocked on 49-07 releasing `admin/review/+page.svelte`)
-- [ ] 49-09-PLAN.md — WR-01 popover open-time side resync, plus the published lock on `update_participant_side` (D-35 half one) made visible on the Speakers card and a full inventory of the write paths still unlocked (wave 4)
+- [x] 49-09-PLAN.md — WR-01 popover open-time side resync, plus the published lock on `update_participant_side` (D-35 half one) made visible on the Speakers card and a full inventory of the write paths still unlocked (wave 4)
 - [ ] 49-10-PLAN.md — Convergence (D-35 half two): one shared side module, a single Speakers row template reaching every stored side value behind a boundary confirm, and `T-15-02-BENCH` retired as satisfied — closes `G-49-3` (wave 5, blocked on 49-09)
 - [ ] 49-11-PLAN.md — Whole-argument lock (D-35a): published guards on `update_argument`, `update_argument_metadata`, `resolve_job`, and `create_person_for_job`; live proof that unpublish and review-state writes still work; the always-editable page decision reversed in place and the Case + Argument Details cards locked (wave 6, blocked on 49-10)
 
@@ -400,7 +400,7 @@ Plans:
 | 46. Dev Environment Reliability | v1.7 | 6/6 | Complete    | 2026-08-14 |
 | 47. Provenance Foundation | v1.8 | 6/6 | Complete    | 2026-08-18 |
 | 48. Trust & Lifecycle | v1.8 | 10/10 | Complete    | 2026-08-21 |
-| 49. Review Model | v1.8 | 8/10 | In Progress|  |
+| 49. Review Model | v1.8 | 9/11 | In Progress|  |
 | 50. Unified Import Path | v1.8 | 0/TBD | Not started | - |
 | 51. Design System & Noun Alignment | v1.8 | 0/TBD | Not started | - |
 

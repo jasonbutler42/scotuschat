@@ -5,15 +5,15 @@ milestone_name: Import & Provenance Re-model
 current_phase: 49
 current_phase_name: Review Model
 status: Phase 49 REOPENED 2026-08-24 — UAT found 4 open gaps; verification status passed -> gaps_found
-stopped_at: Phase 49 UAT complete (31 pass / 3 issues); planning gap-closure plans
-last_updated: "2026-08-24T14:20:00Z"
+stopped_at: Phase 49 gap-closure plans 49-07..49-09 written and checked; ready to execute --gaps-only
+last_updated: "2026-08-24T15:05:00Z"
 last_activity: 2026-08-24
-last_activity_desc: Phase 49 UAT completed; 4 gaps open, 1 fixed in-session; phase reopened
+last_activity_desc: Planned 3 gap-closure plans (49-07 copy, 49-08 narrow-viewport, 49-09 decision+WR-01)
 state_head: 6c7a0f7cb0b857dc81356563a23c8962b85d7417
 progress:
   total_phases: 5
   completed_phases: 2
-  total_plans: 22
+  total_plans: 25
   completed_plans: 22
   percent: 40
 ---
@@ -32,7 +32,7 @@ See: .planning/PROJECT.md (updated 2026-08-18 — Phase 47 complete; corpus-firs
 Phase: 49 — Review Model (reopened for gap closure)
 Last activity: 2026-08-24 — Phase 49 UAT completed (31 pass / 3 issues / 0 pending); phase reopened for gap closure
 
-**Next action:** `/gsd-plan-phase 49 --gaps` then `/gsd-execute-phase 49 --gaps-only` — the 2026-08-24 UAT session (`49-UAT.md`) closed all 34 tests and left 4 open gaps (`G-49-3` major, `G-49-4a`/`G-49-4b`/`G-49-5a` minor, plus cosmetic `G-49-5b`); `G-49-9a` was fixed in-session (commit `690d51e20`, needs a visual re-check). WR-01 remains open — UAT test 7 passed only because the common path masks it. Phase 50 is NOT started; the earlier advance to it was premature.
+**Next action:** `/gsd-execute-phase 49 --gaps-only` — runs only the three `gap_closure: true` plans. Wave 1: 49-07 (copy: G-49-4a/4b/5b) and 49-09 (WR-01 + a BLOCKING decision checkpoint on G-49-3) in parallel, zero file overlap. Wave 2: 49-08 (narrow-viewport containment, G-49-5a) — depends_on 49-07 because both edit `admin/review/+page.svelte` and `test_phase49_review_ui_contract.py`. 49-09 is `autonomous: false` and WILL stop for a human decision: G-49-3 needs a disposition on threat `T-15-02-BENCH` (`admin_arguments.py:754`), which Phase 25 already declined to relax once — options are deep-link (recommended), port-control, or defer. If deferred, G-49-3 must be set `status: deferred`, never `resolved`. Still open and NOT in any gap_ids: G-49-9a needs a visual re-check (folded into 49-08 Task 3), and UAT sub-item 5.6 was never observed.
 
 Phase 49-06 close-out notes (2026-08-23):
 

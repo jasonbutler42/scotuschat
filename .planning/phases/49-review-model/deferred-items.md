@@ -83,3 +83,51 @@ published argument's admin page sees the asymmetry rather than a silently-incons
 The answer, whichever way it goes, is one small follow-up plan.
 
 **Status:** open — awaiting the operator's answer to the NEW question above.
+
+## D-35 convergence (49-10) — the public chat page's independently derived bench flag is NOT reconciled, and this plan makes it MORE reachable
+
+**Found during:** 49-10 Task 3, closing G-49-3 by converging the Speakers card onto the
+Resolve card's full side vocabulary (D-35, "Converge both surfaces").
+
+Admin derives `is_bench` from `side == SideEnum.BENCH`. The public chat page derives its own,
+independent bench signal from `tenure.length > 0`
+(`app/src/routes/cases/[slug]/arguments/[id]/+page.server.ts:36`), and
+`api/services/speakers.py` falls through to `ADVOCATE_LABEL_MAP` when the bench branch is
+skipped — so a `BENCH` participant with no covering `CourtTenure` reads **Bench** in admin
+and **Counsel** in public. This is the open todo
+`2026-08-12-speakers-bench-classification-silent-fallback.md`; its reconcile-the-two-signals
+suggestion is the eventual fix.
+
+**This plan makes the divergence MORE reachable, stated plainly rather than buried.** Before
+49-10, this state required a data accident (a corpus-resolved bench participant landing
+without a covering tenure row). After 49-10, an operator can produce it **on purpose** by
+moving any participant to Bench from the Speakers card. That is a real, direct consequence of
+D-35 and is recorded here as such — not softened.
+
+**Partial mitigation, not a fix:** 49-09's published lock means this divergence cannot be
+*introduced* on an already-published argument — a reclassification is only reachable on
+draft/unpublished/candidate data. It CAN still reach the public site: the argument must be
+published (or re-published) afterward, and the publish trust gate does not currently check
+tenure coverage as a precondition. Reconciling the two signals touches the public read path
+(`api/services/speakers.py`, `app/src/routes/cases/[slug]/...`), which is outside Phase 49's
+boundary (admin-only).
+
+**Status:** open — accepted with this consequence stated, tracked by
+`2026-08-12-speakers-bench-classification-silent-fallback.md`.
+
+## D-35 convergence (49-10) — person-to-participant assignment remains uneditable on the Speakers card
+
+**Found during:** 49-10 Task 3.
+
+The Speakers card converges the SIDE control (bench vs. every advocate role) but does not add
+a person picker — its Name column stays plain text (`speaker.full_name ?? '—'`), unchanged
+from before this plan. Reassigning WHICH person a participant row refers to (as opposed to
+reclassifying that row's side) remains possible only via the Resolve card's person combobox.
+This is a genuinely separate gap from G-49-3 — the operator has not raised it, and D-35's
+"almost the exact interface" language was read (see 49-10-PLAN.md `<planner_decisions>`) as
+covering the side/role vocabulary the operator explicitly complained about, not the person-
+assignment mechanism, which is a materially different control (a searchable combobox against
+a candidate pool) that this plan's `files_modified` list and time budget do not cover.
+
+**Status:** open — not raised by the operator; current remedy is the Resolve card. Candidate
+follow-up if the operator wants person reassignment from the argument-detail page directly.

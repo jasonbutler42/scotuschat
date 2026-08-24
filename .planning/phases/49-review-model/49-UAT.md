@@ -321,12 +321,19 @@ blocked: 0
 
 - gap_id: G-49-3
   truth: "An unresolved/unverified speaker's bench-vs-advocate classification is operator-editable from the Speakers card on the argument edit page"
-  status: failed
-  reason: "User reported: Yes, I can see what you describe and it works as indicated, however, there's no option to choose bench or advocate. If a speaker is unverified, then I would expect their bench side to be editable"
+  status: resolved
+  resolved_by: 49-10
+  resolved_at: 2026-08-24
+  reason: "User reported: Yes, I can see what you describe and it works as indicated, however, there's no option to choose bench or advocate. If a speaker is unverified, then I would expect their bench side to be editable. Closed by convergence (D-35, \"Converge both surfaces\"): the Speakers card now reaches every stored side value including BENCH, gated by a boundary-crossing confirm, with one row template so bench and advocate rows share identical affordance depth. D-35 superseded the three-option checkpoint (deep-link/port-control/defer) 49-09 originally raised for this gap rather than answering any one of them."
   severity: major
   test: 3
-  artifacts: []  # Filled by diagnosis
-  missing: []    # Filled by diagnosis
+  artifacts:
+    - "app/src/lib/participantSide.ts — the shared bucket rule, label map, specific-advocate-role helper, and boundary-crossing predicate both cards import"
+    - "app/src/routes/admin/arguments/[id]/+page.svelte — one converged Speakers row template (bench/advocate branch removed), the five-value side control, the boundary-crossing two-step confirm, and the three-state bench companion (tenure role / missing tenure / no person linked)"
+    - "app/src/routes/admin/arguments/[id]/+page.server.ts — updateParticipantSide action omits descriptor when the row's committed side was BENCH (RESOLVE-13 round-trip guard)"
+    - "api/services/admin_arguments.py::update_participant_side — accepts BENCH under RESOLVE-13's descriptor rule; T-15-02-BENCH retired as satisfied"
+    - "api/schemas/admin_arguments.py, api/routers/admin.py (two docstrings), api/services/admin_jobs.py — the four citation sites recording T-15-02-BENCH's retirement"
+  missing: []
 
 - gap_id: G-49-4a
   truth: "The review-queue constituent action link is labelled with an action verb naming where it goes, matching the established label pattern elsewhere in admin"

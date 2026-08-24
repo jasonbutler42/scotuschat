@@ -172,12 +172,32 @@ export const actions: Actions = {
 	 * non-JSON body cannot throw) and branches on the published case. The raw
 	 * server detail is never echoed to the operator — it names an internal
 	 * folded-todo filename.
+	 *
+	 * RESOLVE-13 round-trip guard (G-49-3/D-35, plan 49-10 Task 3): the
+	 * descriptor key is included in the PATCH body ONLY when the descriptor
+	 * field was actually submitted (a `disabled` input is omitted from
+	 * FormData by the browser itself — see the Speakers card's descriptor
+	 * input, disabled while the selected side is BENCH) AND the row's
+	 * committed (pre-submit, stored) side was NOT BENCH. A bench row's
+	 * descriptor reads null from the read path (RESOLVE-13's "hidden, not
+	 * shown, not cleared"), so if the committed side WAS bench the
+	 * descriptor input would render blank even though the real value is
+	 * still stored — sending that blank value would clobber it. Omitting
+	 * the key lets the service's documented leave-unchanged path
+	 * (api/services/admin_arguments.py::update_participant_side) preserve
+	 * the real value; the row re-renders as an advocate row with it
+	 * visible after the redirect below, and a second save can then edit it.
 	 */
 	updateParticipantSide: async ({ request, params, fetch }) => {
 		const formData = await request.formData();
 		const participant_id = ((formData.get('participant_id') as string) ?? '').trim();
 		const side = ((formData.get('side') as string) ?? '').trim();
-		const descriptor = (formData.get('descriptor') as string) ?? '';
+		const committedSide = ((formData.get('committed_side') as string) ?? '').trim();
+
+		const body: Record<string, unknown> = { side };
+		if (formData.has('descriptor') && committedSide !== 'BENCH') {
+			body.descriptor = (formData.get('descriptor') as string) ?? '';
+		}
 
 		let res: Response;
 		try {
@@ -189,7 +209,7 @@ export const actions: Actions = {
 						'X-Admin-Token': ADMIN_TOKEN,
 						'Content-Type': 'application/json',
 					},
-					body: JSON.stringify({ side, descriptor }),
+					body: JSON.stringify(body),
 				},
 			);
 		} catch {

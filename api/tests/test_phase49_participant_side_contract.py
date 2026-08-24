@@ -995,3 +995,261 @@ def test_one_authority_gated_call_handles_side() -> None:
         f"the retired bench-rejection string {BENCH_REJECTION_STRING!r} must no longer "
         f"exist anywhere in api/services/admin_arguments.py"
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Plan 49-10, Task 3 (G-49-3/D-35): one converged Speakers row — five
+# reachable side values, a boundary confirm, and equal affordance for bench
+# and advocate. Every assertion in this section is STRUCTURAL-ONLY: it
+# proves a string/pattern is present in source, never that the control
+# renders or behaves correctly in a browser (the 48-10 false-green
+# incident — 28 green source-contract tests against a fully broken button
+# — is exactly the failure mode this label guards against). The six-item
+# human-check in 49-10-PLAN.md's Task 3 is the actual behavioral evidence.
+# ─────────────────────────────────────────────────────────────────────────
+
+
+def _speakers_script_region(source: str) -> str:
+    """The script-level Speakers-card state (VALID_SIDES, the speakerSideById
+    seed, sideConfirming, and the argument-id reset $effect) lives ABOVE the
+    'Card 3: Speakers' markup comment _speakers_card_region scopes to — it is
+    declared once in the <script> block, not per-row in the template. Scope
+    assertions about that state to the whole <script> block instead."""
+    match = re.search(r"<script[^>]*>(.*?)</script>", source, re.DOTALL)
+    assert match, "could not find the <script> block in the page source"
+    return match.group(1)
+
+
+def test_speakers_row_has_no_per_class_branch() -> None:
+    """STRUCTURAL-ONLY. CLAUDE.md's apolitical constraint made unfalsifiable-
+    by-drift: with one row template there is no second branch that can
+    diverge in affordance depth between bench and advocate."""
+    source = _source(ARGUMENT_DETAIL_PATH)
+    region = _speakers_card_region(source)
+    assert "speaker.is_bench" not in region, (
+        "the Speakers card region must contain no reference to the row's stored bench "
+        "flag — one row template must serve both bench and advocate rows"
+    )
+
+
+def test_speakers_side_control_offers_every_stored_value() -> None:
+    """STRUCTURAL-ONLY. The unresolved placeholder text is pinned by 26-UAT
+    Test 26, which 49-VERIFICATION.md human_verification item 3 still lists
+    as never observed in a browser — rewording it would invalidate a check
+    that has not yet been performed."""
+    source = _source(ARGUMENT_DETAIL_PATH)
+    region = _speakers_card_region(source)
+    select_match = re.search(r"<select\s+name=\"side\"[^>]*>(.*?)</select>", region, re.DOTALL)
+    assert select_match, "could not find the side <select> in the Speakers card region"
+    select_body = select_match.group(1)
+    assert '<option value="UNKNOWN">Unresolved — choose a role</option>' in select_body, (
+        "the unresolved sentinel's placeholder text must be byte-identical to today's"
+    )
+    assert '<option value="BENCH"' in select_body, (
+        "the side control must offer the BENCH value — G-49-3's whole point"
+    )
+    for role in ("PETITIONER", "RESPONDENT", "AMICUS"):
+        assert f'<option value="{role}"' in select_body, (
+            f"the side control must still offer the specific advocate role {role!r}"
+        )
+
+
+def test_speakers_labels_come_from_the_shared_module() -> None:
+    """STRUCTURAL-ONLY. Cites the open duplication todo
+    (2026-08-12-speaker-popover-frontend-duplication-cleanup.md): the three
+    advocate labels must be consumed from participantSide.ts's SIDE_LABEL
+    map, not from a second hardcoded list on this page."""
+    source = _source(ARGUMENT_DETAIL_PATH)
+    assert re.search(r"from\s+['\"]\$lib/participantSide['\"]", source), (
+        "the argument-detail page must import from '$lib/participantSide'"
+    )
+    import_match = re.search(r"import\s*\{([^}]*)\}\s*from\s*['\"]\$lib/participantSide['\"]", source)
+    assert import_match, "could not find the named import from '$lib/participantSide'"
+    assert "SIDE_LABEL" in import_match.group(1), (
+        "the page must import SIDE_LABEL by name from the shared module"
+    )
+
+    region = _speakers_card_region(source)
+    for hardcoded_label in ("Petitioner's Counsel", "Respondent's Counsel", "Amicus Curiae"):
+        assert hardcoded_label not in region, (
+            f"the Speakers card region must not hardcode the advocate label {hardcoded_label!r} — "
+            f"it must render from SIDE_LABEL instead, so the two cards can never silently drift "
+            f"in operator-visible copy"
+        )
+    assert "SIDE_LABEL" in region, (
+        "the region must actually reference SIDE_LABEL to render its advocate option labels"
+    )
+
+
+def test_speakers_side_state_seeds_from_every_row() -> None:
+    """Without this, a bench row would seed no side state at all and its
+    control would render with no selection — this is a script-level
+    (not per-row-markup) fact, so it is scoped to the whole <script> block
+    rather than the markup region."""
+    source = _source(ARGUMENT_DETAIL_PATH)
+    script = _speakers_script_region(source)
+    assert "VALID_SIDES" in script, "the page must still declare a VALID_SIDES set"
+    valid_sides_match = re.search(r"VALID_SIDES\s*=\s*new Set\(\[([^\]]*)\]\)", script)
+    assert valid_sides_match, "could not find the VALID_SIDES declaration"
+    assert "'BENCH'" in valid_sides_match.group(1), (
+        "VALID_SIDES must admit the BENCH value now that the control offers it"
+    )
+
+    seed_match = re.search(
+        r"speakerSideById\s*=\s*\$state[^(]*\((.*?)\n\t\);", script, re.DOTALL
+    )
+    assert seed_match, "could not find the speakerSideById seed initializer"
+    seed_body = seed_match.group(1)
+    assert ".filter((s) => !s.is_bench)" not in seed_body, (
+        "the seed must no longer filter out bench rows — every speaker row must seed its "
+        "own side state, or a bench row's control would render with no selection"
+    )
+
+
+def test_boundary_crossing_requires_a_second_click() -> None:
+    """STRUCTURAL-ONLY. Names the purpose being ported: the Resolve card's
+    side gate (needsSideGate/confirmSide) forces an explicit decision before
+    a consequential action; here the consequential action is the immediate
+    write, so the same PURPOSE is served with a mechanism appropriate to a
+    one-form-per-row POST rather than a copy of the Resolve card's own
+    batch-form mechanism."""
+    source = _source(ARGUMENT_DETAIL_PATH)
+    script = _speakers_script_region(source)
+    assert "sideConfirming" in script, (
+        "the page must declare per-participant confirm state (sideConfirming)"
+    )
+
+    region = _speakers_card_region(source)
+    assert re.search(r"crossesSideBoundary\s*\(\s*sideBucket\s*\(\s*speaker\.side\s*\)", region), (
+        "the boundary check must be computed via the shared crossesSideBoundary predicate "
+        "against the row's committed (stored) side, not an inline re-derivation"
+    )
+    assert "sideConfirming[speaker.participant_id]" in region, (
+        "the confirm branch must be keyed per participant_id"
+    )
+
+    confirming_match = re.search(
+        r"\{#if\s+sideConfirming\[speaker\.participant_id\]\}(.*?)\{:else\}(.*?)\{/if\}",
+        region,
+        re.DOTALL,
+    )
+    assert confirming_match, "could not find the sideConfirming if/else branch"
+    confirming_branch, non_confirming_branch = confirming_match.groups()
+    assert re.search(r'type="submit"', confirming_branch), (
+        "the confirming branch must render a submit button"
+    )
+    assert re.search(r'type="button"[^>]*>\s*Cancel', confirming_branch, re.DOTALL) or "Cancel" in confirming_branch, (
+        "the confirming branch must render a Cancel button"
+    )
+    assert 'type="button"' in non_confirming_branch, (
+        "the non-confirming branch's button must NOT submit — it only sets the confirm flag"
+    )
+    assert 'type="submit"' not in non_confirming_branch, (
+        "the non-confirming (not-yet-confirmed) branch must never itself submit the form"
+    )
+
+    assert "sideConfirming = {}" in script, (
+        "the confirm state must be reset by the same argument-id $effect the Danger Zone "
+        "uses (Pitfall 7) — otherwise a soft navigation to a different argument would carry "
+        "stale confirm state across arguments"
+    )
+
+
+def test_bench_companion_distinguishes_three_states() -> None:
+    """STRUCTURAL-ONLY. This is the one-way trap being closed: before this
+    task, a bench row with NO person rendered a bare em-dash with no warning
+    and no link — closed here by keying the third branch on person_id being
+    absent rather than on missing_tenure, which the pre-existing bench-only
+    render conflated."""
+    source = _source(ARGUMENT_DETAIL_PATH)
+    region = _speakers_card_region(source)
+
+    assert "speaker.bench_role" in region, "a tenure-derived role branch must still exist"
+    assert "Missing tenure" in region, "the missing-tenure warning copy must still exist"
+    assert "speaker.person_edit_href" in region, "the person-edit link must still be rendered"
+    assert re.search(r"No person linked", region), (
+        "a distinct no-person-linked state must exist, with copy that does not claim the "
+        "tenure is missing (the real problem is that no person is linked at all)"
+    )
+
+    companion_match = re.search(
+        r"\{#if\s+speaker\.person_id\s*==\s*null\}(.*?)\{:else if\s+speaker\.missing_tenure\}(.*?)\{:else\}(.*?)\{/if\}",
+        region,
+        re.DOTALL,
+    )
+    assert companion_match, (
+        "the bench companion must be an if/else-if/else chain keyed FIRST on "
+        "speaker.person_id being null (not on missing_tenure) — the third state must not "
+        "be reachable only as a side effect of the missing_tenure check"
+    )
+    no_person_branch, missing_tenure_branch, role_branch = companion_match.groups()
+    assert "No person linked" in no_person_branch
+    assert "person_edit_href" not in no_person_branch, (
+        "no Edit-person link on the no-person branch — there is no person to edit"
+    )
+    assert "Missing tenure" in missing_tenure_branch
+    assert "person_edit_href" in missing_tenure_branch
+    assert "bench_role" in role_branch
+
+
+def test_descriptor_input_is_disabled_not_removed_on_bench() -> None:
+    """STRUCTURAL-ONLY. Unmounting the descriptor input on a Bench selection
+    would destroy a typed-but-unsaved value on a toggle — the defect
+    ResolveCard.svelte's lastDescriptorValue (:155-165) exists to prevent,
+    avoided here by construction (the input stays mounted) rather than by a
+    second remembering mechanism."""
+    source = _source(ARGUMENT_DETAIL_PATH)
+    region = _speakers_card_region(source)
+
+    descriptor_match = re.search(r"<input\s+type=\"text\"\s+name=\"descriptor\"[^/]*/>", region, re.DOTALL)
+    assert descriptor_match, "could not find the descriptor <input name=\"descriptor\"> in the region"
+    descriptor_tag = descriptor_match.group(0)
+    assert "'BENCH'" in descriptor_tag, (
+        "the descriptor input's disabled position must consult the selected side"
+    )
+
+    preceding_window = region[max(0, descriptor_match.start() - 200) : descriptor_match.start()]
+    assert not re.search(r"\{#if[^}]*\}\s*$", preceding_window.rstrip() + " "), (
+        "the descriptor input must not be wrapped in a conditional that would unmount it "
+        "on a Bench selection"
+    )
+
+
+def test_action_omits_descriptor_when_the_committed_side_was_bench() -> None:
+    """RESOLVE-13 preserves a bench row's stored descriptor and the read
+    path reports it null, so the page cannot see it; sending an empty
+    string on the way back out would clobber exactly the value RESOLVE-13
+    protected. This test is STRUCTURAL-ONLY for the markup half (the hidden
+    input) and the action-body half; Task 2's
+    test_bench_round_trip_does_not_lose_the_descriptor is what actually
+    proves the outcome live."""
+    source = _source(ARGUMENT_DETAIL_PATH)
+    region = _speakers_card_region(source)
+    assert re.search(r'<input\s+type="hidden"\s+name="committed_side"\s+value=\{speaker\.side\}', region), (
+        "the row must carry a hidden input naming the committed (stored) side"
+    )
+
+    server_source = _source(ARGUMENT_DETAIL_SERVER_PATH)
+    body = _ts_action_body(server_source, "updateParticipantSide")
+    assert "committed_side" in body, "the action must read the committed_side field"
+    assert re.search(r"committedSide\s*!==\s*['\"]BENCH['\"]", body), (
+        "the action must gate descriptor inclusion on the committed side NOT being BENCH"
+    )
+    assert re.search(r"formData\.has\(\s*['\"]descriptor['\"]\s*\)", body), (
+        "the action must check whether the descriptor field was actually submitted before "
+        "including it — a disabled input is omitted from FormData by the browser itself"
+    )
+
+
+def test_published_lock_and_unresolved_gate_both_survive_the_convergence() -> None:
+    """A convergence that quietly dropped either the published lock (49-09)
+    or the unresolved-side Save gate would un-verify shipped work."""
+    source = _source(ARGUMENT_DETAIL_PATH)
+    region = _speakers_card_region(source)
+    assert region.count(LOCK_FLAG_NAME) >= 3, (
+        "the published lock flag must still gate the select, the descriptor input, and the "
+        "action controls — a convergence must not quietly drop it"
+    )
+    assert "speakerSideById[speaker.participant_id] === 'UNKNOWN'" in region, (
+        "the unresolved-side Save gate must still hold"
+    )

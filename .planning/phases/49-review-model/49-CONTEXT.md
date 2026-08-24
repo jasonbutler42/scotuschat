@@ -707,6 +707,51 @@ coverage with the live fixture deferred (leaves D-33 unproven end-to-end).
 This is new dev tooling with no analog to copy; it is infrastructure that **gates** every test
 needing the unresolved case, so it must land before those tests.
 
+### D-35 (locked 2026-08-24, operator, during Phase 49 gap-closure execution)
+
+**Decision, verbatim:** *"If an argument is currently published, the data for that argument is
+locked. If an argument is in any other state, I expect the data to be editable and have almost
+the exact interface."*
+
+Raised at the checkpoint plan 49-09 originally posed, offering three mechanisms
+(`deep-link`, `port-control`, `defer`) for closing G-49-3's Speakers-card/Resolve-card
+divergence. The operator rejected all three mechanisms **and the framing that produced
+them**, verbatim: *"I'm less concerned about the mechanisms behind the scenes and the
+decisions that came before that led us here but I feel like they are tripping us up. I'll
+tell you my mental model and I want you to assess the code and see if it supports it in the
+best way possible."* They then selected: **"Converge both surfaces."**
+
+**Consequence, split across two plans:**
+- **49-09** shipped the first half — the published lock on `update_participant_side`, using
+  the same predicate, error shape, and folded-todo citation the resolve writer already used.
+- **49-10** shipped the second half — the Speakers card converged onto one row template
+  reaching all five stored side values (including BENCH), gated by a boundary-crossing
+  confirm, with equal affordance depth for bench and advocate rows (CLAUDE.md apolitical
+  constraint).
+
+**T-15-02-BENCH was retired as SATISFIED, not weakened.** The threat, minted in Phase 15
+(`15-02-PLAN.md:207`), was never really "bench must never be settable" — the Resolve card
+has set it every day since Phase 25. Its real concern was "bench must not be settable
+**without the reconciliation the Resolve card performs**." Under D-35 that concern is met at
+the Speakers card's own call site by four compensating controls:
+1. An explicit two-step confirmation before a boundary crossing (49-10 Task 3) — the same
+   purpose `needsSideGate`/`confirmSide` serve on the Resolve card.
+2. No fabricated bench role — the read path derives `bench_role` from a `CourtTenure`
+   date-window lookup with NO fallback (`_bench_role_and_missing_tenure`, D-15) and reports
+   *Missing tenure* otherwise.
+3. No silent carry of a mismatched person link — the same read path turns a non-Justice
+   person on a bench row into the Missing-tenure affordance plus a link to the person editor
+   (RESOLVE-09's disjoint-pool concern, answered by the read path because this surface has
+   no person picker to clear).
+4. 49-09's published lock — the strongest control: a reclassification from this surface can
+   never mutate live public data.
+
+**Honest boundary of that argument:** the retirement is strictly stronger where the threat's
+impact lives (published data) and deliberately permissive on unpublished data — that is the
+authority D-35 grants the operator, not a claim that it is stronger everywhere.
+
+**Status:** LOCKED. Not to be re-litigated by a future plan in this phase.
+
 ---
 
 *Phase: 49-Review Model*

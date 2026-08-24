@@ -3,6 +3,11 @@
 	import { enhance } from '$app/forms';
 	import CopyableExtractedValue from '$lib/components/CopyableExtractedValue.svelte';
 	import CreatePersonPopover from '$lib/components/CreatePersonPopover.svelte';
+	// G-49-3/D-35 (plan 49-10): the bucket rule, the operator-visible role
+	// labels, and the specific-advocate-role helper are shared with the
+	// argument-detail Speakers card — both cards import from the single
+	// source of truth rather than each declaring their own copy.
+	import { SIDE_LABEL, sideBucket, specificAdvocateRole, crossesSideBoundary } from '$lib/participantSide';
 
 	// Phase 25 — Restructured Resolve card (D-10 through D-19, D-21, PJOB-14 through PJOB-19, PJOB-21).
 	// Phase 44 (RESOLVE-01/D-03/D-04) — five-column rework: the Action column is deleted and
@@ -201,10 +206,6 @@
 		}
 	}
 
-	function specificAdvocateRole(value: string): string | null {
-		return value === 'PETITIONER' || value === 'RESPONDENT' || value === 'AMICUS' ? value : null;
-	}
-
 	function rowFormId(participantId: number): string {
 		return `resolve-row-form-${participantId}`;
 	}
@@ -244,26 +245,26 @@
 	// Bench<->Advocate flip does.
 	let lastSideBucket = $state<Record<number, 'BENCH' | 'ADVOCATE'>>({});
 
-	function sideBucket(value: string): 'BENCH' | 'ADVOCATE' {
-		return value === 'BENCH' ? 'BENCH' : 'ADVOCATE';
-	}
-
 	// Clears the row's own person selection only when the bucket recorded
 	// for this participant differs from the new one — never on the first
 	// bucket ever recorded for a participant, so initial load/seeding (see
 	// the seeding $effect below) is never mistaken for an operator-driven
-	// switch.
+	// switch. The `previousBucket !== undefined` guard stays visible here
+	// (rather than living only inside the imported crossesSideBoundary)
+	// because a contract assertion targets this literal directly; the
+	// actual bucket-changed comparison is delegated to the shared predicate
+	// (plan 49-10, G-49-3/D-35) so both cards agree on what a boundary
+	// crossing is.
 	function clearPersonOnSideBucketChange(row: MergedRow, newSide: string): void {
-		const newBucket = sideBucket(newSide);
 		const previousBucket = lastSideBucket[row.participant_id];
-		if (previousBucket !== undefined && previousBucket !== newBucket) {
+		if (previousBucket !== undefined && crossesSideBoundary(previousBucket, newSide)) {
 			const s = rowMatchStates[row.raw_speaker_label];
 			if (s) {
 				s.personId = null;
 				s.comboQuery = '';
 			}
 		}
-		lastSideBucket[row.participant_id] = newBucket;
+		lastSideBucket[row.participant_id] = sideBucket(newSide);
 	}
 
 	function confirmSide(row: MergedRow, choice: 'BENCH' | 'ADVOCATE') {
@@ -332,15 +333,6 @@
 		}
 		onSideChange(row, value);
 	}
-
-	const SIDE_LABEL: Record<string, string> = {
-		BENCH: 'Bench',
-		PETITIONER: "Petitioner's Counsel",
-		RESPONDENT: "Respondent's Counsel",
-		AMICUS: 'Amicus Curiae',
-		UNKNOWN: 'Counsel',
-		ADVOCATE: 'Counsel', // legacy — never produced going forward
-	};
 
 	// Task 2 (RESOLVE-05, D-08/D-09): hint-value helpers for the four `Imported:`
 	// hints rendered below each hinted column's control. Each takes the same

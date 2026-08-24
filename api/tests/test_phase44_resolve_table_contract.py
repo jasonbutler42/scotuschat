@@ -98,6 +98,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).parents[2]
 RESOLVE_CARD_PATH = ROOT / "app" / "src" / "lib" / "components" / "ResolveCard.svelte"
+# Plan 49-10 (G-49-3/D-35): the shared side/bucket module both ResolveCard.svelte
+# and the argument-detail Speakers card import from.
+PARTICIPANT_SIDE_PATH = ROOT / "app" / "src" / "lib" / "participantSide.ts"
 
 APPROVED_HEX_COLORS = {
     "#1e293b",
@@ -314,11 +317,18 @@ def test_no_unapproved_hex_colors_introduced() -> None:
 def _function_body(source: str, name: str) -> str:
     """Extract a script-level `function {name}(...) { ... }` body, matching the
     tab-indented-closing-brace convention `awk '/function name/,/^\\t}/'` relies on
-    at execution time."""
+    at execution time — a function declared one level deep inside a
+    `<script>` block (ResolveCard.svelte's own convention) closes with
+    exactly one leading tab. Plan 49-10 (G-49-3/D-35) re-points one of this
+    module's assertions at app/src/lib/participantSide.ts, a top-level `$lib`
+    module (docketValues.ts's convention) whose functions close at column
+    zero — `\\t?` accepts either convention's closing brace without weakening
+    the match: a MORE deeply nested closing brace (two or more tabs) still
+    will not match, so the first real end-of-function is still what is found."""
     match = re.search(rf"function\s+{re.escape(name)}\s*\(", source)
     assert match, f"could not find `function {name}(` in source"
     start = match.start()
-    end_match = re.search(r"\n\t\}", source[start:])
+    end_match = re.search(r"\n\t?\}", source[start:])
     assert end_match, f"could not find end of function {name}"
     return source[start : start + end_match.end()]
 
@@ -1663,7 +1673,15 @@ def test_side_bucket_change_clears_the_previously_selected_person() -> None:
 
 
 def test_side_bucket_helper_treats_all_advocate_roles_as_one_bucket() -> None:
-    source = _source(RESOLVE_CARD_PATH)
+    """Originally asserted `sideBucket` as a local ResolveCard.svelte declaration.
+    Plan 49-10 (G-49-3/D-35) extracted this helper — the pure bucket rule
+    shared by the Resolve card and the argument-detail Speakers card — into
+    app/src/lib/participantSide.ts, the single source of truth for both
+    surfaces (RESOLVE-09's disjoint-pool reasoning is what the rule encodes).
+    This test now reads the shared module instead of the component; the
+    contract itself (BENCH special-cased, everything else collapses to one
+    ADVOCATE bucket) is unchanged and nothing about it was weakened."""
+    source = _source(PARTICIPANT_SIDE_PATH)
     assert "function sideBucket(" in source, (
         "a named helper must map any side value onto the two-value BENCH/ADVOCATE bucket"
     )
@@ -1673,6 +1691,25 @@ def test_side_bucket_helper_treats_all_advocate_roles_as_one_bucket() -> None:
         "every other side value (UNKNOWN/PETITIONER/RESPONDENT/AMICUS) must collapse to the "
         "single ADVOCATE bucket, so switching among specific advocate roles never clears "
         "the person selection"
+    )
+
+
+def test_resolve_card_imports_side_bucket_from_shared_module_not_a_local_declaration() -> None:
+    """Companion to the re-pointed test above — gates the extraction in the
+    OPPOSITE direction so a future copy-paste of `sideBucket` back into
+    ResolveCard.svelte fails here. Plan 49-10 (G-49-3/D-35)."""
+    source = _source(RESOLVE_CARD_PATH)
+    assert "function sideBucket(" not in source, (
+        "sideBucket must no longer be declared locally in ResolveCard.svelte — it moved to "
+        "app/src/lib/participantSide.ts (plan 49-10)"
+    )
+    assert re.search(r"from\s+['\"]\$lib/participantSide['\"]", source), (
+        "ResolveCard.svelte must import from '$lib/participantSide'"
+    )
+    import_match = re.search(r"import\s*\{([^}]*)\}\s*from\s*['\"]\$lib/participantSide['\"]", source)
+    assert import_match, "could not find the named import from '$lib/participantSide'"
+    assert "sideBucket" in import_match.group(1), (
+        "ResolveCard.svelte must import sideBucket by name from the shared module"
     )
 
 

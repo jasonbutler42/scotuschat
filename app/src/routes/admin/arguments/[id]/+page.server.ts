@@ -163,6 +163,15 @@ export const actions: Actions = {
 	 * updateParticipantSide — PATCH /api/admin/arguments/{id}/participants/{participant_id}
 	 * with { side }. Isolated to this argument only (ROLE-03, IDOR guard T-15-04-IDOR).
 	 * On success, redirects to reload the page with fresh data.
+	 *
+	 * D-35: on a published-argument rejection (api/services/admin_arguments.py's
+	 * update_participant_side guard, Task 2 of this plan), the generic "Try
+	 * again." copy is wrong — the write can never succeed until the argument is
+	 * unpublished. Reads the 422 body's `detail` the same defensive way the
+	 * `save` action below already does (typeof-guarded, inside its own try so a
+	 * non-JSON body cannot throw) and branches on the published case. The raw
+	 * server detail is never echoed to the operator — it names an internal
+	 * folded-todo filename.
 	 */
 	updateParticipantSide: async ({ request, params, fetch }) => {
 		const formData = await request.formData();
@@ -188,6 +197,23 @@ export const actions: Actions = {
 		}
 
 		if (!res.ok) {
+			let detail = '';
+			try {
+				const body: unknown = await res.json();
+				detail =
+					typeof body === 'object' && body !== null && typeof (body as { detail?: unknown }).detail === 'string'
+						? String((body as { detail: string }).detail)
+						: '';
+			} catch {
+				// ignore parse error
+			}
+
+			if (detail.includes('is published')) {
+				return fail(422, {
+					roleError: 'This argument is published, so its data is read-only. Unpublish it first to edit roles or descriptors.',
+				});
+			}
+
 			return fail(422, { roleError: 'Could not save role. Try again.' });
 		}
 

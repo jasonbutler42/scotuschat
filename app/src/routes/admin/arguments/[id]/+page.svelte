@@ -110,6 +110,14 @@
 	// Speakers section — per-participant save state keyed by participant_id.
 	let savingSpeakerId = $state<number | null>(null);
 
+	// Published lock (D-35): "If an argument is currently published, the
+	// data for that argument is locked." api/services/admin_arguments.py's
+	// update_participant_side (Task 2 of this plan) is the AUTHORITY — this
+	// flag exists only so the operator is never offered a control that will
+	// be refused. Uses the same `data.argument.status === 'published'`
+	// idiom already used below at the Danger Zone / unpublish branch.
+	const speakersLocked = data.argument.status === 'published';
+
 	// Per-row advocate side state, keyed by participant_id (T-26-14, AEDIT-06).
 	// Non-standard sides (UNKNOWN, legacy ADVOCATE) collapse to the 'UNKNOWN'
 	// sentinel so an unresolved advocate shows the explicit placeholder rather
@@ -642,6 +650,16 @@
 				All participants in this argument. Advocates: set the role and descriptor they held here. Changing a role or descriptor here does not affect other arguments.
 			</p>
 
+			{#if speakersLocked}
+				<!-- D-35: card-level lock notice, applies identically to bench and advocate
+				     rows below — no per-class difference in treatment (CLAUDE.md apolitical
+				     constraint). Defence in depth: api/services/admin_arguments.py's
+				     update_participant_side published guard is the authority. -->
+				<p style="font-size: 14px; font-weight: 400; color: #fbbf24; margin: 0 0 16px 0;">
+					This argument is published, so participant data is read-only. Unpublish it first to edit roles or descriptors.
+				</p>
+			{/if}
+
 			{#if data.argument.speakers && data.argument.speakers.length > 0}
 				<table style="width: 100%; border-collapse: collapse;">
 					<thead>
@@ -678,6 +696,7 @@
 											<div style="flex: 1; min-width: 160px;">
 												<select
 													name="side"
+													disabled={speakersLocked}
 													bind:value={speakerSideById[speaker.participant_id]}
 													style="
 														width: 100%;
@@ -689,6 +708,8 @@
 														font-weight: 400;
 														color: #e2e8f0;
 														min-height: 36px;
+														cursor: {speakersLocked ? 'not-allowed' : 'auto'};
+														opacity: {speakersLocked ? 0.7 : 1};
 													"
 												>
 													<option value="UNKNOWN">Unresolved — choose a role</option>
@@ -701,6 +722,7 @@
 												<input
 													type="text"
 													name="descriptor"
+													disabled={speakersLocked}
 													value={speaker.descriptor ?? ''}
 													style="
 														display: block;
@@ -713,6 +735,8 @@
 														color: #e2e8f0;
 														box-sizing: border-box;
 														min-height: 36px;
+														cursor: {speakersLocked ? 'not-allowed' : 'auto'};
+														opacity: {speakersLocked ? 0.7 : 1};
 													"
 												/>
 												<div
@@ -738,7 +762,7 @@
 											</div>
 											<button
 												type="submit"
-												disabled={savingSpeakerId === speaker.participant_id || speakerSideById[speaker.participant_id] === 'UNKNOWN'}
+												disabled={speakersLocked || savingSpeakerId === speaker.participant_id || speakerSideById[speaker.participant_id] === 'UNKNOWN'}
 												style="
 													min-height: 36px;
 													padding: 8px 16px;
@@ -748,8 +772,8 @@
 													font-size: 14px;
 													font-weight: 400;
 													color: #e2e8f0;
-													cursor: {savingSpeakerId === speaker.participant_id || speakerSideById[speaker.participant_id] === 'UNKNOWN' ? 'not-allowed' : 'pointer'};
-													opacity: {savingSpeakerId === speaker.participant_id || speakerSideById[speaker.participant_id] === 'UNKNOWN' ? 0.7 : 1};
+													cursor: {speakersLocked || savingSpeakerId === speaker.participant_id || speakerSideById[speaker.participant_id] === 'UNKNOWN' ? 'not-allowed' : 'pointer'};
+													opacity: {speakersLocked || savingSpeakerId === speaker.participant_id || speakerSideById[speaker.participant_id] === 'UNKNOWN' ? 0.7 : 1};
 													white-space: nowrap;
 												"
 											>

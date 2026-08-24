@@ -109,7 +109,13 @@ def test_no_class_attribute_anywhere_inline_styles_only() -> None:
 
 
 def test_four_action_labels_present_verbatim() -> None:
-    for label in ("Confirm", "Confirm as unattributable", "Edit", "Re-flag for review"):
+    for label in (
+        "Confirm",
+        "Confirm as unattributable",
+        "Re-flag for review",
+        "Edit pipeline run",
+        "Edit argument",
+    ):
         assert label in REVIEW_SOURCE, f"missing action label {label!r}"
 
 
@@ -147,20 +153,77 @@ def test_dashboard_has_five_column_grid_and_five_statcards() -> None:
 
 # ─────────────────────────────────────────────────────────────────────────
 # Backstop E1 (zero-one-many): the Copywriting Contract's plural rule
-# renders "1 constituent needs review" at exactly one and
-# "{N} constituents need review" otherwise — locked to a `=== 1`
-# comparison (not a hardcoded plural string) so a hardcoded plural cannot
-# pass this assertion.
+# renders "1 participant needs review" at exactly one (singular subject,
+# singular verb) and "{N} participants need review" otherwise (plural
+# subject, plural verb) — locked to a `=== 1` comparison (not a hardcoded
+# plural string) so a hardcoded plural cannot pass this assertion. This
+# also closes G-49-4b (domain noun) and G-49-5b (subject-verb agreement)
+# on this line.
 # ─────────────────────────────────────────────────────────────────────────
 
 
 def test_backstop_E1_attention_count_keys_singular_plural_on_strict_equality_one() -> None:
     assert "function attentionCountText" in REVIEW_SOURCE
-    # The plural branch must be keyed on a strict `=== 1` comparison, not a
-    # hardcoded plural string — this exact substring is what a hardcoded
-    # plural (e.g. always emitting "s") would NOT contain.
-    assert "n === 1 ? '' : 's'" in REVIEW_SOURCE
-    assert "need review" in REVIEW_SOURCE
+    # The strict-equality keying survives the noun/verb rewrite.
+    assert "n === 1" in REVIEW_SOURCE
+    assert "1 participant needs review" in REVIEW_SOURCE
+    assert "participants need review" in REVIEW_SOURCE
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# G-49-4a: the row action anchor's label must branch on the same
+# condition as its href, so a static label cannot serve two destinations.
+# ─────────────────────────────────────────────────────────────────────────
+
+
+def test_action_link_label_branches_on_the_same_condition_as_the_href() -> None:
+    """
+    G-49-4a. Source-text assertion only — proves the label helper exists,
+    is wired into the anchor's text content, and tests the identical
+    condition as argumentEditHref, not that the rendered anchor is
+    visually correct.
+    """
+    assert "function argumentEditLabel" in REVIEW_SOURCE
+    match = re.search(
+        r"<a\s+href=\{argumentEditHref\(item\)\}.*?\{argumentEditLabel\(item\)\}.*?</a>",
+        REVIEW_SOURCE,
+        re.DOTALL,
+    )
+    assert match, (
+        "expected one anchor whose href is argumentEditHref(item) and "
+        "whose text content is {argumentEditLabel(item)}"
+    )
+    # One `admin_job_id !== null` occurrence per helper — the parity claim.
+    assert REVIEW_SOURCE.count("admin_job_id !== null") == 2
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# G-49-4b: the internal rollup noun must never render as operator-facing
+# copy on the review page. This gate is the reason the wire code and API
+# schema rename was scoped OUT of this plan (49-07-PLAN.md
+# <planner_decisions>) — it is structural-only (source text, not rendered
+# DOM), and it deliberately permits the wire code (`no_constituents`) and
+# the property/loop-variable accessors (`item.constituents`,
+# `as constituent`, `constituent.<field>`) that this page still uses
+# internally.
+# ─────────────────────────────────────────────────────────────────────────
+
+
+def test_review_page_rendered_copy_uses_the_domain_noun() -> None:
+    allowed_pattern = re.compile(
+        r"no_constituents|item\.constituents|as constituent\b|constituent\.[A-Za-z_]+"
+    )
+    for lineno, line in enumerate(REVIEW_SOURCE.splitlines(), start=1):
+        if "constituent" not in line.lower():
+            continue
+        stripped = line.strip()
+        if stripped.startswith("//") or stripped.startswith("*") or stripped.startswith("<!--"):
+            continue
+        remainder = allowed_pattern.sub("", line)
+        assert "constituent" not in remainder.lower(), (
+            f"line {lineno} renders the internal rollup noun as operator "
+            f"copy: {line!r}"
+        )
 
 
 # ─────────────────────────────────────────────────────────────────────────

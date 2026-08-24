@@ -178,8 +178,11 @@
 
 	// Attention-count copy (E1 populated/partial) — no count text at all
 	// when N is 0 (the row is queued solely via the degraded-tier leg).
+	// Domain noun and subject-verb agreement (G-49-4b/G-49-5b): the shape
+	// is copied verbatim from admin/+page.svelte's Review-queue StatCard
+	// so the two surfaces cannot disagree again.
 	function attentionCountText(n: number): string {
-		return `${n} constituent${n === 1 ? '' : 's'} need review`;
+		return n === 1 ? '1 participant needs review' : `${n} participants need review`;
 	}
 
 	// Discrepancy value display (E6 partial backstop) — an absent side
@@ -216,6 +219,16 @@
 		return item.admin_job_id !== null
 			? `/admin/pipeline/${item.admin_job_id}`
 			: `/admin/arguments/${item.id}`;
+	}
+
+	// The row action label must branch on the same condition as
+	// argumentEditHref immediately above (G-49-4a) — a static "Edit" label
+	// served two destinations and could only ever be right about one. The
+	// operator supplied the "Edit pipeline" phrasing (completed here to
+	// name the destination noun) and explicitly rejected a lifecycle-state
+	// label such as "Edit draft".
+	function argumentEditLabel(item: { admin_job_id: number | null }): string {
+		return item.admin_job_id !== null ? 'Edit pipeline run' : 'Edit argument';
 	}
 
 	function formatDate(iso: string | null): string {
@@ -524,7 +537,7 @@
 														<a
 															href={argumentEditHref(item)}
 															style="display: inline-flex; align-items: center; font-size: 14px; color: #93c5fd; text-decoration: underline;"
-														>Edit</a>
+														>{argumentEditLabel(item)}</a>
 														{#if constituent.review_state === 'operator_confirmed' || constituent.review_state === 'operator_edited'}
 															<form method="POST" action="?/reflag" use:enhance>
 																<input type="hidden" name="id" value={constituent.participant_id} />
@@ -541,7 +554,7 @@
 									{:else}
 										<div style="padding: 12px 12px 0 12px;">
 											<p style="font-size: 14px; color: #94a3b8; margin: 0 0 8px 0;">
-												No flagged constituents — this argument is queued because:
+												No flagged participants — this argument is queued because:
 											</p>
 											<ul style="margin: 0; padding-left: 20px;">
 												{#each item.blockers as blocker}

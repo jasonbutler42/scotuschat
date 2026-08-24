@@ -5,16 +5,16 @@ milestone_name: Import & Provenance Re-model
 current_phase: 49
 current_phase_name: Review Model
 status: Phase 49 REOPENED 2026-08-24 — UAT found 4 open gaps; verification status passed -> gaps_found
-stopped_at: Completed 49-07-PLAN.md (G-49-4a/4b/5b copy gaps closed); 49-09 running in parallel wave 1
-last_updated: "2026-08-24T18:44:57.479Z"
+stopped_at: Completed 49-08-PLAN.md (G-49-5a narrow-viewport containment closed structurally; wave 2 of gap closure)
+last_updated: "2026-08-24T19:22:22.768Z"
 last_activity: 2026-08-24
 last_activity_desc: Planned 3 gap-closure plans (49-07 copy, 49-08 narrow-viewport, 49-09 decision+WR-01)
-state_head: 8662c42af8bc5933b3184db9562dc8277c3f7933
+state_head: fae386261d9d55abce925b323356d172b4df7be4
 progress:
   total_phases: 5
   completed_phases: 2
-  total_plans: 25
-  completed_plans: 23
+  total_plans: 26
+  completed_plans: 24
   percent: 40
 ---
 
@@ -32,7 +32,7 @@ See: .planning/PROJECT.md (updated 2026-08-18 — Phase 47 complete; corpus-firs
 Phase: 49 — Review Model (reopened for gap closure)
 Last activity: 2026-08-24 — Phase 49 UAT completed (31 pass / 3 issues / 0 pending); phase reopened for gap closure
 
-**Next action:** `/gsd-execute-phase 49 --gaps-only` — runs only the three `gap_closure: true` plans. Wave 1: 49-07 (copy: G-49-4a/4b/5b) and 49-09 (WR-01 + a BLOCKING decision checkpoint on G-49-3) in parallel, zero file overlap. Wave 2: 49-08 (narrow-viewport containment, G-49-5a) — depends_on 49-07 because both edit `admin/review/+page.svelte` and `test_phase49_review_ui_contract.py`. 49-09 is `autonomous: false` and WILL stop for a human decision: G-49-3 needs a disposition on threat `T-15-02-BENCH` (`admin_arguments.py:754`), which Phase 25 already declined to relax once — options are deep-link (recommended), port-control, or defer. If deferred, G-49-3 must be set `status: deferred`, never `resolved`. Still open and NOT in any gap_ids: G-49-9a needs a visual re-check (folded into 49-08 Task 3), and UAT sub-item 5.6 was never observed.
+**Next action:** Wave 2 (49-08, narrow-viewport containment for G-49-5a) is now **complete** — see `49-08-SUMMARY.md`. G-49-5a's three horizontal-overflow causes are structurally closed (source-contract tests green: `overflow-x: auto` containment on both queue tables + the status segment group, plus the dashboard's `repeat(auto-fit, minmax(120px, 1fr))` grid track floor proven by an executable arithmetic gate to preserve UAT sub-item 5 while fixing sub-item 7); the visual browser re-confirmation remains outstanding, same `.env`-credential blocker as every other Phase 49 browser check. `49-09` was replanned (D-35, convergence split) into `49-09` + `49-10` — check those PLAN.md files and any SUMMARYs for current status before resuming; not otherwise touched by this plan. Still open and NOT in any gap_ids: G-49-9a needs a visual re-check (49-08 confirmed all three fix sites still present by grep; browser look still outstanding), and UAT sub-item 5.6 was never observed.
 
 Phase 49-06 close-out notes (2026-08-23):
 
@@ -187,6 +187,7 @@ items → 14.** Every closure carries its evidence in the file it closes; the co
 | Phase 49-review-model P05 | 50min | 3 tasks | 10 files |
 | Phase 49-review-model P06 | ~100min | 3 tasks | 15 files |
 | Phase 49 P07 | 45min | 2 tasks | 4 files |
+| Phase 49-review-model P08 | ~55min | 3 tasks | 5 files |
 
 v1.7 per-plan metrics cleared at this milestone boundary per the standard STATE.md reset; the underlying per-plan SUMMARY files remain in `.planning/milestones/v1.7-phases/`.
 
@@ -246,6 +247,7 @@ Full cross-milestone decision log lives in PROJECT.md's Key Decisions table. Per
 - [Phase 49]: 49-06: readonlyMode split into resolveCardReadonly (status===published) / metadataReadonly (unchanged) — closes the item 49-04/49-05 both flagged and deferred.
 - [Phase 49]: 49-06: discovered TEST_DATABASE_URL and DATABASE_URL resolve to the same physical Postgres database in this sandbox — running a full-suite pytest run and a direct dev-DB verification script concurrently produced 2 spurious DeadlockDetectedError failures (confirmed as an artifact, not a regression, by re-running in isolation). Future work in this sandbox should not run both at once.
 - [Phase 49]: 49-07: rename stopped at operator-facing copy; no_constituents/ReviewQueueConstituent/constituents field left unchanged (wire code + D-34 security guard)
+- [Phase 49]: 49-08: closed G-49-5a's three horizontal-overflow causes (two queue tables + the previously-undiagnosed status segment group) with overflow-x: auto containers and a repeat(auto-fit, minmax(120px, 1fr)) grid track floor; the 120px floor resolves the UAT sub-item 5 vs 7 conflict without trading one for the other, proven by an executable _tracks_that_fit arithmetic gate. Structural closure only — browser visual re-confirmation remains blocked by the same denied .env credential access as 49-01/49-03/49-05.
 
 ### Roadmap Evolution
 
@@ -305,8 +307,8 @@ at close.
 
 ## Session Continuity
 
-Last session: 2026-08-24T18:44:56.561Z
-Stopped at: Completed 49-07-PLAN.md (G-49-4a/4b/5b copy gaps closed); 49-09 running in parallel wave 1
+Last session: 2026-08-24T19:22:21.756Z
+Stopped at: Completed 49-08-PLAN.md (G-49-5a narrow-viewport containment closed structurally; wave 2 of gap closure)
 Resume file: None
 
 ## Operator Next Steps

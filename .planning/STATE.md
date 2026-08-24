@@ -5,16 +5,16 @@ milestone_name: Import & Provenance Re-model
 current_phase: 49
 current_phase_name: Review Model
 status: Phase 49 REOPENED 2026-08-24 — UAT found 4 open gaps; verification status passed -> gaps_found
-stopped_at: Phase 49 gap-closure plans 49-07..49-09 written and checked; ready to execute --gaps-only
-last_updated: "2026-08-24T15:05:00Z"
+stopped_at: Completed 49-07-PLAN.md (G-49-4a/4b/5b copy gaps closed); 49-09 running in parallel wave 1
+last_updated: "2026-08-24T18:44:57.479Z"
 last_activity: 2026-08-24
 last_activity_desc: Planned 3 gap-closure plans (49-07 copy, 49-08 narrow-viewport, 49-09 decision+WR-01)
-state_head: 6c7a0f7cb0b857dc81356563a23c8962b85d7417
+state_head: 8662c42af8bc5933b3184db9562dc8277c3f7933
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 25
-  completed_plans: 22
+  completed_plans: 23
   percent: 40
 ---
 
@@ -186,6 +186,7 @@ items → 14.** Every closure carries its evidence in the file it closes; the co
 | Phase 49-review-model P04 | 100min | 3 tasks | 15 files |
 | Phase 49-review-model P05 | 50min | 3 tasks | 10 files |
 | Phase 49-review-model P06 | ~100min | 3 tasks | 15 files |
+| Phase 49 P07 | 45min | 2 tasks | 4 files |
 
 v1.7 per-plan metrics cleared at this milestone boundary per the standard STATE.md reset; the underlying per-plan SUMMARY files remain in `.planning/milestones/v1.7-phases/`.
 
@@ -244,6 +245,7 @@ Full cross-milestone decision log lives in PROJECT.md's Key Decisions table. Per
 - [Phase 49]: 49-06: found and fixed a real gap during D-32's own live walkthrough — _argument_attention_predicate had no leg for "a constituent has an open discrepancy" (the People-tab predicate already did), so the review queue never surfaced exactly the scenario REVIEW-02/REVIEW-04 exist to prove. Fixed same-plan.
 - [Phase 49]: 49-06: readonlyMode split into resolveCardReadonly (status===published) / metadataReadonly (unchanged) — closes the item 49-04/49-05 both flagged and deferred.
 - [Phase 49]: 49-06: discovered TEST_DATABASE_URL and DATABASE_URL resolve to the same physical Postgres database in this sandbox — running a full-suite pytest run and a direct dev-DB verification script concurrently produced 2 spurious DeadlockDetectedError failures (confirmed as an artifact, not a regression, by re-running in isolation). Future work in this sandbox should not run both at once.
+- [Phase 49]: 49-07: rename stopped at operator-facing copy; no_constituents/ReviewQueueConstituent/constituents field left unchanged (wire code + D-34 security guard)
 
 ### Roadmap Evolution
 
@@ -303,8 +305,8 @@ at close.
 
 ## Session Continuity
 
-Last session: 2026-08-23T16:25:00.000Z
-Stopped at: Phase 49 complete, ready to plan Phase 50
+Last session: 2026-08-24T18:44:56.561Z
+Stopped at: Completed 49-07-PLAN.md (G-49-4a/4b/5b copy gaps closed); 49-09 running in parallel wave 1
 Resume file: None
 
 ## Operator Next Steps

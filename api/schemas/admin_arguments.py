@@ -45,10 +45,14 @@ class ParticipantSideUpdate(BaseModel):
     """PATCH body for argument_participants.side and descriptor (ROLE-03, Phase 26 D-06).
 
     Mass-assignment guard (T-26-04): ONLY ``side`` and ``descriptor`` are writable
-    via this schema.  No other ArgumentParticipant column can be set.  Service
-    validates that BENCH cannot be set (T-15-02-BENCH) — operators set advocate
-    roles only.  ``descriptor`` is optional — omitting it (None) leaves the
-    existing descriptor unchanged; it is written only for non-BENCH participants.
+    via this schema.  No other ArgumentParticipant column can be set.  Every side
+    value including BENCH is accepted (T-15-02-BENCH retired as satisfied by D-35,
+    plan 49-10 — see api/services/admin_arguments.py::update_participant_side's
+    docstring for the four compensating controls); unresolved values (UNKNOWN, the
+    legacy ADVOCATE literal) are still rejected.  ``descriptor`` is optional —
+    omitting it (None) leaves the existing descriptor unchanged; it is written
+    only for non-BENCH participants (RESOLVE-13) — a BENCH write leaves the
+    stored descriptor untouched even when one is supplied.
     """
 
     side: SideEnum

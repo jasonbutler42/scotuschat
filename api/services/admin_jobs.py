@@ -853,7 +853,13 @@ async def update_resolve_row_for_job(
 
     This is the resolve-scoped write path RESEARCH.md's Common Pitfalls table and
     Open Question #1 call for — it does NOT route through
-    admin_arguments.update_participant_side, which rejects BENCH by design.
+    admin_arguments.update_participant_side. T-15-02-BENCH (the guard that used to
+    make that path reject BENCH) was retired as satisfied, not weakened, by D-35
+    in plan 49-10 — both writers now accept BENCH. The two functions still do not
+    delegate to each other: they derive and re-verify argument ownership from
+    different trust boundaries (this one from job_id, the sibling from the
+    argument id directly), and each calls the same authority-gated writer
+    (api/services/admin_review.py::apply_participant_value_change) independently.
 
     Guards, in order (T-25-14, T-25-15):
       1. AdminJob must exist and have a linked argument.

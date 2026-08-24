@@ -491,6 +491,14 @@ async def test_update_participant_route_persists_descriptor_for_advocate(
 ) -> None:
     """PATCH /arguments/{id}/participants/{id} with {side, descriptor} persists
     descriptor for an advocate participant and returns it in the response body (D-06).
+
+    T-15-02-BENCH was retired as SATISFIED (not weakened) by D-35 in plan
+    49-10 — see api/services/admin_arguments.py::update_participant_side's
+    docstring for the four compensating controls the retirement rests on.
+    This test's final block previously asserted a 422 on side=="BENCH"; it
+    now asserts the new contract instead: the route accepts BENCH and
+    RESOLVE-13 still protects the stored descriptor (a client-supplied
+    descriptor on the bench call is ignored, not written).
     """
     from api.core.database import AsyncSessionLocal
     from api.models.models import (
@@ -534,13 +542,27 @@ async def test_update_participant_route_persists_descriptor_for_advocate(
         assert body["side"] == "PETITIONER"
         assert body["descriptor"] == "Counsel of Record"
 
-        # BENCH is still rejected via the route (422).
+        # T-15-02-BENCH retired (D-35, plan 49-10): the route now accepts
+        # BENCH on a non-published argument. A client-supplied descriptor on
+        # this call is ignored (RESOLVE-13) — the stored descriptor stays
+        # "Counsel of Record".
         response = await client.patch(
             f"/api/admin/arguments/{arg_id}/participants/{participant_id}",
-            json={"side": "BENCH"},
+            json={"side": "BENCH", "descriptor": "Should not persist"},
             headers=_admin_headers(),
         )
-        assert response.status_code == 422
+        assert response.status_code == 200
+        body = response.json()
+        assert body["side"] == "BENCH"
+        assert body["descriptor"] == "Counsel of Record", (
+            "RESOLVE-13: a bench write via the route must never clobber the stored "
+            "descriptor, even when a client supplies one in the same call"
+        )
+
+        async with AsyncSessionLocal() as db:
+            p = await db.get(ArgumentParticipant, participant_id)
+            assert p.side == SideEnum.BENCH
+            assert p.descriptor == "Counsel of Record"
     finally:
         async with AsyncSessionLocal() as db:
             p = await db.get(ArgumentParticipant, participant_id)

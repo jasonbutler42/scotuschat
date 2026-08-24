@@ -1476,7 +1476,13 @@ async def test_get_argument_detail_status_log_orders_by_id_not_created_at() -> N
 @pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
 async def test_update_participant_side_persists_descriptor_for_advocate() -> None:
     """update_participant_side writes descriptor when provided, leaves it unchanged
-    when omitted, and still raises on side==BENCH (D-06, T-26-04).
+    when omitted (D-06, T-26-04). T-15-02-BENCH was retired as SATISFIED (not
+    weakened) by D-35 in plan 49-10 — see update_participant_side's own
+    docstring for the four compensating controls the retirement rests on —
+    so the final block below no longer asserts a raise on side==BENCH; it
+    asserts the new contract instead: the bench call succeeds, the stored
+    descriptor is unchanged by it (RESOLVE-13), and a subsequent advocate
+    call still returns the original descriptor.
     """
     from api.core.database import AsyncSessionLocal
     from api.models.models import (
@@ -1532,12 +1538,30 @@ async def test_update_participant_side_persists_descriptor_for_advocate() -> Non
         p = await db.get(ArgumentParticipant, participant_id)
         assert p.descriptor == "Counsel of Record"
 
-    # BENCH is still rejected regardless of descriptor.
+    # T-15-02-BENCH retired (D-35, plan 49-10): a bench call now SUCCEEDS on a
+    # non-published argument. A client-supplied descriptor on this call is
+    # ignored (RESOLVE-13) — the stored descriptor stays "Counsel of Record".
     async with AsyncSessionLocal() as db:
-        with pytest.raises(ValueError):
-            await update_participant_side(
-                db, arg_id, participant_id, SideEnum.BENCH, "Should not persist"
-            )
+        result = await update_participant_side(
+            db, arg_id, participant_id, SideEnum.BENCH, "Should not persist"
+        )
+    assert result is not None
+    assert result["side"] == SideEnum.BENCH.value
+    assert result["descriptor"] == "Counsel of Record"
+
+    async with AsyncSessionLocal() as db:
+        p = await db.get(ArgumentParticipant, participant_id)
+        assert p.side == SideEnum.BENCH
+        assert p.descriptor == "Counsel of Record", (
+            "RESOLVE-13: a bench write must never clobber the stored descriptor"
+        )
+
+    # A subsequent advocate call (descriptor omitted, as Task 3's committed-
+    # side rule will do) must still report the original descriptor.
+    async with AsyncSessionLocal() as db:
+        result = await update_participant_side(db, arg_id, participant_id, SideEnum.RESPONDENT)
+    assert result is not None
+    assert result["descriptor"] == "Counsel of Record"
 
     # Cleanup
     async with AsyncSessionLocal() as db:

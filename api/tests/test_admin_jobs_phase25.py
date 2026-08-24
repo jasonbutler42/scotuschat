@@ -886,7 +886,15 @@ def test_resolve_row_update_schema_fields() -> None:
 
 def test_update_resolve_row_for_job_does_not_reuse_advocate_side_endpoint() -> None:
     """RESEARCH.md Common Pitfalls: this function must NOT route through
-    admin_arguments.update_participant_side, which rejects BENCH by design."""
+    admin_arguments.update_participant_side. Originally this was because that
+    path rejected BENCH by design (T-15-02-BENCH); that guard was retired as
+    satisfied (not weakened) by D-35 in plan 49-10, and both writers now
+    accept BENCH. The two functions still do not delegate to each other for a
+    different reason: each derives and re-verifies argument ownership from a
+    different trust boundary (this one from job_id, the sibling from the
+    argument id directly) — collapsing them would blur that ownership-scope
+    distinction, not merely a since-retired BENCH rejection. The assertion
+    itself (no delegation between the two writers) is unchanged."""
     from api.services import admin_jobs
 
     source = inspect.getsource(admin_jobs)
@@ -896,8 +904,10 @@ def test_update_resolve_row_for_job_does_not_reuse_advocate_side_endpoint() -> N
     func_body = source[func_start:next_func] if next_func != -1 else source[func_start:]
 
     assert "update_participant_side(" not in func_body, (
-        "update_resolve_row_for_job must not call update_participant_side — "
-        "that path rejects BENCH by design"
+        "update_resolve_row_for_job must not call update_participant_side — the two "
+        "writers derive and re-verify argument ownership from different trust "
+        "boundaries (job_id here vs. the argument id directly on the sibling) and "
+        "must not delegate to each other"
     )
     assert "ArgumentStatusEnum.PUBLISHED" in func_body, (
         "update_resolve_row_for_job must guard on argument.status == PUBLISHED "
@@ -957,7 +967,9 @@ def test_update_resolve_row_for_job_does_not_reuse_advocate_side_endpoint() -> N
 async def test_update_resolve_row_bench_side_persists() -> None:
     """Test 1: updating an already-resolved bench participant to BENCH succeeds
     and persists ArgumentParticipant.side on the job's linked argument (D-18,
-    PJOB-18) — the old advocate-side path rejects BENCH.
+    PJOB-18) — this resolve-scoped path has always accepted BENCH; the
+    sibling advocate-side path's own BENCH rejection (T-15-02-BENCH) was
+    retired as satisfied by D-35 in plan 49-10, so both now accept it.
 
     Uses AsyncSessionLocal() directly rather than the shared db_session
     fixture — update_resolve_row_for_job commits internally, which raises

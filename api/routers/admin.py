@@ -585,9 +585,15 @@ async def update_resolve_row(
     Update a resolve row's side (BENCH allowed) and advocate descriptor (D-14,
     D-18, PJOB-14, PJOB-18).
 
-    This is the resolve-scoped mutation path — separate from
-    PATCH /arguments/{argument_id}/participants/{participant_id}, which rejects
-    BENCH by design (T-15-02-BENCH). Argument ownership is derived from job_id
+    This is the resolve-scoped mutation path — a separate endpoint from
+    PATCH /arguments/{argument_id}/participants/{participant_id} below, but as
+    of plan 49-10 (D-35, T-15-02-BENCH retired as satisfied) the two are no
+    longer distinguished by which one accepts BENCH — both do. They remain
+    separate because of ownership scope, not authority: this endpoint derives
+    its argument from job_id, the other derives it from the argument id
+    directly, and neither delegates to the other — both call the same
+    authority-gated writer (api/services/admin_review.py::
+    apply_participant_value_change). Argument ownership is derived from job_id
     (never trusted from the client); the target participant must belong to that
     argument (T-25-14 IDOR guard). Rejected once the linked argument's status is
     PUBLISHED — resolve rows are editable across every unpublished lifecycle
@@ -1445,17 +1451,19 @@ async def update_participant_side(
     Mass-assignment guard (T-26-04): only ``side`` and ``descriptor`` are
     writable via this endpoint (ParticipantSideUpdate exposes only those
     fields). descriptor is optional — omitting it leaves the existing
-    descriptor unchanged.
+    descriptor unchanged; it is never written on a BENCH side (RESOLVE-13).
 
-    BENCH guard (T-15-02-BENCH): returns 422 if side == BENCH — operators
-    cannot set advocate participants to BENCH via this endpoint.
+    Accepted values (T-15-02-BENCH retired as satisfied, D-35, plan 49-10):
+    every side value including BENCH is now accepted here — see
+    api/services/admin_arguments.py::update_participant_side's docstring for
+    the four compensating controls the retirement relies on. Unresolved
+    values (UNKNOWN, the legacy ADVOCATE literal) are still rejected.
 
     Published guard (D-35): returns 422 if the owning argument's status is
     PUBLISHED — participant data is read-only once an argument has been
     published. Unpublish the argument first to edit it.
 
-    Returns 422 on side == BENCH, on an unresolved side, or on a published
-    argument.
+    Returns 422 on an unresolved side or on a published argument.
     Returns 404 if the participant is not found under this argument.
     Auth inherited from router-level verify_admin_token dependency (T-15-02-AUTH).
     """

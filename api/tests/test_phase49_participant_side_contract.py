@@ -44,6 +44,8 @@ ADMIN_ARGUMENTS_SERVICE_PATH = ROOT / "api" / "services" / "admin_arguments.py"
 ADMIN_JOBS_SERVICE_PATH = ROOT / "api" / "services" / "admin_jobs.py"
 ARGUMENT_DETAIL_PATH = ROOT / "app" / "src" / "routes" / "admin" / "arguments" / "[id]" / "+page.svelte"
 ARGUMENT_DETAIL_SERVER_PATH = ROOT / "app" / "src" / "routes" / "admin" / "arguments" / "[id]" / "+page.server.ts"
+RESOLVE_CARD_PATH = ROOT / "app" / "src" / "lib" / "components" / "ResolveCard.svelte"
+PARTICIPANT_SIDE_PATH = ROOT / "app" / "src" / "lib" / "participantSide.ts"
 
 FOLDED_TODO_SLUG = "2026-08-21-widen-participant-editability-to-all-unpublished-states"
 
@@ -563,4 +565,433 @@ def test_participant_side_action_reports_a_published_rejection_accurately() -> N
     assert published_copy_match, "could not find distinct published-rejection roleError copy"
     assert published_copy_match.group(1) != "Could not save role. Try again.", (
         "the published-rejection copy must be distinct from the generic retry copy"
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Plan 49-10, Task 1 (G-49-3/D-35): the shared side/bucket module — the
+# bucket rule, the operator-visible role labels, and the specific-advocate-
+# role helper exist in exactly ONE place, consumed by both the Resolve card
+# and the Speakers card. `test_side_bucket_helper_treats_all_advocate_
+# roles_as_one_bucket` in test_phase44_resolve_table_contract.py is the
+# re-pointed declaration assertion for the bucket rule itself; the
+# assertions below cover the label map and the specific-advocate-role
+# helper, which that module does not otherwise touch.
+# ─────────────────────────────────────────────────────────────────────────
+
+
+def test_shared_module_exports_the_label_map_byte_identical_to_todays_advocate_labels() -> None:
+    """The three advocate labels are operator-visible copy. The extraction
+    (plan 49-10) must not silently reword them — Task 3 renders the
+    Speakers card's advocate options from this map rather than from a
+    second hardcoded list, so if the map ever drifted from today's strings
+    the operator-visible copy would silently change with it."""
+    source = _source(PARTICIPANT_SIDE_PATH)
+    assert "SIDE_LABEL" in source, (
+        "app/src/lib/participantSide.ts must export a SIDE_LABEL display map"
+    )
+    for label in ("Petitioner's Counsel", "Respondent's Counsel", "Amicus Curiae"):
+        assert label in source, (
+            f"SIDE_LABEL must carry the byte-identical advocate label {label!r} that "
+            f"ResolveCard.svelte and the Speakers card render today"
+        )
+
+
+def test_shared_module_exports_the_specific_advocate_role_helper() -> None:
+    """specificAdvocateRole is byte-equivalent to ResolveCard.svelte's own
+    (pre-extraction) declaration — both cards import the same function
+    rather than each declaring their own copy of the three-role check."""
+    source = _source(PARTICIPANT_SIDE_PATH)
+    assert "function specificAdvocateRole(" in source, (
+        "app/src/lib/participantSide.ts must export specificAdvocateRole"
+    )
+    body = _plain_function_body(source, "specificAdvocateRole")
+    for role in ("PETITIONER", "RESPONDENT", "AMICUS"):
+        assert role in body, f"specificAdvocateRole must recognize {role!r}"
+
+
+def test_shared_module_exports_a_boundary_crossing_predicate() -> None:
+    """The one genuinely new export (planner_decisions): a pure predicate
+    taking a previous bucket and a new side value and reporting whether the
+    bucket changed, with the first-observation case (no previous bucket)
+    reported as NOT a crossing — the rule clearPersonOnSideBucketChange
+    already implements, so initial load/seeding is never mistaken for an
+    operator-driven boundary crossing. Both cards will consume this."""
+    source = _source(PARTICIPANT_SIDE_PATH)
+    assert re.search(r"function\s+crossesSideBoundary\s*\(", source), (
+        "app/src/lib/participantSide.ts must export a crossesSideBoundary(...) "
+        "boundary-crossing predicate"
+    )
+    body = _plain_function_body(source, "crossesSideBoundary")
+    assert "undefined" in body, (
+        "the predicate must explicitly handle the no-previous-bucket case as NOT a crossing"
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Plan 49-10, Task 2 (G-49-3/D-35): the backend accepts BENCH under
+# RESOLVE-13, and T-15-02-BENCH is retired as SATISFIED (not weakened) — its
+# reconciliation concern is met at the new call site by four compensating
+# controls (Task 3's boundary confirm, the no-fallback tenure derivation,
+# the Missing-tenure/no-person affordance, and 49-09's published lock).
+# ─────────────────────────────────────────────────────────────────────────
+
+BENCH_REJECTION_STRING = "BENCH cannot be set via participant side update"
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_bench_side_write_succeeds_and_preserves_the_stored_descriptor() -> None:
+    """RESOLVE-13: a bench write must skip the descriptor column entirely —
+    the stored descriptor is preserved, and a client-supplied bench
+    descriptor is deliberately ignored (passed here on purpose) rather than
+    written. T-15-02-BENCH's retirement (D-35) means this call must now
+    SUCCEED on a non-published argument rather than raise.
+    """
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import (
+        Argument,
+        ArgumentParticipant,
+        ArgumentStatusEnum,
+        Person,
+        SideEnum,
+    )
+    from api.services.admin_arguments import update_participant_side
+
+    async with AsyncSessionLocal() as db:
+        arg = Argument(status=ArgumentStatusEnum.DRAFT)
+        db.add(arg)
+        await db.flush()
+
+        person = Person(full_name="Bench Retirement Advocate")
+        db.add(person)
+        await db.flush()
+
+        participant = ArgumentParticipant(
+            argument_id=arg.id,
+            person_id=person.id,
+            raw_speaker_label="MR. BENCH RETIREMENT ADVOCATE",
+            side=SideEnum.PETITIONER,
+            descriptor="Original Descriptor",
+        )
+        db.add(participant)
+        await db.commit()
+
+        arg_id = arg.id
+        person_id = person.id
+        participant_id = participant.id
+
+    try:
+        async with AsyncSessionLocal() as db:
+            result = await update_participant_side(
+                db, arg_id, participant_id, SideEnum.BENCH, "Should not persist"
+            )
+        assert result is not None
+        assert result["side"] == SideEnum.BENCH.value
+        assert result["descriptor"] == "Original Descriptor", (
+            "the returned descriptor must report the row's EXISTING descriptor, not the "
+            "ignored incoming one — the return value must not claim a write that did not "
+            "happen"
+        )
+
+        async with AsyncSessionLocal() as db:
+            p = await db.get(ArgumentParticipant, participant_id)
+            assert p.side == SideEnum.BENCH
+            assert p.descriptor == "Original Descriptor", (
+                "RESOLVE-13: a bench write must never clobber the stored descriptor, even "
+                "when a client supplies one in the same call"
+            )
+    finally:
+        async with AsyncSessionLocal() as db:
+            p = await db.get(ArgumentParticipant, participant_id)
+            if p is not None:
+                await db.delete(p)
+            person_row = await db.get(Person, person_id)
+            if person_row is not None:
+                await db.delete(person_row)
+            argument = await db.get(Argument, arg_id)
+            if argument is not None:
+                await db.delete(argument)
+            await db.commit()
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_bench_round_trip_does_not_lose_the_descriptor() -> None:
+    """The sharpest defect in this convergence (planner_decisions): RESOLVE-13
+    preserves a bench row's descriptor but the read path reports it null, so
+    a naive bench->advocate move would submit an empty string and clobber
+    the very value RESOLVE-13 protected. This mirrors
+    test_phase44_argument_role_roundtrip.py's equivalent proof on the
+    resolve path — advocate(descriptor) -> bench -> advocate, with the
+    descriptor OMITTED on the return leg (which is what Task 3's form action
+    will do), must still report the ORIGINAL descriptor.
+    """
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import (
+        Argument,
+        ArgumentParticipant,
+        ArgumentStatusEnum,
+        Person,
+        SideEnum,
+    )
+    from api.services.admin_arguments import list_argument_speakers, update_participant_side
+
+    async with AsyncSessionLocal() as db:
+        arg = Argument(status=ArgumentStatusEnum.DRAFT)
+        db.add(arg)
+        await db.flush()
+
+        person = Person(full_name="Round Trip Advocate")
+        db.add(person)
+        await db.flush()
+
+        participant = ArgumentParticipant(
+            argument_id=arg.id,
+            person_id=person.id,
+            raw_speaker_label="MS. ROUND TRIP ADVOCATE",
+            side=SideEnum.RESPONDENT,
+            descriptor="Counsel for Respondent",
+        )
+        db.add(participant)
+        await db.commit()
+
+        arg_id = arg.id
+        person_id = person.id
+        participant_id = participant.id
+
+    try:
+        # advocate -> bench (descriptor omitted, mirroring the round-trip's first leg)
+        async with AsyncSessionLocal() as db:
+            await update_participant_side(db, arg_id, participant_id, SideEnum.BENCH)
+
+        # bench -> advocate (descriptor OMITTED — Task 3's committed-side rule)
+        async with AsyncSessionLocal() as db:
+            await update_participant_side(db, arg_id, participant_id, SideEnum.PETITIONER)
+
+        async with AsyncSessionLocal() as db:
+            p = await db.get(ArgumentParticipant, participant_id)
+            assert p.descriptor == "Counsel for Respondent", (
+                "the descriptor must survive the full advocate -> bench -> advocate round "
+                "trip even though it is omitted on both legs of the call"
+            )
+
+        async with AsyncSessionLocal() as db:
+            speakers = await list_argument_speakers(db, arg_id)
+        speaker = next(s for s in speakers if s["participant_id"] == participant_id)
+        assert speaker["descriptor"] == "Counsel for Respondent", (
+            "the read path must report the original descriptor once the row is an "
+            "advocate row again — proving the round trip live, not by source grep"
+        )
+    finally:
+        async with AsyncSessionLocal() as db:
+            p = await db.get(ArgumentParticipant, participant_id)
+            if p is not None:
+                await db.delete(p)
+            person_row = await db.get(Person, person_id)
+            if person_row is not None:
+                await db.delete(person_row)
+            argument = await db.get(Argument, arg_id)
+            if argument is not None:
+                await db.delete(argument)
+            await db.commit()
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_bench_write_advances_review_state_and_closes_discrepancies() -> None:
+    """The bench path must not be a quieter path than the advocate path: it
+    advances review_state to OPERATOR_EDITED and closes this participant's
+    open value_discrepancy rows, exactly as an advocate write does."""
+    from sqlalchemy import select
+
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import (
+        Argument,
+        ArgumentParticipant,
+        ArgumentStatusEnum,
+        Person,
+        ReviewState,
+        SideEnum,
+        ValueDiscrepancy,
+    )
+    from api.services.admin_arguments import update_participant_side
+
+    async with AsyncSessionLocal() as db:
+        arg = Argument(status=ArgumentStatusEnum.DRAFT)
+        db.add(arg)
+        await db.flush()
+
+        person = Person(full_name="Discrepancy Bench Advocate")
+        db.add(person)
+        await db.flush()
+
+        participant = ArgumentParticipant(
+            argument_id=arg.id,
+            person_id=person.id,
+            raw_speaker_label="MR. DISCREPANCY BENCH ADVOCATE",
+            side=SideEnum.PETITIONER,
+            review_state=ReviewState.UNREVIEWED,
+        )
+        db.add(participant)
+        await db.commit()
+
+        arg_id = arg.id
+        person_id = person.id
+        participant_id = participant.id
+
+    try:
+        async with AsyncSessionLocal() as db:
+            await update_participant_side(db, arg_id, participant_id, SideEnum.BENCH)
+
+        async with AsyncSessionLocal() as db:
+            p = await db.get(ArgumentParticipant, participant_id)
+            assert p.review_state == ReviewState.OPERATOR_EDITED
+
+            disc_result = await db.execute(
+                select(ValueDiscrepancy).where(
+                    ValueDiscrepancy.target_type == "argument_participant",
+                    ValueDiscrepancy.target_id == participant_id,
+                    ValueDiscrepancy.resolved_at.is_(None),
+                )
+            )
+            assert disc_result.scalar_one_or_none() is None, (
+                "a bench write must close any open value_discrepancy row for this "
+                "participant, same as the advocate path"
+            )
+    finally:
+        async with AsyncSessionLocal() as db:
+            p = await db.get(ArgumentParticipant, participant_id)
+            if p is not None:
+                await db.delete(p)
+            person_row = await db.get(Person, person_id)
+            if person_row is not None:
+                await db.delete(person_row)
+            argument = await db.get(Argument, arg_id)
+            if argument is not None:
+                await db.delete(argument)
+            await db.commit()
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_bench_write_still_refused_on_a_published_argument() -> None:
+    """Proves the retirement did not reopen 49-09's hole: 49-09's published
+    lock is the compensating control the retirement rests on, and it must
+    still refuse a bench write exactly as it refuses any other side write.
+    This assertion is expected to ALREADY PASS before this task's source
+    edit — today's bench raise fires unconditionally before the published
+    check is ever reached, so the write is refused either way. Recorded
+    here explicitly (not merely inferred) so the retirement's compensating
+    control is proved directly rather than assumed.
+    """
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import (
+        Argument,
+        ArgumentParticipant,
+        ArgumentStatusEnum,
+        Person,
+        SideEnum,
+    )
+    from api.services.admin_arguments import update_participant_side
+
+    async with AsyncSessionLocal() as db:
+        arg = Argument(status=ArgumentStatusEnum.PUBLISHED)
+        db.add(arg)
+        await db.flush()
+
+        person = Person(full_name="Published Bench Advocate")
+        db.add(person)
+        await db.flush()
+
+        participant = ArgumentParticipant(
+            argument_id=arg.id,
+            person_id=person.id,
+            raw_speaker_label="MR. PUBLISHED BENCH ADVOCATE",
+            side=SideEnum.PETITIONER,
+            descriptor="Should Not Change",
+        )
+        db.add(participant)
+        await db.commit()
+
+        arg_id = arg.id
+        person_id = person.id
+        participant_id = participant.id
+
+    try:
+        async with AsyncSessionLocal() as db:
+            with pytest.raises(ValueError):
+                await update_participant_side(db, arg_id, participant_id, SideEnum.BENCH)
+
+        async with AsyncSessionLocal() as db:
+            p = await db.get(ArgumentParticipant, participant_id)
+            assert p.side == SideEnum.PETITIONER
+            assert p.descriptor == "Should Not Change"
+    finally:
+        async with AsyncSessionLocal() as db:
+            p = await db.get(ArgumentParticipant, participant_id)
+            if p is not None:
+                await db.delete(p)
+            person_row = await db.get(Person, person_id)
+            if person_row is not None:
+                await db.delete(person_row)
+            argument = await db.get(Argument, arg_id)
+            if argument is not None:
+                await db.delete(argument)
+            await db.commit()
+
+
+def test_unresolved_sides_are_still_rejected() -> None:
+    """T-15-02-BENCH's retirement is scoped to BENCH alone — the unresolved-
+    side rejection (T-26-14) is untouched by this plan. Expected to ALREADY
+    PASS: today's guard already raises for both UNKNOWN and the legacy
+    ADVOCATE literal, and this task does not touch that guard.
+    """
+    from typing import Any
+
+    from api.models.models import SideEnum
+    from api.services.admin_arguments import update_participant_side
+
+    sentinel_session: Any = None
+
+    import asyncio
+
+    async def _run() -> None:
+        with pytest.raises(ValueError):
+            await update_participant_side(sentinel_session, 1, 1, SideEnum.UNKNOWN)
+        with pytest.raises(ValueError):
+            await update_participant_side(sentinel_session, 1, 1, SideEnum.ADVOCATE)
+
+    asyncio.run(_run())
+
+
+def test_one_authority_gated_call_handles_side() -> None:
+    """49-04 D2/D-31a: every value write to argument_participants routes
+    through the ONE authority-gated writer. This asserts exactly one
+    authority-gate call passes the side field, and that the bench-rejection
+    error string no longer exists anywhere in the service module — the
+    retirement removes a refusal, it does not add a writer.
+    """
+    lines = _service_function_source_lines(ADMIN_ARGUMENTS_SERVICE_PATH, "update_participant_side")
+    assert lines, "could not extract update_participant_side() body"
+
+    side_gate_calls = [
+        i
+        for i, line in enumerate(lines)
+        if "apply_participant_value_change(" in line
+    ]
+    # There may be two apply_participant_value_change(...) call sites in this
+    # function (side and, conditionally, descriptor) — exactly one of them
+    # must carry field="side".
+    full_body = "\n".join(lines)
+    side_field_occurrences = full_body.count('field="side"')
+    assert side_field_occurrences == 1, (
+        f"expected exactly one authority-gate call handling the side field, found "
+        f"{side_field_occurrences}. Actual body:\n{full_body}"
+    )
+
+    module_source = _source(ADMIN_ARGUMENTS_SERVICE_PATH)
+    assert BENCH_REJECTION_STRING not in module_source, (
+        f"the retired bench-rejection string {BENCH_REJECTION_STRING!r} must no longer "
+        f"exist anywhere in api/services/admin_arguments.py"
     )

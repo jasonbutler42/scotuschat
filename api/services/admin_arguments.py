@@ -732,8 +732,35 @@ async def update_participant_side(
     Mass-assignment guard (T-26-04): only ``side`` and ``descriptor`` are writable
     via this function.
 
-    BENCH guard (T-15-02-BENCH): raises ValueError when side == BENCH — operators
-    cannot demote or re-classify bench participants.
+    T-15-02-BENCH — RETIRED AS SATISFIED, NOT RELAXED (D-35, 2026-08-24, operator,
+    Phase 49 gap-closure execution, plan 49-10). This function used to raise
+    ValueError when side == BENCH. The threat's real concern was never "bench must
+    never be settable" — the Resolve card (api/services/admin_jobs.py::
+    update_resolve_row_for_job) has set it every day since Phase 25 — its concern
+    was "bench must not be settable WITHOUT THE RECONCILIATION the Resolve card
+    performs." Under D-35 ("converge both surfaces") that concern is met at this
+    call site by four compensating controls, so the guard is OBSOLETE rather than
+    relaxed:
+      1. An explicit two-step confirmation on the calling surface before a
+         boundary crossing (the argument-detail Speakers card, plan 49-10 Task 3) —
+         serving the same purpose as ResolveCard.svelte's needsSideGate/confirmSide.
+      2. No fabricated bench role: the read path derives bench_role from a
+         CourtTenure date-window lookup with NO fallback
+         (_bench_role_and_missing_tenure, D-15) and reports "Missing tenure"
+         otherwise — a reclassified advocate cannot acquire a Justice title by
+         being reclassified; it acquires a visible warning.
+      3. No silent carry of a mismatched person link: the same read path turns a
+         non-Justice person on a bench row into the Missing-tenure affordance plus
+         a link to the person editor — RESOLVE-09's disjoint-pool concern answered
+         by the read path, because this surface has no person picker to clear.
+      4. The published lock below (D-35's first half, plan 49-09) — the strongest
+         control: a reclassification from this surface can never mutate live
+         public data.
+    Still in force under this same threat id: the unresolved-side rejection below
+    and the two-field (side/descriptor) mass-assignment boundary. Honest boundary
+    of this argument: the retirement is strictly stronger on published data and
+    deliberately permissive on unpublished data — that is the authority D-35
+    grants the operator, not a claim that it is stronger everywhere.
 
     Unresolved-side guard (T-26-14, CLAUDE.md no-silent-inference constraint):
     raises ValueError when side == UNKNOWN or the legacy side == ADVOCATE —
@@ -742,10 +769,18 @@ async def update_participant_side(
     authoritative rejection; the edit-page UI additionally disables Save while
     the row is unresolved as defense-in-depth.
 
-    descriptor is written ONLY when the caller passes a non-None value — omitting
-    descriptor leaves the existing ArgumentParticipant.descriptor unchanged (does
-    not clobber it), mirroring the "only write provided fields" pattern used by
-    update_argument_metadata.
+    descriptor is written ONLY when the caller passes a non-None value AND side
+    is not BENCH — omitting descriptor (or setting side to BENCH) leaves the
+    existing ArgumentParticipant.descriptor unchanged (does not clobber it),
+    mirroring the "only write provided fields" pattern used by
+    update_argument_metadata. RESOLVE-13 (copied from update_resolve_row_for_job,
+    api/services/admin_jobs.py): a BENCH write never touches the descriptor
+    column at all — the stored value is preserved, not overwritten with null, and
+    a client-supplied bench descriptor is ignored rather than written. This is
+    what makes the advocate -> bench -> advocate round trip lossless: the read
+    path reports a bench row's descriptor as null (RESOLVE-13's "hidden, not
+    shown, not cleared"), so a naive write on the way back out would otherwise
+    submit an empty string and clobber the value this guard protects.
 
     Published guard (D-35, D-31a): raises ValueError when the owning argument's
     status is PUBLISHED — participant data is read-only once an argument has
@@ -766,12 +801,12 @@ async def update_participant_side(
         dict with ``id``, ``side``, and ``descriptor`` on success.
         None if the participant does not exist under this argument_id (→ 404).
     """
-    # Pure-input guards first (T-15-02-BENCH, T-26-14) — these validate the
-    # incoming `side` value alone and must raise before the session is ever
-    # touched (test_update_participant_side_rejects_unresolved_side calls
-    # this function with a sentinel `None` session to prove exactly that).
-    if side == SideEnum.BENCH:
-        raise ValueError("BENCH cannot be set via participant side update")
+    # Pure-input guard (T-26-14) — validates the incoming `side` value alone
+    # and must raise before the session is ever touched
+    # (test_update_participant_side_rejects_unresolved_side calls this
+    # function with a sentinel `None` session to prove exactly that). The
+    # sibling BENCH guard (T-15-02-BENCH) that used to sit here is retired —
+    # see the docstring above.
     if side in (SideEnum.UNKNOWN, SideEnum.ADVOCATE):
         raise ValueError(
             "An advocate's side must be resolved to Petitioner, Respondent, or Amicus"
@@ -814,7 +849,12 @@ async def update_participant_side(
         incoming_method="manual",
     )
     descriptor_decision: WriteDecision | None = None
-    if descriptor is not None:
+    # RESOLVE-13 (copied from api/services/admin_jobs.py::
+    # update_resolve_row_for_job): the descriptor gate is applied ONLY when
+    # the side is not BENCH, so a BENCH write never touches that column at
+    # all — the stored value is preserved, not overwritten with null, and a
+    # client-supplied bench descriptor is ignored rather than written.
+    if descriptor is not None and side != SideEnum.BENCH:
         descriptor_decision = await apply_participant_value_change(
             db,
             participant=participant,
@@ -846,7 +886,13 @@ async def update_participant_side(
     await recompute_argument_tier(db, argument_id)
     await db.commit()
 
-    persisted_descriptor = descriptor if descriptor is not None else participant.descriptor
+    # persisted_descriptor must not claim a write that did not happen: on a
+    # BENCH write the descriptor gate above is never reached, so the return
+    # value reports the row's EXISTING (unchanged) descriptor rather than an
+    # ignored incoming one (RESOLVE-13).
+    persisted_descriptor = (
+        descriptor if descriptor is not None and side != SideEnum.BENCH else participant.descriptor
+    )
     return {
         "id": participant_id,
         "side": side.value,

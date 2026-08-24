@@ -420,3 +420,86 @@ blocked: 0
     attempted_by: 49-08
     attempted_at: 2026-08-24
     result: "NOT ATTEMPTED IN BROWSER — 49-08 confirmed by grep that all three fix sites still carry the margin fix (arguments/[id]/+page.svelte: `margin:6px` x2 — no space, differs from the plan's `margin: 6px` grep pattern but is the same declaration; ChatBubble.svelte: `margin: 6px` x1), but could not open a browser session (same .env credential gap as G-49-5a). No verified_at added; status remains resolved (code-level) with the visual re-confirmation still outstanding, unchanged from the prior UAT session."
+
+- gap_id: G-49-5c
+  truth: "No horizontal page scroll at 375px on ANY admin page — including the shared AdminSubNav, which renders on all of them"
+  status: failed
+  reason: |
+    Found 2026-08-24 by live browser verification (Playwright MCP), AFTER 49-08 closed G-49-5a's
+    three causes. Those three ARE genuinely fixed and were confirmed working in the same session:
+    both queue tables and the status segment group scroll inside their own containers
+    (312px containers with scrollWidth 529 and 690), and the dashboard grid reflows to
+    `140px 140px` / 2 columns at 375px while still rendering 5 tracks at 136.797px / 1 row at
+    1280px — matching 49-08's predicted arithmetic to the pixel.
+    A FOURTH, previously unknown cause remains. `app/src/lib/components/AdminSubNav.svelte:11`
+    is `display: flex` with NO `flex-wrap` and NO `overflow-x`, holding five nav links plus a
+    `<form style="margin-left: auto;">` (`:32`) wrapping the Log out button. At a 375px viewport
+    (360px client width after the scrollbar) the row needs ~423px, so the logout form's right
+    edge lands at 423px and the Log out button is pushed off-screen entirely.
+    Measured: document.scrollWidth 423 vs clientWidth 360 on BOTH /admin and /admin/review.
+    document.scrollWidth equals the logout form's right edge exactly — the tables (right 714)
+    and status group (right 553) extend further but contribute nothing to page scroll, proving
+    they are contained and the sub-nav is the sole remaining cause.
+    This component renders on EVERY admin page, so no admin page currently satisfies the
+    49-05 UI-SPEC no-horizontal-scroll must_have, regardless of that page's own containment.
+  severity: minor
+  test: 5
+  discovered_by: live browser verification (not source inspection — three structural gates were green)
+  artifacts:
+    - path: "app/src/lib/components/AdminSubNav.svelte"
+      issue: ":11 display:flex with no flex-wrap and no overflow-x; :32 form has margin-left:auto and cannot shrink"
+  missing:
+    - "Containment for the sub-nav row at narrow widths — same idiom 49-08 used for the status segment group (outer min-width:0 + overflow-x:auto, inner width:max-content), or flex-wrap if the wrapped appearance is acceptable for a nav (unlike the segmented control, these are separate links with no shared border geometry, so wrapping is visually fine here)"
+    - "A regression assertion that measures page scrollWidth vs clientWidth rather than grepping for a declaration — three source-text gates passed while the page still scrolled"
+
+## Live Browser Verification — 2026-08-24
+
+First authenticated browser pass of the phase. Playwright MCP + a per-user rootless browser
+runtime (NSS libs and fonts extracted to ~/.local, no sudo, no system change); operator logged
+in once into a persistent profile so no credential ever entered the assistant's context.
+Every item below was MEASURED in a real browser, not inferred from source.
+
+OBSERVED PASS:
+- UAT sub-item 5 — five StatCards, ONE row at 1280px: grid inner width 812px, tracks
+  5 x 136.797px, gap 32px, distinct row-tops = 1. Matches 49-08's predicted arithmetic to the
+  pixel; no regression from the auto-fit change.
+- G-49-5a cause (b) — at 375px the dashboard grid reflows to `140px 140px` (2 columns, 3 rows).
+- G-49-5a causes (a) and (c) — on /admin/review both queue tables AND the status segment group
+  scroll inside their own containers: 312px containers with scrollWidth 529 and 690. The table's
+  right edge reaches 714px and the segment group's 553px, yet document.scrollWidth is only 423px,
+  proving both are contained and contribute nothing to page scroll.
+- G-49-4b — the word "constituent" is ABSENT from rendered operator copy (/admin/review, expanded
+  row). The rewritten blockers fallback renders live: "No flagged participants — this argument is
+  queued because:".
+- G-49-9a — avatar alignment FIXED, confirmed at the pixel. On the public chat page's Advocates
+  sidebar the button-wrapped avatars (HT, EB, HJ, LK, GM, RG) sit at left=647; the bare-div
+  non-interactive avatar (LC) also sits at left=647 with margin:6px. Same in the chat body:
+  interactive and non-interactive both at left=534. This closes the item that had been verified
+  by geometry and test suite but never by sight.
+- 49-09 published lock, VISIBLE and correct on published argument 1801: all 8 side selects
+  disabled, all 8 descriptor inputs disabled, all 8 per-row Save buttons disabled, plus the copy
+  "This argument is published, so participant data is read-only. Unpublish it first to edit roles
+  or descriptors."
+
+OBSERVED FAIL:
+- G-49-5c (NEW, recorded above) — the page STILL scrolls horizontally at 375px on every admin
+  page. AdminSubNav.svelte is the sole remaining cause. Three source-text gates were green while
+  the page scrolled; only a live measurement caught it.
+
+CONFIRMED-AS-EXPECTED (not a defect — this is 49-11's target):
+- D-35a half-locked state, now visible rather than theoretical. On the same published argument
+  1801, `case_name`, `docket_number` and `argued_date` inputs are all ENABLED and both
+  "Save changes" and "Save Argument Details" are active, while the Speakers card is locked.
+  Exactly the state 49-11 exists to close, and exactly what the planner predicted when it
+  declined to reverse the `readonly is always false here` decision silently.
+
+STILL NOT OBSERVABLE (data-state dependent, NOT assumed):
+- G-49-4a — the "Edit pipeline run" / "Edit argument" labels. Requires a queue row with at least
+  one flagged constituent; the current dev data has attention_count 0 on both rows, so the
+  expanded panel shows the blockers fallback instead of constituent action rows.
+- Discrepancy badge placement and its #fb7185 colour. Requires the D-32 authority-conflict state,
+  which the dev database no longer holds.
+- UAT sub-item 5.6 — StatCard singular and zero-state copy. Requires the review queue at exactly
+  1 and at 0; it currently reads 40.
+These three need a re-seed (Reset to Fixture -> Seed unresolved speaker -> the D-32 script) and
+are deliberately left unobserved rather than marked passed.

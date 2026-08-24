@@ -324,25 +324,39 @@ blocked: 0
 
 - gap_id: G-49-4a
   truth: "The review-queue constituent action link is labelled with an action verb naming where it goes, matching the established label pattern elsewhere in admin"
-  status: failed
+  status: resolved
+  resolved_by: 49-07
+  resolved_at: 2026-08-24
   reason: "User reported: link reads a bare \"Edit\"; wants an action verb. Destination is correct (operator followed it to the pipeline run). app/src/routes/admin/review/+page.svelte:527 hardcodes \"Edit\" unconditionally, while argumentEditHref (:215-219) branches between /admin/pipeline/{admin_job_id} and /admin/arguments/{id} — so one static label cannot be accurate for both branches. 49-05 UI-SPEC called this link \"Resolve speaker\"; neither label was implemented."
   severity: minor
   test: 4
-  artifacts: []  # Filled by diagnosis
-  missing: []    # Filled by diagnosis
+  artifacts:
+    - "app/src/routes/admin/review/+page.svelte — new argumentEditLabel(item) helper, branching on the identical admin_job_id !== null condition as argumentEditHref; the row action anchor now renders {argumentEditLabel(item)} instead of the literal \"Edit\""
+    - "api/tests/test_phase49_review_ui_contract.py::test_action_link_label_branches_on_the_same_condition_as_the_href — source-text parity assertion (not a rendering assertion)"
+  missing: []
 
 - gap_id: G-49-4b
   truth: "Operator-facing copy names a speaker with the domain noun (participant), not the internal rollup adjective 'constituent', and agrees in number"
-  status: failed
-  reason: "Found during test 4. 'constituent' was never chosen as a user-facing term: it entered as an ADJECTIVE in .planning/notes/provenance-and-trust-model.md:143 ('constituent utterances and attributions'), was nominalized into a noun by 48-CONTEXT.md:15 (:114 cites that sentence as its source), then hardened into ReviewQueueConstituent (api/schemas/admin_review.py) and leaked into operator copy. The domain noun is participant (argument_participants / ArgumentParticipant / participant_id in the same markup). User asked: 'When did we start calling something constituent?'  Separately, review/+page.svelte:182 pluralizes the noun but not the verb, so a single-item row renders the ungrammatical '1 constituent need review' (visible in the operator's screenshot)."
+  status: resolved
+  resolved_by: 49-07
+  resolved_at: 2026-08-24
+  reason: "Found during test 4. 'constituent' was never chosen as a user-facing term: it entered as an ADJECTIVE in .planning/notes/provenance-and-trust-model.md:143 ('constituent utterances and attributions'), was nominalized into a noun by 48-CONTEXT.md:15 (:114 cites that sentence as its source), then hardened into ReviewQueueConstituent (api/schemas/admin_review.py) and leaked into operator copy. The domain noun is participant (argument_participants / ArgumentParticipant / participant_id in the same markup). User asked: 'When did we start calling something constituent?'  Separately, review/+page.svelte:182 pluralizes the noun but not the verb, so a single-item row renders the ungrammatical '1 constituent need review' (visible in the operator's screenshot). Scoped to operator-facing COPY ONLY per 49-07-PLAN.md <planner_decisions>: the wire code no_constituents, the ReviewQueueConstituent schema symbol, and the constituents response field are unchanged (they are a wire code and an admin-only API/security-guard symbol, never shown to an operator)."
   severity: minor
   test: 4
   user_visible_sites:
     - "app/src/routes/admin/review/+page.svelte:182 (N constituents need review + subject-verb disagreement)"
     - "app/src/routes/admin/review/+page.svelte:544 (No flagged constituents...)"
     - "app/src/routes/admin/help/+page.svelte:181-182, 323"
-  artifacts: []  # Filled by diagnosis
-  missing: []    # Filled by diagnosis
+  artifacts:
+    - "app/src/routes/admin/review/+page.svelte:182 -> attentionCountText now renders '1 participant needs review' / '{N} participants need review'"
+    - "app/src/routes/admin/review/+page.svelte:544 -> 'No flagged participants — this argument is queued because:'"
+    - "app/src/routes/admin/help/+page.svelte:181 -> 'across every one of its speaker attributions'"
+    - "app/src/routes/admin/help/+page.svelte:182 -> 'An argument with no utterances and no participants at all reads uncertain'"
+    - "app/src/routes/admin/help/+page.svelte:323 -> 'the argument's current participants and utterances'"
+    - "api/tests/test_phase49_review_ui_contract.py::test_review_page_rendered_copy_uses_the_domain_noun — per-line source gate, exempts the wire code and property accessors"
+    - "api/tests/test_phase49_cleanup_contract.py::test_help_page_rendered_copy_uses_the_domain_noun — whole-file source gate (help page has no wire code / accessors using the noun)"
+  missing:
+    - "no_constituents (api/services/trust.py), ReviewQueueConstituent (api/schemas/admin_review.py), and the constituents response field are deliberately NOT renamed — see 49-07-PLAN.md prohibitions"
 
 - gap_id: G-49-5a
   truth: "No horizontal scroll at 375px on the review queue and the admin dashboard (49-05 UI-SPEC must_have)"
@@ -355,12 +369,16 @@ blocked: 0
 
 - gap_id: G-49-5b
   truth: "Zero-one-many count copy agrees in number everywhere it appears"
-  status: failed
-  reason: "Found while explaining test 5 sub-item 6. admin/+page.svelte:353-355 (Review queue StatCard) gets it RIGHT — '1 item needs review'. app/src/routes/admin/review/+page.svelte:182 attentionCountText gets it WRONG — pluralizes the noun but not the verb, rendering '1 constituent need review'. Same zero-one-many concept, two implementations, one defective. Overlaps G-49-4b (same line, terminology); fix together."
+  status: resolved
+  resolved_by: 49-07
+  resolved_at: 2026-08-24
+  reason: "Found while explaining test 5 sub-item 6. admin/+page.svelte:353-355 (Review queue StatCard) gets it RIGHT — '1 item needs review'. app/src/routes/admin/review/+page.svelte:182 attentionCountText gets it WRONG — pluralizes the noun but not the verb, rendering '1 constituent need review'. Same zero-one-many concept, two implementations, one defective. Overlaps G-49-4b (same line, terminology); fixed together."
   severity: cosmetic
   test: 5
-  artifacts: []  # Filled by diagnosis
-  missing: []    # Filled by diagnosis
+  artifacts:
+    - "app/src/routes/admin/review/+page.svelte:181-183 -> attentionCountText(n) now returns '1 participant needs review' at n === 1 (singular subject, singular verb) and '${n} participants need review' otherwise (plural subject, plural verb) — the identical shape admin/+page.svelte's Review-queue StatCard already used"
+    - "api/tests/test_phase49_review_ui_contract.py::test_backstop_E1_attention_count_keys_singular_plural_on_strict_equality_one — rewritten to assert the exact singular/plural literals rather than the old ungrammatical substring"
+  missing: []
 
 ## Deferred Follow-Ups
 

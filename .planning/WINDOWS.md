@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 16
+open_count: 18
 waived_count: 0
 fixed_count: 7
-total_count: 23
-last_updated: 2026-08-24T20:00:46.273Z
+total_count: 25
+last_updated: 2026-08-24T22:49:22.058Z
 ---
 
 # Broken Windows Ledger
@@ -38,6 +38,8 @@ last_updated: 2026-08-24T20:00:46.273Z
 | 21 | 49 | unrun-verify | app/src/routes/admin/+page.svelte |  | The new 'Seed unresolved speaker' Dev Tools button and its success line were never observed in a browser -- credential-access denial. Backend endpoint and the form action's error-mapping are fully tested; only the button's rendering/behavior is unconfirmed. | open |  | 2026-08-23T16:19:42.185Z |  |
 | 22 | 49 | unrun-verify | app/src/lib/components/CreatePersonPopover.svelte |  | WR-01 browser walkthrough (49-09 Task 1 human-check) NOT OBSERVED — sandbox denied .env access for ADMIN_USERNAME/ADMIN_PASSWORD/SESSION_SECRET | open |  | 2026-08-24T20:00:45.872Z |  |
 | 23 | 49 | unrun-verify | app/src/routes/admin/arguments/[id]/+page.svelte |  | Speakers-card published-lock visual verification (49-09 Task 3 human-check) NOT OBSERVED — sandbox denied .env access for ADMIN_USERNAME/ADMIN_PASSWORD/SESSION_SECRET | open |  | 2026-08-24T20:00:46.273Z |  |
+| 24 | 49 | unrun-verify | api/tests/test_phase49_participant_side_contract.py |  | Task 1 human-check (Resolve-card regression walk: toggle behavior, person-clear on real boundary crossing, unchanged labels) not observed in this session — browser tooling unavailable to executor | open |  | 2026-08-24T22:49:21.712Z |  |
+| 25 | 49 | unrun-verify | app/src/routes/admin/arguments/[id]/+page.svelte |  | Task 3 six-item Speakers-card convergence human-check walk not observed in this session — browser tooling unavailable to executor | open |  | 2026-08-24T22:49:22.058Z |  |
 
 ````json
 [
@@ -315,6 +317,30 @@ last_updated: 2026-08-24T20:00:46.273Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-08-24T20:00:46.273Z",
+    "resolved_at": null
+  },
+  {
+    "id": 24,
+    "kind": "unrun-verify",
+    "phase": "49",
+    "file": "api/tests/test_phase49_participant_side_contract.py",
+    "line": null,
+    "description": "Task 1 human-check (Resolve-card regression walk: toggle behavior, person-clear on real boundary crossing, unchanged labels) not observed in this session — browser tooling unavailable to executor",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-08-24T22:49:21.712Z",
+    "resolved_at": null
+  },
+  {
+    "id": 25,
+    "kind": "unrun-verify",
+    "phase": "49",
+    "file": "app/src/routes/admin/arguments/[id]/+page.svelte",
+    "line": null,
+    "description": "Task 3 six-item Speakers-card convergence human-check walk not observed in this session — browser tooling unavailable to executor",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-08-24T22:49:22.058Z",
     "resolved_at": null
   }
 ]

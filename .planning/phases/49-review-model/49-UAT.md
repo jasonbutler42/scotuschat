@@ -503,3 +503,42 @@ STILL NOT OBSERVABLE (data-state dependent, NOT assumed):
   1 and at 0; it currently reads 40.
 These three need a re-seed (Reset to Fixture -> Seed unresolved speaker -> the D-32 script) and
 are deliberately left unobserved rather than marked passed.
+
+### Re-seeded verification round — 2026-08-24 (second live pass)
+
+Operator authorised a re-seed. Reset to Fixture (via the Dev Tools button, including its
+"Confirm reset" gate) -> Seed unresolved speaker -> the D-32 authority-conflict script.
+Fixtures re-imported as arguments 1805-1808; seeder reported
+`Argument #1805 — "Lloyd N. Cutler" — trust tier: uncertain`.
+
+NOW OBSERVED PASS — the three items the previous pass could not reach:
+
+- G-49-4a — the destination-naming label renders and points correctly:
+  BOTH action links read "Edit pipeline run" and resolve to `/admin/pipeline/1164`, i.e. the
+  `admin_job_id !== null` branch of argumentEditHref. The operator's original complaint (a bare
+  "Edit" that did not say where it went) is closed.
+- UAT test 6 — Discrepancy badge, fully verified visually and computationally:
+  computed colour `rgb(251, 113, 133)` = #fb7185 exactly, border the same, 12px, background
+  `rgb(15, 17, 23)` = #0f1117 — the informational badge tier from 49-UI-SPEC:79/:97.
+  Placement confirmed LAST in the identity row: ["Howard J. Trienens", "(Advocate)", "Edited",
+  "Discrepancy"]. The provenance line renders directly beneath with no click, as D-15 requires:
+  `descriptor: existing "Lead counsel for petitioner (operator edit)" (corpus/direct) — incoming
+  "Counsel of record (corpus re-import)" (corpus/direct)`.
+- UAT sub-item 5.6 — all THREE zero-one-many branches of the Review-queue StatCard observed by
+  driving the real queue count down (people confirmed in bulk; 1808's single null-speaker
+  utterance resolved; then 1805's four attention legs cleared):
+    total 40 -> "40 items need review ->"   (link)
+    total 1  -> "1 item needs review ->"    (link; singular noun AND singular verb)
+    total 0  -> "No items need review"      (PLAIN TEXT, no link — verified hasLink === false)
+  The zero state correctly refuses to advertise work that does not exist (E8).
+
+ALSO RE-CONFIRMED in the same view: "2 participants need review" in the Needs-attention column —
+the exact line that used to render the ungrammatical "1 constituent need review", now carrying
+both the domain noun (G-49-4b) and correct subject-verb agreement (G-49-5b); and UAT test 4's
+conditional (an unresolved constituent shows "Confirm as unattributable" and NO plain Confirm,
+while the operator_edited row shows "Re-flag for review").
+
+DEV DATA NOTE: reaching totals of 1 and 0 required draining the queue artificially (bulk
+person confirmation, utterance attribution, discrepancy closure). That state is NOT
+representative and was restored by a second Reset to Fixture + Seed unresolved speaker
+immediately afterward.

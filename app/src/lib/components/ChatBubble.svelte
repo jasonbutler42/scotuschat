@@ -77,7 +77,7 @@
 					background-color: {avatarBg};
 					display: flex; align-items: center; justify-content: center;
 					font-size: 12px; font-weight: 600; color: #0f1117;
-					flex-shrink: 0;
+					flex-shrink: 0; margin: 6px;
 				">{initials}</div>
 			{/if}
 <span

@@ -215,7 +215,7 @@
 									</div>
 								</button>
 							{:else}
-								<div aria-hidden="true" style="width:32px;height:32px;border-radius:50%;background-color:#94a3b8;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#0f1117;flex-shrink:0;">
+								<div aria-hidden="true" style="width:32px;height:32px;border-radius:50%;background-color:#94a3b8;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#0f1117;flex-shrink:0;margin:6px;">
 									{getInitials(speaker.name)}
 								</div>
 							{/if}
@@ -249,7 +249,7 @@
 									</div>
 								</button>
 							{:else}
-								<div aria-hidden="true" style="width:32px;height:32px;border-radius:50%;background-color:#93c5fd;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#0f1117;flex-shrink:0;">
+								<div aria-hidden="true" style="width:32px;height:32px;border-radius:50%;background-color:#93c5fd;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#0f1117;flex-shrink:0;margin:6px;">
 									{getInitials(speaker.name)}
 								</div>
 							{/if}

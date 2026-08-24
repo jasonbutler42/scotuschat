@@ -747,15 +747,48 @@ async def update_participant_side(
     not clobber it), mirroring the "only write provided fields" pattern used by
     update_argument_metadata.
 
+    Published guard (D-35, D-31a): raises ValueError when the owning argument's
+    status is PUBLISHED — participant data is read-only once an argument has
+    been published. The predicate is published-only (CANDIDATE, DRAFT, and
+    UNPUBLISHED all remain editable), matching the folded todo `2026-08-21-
+    widen-participant-editability-to-all-unpublished-states`, which is what
+    this function's sibling `update_resolve_row_for_job`
+    (api/services/admin_jobs.py) already implements. This function deliberately
+    mirrors that writer so the two participant-value writers read identically
+    on the published question — D-31a itself recorded that this writer had
+    "no status guard today." The check runs before the participant SELECT and
+    therefore before either `apply_participant_value_change` call below,
+    because that call records a `value_discrepancy` as part of deciding a
+    write (D-16) — a refusal placed after it would leave a discrepancy row and
+    a `review_state` advance behind for a write that never happened.
+
     Returns:
         dict with ``id``, ``side``, and ``descriptor`` on success.
         None if the participant does not exist under this argument_id (→ 404).
     """
+    # Pure-input guards first (T-15-02-BENCH, T-26-14) — these validate the
+    # incoming `side` value alone and must raise before the session is ever
+    # touched (test_update_participant_side_rejects_unresolved_side calls
+    # this function with a sentinel `None` session to prove exactly that).
     if side == SideEnum.BENCH:
         raise ValueError("BENCH cannot be set via participant side update")
     if side in (SideEnum.UNKNOWN, SideEnum.ADVOCATE):
         raise ValueError(
             "An advocate's side must be resolved to Petitioner, Respondent, or Amicus"
+        )
+
+    argument_result = await db.execute(
+        select(Argument).where(Argument.id == argument_id)
+    )
+    argument = argument_result.scalar_one_or_none()
+    if argument is None:
+        return None  # router → 404, same as a missing participant
+    if argument.status == ArgumentStatusEnum.PUBLISHED:
+        raise ValueError(
+            f"Argument {argument.id} is published (current status: "
+            f"{argument.status.value!r}); participant data is read-only once "
+            "an argument has been published (Phase 49 folded todo: "
+            "2026-08-21-widen-participant-editability-to-all-unpublished-states)."
         )
 
     result = await db.execute(

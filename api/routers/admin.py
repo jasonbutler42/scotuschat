@@ -589,10 +589,16 @@ async def update_resolve_row(
     PATCH /arguments/{argument_id}/participants/{participant_id}, which rejects
     BENCH by design (T-15-02-BENCH). Argument ownership is derived from job_id
     (never trusted from the client); the target participant must belong to that
-    argument (T-25-14 IDOR guard). Rejected once the linked argument has left
-    the 'candidate' status (D-18, D-19; the born state as of Phase 48 D-01).
-    descriptor is forced to null server-side whenever side == BENCH
-    regardless of what the client sends (PJOB-15).
+    argument (T-25-14 IDOR guard). Rejected once the linked argument's status is
+    PUBLISHED — resolve rows are editable across every unpublished lifecycle
+    state (CANDIDATE, DRAFT, UNPUBLISHED); a PUBLISHED argument's resolve rows
+    are read-only (Phase 49 folded todo: 2026-08-21-widen-participant-
+    editability-to-all-unpublished-states, which widened the prior
+    CANDIDATE-only guard — D-35 keeps the same predicate on the
+    participant-side endpoint above). On a BENCH write the descriptor column
+    is left untouched: the stored value is preserved and a client-supplied
+    descriptor is ignored (RESOLVE-13, which supersedes PJOB-15's original
+    "force to null" behavior).
 
     Returns 422 on any guard failure (job/argument not found or not
     candidate, participant not found under this job's argument).
@@ -1444,7 +1450,12 @@ async def update_participant_side(
     BENCH guard (T-15-02-BENCH): returns 422 if side == BENCH — operators
     cannot set advocate participants to BENCH via this endpoint.
 
-    Returns 422 on side == BENCH.
+    Published guard (D-35): returns 422 if the owning argument's status is
+    PUBLISHED — participant data is read-only once an argument has been
+    published. Unpublish the argument first to edit it.
+
+    Returns 422 on side == BENCH, on an unresolved side, or on a published
+    argument.
     Returns 404 if the participant is not found under this argument.
     Auth inherited from router-level verify_admin_token dependency (T-15-02-AUTH).
     """

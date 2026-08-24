@@ -64,7 +64,22 @@
 <Popover.Root
 	bind:open
 	onOpenChange={(next) => {
-		if (!next) resetForm();
+		// WR-01 (49-REVIEW.md:297): `let side = $state(initialSide)` above is a
+		// Svelte 5 state initializer — it reads `initialSide` exactly once at
+		// mount and is NOT reactive to later prop changes. ResolveCard.svelte
+		// passes `initialSide` to an always-rendered instance of this
+		// component (never conditionally mounted/destroyed), so without this
+		// branch the radio pre-selection could silently contradict the
+		// trigger label if the row's side changed while this popover was
+		// closed and never reopened afterward via resetForm(). The resync is
+		// deliberately on OPEN, not via an $effect tracking the prop: an
+		// effect would re-fire on every prop change and discard a radio
+		// choice the operator deliberately made while the popover was
+		// already open — a worse defect than the one this fixes.
+		// resetForm()'s own `side = initialSide` reassignment on CLOSE is
+		// retained unchanged, so behavior on close is unaffected.
+		if (next) side = initialSide;
+		else resetForm();
 	}}
 >
 	<Popover.Trigger

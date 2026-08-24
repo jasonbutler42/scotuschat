@@ -49,15 +49,21 @@ result: issue
 reported: "Let's just say that I like the review tab! 1: pass; 2: pass; 3: pass; 4: pass; 5: pass; 6: not sure where to see this; 7: fail. small screens cause horizontal scrolling."
 severity: minor
 note: |
-  Sub-item breakdown (operator-reported):
+  Sub-item breakdown (operator-reported, then 49-08 update below):
     (1) tab switching ........................ pass
     (2) filter composition survives back ..... pass
     (3) expand/collapse + blockers fallback .. pass
     (4) Confirm / unattributable / Re-flag ... pass
-    (5) five StatCards evenly in one row ..... pass
-    (6) StatCard singular + zero-state text .. NOT OBSERVED (needs queue total==1 and ==0;
-        operator's queue had 2+. Site: admin/+page.svelte:338-358)
-    (7) no horizontal scroll at 375px ........ FAIL -> gap G-49-5a
+    (5) five StatCards evenly in one row ..... pass (49-08: still pass — re-verified as an
+        executable arithmetic gate, `_tracks_that_fit(812, 120, 32) == 5`; not traded away
+        for sub-item 7's fix)
+    (6) StatCard singular + zero-state text .. STILL NOT OBSERVED (needs queue total==1 and ==0;
+        operator's queue had 2+. Site: admin/+page.svelte:338-358. 49-08 could not drive this
+        state either — no browser access, see missing[] above)
+    (7) no horizontal scroll at 375px ........ STRUCTURALLY FIXED by 49-08 (three overflow-x:
+        auto containers + auto-fit grid track floor), NOT YET VISUALLY RE-CONFIRMED — the
+        browser pass is blocked by the same credential-access gap as sub-item 6. Do not read
+        this as "pass" until an operator has looked at 375px.
 evidence_ref: 49-EVIDENCE.md §9 item 4 (order step c)
 coverage_id: 49-05 D4, 49-05 D5
 
@@ -360,12 +366,18 @@ blocked: 0
 
 - gap_id: G-49-5a
   truth: "No horizontal scroll at 375px on the review queue and the admin dashboard (49-05 UI-SPEC must_have)"
-  status: failed
-  reason: "User reported: small screens cause horizontal scrolling. TWO independent causes confirmed in source. (a) app/src/routes/admin/review/+page.svelte contains ZERO overflow declarations: both tables (:421, :562) are bare `width: 100%; border-collapse: collapse` with no overflow-x:auto wrapper, and 12 `white-space: nowrap` cells pin a hard minimum width, so the page body — not the table — scrolls. (b) app/src/routes/admin/+page.svelte:257-263 hardcodes `grid-template-columns: repeat(5, 1fr); gap: 32px` with no minmax/auto-fit and no media query; at 375px the four gaps alone consume 128px, leaving ~49px per card. NOTE: cause (b) means sub-item 5 (five StatCards evenly in one row) is what CAUSES sub-item 7 on the dashboard — the fix must decide which wins at narrow widths."
+  status: resolved
+  resolved_by: 49-08
+  resolved_at: 2026-08-24
+  reason: "User reported: small screens cause horizontal scrolling. THREE independent causes, not two — the third found during 49-08 planning, not in the original UAT diagnosis. (a) app/src/routes/admin/review/+page.svelte contained ZERO overflow declarations: both queue tables were bare `width: 100%; border-collapse: collapse` with no overflow-x:auto wrapper, and 12 `white-space: nowrap` cells pinned a hard minimum width, so the page body — not the table — scrolled. (b) app/src/routes/admin/+page.svelte hardcoded `grid-template-columns: repeat(5, 1fr); gap: 32px` with no minmax/auto-fit and no media query; at 375px the four gaps alone consumed 128px, leaving ~49px per card. (c) (found by 49-08 planning, not the original diagnosis) the status segmented control (All/Candidate/Draft/Published/Unpublished) had `display: flex; gap: 0` with five 44px-min-height buttons, no flex-wrap and no min-width: 0, so its own ~480px minimum overflowed the page's 327px inner width independently of the tables. Fixing (a) and (b) alone would have left the page still scrolling."
   severity: minor
   test: 5
-  artifacts: []  # Filled by diagnosis
-  missing: []    # Filled by diagnosis
+  artifacts:
+    - "app/src/routes/admin/review/+page.svelte — each of the two queue tables and the status segment group wrapped in its own `<div style=\"overflow-x: auto;\">` (the status group additionally gets `min-width: 0` on the outer wrapper and `width: max-content` on the inner button group); nowrap cells, columns, and the no-truncation rule (49-UI-SPEC E1/E2) are untouched"
+    - "app/src/routes/admin/+page.svelte — `grid-template-columns` changed from `repeat(5, 1fr)` to `repeat(auto-fit, minmax(120px, 1fr))`; five tracks still fill the 812px desktop content width at the same 136.8px per-card width as before (UAT sub-item 5 preserved exactly), and the grid reflows to two tracks at a 375px viewport"
+    - "api/tests/test_phase49_review_ui_contract.py — three new containment assertions (both tables + status group wrapped, min-width:0/width:max-content present, no truncation/media-query introduced) and an executable `_tracks_that_fit` arithmetic gate proving both UAT sub-item 5 and sub-item 7 hold simultaneously at the real desktop and 375px geometries"
+  missing:
+    - "Visual/browser re-confirmation at 375px and at desktop width — NOT OBSERVED. This sandbox has been denied .env access for ADMIN_USERNAME/ADMIN_PASSWORD/SESSION_SECRET throughout Phase 49 (49-EVIDENCE.md §9 item 4), so 49-08 could not authenticate to /admin/** to run the browser pass. This gap's closure is STRUCTURAL (source-contract tests green) only; it is not yet VISUALLY closed. See 49-VERIFICATION.md human_verification item 2."
 
 - gap_id: G-49-5b
   truth: "Zero-one-many count copy agrees in number everywhere it appears"
@@ -404,3 +416,7 @@ blocked: 0
   missing:
     - "margin:6px on each bare-div branch (margin, not padding — padding on a border-radius:50% box would grow the visible circle from 32px to 44px)"
     - "Operator re-confirmation by eye; the fix is verified by geometry reasoning and the test suite, not visually"
+  reconfirmation_attempt:
+    attempted_by: 49-08
+    attempted_at: 2026-08-24
+    result: "NOT ATTEMPTED IN BROWSER — 49-08 confirmed by grep that all three fix sites still carry the margin fix (arguments/[id]/+page.svelte: `margin:6px` x2 — no space, differs from the plan's `margin: 6px` grep pattern but is the same declaration; ChatBubble.svelte: `margin: 6px` x1), but could not open a browser session (same .env credential gap as G-49-5a). No verified_at added; status remains resolved (code-level) with the visual re-confirmation still outstanding, unchanged from the prior UAT session."

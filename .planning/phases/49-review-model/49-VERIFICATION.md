@@ -21,7 +21,7 @@ human_verification:
 
   - test: "Full /admin/review screen walkthrough: tab switching; filter composition surviving back-button; expand/collapse including zero-constituent blockers fallback; Confirm/Confirm-as-unattributable/Re-flag acting on the correct row; five StatCards in one row; no horizontal scroll at 375px."
     expected: "Matches 49-05's UI-SPEC/must_haves exactly."
-    why_human: "Browser-only visual/interactive verification; this sandbox cannot authenticate to /admin/** (denied .env read for ADMIN_USERNAME/ADMIN_PASSWORD/SESSION_SECRET), consistent with 49-EVIDENCE.md §9 item 4."
+    why_human: "Browser-only visual/interactive verification; this sandbox cannot authenticate to /admin/** (denied .env read for ADMIN_USERNAME/ADMIN_PASSWORD/SESSION_SECRET), consistent with 49-EVIDENCE.md §9 item 4. NOT TICKED by 49-08: the no-horizontal-scroll-at-375px sub-item is now STRUCTURALLY fixed (G-49-5a, source-contract tests green — three overflow-x: auto containers plus an auto-fit grid track floor with an executable track-fit arithmetic gate), but the same credential gap blocked 49-08 from running this browser pass, so the item stays open pending a visual look."
 
   - test: "26-UAT Test 26 (Speakers card 'Unresolved — choose a role' placeholder + disabled Save) and 14-UAT Test 8 (non-interactive avatar for an unresolved utterance), on the seeded live data state."
     expected: "Placeholder/disabled-Save render for 26-UAT; plain non-clickable avatar circle for 14-UAT (second precondition: the fixture must also be published, which the seeder deliberately does not do)."

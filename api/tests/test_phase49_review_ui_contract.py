@@ -143,12 +143,105 @@ def test_subnav_contains_review_link() -> None:
     )
 
 
+# ─────────────────────────────────────────────────────────────────────────
+# G-49-5a (49-08): the dashboard StatCard grid's track-fit arithmetic. UAT
+# sub-item 5 (five cards in one row at desktop width) and sub-item 7 (no
+# horizontal scroll at 375px) were reported as being in direct conflict —
+# true only under a FIXED five-column grid. `_tracks_that_fit` is the CSS
+# Grid `auto-fit` track-count formula; encoding it here makes both UAT
+# sub-items executable rather than commented, so raising the floor or the
+# gap past the point where five tracks fit at the desktop width fails a
+# test instead of surfacing six weeks later in a browser.
+# ─────────────────────────────────────────────────────────────────────────
+
+DASHBOARD_DESKTOP_INNER_PX = 812  # max-width: 860px minus 2 x 24px padding
+DASHBOARD_NARROW_INNER_PX = 327  # a 375px viewport minus the same padding
+
+
+def _tracks_that_fit(inner_px: int, floor_px: int, gap_px: int) -> int:
+    """
+    The CSS Grid `repeat(auto-fit, minmax(floor_px, 1fr))` track-count
+    formula: how many tracks of at least `floor_px` (separated by
+    `gap_px`) fit inside `inner_px`.
+    """
+    return max(1, (inner_px + gap_px) // (floor_px + gap_px))
+
+
 def test_dashboard_has_five_column_grid_and_five_statcards() -> None:
+    """
+    Rewritten by 49-08 (G-49-5a): the fixed five-column literal this test
+    used to key on is deleted by that plan's own edit, so this test cannot
+    be red-gated the way the two tests below can — it is a rewrite, not a
+    new gate. The fixed-column absence assertions are now regression
+    guards (a future contributor reintroducing a fixed column count would
+    fail here), and the five-in-one-row guarantee itself now lives in
+    `test_dashboard_grid_track_floor_fits_five_cards_at_desktop_and_reflows_at_375px`
+    below, as executable arithmetic rather than a string match.
+    """
     dashboard_source = _source(ADMIN_DASHBOARD_PATH)
-    assert dashboard_source.count("grid-template-columns: repeat(5, 1fr)") == 1
+    assert "grid-template-columns: repeat(5, 1fr)" not in dashboard_source
     assert "repeat(4, 1fr)" not in dashboard_source
     assert dashboard_source.count("<StatCard") == 5
     assert 'title="Review queue"' in dashboard_source
+    assert "gap: 32px" in dashboard_source
+
+
+def test_dashboard_grid_track_floor_fits_five_cards_at_desktop_and_reflows_at_375px() -> None:
+    """
+    UAT sub-items 5 and 7 were reported as being in direct conflict; the
+    conflict exists only under a fixed-column grid. This test is what
+    keeps both true: it parses the auto-fit floor and the gap out of the
+    dashboard source and asserts five filled tracks at the 812px desktop
+    inner width (sub-item 5) and at most two tracks — each still at least
+    as wide as the floor — at the 327px 375px-viewport inner width
+    (sub-item 7). Raising the floor or the gap far enough to break either
+    end fails here.
+    """
+    dashboard_source = _source(ADMIN_DASHBOARD_PATH)
+    floor_match = re.search(r"repeat\(auto-fit,\s*minmax\((\d+)px,\s*1fr\)\)", dashboard_source)
+    assert floor_match, (
+        "expected a `repeat(auto-fit, minmax(<n>px, 1fr))` grid-template-columns "
+        "pattern in the dashboard source — none found"
+    )
+    gap_match = re.search(r"gap:\s*(\d+)px", dashboard_source)
+    assert gap_match, "expected a `gap: <n>px` declaration in the dashboard source — none found"
+
+    floor = int(floor_match.group(1))
+    gap = int(gap_match.group(1))
+
+    assert _tracks_that_fit(DASHBOARD_DESKTOP_INNER_PX, floor, gap) == 5, (
+        f"floor={floor}px, gap={gap}px does not yield 5 filled tracks at "
+        f"{DASHBOARD_DESKTOP_INNER_PX}px — UAT sub-item 5 would regress"
+    )
+
+    narrow_tracks = _tracks_that_fit(DASHBOARD_NARROW_INNER_PX, floor, gap)
+    assert narrow_tracks <= 2, (
+        f"floor={floor}px, gap={gap}px yields {narrow_tracks} tracks at "
+        f"{DASHBOARD_NARROW_INNER_PX}px — expected at most 2"
+    )
+    per_track_width = (DASHBOARD_NARROW_INNER_PX - gap * (narrow_tracks - 1)) / narrow_tracks
+    assert per_track_width >= floor, (
+        f"per-track width {per_track_width}px at {DASHBOARD_NARROW_INNER_PX}px is "
+        f"narrower than the {floor}px floor — UAT sub-item 7 would regress"
+    )
+
+
+def test_dashboard_grid_uses_no_media_query_and_no_class_attribute() -> None:
+    """
+    D-29 locks the inline-style idiom and this plan introduces no
+    responsive breakpoint logic — the auto-fit track floor itself is what
+    makes the grid responsive, with no @media query and no class=
+    anywhere in the grid's style block.
+    """
+    dashboard_source = _source(ADMIN_DASHBOARD_PATH)
+    assert "@media" not in dashboard_source
+    grid_match = re.search(
+        r'<div\s*\n?\s*style="[^"]*grid-template-columns[^"]*"',
+        dashboard_source,
+        re.DOTALL,
+    )
+    assert grid_match, "expected to find the grid <div style=...> block"
+    assert "class=" not in grid_match.group(0)
 
 
 # ─────────────────────────────────────────────────────────────────────────

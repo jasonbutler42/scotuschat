@@ -253,11 +253,25 @@
 		     the UI-SPEC's claim that the existing grid "absorbs the fifth
 		     card without change" is contradicted by the four-column literal
 		     this grid used to declare — source wins (RESEARCH Pitfall 3).
+
+		     49-08 (G-49-5a): the fixed five-column form overflowed the page
+		     body at a 375px viewport (UAT sub-item 7), while UAT sub-item 5
+		     required all five cards to stay in one row at desktop width — a
+		     conflict that exists only under a FIXED column count. The content
+		     region is max-width: 860px with 24px side padding, so the desktop
+		     inner width is 812px; five tracks at a 120px floor and a 32px gap
+		     need 5x120 + 4x32 = 728px and therefore fit, and with exactly
+		     five items every track is filled and stretches to 1fr, giving
+		     (812 - 128) / 5 = 136.8px per card — the same width the fixed
+		     five-column form produced. At a 375px viewport the inner width is
+		     327px, which fits two tracks at 147.5px each. The 120px floor is
+		     load-bearing: a 180px floor would fit only three tracks at 812px
+		     and would silently break UAT sub-item 5.
 		     ═══════════════════════════════════════════════════════════════════ -->
 		<div
 			style="
 				display: grid;
-				grid-template-columns: repeat(5, 1fr);
+				grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
 				gap: 32px;
 				margin-top: 32px;
 			"

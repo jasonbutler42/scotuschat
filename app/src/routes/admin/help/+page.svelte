@@ -178,9 +178,9 @@
 				from each speaker attribution's <code>(source, method, review_state)</code> — where
 				the data came from, how it was matched, and whether an operator has looked at it —
 				and an argument's own tier is the <strong>floor</strong> (the least-trusted value)
-				across every one of its constituent attributions. An argument with no
-				constituents at all reads <code>uncertain</code> — the maximal-risk case, not a
-				free pass.
+				across every one of its speaker attributions. An argument with
+				no utterances and no participants at all reads <code>uncertain</code> — the maximal-risk case,
+				not a free pass.
 			</p>
 
 			<div style="display: flex; flex-direction: column; gap: 12px; margin: 16px 0;">
@@ -320,7 +320,7 @@
 			</ol>
 			<p style="font-size: 14px; color: #64748b; margin: 0; line-height: 1.5;">
 				The trust tier used by the second gate is always recomputed fresh at publish time,
-				so the gate reflects the argument's current constituents rather than a possibly
+				so the gate reflects the argument's current participants and utterances rather than a possibly
 				stale stored value.
 			</p>
 		</div>

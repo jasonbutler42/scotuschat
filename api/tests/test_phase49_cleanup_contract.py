@@ -215,6 +215,36 @@ def test_help_page_contains_no_speaker_ranking_or_comparison_language() -> None:
         assert term not in source, f"found comparative/ranking language: {term!r}"
 
 
+def test_help_page_rendered_copy_uses_the_domain_noun() -> None:
+    """
+    G-49-4b. A whole-file assertion is safe here — unlike the review page's
+    per-line gate (test_review_page_rendered_copy_uses_the_domain_noun in
+    test_phase49_review_ui_contract.py) — because the help page contains no
+    wire code and no property accessor that uses the internal rollup noun,
+    so every occurrence on this page would be prose.
+    """
+    source = _source(HELP_PAGE_PATH).lower()
+    assert "constituent" not in source
+
+
+def test_help_page_trust_tier_paragraph_names_speaker_attributions() -> None:
+    source = _source(HELP_PAGE_PATH)
+    assert "speaker attributions" in source
+    # A positional assertion over minified-whitespace markup would be
+    # brittle and is not worth it — assert both substrings are present
+    # instead of pinning them to the same literal paragraph.
+    assert "(source, method, review_state)" in source
+
+
+def test_help_page_states_the_no_blockers_case_accurately() -> None:
+    # api/services/trust.py:151 fires no_constituents only when BOTH
+    # utterance_rows and participant_rows are empty, so a sentence naming
+    # only one of the two would be wrong about the code, not merely
+    # differently worded.
+    source = _source(HELP_PAGE_PATH)
+    assert "no utterances and no participants" in source
+
+
 def test_help_page_min_length() -> None:
     # min_lines: 80 per 49-03-PLAN.md's must_haves.artifacts
     lines = _source(HELP_PAGE_PATH).splitlines()

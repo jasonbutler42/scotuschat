@@ -171,7 +171,16 @@
 			<h1 style="font-size: 20px; font-weight: 600; color: #e2e8f0; margin: 0;">Arguments</h1>
 
 			<!-- Status segmented filter control (DASH-02, D-05) -->
-			<div style="display: flex; gap: 0;">
+			<!-- G-49-18 (operator, 2026-08-25, 49-UAT test 49): SECOND, independent overflow cause on
+			     this page — wrapping the list table alone only took the page from 680 to 429 at a
+			     375px viewport. This segmented control is display:flex with flex-wrap:nowrap and a
+			     405px natural width, so it overflowed on its own. It is the SAME control and the same
+			     defect 49-08 fixed as its cause (c) on /admin/review — that fix was applied only
+			     there. Same remedy, verbatim: min-width:0 on the outer wrapper lets it shrink inside
+			     the flex header, width:max-content on the inner group keeps the segments at their
+			     natural size, and the wrapper scrolls instead of the page. -->
+			<div style="min-width: 0; overflow-x: auto;">
+			<div style="display: flex; gap: 0; width: max-content;">
 				<button
 					type="button"
 					aria-pressed={!data.status}
@@ -200,6 +209,7 @@
 					onclick={() => selectStatus('unpublished')}
 					style="{filterButtonStyle(data.status === 'unpublished', '#fb923c')} border-left: none; border-radius: 0 6px 6px 0;"
 				>Unpublished</button>
+			</div>
 			</div>
 		</div>
 	</header>
@@ -251,7 +261,15 @@
 			</div>
 		{:else}
 			<!-- ArgumentsTable — WCAG 1.3.1: th scope=col for all column headers -->
-			<table style="width: 100%; border-collapse: collapse;">
+			<!-- G-49-18 (operator, 2026-08-25, 49-UAT test 49): this list table was one of the
+			     two admin tables 49-12 measured overflowing at 375px and deliberately scoped out
+			     (/admin/arguments reached 680px at a 375px viewport). Left unwrapped it pushes the PAGE into
+			     horizontal scroll rather than scrolling itself, breaking 49-UI-SPEC's
+			     no-horizontal-scroll must_have. Same remedy as 49-08's review-queue tables and
+			     G-49-17's Speakers table: the table scrolls inside its own container. No column
+			     is truncated and no media query is introduced (49-UI-SPEC E1/E2). -->
+			<div style="overflow-x: auto;">
+				<table style="width: 100%; border-collapse: collapse;">
 				<thead>
 					<tr>
 						<th
@@ -621,7 +639,8 @@
 						{/if}
 						{/each}
 				</tbody>
-			</table>
+				</table>
+			</div>
 		{/if}
 	</div>
 </main>

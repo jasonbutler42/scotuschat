@@ -121,7 +121,18 @@
 	// flag exists only so the operator is never offered a control that will
 	// be refused. Uses the same `data.argument.status === 'published'`
 	// idiom already used below at the Danger Zone / unpublish branch.
-	const speakersLocked = data.argument.status === 'published';
+	// MUST be $derived, not a plain const (operator, 2026-08-25, 49-UAT test 53).
+	// `data` is a prop: a plain `const` captures its value ONCE at component init and
+	// never recomputes. Publish and unpublish do not remount this component — they
+	// POST and invalidate, which updates `data` in place — so a const-captured flag
+	// stayed frozen at whatever the status was when the page first loaded. Publishing
+	// with the page open left the whole card editable (the backend refused the writes,
+	// so nothing corrupted, but the operator was offered controls that could not work);
+	// unpublishing with the page open left it locked with no way back short of a reload.
+	// This is the same false-green shape as plan 48-10: every source-contract test
+	// asserting `disabled={speakersLocked}` passes, because the MARKUP is right — it is
+	// the FLAG that was stale, which no grep-based assertion can see.
+	let speakersLocked = $derived(data.argument.status === 'published');
 
 	// Per-row side state, keyed by participant_id (T-26-14, AEDIT-06). Every
 	// speaker row seeds its own side state now (G-49-3/D-35, plan 49-10) —
@@ -720,7 +731,15 @@
 			{/if}
 
 			{#if data.argument.speakers && data.argument.speakers.length > 0}
-				<table style="width: 100%; border-collapse: collapse;">
+				<!-- G-49-15 (operator, 2026-08-25, 49-UAT test 54): the Speakers table carries a real
+				     minimum width (its five columns include two 160px-min controls), so on a narrower
+				     window it used to push the PAGE into horizontal scroll rather than scrolling itself —
+				     measured bleeding past <main> at a 700px viewport. Same defect class as G-49-5a and
+				     G-49-5c, and the same remedy 49-08 applied to the review-queue tables: the table
+				     scrolls inside its own container. No column is truncated and no media query is
+				     introduced (49-UI-SPEC E1/E2). -->
+				<div style="overflow-x: auto;">
+					<table style="width: 100%; border-collapse: collapse;">
 					<thead>
 						<tr style="border-bottom: 1px solid #334155;">
 							<th style="text-align: left; font-size: 14px; font-weight: 400; color: #94a3b8; padding: 8px; white-space: nowrap;">Name</th>
@@ -735,21 +754,18 @@
 							<tr style="border-bottom: 1px solid #334155;">
 								<td style="padding: 8px; font-size: 14px; color: #e2e8f0; vertical-align: top;">
 									{speaker.full_name ?? '—'}
-								</td>
-								<!-- G-49-3/D-35 (plan 49-10): ONE row template serves bench and advocate —
-								     the previous per-class branch on the row's stored bench flag is
-								     deliberately removed so the two classes of speaker cannot diverge in
-								     affordance depth (CLAUDE.md
-								     apolitical constraint). The bench companion below follows the
-								     operator's CURRENT selection (speakerSideById), not the stored
-								     is_bench, so it appears the instant Bench is picked rather than only
-								     after save — the companion should follow what the operator is
-								     choosing, not what was last saved. The confirm gate is the
-								     purpose-port of ResolveCard's side gate (needsSideGate/confirmSide) —
-								     not a copy of its mechanism, because this surface has no person
-								     picker to gate and each row is its own POST, not a batch form. -->
-								<td colspan="3" style="padding: 8px; vertical-align: top;">
+									<!-- G-49-14 (operator, 2026-08-25, 49-UAT test 52): the row fills all FIVE columns
+									     its header declares. Previously one <td colspan="3"> merged Role/Title/Utterances
+									     and left Action with no cell at all, so the flex-wrap container inside it pushed
+									     Save onto a second line and stranded the utterance count beside it.
+									     The form is declared HERE holding only its hidden inputs; every control in the
+									     sibling cells associates with it by id via the HTML5 `form=` attribute. That is
+									     what lets one POST-per-row survive being split across real <td>s — <form> is not
+									     a permitted child of <tr>, which is why colspan was reached for originally.
+									     FormData(form) includes form-associated controls wherever they sit in the DOM,
+									     so use:enhance keeps working unchanged. -->
 									<form
+										id="speaker-side-{speaker.participant_id}"
 										method="POST"
 										action="?/updateParticipantSide"
 										use:enhance={() => {
@@ -759,160 +775,147 @@
 												await update();
 											};
 										}}
-										style="display: flex; gap: 8px; align-items: flex-start; flex-wrap: wrap;"
 									>
 										<input type="hidden" name="participant_id" value={speaker.participant_id} />
-										<!-- RESOLVE-13 round-trip guard (plan 49-10): tells the server action
-										     whether this row's stored side was BENCH, so it can omit the
-										     descriptor key rather than submit a blank value that would clobber
-										     the preserved-but-hidden stored descriptor. -->
+										<!-- RESOLVE-13 round-trip guard (plan 49-10): tells the server action whether this
+										     row's stored side was BENCH, so it can omit the descriptor key rather than
+										     submit a blank value that would clobber the preserved-but-hidden descriptor. -->
 										<input type="hidden" name="committed_side" value={speaker.side} />
-										<div style="flex: 1; min-width: 160px;">
-											<select
-												name="side"
-												disabled={speakersLocked}
-												bind:value={speakerSideById[speaker.participant_id]}
-												onchange={() => { sideConfirming[speaker.participant_id] = false; }}
-												style="
-													width: 100%;
-													background-color: #0f1117;
-													border: 1px solid #334155;
-													border-radius: 6px;
-													padding: 8px 12px;
-													font-size: 16px;
-													font-weight: 400;
-													color: #e2e8f0;
-													min-height: 36px;
-													cursor: {speakersLocked ? 'not-allowed' : 'auto'};
-													opacity: {speakersLocked ? 0.7 : 1};
-												"
-											>
-												<option value="UNKNOWN">Unresolved — choose a role</option>
-												<option value="BENCH">{SIDE_LABEL.BENCH}</option>
-												<option value="PETITIONER">{SIDE_LABEL.PETITIONER}</option>
-												<option value="RESPONDENT">{SIDE_LABEL.RESPONDENT}</option>
-												<option value="AMICUS">{SIDE_LABEL.AMICUS}</option>
-											</select>
-											{#if speakerSideById[speaker.participant_id] === 'BENCH'}
-												<!-- Bench companion (T-49-10-strand): three distinct states, keyed
-												     on person_id FIRST — not on missing_tenure — so a bench row
-												     with NO linked person is never confused with one whose person
-												     merely lacks covering tenure. Before this task a null-person
-												     bench row rendered a bare em-dash with no warning and no link;
-												     that one-way trap becomes reachable by operator action once a
-												     row can be moved into Bench, so it is closed here. -->
-												<div style="margin: 4px 0 0 0; font-size: 14px;">
-													{#if speaker.person_id == null}
-														<span style="color: #94a3b8;">No person linked</span>
-													{:else if speaker.missing_tenure}
-														<span style="color: #fbbf24;">Missing tenure</span>
-														{#if speaker.person_edit_href}
-															<a
-																href={speaker.person_edit_href}
-																style="color: #93c5fd; text-decoration: underline; margin-left: 4px;"
-															>Edit person</a>
-														{/if}
-													{:else}
-														<span style="color: #e2e8f0;">{speaker.bench_role ?? '—'}</span>
+									</form>
+								</td>
+								<!-- G-49-3/D-35 (plan 49-10): ONE row template serves bench and advocate — the
+								     previous per-class branch on the row's stored bench flag is deliberately removed
+								     so the two classes of speaker cannot diverge in affordance depth (CLAUDE.md
+								     apolitical constraint). The bench companion follows the operator's CURRENT
+								     selection (speakerSideById), not the stored is_bench, so it appears the instant
+								     Bench is picked rather than only after save. The confirm gate is the purpose-port
+								     of ResolveCard's side gate — not a copy of its mechanism, because this surface has
+								     no person picker to gate and each row is its own POST. -->
+								<td style="padding: 8px; vertical-align: top;">
+									<div style="flex: 1; min-width: 160px;">
+										<select
+											form="speaker-side-{speaker.participant_id}"
+											name="side"
+											disabled={speakersLocked}
+											bind:value={speakerSideById[speaker.participant_id]}
+											onchange={() => { sideConfirming[speaker.participant_id] = false; }}
+											style="
+												width: 100%;
+												background-color: #0f1117;
+												border: 1px solid #334155;
+												border-radius: 6px;
+												padding: 8px 12px;
+												font-size: 16px;
+												font-weight: 400;
+												color: #e2e8f0;
+												min-height: 36px;
+												cursor: {speakersLocked ? 'not-allowed' : 'auto'};
+												opacity: {speakersLocked ? 0.7 : 1};
+											"
+										>
+											<option value="UNKNOWN">Unresolved — choose a role</option>
+											<option value="BENCH">{SIDE_LABEL.BENCH}</option>
+											<option value="PETITIONER">{SIDE_LABEL.PETITIONER}</option>
+											<option value="RESPONDENT">{SIDE_LABEL.RESPONDENT}</option>
+											<option value="AMICUS">{SIDE_LABEL.AMICUS}</option>
+										</select>
+										{#if speakerSideById[speaker.participant_id] === 'BENCH'}
+											<!-- Bench companion (T-49-10-strand): three distinct states, keyed
+											     on person_id FIRST — not on missing_tenure — so a bench row
+											     with NO linked person is never confused with one whose person
+											     merely lacks covering tenure. Before this task a null-person
+											     bench row rendered a bare em-dash with no warning and no link;
+											     that one-way trap becomes reachable by operator action once a
+											     row can be moved into Bench, so it is closed here. -->
+											<div style="margin: 4px 0 0 0; font-size: 14px;">
+												{#if speaker.person_id == null}
+													<span style="color: #94a3b8;">No person linked</span>
+												{:else if speaker.missing_tenure}
+													<span style="color: #fbbf24;">Missing tenure</span>
+													{#if speaker.person_edit_href}
+														<a
+															href={speaker.person_edit_href}
+															style="color: #93c5fd; text-decoration: underline; margin-left: 4px;"
+														>Edit person</a>
 													{/if}
-												</div>
-											{/if}
-										</div>
-										<div style="flex: 1; min-width: 160px;">
-											<!-- Descriptor stays MOUNTED (never wrapped in a bench-only {#if}) and
-											     is only DISABLED while the selected side is Bench — unmounting it
-											     would destroy a typed-but-unsaved value on a toggle, the defect
-											     ResolveCard.svelte's lastDescriptorValue (:155-165) exists to
-											     prevent, avoided here by construction instead of a second
-											     remembering mechanism. -->
-											<input
-												type="text"
-												name="descriptor"
-												disabled={speakersLocked || speakerSideById[speaker.participant_id] === 'BENCH'}
-												value={speaker.descriptor ?? ''}
-												style="
-													display: block;
-													width: 100%;
-													background-color: #0f1117;
-													border: 1px solid #334155;
-													border-radius: 6px;
-													padding: 8px 12px;
-													font-size: 16px;
-													color: #e2e8f0;
-													box-sizing: border-box;
-													min-height: 36px;
-													cursor: {speakersLocked || speakerSideById[speaker.participant_id] === 'BENCH' ? 'not-allowed' : 'auto'};
-													opacity: {speakersLocked || speakerSideById[speaker.participant_id] === 'BENCH' ? 0.7 : 1};
-												"
-											/>
-											<div
-												style="
-													margin: 4px 0 0 0;
-												"
-											>
-												<!-- Phase 38 (D-19/D-20): descriptor_hint has no independently stored
-												     raw/confidence (admin_arguments.py D-06 — descriptor and descriptor_hint
-												     source the same column), so the exact extracted text itself is
-												     the raw source and confidence uses an explicit qualitative
-												     fallback rather than a fabricated figure. Kept rendered even while
-												     Bench is selected — copying is a read, not a write. -->
-												<CopyableExtractedValue
-													value={speaker.descriptor_hint}
-													copyLabel="Copy descriptor"
-													confidence="Medium"
-													raw={speaker.descriptor_hint}
-												/>
+												{:else}
+													<span style="color: #e2e8f0;">{speaker.bench_role ?? '—'}</span>
+												{/if}
 											</div>
+										{/if}
+									</div>
+								</td>
+								<td style="padding: 8px; vertical-align: top;">
+									<div style="flex: 1; min-width: 160px;">
+										<!-- Descriptor stays MOUNTED (never wrapped in a bench-only {#if}) and
+										     is only DISABLED while the selected side is Bench — unmounting it
+										     would destroy a typed-but-unsaved value on a toggle, the defect
+										     ResolveCard.svelte's lastDescriptorValue (:155-165) exists to
+										     prevent, avoided here by construction instead of a second
+										     remembering mechanism. -->
+										<input
+											form="speaker-side-{speaker.participant_id}"
+											type="text"
+											name="descriptor"
+											disabled={speakersLocked || speakerSideById[speaker.participant_id] === 'BENCH'}
+											value={speaker.descriptor ?? ''}
+											style="
+												display: block;
+												width: 100%;
+												background-color: #0f1117;
+												border: 1px solid #334155;
+												border-radius: 6px;
+												padding: 8px 12px;
+												font-size: 16px;
+												color: #e2e8f0;
+												box-sizing: border-box;
+												min-height: 36px;
+												cursor: {speakersLocked || speakerSideById[speaker.participant_id] === 'BENCH' ? 'not-allowed' : 'auto'};
+												opacity: {speakersLocked || speakerSideById[speaker.participant_id] === 'BENCH' ? 0.7 : 1};
+											"
+										/>
+										<div
+											style="
+												margin: 4px 0 0 0;
+											"
+										>
+											<!-- Phase 38 (D-19/D-20): descriptor_hint has no independently stored
+											     raw/confidence (admin_arguments.py D-06 — descriptor and descriptor_hint
+											     source the same column), so the exact extracted text itself is
+											     the raw source and confidence uses an explicit qualitative
+											     fallback rather than a fabricated figure. Kept rendered even while
+											     Bench is selected — copying is a read, not a write. -->
+											<CopyableExtractedValue
+												value={speaker.descriptor_hint}
+												copyLabel="Copy descriptor"
+												confidence="Medium"
+												raw={speaker.descriptor_hint}
+											/>
 										</div>
-										<div style="white-space: nowrap; padding-top: 6px; font-size: 14px; color: #94a3b8;">
-											{speaker.utterance_count}
-										</div>
-										{#if crossesSideBoundary(sideBucket(speaker.side), speakerSideById[speaker.participant_id])}
-											{#if sideConfirming[speaker.participant_id]}
-												<div style="display: flex; gap: 8px;">
-													<button
-														type="submit"
-														disabled={speakersLocked || savingSpeakerId === speaker.participant_id || speakerSideById[speaker.participant_id] === 'UNKNOWN'}
-														style="
-															min-height: 36px;
-															padding: 8px 16px;
-															background-color: #1e293b;
-															border: 1px solid #93c5fd;
-															border-radius: 6px;
-															font-size: 14px;
-															font-weight: 400;
-															color: #e2e8f0;
-															cursor: {speakersLocked || savingSpeakerId === speaker.participant_id || speakerSideById[speaker.participant_id] === 'UNKNOWN' ? 'not-allowed' : 'pointer'};
-															opacity: {speakersLocked || savingSpeakerId === speaker.participant_id || speakerSideById[speaker.participant_id] === 'UNKNOWN' ? 0.7 : 1};
-															white-space: nowrap;
-														"
-													>
-														{savingSpeakerId === speaker.participant_id ? 'Saving…' : 'Confirm move'}
-													</button>
-													<button
-														type="button"
-														onclick={() => { sideConfirming[speaker.participant_id] = false; }}
-														style="
-															min-height: 36px;
-															padding: 8px 16px;
-															background: transparent;
-															border: 1px solid #334155;
-															border-radius: 6px;
-															font-size: 14px;
-															font-weight: 400;
-															color: #94a3b8;
-															cursor: pointer;
-															white-space: nowrap;
-														"
-													>
-														Cancel
-													</button>
-												</div>
-											{:else}
+									</div>
+								</td>
+								<td style="padding: 8px; font-size: 14px; color: #94a3b8; vertical-align: top; white-space: nowrap;">
+									{speaker.utterance_count}
+								</td>
+								<td style="padding: 8px; vertical-align: top;">
+									<!-- D-35a follow-up (operator, 2026-08-25, 49-UAT test 51): a published
+									     argument's Speakers card renders NO save affordance at all, rather than a
+									     disabled one. A Save button on a card that cannot be saved is meaningless —
+									     the card-level lock line already states why the row is read-only. The
+									     disabled inputs are deliberately left as-is (operator: "I guess it's okay
+									     that we are using disabled inputs"); only the button is withdrawn.
+									     The two boundary-crossing branches are wrapped by the same guard because
+									     they are the same affordance in a different state and are unreachable while
+									     locked anyway (the side select that triggers them is itself disabled) —
+									     guarding the whole action block keeps one lock predicate instead of three. -->
+									{#if !speakersLocked}
+									{#if crossesSideBoundary(sideBucket(speaker.side), speakerSideById[speaker.participant_id])}
+										{#if sideConfirming[speaker.participant_id]}
+											<div style="display: flex; gap: 8px;">
 												<button
-													type="button"
-													disabled={speakersLocked}
-													onclick={() => { sideConfirming[speaker.participant_id] = true; }}
+													form="speaker-side-{speaker.participant_id}"
+													type="submit"
+													disabled={speakersLocked || savingSpeakerId === speaker.participant_id || speakerSideById[speaker.participant_id] === 'UNKNOWN'}
 													style="
 														min-height: 36px;
 														padding: 8px 16px;
@@ -922,18 +925,37 @@
 														font-size: 14px;
 														font-weight: 400;
 														color: #e2e8f0;
-														cursor: {speakersLocked ? 'not-allowed' : 'pointer'};
-														opacity: {speakersLocked ? 0.7 : 1};
+														cursor: {speakersLocked || savingSpeakerId === speaker.participant_id || speakerSideById[speaker.participant_id] === 'UNKNOWN' ? 'not-allowed' : 'pointer'};
+														opacity: {speakersLocked || savingSpeakerId === speaker.participant_id || speakerSideById[speaker.participant_id] === 'UNKNOWN' ? 0.7 : 1};
 														white-space: nowrap;
 													"
 												>
-													Move to {SIDE_LABEL[speakerSideById[speaker.participant_id]]}
+													{savingSpeakerId === speaker.participant_id ? 'Saving…' : 'Confirm move'}
 												</button>
-											{/if}
+												<button
+													type="button"
+													onclick={() => { sideConfirming[speaker.participant_id] = false; }}
+													style="
+														min-height: 36px;
+														padding: 8px 16px;
+														background: transparent;
+														border: 1px solid #334155;
+														border-radius: 6px;
+														font-size: 14px;
+														font-weight: 400;
+														color: #94a3b8;
+														cursor: pointer;
+														white-space: nowrap;
+													"
+												>
+													Cancel
+												</button>
+											</div>
 										{:else}
 											<button
-												type="submit"
-												disabled={speakersLocked || savingSpeakerId === speaker.participant_id || speakerSideById[speaker.participant_id] === 'UNKNOWN'}
+												type="button"
+												disabled={speakersLocked}
+												onclick={() => { sideConfirming[speaker.participant_id] = true; }}
 												style="
 													min-height: 36px;
 													padding: 8px 16px;
@@ -943,20 +965,43 @@
 													font-size: 14px;
 													font-weight: 400;
 													color: #e2e8f0;
-													cursor: {speakersLocked || savingSpeakerId === speaker.participant_id || speakerSideById[speaker.participant_id] === 'UNKNOWN' ? 'not-allowed' : 'pointer'};
-													opacity: {speakersLocked || savingSpeakerId === speaker.participant_id || speakerSideById[speaker.participant_id] === 'UNKNOWN' ? 0.7 : 1};
+													cursor: {speakersLocked ? 'not-allowed' : 'pointer'};
+													opacity: {speakersLocked ? 0.7 : 1};
 													white-space: nowrap;
 												"
 											>
-												{savingSpeakerId === speaker.participant_id ? 'Saving…' : 'Save'}
+												Move to {SIDE_LABEL[speakerSideById[speaker.participant_id]]}
 											</button>
 										{/if}
-									</form>
+									{:else}
+										<button
+											form="speaker-side-{speaker.participant_id}"
+											type="submit"
+											disabled={speakersLocked || savingSpeakerId === speaker.participant_id || speakerSideById[speaker.participant_id] === 'UNKNOWN'}
+											style="
+												min-height: 36px;
+												padding: 8px 16px;
+												background-color: #1e293b;
+												border: 1px solid #93c5fd;
+												border-radius: 6px;
+												font-size: 14px;
+												font-weight: 400;
+												color: #e2e8f0;
+												cursor: {speakersLocked || savingSpeakerId === speaker.participant_id || speakerSideById[speaker.participant_id] === 'UNKNOWN' ? 'not-allowed' : 'pointer'};
+												opacity: {speakersLocked || savingSpeakerId === speaker.participant_id || speakerSideById[speaker.participant_id] === 'UNKNOWN' ? 0.7 : 1};
+												white-space: nowrap;
+											"
+										>
+											{savingSpeakerId === speaker.participant_id ? 'Saving…' : 'Save'}
+										</button>
+									{/if}
+									{/if}
 								</td>
 							</tr>
 						{/each}
 					</tbody>
-				</table>
+					</table>
+				</div>
 
 				<!-- Role error message (shown on form.roleError) -->
 				{#if form?.roleError}

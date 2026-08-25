@@ -1054,8 +1054,12 @@ def test_page_derives_no_second_published_lock_flag() -> None:
     prohibitions require both to stay untouched.
     """
     source = _source(ARGUMENT_DETAIL_PATH)
+    # G-49-16 (2026-08-25): the flag is now $derived-wrapped (it was a plain const and
+    # went stale on in-page publish). The wrapper is optional in this pattern so the
+    # SINGULARITY property this test exists for keeps holding either way — reactivity is
+    # pinned separately by test_published_lock_flag_must_be_reactive_not_const_captured.
     declarations = re.findall(
-        r"(?:const|let)\s+\w+\s*=\s*data\.argument\.status\s*===\s*'published'\s*;",
+        r"(?:const|let)\s+\w+\s*=\s*(?:\$derived\(\s*)?data\.argument\.status\s*===\s*'published'",
         source,
     )
     assert len(declarations) == 1, (

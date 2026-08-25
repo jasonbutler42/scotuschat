@@ -192,7 +192,15 @@
 
 		<!-- PeopleTable (per-tab columns, PDIR-03/PDIR-04) -->
 		{#if data.people.length > 0}
-			<table style="width: 100%; border-collapse: collapse;">
+			<!-- G-49-18 (operator, 2026-08-25, 49-UAT test 49): this list table was one of the
+			     two admin tables 49-12 measured overflowing at 375px and deliberately scoped out
+			     (/admin/people reached 403px at a 375px viewport). Left unwrapped it pushes the PAGE into
+			     horizontal scroll rather than scrolling itself, breaking 49-UI-SPEC's
+			     no-horizontal-scroll must_have. Same remedy as 49-08's review-queue tables and
+			     G-49-17's Speakers table: the table scrolls inside its own container. No column
+			     is truncated and no media query is introduced (49-UI-SPEC E1/E2). -->
+			<div style="overflow-x: auto;">
+				<table style="width: 100%; border-collapse: collapse;">
 				<thead>
 					<tr>
 						<th
@@ -355,7 +363,8 @@
 						</tr>
 					{/each}
 				</tbody>
-			</table>
+				</table>
+			</div>
 		{:else}
 			<!-- Empty states (UI-SPEC Copywriting Contract) -->
 			<div

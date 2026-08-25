@@ -453,8 +453,13 @@ def test_argument_page_derives_one_published_lock_flag() -> None:
     wired correctly at runtime.
     """
     source = _source(ARGUMENT_DETAIL_PATH)
+    # G-49-16 (2026-08-25): the declaration MUST be $derived-wrapped. It was a plain
+    # `const` until an operator found the lock dead after an in-page publish — see
+    # test_published_lock_flag_must_be_reactive below for the full reasoning. The
+    # optional-$derived shape here keeps this test focused on "one named flag, page's
+    # own comparison idiom"; reactivity is that test's job.
     assert re.search(
-        rf"(const|let)\s+{LOCK_FLAG_NAME}\s*=\s*data\.argument\.status\s*===\s*'published'\s*;",
+        rf"(const|let)\s+{LOCK_FLAG_NAME}\s*=\s*(?:\$derived\(\s*)?data\.argument\.status\s*===\s*'published'",
         source,
     ), (
         f"expected a single named published-lock flag `{LOCK_FLAG_NAME}` derived "
@@ -483,21 +488,26 @@ def test_speakers_card_controls_consult_the_published_lock() -> None:
     source = _source(ARGUMENT_DETAIL_PATH)
     region = _speakers_card_region(source)
 
-    select_match = re.search(r"<select\s+name=\"side\"[^>]*>", region, re.DOTALL)
+    # G-49-14 (2026-08-25): the row was split into five real <td>s, so each control
+    # now also carries a `form="speaker-side-{id}"` association attribute AHEAD of its
+    # other attributes. These locators match on attribute PRESENCE rather than a fixed
+    # attribute ORDER — pinning order made the test fail on a markup change that left
+    # every property it actually asserts intact.
+    select_match = re.search(r"<select\s[^>]*name=\"side\"[^>]*>", region, re.DOTALL)
     assert select_match, "could not find the role <select name=\"side\"> in the Speakers card"
     assert LOCK_FLAG_NAME in select_match.group(0), (
         f"the role select must reference `{LOCK_FLAG_NAME}` in a disabled "
         f"condition. Actual tag:\n{select_match.group(0)}"
     )
 
-    descriptor_match = re.search(r"<input\s+type=\"text\"\s+name=\"descriptor\"[^/]*/>", region, re.DOTALL)
+    descriptor_match = re.search(r"<input\s[^>]*name=\"descriptor\"[^>]*/>", region, re.DOTALL)
     assert descriptor_match, "could not find the descriptor <input name=\"descriptor\"> in the Speakers card"
     assert LOCK_FLAG_NAME in descriptor_match.group(0), (
         f"the descriptor input must reference `{LOCK_FLAG_NAME}` in a disabled "
         f"condition. Actual tag:\n{descriptor_match.group(0)}"
     )
 
-    save_button_match = re.search(r"<button\s+type=\"submit\"\s+disabled=\{([^}]*)\}", region)
+    save_button_match = re.search(r"<button\s[^>]*type=\"submit\"[^>]*disabled=\{([^}]*)\}", region)
     assert save_button_match, "could not find the Save <button type=\"submit\" disabled={...}> in the Speakers card"
     disabled_expr = save_button_match.group(1)
     assert LOCK_FLAG_NAME in disabled_expr, (
@@ -1039,7 +1049,7 @@ def test_speakers_side_control_offers_every_stored_value() -> None:
     that has not yet been performed."""
     source = _source(ARGUMENT_DETAIL_PATH)
     region = _speakers_card_region(source)
-    select_match = re.search(r"<select\s+name=\"side\"[^>]*>(.*?)</select>", region, re.DOTALL)
+    select_match = re.search(r"<select\s[^>]*name=\"side\"[^>]*>(.*?)</select>", region, re.DOTALL)
     assert select_match, "could not find the side <select> in the Speakers card region"
     select_body = select_match.group(1)
     assert '<option value="UNKNOWN">Unresolved — choose a role</option>' in select_body, (
@@ -1201,7 +1211,7 @@ def test_descriptor_input_is_disabled_not_removed_on_bench() -> None:
     source = _source(ARGUMENT_DETAIL_PATH)
     region = _speakers_card_region(source)
 
-    descriptor_match = re.search(r"<input\s+type=\"text\"\s+name=\"descriptor\"[^/]*/>", region, re.DOTALL)
+    descriptor_match = re.search(r"<input\s[^>]*name=\"descriptor\"[^>]*/>", region, re.DOTALL)
     assert descriptor_match, "could not find the descriptor <input name=\"descriptor\"> in the region"
     descriptor_tag = descriptor_match.group(0)
     assert "'BENCH'" in descriptor_tag, (
@@ -1252,4 +1262,103 @@ def test_published_lock_and_unresolved_gate_both_survive_the_convergence() -> No
     )
     assert "speakerSideById[speaker.participant_id] === 'UNKNOWN'" in region, (
         "the unresolved-side Save gate must still hold"
+    )
+
+
+def test_every_speakers_row_control_is_associated_with_its_own_row_form() -> None:
+    """
+    STRUCTURAL-ONLY. G-49-14 (operator, 2026-08-25) split the speaker row from one
+    `<td colspan="3">` into five real `<td>`s so the row fills the five columns its
+    header declares. `<form>` is not a permitted child of `<tr>`, so the form is
+    declared once in the name cell and every control in the sibling cells associates
+    with it by id via the HTML5 `form=` attribute.
+
+    That association is now load-bearing and SILENT when broken: drop the `form=`
+    attribute and the control simply stops being submitted — no error, no visual
+    change, the row just quietly saves less than it should. This test exists because
+    that failure mode is invisible to every other assertion in this module.
+
+    Does NOT prove a browser actually submits the row (see the 48-10 false-green
+    incident); it proves the association attribute is present on each control that
+    must carry it, and that the form id is per-participant rather than shared.
+    """
+    source = _source(ARGUMENT_DETAIL_PATH)
+    region = _speakers_card_region(source)
+
+    form_ref = 'form="speaker-side-{speaker.participant_id}"'
+
+    form_decl = re.search(r'<form\s[^>]*id="speaker-side-\{speaker\.participant_id\}"', region, re.DOTALL)
+    assert form_decl, (
+        "the per-row form must be declared with a participant-scoped id "
+        '(id="speaker-side-{speaker.participant_id}"). A shared or static id would '
+        "make every row submit the same participant's data."
+    )
+
+    select_match = re.search(r"<select\s[^>]*name=\"side\"[^>]*>", region, re.DOTALL)
+    assert select_match and form_ref in select_match.group(0), (
+        "the side <select> sits in a different <td> from its <form> and must carry "
+        f"{form_ref} or it will not be submitted"
+    )
+
+    descriptor_match = re.search(r"<input\s[^>]*name=\"descriptor\"[^>]*/>", region, re.DOTALL)
+    assert descriptor_match and form_ref in descriptor_match.group(0), (
+        "the descriptor <input> sits in a different <td> from its <form> and must "
+        f"carry {form_ref} or a typed descriptor will be silently dropped on save"
+    )
+
+    submit_buttons = re.findall(r"<button\s[^>]*type=\"submit\"[^>]*>", region, re.DOTALL)
+    assert submit_buttons, "expected at least one submit button in the Speakers card region"
+    for button in submit_buttons:
+        assert form_ref in button, (
+            "every submit button in the Speakers card sits in the Action <td>, outside "
+            f"its <form>, and must carry {form_ref} to submit anything. Offending tag:\n{button}"
+        )
+
+    # The hidden inputs stay INSIDE the form element itself, so they need no attribute.
+    assert 'name="participant_id"' in region and 'name="committed_side"' in region, (
+        "both hidden inputs must survive the split — committed_side is RESOLVE-13's "
+        "round-trip guard against clobbering a preserved bench descriptor"
+    )
+
+def test_published_lock_flag_must_be_reactive_not_const_captured() -> None:
+    """
+    G-49-16 (operator, 2026-08-25). The published lock MUST be `$derived`, never a plain
+    `const` over `data`.
+
+    `data` is a prop. In Svelte 5 runes mode a plain `const` evaluates ONCE at component
+    initialisation and never recomputes. Publish and unpublish do NOT remount this
+    component — both POST and invalidate, updating `data` in place — so a const-captured
+    flag stays frozen at whatever the status was when the page first loaded. In the field
+    that meant publishing with the page open left the entire card editable (the backend
+    refused every write, so nothing corrupted, but the operator was offered controls that
+    could not work), and unpublishing left it locked with no way back short of a reload.
+
+    Why this test has to exist as its OWN assertion: every other source-contract test in
+    this module asserts the MARKUP says `disabled={speakersLocked}` — and the markup was
+    correct the entire time the bug was live. It was the FLAG that was dead. A grep cannot
+    tell a live flag from a stale one, so the one greppable half of the invariant — the
+    declaration must be $derived — is pinned here explicitly. Six plans verified this lock
+    on a FRESH page load, which is the single case a const-captured flag gets right.
+
+    Does NOT prove reactivity at runtime (that needs a mounted-component or browser test);
+    it forecloses the specific regression that actually happened.
+    """
+    source = _source(ARGUMENT_DETAIL_PATH)
+
+    declaration = re.search(
+        rf"(const|let)\s+{LOCK_FLAG_NAME}\s*=\s*([^;]+);",
+        source,
+    )
+    assert declaration, f"could not find the `{LOCK_FLAG_NAME}` declaration"
+
+    keyword, initialiser = declaration.group(1), declaration.group(2)
+    assert "$derived" in initialiser, (
+        f"`{LOCK_FLAG_NAME}` must be declared with $derived so it recomputes when `data` "
+        f"changes on publish/unpublish invalidation. A plain capture goes stale and the "
+        f"lock silently stops tracking the argument's real status.\n"
+        f"Actual: {keyword} {LOCK_FLAG_NAME} = {initialiser.strip()};"
+    )
+    assert keyword == "let", (
+        f"a $derived declaration must use `let`, not `const` — Svelte reassigns it on "
+        f"recompute. Actual keyword: {keyword!r}"
     )

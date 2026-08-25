@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 20
+open_count: 21
 waived_count: 0
 fixed_count: 7
-total_count: 27
-last_updated: 2026-08-25T10:54:09.338Z
+total_count: 28
+last_updated: 2026-08-25T11:18:44.159Z
 ---
 
 # Broken Windows Ledger
@@ -42,6 +42,7 @@ last_updated: 2026-08-25T10:54:09.338Z
 | 25 | 49 | unrun-verify | app/src/routes/admin/arguments/[id]/+page.svelte |  | Task 3 six-item Speakers-card convergence human-check walk not observed in this session — browser tooling unavailable to executor | open |  | 2026-08-24T22:49:22.058Z |  |
 | 26 | 49 | deviation | app/src/routes/admin/arguments/+page.svelte |  | New finding during 49-12 (G-49-5c) live measurement: /admin/arguments overflows at 375px (scrollWidth 680 vs clientWidth 375) via an unwrapped <table> with no overflow-x container -- separate, pre-existing cause independent of AdminSubNav; out of scope for 49-12 (files_modified did not include this page). Not fixed. | open |  | 2026-08-25T10:54:02.125Z |  |
 | 27 | 49 | deviation | app/src/routes/admin/people/+page.svelte |  | New finding during 49-12 (G-49-5c) live measurement: /admin/people overflows at 375px (scrollWidth 403 vs clientWidth 375) via an unwrapped <table> with no overflow-x container -- separate, pre-existing cause independent of AdminSubNav. Was previously masked by AdminSubNav's larger 423px overflow (both pegged the page at the same scrollWidth); only became independently visible after 49-12 fixed the sub-nav. Out of scope for 49-12 (files_modified did not include this page). Not fixed. | open |  | 2026-08-25T10:54:09.338Z |  |
+| 28 | 49 | unrun-verify | app/src/routes/admin/arguments/[id]/+page.svelte |  | Task 3 browser human-check (5 items) not observed — no browser tool available to the executor; see 49-11-SUMMARY.md Human-Check Items section | open |  | 2026-08-25T11:18:44.159Z |  |
 
 ````json
 [
@@ -367,6 +368,18 @@ last_updated: 2026-08-25T10:54:09.338Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-08-25T10:54:09.338Z",
+    "resolved_at": null
+  },
+  {
+    "id": 28,
+    "kind": "unrun-verify",
+    "phase": "49",
+    "file": "app/src/routes/admin/arguments/[id]/+page.svelte",
+    "line": null,
+    "description": "Task 3 browser human-check (5 items) not observed — no browser tool available to the executor; see 49-11-SUMMARY.md Human-Check Items section",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-08-25T11:18:44.159Z",
     "resolved_at": null
   }
 ]

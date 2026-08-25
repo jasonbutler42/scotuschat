@@ -4,17 +4,17 @@ milestone: v1.8
 milestone_name: Import & Provenance Re-model
 current_phase: 49
 current_phase_name: Review Model
-status: Phase 49 REOPENED 2026-08-24 — UAT found 4 open gaps; verification status passed -> gaps_found
-stopped_at: Completed 49-12-PLAN.md — G-49-5c closed, last open Phase 49 gap
-last_updated: "2026-08-25T11:11:45.574Z"
-last_activity: 2026-08-24
-last_activity_desc: Executed 49-10 (shared side module, backend BENCH acceptance under RESOLVE-13, converged Speakers row) — closes G-49-3
-state_head: fc7bf02817023f495c7b026b9c607dcf052d7e5a
+status: Phase 49 REOPENED 2026-08-24 — UAT found 4 open gaps; all 4 now closed (49-09 through 49-12); ready for /gsd-verify-work re-pass
+stopped_at: Completed 49-11-PLAN.md — whole-argument published lock (D-35a); all Phase 49 plans (01-12) now complete
+last_updated: "2026-08-25T11:20:13.350Z"
+last_activity: 2026-08-25
+last_activity_desc: Executed 49-11 (published lock on update_argument/update_argument_metadata/resolve_job/create_person_for_job; always-editable decision reversed in place; D-35a recorded) — closes D-35a, the last open Phase 49 item
+state_head: 6e379ed94e574a161e4a938d35b04555662766ac
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 28
-  completed_plans: 27
+  completed_plans: 28
   percent: 40
 ---
 
@@ -32,7 +32,7 @@ See: .planning/PROJECT.md (updated 2026-08-18 — Phase 47 complete; corpus-firs
 Phase: 49 — Review Model (reopened for gap closure)
 Last activity: 2026-08-24 — Phase 49 UAT completed (31 pass / 3 issues / 0 pending); phase reopened for gap closure
 
-**Next action:** Wave 5 (49-10, D-35's SECOND half) is now **complete** — see `49-10-SUMMARY.md`. `app/src/lib/participantSide.ts` is the new shared bucket/label/boundary-predicate module both `ResolveCard.svelte` and the argument-detail Speakers card import from. `update_participant_side` now accepts `BENCH` under RESOLVE-13's descriptor-preservation rule; `T-15-02-BENCH` is retired **as satisfied, not weakened** (four compensating controls recorded at all citation sites — the boundary confirm, the no-fallback tenure derivation, the Missing-tenure/no-person affordance, and 49-09's published lock). The Speakers card is now ONE row template reaching all five stored side values, with a two-step boundary-crossing confirm and a three-state bench companion (closing the no-person one-way trap). **G-49-3 is closed** (`49-UAT.md` updated); D-35 recorded in `49-CONTEXT.md`. Full suite: 1123 passed (baseline 1104, clean +19, no new skips). Three human-check walks (Task 1's Resolve-card regression, Task 3's six-item convergence walk, 49-09's published-lock walk) were NOT observed this session — no browser tool available to this executor; logged to `WINDOWS.md`. **`49-11` remains** — the whole-argument published lock (D-35a), which does not touch anything 49-10 changed. Still open and NOT in any gap_ids: G-49-9a needs a visual re-check, and UAT sub-item 5.6 was never observed.
+**Next action:** Wave 6 (49-11, D-35a — the whole-argument published lock) is now **complete** — see `49-11-SUMMARY.md`. Six argument-data writers (`update_argument`, `update_argument_metadata`, `update_participant_side`, `update_resolve_row_for_job`, `resolve_job`, `create_person_for_job`) now share one published predicate and one error-prose clause, proved by live non-persistence tests; the deliberate non-locks (`unpublish_argument`, `resolve_participant_review`) are proved live too. The argument-detail page's `readonly is always false here` decision is reversed in place, cited to D-35/D-35a/operator/2026-08-24; the Case card and Argument Details card are locked behind 49-09's single `speakersLocked` flag with one page-level statement. `deferred-items.md`'s write-path inventory is now complete and four-way dispositioned; `49-CONTEXT.md` carries `### D-35a (locked)`. Full suite: 1150 passed across two split runs (no failures, no new skips, 12 pre-existing warnings). 49-12 (G-49-5c, narrow-viewport nav) also completed concurrently — see `49-12-SUMMARY.md`. **All Phase 49 plans (01-12) and all four reopened gaps are now closed.** Five browser human-check items from 49-11 Task 3 were NOT observed this session — no browser tool available to this executor; logged to `WINDOWS.md` entry 28. One NEW operator question remains open (Person-scoped write boundary — see `deferred-items.md`). Still open and NOT in any gap_ids: G-49-9a needs a visual re-check, and UAT sub-item 5.6 was never observed. **Next step: `/gsd-verify-work 49`** to re-close the phase.
 
 Phase 49-06 close-out notes (2026-08-23):
 
@@ -190,6 +190,7 @@ items → 14.** Every closure carries its evidence in the file it closes; the co
 | Phase 49-review-model P08 | ~55min | 3 tasks | 5 files |
 | Phase 49 P09 | 1h 5m | 3 tasks | 6 files |
 | Phase 49-review-model P12 | 70min | 4 tasks | 6 files |
+| Phase 49 P11 | 70min | 3 tasks | 9 files |
 
 v1.7 per-plan metrics cleared at this milestone boundary per the standard STATE.md reset; the underlying per-plan SUMMARY files remain in `.planning/milestones/v1.7-phases/`.
 
@@ -254,6 +255,9 @@ Full cross-milestone decision log lives in PROJECT.md's Key Decisions table. Per
 - [Phase 49]: 49-09: two new contract assertions (test_update_participant_side_still_accepts_unpublished_and_draft, test_popover_does_not_resync_side_on_every_prop_change) were green from the start of the RED phase — documented as negative-space/continuity checks, not presented as red-then-green.
 - [Phase 49]: D-35 (second half): T-15-02-BENCH retired as satisfied (not weakened) — Speakers card and Resolve card converged onto one shared side/bucket module, closing G-49-3
 - [Phase 49]: 49-12: closed G-49-5c (last open Phase 49 gap) — AdminSubNav/TopNav gained flex-wrap:wrap; a computed page-chrome sweep replaces hand-enumerated regression gates and found TopNav as a second zero-slack near-miss unprompted; a re-runnable narrow-viewport-audit.mjs operator tool shipped per D-49-12-c. Two new out-of-scope table-overflow findings on /admin/arguments and /admin/people recorded (WINDOWS.md #26/#27), not fixed.
+- [Phase 49]: 49-11: the two pre-existing published guards cite the folded-todo slug in their raised text; the four new guards cite 'D-35/D-35a, operator, 2026-08-24' instead (same structural shape, same 'is published (current status:' clause) since the folded todo is participant-editability-specific
+- [Phase 49]: 49-11: create_person_for_job's published guard only fires when the job resolves to an actual PUBLISHED Argument — a job with no linked argument still legitimately creates a bare Person, which is Person-only territory outside D-35a's scope
+- [Phase 49]: 49-11: the page-level lock statement and Case card reuse 49-09's speakersLocked flag verbatim rather than renaming it, even though its scope now covers the whole page
 
 ### Roadmap Evolution
 
@@ -313,13 +317,14 @@ at close.
 
 ## Session Continuity
 
-Last session: 2026-08-25T11:11:45.258Z
-Stopped at: Completed 49-12-PLAN.md — G-49-5c closed, last open Phase 49 gap
+Last session: 2026-08-25T11:19:03.770Z
+Stopped at: Completed 49-11-PLAN.md — whole-argument published lock (D-35a); all Phase 49 plans (01-12) now complete
 Resume file: None
 
 ## Operator Next Steps
 
-- **Phase 49 (Review Model) is complete.** All five REVIEW-0X requirements are `Complete`. Review `.planning/phases/49-review-model/49-EVIDENCE.md` and `49-06-SUMMARY.md` at your convenience.
-- **Recommended single-sitting browser pass** (see `49-EVIDENCE.md` §9 for the exact order): open `/admin`, click Reset to Fixture then Seed unresolved speaker; open the Complexity fixture's argument edit page (26-UAT Test 26); open `/admin/review` (49-01/49-05's items, D-32's visual rendering); exercise `CreatePersonPopover`/`/admin/help` (49-03's items); optionally publish the Complexity fixture to check 14-UAT Test 8's public-page rendering.
+- **Phase 49 (Review Model) is complete, including all four gap-closure plans (49-09 through 49-12).** All five REVIEW-0X requirements are `Complete`. Run `/gsd-verify-work 49` to re-close the phase against the reopened gaps.
+- **Recommended single-sitting browser pass** (see `49-EVIDENCE.md` §9 for the pre-49-11 order, plus the 5 new 49-11 Task 3 items in `49-11-SUMMARY.md`'s Human-Check Items section — WINDOWS.md entry 28): open `/admin`, click Reset to Fixture then Seed unresolved speaker; open the Complexity fixture's argument edit page (26-UAT Test 26); open `/admin/review` (49-01/49-05's items, D-32's visual rendering); exercise `CreatePersonPopover`/`/admin/help` (49-03's items); on `/admin/arguments/{id}` for a PUBLISHED argument, confirm the page-level lock statement, the Case card and Argument Details card render disabled, and Publish/Unpublish/Delete still work; optionally publish the Complexity fixture to check 14-UAT Test 8's public-page rendering.
+- **New operator question from 49-11 (D-35a), not yet answered:** should `Person`-scoped writers (`update_person`, `merge_people`, and siblings) be restricted at all, given a `Person` is shared across every argument they appear in? See `deferred-items.md`'s "one new operator question" section.
 - One standalone todo remains open from Phase 48: `2026-08-20-reset-to-fixture-stale-created-at-timestamps.md` — candidate for a future plan or `/gsd-review-backlog`. (`2026-08-21-widen-participant-editability-to-all-unpublished-states.md` is now closed — see `.planning/todos/completed/`.)
 - When ready, begin Phase 50 (Import Unification) with `/gsd-discuss-phase 50`.

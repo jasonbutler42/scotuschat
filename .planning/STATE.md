@@ -4,16 +4,16 @@ milestone: v1.8
 milestone_name: Import & Provenance Re-model
 current_phase: 50
 current_phase_name: Unified Import Path
-status: Phase 49 COMPLETE 2026-08-25 — UAT re-pass green (55 tests, 54 passed, 0 issues, 0 pending); verification re-closed to passed; ready to plan Phase 50
-stopped_at: Phase 50 context gathered
-last_updated: "2026-08-25T21:08:27.494Z"
+status: Phase 50 PLANNED 2026-08-25 — 7 plans in 4 waves, plan-checker passed; requirements 4/4 and decisions 30/30 covered; ready to execute
+stopped_at: Phase 50 planned
+last_updated: "2026-08-25T23:59:00.000Z"
 last_activity: 2026-08-25
-last_activity_desc: Phase 49 complete, transitioned to Phase 50
-state_head: 05e4be03548e914f660132085e2197b310e1b4d7
+last_activity_desc: Phase 50 planned — 7 plans, 4 waves
+state_head: f366f29b8bb00e2e383a426d6b495204713922c1
 progress:
   total_phases: 5
   completed_phases: 3
-  total_plans: 28
+  total_plans: 42
   completed_plans: 28
   percent: 60
 ---
@@ -27,14 +27,25 @@ See: .planning/PROJECT.md (updated 2026-08-18 — Phase 47 complete; corpus-firs
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
 **Current focus:** Phase 50 — Unified Import Path (Phase 49 closed 2026-08-25)
 
-**Phase 50 scope resolved 2026-08-25** (at `/gsd-plan-phase 50` time, by the operator): the phase's 2026-08-18 scope flag is closed **corpus-only**. Its PDF half — old success criterion 2, IMPORT-02, "the PDF pipeline path reads and writes `import_run` as one strategy among peers" — **split out to Phase 999.11 (BACKLOG)**, on the deferred PDF route. Phase 50 now carries 4 requirements (IMPORT-01, IMPORT-03, IMPORT-04, IMPORT-05) and 4 success criteria, renumbered. IMPORT-05's authority ordering stays here **in full** (all four rungs, one total ordering function); its `operator`/`corpus` rungs get live corpus proof, its `pdf/rule_based`/`pdf/llm_corrective` rungs get real-writer-test proof — the same verification split Phase 47 established. Recorded in ROADMAP.md (Phase 50 section + v1.8 bullet + Backlog 999.11), REQUIREMENTS.md (IMPORT-02 remapped, coverage note), and PROJECT.md Key Decisions. **No CONTEXT.md yet — `/gsd-discuss-phase 50` is the next step, and it will read the already-narrowed scope.**
+**Phase 50 scope resolved 2026-08-25** (at `/gsd-plan-phase 50` time, by the operator): the phase's 2026-08-18 scope flag is closed **corpus-only**. Its PDF half — old success criterion 2, IMPORT-02, "the PDF pipeline path reads and writes `import_run` as one strategy among peers" — **split out to Phase 999.11 (BACKLOG)**, on the deferred PDF route. Phase 50 now carries 4 requirements (IMPORT-01, IMPORT-03, IMPORT-04, IMPORT-05) and 4 success criteria, renumbered. IMPORT-05's authority ordering stays here **in full** (all four rungs, one total ordering function); its `operator`/`corpus` rungs get live corpus proof, its `pdf/rule_based`/`pdf/llm_corrective` rungs get real-writer-test proof — the same verification split Phase 47 established. Recorded in ROADMAP.md (Phase 50 section + v1.8 bullet + Backlog 999.11), REQUIREMENTS.md (IMPORT-02 remapped, coverage note), and PROJECT.md Key Decisions. Discuss and plan are both DONE: `50-CONTEXT.md` (30 locked decisions), `50-RESEARCH.md`, `50-PATTERNS.md`, `50-VALIDATION.md` and 7 PLAN.md files are on disk.
 
 ## Current Position
 
-Phase: 50 — Unified Import Path
-Last activity: 2026-08-25 — Phase 49 complete, transitioned to Phase 50
+Phase: 50 (Unified Import Path) — READY TO EXECUTE
+Last activity: 2026-08-25 — Phase 50 planned (7 plans, 4 waves)
 
-**Next action:** Wave 6 (49-11, D-35a — the whole-argument published lock) is now **complete** — see `49-11-SUMMARY.md`. Six argument-data writers (`update_argument`, `update_argument_metadata`, `update_participant_side`, `update_resolve_row_for_job`, `resolve_job`, `create_person_for_job`) now share one published predicate and one error-prose clause, proved by live non-persistence tests; the deliberate non-locks (`unpublish_argument`, `resolve_participant_review`) are proved live too. The argument-detail page's `readonly is always false here` decision is reversed in place, cited to D-35/D-35a/operator/2026-08-24; the Case card and Argument Details card are locked behind 49-09's single `speakersLocked` flag with one page-level statement. `deferred-items.md`'s write-path inventory is now complete and four-way dispositioned; `49-CONTEXT.md` carries `### D-35a (locked)`. Full suite: 1150 passed across two split runs (no failures, no new skips, 12 pre-existing warnings). 49-12 (G-49-5c, narrow-viewport nav) also completed concurrently — see `49-12-SUMMARY.md`. **All Phase 49 plans (01-12) and all four reopened gaps are now closed.** Five browser human-check items from 49-11 Task 3 were NOT observed this session — no browser tool available to this executor; logged to `WINDOWS.md` entry 28. One NEW operator question remains open (Person-scoped write boundary — see `deferred-items.md`). Still open and NOT in any gap_ids: G-49-9a needs a visual re-check, and UAT sub-item 5.6 was never observed. **Next step: `/gsd-verify-work 49`** to re-close the phase.
+**Next action:** Phase 50 is planned — **7 plans in 4 waves**, plan-checker passed. `/gsd-execute-phase 50`.
+
+- Wave 1: `50-01` (migration `0030`, the frozen `content_digest` contract, and the `type="tracer"` double-import slice). **`autonomous: false`** — Task 0 is a blocking `checkpoint:decision` on the digest field list, so Wave 1 pauses for an operator answer.
+- Wave 2: `50-02` (the `apply_argument_value_change` / `apply_case_value_change` peer gates + OQ-1 fail-closed NULL semantics), `50-03` (argument-scoped approve route, operator provenance stamping, delete-cascade fix).
+- Wave 3: `50-04` (`/admin/review` discrepancy render + Approve action), `50-05` (the reconcile compare-and-record pass), `50-06` (D-22 delegation sweep + D-24 behavioral gate).
+- Wave 4: `50-07` (offline `prune-runs`, public-leak ban, dispositioned writer inventory).
+
+Three researcher open questions were resolved by the operator at planning time and are LOCKED in the plans: **OQ-1** — nullable `source`/`method` on both `Argument` and `Case`, no backfill, NULL is unknown and fails closed; **OQ-2** — `reset_to_fixture` keeps all four reference states, "Mid-pipeline" preserved by seeding a `step="reconcile"` ImportRun; **OQ-3** — the comparison digest is read from the latest `step="parse"` run, and a diff writes a new `step="parse"` run.
+
+Planner deviations to watch at execute/verify time: **PD-01** dropped `side` from the digest field list; **PD-07/PD-08** make `update_argument`/`update_argument_metadata` stamp operator authority (a scoped deviation from Phase 49's D-22); **PD-13** adds a gap-fill rule to all four gates — the one change to Phase 49's frozen `decide_write` behavior, and it must be named in the phase summary.
+
+Phase 49 close-out (historical, superseded — Phase 49 is closed and verified): Wave 6 (49-11, D-35a — the whole-argument published lock) is now **complete** — see `49-11-SUMMARY.md`. Six argument-data writers (`update_argument`, `update_argument_metadata`, `update_participant_side`, `update_resolve_row_for_job`, `resolve_job`, `create_person_for_job`) now share one published predicate and one error-prose clause, proved by live non-persistence tests; the deliberate non-locks (`unpublish_argument`, `resolve_participant_review`) are proved live too. The argument-detail page's `readonly is always false here` decision is reversed in place, cited to D-35/D-35a/operator/2026-08-24; the Case card and Argument Details card are locked behind 49-09's single `speakersLocked` flag with one page-level statement. `deferred-items.md`'s write-path inventory is now complete and four-way dispositioned; `49-CONTEXT.md` carries `### D-35a (locked)`. Full suite: 1150 passed across two split runs (no failures, no new skips, 12 pre-existing warnings). 49-12 (G-49-5c, narrow-viewport nav) also completed concurrently — see `49-12-SUMMARY.md`. **All Phase 49 plans (01-12) and all four reopened gaps are now closed.** Five browser human-check items from 49-11 Task 3 were NOT observed this session — no browser tool available to this executor; logged to `WINDOWS.md` entry 28. One NEW operator question remains open (Person-scoped write boundary — see `deferred-items.md`). Still open and NOT in any gap_ids: G-49-9a needs a visual re-check, and UAT sub-item 5.6 was never observed. (Phase 49 was subsequently re-verified and closed on 2026-08-25 — the `/gsd-verify-work 49` step named here is DONE.)
 
 Phase 49-06 close-out notes (2026-08-23):
 

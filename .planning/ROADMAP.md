@@ -272,7 +272,7 @@ Plans:
   4. The operator can resolve a review item (confirm or edit) from the queue, and doing so advances its `review_state` and recomputes the affected argument's trust.
   5. The legacy `name_needs_review` / `name_extraction_metadata` mechanism is folded into the unified review_state + provenance record, with no parallel mechanism remaining.
 
-**Plans**: 10/12 plans executed (6 gap-closure plans added 2026-08-24 after UAT reopened the phase; 49-09 split into 49-09 + 49-10 when operator decision D-35 replaced the G-49-3 checkpoint with a convergence mandate; 49-11 added when the operator scoped D-35 to the whole argument, not just participant data — D-35a; 49-12 added when the phase's first authenticated live-browser pass found a FOURTH horizontal-scroll cause, `AdminSubNav`, that three green source-text gates could not see — G-49-5c)
+**Plans**: 11/12 plans executed (6 gap-closure plans added 2026-08-24 after UAT reopened the phase; 49-09 split into 49-09 + 49-10 when operator decision D-35 replaced the G-49-3 checkpoint with a convergence mandate; 49-11 added when the operator scoped D-35 to the whole argument, not just participant data — D-35a; 49-12 added when the phase's first authenticated live-browser pass found a FOURTH horizontal-scroll cause, `AdminSubNav`, that three green source-text gates could not see — G-49-5c)
 **UI hint**: yes
 
 Plans:
@@ -304,7 +304,7 @@ Plans:
 - [x] 49-09-PLAN.md — WR-01 popover open-time side resync, plus the published lock on `update_participant_side` (D-35 half one) made visible on the Speakers card and a full inventory of the write paths still unlocked (wave 4)
 - [x] 49-10-PLAN.md — Convergence (D-35 half two): one shared side module, a single Speakers row template reaching every stored side value behind a boundary confirm, and `T-15-02-BENCH` retired as satisfied — closes `G-49-3` (wave 5, blocked on 49-09)
 - [ ] 49-11-PLAN.md — Whole-argument lock (D-35a): published guards on `update_argument`, `update_argument_metadata`, `resolve_job`, and `create_person_for_job`; live proof that unpublish and review-state writes still work; the always-editable page decision reversed in place and the Case + Argument Details cards locked (wave 6, blocked on 49-10)
-- [ ] 49-12-PLAN.md — Narrow-viewport chrome (`G-49-5c`): `flex-wrap` on `AdminSubNav` (the fourth and last horizontal-scroll cause, on every admin page) and on `TopNav`, proved by real-browser page-scroll measurement rather than a fourth grep, plus a computed page-chrome sweep that fails on an unfixed component nobody named (wave 7, independent)
+- [x] 49-12-PLAN.md — Narrow-viewport chrome (`G-49-5c`): `flex-wrap` on `AdminSubNav` (the fourth and last horizontal-scroll cause, on every admin page) and on `TopNav`, proved by real-browser page-scroll measurement rather than a fourth grep, plus a computed page-chrome sweep that fails on an unfixed component nobody named (wave 7, independent)
 
 ### Phase 50: Unified Import Path
 
@@ -401,7 +401,7 @@ Plans:
 | 46. Dev Environment Reliability | v1.7 | 6/6 | Complete    | 2026-08-14 |
 | 47. Provenance Foundation | v1.8 | 6/6 | Complete    | 2026-08-18 |
 | 48. Trust & Lifecycle | v1.8 | 10/10 | Complete    | 2026-08-21 |
-| 49. Review Model | v1.8 | 10/12 | In Progress|  |
+| 49. Review Model | v1.8 | 11/12 | In Progress|  |
 | 50. Unified Import Path | v1.8 | 0/TBD | Not started | - |
 | 51. Design System & Noun Alignment | v1.8 | 0/TBD | Not started | - |
 

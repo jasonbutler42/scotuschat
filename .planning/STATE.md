@@ -5,16 +5,16 @@ milestone_name: Import & Provenance Re-model
 current_phase: 49
 current_phase_name: Review Model
 status: Phase 49 REOPENED 2026-08-24 — UAT found 4 open gaps; verification status passed -> gaps_found
-stopped_at: Completed 49-10-PLAN.md (D-35 second half, G-49-3 closed)
-last_updated: "2026-08-24T22:50:36.675Z"
+stopped_at: Completed 49-12-PLAN.md — G-49-5c closed, last open Phase 49 gap
+last_updated: "2026-08-25T11:11:45.574Z"
 last_activity: 2026-08-24
 last_activity_desc: Executed 49-10 (shared side module, backend BENCH acceptance under RESOLVE-13, converged Speakers row) — closes G-49-3
-state_head: 5ec8d1fde0cf840952e7bb197bdc6b527ac45b58
+state_head: fc7bf02817023f495c7b026b9c607dcf052d7e5a
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 28
-  completed_plans: 26
+  completed_plans: 27
   percent: 40
 ---
 
@@ -189,6 +189,7 @@ items → 14.** Every closure carries its evidence in the file it closes; the co
 | Phase 49 P07 | 45min | 2 tasks | 4 files |
 | Phase 49-review-model P08 | ~55min | 3 tasks | 5 files |
 | Phase 49 P09 | 1h 5m | 3 tasks | 6 files |
+| Phase 49-review-model P12 | 70min | 4 tasks | 6 files |
 
 v1.7 per-plan metrics cleared at this milestone boundary per the standard STATE.md reset; the underlying per-plan SUMMARY files remain in `.planning/milestones/v1.7-phases/`.
 
@@ -252,6 +253,7 @@ Full cross-milestone decision log lives in PROJECT.md's Key Decisions table. Per
 - [Phase 49]: 49-09: published-status guard on update_participant_side placed after the pre-existing BENCH/unresolved-side input checks (not literally first), to keep a sentinel-session unit test's no-DB-touch contract intact — still runs before the participant SELECT and both authority-gate calls, satisfying D-16's no-residue requirement.
 - [Phase 49]: 49-09: two new contract assertions (test_update_participant_side_still_accepts_unpublished_and_draft, test_popover_does_not_resync_side_on_every_prop_change) were green from the start of the RED phase — documented as negative-space/continuity checks, not presented as red-then-green.
 - [Phase 49]: D-35 (second half): T-15-02-BENCH retired as satisfied (not weakened) — Speakers card and Resolve card converged onto one shared side/bucket module, closing G-49-3
+- [Phase 49]: 49-12: closed G-49-5c (last open Phase 49 gap) — AdminSubNav/TopNav gained flex-wrap:wrap; a computed page-chrome sweep replaces hand-enumerated regression gates and found TopNav as a second zero-slack near-miss unprompted; a re-runnable narrow-viewport-audit.mjs operator tool shipped per D-49-12-c. Two new out-of-scope table-overflow findings on /admin/arguments and /admin/people recorded (WINDOWS.md #26/#27), not fixed.
 
 ### Roadmap Evolution
 
@@ -311,8 +313,8 @@ at close.
 
 ## Session Continuity
 
-Last session: 2026-08-24T22:50:36.378Z
-Stopped at: Completed 49-10-PLAN.md (D-35 second half, G-49-3 closed)
+Last session: 2026-08-25T11:11:45.258Z
+Stopped at: Completed 49-12-PLAN.md — G-49-5c closed, last open Phase 49 gap
 Resume file: None
 
 ## Operator Next Steps

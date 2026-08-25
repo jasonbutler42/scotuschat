@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 18
+open_count: 20
 waived_count: 0
 fixed_count: 7
-total_count: 25
-last_updated: 2026-08-24T22:49:22.058Z
+total_count: 27
+last_updated: 2026-08-25T10:54:09.338Z
 ---
 
 # Broken Windows Ledger
@@ -40,6 +40,8 @@ last_updated: 2026-08-24T22:49:22.058Z
 | 23 | 49 | unrun-verify | app/src/routes/admin/arguments/[id]/+page.svelte |  | Speakers-card published-lock visual verification (49-09 Task 3 human-check) NOT OBSERVED — sandbox denied .env access for ADMIN_USERNAME/ADMIN_PASSWORD/SESSION_SECRET | open |  | 2026-08-24T20:00:46.273Z |  |
 | 24 | 49 | unrun-verify | api/tests/test_phase49_participant_side_contract.py |  | Task 1 human-check (Resolve-card regression walk: toggle behavior, person-clear on real boundary crossing, unchanged labels) not observed in this session — browser tooling unavailable to executor | open |  | 2026-08-24T22:49:21.712Z |  |
 | 25 | 49 | unrun-verify | app/src/routes/admin/arguments/[id]/+page.svelte |  | Task 3 six-item Speakers-card convergence human-check walk not observed in this session — browser tooling unavailable to executor | open |  | 2026-08-24T22:49:22.058Z |  |
+| 26 | 49 | deviation | app/src/routes/admin/arguments/+page.svelte |  | New finding during 49-12 (G-49-5c) live measurement: /admin/arguments overflows at 375px (scrollWidth 680 vs clientWidth 375) via an unwrapped <table> with no overflow-x container -- separate, pre-existing cause independent of AdminSubNav; out of scope for 49-12 (files_modified did not include this page). Not fixed. | open |  | 2026-08-25T10:54:02.125Z |  |
+| 27 | 49 | deviation | app/src/routes/admin/people/+page.svelte |  | New finding during 49-12 (G-49-5c) live measurement: /admin/people overflows at 375px (scrollWidth 403 vs clientWidth 375) via an unwrapped <table> with no overflow-x container -- separate, pre-existing cause independent of AdminSubNav. Was previously masked by AdminSubNav's larger 423px overflow (both pegged the page at the same scrollWidth); only became independently visible after 49-12 fixed the sub-nav. Out of scope for 49-12 (files_modified did not include this page). Not fixed. | open |  | 2026-08-25T10:54:09.338Z |  |
 
 ````json
 [
@@ -341,6 +343,30 @@ last_updated: 2026-08-24T22:49:22.058Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-08-24T22:49:22.058Z",
+    "resolved_at": null
+  },
+  {
+    "id": 26,
+    "kind": "deviation",
+    "phase": "49",
+    "file": "app/src/routes/admin/arguments/+page.svelte",
+    "line": null,
+    "description": "New finding during 49-12 (G-49-5c) live measurement: /admin/arguments overflows at 375px (scrollWidth 680 vs clientWidth 375) via an unwrapped <table> with no overflow-x container -- separate, pre-existing cause independent of AdminSubNav; out of scope for 49-12 (files_modified did not include this page). Not fixed.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-08-25T10:54:02.125Z",
+    "resolved_at": null
+  },
+  {
+    "id": 27,
+    "kind": "deviation",
+    "phase": "49",
+    "file": "app/src/routes/admin/people/+page.svelte",
+    "line": null,
+    "description": "New finding during 49-12 (G-49-5c) live measurement: /admin/people overflows at 375px (scrollWidth 403 vs clientWidth 375) via an unwrapped <table> with no overflow-x container -- separate, pre-existing cause independent of AdminSubNav. Was previously masked by AdminSubNav's larger 423px overflow (both pegged the page at the same scrollWidth); only became independently visible after 49-12 fixed the sub-nav. Out of scope for 49-12 (files_modified did not include this page). Not fixed.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-08-25T10:54:09.338Z",
     "resolved_at": null
   }
 ]

@@ -509,15 +509,30 @@ async def update_argument(
 
     Returns None if the argument does not exist (router → 404 IDOR guard T-11-IDOR).
 
+    Published guard (D-35, D-35a, operator, 2026-08-24): raises ValueError when
+    the owning argument's status is PUBLISHED. D-35a is the operator's
+    whole-argument answer to the scope question D-35's first half (plan
+    49-09) left open in deferred-items.md — "lock everything," not just
+    participant data. The predicate is published-only, so CANDIDATE, DRAFT,
+    and UNPUBLISHED all remain editable. The check runs immediately after
+    step 1's load, BEFORE step 2's lead-Case load, so a refusal performs no
+    further work and leaves no attribute assignments on the session. This
+    supersedes the pre-existing partial treatment below, in which this
+    function froze only the slug on a published argument while
+    argued_date, case_name, and docket_number all stayed writable on live
+    public data — that gap is what this guard closes.
+
     Slug logic (D-11, ALIST-01):
       - When body.case_name is provided AND argument.status == DRAFT:
         re-derive slug from new case_name and write to lead_case.slug.
         Pre-write collision check: if another Case has the same slug, raise
         ValueError("slug_collision") → router returns 422 (T-11-SLUG).
-      - When argument.status is PUBLISHED or UNPUBLISHED: slug is frozen —
-        only lead_case.case_name is updated; lead_case.slug is NOT touched
-        (Pitfall 3). Slug freeze keys on status, not published_at, so it
-        applies to both PUBLISHED and UNPUBLISHED arguments.
+      - When argument.status is UNPUBLISHED: slug is frozen — only
+        lead_case.case_name is updated; lead_case.slug is NOT touched
+        (Pitfall 3). The PUBLISHED half of this branch is now unreachable —
+        the published guard above raises before this logic ever runs for a
+        published argument; the UNPUBLISHED case remains live and this
+        sentence stays true for it.
 
     Docket collision (T-11-DOCKET):
       - If body.docket_number differs from current and another Case already has
@@ -537,6 +552,12 @@ async def update_argument(
     argument = arg_result.scalar_one_or_none()
     if argument is None:
         return None
+    if argument.status == ArgumentStatusEnum.PUBLISHED:
+        raise ValueError(
+            f"Argument {argument.id} is published (current status: "
+            f"{argument.status.value!r}); the argument's data is read-only "
+            "once it has been published (D-35/D-35a, operator, 2026-08-24)."
+        )
 
     # 2. Load lead case
     lead_result = await db.execute(
@@ -1066,6 +1087,19 @@ async def update_argument_metadata(
     Mass-assignment guard (T-19-03-01): ONLY argued_date, source_docket on Argument
     and case_name on the lead Case are writable via this function.
 
+    Published guard (D-35, D-35a, operator, 2026-08-24): raises ValueError when
+    the owning argument's status is PUBLISHED. This function had NO status
+    check at any layer before D-35a — not the service, not the router, not
+    the SvelteKit action — and it writes argued_date, source_docket,
+    source_dockets, question_number, and the lead Case.case_name, all of
+    which are live public data on a published argument. The predicate is
+    published-only (CANDIDATE, DRAFT, and UNPUBLISHED all remain editable).
+    The check deliberately reuses the row loaded at step a immediately
+    below — never a second SELECT of the Argument row — so this
+    function's db.execute call sequence is unchanged (three
+    AsyncMock-driven tests in test_admin_arguments_service.py depend on
+    that exact sequence).
+
     Critical: every UPDATE statement uses .execution_options(synchronize_session=False)
     (Pitfall 5 — project-wide critical guard).
     """
@@ -1076,6 +1110,12 @@ async def update_argument_metadata(
     argument = result.scalar_one_or_none()
     if argument is None:
         return False
+    if argument.status == ArgumentStatusEnum.PUBLISHED:
+        raise ValueError(
+            f"Argument {argument.id} is published (current status: "
+            f"{argument.status.value!r}); the argument's data is read-only "
+            "once it has been published (D-35/D-35a, operator, 2026-08-24)."
+        )
 
     # b. Parse argued_date from ISO string if provided
     parsed_date: datetime.date | None = None

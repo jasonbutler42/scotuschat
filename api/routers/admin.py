@@ -567,6 +567,9 @@ async def resolve_job(
     Calls jobs_service.resolve_job which validates all person_ids BEFORE any
     alias/utterance write (Pitfall 5). A bad person_id raises ValueError which
     is re-raised here as HTTPException 422, leaving the job paused for retry.
+    Also returns 422 if the job's linked argument is published — its data
+    is read-only once published; unpublish it first to edit it
+    (D-35/D-35a).
     """
     try:
         updated_job = await jobs_service.resolve_job(db, job_id, body.matches)
@@ -754,6 +757,9 @@ async def create_person_for_job(
     jobs_service.create_person_for_job for the IDOR guard).
 
     Bio, photo, and tenure dates remain Phase 27 scope (People Editor).
+
+    Returns 422 if the job's linked argument is published — its data is
+    read-only once published; unpublish it first to edit it (D-35/D-35a).
     """
     try:
         person = await jobs_service.create_person_for_job(db, job_id, body)
@@ -1125,6 +1131,8 @@ async def update_argument(
     Returns 422 if argued_date is malformed, or if slug/docket collision detected
     (T-11-SLUG, T-11-DOCKET). The detail string carries "slug_collision" or
     "docket_collision" so the SvelteKit layer can display the specific error message.
+    Returns 422 if the argument is published — its data is read-only once
+    published; unpublish it first to edit it (D-35/D-35a).
     """
     try:
         updated = await arguments_service.update_argument(db, argument_id, body)
@@ -1248,6 +1256,8 @@ async def update_argument_metadata(
 
     Returns 404 if the argument does not exist (T-19-03-02 IDOR guard).
     Returns 422 if argued_date is malformed.
+    Returns 422 if the argument is published — its data is read-only once
+    published; unpublish it first to edit it (D-35/D-35a).
     Returns 409 if the write violates a DB constraint (defense-in-depth;
     T-30.1-06 — never leaks the raw DB/asyncpg message).
     Returns {"success": True} on success.

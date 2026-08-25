@@ -84,11 +84,19 @@ def test_source_dockets_normalizes_once_in_first_seen_order_and_wins():
 async def test_metadata_update_rejects_final_pair_collision(
     body_kwargs, stored_docket, stored_question
 ) -> None:
+    from api.models.models import ArgumentStatusEnum
     from api.schemas.admin_arguments import MetadataUpdate
     from api.services.admin_arguments import DuplicateArgumentError, update_argument_metadata
 
     db = AsyncMock()
-    argument = SimpleNamespace(id=7, source_docket=stored_docket, question_number=stored_question)
+    # status=DRAFT: D-35a's published guard (api/services/admin_arguments.py)
+    # reads argument.status before this fixture's fixed side_effect list is
+    # consulted — the attribute must exist, non-published, so the guard
+    # passes through to the logic under test (49-11-PLAN.md Task 1 item 9).
+    argument = SimpleNamespace(
+        id=7, source_docket=stored_docket, question_number=stored_question,
+        status=ArgumentStatusEnum.DRAFT,
+    )
     db.execute.side_effect = [
         MagicMock(scalar_one_or_none=lambda: argument),
         MagicMock(scalar_one_or_none=lambda: 42),
@@ -103,11 +111,17 @@ async def test_metadata_update_rejects_final_pair_collision(
 @pytest.mark.asyncio
 @pytest.mark.parametrize(("docket", "question"), [(None, 2), ("24-1", None)])
 async def test_metadata_update_null_final_pair_does_not_collide(docket, question) -> None:
+    from api.models.models import ArgumentStatusEnum
     from api.schemas.admin_arguments import MetadataUpdate
     from api.services.admin_arguments import update_argument_metadata
 
     db = AsyncMock()
-    argument = SimpleNamespace(id=7, source_docket=docket, question_number=question)
+    # status=DRAFT: see the sibling test above — the guard reads this
+    # attribute before anything else in the fixed side_effect list.
+    argument = SimpleNamespace(
+        id=7, source_docket=docket, question_number=question,
+        status=ArgumentStatusEnum.DRAFT,
+    )
     db.execute.side_effect = [MagicMock(scalar_one_or_none=lambda: argument), MagicMock()]
     assert await update_argument_metadata(db, 7, MetadataUpdate()) is True
     assert db.execute.await_count == 1
@@ -115,11 +129,17 @@ async def test_metadata_update_null_final_pair_does_not_collide(docket, question
 
 @pytest.mark.asyncio
 async def test_metadata_array_writes_normalized_list_and_canonical_first_value() -> None:
+    from api.models.models import ArgumentStatusEnum
     from api.schemas.admin_arguments import MetadataUpdate
     from api.services.admin_arguments import update_argument_metadata
 
     db = AsyncMock()
-    argument = SimpleNamespace(id=7, source_docket="old", question_number=None)
+    # status=DRAFT: see the published-guard fixtures above — the guard
+    # reads this attribute before anything else in the fixed side_effect list.
+    argument = SimpleNamespace(
+        id=7, source_docket="old", question_number=None,
+        status=ArgumentStatusEnum.DRAFT,
+    )
     db.execute.side_effect = [
         MagicMock(scalar_one_or_none=lambda: argument),
         MagicMock(scalar_one_or_none=lambda: None),

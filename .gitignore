@@ -54,3 +54,9 @@ Thumbs.db
 
 # Backup of .env written by scripts/dev-start.sh before rewriting the DB host
 .env.bak
+
+# Playwright MCP persistent browser profile (holds an admin session cookie — never commit)
+.playwright-profile/
+
+# Playwright MCP run artifacts (snapshots, console logs, screenshots)
+.playwright-mcp/

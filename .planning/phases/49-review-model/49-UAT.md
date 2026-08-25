@@ -549,3 +549,35 @@ DEV DATA NOTE: reaching totals of 1 and 0 required draining the queue artificial
 person confirmation, utterance attribution, discrepancy closure). That state is NOT
 representative and was restored by a second Reset to Fixture + Seed unresolved speaker
 immediately afterward.
+
+### 49-10 human-checks — RUN IN BROWSER by the orchestrator, 2026-08-24
+
+49-10's executor had no browser tool and logged three `<human-check>` items as unrun. Two of the
+three are now OBSERVED (the third, Task 1's Resolve-card pipeline-page regression walk, is not).
+
+OBSERVED PASS:
+- Convergence, on draft argument 1810: EVERY speaker row renders the full five-option control
+  [UNKNOWN, BENCH, PETITIONER, RESPONDENT, AMICUS] — measured `everyRowOffersBench: true` across
+  all 5 rows. Bench-side people (Earl Warren, Felix Frankfurter, Stanley Reed) now carry the SAME
+  select rather than the bare em-dash that made G-49-3's asymmetry. CLAUDE.md's apolitical
+  constraint — identical affordance depth for every speaker — is satisfied by observation, not
+  by assertion.
+- Cross-boundary confirm (RESOLVE-09), verified INTERACTIVELY: selecting BENCH on an advocate row
+  changes that row's Save button to "Move to Bench". The operator cannot cross the boundary
+  without seeing that they are.
+- Descriptor protection (RESOLVE-13), verified INTERACTIVELY: the descriptor input becomes
+  `disabled: true` the instant BENCH is selected, and a hidden `committed_side="UNKNOWN"` input is
+  present for the server to read. That is the both-ends fix for the round trip that would
+  otherwise have submitted '' and clobbered a preserved bench descriptor.
+- 49-09's published lock SURVIVED the convergence (49-10's single largest regression risk), on
+  published argument 1811: 7 side selects all disabled, all descriptors disabled, all Saves
+  disabled, lock line intact — while BENCH remains in the option set.
+
+The last point is the clearest demonstration of D-35 in the product: published 1811 and draft 1810
+render the IDENTICAL five-option interface, and the only difference between them is enabled vs
+disabled, decided solely by publish status. That is the operator's doctrine, verbatim, on screen.
+
+STILL NOT OBSERVED:
+- 49-10 Task 1's Resolve-card regression walk on the pipeline page (`/admin/pipeline/{job}`).
+  The shared-module extraction changed ResolveCard's imports; this walk confirms the batch resolve
+  form still behaves. Not run in this pass.

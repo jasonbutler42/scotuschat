@@ -752,6 +752,49 @@ authority D-35 grants the operator, not a claim that it is stronger everywhere.
 
 **Status:** LOCKED. Not to be re-litigated by a future plan in this phase.
 
+### D-35a (locked 2026-08-24, operator, during Phase 49 gap-closure execution)
+
+**The question, as 49-09's Task 3 posed it in `deferred-items.md`:** does D-35's *"the
+data for that argument is locked"* extend to the Case card and the Argument Details card
+on `/admin/arguments/{id}` — argued date, case name, docket, question number — or is D-35
+scoped to participant data only (the half 49-09 closed)?
+
+**The operator's answer, verbatim:** **"Whole argument — lock everything."**
+
+**Consequences, all binding on plan 49-11:**
+- Every writer of an argument's own value columns refuses while `status == PUBLISHED`:
+  `api/services/admin_arguments.py::update_argument` (previously froze only the slug) and
+  `::update_argument_metadata` (previously had no status check at any layer), plus the two
+  job-scoped participant writers D-35's first half never reached —
+  `api/services/admin_jobs.py::resolve_job` and `::create_person_for_job` (both defence in
+  depth; the published case is not reachable through any current path today).
+- **This REVERSES a prior explicit decision**, recorded in a comment above the
+  `ArgumentDetailsCard` call site in `app/src/routes/admin/arguments/[id]/+page.svelte`:
+  *"readonly is always false here: this page's argument details remain editable regardless
+  of publish status."* That comment is replaced, in place, with one naming D-35, D-35a, the
+  operator, and 2026-08-24 — the reversal is visible without a git blame, never a silent
+  flip.
+- Lifecycle operations are explicitly OUT of the lock — the operator's own second sentence
+  ("if an argument is in any other state I expect the data to be editable") presupposes an
+  argument can always leave the published state. `publish_argument` / `unpublish_argument`
+  stay callable on a published argument; proved live.
+- Review-state writes (`admin_review.resolve_participant_review` / `resolve_person_review`)
+  are OUT of the lock, carried forward from 49-09's classification unchanged and now proved
+  live.
+- The Case card and the Argument Details card are locked behind 49-09's SAME single
+  `speakersLocked` flag — no second flag was minted — with one page-level lock statement
+  covering both cards, rather than a third card-level restatement.
+
+**Left open, NOT decided here — a genuinely different question:** whether `Person`-scoped
+writers (`admin_people.update_person`, `merge_people`, and siblings) should be restricted at
+all, given a `Person` is shared across every argument they appear in and any lock there
+would freeze a sitting Justice's record the moment one of their arguments publishes. This is
+distinct from the whole-argument-scope question answered above — that one was about which
+CARDS on the argument page are locked; this one is about data no single argument owns.
+Recorded in `deferred-items.md` as the phase's one new operator question, not guessed at.
+
+**Status:** LOCKED. Not to be re-litigated by a future plan in this phase.
+
 ---
 
 *Phase: 49-Review Model*

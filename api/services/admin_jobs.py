@@ -437,6 +437,18 @@ async def resolve_job(
          ONCE for the whole batch (D-07, 48-RESEARCH.md writer #5) — the
          floor must see the complete post-write utterance/participant set,
          not an intermediate per-match value; commit.
+
+    Published guard (D-35, D-35a, operator, 2026-08-24, step 1a.i below):
+    raises ValueError when the job's owning argument's status is PUBLISHED.
+    This closes one of the two job-scoped participant writers D-35's first
+    half (plan 49-09, update_participant_side) never reached. Reachability
+    note: a PAUSED job never points at a publishable argument today (no
+    live path stamps resolved_at on an argument whose job is still PAUSED —
+    see 49-11-PLAN.md `<planner_decisions>` for the full trace), so this
+    guard is defence in depth against a future change to how jobs bind to
+    arguments, not a currently-reachable hole. Runs immediately after the
+    PAUSED check and before any person_id validation, so a refusal happens
+    before any validation work and long before any write.
     """
     # Step 1: Load job
     job = await get_job(db, job_id)
@@ -450,6 +462,25 @@ async def resolve_job(
         raise ValueError(
             f"AdminJob {job_id} is not PAUSED (current status: {job.status.value!r}); "
             "resolve can only be applied to a paused job."
+        )
+
+    # Step 1a.i: Published guard (D-35a) — load the owning Argument by the
+    # job's argument_id and refuse if it is PUBLISHED. A missing/unlinked
+    # argument (job.argument_id is None, or the row is gone) falls into the
+    # same "Argument not found for this job" message update_resolve_row_for_job
+    # already uses for that case — select(Argument).where(Argument.id ==
+    # None) matches no row, so no separate branch is needed for that edge.
+    arg_result = await db.execute(
+        select(Argument).where(Argument.id == job.argument_id)
+    )
+    argument = arg_result.scalar_one_or_none()
+    if argument is None:
+        raise ValueError("Argument not found for this job")
+    if argument.status == ArgumentStatusEnum.PUBLISHED:
+        raise ValueError(
+            f"Argument {argument.id} is published (current status: "
+            f"{argument.status.value!r}); the argument's data is read-only "
+            "once it has been published (D-35/D-35a, operator, 2026-08-24)."
         )
 
     # Step 1b: Validate all person_ids BEFORE any alias/utterance write
@@ -1053,6 +1084,20 @@ async def create_person_for_job(
     before this function's own commit (D-07, 48-RESEARCH.md Pitfall 2) —
     this path fills in a NULL person_id, a direct D-11 floor input, so the
     recompute is load-bearing, not consistency-only.
+
+    Published guard (D-35, D-35a, operator, 2026-08-24): raises ValueError
+    when the job's linked argument is PUBLISHED. This closes the second of
+    the two job-scoped participant writers D-35's first half (plan 49-09,
+    update_participant_side) never reached — same reachability caveat as
+    resolve_job's own published guard (defence in depth; see 49-11-PLAN.md
+    `<planner_decisions>`). Runs inside this function's existing
+    validate-before-mutate discipline, immediately after the PAUSED check
+    and before the participant lookup below, so a refusal happens before
+    any Person row exists. Unlike resolve_job, a job with NO linked
+    argument (job.argument_id is None) is a legitimate call here — bare
+    Person creation with no raw_speaker_label is Person-only territory,
+    out of D-35a's scope (see the prohibitions in 49-11-PLAN.md) — so this
+    guard only fires when the job resolves to an actual PUBLISHED Argument.
     """
     # Phase 38 (D-09): validate/derive the name FIRST — cheapest possible
     # rejection, before any job/participant lookup or Person row exists.
@@ -1068,6 +1113,19 @@ async def create_person_for_job(
             f"AdminJob {job_id} is not PAUSED (status: {job.status.value!r}); "
             "people can only be created for a paused job."
         )
+
+    if job.argument_id is not None:
+        arg_result = await db.execute(
+            select(Argument).where(Argument.id == job.argument_id)
+        )
+        linked_argument = arg_result.scalar_one_or_none()
+        if linked_argument is not None and linked_argument.status == ArgumentStatusEnum.PUBLISHED:
+            raise ValueError(
+                f"Argument {linked_argument.id} is published (current status: "
+                f"{linked_argument.status.value!r}); the argument's data is "
+                "read-only once it has been published (D-35/D-35a, operator, "
+                "2026-08-24)."
+            )
 
     # Phase 25 (T-25-01 IDOR guard): resolve and validate the target participant
     # BEFORE creating any Person row. Scoping by job.argument_id means a

@@ -319,11 +319,17 @@ Plans:
   3. Re-running any import is idempotent — the same input yields the same rows and never clobbers operator-authored values.
   4. The authority ordering (operator > corpus > pdf/rule > pdf/llm) governs the overwrite decision on every writer.
 
-**Plans**: TBD
+**Plans**: 7 plans (4 waves)
 
 Plans:
 
-- [ ] TBD (planned via `/gsd-plan-phase 50`)
+- [ ] 50-01-PLAN.md — Migration 0030, the frozen content-digest contract, and the tracer: one corpus conversation imported twice, unchanged, with no AdminJob anywhere (wave 1)
+- [ ] 50-02-PLAN.md — `apply_argument_value_change` / `apply_case_value_change` peer gates with the OQ-1 fail-closed NULL semantics, plus the argument- and case-level legs on the review attention predicate (wave 2)
+- [ ] 50-03-PLAN.md — The argument-scoped approve route, operator provenance stamping on the five Argument/Case compare-set columns, and delete-in-every-state-except-published with the value_discrepancy cascade fix (wave 2)
+- [ ] 50-04-PLAN.md — `/admin/review` surfaces: argument- and case-level discrepancy render, and the Approve action on a candidate row (wave 3)
+- [ ] 50-05-PLAN.md — The reconcile compare-and-record pass: D-02 walk, D-07 restamp, D-08 published freeze, D-10 whole-set utterance replacement, `--dry-run` and the batch counters (wave 3)
+- [ ] 50-06-PLAN.md — The D-22 delegation sweep across resolve.py, parse.py and import_justices_csv.py, plus the D-24 executable behavioral gate (wave 3)
+- [ ] 50-07-PLAN.md — The offline `prune-runs` command, the extended public-leak ban, the dispositioned writer inventory, and D-23's closure (wave 4)
 
 ### Phase 51: Design System & Noun Alignment
 

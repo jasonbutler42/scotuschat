@@ -1,9 +1,9 @@
 ---
 status: complete
 phase: 49-review-model
-source: 49-01-SUMMARY.md, 49-02-SUMMARY.md, 49-03-SUMMARY.md, 49-04-SUMMARY.md, 49-05-SUMMARY.md, 49-06-SUMMARY.md
+source: 49-01-SUMMARY.md, 49-02-SUMMARY.md, 49-03-SUMMARY.md, 49-04-SUMMARY.md, 49-05-SUMMARY.md, 49-06-SUMMARY.md, 49-07-SUMMARY.md, 49-08-SUMMARY.md, 49-09-SUMMARY.md, 49-10-SUMMARY.md, 49-11-SUMMARY.md, 49-12-SUMMARY.md
 started: 2026-08-24T00:38:02Z
-updated: 2026-08-24T14:06:00Z
+updated: 2026-08-25T16:30:00Z
 ---
 
 ## Current Test
@@ -24,17 +24,35 @@ evidence_ref: 49-EVIDENCE.md §9 item 8 (order step a)
 
 ### 3. Speakers card — unresolved placeholder (26-UAT Test 26)
 expected: Open the Complexity fixture's argument edit page. The Speakers card shows the "Unresolved — choose a role" placeholder and the Save button is disabled.
-result: issue
+result: pass
+original_result: issue
 reported: "Yes, I can see what you describe and it works as indicated, however, there's no option to choose bench or advocate. If a speaker is unverified, then I would expect their bench side to be editable"
 severity: major
+resolution: |
+  Closed by G-49-3 (49-10's D-35 convergence) and OBSERVED IN BROWSER 2026-08-24: every speaker
+  row renders the full five-option control [UNKNOWN, BENCH, PETITIONER, RESPONDENT, AMICUS],
+  measured everyRowOffersBench: true across all rows, with bench-side people carrying the same
+  select that previously showed a bare em-dash. Cross-boundary confirm and descriptor protection
+  verified interactively in the same pass. Re-confirmed 2026-08-25 on the converged five-column
+  row. Result flipped from `issue` to `pass` on that evidence; the original report is preserved
+  above verbatim.
 evidence_ref: 49-EVIDENCE.md §9 item 5 (order step b)
 coverage_id: 49-06 D3
 
 ### 4. /admin/review — Confirm vs "Resolve speaker" link conditional
 expected: On /admin/review, an unresolved constituent renders a "Resolve speaker" link pointing at /admin/pipeline/{admin_job_id} (falling back to /admin/arguments/{id}), not a Confirm button. A needs_review constituent with a person renders Confirm.
-result: issue
+result: pass
+original_result: issue
 reported: "Edit correctly links to the pipeline run for that argument but I'd prefer if it was action verb as an established pattern in most places. So something like \"Edit pipeline\" makes sense since it takes you to the pipeline run for it, but maybe \"Edit draft\" since that's the state it's in. Also: when did we start calling something \"constituent\"?"
 severity: minor
+resolution: |
+  Closed by G-49-4a and G-49-4b (49-07) and OBSERVED IN BROWSER: the action link reads
+  "Edit pipeline run" and resolves to /admin/pipeline/1168 (2026-08-24, re-confirmed 2026-08-25),
+  and the rendered copy of /admin/review and /admin/help contains ZERO occurrences of
+  "constituent" measured against innerText, not source (test 36). The admin_job_id === null
+  branch label ("Edit argument") remains unobserved for want of a queue row without a pipeline
+  job — recorded on test 35, not claimed here. Result flipped from `issue` to `pass`; the
+  original report is preserved above verbatim.
 note: |
   Conditional itself VERIFIED from operator screenshot + code: no plain Confirm on a
   person_id-IS-NULL row (+page.svelte:507 guard), "Confirm as unattributable" present
@@ -45,9 +63,21 @@ coverage_id: 49-01 D6
 
 ### 5. /admin/review — full screen walkthrough (7 items)
 expected: On /admin/review — (1) Arguments|People tab switching works; (2) filter composition survives a back-button press and the active-filter indicator shows; (3) expand/collapse toggles live, including the zero-constituent blockers fallback; (4) Confirm / Confirm-as-unattributable / Re-flag act on the correct row and the row stays visible with its new badge (D-26); (5) all five dashboard StatCards sit evenly in one row; (6) the StatCard's singular and zero-state link text read correctly; (7) no horizontal scroll at 375px.
-result: issue
+result: pass
+original_result: issue
 reported: "Let's just say that I like the review tab! 1: pass; 2: pass; 3: pass; 4: pass; 5: pass; 6: not sure where to see this; 7: fail. small screens cause horizontal scrolling."
 severity: minor
+resolution: |
+  Both outstanding sub-items are now OBSERVED, so the whole walkthrough passes:
+  (6) StatCard singular/zero-state copy — driven to the real states in the 2026-08-24 re-seeded
+      round: total 40 -> "40 items need review" (link), total 1 -> "1 item needs review" (link,
+      singular noun AND verb), total 0 -> "No items need review" (plain text, hasLink === false).
+  (7) no horizontal scroll at 375px — measured live, not inferred: /admin/review 360/360 with the
+      702px table scrolling inside its own 312px container (test 38). G-49-5c later closed the
+      shared AdminSubNav, and G-49-17/G-49-18 closed the Speakers table and the two remaining
+      admin list pages; the full six-route sweep now measures 360/360 (test 49).
+  Sub-items 1-5 were operator-passed at the time. Result flipped from `issue` to `pass`; the
+  original report is preserved above verbatim.
 note: |
   Sub-item breakdown (operator-reported, then 49-08 update below):
     (1) tab switching ........................ pass
@@ -308,11 +338,408 @@ result: pass
 source: automated
 coverage_id: 49-06 D8
 
+### 35. 49-07 D1 — review-queue action link names its destination
+expected: The row action link reads an action verb naming where it goes ("Edit pipeline run" for a row with an admin_job_id, "Edit argument" otherwise), branching on the same condition as its href.
+result: pass
+source: automated-ui (orchestrator browser pass, 2026-08-25)
+coverage_id: 49-07 D1
+observed: |
+  /admin/review, expanded row: link reads "Edit pipeline run" -> /admin/pipeline/1168, i.e. the
+  admin_job_id !== null branch. Label and destination agree.
+partial: |
+  The admin_job_id === null branch ("Edit argument") remains UNOBSERVED — current dev data has no
+  queue row without a pipeline job. Same data-shape limitation recorded in the 2026-08-24 round.
+  Not marked passed; the branch condition is proven only by the source-parity test.
+
+### 36. 49-07 D2 — internal rollup noun absent from rendered operator copy
+expected: The word "constituent" appears nowhere in the rendered copy of /admin/review or /admin/help; the domain noun "participant" is used instead.
+result: pass
+source: automated-ui (orchestrator browser pass, 2026-08-25)
+coverage_id: 49-07 D2
+observed: |
+  Measured against rendered innerText, not source: /admin/help -> 0 occurrences of "constituent",
+  3 of "participant". /admin/review -> 0 occurrences of "constituent" both collapsed and with all
+  rows expanded. This is the rendering claim the source-text gates could not make.
+
+### 37. 49-07 D3 — attention-count copy agrees in number at exactly one
+expected: A queue row with one flagged participant renders "1 participant needs review" — singular noun AND singular verb.
+result: pass
+source: automated-ui (orchestrator browser pass, 2026-08-25)
+coverage_id: 49-07 D3
+observed: |
+  Live at n=1 on the Baltimore & Ohio Railroad row: "1 participant needs review". The formerly
+  ungrammatical "1 constituent need review" is gone in the rendered DOM. (The n=0 and n=40 branches
+  were separately observed in the 2026-08-24 re-seeded round.)
+
+### 38. 49-08 D1 — review queue contains its own overflow at 375px
+expected: At a 375px viewport the queue table scrolls inside its own container and the page body itself does not scroll horizontally.
+result: pass
+source: automated-ui (orchestrator browser pass, 2026-08-25)
+coverage_id: 49-08 D1
+observed: |
+  /admin/review at 375px: page scrollWidth 360 == clientWidth 360 (no page scroll), while the
+  702px-wide table scrolls inside a 312px overflow-x container (wrapperScrolls true). Containment
+  measured in a real browser, not inferred from the wrapper markup.
+
+### 39. 49-08 D2 — dashboard StatCard grid reflows without losing desktop geometry
+expected: Five tracks at desktop width at the pre-existing per-card width; two tracks at 375px; no page scroll at either width.
+result: pass
+source: automated-ui (orchestrator browser pass, 2026-08-25)
+coverage_id: 49-08 D2
+observed: |
+  /admin at 1280px: gridTemplateColumns = 136.797px x4 + 136.812px = 5 tracks, matching 49-08's
+  claimed 136.8px per-card width exactly; page 1265/1265, no scroll.
+  /admin at 375px: gridTemplateColumns = "140px 140px" = 2 tracks; page 360/360, no scroll.
+  Both halves of the arithmetic gate now confirmed by real layout rather than formula.
+
+### 40. 49-08 D3 — remaining visual confirmation routed to a human, structural vs visual kept separate
+expected: 49-UAT.md / 49-VERIFICATION.md record G-49-5a's three causes and the G-49-9a re-check attempt with structural and visual closure as separate claims.
+result: pass
+coverage_id: 49-08 D3
+observed: |
+  Documentation-only deliverable, satisfied by the artifacts themselves: G-49-5a carries an explicit
+  `missing:` entry stating closure is STRUCTURAL only, and G-49-9a carries a `reconfirmation_attempt`
+  block recording NOT ATTEMPTED IN BROWSER rather than silently claiming a pass.
+
+### 41. 49-09 D1 (WR-01) — create-person popover resyncs to the row's side on OPEN
+expected: Opening the popover pre-selects the row's current Bench/Advocate side; an operator's own in-popover choice is not clobbered by a prop change.
+result: pass
+source: automated-ui (orchestrator browser pass, 2026-08-25)
+coverage_id: 49-09 D1
+observed: |
+  On /admin/pipeline/1168, Lloyd N. Cutler row (side=Advocate): opened the combobox popup ->
+  trigger read "Create new advocate" -> popover radiogroup had Advocate aria-checked=true.
+  Toggled the row to Bench (person cleared, placeholder became "Select bench…" — RESOLVE-09
+  boundary behaviour), reopened -> trigger read "Create new bench person" and the radiogroup had
+  Bench aria-checked=true. This is precisely the transition the pre-WR-01 bug (resync on CLOSE
+  only) would have failed.
+  No-clobber half: with the popover open on a BENCH row, selecting Advocate stuck at
+  aria-checked=true and was NOT snapped back to Bench — the "does not resync on every prop change"
+  claim, observed.
+note: |
+  The literal "keep the popover open across a row toggle" script is unreachable in the real UI:
+  the popover is rendered inside the combobox's own popup, and toggling the row unmounts that
+  popup. The clobbering scenario therefore cannot arise through the row-toggle path at all.
+  State restored by reload; nothing was saved (Continue Resolve stayed disabled throughout).
+
+### 42. 49-09 D3 — Speakers card visibly discloses the published lock
+expected: On a published argument the side selects, descriptor inputs and Saves render disabled, with a reason line naming publish/unpublish as the remedy.
+result: pass
+source: automated-ui (orchestrator browser pass, 2026-08-25)
+coverage_id: 49-09 D3
+observed: |
+  /admin/arguments/1811 (published): every side select disabled, every descriptor disabled, all 8
+  Save buttons disabled, and the card-level line "This argument is published, so participant data
+  is read-only. Unpublish it first to edit roles or descriptors." rendered. Confirms the earlier
+  D-35 round on a second pass.
+scope_correction: |
+  This pass covers the Speakers card's FORM CONTROLS only. The card additionally renders five live
+  "Edit person" links to /admin/people/{id}, which are NOT locked — see test 50 / gap G-49-13.
+  Recorded here so this entry is not read as "the Speakers card is fully read-only when published".
+
+### 43. 49-10 D1/D3 — shared participantSide module and the converged Speakers row
+expected: ResolveCard still behaves after the shared-module extraction; every Speakers row offers the full five-value side control with the boundary-crossing confirm.
+result: pass
+coverage_id: 49-10 D1, 49-10 D3
+observed: |
+  Already observed in two dedicated browser rounds recorded below (49-10 human-checks 2026-08-24
+  and the Resolve-card regression walk 2026-08-25): 34 correct toggles, 9 candidate selects, all
+  four shared SIDE_LABEL values rendering, everyRowOffersBench true across all rows, "Move to
+  Bench" confirm on a real crossing, descriptor disabled the instant BENCH is selected.
+  Re-confirmed incidentally this session on /admin/pipeline/1168 (34 toggles, 0 console errors).
+
+### 44. 49-11 items 1 and 3 — whole-argument lock on published, nothing changed on draft
+expected: A published argument renders one page-level lock line with the Case and Argument Details cards disabled; a draft renders no lock line and stays fully editable.
+result: pass
+source: automated-ui (orchestrator browser pass, 2026-08-25)
+coverage_id: 49-11 (legacy summary, human-check items 1 and 3)
+observed: |
+  Published 1811: case_name / docket_number / docket-input / question_number / argued_date all
+  disabled; "Save changes" and every per-row Save disabled; one page-level line reading "This
+  argument is published, so its data is read-only. Unpublish it in the Status card below to edit
+  the case, argument details, or speakers."; Unpublish ENABLED (over-lock guard holds).
+  Draft 1810: no lock line; all four argument-data inputs editable; "Save changes" and
+  "Save Argument Details" enabled; per-row Saves disabled ONLY on rows whose side is still
+  UNKNOWN — the pre-existing 26-UAT Test 26 gate, not a lock leak.
+partial: |
+  Item 1's "every Copy affordance still works" sub-check is DATA-BLOCKED, not passed. All 10 Copy
+  buttons on 1811 are disabled — but with aria-label "Nothing extracted to copy.", i.e. the
+  isEmpty empty-state. The draft 1810 shows the same 8-of-8 disabled state, so the lock is provably
+  not the cause, and CopyableExtractedValue.svelte:102 has `disabled={isEmpty}` as its ONLY
+  disabled condition and never references a lock flag. Neither argument in current dev data carries
+  extracted values, so a live "Copy works while locked" observation is unreachable without a
+  re-seed from a run that has them.
+
+### 45. 49-11 item 4 — forced write against a published argument is refused with honest copy
+expected: A save that bypasses the client-side lock is rejected by the server, the message names unpublishing as the remedy (never a generic retry), no raw decision id or date leaks, and nothing persists.
+result: pass
+source: automated-ui (orchestrator browser pass, 2026-08-25)
+coverage_id: 49-11 (legacy summary, human-check item 4)
+observed: |
+  Re-enabled the disabled case_name input and Save on published 1811 — the stale-second-tab
+  scenario — and submitted four times.
+  Action result: {"type":"failure","status":422,"data":{error:"This argument is published, so its
+  data is read-only. Unpublish it first to edit it.", ...}}.
+  On the plain HTML form-post path (no x-sveltekit-action header, i.e. what a stale second tab
+  actually sends) the rendered HTML CONTAINS that message: rendersRemedyMessage true,
+  rendersGenericRetry false, leaksDecisionId false — the raw server detail, which does name
+  "D-35/D-35a, operator, 2026-08-24", is correctly not echoed to the operator.
+  NON-PERSISTENCE verified by reload after all four attempts: case_name still
+  "Anderson v. Liberty Lobby, Inc.", docket still 84-1602, no "FORCED EDIT" text anywhere,
+  argument still published.
+
+### 46. 49-11 item 2 — unpublishing restores editability
+expected: On a published argument, Unpublish still works and the Danger Zone behaves as before; after unpublishing, every locked control becomes editable again and the lock line disappears.
+result: pass
+closed_by: test 53 step C — unpublishing with the page open now restores every control live
+reason: |
+  Requires mutating publish state on fixture argument 1811. Reversible (republish), but it is a
+  state change on the operator's dev data, so it is presented rather than performed unasked.
+  Half-observed already: Unpublish renders ENABLED under the lock (test 44), which is the
+  over-lock guard; the restore-on-unpublish direction is what remains.
+
+### 47. 49-11 item 5 — one page-level lock line vs. a line per locked card
+expected: The single page-level lock statement still reads as "locked" rather than "broken" when the operator has scrolled down to the Argument Details card, far from the line.
+result: pass
+resolution: |
+  OPERATOR, 2026-08-25: "One line is fine — pass it." No per-card lock line is to be added to the
+  Case or Argument Details cards; the single page-level statement is sufficient. (The Speakers card
+  keeps its own line, which predates this decision and is unaffected.) 49-11's last human-judgment
+  item is closed.
+
+### 48. 49-12 D1/D2/D3 — narrow-viewport chrome
+expected: No page-level horizontal scroll at 375px on the admin routes; 1280px sub-nav geometry unchanged; a re-runnable audit script.
+result: pass
+source: automated
+coverage_id: 49-12 D1, 49-12 D2, 49-12 D3
+observed: |
+  Auto-covered by 49-12's own live headless-chromium measurements. Independently re-confirmed this
+  session at 375px: /admin 360/360, /admin/review 360/360, /admin/help 360/360 — no page scroll.
+
+### 49. Admin list tables overflow at 375px (/admin/arguments, /admin/people)
+expected: 49-UI-SPEC's must_have — no horizontal page scroll at 375px on admin pages — holds on ALL admin routes, not only the ones a gap named.
+result: pass
+source: operator decision 2026-08-25 ("Fix both now"), fixed and re-verified in-session
+observed_before: |
+  /admin/arguments 680/360 and /admin/people 403/360 at a 375px viewport — both unwrapped <table>s.
+  49-12 found these while closing G-49-5c and deliberately scoped them out (neither page was in its
+  files_modified).
+fix: |
+  Both list tables wrapped in <div style="overflow-x: auto;">, per 49-08's remedy.
+  /admin/arguments needed a SECOND, independent fix: wrapping its table alone only took the page
+  from 680 to 429. The residual 69px was the status segmented filter (display:flex,
+  flex-wrap:nowrap, 405px natural width) — the SAME control and the SAME defect 49-08 fixed as its
+  cause (c) on /admin/review, where the remedy was applied only to that page. 49-08's fix reused
+  verbatim: min-width:0 on the outer wrapper, width:max-content on the inner group.
+verified: |
+  Full six-route sweep at 375px, all measured in the live browser, all now scrollWidth == clientWidth
+  == 360 (no page scroll): /admin, /admin/review, /admin/arguments (was 680), /admin/people (was 403),
+  /admin/pipeline, /admin/help. The argument detail page /admin/arguments/1810 also measures 360/360
+  (see test 54). All four /admin/arguments filter buttons intact; no truncation, no media query.
+class_note: |
+  This is the FOURTH instance of one defect class in this phase — G-49-5a (review tables, dashboard
+  grid, review's segment control), G-49-5c (AdminSubNav), G-49-17 (Speakers table), G-49-18
+  (arguments table, arguments' segment control, people table). Every instance was found by an
+  operator noticing a specific page, never by a sweep. 49-12 already built the tool for this
+  (npm run audit:viewport, 49-12 D3); running it over every admin route in CI would convert this
+  from a recurring operator report into a gate. Recommended as a follow-up.
+
+
+### 50. Person data reachable from a published argument's Speakers card
+expected: On a published argument, a speaker's displayed data is not editable from that argument's Speakers card.
+result: pass
+resolution: |
+  Closed by operator decision, not by code. The expectation as written was WRONG: the operator
+  ruled that people should remain editable even on published arguments, so the "Edit person" link
+  and the unlocked People Editor are correct as they stand. See gap G-49-13.
+original_result: issue
+reported: "1811 is published but I can still make changes to the speakers card"
+severity: major
+source: operator (2026-08-25), reproduced by orchestrator browser pass
+observed: |
+  Every FORM CONTROL on 1811's Speakers card is genuinely disabled (7 side selects, 7 descriptors,
+  8 Saves — verified: of 55 controls on the page only Log out, Unpublish and hidden inputs are
+  enabled). The hole is not a control, it is a LINK: the card renders five "Edit person" anchors to
+  /admin/people/{1931,1919,1932,1933,1934}.
+  /admin/people/1931 — Warren E. Burger, a speaker on published 1811 — opens with NO lock line and
+  20 enabled controls: first_name / middle_name / last_name / name_suffix, photo upload, bio_text,
+  Bench/Advocate, birthdate, death_date, "+ Add Tenure Period", a merge_target_id select, and
+  "Save Person". Two clicks from the published argument to changing what it displays.
+known_open_question: |
+  NOT an oversight. deferred-items.md:93 dispositions admin_people.update_person / merge_people /
+  delete_person_if_orphan / update_photo_url / upload_photo / create_role as "NOT locked,
+  ambiguous", and :104 records "Status: open — awaiting the operator's answer to the NEW
+  Person-scoped question". 49-11 explicitly declined to decide it: a Person is SHARED, so locking
+  one because a single argument published would freeze that person across every other argument
+  permanently — "which for a sitting Justice means forever".
+
+### 51. Save button on a published argument's Speakers card
+expected: A published (locked) Speakers card renders no save affordance; the disabled inputs and the card-level lock line carry the read-only message on their own.
+result: pass
+reported: "I guess it's okay that we are using disabled inputs but I was expecting that it would just be information and not in the original inputs. Don't change anything except the save button. ... It doesn't make sense here because this shouldn't be editable."
+severity: minor
+source: operator (2026-08-25), fixed and re-verified in-session
+fix: |
+  app/src/routes/admin/arguments/[id]/+page.svelte — the row's action block (the plain Save plus
+  the two boundary-crossing branches, which are the same affordance in another state) is wrapped in
+  {#if !speakersLocked}. One lock predicate, not three. The disabled inputs are deliberately
+  UNCHANGED per the operator's explicit scope instruction; the column defect in test 52 is likewise
+  left alone.
+verified: |
+  Published 1811 after the change: 0 save affordances across all 7 rows (previously 7 disabled
+  ones); the Copy "N/A" button, the 5 "Edit person" links, the utterance counts and the card-level
+  lock line all still render.
+  Draft 1810 after the change: all 5 rows still carry Save — 2 disabled by the pre-existing
+  UNKNOWN-side gate, 3 enabled. Saving behaviour on unpublished arguments is untouched.
+  api/tests/test_phase49_participant_side_contract.py + test_phase49_argument_lock_contract.py:
+  45 passed. Full suite after the change: 1487 passed, 5 xfailed, 0 failures (14m10s, single clean
+  process) — no regression from the Save-button guard.
+
+### 52. Speakers table rows are one column short of their header
+expected: Each speaker row fills the same number of columns its header declares, so the utterance count sits under the "Utterances" heading.
+result: pass
+reported: "Why is there a number next to the save button?" / "the table columns are still not right. There are five headers but the save button is wrapping weird and not in the same row"
+severity: minor
+source: operator (2026-08-25), fixed and re-verified in-session
+observed: |
+  The Speakers <thead> declares FIVE columns (Name, Role, Title, Utterances, Action). Each <tbody>
+  row renders TWO cells totalling FOUR column slots: a colspan-1 name cell plus a
+  <td colspan="3"> holding the role select, descriptor, Extracted/Copy, the utterance count and
+  (until test 51) the Save button. speaker.utterance_count is a bare <div> at
+  +page.svelte:867-869 inside that merged cell, which is why it reads as a loose number beside the
+  action affordance instead of a value under its own heading.
+history: |
+  NOT purely new. Pre-49-10 there were TWO row templates: the advocate branch already had this
+  colspan-3 shape (since 94f2068a5 / 26-04), while the BENCH branch rendered proper separate cells
+  — Title, "—", Utterances in its own <td>, Action "—" (git show 5ec8d1fde~1 -- the file, :786-803)
+  — and filled all five columns correctly. 49-10 (5ec8d1fde) converged both onto one template to
+  close G-49-3 and adopted the advocate one, so bench rows LOST a correctly-placed Utterances cell
+  and the malformed shape propagated to every speaker.
+measured_before: |
+  Draft 1810, row 1: headers at Name 362 / Role 473 / Title 565 / Utterances 658 / Action 844.
+  The row rendered TWO cells — name at 362 (w111) and a colspan-3 cell at 473 (w371) — so the
+  Action column at 844 had NO cell at all. Inside the merged cell a flex-wrap container held the
+  role select (w160), the descriptor (w160), the count (w18) and Save (w68); those exceed 371px,
+  so Save wrapped to a second line (top 372 vs the select's top 282). That is exactly what the
+  operator saw: "the save button is wrapping weird and not in the same row".
+fix: |
+  app/src/routes/admin/arguments/[id]/+page.svelte — the row is now five real <td>s matching its
+  five headers: Name, Role (side select + bench companion), Title (descriptor + Copy), Utterances
+  (the count, in its own cell at last), Action (the save affordance).
+  <form> is not a permitted child of <tr>, which is why colspan was reached for originally. The
+  form is now declared once in the NAME cell holding only its two hidden inputs, and every control
+  in the sibling cells associates with it by id through the HTML5 `form=` attribute
+  (form="speaker-side-{participant_id}"). FormData(form) collects form-associated controls
+  wherever they sit in the DOM, so one-POST-per-row and use:enhance are unchanged.
+verified: |
+  Draft 1810 after the fix: all 5 rows render 5 cells; 0 rows misaligned against their headers
+  (each cell's left edge within 1px of its th); 0 rows with a wrapped action; Save now sits at
+  left 908 inside the Action column (header left 900) on the SAME line as the select (both
+  top 282). Every control resolves to its own row's form (sel.form.id === speaker-side-{its own
+  participant_id}) — not a shared form.
+  FUNCTIONAL, not just structural: FormData for row 3757 collects participant_id/committed_side/
+  side across three different <td>s; clicking Save fired POST ?/updateParticipantSide -> 200 plus
+  the invalidation GET, no error alert, side persisted. The boundary-crossing path still works —
+  BENCH -> PETITIONER produced "Move to Petitioner's Counsel" in the Action cell, and its
+  "Confirm move" submit carries the form reference and resolves to the right form.
+  Published 1811 after the fix: still 5 aligned cells per row, 0 save affordances, Action cells
+  empty, the 5 "Edit person" links and the lock line intact.
+test_updates: |
+  Three source-contract tests failed on this change and were locator-only failures, NOT behavioural
+  ones: test_speakers_card_controls_consult_the_published_lock,
+  test_speakers_side_control_offers_every_stored_value, and
+  test_descriptor_input_is_disabled_not_removed_on_bench each pinned attribute ORDER
+  (<input\s+type="text"\s+name="descriptor">), and the new form= attribute precedes type=. The
+  locators now match on attribute PRESENCE; every assertion they make is unchanged.
+  Added test_every_speakers_row_control_is_associated_with_its_own_row_form, because the split
+  introduced a SILENT failure mode: drop a form= attribute and that control simply stops being
+  submitted — no error, no visual change, the row just saves less than it should. Mutation-checked:
+  removing the descriptor's form= makes the new test fail, so it is not vacuous.
+
+### 53. Published lock survives a publish/unpublish with the page open
+expected: Publishing or unpublishing an argument while its edit page is open immediately locks or unlocks the page — no reload required.
+result: pass
+reported: "1811 is published but I can still make changes to the speakers card" / "The input fields and several buttons are still active, although the backend seems to be catching any attempts to save while in a published state. This one interface has been circling for two weeks now."
+severity: blocker
+source: operator (2026-08-25), root-caused and fixed in-session
+root_cause: |
+  app/src/routes/admin/arguments/[id]/+page.svelte:124 declared the lock as a PLAIN CONST:
+      const speakersLocked = data.argument.status === 'published';
+  `data` is a prop. In Svelte 5 runes mode a plain `const` evaluates ONCE at component
+  initialisation and never recomputes. Publish and unpublish do NOT remount this component —
+  both POST and invalidate, which updates `data` in place — so the flag stayed frozen at
+  whatever the status was when the page first loaded.
+  Publishing with the page open therefore left the ENTIRE card editable (every input active,
+  every Save present) while the backend correctly refused each write; unpublishing with the page
+  open left it locked with no way back short of a manual reload.
+why_it_survived_six_plans: |
+  Every source-contract test asserting `disabled={speakersLocked}` passed, because the MARKUP was
+  always correct — it was the FLAG that was dead. No grep-based assertion can distinguish a live
+  flag from a stale one. This is the identical false-green shape as plan 48-10 (28 green
+  source-contract tests against a fully broken button), and the reason 49-09/49-10/49-11 each
+  verified the lock and each found it working: a FRESH page load is the one case where a
+  const-captured flag is right. The orchestrator's own UAT passes had the same blind spot — 1811
+  and 1810 were each loaded fresh and never toggled with the page open.
+fix: |
+  let speakersLocked = $derived(data.argument.status === 'published');
+regression_tests: |
+  Added test_published_lock_flag_must_be_reactive_not_const_captured
+  (api/tests/test_phase49_participant_side_contract.py): asserts the declaration is $derived-wrapped
+  and uses `let`. This pins the ONE greppable half of the invariant. Its docstring states plainly
+  what a grep cannot do here — every other source-contract test asserts the MARKUP says
+  `disabled={speakersLocked}`, and the markup was correct the whole time the bug was live.
+  Two existing tests were updated to tolerate the $derived wrapper, with their assertions unchanged:
+  test_argument_page_derives_one_published_lock_flag (participant_side contract) and
+  test_page_derives_no_second_published_lock_flag (argument_lock contract). Both pinned the exact
+  declaration shape `(const|let) NAME = data.argument.status === 'published';`; the singularity and
+  naming properties they exist for are preserved.
+  STILL MISSING: a behavioural guard. Proving the flag actually recomputes needs a mounted-component
+  or browser test, which this suite has no harness for. The $derived assertion forecloses the exact
+  regression that happened; it does not close the class.
+verified: |
+  Live, no reload, both directions, on 1810:
+  A. fresh load while Unpublished -> no lock line, 5 Saves, selects enabled, case_name editable.
+  B. clicked Publish -> status Published, lock line appears, 0 save affordances, all selects and
+     descriptors disabled, case_name disabled, Unpublish still ENABLED (over-lock guard holds).
+  C. clicked Unpublish -> status Unpublished, lock line gone, 5 Saves back, selects enabled,
+     case_name editable again.
+  Step C also closes the previously-pending test 46 (unpublish restores editability).
+
+### 54. Speakers table scrolls itself instead of pushing the page sideways
+expected: On a narrower window the Speakers table scrolls inside its own container; the page body never scrolls horizontally and the table never bleeds past the main content area.
+result: pass
+reported: "they are bleeding out of the main content area instead of being a horizontally scrolling table"
+severity: minor
+source: operator (2026-08-25), fixed in-session
+observed_before: |
+  The Speakers table had NO overflow-x container — the only admin table besides /admin/arguments
+  and /admin/people still unwrapped after 49-08 and 49-12. Its five columns include two 160px-min
+  controls, giving a 623px floor. Measured at a 700px viewport: table right edge 694 vs main right
+  edge 685 (bleeding), page scrollWidth 694 vs clientWidth 685 (the PAGE scrolled, not the table).
+fix: |
+  app/src/routes/admin/arguments/[id]/+page.svelte — the table is wrapped in
+  <div style="overflow-x: auto;">, the same remedy 49-08 applied to the review-queue tables.
+verified: |
+  Same 700px viewport after the fix: page 685/685 (no page scroll), the 623px table scrolls inside
+  its own 542px container, all five headers intact, no truncation and no media query introduced
+  (49-UI-SPEC E1/E2). Screenshot confirms no horizontal bleed.
+note: |
+  Same defect class as G-49-5a / G-49-5c. Those closed the review queue, the dashboard and the
+  shared sub-nav; this table was never in any of their scopes.
+
+### 55. Action column header retained on a locked argument
+expected: Operator disposition on the empty Action column that remains on a published argument after its Save buttons are withdrawn.
+result: pass
+resolution: |
+  OPERATOR, 2026-08-25: "Leave the empty cells there for now." The Action <th> and its empty <td>s
+  stay on a published argument; only the save affordance is withdrawn (test 51). Recorded so a
+  later pass does not read the empty column as an oversight and 'tidy' it away.
+
 ## Summary
 
-total: 34
-passed: 31
-issues: 3
+total: 55
+passed: 54
+issues: 0
 pending: 0
 skipped: 0
 blocked: 0
@@ -398,6 +825,102 @@ blocked: 0
     - "app/src/routes/admin/review/+page.svelte:181-183 -> attentionCountText(n) now returns '1 participant needs review' at n === 1 (singular subject, singular verb) and '${n} participants need review' otherwise (plural subject, plural verb) — the identical shape admin/+page.svelte's Review-queue StatCard already used"
     - "api/tests/test_phase49_review_ui_contract.py::test_backstop_E1_attention_count_keys_singular_plural_on_strict_equality_one — rewritten to assert the exact singular/plural literals rather than the old ungrammatical substring"
   missing: []
+
+- gap_id: G-49-13
+  truth: "A published argument's speaker data is not editable from that argument's Speakers card"
+  status: resolved_by_decision
+  decision: |
+    OPERATOR, 2026-08-25: "Keep the Edit person link just like it is; people should be editable
+    even on published arguments." The Person-scoped question deferred-items.md:104 left open is
+    hereby ANSWERED: a Person is NOT the argument's data. D-35a's lock covers the argument's own
+    columns; the People Editor keeps its own lifecycle and stays editable regardless of any
+    argument's publish state. No Person-level guard is to be added, and the Speakers card keeps
+    its "Edit person" links unchanged. deferred-items.md:93/:104 should be updated from
+    "open — awaiting the operator's answer" to this decision.
+  original_status: failed
+  reason: "User reported: 1811 is published but I can still make changes to the speakers card. Reproduced: the card's form controls ARE all disabled, but its five 'Edit person' links reach /admin/people/{id}, which carries no lock and exposes name, photo, bio, side, dates, tenure and a person MERGE control. Two clicks from a published argument to changing what it displays."
+  severity: major
+  test: 50
+  decision_required: true
+  artifacts:
+    - "app/src/routes/admin/arguments/[id]/+page.svelte — Speakers card renders an unconditional 'Edit person' anchor per row; the anchor does not consult speakersLocked"
+    - "app/src/routes/admin/people/[id]/+page.svelte — People Editor has no published-derived lock of any kind"
+    - "api/services/admin_people.py — update_person, merge_people, delete_person_if_orphan, update_photo_url, upload_photo, create_role are all unguarded"
+    - ".planning/phases/49-review-model/deferred-items.md:93,:104 — the open Person-scoped question this report instantiates"
+  missing:
+    - "An operator decision on Person-level scope; 49-11 deliberately did not decide it (a Person is shared across arguments, so a per-argument lock would freeze the person globally and permanently)."
+  note: |
+    Not a regression and not a planner miss — deferred-items.md:104 records this exact question as
+    open and awaiting the operator. The UAT report is that question arriving from the product side.
+
+- gap_id: G-49-14
+  truth: "Each Speakers row fills the same number of columns its header declares"
+  status: resolved
+  resolved_by: in-session fix during UAT (operator re-raised it on the draft page)
+  resolved_at: 2026-08-25
+  reason: "User reported: Why is there a number next to the save button? The Speakers thead declares 5 columns; each row fills 4 (name colspan-1 + a colspan-3 cell). speaker.utterance_count renders as a bare div inside the merged cell (+page.svelte:867-869) instead of under the Utterances heading."
+  severity: minor
+  test: 52
+  regression_scope: |
+    Partial regression. The advocate row template carried this shape since 26-04 (94f2068a5); the
+    BENCH template did NOT — it filled all five columns with the count in its own <td>
+    (5ec8d1fde~1, :786-803). 49-10's G-49-3 convergence adopted the advocate template, so bench
+    rows regressed and the defect became universal.
+  artifacts:
+    - "app/src/routes/admin/arguments/[id]/+page.svelte:724-730 — thead declaring 5 columns"
+    - "app/src/routes/admin/arguments/[id]/+page.svelte:751 — <td colspan=\"3\"> merging Role/Title/Utterances"
+    - "app/src/routes/admin/arguments/[id]/+page.svelte:867-869 — utterance_count as a bare div inside that cell"
+  missing:
+    - "Either give the row real Title/Utterances/Action cells matching the header, or change the header to describe the layout the converged row actually has."
+  note: |
+    Initially logged unfixed (the operator had scoped that round to the Save button). Re-raised by
+    the operator on the DRAFT page, where the Save button is actually rendered and the merged cell
+    therefore holds five things at once — so the wrap is visible there and not on the published
+    page. Fixed in the same session; see test 52 for the before/after measurements.
+
+- gap_id: G-49-16
+  truth: "The published lock reflects the argument's CURRENT status, not the status at page load"
+  status: resolved
+  resolved_by: in-session fix during UAT
+  resolved_at: 2026-08-25
+  reason: "User reported the card fully editable on a published argument, with the backend refusing saves. Root cause: `const speakersLocked = data.argument.status === 'published'` at +page.svelte:124 — a plain const over a prop, evaluated once at component init. Publish/unpublish invalidate rather than remount, so the flag never recomputed. Fixed with $derived."
+  severity: blocker
+  test: 53
+  artifacts:
+    - "app/src/routes/admin/arguments/[id]/+page.svelte:124 — const -> $derived"
+  missing:
+    - "A regression test that can actually see this. Source-contract greps cannot: they assert the markup says disabled={speakersLocked}, which was true throughout. The greppable half (the declaration must use $derived) is pinnable; the behavioural half needs a mounted-component or browser test."
+  note: |
+    This is why the interface 'circled for two weeks': six plans each verified the lock on a FRESH
+    page load, which is the one case a const-captured flag gets right.
+
+- gap_id: G-49-17
+  truth: "No admin table pushes the page into horizontal scroll on a narrow window"
+  status: resolved
+  resolved_by: in-session fix during UAT
+  resolved_at: 2026-08-25
+  reason: "User reported the Speakers table bleeding out of the main content area instead of scrolling. It had no overflow-x wrapper; measured at 700px, table right 694 vs main right 685, page scrollWidth 694 vs clientWidth 685. Wrapped in overflow-x:auto per 49-08's remedy; page now 685/685 with the table scrolling in its own 542px container."
+  severity: minor
+  test: 54
+  artifacts:
+    - "app/src/routes/admin/arguments/[id]/+page.svelte — Speakers <table> wrapped in <div style=\"overflow-x: auto;\">"
+  note: |
+    Third instance of the same defect class (G-49-5a, G-49-5c). /admin/arguments and /admin/people
+    remain unwrapped — still open as test 49.
+
+- gap_id: G-49-18
+  truth: "No admin list page pushes the page into horizontal scroll at 375px"
+  status: resolved
+  resolved_by: in-session fix during UAT (operator: "Fix both now")
+  resolved_at: 2026-08-25
+  reason: "/admin/arguments 680/360 and /admin/people 403/360 at 375px, both unwrapped tables; 49-12 found and scoped them out. /admin/arguments additionally carried a second independent cause — its status segmented filter (flex, nowrap, 405px), the same control 49-08 fixed only on /admin/review."
+  severity: minor
+  test: 49
+  artifacts:
+    - "app/src/routes/admin/arguments/+page.svelte — list table wrapped in overflow-x:auto; status segment group given 49-08's min-width:0 / width:max-content remedy"
+    - "app/src/routes/admin/people/+page.svelte — list table wrapped in overflow-x:auto"
+  missing:
+    - "A CI gate running app/scripts/narrow-viewport-audit.mjs (npm run audit:viewport) over every admin route. Four instances of this defect class in one phase were each found by an operator, not by a sweep."
 
 ## Deferred Follow-Ups
 

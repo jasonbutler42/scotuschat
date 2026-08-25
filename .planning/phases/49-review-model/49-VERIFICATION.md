@@ -1,7 +1,7 @@
 ---
 phase: 49-review-model
-verified: 2026-08-23T18:00:00Z
-status: gaps_found
+verified: 2026-08-25T16:30:00Z
+status: passed
 score: 5/5 roadmap success criteria verified
 behavior_unverified: 0
 overrides_applied: 0
@@ -59,6 +59,51 @@ human_verification:
 >
 > UAT sub-item 5.6 (StatCard singular/zero-state copy) was never observed — it needs the
 > review queue at exactly 1 and at 0 — and is recorded as NOT OBSERVED, not as a pass.
+
+> **RE-CLOSED 2026-08-25 — status changed `gaps_found` -> `passed`.** Every reason this
+> report was reopened on 2026-08-24 is now closed, and each was confirmed in a real
+> browser rather than by source assertion. Recorded per-item so the flip is auditable:
+>
+> | Reopening reason | Closed by | Evidence |
+> |---|---|---|
+> | `G-49-3` bench/advocate control | 49-10 (D-35 convergence) | Observed 2026-08-24: every row offers all five side values, `everyRowOffersBench: true`; cross-boundary confirm and descriptor protection verified interactively. 49-UAT test 3. |
+> | `G-49-4a` bare "Edit" label | 49-07 | Observed: link reads "Edit pipeline run" -> `/admin/pipeline/1168`. 49-UAT tests 4, 35. |
+> | `G-49-4b` "constituent" in operator copy | 49-07 | Measured against rendered innerText (not source): ZERO occurrences on `/admin/review` and `/admin/help`. 49-UAT test 36. |
+> | `G-49-5a` horizontal scroll at 375px | 49-08 | Measured live: `/admin/review` 360/360, 702px table scrolling inside its own 312px container. 49-UAT test 38. |
+> | `G-49-9a` avatar footprint | fixed in-session `690d51e20` | Already closed at reopen time. |
+> | **WR-01** stale `$state` prop capture | 49-09 | Now OBSERVED, which the 2026-08-24 note explicitly forbade claiming on test 7's strength. Toggled a row Advocate->Bench and reopened the popover: trigger changed to "Create new bench person" and the radiogroup showed `Bench aria-checked=true` — the exact transition the resync-on-close-only bug failed. 49-UAT test 41. |
+> | UAT sub-item 5.6 StatCard singular/zero copy | — | Observed by driving the queue to the real states: 40 -> "40 items need review", 1 -> "1 item needs review", 0 -> "No items need review" (plain text, `hasLink === false`). 49-UAT test 5. |
+>
+> The eight browser-only `human_verification` items below were carried as open for want of
+> `.env` credentials throughout plans 49-01..49-12. An authenticated browser session was
+> available for the 2026-08-24/25 UAT rounds and they are now discharged; see 49-UAT.md
+> tests 35-55 for per-item measurements.
+>
+> **Found and fixed during the closing UAT rounds**, none of which existed as gaps at reopen:
+>
+> | Gap | Severity | Summary |
+> |-----|----------|---------|
+> | `G-49-13` | major | Person data reachable from a published argument's Speakers card. **Resolved by operator decision**, not code: a Person is shared across arguments, so it is not the argument's data and stays editable. Answers the open question `deferred-items.md:104` was holding. |
+> | `G-49-14` | minor | Speakers row filled 4 of the 5 columns its header declared; Save wrapped to a second line. Row split into five real `<td>`s, form association preserved via the HTML5 `form=` attribute. |
+> | `G-49-16` | **blocker** | The published lock was a plain `const` over a prop, so it never recomputed on publish/unpublish invalidation — publishing with the page open left the whole card editable while the backend refused every write. Now `$derived`. This is the defect that made the interface "circle for two weeks": every source-contract test passed because the MARKUP was always right, and every prior verification loaded the page fresh, the one case a const-captured flag gets right. |
+> | `G-49-17` | minor | Speakers table had no overflow container; pushed the page sideways below ~700px. |
+> | `G-49-18` | minor | `/admin/arguments` (680/360) and `/admin/people` (403/360) at 375px; `/admin/arguments` needed a second fix for its status segmented control — the same control 49-08 fixed only on `/admin/review`. |
+>
+> Final UAT: **55 tests, 54 passed, 0 issues, 0 pending, 0 blocked.** Full suite after a
+> test-database rebuild: **1486 passed, 5 xfailed, 0 failures**.
+>
+> **Carried forward, not blocking this phase:**
+> - No behavioural guard exists for `G-49-16`'s class. The added
+>   `test_published_lock_flag_must_be_reactive_not_const_captured` pins the greppable half
+>   (the declaration must be `$derived`); proving a flag actually recomputes needs a
+>   mounted-component or browser harness this suite does not have.
+> - `scotus_test` accumulates ~15 dropped-column tombstones per full suite run and will hit
+>   the PostgreSQL 1600-column ceiling again in roughly 105 runs. The durable fix is an
+>   ephemeral per-run test database; recreating by hand is a treadmill.
+> - Four instances of one narrow-viewport defect class surfaced in this phase, each found by
+>   an operator rather than a sweep. `npm run audit:viewport` (49-12 D3) exists; running it
+>   over every admin route in CI would make it a gate.
+
 
 # Phase 49: Review Model Verification Report
 

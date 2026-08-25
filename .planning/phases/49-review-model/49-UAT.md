@@ -430,7 +430,9 @@ blocked: 0
 
 - gap_id: G-49-5c
   truth: "No horizontal page scroll at 375px on ANY admin page — including the shared AdminSubNav, which renders on all of them"
-  status: failed
+  status: resolved
+  resolved_by: 49-12
+  resolved_at: 2026-08-24
   reason: |
     Found 2026-08-24 by live browser verification (Playwright MCP), AFTER 49-08 closed G-49-5a's
     three causes. Those three ARE genuinely fixed and were confirmed working in the same session:
@@ -438,26 +440,43 @@ blocked: 0
     (312px containers with scrollWidth 529 and 690), and the dashboard grid reflows to
     `140px 140px` / 2 columns at 375px while still rendering 5 tracks at 136.797px / 1 row at
     1280px — matching 49-08's predicted arithmetic to the pixel.
-    A FOURTH, previously unknown cause remains. `app/src/lib/components/AdminSubNav.svelte:11`
-    is `display: flex` with NO `flex-wrap` and NO `overflow-x`, holding five nav links plus a
+    A FOURTH, previously unknown cause remained. `app/src/lib/components/AdminSubNav.svelte:11`
+    was `display: flex` with NO `flex-wrap` and NO `overflow-x`, holding five nav links plus a
     `<form style="margin-left: auto;">` (`:32`) wrapping the Log out button. At a 375px viewport
-    (360px client width after the scrollbar) the row needs ~423px, so the logout form's right
-    edge lands at 423px and the Log out button is pushed off-screen entirely.
-    Measured: document.scrollWidth 423 vs clientWidth 360 on BOTH /admin and /admin/review.
-    document.scrollWidth equals the logout form's right edge exactly — the tables (right 714)
-    and status group (right 553) extend further but contribute nothing to page scroll, proving
-    they are contained and the sub-nav is the sole remaining cause.
-    This component renders on EVERY admin page, so no admin page currently satisfies the
-    49-05 UI-SPEC no-horizontal-scroll must_have, regardless of that page's own containment.
+    the row needed ~423px, so the logout form's right edge landed at 423px and the Log out
+    button was pushed off-screen entirely.
+    Measured (operator, 2026-08-24): document.scrollWidth 423 vs clientWidth 360 on BOTH /admin
+    and /admin/review. document.scrollWidth equalled the logout form's right edge exactly — the
+    tables (right 714) and status group (right 553) extended further but contributed nothing to
+    page scroll, proving they were contained and the sub-nav was the sole remaining cause.
+    RESOLVED by 49-12 (2026-08-24, session continued into 2026-08-25): 49-08's three causes were
+    NOT re-fixed and were re-confirmed working by the same live measurement pass that found this
+    gap in the first place — this plan added only a fourth cause's fix. `AdminSubNav.svelte` gained
+    `flex-wrap: wrap` on its `<nav>` inline style (D-49-12-a); `margin-left: auto` on the logout
+    form stays (D-49-12-b), so Log out lands flush right on whichever line it wraps to. Re-measured
+    live (headless chromium, same authenticated profile): scrollWidth == clientWidth == 375 on
+    /admin, /admin/review, /admin/pipeline, /admin/help post-fix, having been measured 423 vs 375
+    on those same routes pre-fix. 1280px sub-nav geometry unchanged before/after (navHeight 69,
+    logout right 1256).
+    The regression gate 49-08 lacked (a page-scroll measurement, not a declaration grep) is now a
+    computed chrome-set sweep in api/tests/test_phase49_nav_narrow_viewport_contract.py: it
+    discovered TopNav.svelte as a second, previously-unreported zero-slack near-miss (not a cause
+    of page scroll, but `display:flex` with no escape) and failed naming it before any fix was
+    applied. TopNav also received `flex-wrap: wrap` (D-49-12-c) — brought into compliance by sweep
+    MEMBERSHIP, not because it was observed causing scroll.
   severity: minor
   test: 5
   discovered_by: live browser verification (not source inspection — three structural gates were green)
   artifacts:
     - path: "app/src/lib/components/AdminSubNav.svelte"
-      issue: ":11 display:flex with no flex-wrap and no overflow-x; :32 form has margin-left:auto and cannot shrink"
+      issue: "RESOLVED — `flex-wrap: wrap` added to the `<nav>` inline style (one declaration; nothing else changed)"
+    - path: "app/src/lib/components/TopNav.svelte"
+      issue: "Brought into sweep compliance — `flex-wrap: wrap` added; TopNav was never a cause of page scroll (zero pixels of slack at 375px, not overflowing)"
+    - path: "api/tests/test_phase49_nav_narrow_viewport_contract.py"
+      issue: "NEW module: a computed chrome-set walker (transitively-imported +layout.svelte components, union first-tag <nav> components) so a fifth undiscovered offender is swept in by construction; a whitespace-insensitive display:flex/escape detector; a non-degeneracy guard that fails (not passes vacuously) if the walker's discovered set collapses; and a permanent regression fixture proving the detector flags the exact historical pre-fix AdminSubNav declaration set. Every assertion in it is source-text-only — see the module's own docstring — the behavioural claim is closed by the live measurement recorded below, never by this module going green."
   missing:
-    - "Containment for the sub-nav row at narrow widths — same idiom 49-08 used for the status segment group (outer min-width:0 + overflow-x:auto, inner width:max-content), or flex-wrap if the wrapped appearance is acceptable for a nav (unlike the segmented control, these are separate links with no shared border geometry, so wrapping is visually fine here)"
-    - "A regression assertion that measures page scrollWidth vs clientWidth rather than grepping for a declaration — three source-text gates passed while the page still scrolled"
+    - "`/admin/arguments` and `/admin/people` each still overflow at 375px (scrollWidth 680 and 403 respectively vs clientWidth 375) due to an UNWRAPPED <table> on each page — a separate, pre-existing cause, out of scope for this plan (files_modified does not include either page). /admin/people's overflow was newly VISIBLE only after this plan's fix removed the larger sub-nav overflow that had been masking it (both were previously pegged at 423/375 by the sub-nav alone). Recorded as a new finding, not fixed here — a candidate for a future plan or `/gsd-review-backlog`."
+    - "The 49-12-SUMMARY.md authenticated browser measurements were taken via a direct node + playwright-core script against a copy of the persistent `.playwright-profile` (cookies only, no credential read/typed/echoed), not via the Playwright MCP tool call the plan anticipated — the configured MCP server process already held the live profile's singleton lock at execution time. Same executable, same authenticated session, same numbers; documented for transparency, not treated as a shortfall of the truth this gap required."
 
 ## Live Browser Verification — 2026-08-24
 
@@ -613,3 +632,60 @@ PRE-EXISTING OBSERVATION, not a 49-10 regression and NOT a gap:
   a cleanup plan; deliberately not fixed here, as it is outside every open gap.
 
 All three of 49-10's human-checks are now observed. None remain outstanding for that plan.
+
+### Third live pass — 2026-08-24 (49-12, narrow-viewport chrome)
+
+Closes G-49-5c. Method note: the authenticated measurements below were taken via a direct
+`node` + `playwright-core` script against a COPY of the persistent `.playwright-profile`
+(cookies only — no credential was ever read, typed, or echoed), because the Playwright MCP
+server process configured in `.mcp.json` already held the live profile's singleton lock at
+execution time. Same chromium binary, same authenticated session, same numbers as the operator's
+own 423/360 reading above would have produced.
+
+MEASURED (real headless-chromium browser, not inferred from source):
+
+- Six admin routes at 375px, before the AdminSubNav fix: `/admin` 423/375, `/admin/review`
+  423/375, `/admin/arguments` 680/375, `/admin/people` 423/375, `/admin/pipeline` 423/375,
+  `/admin/help` 423/375 (scrollWidth / clientWidth). The 423 on five of six matches the operator's
+  own 423 reading exactly; `/admin/arguments` was already higher for an unrelated reason (see
+  below).
+- The same six routes at 375px, after `AdminSubNav.svelte` gained `flex-wrap: wrap`: `/admin`
+  375/375, `/admin/review` 375/375, `/admin/arguments` 680/375 (UNCHANGED — separate cause),
+  `/admin/people` 403/375 (now visible on its own — see below), `/admin/pipeline` 375/375,
+  `/admin/help` 375/375.
+- 1280px `/admin` sub-nav geometry, before and after the fix — IDENTICAL: navHeight 69,
+  logout form left 1169.609375 / right 1256, page scrollWidth == clientWidth == 1280 both times.
+- NEW FINDING, out of scope for this plan (neither page is in `files_modified`): `/admin/arguments`
+  has an unwrapped `<table>` (right edge 679.95px at 375px) — an admin-jobs/arguments list table
+  with no `overflow-x` container, a separate cause from AdminSubNav. `/admin/people` has the same
+  shape (a people-editor `<table>`, right edge 402.94px at 375px); this one was previously MASKED
+  because the sub-nav's larger 423px overflow pegged the whole page at 423 regardless. Fixing the
+  sub-nav did not fix these tables and was never expected to — they are independent overflow
+  sources. Both were also confirmed clean (no overflow) at 1280px via
+  `app/scripts/narrow-viewport-audit.mjs` (Task 2b), which additionally named the exact offending
+  `<table>`/`<thead>`/`<tr>`/`<th>`/`<tbody>` elements and their right edges for both routes.
+  Neither is fixed here — recorded as a new finding, candidate for a future plan.
+
+ASSERTED-ONLY (STRUCTURAL) — proves declarations are present in source, cannot prove the page
+does not scroll:
+
+- `api/tests/test_phase49_nav_narrow_viewport_contract.py` (new module): a chrome-set walker
+  computes the set of page-chrome `.svelte` files (rather than a hand-picked list); a detector
+  flags any element with `display:flex` and none of `flex-wrap`, `overflow-x`, or fixed-with-
+  left/right; a non-degeneracy guard fails if the walker's discovered set shrinks below three
+  members or misses AdminSubNav/TopNav/MobileNavBar. Run BEFORE the TopNav fix, the live sweep
+  failed naming `TopNav.svelte:<nav>` — a component no gap report or prior assertion had ever
+  named. This module going green proves the four known chrome components each carry an escape
+  declaration; it does not and cannot prove the rendered page does not scroll. That claim is
+  closed only by the MEASURED numbers above.
+
+Also recorded, from planning:
+
+- MobileNavBar was already compliant and needed no change: it is mobile-only
+  (`display: none` above 768px via a `<style>` media-query rule), declares `overflow-x: auto` and
+  `position: fixed` with `left: 0; right: 0` inline, so it structurally cannot widen the page.
+- TopNav had exactly zero pixels of horizontal slack at 375px (planning-time measurement on the
+  real `/cases` page: last child's right edge 351px + 24px padding = 375px exactly) without
+  actually overflowing — it was NOT a cause of page scroll. It was brought into compliance by
+  sweep MEMBERSHIP (the computed chrome set includes it by construction, via both `+layout.svelte`
+  files importing it), not because it was observed causing scroll.

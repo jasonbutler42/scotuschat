@@ -9,6 +9,7 @@
 		border-bottom: 1px solid #334155;
 		padding: 12px 24px;
 		display: flex;
+		flex-wrap: wrap;
 		align-items: center;
 		gap: 16px;
 	"

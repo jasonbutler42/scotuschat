@@ -186,6 +186,30 @@
 
 	<div style="max-width: 640px; margin: 0 auto; padding: 48px 24px;">
 
+		<!-- D-35a: whole-argument lock notice (operator, 2026-08-24). Stated ONCE,
+		     at page level, covering the Case card and the Argument Details card
+		     together — card-agnostic on purpose, since under D-35a both cards are
+		     inside the same lock. 49-09's Speakers-card line stays where it is
+		     (it names a control-specific remedy); this notice does not replace it. -->
+		{#if speakersLocked}
+			<p
+				role="status"
+				style="
+					font-size: 14px;
+					font-weight: 400;
+					color: #94a3b8;
+					background-color: #1e293b;
+					border: 1px solid #334155;
+					border-radius: 8px;
+					padding: 16px;
+					margin: 0 0 16px 0;
+				"
+			>
+				This argument is published, so its data is read-only. Unpublish it in the
+				Status card below to edit the case, argument details, or speakers.
+			</p>
+		{/if}
+
 		<!-- Card 1: Case — case title + Case docket number + consolidated dockets (D-03) -->
 		<div
 			style="
@@ -228,6 +252,7 @@
 						name="case_name"
 						value={form && 'case_name' in form ? form.case_name : data.argument.case_name}
 						required
+						disabled={speakersLocked}
 						oninvalid={handleCaseInvalid}
 						aria-invalid={caseNameRequired ? 'true' : undefined}
 						aria-describedby={caseNameRequired ? 'case-form-alert' : undefined}
@@ -260,6 +285,7 @@
 						name="docket_number"
 						value={form && 'docket_number' in form ? form.docket_number : data.argument.docket_number}
 						required
+						disabled={speakersLocked}
 						oninvalid={handleCaseInvalid}
 						aria-invalid={docketRequired ? 'true' : undefined}
 						aria-describedby={docketRequired ? 'case-form-alert' : undefined}
@@ -322,10 +348,12 @@
 					</p>
 				{/if}
 
-				<!-- Save changes button — full-width, accent border, 44px min-height -->
+				<!-- Save changes button — full-width, accent border, 44px min-height.
+				     D-35a: disabled under speakersLocked too, ADDED to the pre-existing
+				     submitting-state condition, never substituted for it. -->
 				<button
 					type="submit"
-					disabled={savingState}
+					disabled={speakersLocked || savingState}
 					style="
 						display: block;
 						width: 100%;
@@ -336,9 +364,9 @@
 						font-size: 16px;
 						font-weight: 600;
 						color: #e2e8f0;
-						cursor: {savingState ? 'not-allowed' : 'pointer'};
+						cursor: {(speakersLocked || savingState) ? 'not-allowed' : 'pointer'};
 						margin-top: 24px;
-						opacity: {savingState ? 0.7 : 1};
+						opacity: {(speakersLocked || savingState) ? 0.7 : 1};
 					"
 				>
 					{savingState ? 'Saving…' : 'Save changes'}
@@ -348,13 +376,25 @@
 
 		<!-- Card 1b: Argument Details — shared ArgumentDetailsCard, second consumer (AEDIT-04) -->
 		<!-- Owns its own card chrome (24px bottom margin baked in) — not wrapped in an extra div. -->
-		<!-- readonly is always false here: this page's argument details remain editable
-		     regardless of publish status (unlike the pipeline page's already_created state). -->
+		<!-- D-35/D-35a (operator, 2026-08-24): REVERSES the prior decision recorded
+		     at this call site, which held that this card's fields stay editable
+		     no matter the argument's publish status. The operator's D-35 rule
+		     ("if an argument is currently published, the data for that argument
+		     is locked") was answered, on 2026-08-24, as applying to the WHOLE
+		     argument — the Case card and this card too, not participant data
+		     alone. This is a deliberate, visible reversal, not a silent flip: the
+		     previously-hardcoded editable prop below is replaced with 49-09's
+		     single published-lock flag (speakersLocked), the SAME flag the
+		     Speakers card already consults. The server-side guards on both
+		     argument-data writers (api/services/admin_arguments.py::
+		     update_argument / update_argument_metadata) are the authority while
+		     this flag exists — it exists only so the operator is never offered
+		     a control that will be refused. -->
 		<ArgumentDetailsCard
 			savedValues={data.savedValues}
 			hints={data.hints}
 			action="?/saveArgumentDetails"
-			readonly={false}
+			readonly={speakersLocked}
 			{form}
 		/>
 

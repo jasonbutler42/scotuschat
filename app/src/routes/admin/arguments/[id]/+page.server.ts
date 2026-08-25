@@ -284,6 +284,20 @@ export const actions: Actions = {
 				// ignore parse error
 			}
 
+			// D-35/D-35a (operator, 2026-08-24): a published argument's Case data is
+			// read-only. The generic "try again" copy below is wrong here — this
+			// write can never succeed until the argument is unpublished. Matches
+			// the same technique 49-09's updateParticipantSide action already uses
+			// (detail.includes('is published')); never echoes the raw server
+			// detail, which names an internal decision id and a date (developer
+			// text, not operator text).
+			if (res.status === 422 && detail.includes('is published')) {
+				return fail(422, {
+					error: 'This argument is published, so its data is read-only. Unpublish it first to edit it.',
+					...attemptedValues,
+				});
+			}
+
 			if (res.status === 422 && detail.includes('slug_collision')) {
 				return fail(422, {
 					error:
@@ -350,8 +364,26 @@ export const actions: Actions = {
 		if (!res.ok) {
 			if (res.status === 422) {
 				try {
-					const required = parseRequiredFieldErrors(await res.json());
+					const body: unknown = await res.json();
+					const required = parseRequiredFieldErrors(body);
 					if (required) return fail(422, { ...required, ...attemptedValues });
+
+					// D-35/D-35a (operator, 2026-08-24): a published argument's
+					// metadata is read-only. Same technique as the save action
+					// above and 49-09's updateParticipantSide action
+					// (detail.includes('is published')); never echoes the raw
+					// server detail, which names an internal decision id and a
+					// date (developer text, not operator text).
+					const detail =
+						typeof body === 'object' && body !== null && typeof (body as { detail?: unknown }).detail === 'string'
+							? String((body as { detail: string }).detail)
+							: '';
+					if (detail.includes('is published')) {
+						return fail(422, {
+							saveError: 'This argument is published, so its data is read-only. Unpublish it first to edit it.',
+							...attemptedValues,
+						});
+					}
 				} catch {
 					// Malformed backend data is intentionally replaced with generic copy.
 				}

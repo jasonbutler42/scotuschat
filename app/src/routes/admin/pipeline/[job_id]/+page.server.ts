@@ -297,9 +297,13 @@ export const load: PageServerLoad = async ({ params }) => {
 	// (Phase 25, D-18, D-19; Phase 48 D-01 renamed the born state from
 	// 'pipeline' to 'candidate'). No linked argument yet means the run is
 	// still in-progress, never read-only. This concern predates Phase 49 and
-	// nothing in this phase's scope changes it — `update_argument_metadata`
-	// (api/services/admin_arguments.py) has no status guard of its own, so
-	// this remains a deliberate frontend-only restriction, not a backend one.
+	// nothing in this phase's scope changes it. UPDATED (D-35a, plan 49-11,
+	// 2026-08-24): `update_argument_metadata` (api/services/admin_arguments.py)
+	// now carries its OWN published guard (it did not before D-35a). The
+	// restriction on THIS page is therefore a frontend-only restriction on
+	// the CANDIDATE boundary — a narrower, non-published concern this flag
+	// predates and still owns — layered ON TOP OF the backend's published
+	// lock, not a frontend-only restriction full stop.
 	//
 	// resolveCardReadonly (ResolveCard): WIDENED to match the backend's own
 	// widened guard (Phase 49 plan 49-04) — `update_resolve_row_for_job` and

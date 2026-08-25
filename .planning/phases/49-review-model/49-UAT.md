@@ -689,3 +689,34 @@ Also recorded, from planning:
   actually overflowing — it was NOT a cause of page scroll. It was brought into compliance by
   sweep MEMBERSHIP (the computed chrome set includes it by construction, via both `+layout.svelte`
   files importing it), not because it was observed causing scroll.
+
+### D-35 / D-35a end-to-end verification — RUN IN BROWSER, 2026-08-25
+
+After 49-11 and 49-12 landed. This is the operator's doctrine tested in both directions on real
+pages, which is the only way to know it was implemented rather than merely asserted.
+
+PUBLISHED argument 1811 — everything locked, escape hatch intact:
+- `case_name`, `docket_number`, `question_number`, `argued_date` — ALL disabled.
+- All 8 Save buttons — ALL disabled (both card-level and every per-speaker row).
+- **`Unpublish` remains ENABLED** — the over-lock guard holds. This was 49-11's own stated worst
+  failure mode: locking lifecycle operations alongside data would freeze a published argument
+  permanently, with no way back. It did not happen.
+- One card-agnostic notice, stated once: "This argument is published, so its data is read-only.
+  Unpublish it in the Status card below to edit the case, argument details, or speakers." It names
+  the way out rather than only the prohibition.
+
+DRAFT argument 1810 — everything editable:
+- All four argument-data inputs editable; both card-level Saves enabled; no lock notice rendered.
+- All side selects enabled, and every one offers BENCH (49-10's convergence).
+- Per-row Saves disabled ONLY on rows whose side is still UNKNOWN — verified individually: each
+  disabled Save has `rowSideValue: "UNKNOWN"`, and rows already resolved to BENCH have ENABLED
+  Saves. That is the PRE-EXISTING unresolved-side gate (26-UAT Test 26), not a lock leak. Checked
+  explicitly rather than assumed, because "some Save is disabled on a draft" would otherwise look
+  exactly like an over-lock bug.
+
+Net: published 1811 and draft 1810 render the IDENTICAL interface. The only difference between
+them is enabled vs disabled, decided solely by publish status — plus one pre-existing gate that
+predates this doctrine and is orthogonal to it. That is D-35 as the operator stated it,
+implemented, and observed.
+
+Full suite after all six gap-closure plans: 1150 passed, single clean process, 0 failures.

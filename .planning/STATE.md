@@ -2,20 +2,20 @@
 gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: Import & Provenance Re-model
-current_phase: 49
-current_phase_name: Review Model
-status: Phase 49 REOPENED 2026-08-24 — UAT found 4 open gaps; all 4 now closed (49-09 through 49-12); ready for /gsd-verify-work re-pass
-stopped_at: Completed 49-11-PLAN.md — whole-argument published lock (D-35a); all Phase 49 plans (01-12) now complete
-last_updated: "2026-08-25T11:20:13.350Z"
+current_phase: 50
+current_phase_name: Unified Import Path
+status: Phase 49 COMPLETE 2026-08-25 — UAT re-pass green (55 tests, 54 passed, 0 issues, 0 pending); verification re-closed to passed; ready to plan Phase 50
+stopped_at: Phase 49 complete, ready to plan Phase 50
+last_updated: "2026-08-25T16:18:45.890Z"
 last_activity: 2026-08-25
-last_activity_desc: Executed 49-11 (published lock on update_argument/update_argument_metadata/resolve_job/create_person_for_job; always-editable decision reversed in place; D-35a recorded) — closes D-35a, the last open Phase 49 item
-state_head: 6e379ed94e574a161e4a938d35b04555662766ac
+last_activity_desc: Phase 49 complete, transitioned to Phase 50
+state_head: 6a23756f0c297194ebb44e9ac6b2a3a807e14533
 progress:
   total_phases: 5
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 28
   completed_plans: 28
-  percent: 40
+  percent: 60
 ---
 
 # Project State
@@ -25,12 +25,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-18 — Phase 47 complete; corpus-first / PDF-deferred scope decision recorded)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** Phase 49 — Review Model (REOPENED — gap closure)
+**Current focus:** Phase 50 — Unified Import Path (Phase 49 closed 2026-08-25)
 
 ## Current Position
 
-Phase: 49 — Review Model (reopened for gap closure)
-Last activity: 2026-08-24 — Phase 49 UAT completed (31 pass / 3 issues / 0 pending); phase reopened for gap closure
+Phase: 50 — Unified Import Path
+Last activity: 2026-08-25 — Phase 49 complete, transitioned to Phase 50
 
 **Next action:** Wave 6 (49-11, D-35a — the whole-argument published lock) is now **complete** — see `49-11-SUMMARY.md`. Six argument-data writers (`update_argument`, `update_argument_metadata`, `update_participant_side`, `update_resolve_row_for_job`, `resolve_job`, `create_person_for_job`) now share one published predicate and one error-prose clause, proved by live non-persistence tests; the deliberate non-locks (`unpublish_argument`, `resolve_participant_review`) are proved live too. The argument-detail page's `readonly is always false here` decision is reversed in place, cited to D-35/D-35a/operator/2026-08-24; the Case card and Argument Details card are locked behind 49-09's single `speakersLocked` flag with one page-level statement. `deferred-items.md`'s write-path inventory is now complete and four-way dispositioned; `49-CONTEXT.md` carries `### D-35a (locked)`. Full suite: 1150 passed across two split runs (no failures, no new skips, 12 pre-existing warnings). 49-12 (G-49-5c, narrow-viewport nav) also completed concurrently — see `49-12-SUMMARY.md`. **All Phase 49 plans (01-12) and all four reopened gaps are now closed.** Five browser human-check items from 49-11 Task 3 were NOT observed this session — no browser tool available to this executor; logged to `WINDOWS.md` entry 28. One NEW operator question remains open (Person-scoped write boundary — see `deferred-items.md`). Still open and NOT in any gap_ids: G-49-9a needs a visual re-check, and UAT sub-item 5.6 was never observed. **Next step: `/gsd-verify-work 49`** to re-close the phase.
 
@@ -318,7 +318,7 @@ at close.
 ## Session Continuity
 
 Last session: 2026-08-25T11:19:03.770Z
-Stopped at: Completed 49-11-PLAN.md — whole-argument published lock (D-35a); all Phase 49 plans (01-12) now complete
+Stopped at: Phase 49 complete, ready to plan Phase 50
 Resume file: None
 
 ## Operator Next Steps

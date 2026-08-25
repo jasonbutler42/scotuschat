@@ -63,7 +63,7 @@
     "source_grounding": true
   },
   "git": {
-    "branching_strategy": "none",
+    "branching_strategy": "phase",
     "create_tag": true
   },
   "hooks": {

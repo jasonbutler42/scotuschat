@@ -581,3 +581,35 @@ STILL NOT OBSERVED:
 - 49-10 Task 1's Resolve-card regression walk on the pipeline page (`/admin/pipeline/{job}`).
   The shared-module extraction changed ResolveCard's imports; this walk confirms the batch resolve
   form still behaves. Not run in this pass.
+
+### 49-10 Task 1 Resolve-card regression walk — RUN IN BROWSER, 2026-08-25
+
+The third and last of 49-10's unrun `<human-check>` items. Run on the paused job that owns the
+Complexity fixture (`/admin/pipeline/1168`, argument 1809), which is the only surface with a live
+Resolve card. This is the check that matters for 49-10's shared-module extraction, because
+`SIDE_LABEL` and `sideBucket` were moved OUT of ResolveCard.svelte into
+`app/src/lib/participantSide.ts` and this component now imports them.
+
+OBSERVED PASS:
+- The Resolve card renders intact: 34 Bench/Advocate segmented toggles (17 participant rows x 2)
+  with correct `aria-pressed` state (Advocate pressed=true / Bench pressed=false on advocate rows),
+  9 candidate picker selects, 0 elements with role="alert", 0 console errors.
+- All four SIDE_LABEL values render from the shared module: "Bench", "Petitioner's Counsel",
+  "Respondent's Counsel", "Amicus Curiae". This is the extraction verified behaviourally — the
+  labels now come from participantSide.ts and still render identically.
+
+PRE-EXISTING OBSERVATION, not a 49-10 regression and NOT a gap:
+- The page emits 17 identical Svelte warnings: `binding_property_non_reactive`, one per
+  participant row. Traced to `ResolveCard.svelte:1314`, `bind:this={formRefs[row.participant_id]}`
+  — a bind into a plain object property, so `formRefs` is not a `$state` proxy and writes into it
+  are not reactive. PROVEN pre-existing rather than introduced: 49-10's diff over ResolveCard
+  (574903cb5~1..a89adcd62) touches ZERO `bind:` lines, and the pre-49-10 file carried the same
+  single binding.
+  Recorded rather than ignored because it is the same SHAPE as this project's documented
+  false-green incident (a non-reactive Svelte binding under 28 green source-contract tests, plan
+  48-10). Here it is probably benign — the refs are used imperatively with flushSync before
+  submit, where non-reactivity is the intent — but a future contributor who starts reading
+  `formRefs` reactively would get a silent stale value. Candidate for the design-system phase or
+  a cleanup plan; deliberately not fixed here, as it is outside every open gap.
+
+All three of 49-10's human-checks are now observed. None remain outstanding for that plan.

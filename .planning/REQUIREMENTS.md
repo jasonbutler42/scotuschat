@@ -37,7 +37,7 @@ Requirements for milestone v1.8. Each maps to exactly one roadmap phase.
 ### Unified Import Path (IMPORT)
 
 - [ ] **IMPORT-01**: Corpus import writes `import_run` directly (source=corpus) without fabricating PDF-pipeline artifacts
-- [ ] **IMPORT-02**: PDF pipeline path adapts to `import_run` as one strategy among peers
+- [ ] **IMPORT-02**: PDF pipeline path adapts to `import_run` as one strategy among peers — *split out of Phase 50 on 2026-08-25 to Phase 999.11 (BACKLOG); sits on the deferred PDF route*
 - [ ] **IMPORT-03**: `admin_job` references an `import_run` rather than inventing one; corpus CLI batch needs no admin_job
 - [ ] **IMPORT-04**: Re-import is idempotent — re-running yields the same result and never clobbers operator-authored values
 - [ ] **IMPORT-05**: Authority ordering (operator > corpus > pdf/rule > pdf/llm) governs overwrite decisions on every writer
@@ -86,7 +86,7 @@ Mappings confirmed by the v1.8 roadmap (`.planning/ROADMAP.md`), created 2026-08
 | REVIEW-04 | Phase 49 | Complete |
 | REVIEW-05 | Phase 49 | Complete |
 | IMPORT-01 | Phase 50 | Pending |
-| IMPORT-02 | Phase 50 | Pending |
+| IMPORT-02 | Phase 999.11 (BACKLOG) | Deferred |
 | IMPORT-03 | Phase 50 | Pending |
 | IMPORT-04 | Phase 50 | Pending |
 | IMPORT-05 | Phase 50 | Pending |
@@ -100,7 +100,9 @@ Mappings confirmed by the v1.8 roadmap (`.planning/ROADMAP.md`), created 2026-08
 - v1 requirements: 25 total
 - Mapped to phases: 25
 - Unmapped: 0 ✓
+- Of which deferred out of the v1.8 milestone: 1 (IMPORT-02 → Phase 999.11, deferred PDF route)
 
 ---
 *Requirements defined: 2026-08-17*
-*Last updated: 2026-08-17 — v1.8 roadmap created; traceability confirmed (25/25 mapped to Phases 47–51, no orphans, no duplicates)*
+*Last updated: 2026-08-25 — IMPORT-02 remapped from Phase 50 to Phase 999.11 (BACKLOG) when Phase 50's 2026-08-18 scope flag was resolved at planning time in favour of corpus-only. Traceability still 25/25 mapped, no orphans, no duplicates; 24 remain inside Phases 47–51.*
+*Previously: 2026-08-17 — v1.8 roadmap created; traceability confirmed (25/25 mapped to Phases 47–51, no orphans, no duplicates)*

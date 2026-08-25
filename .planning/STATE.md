@@ -27,6 +27,8 @@ See: .planning/PROJECT.md (updated 2026-08-18 — Phase 47 complete; corpus-firs
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
 **Current focus:** Phase 50 — Unified Import Path (Phase 49 closed 2026-08-25)
 
+**Phase 50 scope resolved 2026-08-25** (at `/gsd-plan-phase 50` time, by the operator): the phase's 2026-08-18 scope flag is closed **corpus-only**. Its PDF half — old success criterion 2, IMPORT-02, "the PDF pipeline path reads and writes `import_run` as one strategy among peers" — **split out to Phase 999.11 (BACKLOG)**, on the deferred PDF route. Phase 50 now carries 4 requirements (IMPORT-01, IMPORT-03, IMPORT-04, IMPORT-05) and 4 success criteria, renumbered. IMPORT-05's authority ordering stays here **in full** (all four rungs, one total ordering function); its `operator`/`corpus` rungs get live corpus proof, its `pdf/rule_based`/`pdf/llm_corrective` rungs get real-writer-test proof — the same verification split Phase 47 established. Recorded in ROADMAP.md (Phase 50 section + v1.8 bullet + Backlog 999.11), REQUIREMENTS.md (IMPORT-02 remapped, coverage note), and PROJECT.md Key Decisions. **No CONTEXT.md yet — `/gsd-discuss-phase 50` is the next step, and it will read the already-narrowed scope.**
+
 ## Current Position
 
 Phase: 50 — Unified Import Path

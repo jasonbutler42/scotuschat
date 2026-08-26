@@ -1,19 +1,26 @@
 """
-Tests for pipeline.commands.import_convokit's paired AdminJob creation
-(Phase 30, Plan 01, Task 2).
+IMPORT-03 negative-space module (Phase 50, plan 50-01, Task 3, PD-04).
 
-Covers:
-    - The Argument created by a corpus import lands at
-      ArgumentStatusEnum.PIPELINE (not DRAFT) -- 30-RESEARCH.md Pitfall 1.
-    - Exactly one AdminJob(status=PAUSED, current_step=RESOLVE,
-      argument_id=<arg>) row is created per imported conversation (D-01,
-      D-03), in the same per-conversation transaction.
-    - That AdminJob's discrepancies JSONB holds one HIT-shaped dict per
-      already-resolved ArgumentParticipant, matching ResolveCard.svelte's
-      Action-column rendering contract (D-05).
-    - Re-running an already-imported conversation_id creates NO additional
-      AdminJob row (rides the existing oyez_transcript_id early-return
-      idempotency gate -- no second AdminJob-specific select is added).
+This file used to assert the Phase 30 corpus AdminJob fabrication (paired
+PAUSED/RESOLVE job, HIT-shaped discrepancies, idempotent re-import via
+skip-existing). Phase 50 D-14/D-19 DELETES that fabrication entirely: the
+corpus importer never creates an AdminJob, corpus arguments reach DRAFT via
+the argument-scoped `api.services.admin_arguments.approve_argument`
+instead, and a repeat import reconciles rather than skipping (D-01).
+
+Every one of the four assertions below is the INVERSE of what this file
+used to assert -- proof the deletion actually happened, not just that the
+old behavior went untested:
+    - A fresh corpus import of one synthetic conversation creates ZERO
+      admin_job rows (IMPORT-03).
+    - That argument does not appear in
+      `api.services.admin_jobs.list_jobs` (no job to list).
+    - `api.services.admin_jobs.get_pipeline_stats` is unaffected by the
+      import (its counts are scoped to AdminJob rows only).
+    - The argument is still reachable and approvable via
+      `api.services.admin_arguments.approve_argument` (D-14 -- corpus
+      arguments are not orphaned by AdminJob's removal; they have their
+      own path to DRAFT/publishable).
 
 DB-dependent tests are skipped when DATABASE_URL/TEST_DATABASE_URL is not
 set (via conftest.py's test_db_url fixture -> pytest.skip). Uses a small
@@ -28,15 +35,21 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-from sqlalchemy import select
+from sqlalchemy import delete, func, select
 
 from api.models.models import (
     AdminJob,
-    AdminJobStatus,
-    AdminJobStep,
     Argument,
+    ArgumentParticipant,
     ArgumentStatusEnum,
+    ArgumentStatusLog,
+    CaseArgument,
+    ImportRun,
+    Person,
+    Utterance,
 )
+from api.services.admin_arguments import approve_argument
+from api.services.admin_jobs import get_pipeline_stats, list_jobs
 from pipeline.commands.import_convokit import run_import_convokit
 
 # ===========================================================================
@@ -134,9 +147,7 @@ _SPEAKERS = {
 }
 
 # One advocate turn (already resolved during the advocates loop) and one
-# bench turn (discovered only while streaming utterances) -- exercises the
-# D-01/D-03 insertion point that requires both resolution paths to have
-# completed before resolved_participants.values() is read.
+# bench turn (discovered only while streaming utterances).
 _UTTERANCES = [
     {
         "id": "u1",
@@ -179,7 +190,33 @@ async def _fetch_argument(isolated_session) -> Argument:
 
 
 @pytest.mark.asyncio
-async def test_argument_status_is_pipeline_not_draft(isolated_session, tmp_path):
+async def test_fresh_corpus_import_creates_zero_admin_job_rows(
+    isolated_session, tmp_path
+):
+    await _run_import(isolated_session, tmp_path)
+    argument = await _fetch_argument(isolated_session)
+
+    jobs_for_argument = (
+        (
+            await isolated_session.execute(
+                select(AdminJob).where(AdminJob.argument_id == argument.id)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    assert jobs_for_argument == []
+
+    total_admin_jobs = (
+        await isolated_session.execute(select(func.count()).select_from(AdminJob))
+    ).scalar_one()
+    assert total_admin_jobs == 0
+
+
+@pytest.mark.asyncio
+async def test_argument_status_is_candidate_with_no_resolved_at(
+    isolated_session, tmp_path
+):
     await _run_import(isolated_session, tmp_path)
     argument = await _fetch_argument(isolated_session)
 
@@ -188,85 +225,91 @@ async def test_argument_status_is_pipeline_not_draft(isolated_session, tmp_path)
 
 
 @pytest.mark.asyncio
-async def test_exactly_one_paused_resolve_adminjob_created(isolated_session, tmp_path):
+async def test_corpus_argument_absent_from_list_jobs(isolated_session, tmp_path):
     await _run_import(isolated_session, tmp_path)
     argument = await _fetch_argument(isolated_session)
 
-    jobs = (
-        await isolated_session.execute(
-            select(AdminJob).where(AdminJob.argument_id == argument.id)
-        )
-    ).scalars().all()
-
-    assert len(jobs) == 1
-    job = jobs[0]
-    assert job.status == AdminJobStatus.PAUSED
-    assert job.current_step == AdminJobStep.RESOLVE
-    assert job.argument_id == argument.id
+    jobs = await list_jobs(isolated_session)
+    job_argument_ids = {j.argument_id for j in jobs}
+    assert argument.id not in job_argument_ids
 
 
 @pytest.mark.asyncio
-async def test_discrepancies_are_hit_shaped_for_advocate_and_bench(
+async def test_get_pipeline_stats_unaffected_by_corpus_import(
     isolated_session, tmp_path
 ):
+    before = await get_pipeline_stats(isolated_session)
     await _run_import(isolated_session, tmp_path)
-    argument = await _fetch_argument(isolated_session)
+    after = await get_pipeline_stats(isolated_session)
 
-    job = (
-        await isolated_session.execute(
-            select(AdminJob).where(AdminJob.argument_id == argument.id)
-        )
-    ).scalar_one()
-
-    assert isinstance(job.discrepancies, list)
-    # One resolved participant from the advocates loop (Jane Roe) and one
-    # from utterance streaming (Test Justice Bench) -- both present because
-    # the AdminJob insert happens after _import_utterances returns.
-    assert len(job.discrepancies) == 2
-
-    expected_keys = {
-        "raw_speaker_label",
-        "normalized",
-        "candidates",
-        "auto_match_id",
-        "auto_match_name",
-        "auto_match_role",
-        "auto_resolved",
-        "extracted_side",
-    }
-    labels = {d["raw_speaker_label"] for d in job.discrepancies}
-    assert labels == {"Jane Roe", "Test Justice Bench"}
-
-    for d in job.discrepancies:
-        assert set(d.keys()) == expected_keys
-        assert d["auto_resolved"] is True
-        assert d["candidates"] == []
-        assert d["auto_match_id"] is not None
-        assert d["auto_match_name"] == d["raw_speaker_label"]
-        assert d["auto_match_role"] is None
-        # Phase 44 hint-snapshot fix: the side classified at import time,
-        # frozen into the discrepancy blob so the Resolve card's hint can
-        # show it independent of any later operator edit.
-        assert d["extracted_side"] in ("BENCH", "PETITIONER", "RESPONDENT", "AMICUS", "UNKNOWN")
+    # get_pipeline_stats is scoped to AdminJob rows only -- a corpus import
+    # that creates zero AdminJob rows must leave it byte-identical.
+    assert after["recent_count"] == before["recent_count"]
+    assert after["last_activity_at"] == before["last_activity_at"]
 
 
 @pytest.mark.asyncio
-async def test_reimport_same_conversation_creates_no_additional_adminjob(
+async def test_jobless_corpus_argument_is_reachable_and_approvable(
     isolated_session, tmp_path
 ):
+    """D-14: approve_argument is the ONLY writer of resolved_at for a
+    jobless corpus argument -- without it, publish_argument's
+    non-overridable resolved_at IS NULL refusal would make it permanently
+    unpublishable.
+
+    Unlike every other test in this module, `approve_argument` COMMITS
+    internally (mirroring `approve_job`'s established contract) -- once
+    committed, `isolated_session`'s fixture-teardown `rollback()` can no
+    longer undo it (rollback only ever undoes an OPEN transaction, not
+    already-committed work), so this test explicitly deletes every row it
+    created before returning rather than relying on that rollback for
+    cleanup, keeping this the ONE test in the corpus test suite that is
+    ever allowed to leave committed data behind if it doesn't clean up
+    after itself.
+    """
     await _run_import(isolated_session, tmp_path)
     argument = await _fetch_argument(isolated_session)
+    argument_id = argument.id
 
-    # Re-run the same conversation a second time (fresh corpus_dir tree,
-    # same conversation_id/oyez_transcript_id) -- the existing
-    # oyez_transcript_id early-return in _import_conversation should skip
-    # this conversation entirely, so no second AdminJob is ever created.
-    await _run_import(isolated_session, tmp_path, subdir="corpus2")
+    result = await approve_argument(isolated_session, argument_id)
+    assert result is not None
+    assert result["status"] == ArgumentStatusEnum.DRAFT
 
-    jobs = (
-        await isolated_session.execute(
-            select(AdminJob).where(AdminJob.argument_id == argument.id)
+    await isolated_session.refresh(argument)
+    assert argument.status == ArgumentStatusEnum.DRAFT
+    assert argument.resolved_at is not None
+
+    # Explicit cleanup (see docstring) -- FK-ordered, mirroring
+    # admin_arguments.py::delete_argument's own cascade order.
+    person_ids = (
+        (
+            await isolated_session.execute(
+                select(ArgumentParticipant.person_id).where(
+                    ArgumentParticipant.argument_id == argument_id
+                )
+            )
         )
-    ).scalars().all()
-
-    assert len(jobs) == 1
+        .scalars()
+        .all()
+    )
+    await isolated_session.execute(
+        delete(Utterance).where(Utterance.argument_id == argument_id)
+    )
+    await isolated_session.execute(
+        delete(ImportRun).where(ImportRun.argument_id == argument_id)
+    )
+    await isolated_session.execute(
+        delete(ArgumentParticipant).where(ArgumentParticipant.argument_id == argument_id)
+    )
+    await isolated_session.execute(
+        delete(CaseArgument).where(CaseArgument.argument_id == argument_id)
+    )
+    await isolated_session.execute(
+        delete(ArgumentStatusLog).where(ArgumentStatusLog.argument_id == argument_id)
+    )
+    await isolated_session.execute(delete(Argument).where(Argument.id == argument_id))
+    if person_ids:
+        await isolated_session.execute(
+            delete(Person).where(Person.id.in_(p for p in person_ids if p is not None))
+        )
+    await isolated_session.commit()

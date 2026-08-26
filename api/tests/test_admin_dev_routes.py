@@ -39,8 +39,6 @@ from sqlalchemy import func, select
 
 from api.models.models import (
     AdminJob,
-    AdminJobStatus,
-    AdminJobStep,
     Argument,
     ArgumentStatusEnum,
     ArgumentStatusLog,
@@ -277,16 +275,24 @@ async def _fetch_argument(db, conversation_id: str) -> Argument:
     ).scalar_one()
 
 
-async def _fetch_admin_job(db, argument_id: int) -> AdminJob:
-    # Deliberately does NOT call db.expire_all() (unlike _fetch_argument) --
-    # callers commonly do `arg = await _fetch_argument(...)` followed by
-    # `job = await _fetch_admin_job(db, arg.id)` and then keep reading
-    # attributes off `arg`; expiring here would force a synchronous
-    # re-load of `arg`'s already-fetched attributes on next access, which
-    # raises sqlalchemy.exc.MissingGreenlet outside of an explicit await.
+async def _fetch_latest_import_run_step(db, argument_id: int) -> str | None:
+    """Phase 50 (D-14/D-19, PD-05): replaces _fetch_admin_job -- there is no
+    AdminJob for a corpus fixture anymore. Mirrors admin_dev.py's own
+    latest_import_run_step derivation (the highest-id ImportRun's step).
+    Deliberately does NOT call db.expire_all() (unlike _fetch_argument) --
+    callers commonly do `arg = await _fetch_argument(...)` followed by this,
+    then keep reading attributes off `arg`; expiring here would force a
+    synchronous re-load of `arg`'s already-fetched attributes on next
+    access, which raises sqlalchemy.exc.MissingGreenlet outside of an
+    explicit await."""
     return (
-        await db.execute(select(AdminJob).where(AdminJob.argument_id == argument_id))
-    ).scalar_one()
+        await db.execute(
+            select(ImportRun.step)
+            .where(ImportRun.argument_id == argument_id)
+            .order_by(ImportRun.id.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
 
 
 @pytest.mark.asyncio
@@ -390,11 +396,11 @@ async def test_reset_wipes_and_reseeds_fixtures(client, tmp_path, db):
     assert len(all_arguments) == 4
     assert {a.oyez_transcript_id for a in all_arguments} == set(FIXTURE_ORDER)
 
-    # Each fixture argument has exactly one paired AdminJob.
+    # Phase 50 (D-14/D-19): zero AdminJob rows anywhere -- the corpus
+    # importer no longer creates one, and TRUNCATE_SQL's admin_jobs entry
+    # wiped whatever legacy PDF-path rows existed before this reset.
     all_jobs = (await db.execute(select(AdminJob))).scalars().all()
-    assert len(all_jobs) == 4
-    job_argument_ids = {j.argument_id for j in all_jobs}
-    assert job_argument_ids == {a.id for a in all_arguments}
+    assert len(all_jobs) == 0
 
     # The fixtures' own people were created.
     person_count = (
@@ -538,42 +544,66 @@ async def test_reset_realizes_state_variety(client, tmp_path, db):
     resp = await _post_reset(client, corpus_dir)
     assert resp.status_code == 200
 
-    # 15169 (Complexity): untouched freshly-imported default.
+    # Capture status/step values as PLAIN LOCALS immediately after each
+    # fetch pair -- _fetch_argument's own db.expire_all() (and the next
+    # iteration's) would otherwise expire an earlier iteration's already-
+    # loaded `argument` object, and re-accessing an expired attribute
+    # outside an explicit await raises sqlalchemy.exc.MissingGreenlet in
+    # this async context (same discipline test_reset_writes_status_log_rows
+    # already uses for `.id`).
+
+    # 15169 (Complexity): untouched freshly-imported default -- candidate,
+    # latest ImportRun at step="parse" (Phase 50 D-14/D-19: no AdminJob).
     complexity_arg = await _fetch_argument(db, "15169")
-    assert complexity_arg.status == ArgumentStatusEnum.CANDIDATE
+    complexity_status = complexity_arg.status
+    assert complexity_status == ArgumentStatusEnum.CANDIDATE
     assert complexity_arg.resolved_at is None
     assert complexity_arg.published_at is None
-    complexity_job = await _fetch_admin_job(db, complexity_arg.id)
-    assert complexity_job.status == AdminJobStatus.PAUSED
-    assert complexity_job.current_step == AdminJobStep.RESOLVE
+    complexity_step = await _fetch_latest_import_run_step(db, complexity_arg.id)
+    assert complexity_step == "parse"
 
-    # 13015 (Draft): CANDIDATE -> DRAFT.
+    # 13015 (Draft): CANDIDATE -> DRAFT via approve_argument, latest
+    # ImportRun still step="parse" (approve_argument writes no ImportRun).
     draft_arg = await _fetch_argument(db, "13015")
-    assert draft_arg.status == ArgumentStatusEnum.DRAFT
+    draft_status = draft_arg.status
+    assert draft_status == ArgumentStatusEnum.DRAFT
     assert draft_arg.resolved_at is not None
     assert draft_arg.published_at is None
-    draft_job = await _fetch_admin_job(db, draft_arg.id)
-    assert draft_job.status == AdminJobStatus.COMPLETED
+    draft_step = await _fetch_latest_import_run_step(db, draft_arg.id)
+    assert draft_step == "parse"
 
-    # 18897 (Published): CANDIDATE -> DRAFT -> PUBLISHED.
+    # 18897 (Published): CANDIDATE -> DRAFT -> PUBLISHED, latest ImportRun
+    # still step="parse".
     published_arg = await _fetch_argument(db, "18897")
-    assert published_arg.status == ArgumentStatusEnum.PUBLISHED
+    published_status = published_arg.status
+    assert published_status == ArgumentStatusEnum.PUBLISHED
     assert published_arg.resolved_at is not None
     assert published_arg.published_at is not None
-    published_job = await _fetch_admin_job(db, published_arg.id)
-    assert published_job.status == AdminJobStatus.COMPLETED
+    published_step = await _fetch_latest_import_run_step(db, published_arg.id)
+    assert published_step == "parse"
 
-    # 22372 (Mid-pipeline): stays CANDIDATE, AdminJob flipped to RUNNING.
+    # 22372 (Mid-pipeline): stays CANDIDATE, a step="reconcile" ImportRun is
+    # seeded (OQ-2) -- its highest id makes it the "latest" run.
     mid_arg = await _fetch_argument(db, "22372")
-    assert mid_arg.status == ArgumentStatusEnum.CANDIDATE
+    mid_status = mid_arg.status
+    assert mid_status == ArgumentStatusEnum.CANDIDATE
     assert mid_arg.resolved_at is None
-    mid_job = await _fetch_admin_job(db, mid_arg.id)
-    assert mid_job.status == AdminJobStatus.RUNNING
-    assert mid_job.current_step == AdminJobStep.RESOLVE
+    mid_step = await _fetch_latest_import_run_step(db, mid_arg.id)
+    assert mid_step == "reconcile"
 
-    # All four AdminJob rows still exist (none deleted).
+    # PD-05: all four fixtures are distinguishable by the
+    # (argument_status, latest_import_run_step) pair.
+    pairs = {
+        (complexity_status.value, complexity_step),
+        (draft_status.value, draft_step),
+        (published_status.value, published_step),
+        (mid_status.value, mid_step),
+    }
+    assert len(pairs) == 4
+
+    # Zero AdminJob rows anywhere (Phase 50 D-14/D-19 -- none created).
     all_jobs = (await db.execute(select(AdminJob))).scalars().all()
-    assert len(all_jobs) == 4
+    assert len(all_jobs) == 0
 
 
 @pytest.mark.asyncio
@@ -624,9 +654,10 @@ async def test_reset_writes_status_log_rows(client, tmp_path, db):
 
 @pytest.mark.asyncio
 async def test_reset_response_reports_realized_states(client, tmp_path, db):
-    """Each response item's argument_status and admin_job_status fields
-    match the values read back from the database, not values assumed from
-    FIXTURE_SET."""
+    """Each response item's argument_status and latest_import_run_step
+    fields match the values read back from the database, not values
+    assumed from FIXTURE_SET (Phase 50 D-14/D-19, PD-05 -- replaces the
+    retired AdminJob-status field, which no longer exists)."""
     _require_test_db()
 
     corpus_dir = _write_corpus_fixture(tmp_path)
@@ -634,8 +665,14 @@ async def test_reset_response_reports_realized_states(client, tmp_path, db):
     assert resp.status_code == 200
     body = resp.json()
 
+    seen_pairs = set()
     for item in body["fixtures"]:
         argument = await _fetch_argument(db, item["conversation_id"])
-        admin_job = await _fetch_admin_job(db, argument.id)
+        latest_step = await _fetch_latest_import_run_step(db, argument.id)
         assert item["argument_status"] == argument.status.value
-        assert item["admin_job_status"] == admin_job.status.value
+        assert item["latest_import_run_step"] == latest_step
+        seen_pairs.add((item["argument_status"], item["latest_import_run_step"]))
+
+    # PD-05: all four fixtures are distinguishable by the
+    # (argument_status, latest_import_run_step) pair.
+    assert len(seen_pairs) == 4

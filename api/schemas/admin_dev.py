@@ -23,7 +23,13 @@ class ResetFixtureItem(BaseModel):
     role: str
     argument_id: int
     argument_status: str
-    admin_job_status: str
+    # Phase 50 (D-14/D-19, PD-05): replaces the retired AdminJob-status
+    # field -- there is no AdminJob for a corpus fixture anymore. The step
+    # of the fixture argument's highest-id ImportRun, which together with
+    # argument_status keeps all four reference states distinguishable:
+    # Complexity = candidate/parse, Draft = draft/parse, Published =
+    # published/parse, Mid-pipeline = candidate/reconcile.
+    latest_import_run_step: str
 
 
 class ResetToFixtureResponse(BaseModel):

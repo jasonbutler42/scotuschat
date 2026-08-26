@@ -15,7 +15,10 @@
 		role: string;
 		argument_id: number;
 		argument_status: string;
-		admin_job_status: string;
+		// Phase 50 (D-14/D-19, PD-05) — mirrors api/schemas/admin_dev.py's
+		// ResetFixtureItem.latest_import_run_step; there is no AdminJob for a
+		// corpus fixture anymore.
+		latest_import_run_step: string;
 	}
 
 	// Phase 49 (D-33a) — mirrors api/schemas/admin_dev.py::SeedUnresolvedSpeakerResponse.

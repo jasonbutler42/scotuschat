@@ -295,9 +295,10 @@ def main() -> None:
             "corpus dataset, bypassing PDF/LLM parsing. Scaffolds Case/"
             "Argument/CaseArgument/ImportRun rows and resolves bench/"
             "advocate speakers into Person/ArgumentParticipant rows. "
-            "Arguments land at status=candidate, paired with a paused "
-            "resolve admin job. Idempotent -- safe to re-run any term or "
-            "conversation."
+            "Arguments land at status=candidate, with no admin job -- "
+            "approve via the argument-scoped approve action instead "
+            "(Phase 50). Idempotent -- safe to re-run any term or "
+            "conversation; a repeat run reconciles rather than skipping."
         ),
     )
     import_convokit_term_group = import_convokit_p.add_mutually_exclusive_group(

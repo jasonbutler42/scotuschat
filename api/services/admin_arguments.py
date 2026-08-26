@@ -623,6 +623,70 @@ async def update_argument(
     return await get_argument_detail(db, argument_id)
 
 
+async def approve_argument(db: AsyncSession, argument_id: int) -> dict | None:
+    """Transition an argument from CANDIDATE to DRAFT (Phase 50, D-14).
+
+    This is the argument-scoped peer of `api.services.admin_jobs.approve_job`
+    (PATTERNS.md rates that function an exact analog) with the job legs
+    removed — no `AdminJob` is read, written, or required. `approve_job`
+    remains the PDF path's job-scoped wrapper; this function is what a
+    corpus argument (which never has an `AdminJob` as of this phase, D-14/
+    D-19) calls instead. `reset_to_fixture` calls this function directly
+    for its Draft/Published fixtures (replacing its two `approve_job`
+    calls).
+
+    This is the ONLY writer of `resolved_at` for a jobless corpus argument
+    — without it, `publish_argument`'s non-overridable `resolved_at IS
+    NULL` refusal would make such an argument permanently unpublishable.
+
+    Sets `status = DRAFT` and `resolved_at = now()`.
+
+    Returns None if the argument does not exist (router → 404 T-11-IDOR
+    precedent — never trust a client-supplied id without a matching row).
+    Raises ValueError naming the argument's current status when it is not
+    CANDIDATE (the same double-approve guard `approve_job` enforces).
+
+    Writes one ArgumentStatusLog row (status=DRAFT) — the "Created"
+    transition record (D-08 precedent) — in the same transaction as the
+    Argument update.
+
+    Recomputes and stores arguments.trust_tier in the same transaction,
+    before this function's own commit (D-07, 48-RESEARCH.md Pitfall 2).
+
+    Uses .execution_options(synchronize_session=False) (project-wide
+    critical guard, Pitfall 5).
+    """
+    result = await db.execute(select(Argument).where(Argument.id == argument_id))
+    argument = result.scalar_one_or_none()
+    if argument is None:
+        return None
+
+    if argument.status != ArgumentStatusEnum.CANDIDATE:
+        raise ValueError(
+            f"Argument is already in '{argument.status.value}' state; cannot approve again."
+        )
+
+    await db.execute(
+        update(Argument)
+        .where(Argument.id == argument_id)
+        .values(status=ArgumentStatusEnum.DRAFT, resolved_at=sqlfunc.now())
+        .execution_options(synchronize_session=False)
+    )
+    db.add(ArgumentStatusLog(argument_id=argument_id, status=ArgumentStatusEnum.DRAFT))
+    # D-07: not itself a constituent change, but every writer recomputes
+    # (48-RESEARCH.md writer #4) — one bounded per-argument query guarantees
+    # the tier is truthful the moment the argument becomes operator-visible.
+    await recompute_argument_tier(db, argument_id)
+    await db.commit()
+    # Phase 31 fix: the bulk update() above uses synchronize_session=False,
+    # so the already-loaded `argument` object never syncs to the new status
+    # in this session's identity map. Refresh it before the caller's own
+    # re-read (same db.refresh() precedent unpublish_argument/publish_
+    # argument already use after their own bulk updates).
+    await db.refresh(argument)
+    return await get_argument_detail(db, argument_id)
+
+
 async def publish_argument(
     db: AsyncSession, argument_id: int, override_reason: str | None = None
 ) -> dict | None:

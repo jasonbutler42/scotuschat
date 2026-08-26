@@ -77,14 +77,12 @@ from dateutil import parser as dateutil_parser
 from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 
+from api.domain.content_digest import compute_utterance_digest
 from api.domain.person_names import prepare_name_provenance, split_legacy_full_name
 from api.services.argument_uniqueness import is_argument_pair_violation
 from api.services.trust import recompute_argument_tier
 
 from api.models.models import (
-    AdminJob,
-    AdminJobStatus,
-    AdminJobStep,
     Argument,
     ArgumentParticipant,
     ArgumentStatusEnum,
@@ -102,7 +100,6 @@ from api.models.models import (
     Utterance,
 )
 from pipeline.commands.ingest import _derive_slug
-from pipeline.commands.resolve import normalize_label
 from pipeline.corpus import apolitical, stage_directions
 from pipeline.corpus.loader import (
     load_cases,
@@ -402,46 +399,6 @@ async def _next_question_number(session, source_docket: str) -> int:
     return 1 if current_max is None else current_max + 1
 
 
-def _build_discrepancies(participants: list[ArgumentParticipant]) -> list[dict]:
-    """
-    Build one HIT-shaped discrepancy dict per already-resolved corpus
-    participant (D-05 parity), mirroring `pipeline.commands.resolve`'s
-    HIT-branch `discrepancies.append(...)` shape exactly (30-PATTERNS.md)
-    so `ResolveCard.svelte`'s per-row Action column (Confirm/Change/Create
-    person) renders unmodified for corpus jobs.
-
-    Only participants with a resolved `person_id` are included -- there is
-    no MISS branch here (corpus speakers are always resolved to a Person
-    by `_resolve_and_link_participant` before this is called; a `None`
-    entry in `resolved_participants` means "no attributable speaker", not
-    "unresolved", and is filtered out by the caller before this function
-    ever sees it -- this second guard is defense-in-depth).
-
-    `auto_match_name` is `p.raw_speaker_label` (not a Person query) because
-    for corpus rows `full_name IS raw_speaker_label` (see
-    `_resolve_and_link_participant`). `auto_match_role` is always `None`
-    because corpus-imported Person rows never set `role_id` (Assumptions
-    Log A2).
-    """
-    return [
-        {
-            "raw_speaker_label": p.raw_speaker_label,
-            "normalized": normalize_label(p.raw_speaker_label),
-            "candidates": [],
-            "auto_match_id": p.person_id,
-            "auto_match_name": p.raw_speaker_label,
-            "auto_match_role": None,
-            "auto_resolved": True,
-            # Phase 44 hint-snapshot fix: mirrors resolve.py's HIT branch —
-            # freezes the side as classified at import time so the Resolve
-            # card's hint can show it independent of any later operator edit.
-            "extracted_side": p.side.value if p.side is not None else None,
-        }
-        for p in participants
-        if p.person_id is not None
-    ]
-
-
 async def _import_conversation(
     session,
     conversation_id: str,
@@ -457,6 +414,11 @@ async def _import_conversation(
     resolution (29-04 Task 3), and utterance streaming/stage-direction
     splitting (29-05 Task 1) for this conversation's `turns` (already
     filtered/grouped by the caller from utterances.jsonl, T-29-03).
+
+    Phase 50 (D-01): a conversation whose oyez_transcript_id already
+    exists is no longer skipped -- it is handed to _reconcile_conversation
+    (the branch this plan's Task 3 establishes; the real compare-and-write
+    body lands in plan 50-05).
 
     Never raises for an anticipated bad/missing join -- increments
     counters["conversations_errored"] and returns early (T-29-05b /
@@ -487,11 +449,21 @@ async def _import_conversation(
         return
 
     # ---- Idempotent Argument dedup on oyez_transcript_id (D-08) ----
+    # Phase 50 (D-01): no more skip-existing early return -- an already-
+    # imported conversation is handed to the reconcile branch instead.
     existing_argument_result = await session.execute(
         select(Argument).where(Argument.oyez_transcript_id == conversation_id)
     )
-    if existing_argument_result.scalar_one_or_none() is not None:
-        counters["skipped_existing"] += 1
+    existing_argument = existing_argument_result.scalar_one_or_none()
+    if existing_argument is not None:
+        await _reconcile_conversation(
+            session=session,
+            argument=existing_argument,
+            conversation_id=conversation_id,
+            turns=turns,
+            speakers_index=speakers_index,
+            counters=counters,
+        )
         return
 
     case = await _get_or_create_case(session, case_fields, counters)
@@ -566,38 +538,13 @@ async def _import_conversation(
     if link_result.scalar_one_or_none() is None:
         session.add(CaseArgument(case_id=case.id, argument_id=argument.id, is_lead=True))
 
-    # ---- ImportRun -- this single row performs the combined work the PDF
-    # pipeline splits across three separate CLI-invoked stages (ingest,
-    # parse, resolve), but is labeled by its function -- the run that writes
-    # this argument's Utterance rows -- matching the meaning
-    # api/services/arguments.py's get_argument_with_utterances and
-    # api/services/admin_jobs.py's get_run_id_for_step already give
-    # step="parse" everywhere else in the codebase. Created BEFORE any
-    # utterance write path (T-29-09). Phase 47 (D-03's locked mapping,
-    # convokit_import -> corpus/direct): declares source=CORPUS/
-    # method=DIRECT explicitly; external_id is a dual-write of the
-    # ConvoKit conversation id (Argument.oyez_transcript_id, set below at
-    # argument creation, remains the live dedup key and public API field --
-    # RESEARCH.md Pitfall 1). No pdf_path/pdf_url -- the corpus path
-    # fabricates no PDF artifacts (PROV-06).
-    run = ImportRun(
-        argument_id=argument.id,
-        step="parse",
-        status=ImportRunStatus.COMPLETED,
-        source=ImportSource.CORPUS,
-        method=ImportMethod.DIRECT,
-        external_id=conversation_id,
-    )
-    session.add(run)
-    await session.flush()
-
     # ---- Task 3: speaker resolution for the conversation's advocates ----
     # `resolved_participants` caches speaker_id -> ArgumentParticipant for
-    # this conversation only (not persisted/global) -- both the advocates
-    # loop below and the utterance-import loop (29-05 Task 1) share it, so
-    # a speaker with many turns is resolved via _resolve_and_link_participant
-    # (a DB round trip + counters increment) exactly ONCE per conversation,
-    # not once per turn.
+    # this conversation only (not persisted/global) -- the advocates loop
+    # below, _incoming_utterance_rows (read-only), and _import_utterances
+    # (write) all share it, so a speaker with many turns is resolved via
+    # _resolve_and_link_participant (a DB round trip + counters increment)
+    # exactly ONCE per conversation, not once per turn.
     resolved_participants: dict[str, ArgumentParticipant | None] = {}
     advocates = conversation.get("advocates") or {}
     for speaker_id, advocate_meta in advocates.items():
@@ -614,35 +561,62 @@ async def _import_conversation(
             argued_date=argued_date,
         )
 
-    # ---- 29-05 Task 1: stream this conversation's turns into Utterance rows ----
-    await _import_utterances(
-        session=session,
-        argument_id=argument.id,
-        import_run_id=run.id,
+    # ---- Phase 50 (D-13, Task 2/Task 3): compute the ordered incoming rows
+    # and their frozen content digest BEFORE any DB write on this path --
+    # _incoming_utterance_rows resolves/creates NO Person/ArgumentParticipant
+    # row, so this is safe to call on the reconcile branch too (see
+    # _reconcile_conversation below) without violating its no-write
+    # guarantee. Factoring turn-splitting/label-derivation through this ONE
+    # helper is what keeps the digest from ever disagreeing with the rows
+    # _import_utterances goes on to write.
+    incoming_rows = _incoming_utterance_rows(
         turns=turns,
         speakers_index=speakers_index,
         resolved_participants=resolved_participants,
         counters=counters,
-        argued_date=argued_date,
     )
+    content_digest = compute_utterance_digest(incoming_rows)
 
-    # ---- Phase 30: pause every corpus-imported argument for operator
-    # review (D-01, D-03) ---- Inserted here, after _import_utterances
-    # returns, because bench (Justice) participants are discovered only
-    # while streaming utterances -- both the advocates loop above and
-    # _import_utterances write into resolved_participants by reference, so
-    # only now does resolved_participants.values() hold every participant
-    # for this argument (30-RESEARCH.md Pattern 3). No separate
-    # commit/flush -- get_session()'s context manager commits this whole
-    # per-conversation transaction atomically on clean exit.
-    resolved = [p for p in resolved_participants.values() if p is not None]
-    session.add(
-        AdminJob(
-            status=AdminJobStatus.PAUSED,
-            current_step=AdminJobStep.RESOLVE,
-            argument_id=argument.id,
-            discrepancies=_build_discrepancies(resolved),
-        )
+    # ---- ImportRun -- this single row performs the combined work the PDF
+    # pipeline splits across three separate CLI-invoked stages (ingest,
+    # parse, resolve), but is labeled by its function -- the run that writes
+    # this argument's Utterance rows -- matching the meaning
+    # api/services/arguments.py's get_argument_with_utterances and
+    # api/services/admin_jobs.py's get_run_id_for_step already give
+    # step="parse" everywhere else in the codebase. Created BEFORE any
+    # utterance write path (T-29-09; the participant resolution above does
+    # not write Utterance rows, so this ordering constraint still holds).
+    # Phase 47 (D-03's locked mapping, convokit_import -> corpus/direct):
+    # declares source=CORPUS/method=DIRECT explicitly; external_id is a
+    # dual-write of the ConvoKit conversation id (Argument.oyez_transcript_id,
+    # set above at argument creation, remains the live dedup key and public
+    # API field -- RESEARCH.md Pitfall 1). No pdf_path/pdf_url -- the corpus
+    # path fabricates no PDF artifacts (PROV-06). content_digest (D-13) is
+    # stamped at construction time, not via a later UPDATE.
+    run = ImportRun(
+        argument_id=argument.id,
+        step="parse",
+        status=ImportRunStatus.COMPLETED,
+        source=ImportSource.CORPUS,
+        method=ImportMethod.DIRECT,
+        external_id=conversation_id,
+        content_digest=content_digest,
+    )
+    session.add(run)
+    await session.flush()
+
+    # ---- 29-05 Task 1: write this conversation's precomputed rows as
+    # Utterance rows, resolving any bench/turn-discovered participant not
+    # already in resolved_participants from the advocates loop above ----
+    await _import_utterances(
+        session=session,
+        argument_id=argument.id,
+        import_run_id=run.id,
+        rows=incoming_rows,
+        speakers_index=speakers_index,
+        resolved_participants=resolved_participants,
+        counters=counters,
+        argued_date=argued_date,
     )
 
     # D-07/writer #1 (48-RESEARCH.md): stamp the tier last, after every
@@ -651,7 +625,83 @@ async def _import_conversation(
     # on clean exit of run_import_convokit's `async with` block, so this
     # call is inside the same birth transaction; no session.commit() is
     # added here (48-RESEARCH.md Pitfall 2).
+    #
+    # Phase 50 (D-14/D-19): no AdminJob is created here -- the corpus path
+    # no longer fabricates a job to borrow the PDF path's resolve/approve
+    # machinery. A corpus argument reaches DRAFT via api.services.
+    # admin_arguments.approve_argument instead (Task 3, argument-scoped).
     await recompute_argument_tier(session, argument.id)
+
+
+async def _reconcile_conversation(
+    session,
+    argument: Argument,
+    conversation_id: str,
+    turns: list[dict],
+    speakers_index: dict,
+    counters: dict,
+) -> None:
+    """
+    Phase 50 (D-01/D-06/D-09/D-13, OQ-3; 50-01-PLAN.md Task 3, item 5):
+    the reconcile branch a repeat corpus import over an already-imported
+    conversation takes, replacing the old skip-existing early return.
+
+    THIS TASK establishes only the branch, the digest read, and the no-op
+    guarantee D-09's byte-identical proof rests on -- it writes NOTHING in
+    either branch below. The full compare-and-apply body (D-02's field
+    walk, D-07's restamp, D-08's published check, D-10's utterance
+    rewrite) is built in plan 50-05 of this same phase.
+
+    Reads the argument's LATEST step="parse" run's content_digest (OQ-3 --
+    never a step="reconcile" run's; there are none yet at this point in
+    the phase) and computes the incoming digest via
+    _incoming_utterance_rows/compute_utterance_digest -- the SAME
+    write-free helper _import_conversation's first-import path uses, so an
+    identical re-import produces an identical digest with zero DB writes
+    (no participant resolution, no Utterance rows) on this path.
+
+    Equal digests: counters["arguments_unchanged"] increments, nothing is
+    written, nothing is recorded.
+
+    Unequal digests, OR the stored digest is NULL (the row predates this
+    phase and was never stamped): counters["arguments_reconciled"]
+    increments and a WARNING names the argument id and conversation id --
+    still nothing is written. A future pass (plan 50-05) is what actually
+    applies D-02's field-level compare-and-write here.
+    """
+    latest_parse_digest = (
+        await session.execute(
+            select(ImportRun.content_digest)
+            .where(ImportRun.argument_id == argument.id, ImportRun.step == "parse")
+            .order_by(ImportRun.id.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+
+    # No Person/ArgumentParticipant resolution happens here -- an empty
+    # resolved_participants seed means every row's raw_speaker_label is
+    # derived purely from speakers_index (a pure function of speaker_id),
+    # identical to what the first-import path would have derived via the
+    # advocates loop, and with zero DB writes either way.
+    incoming_rows = _incoming_utterance_rows(
+        turns=turns,
+        speakers_index=speakers_index,
+        resolved_participants={},
+        counters=counters,
+    )
+    incoming_digest = compute_utterance_digest(incoming_rows)
+
+    if latest_parse_digest is not None and latest_parse_digest == incoming_digest:
+        counters["arguments_unchanged"] = counters.get("arguments_unchanged", 0) + 1
+        return
+
+    counters["arguments_reconciled"] = counters.get("arguments_reconciled", 0) + 1
+    print(
+        f"WARNING: conversation {conversation_id!r} (argument_id="
+        f"{argument.id}) content digest differs from the stored step="
+        "'parse' run (or none is stored yet) -- reconcile compare-and-"
+        "write is not implemented until plan 50-05; no rows written."
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -929,6 +979,12 @@ async def _resolve_and_link_participant(
         # freshly-resolved corpus participant to UNCERTAIN (D-18).
         source=ImportSource.CORPUS,
         method=ImportMethod.DIRECT,
+        # Phase 50 (D-04): the explicit re-import pairing key -- the
+        # ConvoKit speaker id this participant row was resolved from.
+        # Threaded into every corpus participant this importer writes so
+        # plan 50-05's reconcile pass can pair by id rather than by the
+        # display-string raw_speaker_label dedup key above.
+        oyez_speaker_id=speaker_id,
     )
     session.add(participant)
     await session.flush()
@@ -976,23 +1032,142 @@ def _split_turn_into_rows(text: str) -> list[tuple[str, bool]]:
     return rows
 
 
+def _incoming_utterance_rows(
+    turns: list[dict],
+    speakers_index: dict,
+    resolved_participants: dict[str, "ArgumentParticipant | None"],
+    counters: dict,
+) -> list[dict]:
+    """
+    Phase 50 (D-13, Task 3 item 3): compute the ordered incoming row dicts
+    `_import_utterances` would write for ONE argument's `turns`, WITHOUT
+    writing any Utterance row and WITHOUT resolving or creating any
+    Person/ArgumentParticipant row -- so this is safe to call from
+    `_reconcile_conversation`'s no-write digest comparison as well as the
+    first-import path (D-09's byte-identical proof depends on this).
+
+    Factors `_import_utterances`'s (pre-Phase-50) turn-splitting,
+    malformed-row validation (V5), and sequence-assignment logic through
+    this ONE place -- two implementations of "the incoming row set" is
+    exactly how the digest would start disagreeing with the rows actually
+    written (D-13).
+
+    Each returned row dict carries the four D-13-frozen digest fields
+    (`sequence`, `raw_speaker_label`, `text`, `is_stage_direction`) PLUS one
+    extra field, `speaker_id` (`None` for stage-direction rows and for rows
+    with no attributable speaker) -- `compute_utterance_digest` ignores any
+    key outside its frozen four, so this extra field never affects the
+    digest. It exists purely so a caller that DOES need to write Utterance
+    rows (`_import_utterances`) can resolve/create the row's participant
+    without re-deriving `speaker_id` from `turns` a second time.
+
+    `raw_speaker_label` is derived the SAME way
+    `_resolve_and_link_participant` derives `full_name` -- directly from
+    `speakers_index`, never via a DB round trip -- because that value is a
+    pure function of `(speaker_id, speakers_index)`, identical whether the
+    participant was resolved via the advocates loop, turn discovery, or (on
+    a reconcile pass) never resolved at all. `resolved_participants` is
+    read-only here: an already-resolved advocate's `raw_speaker_label` is
+    reused directly instead of recomputed; this function NEVER writes to
+    `resolved_participants` -- that cache mutation stays
+    `_import_utterances`'s job.
+
+    Malformed turns/rows (missing "conversation_id"/"text", or missing
+    "speaker" on a spoken row) are counted in
+    counters["utterance_rows_errored"] and skipped (V5), matching
+    pre-Phase-50 behavior exactly.
+    """
+    rows: list[dict] = []
+    sequence = 0
+    seen_unattributed: set[str] = set()
+
+    for turn in turns:
+        if not isinstance(turn, dict) or "conversation_id" not in turn or turn.get("text") is None:
+            counters["utterance_rows_errored"] = (
+                counters.get("utterance_rows_errored", 0) + 1
+            )
+            print(
+                f"WARNING: malformed utterance row {turn!r} -- missing "
+                "conversation_id/text key(s), flagged, skipped (V5)."
+            )
+            continue
+
+        split_rows = _split_turn_into_rows(turn["text"])
+        if not split_rows:
+            continue
+
+        speaker_id: str | None = None
+        raw_speaker_label: str | None = None
+        if any(not is_stage for _, is_stage in split_rows):
+            speaker_id = turn.get("speaker")
+            if not speaker_id:
+                counters["utterance_rows_errored"] = (
+                    counters.get("utterance_rows_errored", 0) + 1
+                )
+                print(
+                    f"WARNING: utterance row for conversation "
+                    f"{turn.get('conversation_id')!r} missing 'speaker' key "
+                    "-- flagged, skipped (V5)."
+                )
+                continue
+
+            if speaker_id in resolved_participants:
+                # Already resolved (advocates loop) -- reuse its
+                # raw_speaker_label directly, no recomputation, no write.
+                cached = resolved_participants[speaker_id]
+                if cached is None:
+                    raw_speaker_label = None
+                    speaker_id = None  # no attributable speaker
+                else:
+                    raw_speaker_label = cached.raw_speaker_label
+            else:
+                speaker_meta = speakers_index.get(speaker_id) or {}
+                if _is_unattributed_speaker_type(speaker_meta):
+                    if speaker_id not in seen_unattributed:
+                        seen_unattributed.add(speaker_id)
+                        counters["unattributed_speakers_skipped"] = (
+                            counters.get("unattributed_speakers_skipped", 0) + 1
+                        )
+                    raw_speaker_label = None
+                    speaker_id = None  # no attributable speaker
+                else:
+                    raw_speaker_label = (
+                        speaker_meta.get("name")
+                        or speaker_meta.get("full_name")
+                        or turn.get("speaker")
+                    )
+
+        for row_text, is_stage in split_rows:
+            sequence += 1
+            rows.append(
+                {
+                    "sequence": sequence,
+                    "raw_speaker_label": None if is_stage else raw_speaker_label,
+                    "text": row_text,
+                    "is_stage_direction": is_stage,
+                    "speaker_id": None if is_stage else speaker_id,
+                }
+            )
+
+    return rows
+
+
 async def _import_utterances(
     session,
     argument_id: int,
     import_run_id: int,
-    turns: list[dict],
+    rows: list[dict],
     speakers_index: dict,
     resolved_participants: dict[str, ArgumentParticipant],
     counters: dict,
     argued_date=None,
 ) -> None:
     """
-    Write one Utterance row per ConvoKit turn (D-18), or per split-out
-    segment when a turn contains stage-direction marker segments (D-16),
-    for one already-scaffolded argument + pipeline run, in the streamed
-    (transcript) order the turns were encountered (T-29-03 -- `turns` is
-    already a small, term-scoped in-memory list; never the full 900MB
-    file).
+    Write one Utterance row per precomputed row dict from
+    `_incoming_utterance_rows` (D-13; see that function's docstring for why
+    turn-splitting/sequence-assignment/label-derivation was factored out of
+    this function), in the same streamed (transcript) order the rows were
+    computed in.
 
     `argued_date` (Phase 42 Task 3, item 2) is threaded through to every
     fresh `_resolve_and_link_participant` call this function makes below
@@ -1003,27 +1178,24 @@ async def _import_utterances(
     `resolved_participants` is a per-conversation speaker_id ->
     ArgumentParticipant cache shared with the caller's advocates-loop
     resolution (Task 3) -- a speaker with many turns is resolved via
-    _resolve_and_link_participant (a DB round trip + people-counter
+    `_resolve_and_link_participant` (a DB round trip + people-counter
     increment) exactly ONCE per conversation, not once per turn, keeping
-    the D-14 summary's people-created/matched counts accurate and
-    avoiding redundant DB round trips across a conversation's turns.
+    the D-14 summary's people-created/matched counts accurate and avoiding
+    redundant DB round trips across a conversation's turns. A row's
+    `speaker_id` is `None` for a stage-direction row or a row with no
+    attributable speaker (ConvoKit's own unattributed-speaker sentinel) --
+    matching the pre-Phase-50 `participant is None` path exactly, and never
+    triggering a resolution call.
 
-    `sequence` is a fresh monotonic counter starting at 1 for this
-    argument_id/import_run_id pair (T-29-09 -- every row created here
-    carries a non-null import_run_id and a sequence unique within
+    `sequence` on each row is already a fresh monotonic counter starting at
+    1 for this argument_id/import_run_id pair (T-29-09 -- every row created
+    here carries a non-null import_run_id and a sequence unique within
     (argument_id, import_run_id), matching uq_utterance_arg_run_seq).
-
-    Malformed turns (missing "conversation_id"/"text", or missing
-    "speaker" on a spoken row) are validated (V5) and counted in
-    counters["utterance_rows_errored"] rather than raising an unhandled
-    KeyError mid-batch (T-29-10) -- one bad row does not abort the
-    argument's whole utterance import.
     """
-    sequence = 0
     # D-04 (Phase 42 Task 2, section-hint-derive): tracks which side
     # currently owns the open section, and whether a respondent section
     # has been seen yet -- both persist across the WHOLE conversation's
-    # turns (a section can span many turns), matching parse.py's
+    # rows (a section can span many turns), matching parse.py's
     # non-cascading section_hint semantics (see
     # test_section_hint_not_cascade: exactly one utterance per section
     # carries the hint, every later utterance in that section is null).
@@ -1036,41 +1208,41 @@ async def _import_utterances(
     # change these locals and never carry a hint.
     current_section_side: SideEnum | None = None
     respondent_section_started = False
-    for turn in turns:
-        if not isinstance(turn, dict) or "conversation_id" not in turn or turn.get("text") is None:
-            counters["utterance_rows_errored"] = (
-                counters.get("utterance_rows_errored", 0) + 1
+
+    for row in rows:
+        sequence = row["sequence"]
+        text = row["text"]
+
+        if row["is_stage_direction"]:
+            session.add(
+                Utterance(
+                    argument_id=argument_id,
+                    import_run_id=import_run_id,
+                    sequence=sequence,
+                    raw_speaker_label=None,  # D-16
+                    text=text,
+                    is_stage_direction=True,
+                    side=SideEnum.UNKNOWN,
+                    person_id=None,
+                    section_hint=None,  # D-04: stage directions never
+                    # carry or change a section.
+                )
             )
-            print(
-                f"WARNING: malformed utterance row {turn!r} -- missing "
-                "conversation_id/text key(s), flagged, skipped (V5)."
+            counters["stage_direction_utterances_created"] = (
+                counters.get("stage_direction_utterances_created", 0) + 1
             )
             continue
 
-        rows = _split_turn_into_rows(turn["text"])
-        if not rows:
-            continue
-
-        # Resolve the turn's speaker ONCE -- every spoken row split out of
-        # this turn shares the same speaker; an all-marker turn needs no
-        # participant resolution at all.
-        participant = None
-        if any(not is_stage for _, is_stage in rows):
-            speaker_id = turn.get("speaker")
-            if not speaker_id:
-                counters["utterance_rows_errored"] = (
-                    counters.get("utterance_rows_errored", 0) + 1
-                )
-                print(
-                    f"WARNING: utterance row for conversation "
-                    f"{turn.get('conversation_id')!r} missing 'speaker' key "
-                    "-- flagged, skipped (V5)."
-                )
-                continue
+        # `speaker_id` is None for "no attributable speaker" rows -- the
+        # row's spoken text is still preserved verbatim, just with no
+        # speaker attribution, mirroring how a stage-direction row already
+        # carries no participant.
+        speaker_id = row.get("speaker_id")
+        participant: ArgumentParticipant | None = None
+        if speaker_id:
             # `in` (not `.get(...) is None`) -- a speaker can legitimately
-            # resolve to None (ConvoKit's own unattributed-speaker sentinel,
-            # e.g. "<INAUDIBLE>"); using a None-check here would re-attempt
-            # resolution on every subsequent turn by that same speaker_id
+            # resolve to None; using a None-check here would re-attempt
+            # resolution on every subsequent row by that same speaker_id
             # instead of caching the "no attributable speaker" result once.
             if speaker_id not in resolved_participants:
                 resolved_participants[speaker_id] = await _resolve_and_link_participant(
@@ -1087,80 +1259,47 @@ async def _import_utterances(
                 )
             participant = resolved_participants[speaker_id]
 
-        for row_text, is_stage in rows:
-            sequence += 1
-            if is_stage:
-                session.add(
-                    Utterance(
-                        argument_id=argument_id,
-                        import_run_id=import_run_id,
-                        sequence=sequence,
-                        raw_speaker_label=None,  # D-16
-                        text=row_text,
-                        is_stage_direction=True,
-                        side=SideEnum.UNKNOWN,
-                        person_id=None,
-                        section_hint=None,  # D-04: stage directions never
-                        # carry or change a section.
-                    )
-                )
-                counters["stage_direction_utterances_created"] = (
-                    counters.get("stage_direction_utterances_created", 0) + 1
-                )
-            else:
-                # participant is None for ConvoKit's own unattributed-speaker
-                # sentinel (ambiguous_speaker_id resolved to no Person at
-                # all) -- the row's spoken text is still preserved verbatim,
-                # just with no speaker attribution, mirroring how a
-                # stage-direction row already carries no participant.
-                resolved_side = participant.side if participant else SideEnum.UNKNOWN
+        resolved_side = participant.side if participant else SideEnum.UNKNOWN
 
-                # D-04: derive section_hint. Only a PETITIONER/RESPONDENT/
-                # AMICUS side can open a section; BENCH, UNKNOWN, and "no
-                # attributable speaker" rows fall through with section_hint
-                # left None and current_section_side/respondent_section_
-                # started untouched (they never change the current
-                # section). A side that matches the side which already
-                # opened the current section also gets None -- this is
-                # what keeps the hint non-cascading (one row per section).
-                section_hint = None
-                if (
-                    resolved_side
-                    in (SideEnum.PETITIONER, SideEnum.RESPONDENT, SideEnum.AMICUS)
-                    and resolved_side != current_section_side
-                ):
-                    if resolved_side == SideEnum.RESPONDENT:
-                        section_hint = "respondent"
-                        respondent_section_started = True
-                    elif resolved_side == SideEnum.PETITIONER:
-                        # A petitioner side returning after a respondent
-                        # section already opened is rebuttal, not a second
-                        # "petitioner" section.
-                        section_hint = (
-                            "rebuttal" if respondent_section_started else "petitioner"
-                        )
-                    else:  # SideEnum.AMICUS
-                        section_hint = "amicus"
-                    current_section_side = resolved_side
+        # D-04: derive section_hint. Only a PETITIONER/RESPONDENT/AMICUS
+        # side can open a section; BENCH, UNKNOWN, and "no attributable
+        # speaker" rows fall through with section_hint left None and
+        # current_section_side/respondent_section_started untouched (they
+        # never change the current section). A side that matches the side
+        # which already opened the current section also gets None -- this
+        # is what keeps the hint non-cascading (one row per section).
+        section_hint = None
+        if (
+            resolved_side in (SideEnum.PETITIONER, SideEnum.RESPONDENT, SideEnum.AMICUS)
+            and resolved_side != current_section_side
+        ):
+            if resolved_side == SideEnum.RESPONDENT:
+                section_hint = "respondent"
+                respondent_section_started = True
+            elif resolved_side == SideEnum.PETITIONER:
+                # A petitioner side returning after a respondent section
+                # already opened is rebuttal, not a second "petitioner".
+                section_hint = (
+                    "rebuttal" if respondent_section_started else "petitioner"
+                )
+            else:  # SideEnum.AMICUS
+                section_hint = "amicus"
+            current_section_side = resolved_side
 
-                session.add(
-                    Utterance(
-                        argument_id=argument_id,
-                        import_run_id=import_run_id,
-                        sequence=sequence,
-                        raw_speaker_label=(
-                            participant.raw_speaker_label if participant else None
-                        ),
-                        text=row_text,  # D-18: verbatim, \n preserved
-                        is_stage_direction=False,
-                        side=resolved_side,
-                        person_id=participant.person_id if participant else None,
-                        section_hint=section_hint,
-                    )
-                )
-                counters["utterances_created"] = (
-                    counters.get("utterances_created", 0) + 1
-                )
+        session.add(
+            Utterance(
+                argument_id=argument_id,
+                import_run_id=import_run_id,
+                sequence=sequence,
+                raw_speaker_label=row["raw_speaker_label"],
+                text=text,  # D-18: verbatim, \n preserved
+                is_stage_direction=False,
+                side=resolved_side,
+                person_id=participant.person_id if participant else None,
+                section_hint=section_hint,
+            )
+        )
+        counters["utterances_created"] = counters.get("utterances_created", 0) + 1
 
     await session.flush()
 
@@ -1174,7 +1313,13 @@ async def _import_utterances(
 # introduced here don't need every call site retrofitted.
 _SUMMARY_COUNTER_KEYS: tuple[str, ...] = (
     "arguments_created",
-    "skipped_existing",
+    # Phase 50 (D-01/PD-03): "skipped_existing" is RETIRED, not repurposed
+    # -- D-01 removes the early return no code path incremented it from,
+    # and a permanently-zero "arguments skipped" line would misreport what
+    # the batch did. Replaced by arguments_reconciled/arguments_unchanged
+    # below (the reconcile branch this plan's Task 3 establishes).
+    "arguments_reconciled",
+    "arguments_unchanged",
     "cases_created",
     "utterances_created",
     "stage_direction_utterances_created",
@@ -1208,8 +1353,10 @@ def _accumulate_counters(rollup: dict, term_counters: dict) -> dict:
 def _print_summary(label: str, counters: dict) -> None:
     """
     Print one per-batch summary block (D-14): term year, arguments
-    created, arguments skipped (already imported), cases created,
-    utterances created, stage-direction utterances created, people
+    created, arguments reconciled (content differs, or no stored digest --
+    Phase 50 D-01/D-13, plan 50-05 does the actual compare-and-write) and
+    arguments unchanged (identical content digest, zero-write no-op), cases
+    created, utterances created, stage-direction utterances created, people
     created, people matched (reused), speakers flagged (ambiguous/missing
     type), cases/conversations errored (join failures or bad rows),
     docket/question conflicts -- a distinct, clearly-labeled count of any
@@ -1225,7 +1372,8 @@ def _print_summary(label: str, counters: dict) -> None:
     print(
         f"{label}: "
         f"{c.get('arguments_created', 0)} arguments created, "
-        f"{c.get('skipped_existing', 0)} arguments skipped (already imported), "
+        f"{c.get('arguments_reconciled', 0)} arguments reconciled, "
+        f"{c.get('arguments_unchanged', 0)} arguments unchanged, "
         f"{c.get('cases_created', 0)} cases created, "
         f"{c.get('utterances_created', 0)} utterances created, "
         f"{c.get('stage_direction_utterances_created', 0)} stage-direction "

@@ -2,9 +2,9 @@
 schema_version: 1
 open_count: 23
 waived_count: 0
-fixed_count: 7
-total_count: 30
-last_updated: 2026-08-26T15:35:23.632Z
+fixed_count: 8
+total_count: 31
+last_updated: 2026-08-26T16:33:01.918Z
 ---
 
 # Broken Windows Ledger
@@ -43,8 +43,9 @@ last_updated: 2026-08-26T15:35:23.632Z
 | 26 | 49 | deviation | app/src/routes/admin/arguments/+page.svelte |  | New finding during 49-12 (G-49-5c) live measurement: /admin/arguments overflows at 375px (scrollWidth 680 vs clientWidth 375) via an unwrapped <table> with no overflow-x container -- separate, pre-existing cause independent of AdminSubNav; out of scope for 49-12 (files_modified did not include this page). Not fixed. | open |  | 2026-08-25T10:54:02.125Z |  |
 | 27 | 49 | deviation | app/src/routes/admin/people/+page.svelte |  | New finding during 49-12 (G-49-5c) live measurement: /admin/people overflows at 375px (scrollWidth 403 vs clientWidth 375) via an unwrapped <table> with no overflow-x container -- separate, pre-existing cause independent of AdminSubNav. Was previously masked by AdminSubNav's larger 423px overflow (both pegged the page at the same scrollWidth); only became independently visible after 49-12 fixed the sub-nav. Out of scope for 49-12 (files_modified did not include this page). Not fixed. | open |  | 2026-08-25T10:54:09.338Z |  |
 | 28 | 49 | unrun-verify | app/src/routes/admin/arguments/[id]/+page.svelte |  | Task 3 browser human-check (5 items) not observed — no browser tool available to the executor; see 49-11-SUMMARY.md Human-Check Items section | open |  | 2026-08-25T11:18:44.159Z |  |
-| 29 | 50 | deviation | pipeline/commands/import_convokit.py | 636 | _reconcile_conversation's compare-and-write body is deferred to plan 50-05 by design (50-01-PLAN.md Task 3 scope); it currently only establishes the digest-compare branch and writes nothing on a real content mismatch. | open |  | 2026-08-26T13:51:01.301Z |  |
+| 29 | 50 | deviation | pipeline/commands/import_convokit.py | 636 | _reconcile_conversation's compare-and-write body is deferred to plan 50-05 by design (50-01-PLAN.md Task 3 scope); it currently only establishes the digest-compare branch and writes nothing on a real content mismatch. | fixed |  | 2026-08-26T13:51:01.301Z | 2026-08-26T16:32:56.051Z |
 | 30 | 50-unified-import-path | unrun-verify | app/src/routes/admin/review/+page.svelte |  | 50-04 Task 2 human-check walkthrough not performed: Approve on a candidate corpus argument, tab/filter survival on redirect, Approve button absence post-transition, publish-after-approve, and no-truncation of a discrepancy value at 1280px and narrow viewports — no browser tool / .env admin credential access available to this executor (same constraint as 49-01/49-03/49-05/49-06). | open |  | 2026-08-26T15:35:23.632Z |  |
+| 31 | 50-unified-import-path | unrun-verify | pipeline/commands/import_convokit.py |  | D-09's live double-import byte-identical diff plus an operator-edit-survival walkthrough (this plan's own <verification> block names it as a phase gate, not this plan's own verify) was not run -- the automated half (byte-identical re-import proof, operator-value-survives-a-disagreeing-re-import) is proven by pipeline/tests/test_import_convokit_reconcile.py and test_import_convokit_reimport_tracer.py; the live reset_to_fixture -> import -> snapshot -> re-import -> diff -> edit-as-operator -> re-import -> prove-survival walkthrough is outside a single-plan executor's reach, mirroring 50-01-SUMMARY.md's D4 rationale. | open |  | 2026-08-26T16:33:01.918Z |  |
 
 ````json
 [
@@ -391,10 +392,10 @@ last_updated: 2026-08-26T15:35:23.632Z
     "file": "pipeline/commands/import_convokit.py",
     "line": 636,
     "description": "_reconcile_conversation's compare-and-write body is deferred to plan 50-05 by design (50-01-PLAN.md Task 3 scope); it currently only establishes the digest-compare branch and writes nothing on a real content mismatch.",
-    "status": "open",
+    "status": "fixed",
     "reason": "",
     "recorded_at": "2026-08-26T13:51:01.301Z",
-    "resolved_at": null
+    "resolved_at": "2026-08-26T16:32:56.051Z"
   },
   {
     "id": 30,
@@ -406,6 +407,18 @@ last_updated: 2026-08-26T15:35:23.632Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-08-26T15:35:23.632Z",
+    "resolved_at": null
+  },
+  {
+    "id": 31,
+    "kind": "unrun-verify",
+    "phase": "50-unified-import-path",
+    "file": "pipeline/commands/import_convokit.py",
+    "line": null,
+    "description": "D-09's live double-import byte-identical diff plus an operator-edit-survival walkthrough (this plan's own <verification> block names it as a phase gate, not this plan's own verify) was not run -- the automated half (byte-identical re-import proof, operator-value-survives-a-disagreeing-re-import) is proven by pipeline/tests/test_import_convokit_reconcile.py and test_import_convokit_reimport_tracer.py; the live reset_to_fixture -> import -> snapshot -> re-import -> diff -> edit-as-operator -> re-import -> prove-survival walkthrough is outside a single-plan executor's reach, mirroring 50-01-SUMMARY.md's D4 rationale.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-08-26T16:33:01.918Z",
     "resolved_at": null
   }
 ]

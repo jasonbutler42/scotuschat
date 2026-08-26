@@ -319,7 +319,7 @@ Plans:
   3. Re-running any import is idempotent — the same input yields the same rows and never clobbers operator-authored values.
   4. The authority ordering (operator > corpus > pdf/rule > pdf/llm) governs the overwrite decision on every writer.
 
-**Plans**: 3/7 plans executed (4 waves)
+**Plans**: 5/7 plans executed (4 waves)
 
 Plans:
 **Wave 1**
@@ -334,7 +334,7 @@ Plans:
 **Wave 3** *(blocked on Wave 2 completion)*
 
 - [x] 50-04-PLAN.md — `/admin/review` surfaces: argument- and case-level discrepancy render, and the Approve action on a candidate row (wave 3)
-- [ ] 50-05-PLAN.md — The reconcile compare-and-record pass: D-02 walk, D-07 restamp, D-08 published freeze, D-10 whole-set utterance replacement, `--dry-run` and the batch counters (wave 3)
+- [x] 50-05-PLAN.md — The reconcile compare-and-record pass: D-02 walk, D-07 restamp, D-08 published freeze, D-10 whole-set utterance replacement, `--dry-run` and the batch counters (wave 3)
 - [ ] 50-06-PLAN.md — The D-22 delegation sweep across resolve.py, parse.py and import_justices_csv.py, plus the D-24 executable behavioral gate (wave 3)
 
 **Wave 4** *(blocked on Wave 3 completion)*
@@ -417,7 +417,7 @@ Plans:
 | 47. Provenance Foundation | v1.8 | 6/6 | Complete    | 2026-08-18 |
 | 48. Trust & Lifecycle | v1.8 | 10/10 | Complete    | 2026-08-21 |
 | 49. Review Model | v1.8 | 12/12 | Complete    | 2026-08-25 |
-| 50. Unified Import Path | v1.8 | 3/7 | In Progress|  |
+| 50. Unified Import Path | v1.8 | 5/7 | In Progress|  |
 | 51. Design System & Noun Alignment | v1.8 | 0/TBD | Not started | - |
 
 ## Backlog

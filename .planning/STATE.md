@@ -4,17 +4,17 @@ milestone: v1.8
 milestone_name: Import & Provenance Re-model
 current_phase: 50
 current_phase_name: Unified Import Path
-status: "Phase 50 EXECUTING — Wave 2 complete, Wave 3 plan 50-04 complete (2026-08-26): 50-02/50-03 (Wave 2), 50-04 (/admin/review discrepancy render + argument-scoped Approve action) all done. 50-05/50-06 (rest of Wave 3) and Wave 4 (50-07) remain."
-stopped_at: Completed 50-04-PLAN.md
-last_updated: "2026-08-26T15:37:05.902Z"
+status: "Phase 50 EXECUTING — Wave 2 complete, Wave 3 plans 50-04/50-05 complete (2026-08-26): 50-02/50-03 (Wave 2), 50-04 (/admin/review discrepancy render + argument-scoped Approve action), 50-05 (the real compare-and-record reconcile pass) all done. 50-06 (rest of Wave 3) and Wave 4 (50-07) remain."
+stopped_at: Completed 50-05-PLAN.md
+last_updated: "2026-08-26T16:34:13.416Z"
 last_activity: 2026-08-26
-last_activity_desc: Phase 50 execution started
-state_head: d6510de0b95109e7b1a7a1dfbe13761b39ae3534
+last_activity_desc: Phase 50 execution continued — plan 50-05 complete
+state_head: fd0e080b2432169fa819195603c90a76b9d27fb2
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 35
-  completed_plans: 32
+  completed_plans: 33
   percent: 60
 ---
 
@@ -32,16 +32,17 @@ See: .planning/PROJECT.md (updated 2026-08-18 — Phase 47 complete; corpus-firs
 ## Current Position
 
 Phase: 50 (Unified Import Path) — EXECUTING
-Last activity: 2026-08-26 — Plan 50-04 (Wave 3) complete
+Last activity: 2026-08-26 — Plan 50-05 (Wave 3) complete
 
-**Next action:** Waves 1-2 and plan `50-04` (Wave 3) are all complete. Proceed with `/gsd-execute-phase 50` to run the remaining Wave 3 plans (`50-05`, `50-06`), then Wave 4 (`50-07`).
+**Next action:** Waves 1-2 and plans `50-04`/`50-05` (Wave 3) are all complete. Proceed with `/gsd-execute-phase 50` to run the remaining Wave 3 plan (`50-06`), then Wave 4 (`50-07`).
 
 - **Wave 1: `50-01` — COMPLETE (2026-08-26).** Migration `0030` (six nullable columns, no backfill), the frozen `api/domain/content_digest.py` contract (Task 0 checkpoint: `freeze-as-proposed`), and the `type="tracer"` slice: corpus import creates zero `AdminJob` rows, stamps `oyez_speaker_id`/`content_digest`, survives a byte-identical double-import across all eight affected tables, and `approve_argument` + a reworked `reset_to_fixture` replace the AdminJob-based approve path. `_reconcile_conversation` establishes only the branch/digest-read/no-op guarantee — the real compare-and-write body is `50-05`'s. Full suite: 1507 passed, 5 xfailed, 0 failed. See `50-01-SUMMARY.md`.
 - **Wave 2 plan `50-02` — COMPLETE (2026-08-26).** `apply_argument_value_change`/`apply_case_value_change` — true peers of the two Phase 49 gate functions, both routing through the single `decide_write`. PD-07 fail-closed NULL-provenance pre-check. PD-13 gap-fill pre-check applied to all four gate functions, with a deliberate OPERATOR-authority scope guard on the two EXISTING gates (deviation — the literal unconditional plan text would have reopened the CR-02/CR-04 defect; see `50-02-SUMMARY.md`). `_argument_attention_predicate` legs 5/6 + `ReviewQueueArgumentItem.argument_discrepancies` make an argument-level or lead-case-level discrepancy visible in `/admin/review` (render itself is `50-04`'s). Full suite: 1535 passed, 5 xfailed, 0 failed (was 1507/5; +28 new tests, zero regressions). See `50-02-SUMMARY.md`.
 - **Wave 2 plan `50-03` — COMPLETE (2026-08-26).** `POST /api/admin/arguments/{id}/approve` (D-14) makes a jobless corpus argument publishable end to end. `_stamp_operator_provenance` (PD-08) makes `Argument`/`Case`'s five compare-set columns reach OPERATOR authority — proved by a round-trip where a disagreeing corpus write is `REJECT_AND_RECORD`. `delete_argument`'s gate inverted to published-only (D-25/PD-11) with a `value_discrepancy` cascade fix (D-26) — including a real FK-orphaning gap this plan's own testing found and fixed (a surviving discrepancy row could reference an `ImportRun` about to be deleted; now NULLed first, mirroring the existing `AdminJob.argument_id` pattern). Full suite: 1554 passed, 5 xfailed, 0 failed (was 1535/5; +19 net new tests). See `50-03-SUMMARY.md`.
 - **Wave 2 — DONE.** Both plans (`50-02`, `50-03`) complete.
 - **Wave 3 plan `50-04` — COMPLETE (2026-08-26).** `/admin/review`: an argument-level or lead-case-level `value_discrepancy` now renders (a Discrepancy badge on the collapsed row's case name, a stored/incoming detail block at the top of the expanded panel, reusing the participant-level styling verbatim), and a CANDIDATE argument's expanded panel carries an "Approve — move to Draft" action posting to `50-03`'s argument-scoped approve route. Deviation: the Approve form was placed OUTSIDE the per-constituent `{#each}` loop the plan's read_first pointer named — a literal per-constituent placement would have either duplicated the button or (for a candidate argument with zero flagged constituents, queued solely via a degraded tier or an argument/case discrepancy) never rendered it at all, breaking D-14's own stated purpose. Task 2's browser `<human-check>` was NOT observed this session — no browser tool / `.env` admin credential access available; recorded as `WINDOWS.md` entry 30. Full suite: 1561 passed, 5 xfailed, 0 failed (was 1554/5; +7 is exactly the new contract-test assertions, zero regressions). See `50-04-SUMMARY.md`.
-- Wave 3 (remaining): `50-05` (the reconcile compare-and-record pass — builds directly on `50-01`'s `_reconcile_conversation` branch and calls `50-02`'s two new gates), `50-06` (D-22 delegation sweep + D-24 behavioral gate).
+- **Wave 3 plan `50-05` — COMPLETE (2026-08-26).** The real D-02 compare-and-record field walk replaces `50-01`'s placeholder: `Argument`/`Case`/`ArgumentParticipant`/`Person` compare-set fields walked through the Phase 49/50-02 gates in PD-14's fixed order on every reconcile pass; D-04 `oyez_speaker_id`-only pairing; D-06's lazy `step="reconcile"` run (predictor imports `admin_review`'s own no-opinion/gap-fill helpers directly, never re-implements — PD-15); D-07's unconditional restamp; D-08's PUBLISHED-argument record-only freeze; D-10/D-11/D-13's whole-set utterance replacement under a new `step="parse"` run; D-28's `--dry-run` plus PD-17's five new batch counters. Two auto-fixed deviations found via the tracer test: (1) Rule 2 — `Argument`/`Case` never stamped `source`/`method` at first-import creation (unlike `ArgumentParticipant`/`ImportRun`), breaking D-09's byte-identical proof once D-07's restamp started firing; (2) Rule 1 — a brand-new `Person`'s `review_state` is `None` in-memory pre-flush, crashing `apply_person_value_change`. 35 new tests; `WINDOWS.md` #29 (the deferred-body placeholder) marked fixed, #31 added for D-09's live walkthrough (phase gate, not this plan's own verify). Full suite: 1596 passed, 5 xfailed, 0 failed (was 1561/5; +35 new tests, zero regressions). See `50-05-SUMMARY.md`.
+- Wave 3 (remaining): `50-06` (D-22 delegation sweep + D-24 behavioral gate).
 - Wave 4: `50-07` (offline `prune-runs`, public-leak ban, dispositioned writer inventory).
 
 Three researcher open questions were resolved by the operator at planning time and are LOCKED in the plans: **OQ-1** — nullable `source`/`method` on both `Argument` and `Case`, no backfill, NULL is unknown and fails closed; **OQ-2** — `reset_to_fixture` keeps all four reference states, "Mid-pipeline" preserved by seeding a `step="reconcile"` ImportRun; **OQ-3** — the comparison digest is read from the latest `step="parse"` run, and a diff writes a new `step="parse"` run.
@@ -211,6 +212,7 @@ items → 14.** Every closure carries its evidence in the file it closes; the co
 | Phase 50 P02 | 55min | 2 tasks | 5 files |
 | Phase 50 P03 | 100min | 3 tasks | 6 files |
 | Phase 50-unified-import-path P04 | 45min | 2 tasks | 3 files |
+| Phase 50 P05 | 195min | 3 tasks | 3 files |
 
 v1.7 per-plan metrics cleared at this milestone boundary per the standard STATE.md reset; the underlying per-plan SUMMARY files remain in `.planning/milestones/v1.7-phases/`.
 
@@ -285,6 +287,8 @@ Full cross-milestone decision log lives in PROJECT.md's Key Decisions table. Per
 - [Phase 50]: 50-03: update_argument_metadata deliberately does NOT stamp operator provenance when it writes argued_date — only question_number/source_docket trigger _stamp_operator_provenance there, matching the plan's own action text and its call-site count acceptance criterion (1 definition + exactly 3 call sites).
 - [Phase 50]: 50-04: The Approve form action was placed OUTSIDE the {#each item.constituents} loop, not inside the per-constituent action row the plan's read_first pointer named -- a literal per-constituent placement would either duplicate the button once per flagged constituent, or never render at all for a CANDIDATE argument queued solely via a degraded-tier or argument/case-discrepancy leg with zero flagged constituents, which is the primary use case D-14 exists to unblock.
 - [Phase 50]: 50-04: The local ReviewQueueArgumentItem TypeScript type Task 1 asked to extend lives in +page.server.ts, not in +page.svelte's module script (the .svelte file declares no local types; it infers PageData). Edited +page.server.ts instead.
+- [Phase 50]: Plan 50-05: the D-06 lazy-reconcile-run predictor imports admin_review's own _values_differ/_is_gap_fill/_normalize_generic directly rather than re-implementing them, so it can never diverge from the gate's own write/record decision (PD-15).
+- [Phase 50]: Plan 50-05: Argument/Case first-import creation now stamps source=corpus/method=direct (matching ArgumentParticipant/ImportRun) -- a Rule 2 fix required for D-07's restamp to not itself break D-09's byte-identical re-import guarantee.
 
 ### Roadmap Evolution
 
@@ -344,8 +348,8 @@ at close.
 
 ## Session Continuity
 
-Last session: 2026-08-26T15:37:05.170Z
-Stopped at: Completed 50-04-PLAN.md
+Last session: 2026-08-26T16:34:13.012Z
+Stopped at: Completed 50-05-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

@@ -387,6 +387,42 @@ def test_status_segment_group_can_shrink_and_scroll() -> None:
     )
 
 
+# ─────────────────────────────────────────────────────────────────────────
+# Phase 50 plan 50-04, Task 1: argument-level / lead-case-level discrepancy
+# rendering. Structural source-text assertions only — the real behavioral
+# evidence is Task 2's <human-check> browser walkthrough (see the project
+# memory note on the $state-proxy-vs-grep-contract-test trap: a green
+# assertion here does not by itself prove the render is correct).
+# ─────────────────────────────────────────────────────────────────────────
+
+
+def test_argument_discrepancies_referenced_at_least_three_times() -> None:
+    assert REVIEW_SOURCE.count("argument_discrepancies") >= 3
+
+
+def test_argument_discrepancies_iterated_with_keyed_each_on_id() -> None:
+    assert "{#each item.argument_discrepancies as d (d.id)}" in REVIEW_SOURCE
+
+
+def test_argument_discrepancies_render_both_existing_and_incoming_through_display_helper() -> None:
+    match = re.search(
+        r"\{#each item\.argument_discrepancies as d \(d\.id\)\}.*?\{/each\}",
+        REVIEW_SOURCE,
+        re.DOTALL,
+    )
+    assert match, "expected an {#each item.argument_discrepancies as d (d.id)} block"
+    block = match.group(0)
+    assert "discrepancyValueDisplay(d.existing_value)" in block
+    assert "discrepancyValueDisplay(d.incoming_value)" in block
+
+
+def test_argument_level_discrepancy_row_badge_conditioned_on_non_empty_list() -> None:
+    assert "{#if item.argument_discrepancies.length > 0}" in REVIEW_SOURCE
+    # At least two guards: the collapsed-row case-name badge and the
+    # expanded-panel block, both keyed on the same non-empty-list condition.
+    assert REVIEW_SOURCE.count("{#if item.argument_discrepancies.length > 0}") >= 2
+
+
 def test_no_truncation_or_media_query_introduced_on_the_review_page() -> None:
     """
     49-UI-SPEC E1/E2 long-text and E6 overflow forbid truncation outright —

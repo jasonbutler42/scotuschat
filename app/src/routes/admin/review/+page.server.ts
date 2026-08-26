@@ -37,6 +37,11 @@ type ReviewQueueArgumentItem = {
 	admin_job_id: number | null;
 	constituents: ReviewQueueConstituent[];
 	blockers: TierBlocker[];
+	// Phase 50 plan 50-02 (PD-09): open value_discrepancy rows recorded
+	// directly against this argument's own value columns or its lead
+	// case's columns — distinct from constituents[].discrepancies, which
+	// covers only argument_participant-level rows. Rendered by 50-04.
+	argument_discrepancies: DiscrepancyDetail[];
 };
 
 type ReviewQueuePersonItem = {

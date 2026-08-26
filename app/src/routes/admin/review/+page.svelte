@@ -472,6 +472,10 @@
 							</td>
 							<td style="padding: 12px; border-bottom: 1px solid #334155; vertical-align: top; color: #e2e8f0; font-size: 16px;">
 								{item.case_name}
+								{#if item.argument_discrepancies.length > 0}
+									<span style="display: inline-block; width: 4px;"></span>
+									<span style={discrepancyBadgeStyle()}>Discrepancy</span>
+								{/if}
 							</td>
 							<td style="padding: 12px; border-bottom: 1px solid #334155; vertical-align: top; color: #94a3b8; font-size: 14px; white-space: nowrap;">
 								{item.docket_number}
@@ -506,6 +510,23 @@
 						{#if expandedIds.has(item.id)}
 							<tr>
 								<td colspan="6" style="padding: 0 0 16px 0; border-bottom: 1px solid #334155;">
+									{#if item.argument_discrepancies.length > 0}
+										<div style="background-color: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 16px; margin: 4px 12px 16px 12px;">
+											<div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px;">
+												<span style="color: #e2e8f0; font-size: 16px;">This argument's own values and its lead case's</span>
+												<span style={discrepancyBadgeStyle()}>Discrepancy</span>
+											</div>
+											{#each item.argument_discrepancies as d (d.id)}
+												<p style="font-size: 14px; margin: 4px 0;">
+													<span style="color: #94a3b8;">{d.field}: existing</span>
+													<span style="color: #e2e8f0;"> {discrepancyValueDisplay(d.existing_value)}</span>
+													<span style="color: #94a3b8;"> ({d.existing_source ?? '—'}/{d.existing_method ?? '—'}) — incoming</span>
+													<span style="color: #e2e8f0;"> {discrepancyValueDisplay(d.incoming_value)}</span>
+													<span style="color: #94a3b8;"> ({d.incoming_source ?? '—'}/{d.incoming_method ?? '—'})</span>
+												</p>
+											{/each}
+										</div>
+									{/if}
 									{#if item.constituents.length > 0}
 										<div style="display: flex; flex-direction: column; gap: 16px; padding: 4px 12px 0 12px;">
 											{#each item.constituents as constituent (constituent.participant_id)}

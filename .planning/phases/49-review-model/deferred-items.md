@@ -98,12 +98,23 @@ implements, and distinct from G-49-3, which 49-10 closed): a published argument 
 directory and can be repointed wholesale by a person merge; because a `Person` is shared
 across every argument they appear in, any lock there would freeze a sitting Justice's
 record permanently the moment one of their arguments publishes. Should `Person`-level
-edits be restricted at all, and if so on what boundary? No lock was applied either way
-pending the answer.
+edits be restricted at all, and if so on what boundary?
 
-**Status:** open — awaiting the operator's answer to the NEW `Person`-scoped question above.
-D-35a itself (the whole-argument scope question this section used to record as open) is
-now LOCKED and implemented — see `49-CONTEXT.md`'s `### D-35a (locked)` entry.
+**Answered by D-23 (operator, 2026-08-25, Phase 50, `50-CONTEXT.md`): no Person-level
+published lock.** Zero implementation follows — this is a decision record, not a code
+change. Three reasons, carried verbatim in substance from `50-CONTEXT.md`:
+
+1. A `Person` is shared across every argument they appear in, so any lock freezes a
+   sitting Justice's record permanently the moment one of their arguments publishes.
+2. Under D-35 a Person's name, photo, and bio is not "the data for that argument" — the
+   same reasoning that already keeps `resolve_participant_review`/`resolve_person_review`
+   (review-state-only writes) unlocked in the table above.
+3. It keeps the road open for the deferred Person-dedup fix (White/Black/Clark/Douglas,
+   carried since Phase 42), which needs merges on exactly these Justices.
+
+**Status:** closed — 2026-08-25, D-23 (operator), cited in `50-CONTEXT.md`. D-35a itself
+(the whole-argument scope question this section used to record as open) has been LOCKED
+and implemented since 49-11 — see `49-CONTEXT.md`'s `### D-35a (locked)` entry.
 
 ## D-35 convergence (49-10) — the public chat page's independently derived bench flag is NOT reconciled, and this plan makes it MORE reachable
 
@@ -152,3 +163,42 @@ a candidate pool) that this plan's `files_modified` list and time budget do not 
 
 **Status:** open — not raised by the operator; current remedy is the Resolve card. Candidate
 follow-up if the operator wants person reassignment from the argument-detail page directly.
+
+## D-24 writer inventory (50-07) — `parse.py`'s TOC-mapping side/descriptor writers bypass the authority gate entirely
+
+**Found during:** 50-07 Task 3, building `50-WRITER-INVENTORY.md` — reading every writer's
+source directly (per D-24's own instruction) rather than trusting D-22's enumeration or
+50-06's already-converted list, exactly the discipline that already found the two writers
+50-05/50-06 fixed (`resolve.py`'s bulk `person_id` UPDATE, `import_convokit`'s
+`_apply_extracted_name_provenance`).
+
+**The defect:** `pipeline/commands/parse.py::_update_participant_sides` and
+`::_update_participant_descriptors` (Phase 16 PARSE-02 / Phase 22 PJOB-13, both pre-dating
+Phase 49's authority ladder) write `ArgumentParticipant.side`/`.descriptor` by direct ORM
+attribute assignment (`p.side = ...`, `p.descriptor = ...`) from a TOC-derived label map,
+called unconditionally on **every** parse pass — including a re-parse of an argument whose
+participant rows already survived a prior pass. `ArgumentParticipant` rows persist across
+re-parses (select-before-insert dedup on `raw_speaker_label`, `_run_parse_inner` Step 7b) —
+so a participant an operator already moved to a different side via
+`admin_arguments.update_participant_side` (gated) can be silently overwritten back to the
+TOC's mapping on the next re-parse. No `apply_participant_value_change` call, no
+`review_state` check, no `source`/`method` stamp — the exact overwrite-an-operator-edit
+failure mode D-22's whole sweep exists to close, on the one call site the sweep never
+named.
+
+**Why not fixed here:** out of scope for plan 50-07 (a documentation-and-closeout plan;
+`pipeline/commands/parse.py` is not in its `files_modified`) and out of scope for 50-06
+(already shipped, closed, and summarized before this defect was found — 50-06's own
+`files_modified` covered `parse.py`'s Blocks A/B/D cover-metadata writes only, never this
+Phase-16-era TOC-mapping helper pair). A real fix needs a per-row `apply_participant_value_
+change` conversion mirroring `resolve.py`'s own `_apply_resolved_person_ids` shape (50-06's
+established pattern), a decision on `incoming_source`/`incoming_method` for a TOC-derived
+correction (likely `run.source`/`run.method`, matching Block D's convention), and dedicated
+tests — the same class of "new decision, not a bug fix, needs its own mandate" reasoning
+the trust-tier regression item at the top of this file already used for a sibling gap in
+this same file's history.
+
+**Status:** open — not fixed by this plan. Candidate follow-up: a small plan converting
+`_update_participant_sides`/`_update_participant_descriptors` to per-row gate calls,
+mirroring 50-06's `resolve.py` conversion, with its own `test_gated_column_writers.py`
+coverage.

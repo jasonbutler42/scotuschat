@@ -319,12 +319,12 @@ Plans:
   3. Re-running any import is idempotent — the same input yields the same rows and never clobbers operator-authored values.
   4. The authority ordering (operator > corpus > pdf/rule > pdf/llm) governs the overwrite decision on every writer.
 
-**Plans**: 7 plans (4 waves)
+**Plans**: 1/7 plans executed (4 waves)
 
 Plans:
 **Wave 1**
 
-- [ ] 50-01-PLAN.md — Migration 0030, the frozen content-digest contract, and the tracer: one corpus conversation imported twice, unchanged, with no AdminJob anywhere (wave 1)
+- [x] 50-01-PLAN.md — Migration 0030, the frozen content-digest contract, and the tracer: one corpus conversation imported twice, unchanged, with no AdminJob anywhere (wave 1)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -417,7 +417,7 @@ Plans:
 | 47. Provenance Foundation | v1.8 | 6/6 | Complete    | 2026-08-18 |
 | 48. Trust & Lifecycle | v1.8 | 10/10 | Complete    | 2026-08-21 |
 | 49. Review Model | v1.8 | 12/12 | Complete    | 2026-08-25 |
-| 50. Unified Import Path | v1.8 | 0/TBD | Not started | - |
+| 50. Unified Import Path | v1.8 | 1/7 | In Progress|  |
 | 51. Design System & Noun Alignment | v1.8 | 0/TBD | Not started | - |
 
 ## Backlog

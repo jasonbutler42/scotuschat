@@ -1093,7 +1093,7 @@
 					id="delete-tip"
 					style="font-size: 14px; color: #94a3b8; margin-top: 8px; text-align: center;"
 				>
-					Published and unpublished arguments cannot be deleted. Only drafts can be removed.
+					Published arguments cannot be deleted.
 				</p>
 			{/if}
 		</div>

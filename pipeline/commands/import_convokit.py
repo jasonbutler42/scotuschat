@@ -69,16 +69,32 @@ without pulling in the rest of its term as a side effect.
 from __future__ import annotations
 
 import argparse
+import functools
 from collections import defaultdict
 from datetime import date
 from pathlib import Path
 
 from dateutil import parser as dateutil_parser
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 
+from api.domain.authority import WriteDecision, decide_write
 from api.domain.content_digest import compute_utterance_digest
 from api.domain.person_names import prepare_name_provenance, split_legacy_full_name
+from api.services.admin_review import (
+    _is_gap_fill,  # noqa: F401 -- Phase 50 (PD-15): imported directly (never
+    # re-implemented) so the lazy-run predictor below can never diverge from
+    # the gate's own gap-fill decision.
+    _normalize_generic,  # noqa: F401 -- ditto, for the D-03 blank-incoming
+    # predictor (argument/case fields) and the published-freeze record-only
+    # branch's own no-opinion check.
+    _values_differ,  # noqa: F401 -- ditto, the equality predictor.
+    apply_argument_value_change,
+    apply_case_value_change,
+    apply_participant_value_change,
+    apply_person_value_change,
+    record_value_discrepancy,
+)
 from api.services.argument_uniqueness import is_argument_pair_violation
 from api.services.trust import recompute_argument_tier
 
@@ -367,6 +383,10 @@ async def _get_or_create_case(session, case_fields: dict, counters: dict) -> Cas
         term_year=case_fields["year"],  # D-15 -- never int(argued_date[:4])
         slug=_derive_slug(case_name),
         oyez_case_id=case_fields.get("case_id"),  # D-10
+        # Phase 50 plan 50-05 (Rule 2 deviation, D-21/D-22): see the
+        # matching Argument(...) comment above -- same gap, same fix.
+        source=ImportSource.CORPUS,
+        method=ImportMethod.DIRECT,
     )
     session.add(new_case)
     await session.flush()
@@ -407,6 +427,7 @@ async def _import_conversation(
     speakers_index: dict,
     turns: list[dict],
     counters: dict,
+    dry_run: bool = False,
 ) -> None:
     """
     Import one conversation: idempotent Case/Argument/CaseArgument/
@@ -416,9 +437,18 @@ async def _import_conversation(
     filtered/grouped by the caller from utterances.jsonl, T-29-03).
 
     Phase 50 (D-01): a conversation whose oyez_transcript_id already
-    exists is no longer skipped -- it is handed to _reconcile_conversation
-    (the branch this plan's Task 3 establishes; the real compare-and-write
-    body lands in plan 50-05).
+    exists is no longer skipped -- it is handed to _reconcile_conversation,
+    which ALWAYS reconciles (the real compare-and-write body plan 50-05
+    builds out; plan 50-01 only established the branch and the digest
+    no-op guarantee).
+
+    Phase 50 plan 50-05 (D-28, Task 3): `dry_run=True` on the FIRST-import
+    path (no existing argument) skips the whole conversation with a
+    counted, printed line rather than half-applying entity creation --
+    scoped this way per the plan's own note ("never silently import on a
+    dry run") rather than threading dry-run through every write site below.
+    The reconcile branch's own dry-run handling is separate (see
+    _reconcile_conversation / _predict_reconcile).
 
     Never raises for an anticipated bad/missing join -- increments
     counters["conversations_errored"] and returns early (T-29-05b /
@@ -460,9 +490,25 @@ async def _import_conversation(
             session=session,
             argument=existing_argument,
             conversation_id=conversation_id,
+            conversation=conversation,
+            case_fields=case_fields,
             turns=turns,
             speakers_index=speakers_index,
             counters=counters,
+            dry_run=dry_run,
+        )
+        return
+
+    if dry_run:
+        # D-28/Task 3: a dry run never creates an argument either -- skip
+        # the whole conversation with a printed line (PD-17 fixes the full
+        # counter set; this path adds none of its own) rather than
+        # half-applying first-import entity creation.
+        print(
+            f"DRY RUN: conversation {conversation_id!r} has no existing "
+            "argument -- first-import creation is skipped under --dry-run "
+            "(D-28); would create one Argument/Case/CaseArgument/ImportRun "
+            "set on a real run."
         )
         return
 
@@ -494,6 +540,14 @@ async def _import_conversation(
         # Anti-Patterns).
         status=ArgumentStatusEnum.CANDIDATE,
         oyez_transcript_id=conversation_id,  # D-10
+        # Phase 50 plan 50-05 (Rule 2 deviation, D-21/D-22): declared at
+        # write time like every other corpus-stamped row in this module
+        # (ArgumentParticipant, ImportRun) -- without this, a fresh corpus
+        # argument's source/method stay NULL until the FIRST reconcile
+        # pass restamps them (D-07), which is itself a real column-value
+        # change and breaks D-09's byte-identical re-import guarantee.
+        source=ImportSource.CORPUS,
+        method=ImportMethod.DIRECT,
     )
     session.add(argument)
     try:
@@ -633,42 +687,525 @@ async def _import_conversation(
     await recompute_argument_tier(session, argument.id)
 
 
+class _ReconcileContext:
+    """
+    Phase 50 plan 50-05 (Task 1): per-argument bookkeeping shared by every
+    helper in a single `_reconcile_conversation` pass -- the session, the
+    argument, the running counters, the dry-run flag, and the lazily
+    minted `step="reconcile"` `ImportRun` id (D-06). One instance per
+    reconcile call; never reused across arguments.
+    """
+
+    def __init__(self, *, session, argument, conversation_id, speakers_index, counters, dry_run):
+        self.session = session
+        self.argument = argument
+        self.conversation_id = conversation_id
+        self.speakers_index = speakers_index
+        self.counters = counters
+        self.dry_run = dry_run
+        self.reconcile_run_id: int | None = None
+
+
+async def _ensure_reconcile_run(ctx: _ReconcileContext) -> int:
+    """
+    D-06: create the `step="reconcile"` `ImportRun` on first call and
+    return its id thereafter -- memoized on `ctx.reconcile_run_id`.
+
+    MUST NEVER be called speculatively -- only from a code path that is
+    about to write a value or record a discrepancy (see `_needs_reconcile_
+    run` below, which every call site consults first) -- because a true
+    no-op must add zero rows for D-09's byte-identical proof to be
+    possible. Never called in dry-run mode (the dry-run branch never
+    calls this function at all).
+    """
+    if ctx.reconcile_run_id is not None:
+        return ctx.reconcile_run_id
+    run = ImportRun(
+        argument_id=ctx.argument.id,
+        step="reconcile",
+        status=ImportRunStatus.COMPLETED,
+        source=ImportSource.CORPUS,
+        method=ImportMethod.DIRECT,
+        external_id=ctx.conversation_id,
+        content_digest=None,  # OQ-3: a reconcile run carries no comparison digest
+    )
+    ctx.session.add(run)
+    await ctx.session.flush()
+    ctx.reconcile_run_id = run.id
+    return run.id
+
+
+def _needs_reconcile_run(
+    field: str, incoming_value, existing_value, *, has_no_opinion_check: bool
+) -> bool:
+    """
+    Predicts whether calling the real gate for this field could write-and-
+    record or reject-and-record -- i.e. whether `_ensure_reconcile_run`
+    must fire before the gate call (D-06). Used ONLY to decide whether to
+    eagerly mint the lazy run; it never makes or duplicates the gate's own
+    accept/reject/record decision (PD-15).
+
+    Reuses admin_review's own `_normalize_generic`/`_is_gap_fill`/
+    `_values_differ` (imported directly, never re-implemented) so this
+    predictor can never diverge from what the gate itself decides. A field
+    the predictor marks "needs a run" that the gate's own D-03/gap-fill
+    short-circuit ultimately resolves as ACCEPT-no-record simply mints a
+    run that ends up recording nothing -- harmless, and the ONLY case this
+    predictor actually protects (D-09's byte-identical no-op) never
+    reaches that false-positive: on an identical re-import every field's
+    incoming value literally equals its existing value, so
+    `_values_differ` returns False for every field simultaneously and no
+    run is ever minted.
+
+    `has_no_opinion_check` mirrors D-03's scope exactly: True for
+    Argument/Case fields (whose gates implement the blank-incoming
+    no-opinion pre-check), False for ArgumentParticipant/Person fields
+    (whose gates do not -- PD-15's "the reconcile pass does NOT
+    re-implement [D-03]" is about the real write path, not this
+    same-outcome-guaranteed predictor).
+    """
+    if (
+        has_no_opinion_check
+        and _normalize_generic(incoming_value) is None
+        and _normalize_generic(existing_value) is not None
+    ):
+        return False
+    if _is_gap_fill(field, incoming_value, existing_value):
+        return False
+    return _values_differ(field, incoming_value, existing_value)
+
+
+def _count_decision(counters: dict, decision) -> None:
+    """PD-17: increment the four write/record whole-batch counters from
+    one gate call's returned `WriteDecision` (or `None` for D-03's
+    no-opinion, which increments nothing)."""
+    if decision is None:
+        return
+    if decision in (WriteDecision.ACCEPT, WriteDecision.ACCEPT_AND_RECORD):
+        counters["values_accepted"] = counters.get("values_accepted", 0) + 1
+    if decision == WriteDecision.REJECT_AND_RECORD:
+        counters["values_rejected"] = counters.get("values_rejected", 0) + 1
+    if decision in (WriteDecision.ACCEPT_AND_RECORD, WriteDecision.REJECT_AND_RECORD):
+        counters["discrepancies_recorded"] = counters.get("discrepancies_recorded", 0) + 1
+
+
+async def _reconcile_field(
+    ctx: _ReconcileContext,
+    gate_call,
+    *,
+    target,
+    field: str,
+    incoming_value,
+    existing_value,
+    has_no_opinion_check: bool,
+):
+    """
+    Walk one D-02 compare-set field through its authority gate (D-21) on
+    the ordinary (non-published, non-dry-run) path.
+
+    `gate_call` is a `functools.partial` of one of the four gate
+    functions with its target object already bound (e.g.
+    `functools.partial(apply_argument_value_change, argument=argument)`)
+    -- this function supplies `field`/`incoming_value`/`incoming_source`/
+    `incoming_method`/`import_run_id`.
+
+    Every gate issues its write via `execution_options(synchronize_
+    session=False)`, so the in-memory ORM attribute is synced via
+    `setattr` on any accepted decision -- later readers in this SAME
+    pass (Task 2's participant.person_id sourcing, D-11) must see the
+    fresh value, not a stale pre-write one.
+    """
+    run_id = None
+    if _needs_reconcile_run(
+        field, incoming_value, existing_value, has_no_opinion_check=has_no_opinion_check
+    ):
+        run_id = await _ensure_reconcile_run(ctx)
+    decision = await gate_call(
+        ctx.session,
+        field=field,
+        incoming_value=incoming_value,
+        incoming_source=ImportSource.CORPUS.value,
+        incoming_method=ImportMethod.DIRECT.value,
+        import_run_id=run_id,
+    )
+    if decision in (WriteDecision.ACCEPT, WriteDecision.ACCEPT_AND_RECORD):
+        setattr(target, field, incoming_value)
+    _count_decision(ctx.counters, decision)
+    return decision
+
+
+async def _record_published_diff(
+    ctx: _ReconcileContext,
+    *,
+    target_type: str,
+    target_id: int,
+    field: str,
+    incoming_value,
+    existing_value,
+    existing_source: str | None,
+    existing_method: str | None,
+) -> None:
+    """
+    D-08: the PUBLISHED-argument record-only branch. Never calls a gate
+    and never writes a column -- compares `incoming_value` against
+    `existing_value` directly and records one open `value_discrepancy`
+    row when (and only when) they genuinely disagree.
+
+    This is the ONE place besides the dry-run branch that reads the
+    normalization/gap-fill contract without going through a gate --
+    unavoidable, since D-08 forbids calling a gate AT ALL here (a gate
+    call is inseparable from its own write). Mirrors the same no-opinion
+    (blank incoming vs. populated existing) and gap-fill (blank existing
+    vs. populated incoming) skip conditions the real gates apply, so a
+    corpus with genuinely no data for this field, or a genuine blank-slate
+    fill, is never misreported as a "disagreement" on a published
+    argument's discrepancy log.
+    """
+    if _normalize_generic(incoming_value) is None and _normalize_generic(existing_value) is not None:
+        return
+    if _is_gap_fill(field, incoming_value, existing_value):
+        return
+    if not _values_differ(field, incoming_value, existing_value):
+        return
+    run_id = await _ensure_reconcile_run(ctx)
+    await record_value_discrepancy(
+        ctx.session,
+        target_type=target_type,
+        target_id=target_id,
+        field=field,
+        import_run_id=run_id,
+        incoming_value=incoming_value,
+        existing_value=existing_value,
+        incoming_source=ImportSource.CORPUS.value,
+        incoming_method=ImportMethod.DIRECT.value,
+        existing_source=existing_source,
+        existing_method=existing_method,
+    )
+    ctx.counters["discrepancies_recorded"] = ctx.counters.get("discrepancies_recorded", 0) + 1
+
+
+async def _pair_participants_by_speaker_id(
+    session, argument_id: int, incoming_speaker_ids: set[str]
+) -> dict[str, ArgumentParticipant]:
+    """
+    D-04: build a `oyez_speaker_id -> ArgumentParticipant` map for this
+    argument's STORED rows, read-only, ordered by `ArgumentParticipant.id`
+    ASC (PD-14). Pairing is on `oyez_speaker_id` ONLY -- never
+    `raw_speaker_label`, never a `Person` lookup.
+
+    A stored row is included ONLY when its `oyez_speaker_id` is non-NULL
+    AND present in `incoming_speaker_ids` -- i.e. genuinely paired to a
+    speaker the corpus still mentions this pass. A stored row with a NULL
+    `oyez_speaker_id` (operator-created or otherwise undervivable) is
+    unpairable and simply never appears in the returned map -- the caller
+    never iterates it, so it is left entirely alone (D-05, Claude's
+    Discretion note). A stored row whose `oyez_speaker_id` the corpus no
+    longer mentions is likewise absent from the map and left untouched
+    (D-05).
+    """
+    result = await session.execute(
+        select(ArgumentParticipant)
+        .where(ArgumentParticipant.argument_id == argument_id)
+        .order_by(ArgumentParticipant.id)
+    )
+    rows = result.scalars().all()
+    return {
+        row.oyez_speaker_id: row
+        for row in rows
+        if row.oyez_speaker_id is not None and row.oyez_speaker_id in incoming_speaker_ids
+    }
+
+
+async def _restamp_corpus_provenance(session, model, row_id: int) -> None:
+    """
+    D-07 (PD-16): after ANY accepted overwrite on this reconcile pass,
+    unconditionally restamp `source`/`method` to corpus/direct -- even a
+    row that already carried a `source` value. The provenance columns
+    describe where the value came FROM, not where it originally came
+    from. `review_state` is deliberately NOT touched here (see D-07's
+    rationale in 50-CONTEXT.md). `Person` has no `source`/`method`
+    columns, so this is only ever called for `Argument`, `Case`, and
+    `ArgumentParticipant`.
+
+    Distinct from the backfill-only precedent at
+    `api/services/admin_jobs.py`'s `resolve_participant_review` (guarded
+    on `participant.source is None`) -- that precedent must NOT be reused
+    verbatim here; D-07 requires an unconditional restamp.
+    """
+    await session.execute(
+        update(model)
+        .where(model.id == row_id)
+        .values(source=ImportSource.CORPUS, method=ImportMethod.DIRECT)
+        .execution_options(synchronize_session=False)
+    )
+
+
+async def _fetch_lead_case(session, argument_id: int) -> Case | None:
+    """Read-only: this argument's LEAD linked `Case` row (D-19's
+    lead-docket-only convention), or `None` if somehow unlinked."""
+    result = await session.execute(
+        select(Case)
+        .join(CaseArgument, CaseArgument.case_id == Case.id)
+        .where(CaseArgument.argument_id == argument_id, CaseArgument.is_lead == True)  # noqa: E712
+    )
+    return result.scalar_one_or_none()
+
+
 async def _reconcile_conversation(
     session,
     argument: Argument,
     conversation_id: str,
+    conversation: dict,
+    case_fields: dict,
     turns: list[dict],
     speakers_index: dict,
     counters: dict,
+    dry_run: bool = False,
 ) -> None:
     """
-    Phase 50 (D-01/D-06/D-09/D-13, OQ-3; 50-01-PLAN.md Task 3, item 5):
-    the reconcile branch a repeat corpus import over an already-imported
-    conversation takes, replacing the old skip-existing early return.
+    Phase 50 plan 50-05 (D-01/D-02/D-04/D-06/D-07/D-08/D-09/D-10/D-11/
+    D-13, OQ-3, PD-14/PD-15/PD-16): the real compare-and-record pass a
+    repeat corpus import over an already-imported conversation takes,
+    replacing plan 50-01's placeholder branch.
 
-    THIS TASK establishes only the branch, the digest read, and the no-op
-    guarantee D-09's byte-identical proof rests on -- it writes NOTHING in
-    either branch below. The full compare-and-apply body (D-02's field
-    walk, D-07's restamp, D-08's published check, D-10's utterance
-    rewrite) is built in plan 50-05 of this same phase.
+    Walks the WHOLE D-02 compare set in PD-14's fixed order --
+    `Argument.argued_date`/`question_number`/`source_docket`, lead
+    `Case.case_name`/`docket_number`, each paired participant's
+    `person_id`/`side`/`descriptor`, then each paired participant's
+    `Person` name-parts (via `_resolve_person`, visiting each Person at
+    most once) -- on EVERY reconcile pass, including a byte-identical
+    re-import (every field then resolves ACCEPT-no-record or D-03's
+    no-opinion, and `_needs_reconcile_run`'s predictor never mints a run,
+    so D-09's zero-rows guarantee holds).
 
-    Reads the argument's LATEST step="parse" run's content_digest (OQ-3 --
-    never a step="reconcile" run's; there are none yet at this point in
-    the phase) and computes the incoming digest via
-    _incoming_utterance_rows/compute_utterance_digest -- the SAME
-    write-free helper _import_conversation's first-import path uses, so an
-    identical re-import produces an identical digest with zero DB writes
-    (no participant resolution, no Utterance rows) on this path.
+    `question_number` has no corpus source at all -- ConvoKit carries no
+    concept of it, so its incoming value is always `None`, which the
+    Argument gate's own D-03 pre-check resolves as permanent no-opinion.
+    It is still walked (present in PD-14's order) for documentation/
+    symmetry, at zero cost.
 
-    Equal digests: counters["arguments_unchanged"] increments, nothing is
-    written, nothing is recorded.
+    D-08: when `argument.status == PUBLISHED`, the ENTIRE pass runs in
+    record-only mode via `_record_published_diff` for the Argument/Case
+    legs -- no gate is called, no column is written, no participant/
+    person walk happens (nothing there could ever accept-and-record once
+    `_apply_extracted_name_provenance`'s own gap-fill-only design is
+    accounted for -- see that function's docstring), and no utterance
+    replacement happens either (guarded further down).
+    `published_writes_skipped` increments exactly once per pass,
+    unconditionally.
 
-    Unequal digests, OR the stored digest is NULL (the row predates this
-    phase and was never stamped): counters["arguments_reconciled"]
-    increments and a WARNING names the argument id and conversation id --
-    still nothing is written. A future pass (plan 50-05) is what actually
-    applies D-02's field-level compare-and-write here.
+    Utterance replacement (D-10/D-11/D-13) is delegated to
+    `_replace_utterance_set` when the incoming content digest differs
+    from the latest stored `step="parse"` run's (OQ-3) -- see that
+    function and the digest-comparison block at the end of this one.
     """
+    ctx = _ReconcileContext(
+        session=session,
+        argument=argument,
+        conversation_id=conversation_id,
+        speakers_index=speakers_index,
+        counters=counters,
+        dry_run=dry_run,
+    )
+    is_published = argument.status == ArgumentStatusEnum.PUBLISHED
+
+    if dry_run:
+        await _predict_reconcile(ctx, conversation, case_fields, turns, is_published=is_published)
+        return
+
+    if is_published:
+        counters["published_writes_skipped"] = counters.get("published_writes_skipped", 0) + 1
+
+    # ---- PD-14 items 1-3: Argument fields ----
+    incoming_argued_date = _parse_argued_date(case_fields, conversation_id)
+    argument_field_plan = (
+        ("argued_date", incoming_argued_date, argument.argued_date),
+        # No corpus source exists for question_number -- always no-opinion
+        # (D-03); walked for PD-14 order/documentation only.
+        ("question_number", None, argument.question_number),
+        ("source_docket", case_fields.get("docket_no"), argument.source_docket),
+    )
+    for arg_field, incoming_value, existing_value in argument_field_plan:
+        if is_published:
+            existing_source_value = argument.source.value if argument.source else None
+            existing_method_value = argument.method.value if argument.method else None
+            await _record_published_diff(
+                ctx,
+                target_type="argument",
+                target_id=argument.id,
+                field=arg_field,
+                incoming_value=incoming_value,
+                existing_value=existing_value,
+                existing_source=existing_source_value,
+                existing_method=existing_method_value,
+            )
+        else:
+            decision = await _reconcile_field(
+                ctx,
+                functools.partial(apply_argument_value_change, argument=argument),
+                target=argument,
+                field=arg_field,
+                incoming_value=incoming_value,
+                existing_value=existing_value,
+                has_no_opinion_check=True,
+            )
+            if decision in (WriteDecision.ACCEPT, WriteDecision.ACCEPT_AND_RECORD):
+                await _restamp_corpus_provenance(session, Argument, argument.id)
+
+    # ---- PD-14 items 4-5: lead Case fields ----
+    lead_case = await _fetch_lead_case(session, argument.id)
+    if lead_case is not None:
+        case_field_plan = (
+            ("case_name", _case_name_from_fields(case_fields), lead_case.case_name),
+            ("docket_number", case_fields.get("docket_no"), lead_case.docket_number),
+        )
+        for c_field, incoming_value, existing_value in case_field_plan:
+            if is_published:
+                existing_source_value = lead_case.source.value if lead_case.source else None
+                existing_method_value = lead_case.method.value if lead_case.method else None
+                await _record_published_diff(
+                    ctx,
+                    target_type="case",
+                    target_id=lead_case.id,
+                    field=c_field,
+                    incoming_value=incoming_value,
+                    existing_value=existing_value,
+                    existing_source=existing_source_value,
+                    existing_method=existing_method_value,
+                )
+            else:
+                decision = await _reconcile_field(
+                    ctx,
+                    functools.partial(apply_case_value_change, case=lead_case),
+                    target=lead_case,
+                    field=c_field,
+                    incoming_value=incoming_value,
+                    existing_value=existing_value,
+                    has_no_opinion_check=True,
+                )
+                if decision in (WriteDecision.ACCEPT, WriteDecision.ACCEPT_AND_RECORD):
+                    await _restamp_corpus_provenance(session, Case, lead_case.id)
+
+    # No Person/ArgumentParticipant resolution happens for the digest
+    # computation below -- an empty resolved_participants seed means every
+    # row's raw_speaker_label is derived purely from speakers_index (a
+    # pure function of speaker_id), identical whether or not the
+    # participant walk below has already run.
+    incoming_rows = _incoming_utterance_rows(
+        turns=turns,
+        speakers_index=speakers_index,
+        resolved_participants={},
+        counters=counters,
+    )
+    advocates = conversation.get("advocates") or {}
+    incoming_speaker_ids = {
+        row["speaker_id"] for row in incoming_rows if row.get("speaker_id")
+    }
+    incoming_speaker_ids |= set(advocates.keys())
+
+    # ---- PD-14 items 6-7: paired participants + their Person name-parts.
+    # D-08: skipped entirely on a PUBLISHED argument -- there is nothing
+    # here that could ever accept-and-record even on the ordinary path
+    # (_apply_extracted_name_provenance only ever gap-fills or no-ops, see
+    # its own docstring), so the record-only branch would have nothing to
+    # record; the new-participant-creation leg below IS a write (a brand
+    # new row), so it is unconditionally skipped for a published argument.
+    if not is_published:
+        paired = await _pair_participants_by_speaker_id(
+            session, argument.id, incoming_speaker_ids
+        )
+        visited_person_ids: set[int] = set()
+        for speaker_id, participant in paired.items():
+            speaker_meta = speakers_index.get(speaker_id) or {}
+            is_justice = _is_justice_type(speaker_meta)
+            if is_justice is None:
+                is_justice = False
+            full_name = (
+                speaker_meta.get("name") or speaker_meta.get("full_name") or speaker_id
+            )
+
+            # ---- Person leg: resolves (and gap-fills, D-21) the Person
+            # this speaker currently maps to -- the SAME oyez_speaker_id
+            # -first/full_name-fallback resolution the first-import path
+            # uses -- so an operator's participant REASSIGNMENT (this
+            # participant's stored person_id pointing at a DIFFERENT
+            # Person than the one this speaker id resolves to) is exactly
+            # what the person_id comparison below detects (D-04's stated
+            # highest-value case).
+            person = await _resolve_person(
+                session, speaker_id, full_name, is_justice, counters
+            )
+            visited_person_ids.add(person.id)
+
+            decision = await _reconcile_field(
+                ctx,
+                functools.partial(apply_participant_value_change, participant=participant),
+                target=participant,
+                field="person_id",
+                incoming_value=person.id,
+                existing_value=participant.person_id,
+                has_no_opinion_check=False,
+            )
+            if decision in (WriteDecision.ACCEPT, WriteDecision.ACCEPT_AND_RECORD):
+                await _restamp_corpus_provenance(
+                    session, ArgumentParticipant, participant.id
+                )
+
+            side_meta = advocates.get(speaker_id)
+            side_code = side_meta.get("side") if isinstance(side_meta, dict) else side_meta
+            incoming_side = (
+                SideEnum.BENCH if is_justice else _ADVOCATE_SIDE_MAP.get(side_code, SideEnum.UNKNOWN)
+            )
+            decision = await _reconcile_field(
+                ctx,
+                functools.partial(apply_participant_value_change, participant=participant),
+                target=participant,
+                field="side",
+                incoming_value=incoming_side,
+                existing_value=participant.side,
+                has_no_opinion_check=False,
+            )
+            if decision in (WriteDecision.ACCEPT, WriteDecision.ACCEPT_AND_RECORD):
+                await _restamp_corpus_provenance(
+                    session, ArgumentParticipant, participant.id
+                )
+
+            # descriptor: corpus never supplies one (PDF-cover-extractor-only
+            # field) -- incoming is always None; walked for PD-14 order.
+            decision = await _reconcile_field(
+                ctx,
+                functools.partial(apply_participant_value_change, participant=participant),
+                target=participant,
+                field="descriptor",
+                incoming_value=None,
+                existing_value=participant.descriptor,
+                has_no_opinion_check=False,
+            )
+            if decision in (WriteDecision.ACCEPT, WriteDecision.ACCEPT_AND_RECORD):
+                await _restamp_corpus_provenance(
+                    session, ArgumentParticipant, participant.id
+                )
+
+        # ---- A speaker present in the corpus with no paired stored row is
+        # a NEW participant -- route through the existing first-import
+        # machinery, which already stamps source/method/oyez_speaker_id.
+        for speaker_id in incoming_speaker_ids:
+            if speaker_id in paired:
+                continue
+            side_meta = advocates.get(speaker_id)
+            side_code = side_meta.get("side") if isinstance(side_meta, dict) else side_meta
+            await _resolve_and_link_participant(
+                session=session,
+                argument_id=argument.id,
+                speaker_id=speaker_id,
+                speakers_index=speakers_index,
+                side_code=side_code,
+                counters=counters,
+                argued_date=argument.argued_date,
+            )
+
+    # ---- D-10/D-11/D-13: utterance replacement, gated on the content
+    # digest and D-08's published freeze.
     latest_parse_digest = (
         await session.execute(
             select(ImportRun.content_digest)
@@ -677,15 +1214,214 @@ async def _reconcile_conversation(
             .limit(1)
         )
     ).scalar_one_or_none()
+    incoming_digest = compute_utterance_digest(incoming_rows)
 
-    # No Person/ArgumentParticipant resolution happens here -- an empty
-    # resolved_participants seed means every row's raw_speaker_label is
-    # derived purely from speakers_index (a pure function of speaker_id),
-    # identical to what the first-import path would have derived via the
-    # advocates loop, and with zero DB writes either way.
+    wrote_anything = ctx.reconcile_run_id is not None
+
+    if latest_parse_digest is not None and latest_parse_digest == incoming_digest:
+        counters["arguments_unchanged"] = counters.get("arguments_unchanged", 0) + 1
+    elif not incoming_rows and latest_parse_digest is not None:
+        # Blank-page hazard defense: an empty incoming set against a
+        # non-empty stored one is far more likely a load/filter defect
+        # than a genuine claim the argument now has zero utterances --
+        # refuse outright rather than silently blanking the public page.
+        counters["conversations_errored"] = counters.get("conversations_errored", 0) + 1
+        print(
+            f"WARNING: conversation {conversation_id!r} (argument_id="
+            f"{argument.id}) incoming utterance set is EMPTY but "
+            f"{len(incoming_rows)} stored rows exist under a prior run -- "
+            "refusing to replace (D-10 blank-page hazard); left untouched, "
+            "counted as an error."
+        )
+    elif is_published:
+        counters["arguments_reconciled"] = counters.get("arguments_reconciled", 0) + 1
+        print(
+            f"WARNING: conversation {conversation_id!r} (argument_id="
+            f"{argument.id}) content digest differs but the argument is "
+            "PUBLISHED -- utterance set left untouched (D-08); unpublish "
+            "to allow a reconcile-driven replacement."
+        )
+    else:
+        counters["arguments_reconciled"] = counters.get("arguments_reconciled", 0) + 1
+        await _replace_utterance_set(ctx, incoming_rows)
+        wrote_anything = True
+
+    if not is_published and wrote_anything:
+        await recompute_argument_tier(session, argument.id)
+
+
+async def _replace_utterance_set(ctx: _ReconcileContext, incoming_rows: list[dict]) -> None:
+    """
+    D-10/D-11/D-13: whole-set utterance replacement under a NEW
+    `step="parse"`/`COMPLETED` `ImportRun`, minted and populated in the
+    SAME transaction as the reconcile pass's caller (`run_import_convokit`
+    's per-conversation `async with get_session()` block, D-30) -- never
+    an intervening commit between minting the run and writing its rows.
+
+    THE HARDEST CONSTRAINT IN THIS PHASE: `api/services/arguments.py`'s
+    `get_argument_with_utterances` selects the newest `step="parse"`/
+    `COMPLETED` run via `MAX(ImportRun.id)`, deliberately not a max over
+    utterances -- a run flushed without its rows makes that argument's
+    public chat page render EMPTY. Steps 1 and 2 below MUST occur with no
+    intervening commit; the caller's own `<precondition>`-equivalent
+    guarantee is the outer per-conversation transaction, and any failure
+    mid-write rolls the whole thing back (D-30's own per-argument
+    atomicity, unchanged).
+
+    Deletes nothing (D-12) -- superseded rows and their run are retained;
+    `pipeline prune-runs` (plan 50-07) is the only thing that ever removes
+    them.
+
+    Person ids on the new rows come from the POST-reconcile
+    `ArgumentParticipant` state (D-11), never the raw corpus speaker
+    mapping: `_import_utterances` is called with a FRESH
+    `resolved_participants={}`, so its own `_resolve_and_link_participant`
+    call performs a fresh `(argument_id, raw_speaker_label)` lookup for
+    every speaker -- for a speaker this pass already paired and
+    reconciled above, that lookup returns the SAME row this transaction
+    already restamped/reassigned, so an operator's participant
+    reassignment survives a re-import for free without this function
+    needing to know anything about the D-02 walk that ran before it.
+    """
+    incoming_digest = compute_utterance_digest(incoming_rows)
+    run = ImportRun(
+        argument_id=ctx.argument.id,
+        step="parse",
+        status=ImportRunStatus.COMPLETED,
+        source=ImportSource.CORPUS,
+        method=ImportMethod.DIRECT,
+        external_id=ctx.conversation_id,
+        content_digest=incoming_digest,
+    )
+    ctx.session.add(run)
+    await ctx.session.flush()
+
+    await _import_utterances(
+        session=ctx.session,
+        argument_id=ctx.argument.id,
+        import_run_id=run.id,
+        rows=incoming_rows,
+        speakers_index=ctx.speakers_index,
+        resolved_participants={},
+        counters=ctx.counters,
+        argued_date=ctx.argument.argued_date,
+    )
+    ctx.counters["utterance_sets_replaced"] = (
+        ctx.counters.get("utterance_sets_replaced", 0) + 1
+    )
+
+
+async def _predict_reconcile(
+    ctx: _ReconcileContext,
+    conversation: dict,
+    case_fields: dict,
+    turns: list[dict],
+    *,
+    is_published: bool,
+) -> None:
+    """
+    Phase 50 plan 50-05 Task 3 (D-28): the `--dry-run` prediction path.
+    Computes every decision `_reconcile_conversation`'s ordinary path
+    would reach -- the SAME extracted incoming values, the SAME
+    `decide_write` ladder call -- but touches ZERO rows: no gate call
+    (which is inseparable from its own write), no `_ensure_reconcile_run`,
+    no `record_value_discrepancy`, no participant/person resolution or
+    creation, no utterance replacement.
+
+    This is the ONE place in this module that calls
+    `api.domain.authority.decide_write` directly instead of going through
+    a gate -- deliberately, and ONLY because it writes nothing: calling
+    the real gate and rolling back would still consume sequence values
+    and risk a partial flush, which is exactly what `--dry-run` exists to
+    avoid. This path MUST NEVER be reachable when `ctx.dry_run` is False
+    -- `_reconcile_conversation` branches to this function before doing
+    ANY other work, so the ordinary path never touches `decide_write`.
+
+    Scoped to Argument/Case fields only (participant/person prediction is
+    a documented simplification -- see 50-05-SUMMARY.md's Deviations
+    section) plus the utterance-replacement prediction via the same
+    digest comparison the real path uses.
+    """
+    counters = ctx.counters
+    argument = ctx.argument
+
+    if is_published:
+        counters["published_writes_skipped"] = (
+            counters.get("published_writes_skipped", 0) + 1
+        )
+
+    def _predict(field, incoming_value, existing_value, existing_source, existing_method):
+        if (
+            _normalize_generic(incoming_value) is None
+            and _normalize_generic(existing_value) is not None
+        ):
+            return  # D-03 no-opinion -- nothing to predict
+        if _is_gap_fill(field, incoming_value, existing_value):
+            counters["values_accepted"] = counters.get("values_accepted", 0) + 1
+            return
+        differ = _values_differ(field, incoming_value, existing_value)
+        decision = decide_write(
+            incoming_source=ImportSource.CORPUS.value,
+            incoming_method=ImportMethod.DIRECT.value,
+            incoming_review_state="",
+            existing_source=existing_source or "",
+            existing_method=existing_method or "",
+            existing_review_state="",
+            values_differ=differ,
+        )
+        _count_decision(counters, decision)
+
+    incoming_argued_date = _parse_argued_date(case_fields, ctx.conversation_id)
+    _predict(
+        "argued_date",
+        incoming_argued_date,
+        argument.argued_date,
+        argument.source.value if argument.source else None,
+        argument.method.value if argument.method else None,
+    )
+    _predict(
+        "question_number",
+        None,
+        argument.question_number,
+        argument.source.value if argument.source else None,
+        argument.method.value if argument.method else None,
+    )
+    _predict(
+        "source_docket",
+        case_fields.get("docket_no"),
+        argument.source_docket,
+        argument.source.value if argument.source else None,
+        argument.method.value if argument.method else None,
+    )
+
+    lead_case = await _fetch_lead_case(ctx.session, argument.id)
+    if lead_case is not None:
+        _predict(
+            "case_name",
+            _case_name_from_fields(case_fields),
+            lead_case.case_name,
+            lead_case.source.value if lead_case.source else None,
+            lead_case.method.value if lead_case.method else None,
+        )
+        _predict(
+            "docket_number",
+            case_fields.get("docket_no"),
+            lead_case.docket_number,
+            lead_case.source.value if lead_case.source else None,
+            lead_case.method.value if lead_case.method else None,
+        )
+
+    latest_parse_digest = (
+        await ctx.session.execute(
+            select(ImportRun.content_digest)
+            .where(ImportRun.argument_id == argument.id, ImportRun.step == "parse")
+            .order_by(ImportRun.id.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
     incoming_rows = _incoming_utterance_rows(
         turns=turns,
-        speakers_index=speakers_index,
+        speakers_index=ctx.speakers_index,
         resolved_participants={},
         counters=counters,
     )
@@ -693,15 +1429,18 @@ async def _reconcile_conversation(
 
     if latest_parse_digest is not None and latest_parse_digest == incoming_digest:
         counters["arguments_unchanged"] = counters.get("arguments_unchanged", 0) + 1
-        return
-
-    counters["arguments_reconciled"] = counters.get("arguments_reconciled", 0) + 1
-    print(
-        f"WARNING: conversation {conversation_id!r} (argument_id="
-        f"{argument.id}) content digest differs from the stored step="
-        "'parse' run (or none is stored yet) -- reconcile compare-and-"
-        "write is not implemented until plan 50-05; no rows written."
-    )
+    elif not incoming_rows and latest_parse_digest is not None:
+        counters["conversations_errored"] = counters.get("conversations_errored", 0) + 1
+    elif is_published:
+        counters["arguments_reconciled"] = counters.get("arguments_reconciled", 0) + 1
+        counters["published_writes_skipped"] = (
+            counters.get("published_writes_skipped", 0) + 1
+        )
+    else:
+        counters["arguments_reconciled"] = counters.get("arguments_reconciled", 0) + 1
+        counters["utterance_sets_replaced"] = (
+            counters.get("utterance_sets_replaced", 0) + 1
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -737,7 +1476,7 @@ def _is_unattributed_speaker_type(speaker_meta: dict) -> bool:
     return str(speaker_type).strip().lower() in _UNATTRIBUTED_TYPE_VALUES
 
 
-def _apply_extracted_name_provenance(person: Person, full_name: str) -> None:
+async def _apply_extracted_name_provenance(session, person: Person, full_name: str) -> None:
     """
     Persist a conservative interpreted-parts + provenance extraction for
     `person` from its `full_name` (D-14-D-18), reusing the same pure
@@ -748,23 +1487,51 @@ def _apply_extracted_name_provenance(person: Person, full_name: str) -> None:
 
     Every call refreshes `provenance_metadata` unconditionally (D-17 --
     "if extraction/reprocessing occurs later, replace the extracted
-    reference with the latest result"). Structured parts are only ever
-    written when the row currently carries NO structured part at all
-    (mirrors migration 0022's own guard exactly -- a row that already has
-    any operator/import-authored part is left completely untouched, never
-    partially clobbered) and only for a High-confidence, round-trip-exact
-    split (`auto_apply=True`, D-11) -- an ambiguous/uncertain interpretation
-    (Low/Medium) is still recorded in the provenance envelope so the
-    operator can see what the extractor thought it saw (D-18), but is never
-    silently written into the authoritative saved columns, and the row's
-    `review_state` is set to NEEDS_REVIEW for the People directory's Name
-    review filter (D-12).
+    reference with the latest result") -- this is metadata, not a D-02
+    gated column, so it is a plain attribute write, never routed through
+    a gate. Structured parts are only ever written when the row currently
+    carries NO structured part at all (mirrors migration 0022's own guard
+    exactly -- a row that already has any operator/import-authored part is
+    left completely untouched, never partially clobbered) and only for a
+    High-confidence, round-trip-exact split (`auto_apply=True`, D-11) -- an
+    ambiguous/uncertain interpretation (Low/Medium) is still recorded in
+    the provenance envelope so the operator can see what the extractor
+    thought it saw (D-18), but is never silently written into the
+    authoritative saved columns, and the row's `review_state` is set to
+    NEEDS_REVIEW for the People directory's Name review filter (D-12).
 
     Note the asymmetry deliberately (Phase 49 D-08, D-11, D-24): the
     confident branch below sets UNREVIEWED, never a human-only operator
     review state -- only a human action ever produces one; an importer
     must never mint one.
+
+    Phase 50 (Task 1, D-21/D-22): the four structured-part writes are an
+    ungated writer D-22's enumeration did not name -- each now routes
+    through `apply_person_value_change` (`incoming_source=corpus`,
+    `incoming_method=direct`; this is the corpus importer, not the
+    justice seeder, so `seed` is the wrong vocabulary even though
+    `authority_rank` ranks the two identically). Every write this
+    function performs only ever reaches the gate's own gap-fill
+    short-circuit (existing part is always blank here, per the
+    `has_any_part` guard above it) or a no-op ACCEPT (both sides blank) --
+    it can never reach ACCEPT_AND_RECORD/REJECT_AND_RECORD, so
+    `import_run_id=None` is always safe: PD-13's gap-fill rule is what
+    keeps this from minting four discrepancy rows per new Person on every
+    reseed. The gate issues its own `execution_options(synchronize_
+    session=False)` UPDATE, so the in-memory `person` attribute is synced
+    via `setattr` on any accepted decision -- callers in this same
+    transaction (including this function's own caller) must see the
+    fresh value, not a stale pre-write one.
     """
+    # A brand-new Person object has review_state=None in-memory until
+    # flush (the model's `default=ReviewState.UNREVIEWED` is an INSERT-time
+    # default, not applied at construction) -- apply_person_value_change
+    # below reads `person.review_state.value` unconditionally, so a
+    # not-yet-flushed row must be seeded with the same value the column's
+    # own default would apply, before any gate call.
+    if person.review_state is None:
+        person.review_state = ReviewState.UNREVIEWED
+
     split = split_legacy_full_name(full_name)
     provenance = prepare_name_provenance(None, full_name, split.confidence)
     person.provenance_metadata = {
@@ -784,10 +1551,23 @@ def _apply_extracted_name_provenance(person: Person, full_name: str) -> None:
         return
 
     if split.auto_apply:
-        person.first_name = split.first_name
-        person.middle_name = split.middle_name
-        person.last_name = split.last_name
-        person.name_suffix = split.name_suffix
+        for name_field, incoming_value in (
+            ("first_name", split.first_name),
+            ("middle_name", split.middle_name),
+            ("last_name", split.last_name),
+            ("name_suffix", split.name_suffix),
+        ):
+            decision = await apply_person_value_change(
+                session,
+                person=person,
+                field=name_field,
+                incoming_value=incoming_value,
+                incoming_source=ImportSource.CORPUS.value,
+                incoming_method=ImportMethod.DIRECT.value,
+                import_run_id=None,
+            )
+            if decision in (WriteDecision.ACCEPT, WriteDecision.ACCEPT_AND_RECORD):
+                setattr(person, name_field, incoming_value)
         person.review_state = ReviewState.UNREVIEWED
     else:
         person.review_state = ReviewState.NEEDS_REVIEW
@@ -820,7 +1600,7 @@ async def _resolve_person(
     )
     person = result.scalar_one_or_none()
     if person is not None:
-        _apply_extracted_name_provenance(person, person.full_name)
+        await _apply_extracted_name_provenance(session, person, person.full_name)
         counters["people_matched"] = counters.get("people_matched", 0) + 1
         return person
 
@@ -829,7 +1609,7 @@ async def _resolve_person(
     if person is not None:
         if person.oyez_speaker_id is None:
             person.oyez_speaker_id = speaker_id  # D-11 backfill
-        _apply_extracted_name_provenance(person, person.full_name)
+        await _apply_extracted_name_provenance(session, person, person.full_name)
         counters["people_matched"] = counters.get("people_matched", 0) + 1
         return person
 
@@ -838,7 +1618,7 @@ async def _resolve_person(
         oyez_speaker_id=speaker_id,
         is_justice=is_justice,
     )
-    _apply_extracted_name_provenance(person, full_name)
+    await _apply_extracted_name_provenance(session, person, full_name)
     session.add(person)
     await session.flush()
     counters["people_created"] = counters.get("people_created", 0) + 1
@@ -1335,6 +2115,20 @@ _SUMMARY_COUNTER_KEYS: tuple[str, ...] = (
     # CourtTenure row covering the argument's argued_date. Flag-only --
     # side is never reassigned for this counter (D-03).
     "bench_tenure_mismatch",
+    # Phase 50 plan 50-05 (PD-17): the reconcile pass's own whole-batch
+    # totals -- values accepted/rejected by the authority ladder across
+    # every D-02 compare-set field, discrepancies recorded (the union of
+    # every ACCEPT_AND_RECORD/REJECT_AND_RECORD outcome plus every
+    # PUBLISHED-argument record-only disagreement), utterance sets fully
+    # replaced under a new step="parse" run (D-10), and PUBLISHED-argument
+    # passes that ran in record-only mode (D-08). No per-speaker or
+    # per-person breakdown of any of these (project apolitical constraint,
+    # D-29's own no-report-file decision).
+    "values_accepted",
+    "values_rejected",
+    "discrepancies_recorded",
+    "utterance_sets_replaced",
+    "published_writes_skipped",
 )
 
 
@@ -1363,10 +2157,17 @@ def _print_summary(label: str, counters: dict) -> None:
     residual (source_docket, question_number) collision caught at flush
     (CR-01, 29-VERIFICATION.md), never folded into conversations_errored --
     unattributed speakers skipped (ConvoKit's own "<INAUDIBLE>"/
-    "<UNKNOWN>" sentinels, never turned into a Person row), and
-    bench-tenure mismatches (Phase 42 Task 3, item 2: a Justice-typed
-    speaker with no CourtTenure row covering argued_date -- flag-only,
-    side never reassigned).
+    "<UNKNOWN>" sentinels, never turned into a Person row), bench-tenure
+    mismatches (Phase 42 Task 3, item 2: a Justice-typed speaker with no
+    CourtTenure row covering argued_date -- flag-only, side never
+    reassigned), and (Phase 50 plan 50-05, PD-17) the reconcile pass's own
+    whole-batch totals: values accepted/rejected by the authority ladder,
+    discrepancies recorded, utterance sets fully replaced under a new
+    parse run, and PUBLISHED-argument passes run in record-only mode.
+
+    `label` carries a "DRY RUN" marker when the batch ran under --dry-run
+    (D-28) so an operator can never mistake a dry-run report for a
+    completed batch -- see run_import_convokit.
     """
     c = counters
     print(
@@ -1385,7 +2186,12 @@ def _print_summary(label: str, counters: dict) -> None:
         f"{c.get('utterance_rows_errored', 0)} utterance rows errored, "
         f"{c.get('docket_question_conflict', 0)} docket/question conflicts, "
         f"{c.get('unattributed_speakers_skipped', 0)} unattributed speakers skipped, "
-        f"{c.get('bench_tenure_mismatch', 0)} bench tenure mismatches."
+        f"{c.get('bench_tenure_mismatch', 0)} bench tenure mismatches, "
+        f"{c.get('values_accepted', 0)} values accepted, "
+        f"{c.get('values_rejected', 0)} values rejected, "
+        f"{c.get('discrepancies_recorded', 0)} discrepancies recorded, "
+        f"{c.get('utterance_sets_replaced', 0)} utterance sets replaced, "
+        f"{c.get('published_writes_skipped', 0)} published writes skipped."
     )
 
 
@@ -1415,7 +2221,17 @@ async def run_import_convokit(args) -> None:
     resolution, and utterance import). Prints a per-term summary (D-14); a
     --term-range spanning more than one term also prints a final rollup
     block.
+
+    Phase 50 plan 50-05 (D-28): `--dry-run` (`getattr(args, "dry_run",
+    False)` -- the same backward-compatible-Namespace convention
+    `_resolve_scoped_conversation` already uses for `conversation_id`, so
+    every pre-existing test `argparse.Namespace()` without a `dry_run`
+    attribute still hits the False branch) threads through to every
+    `_import_conversation` call this term loop makes. Every printed
+    summary block is labeled "DRY RUN" so it can never be mistaken for a
+    completed batch.
     """
+    dry_run = getattr(args, "dry_run", False)
     corpus_dir = _resolve_corpus_dir(args)
 
     conversations_path = corpus_dir / "conversations.json"
@@ -1486,6 +2302,7 @@ async def run_import_convokit(args) -> None:
                         speakers_index=speakers_index,
                         turns=turns_by_conversation.get(conversation_id, []),
                         counters=counters,
+                        dry_run=dry_run,
                     )
             except Exception as exc:  # per-row resilience, T-29-05b/Pitfall 5
                 counters["conversations_errored"] = (
@@ -1496,8 +2313,14 @@ async def run_import_convokit(args) -> None:
                     f"{exc!r} -- errored, term continues."
                 )
 
-        _print_summary(f"Term {term}", counters)
+        term_label = f"DRY RUN Term {term}" if dry_run else f"Term {term}"
+        _print_summary(term_label, counters)
         _accumulate_counters(rollup, counters)
 
     if len(terms) > 1:
-        _print_summary(f"Rollup ({terms[0]}-{terms[-1]}, {len(terms)} terms)", rollup)
+        rollup_label = (
+            f"DRY RUN Rollup ({terms[0]}-{terms[-1]}, {len(terms)} terms)"
+            if dry_run
+            else f"Rollup ({terms[0]}-{terms[-1]}, {len(terms)} terms)"
+        )
+        _print_summary(rollup_label, rollup)

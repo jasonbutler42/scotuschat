@@ -330,6 +330,15 @@ def main() -> None:
             f"(default: {DEFAULT_CORPUS_DIR})"
         ),
     )
+    import_convokit_p.add_argument(
+        "--dry-run",
+        action="store_true",
+        help=(
+            "Report what a reconcile pass would accept, reject, record, "
+            "and replace without touching a single row (D-28). Every "
+            "printed summary block is labeled DRY RUN."
+        ),
+    )
 
     # -----------------------------------------------------------------------
     # recompute-trust subcommand (Phase 48, D-09)

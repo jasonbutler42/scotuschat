@@ -609,6 +609,176 @@ async def test_name_part_whitespace_only_difference_is_not_a_disagreement() -> N
     assert _values_differ("first_name", "john", "John") is True
 
 
+# ---------------------------------------------------------------------------
+# Phase 50 plan 50-02 (PD-13): the gap-fill pre-check applied to the two
+# EXISTING gates. Both fixtures below are deliberately UNREVIEWED/UNKNOWN
+# authority (never operator-confirmed) — a row an operator already
+# reviewed and deliberately left blank is NOT a gap-fill candidate; see
+# test_resolve_job_cannot_overwrite_confirmed_unattributable_participant
+# above for that boundary, which this change must not disturb.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_apply_participant_value_change_person_id_null_gap_fill_accepts_no_discrepancy() -> None:
+    """PD-13: a participant with person_id IS NULL (never reviewed, never
+    operator-confirmed) receiving a person id writes and records nothing —
+    filling a gap is not a disagreement."""
+    import uuid as _uuid
+
+    from sqlalchemy import select as sa_select
+
+    from api.core.database import AsyncSessionLocal
+    from api.domain.authority import WriteDecision
+    from api.models.models import (
+        Argument,
+        ArgumentParticipant,
+        ArgumentStatusEnum,
+        Case,
+        CaseArgument,
+        Person,
+        SideEnum,
+        ValueDiscrepancy,
+    )
+    from api.services.admin_review import apply_participant_value_change
+
+    suffix = _uuid.uuid4().hex[:8]
+    async with AsyncSessionLocal() as db:
+        arg = Argument(status=ArgumentStatusEnum.CANDIDATE)
+        db.add(arg)
+        await db.flush()
+        case = Case(
+            docket_number=f"AM-GF-{suffix}",
+            docket_number_norm=f"am-gf-{suffix}",
+            case_name="Gap Fill Fixture",
+            term_year=2026,
+            slug=f"gap-fill-fixture-{suffix}",
+        )
+        db.add(case)
+        await db.flush()
+        db.add(CaseArgument(case_id=case.id, argument_id=arg.id, is_lead=True))
+        participant = ArgumentParticipant(
+            argument_id=arg.id,
+            person_id=None,
+            raw_speaker_label="MR. GAP FILL",
+            side=SideEnum.PETITIONER,
+        )
+        db.add(participant)
+        candidate_person = Person(full_name="Gap Fill Candidate Person")
+        db.add(candidate_person)
+        await db.commit()
+        arg_id, case_id, participant_id, candidate_person_id = (
+            arg.id,
+            case.id,
+            participant.id,
+            candidate_person.id,
+        )
+
+    try:
+        async with AsyncSessionLocal() as db:
+            participant = await db.get(ArgumentParticipant, participant_id)
+            decision = await apply_participant_value_change(
+                db,
+                participant=participant,
+                field="person_id",
+                incoming_value=candidate_person_id,
+                incoming_source="corpus",
+                incoming_method="direct",
+            )
+            await db.commit()
+
+        assert decision == WriteDecision.ACCEPT
+
+        async with AsyncSessionLocal() as db:
+            refreshed = await db.get(ArgumentParticipant, participant_id)
+            assert refreshed.person_id == candidate_person_id
+            rows = (
+                await db.execute(
+                    sa_select(ValueDiscrepancy).where(
+                        ValueDiscrepancy.target_type == "argument_participant",
+                        ValueDiscrepancy.target_id == participant_id,
+                    )
+                )
+            ).scalars().all()
+            assert len(rows) == 0
+    finally:
+        from sqlalchemy import delete as sa_delete
+
+        async with AsyncSessionLocal() as db:
+            await db.execute(
+                sa_delete(ValueDiscrepancy).where(
+                    ValueDiscrepancy.target_type == "argument_participant",
+                    ValueDiscrepancy.target_id == participant_id,
+                )
+            )
+            await db.execute(sa_delete(ArgumentParticipant).where(ArgumentParticipant.id == participant_id))
+            await db.execute(sa_delete(CaseArgument).where(CaseArgument.argument_id == arg_id))
+            await db.execute(sa_delete(Case).where(Case.id == case_id))
+            await db.execute(sa_delete(Person).where(Person.id == candidate_person_id))
+            await db.execute(sa_delete(Argument).where(Argument.id == arg_id))
+            await db.commit()
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_apply_person_value_change_blank_name_parts_gap_fill_accepts_no_discrepancy() -> None:
+    """PD-13: a Person with all four name parts blank (never reviewed)
+    receiving a confident split writes and records nothing."""
+    from sqlalchemy import select as sa_select
+
+    from api.core.database import AsyncSessionLocal
+    from api.domain.authority import WriteDecision
+    from api.models.models import Person, ValueDiscrepancy
+    from api.services.admin_review import apply_person_value_change
+
+    async with AsyncSessionLocal() as db:
+        person = Person(full_name="Gap Fill Name Parts Person")
+        db.add(person)
+        await db.commit()
+        person_id = person.id
+
+    try:
+        async with AsyncSessionLocal() as db:
+            person = await db.get(Person, person_id)
+            decision = await apply_person_value_change(
+                db,
+                person=person,
+                field="first_name",
+                incoming_value="Jane",
+                incoming_source="corpus",
+                incoming_method="direct",
+            )
+            await db.commit()
+
+        assert decision == WriteDecision.ACCEPT
+
+        async with AsyncSessionLocal() as db:
+            refreshed = await db.get(Person, person_id)
+            assert refreshed.first_name == "Jane"
+            rows = (
+                await db.execute(
+                    sa_select(ValueDiscrepancy).where(
+                        ValueDiscrepancy.target_type == "person",
+                        ValueDiscrepancy.target_id == person_id,
+                    )
+                )
+            ).scalars().all()
+            assert len(rows) == 0
+    finally:
+        from sqlalchemy import delete as sa_delete
+
+        async with AsyncSessionLocal() as db:
+            await db.execute(
+                sa_delete(ValueDiscrepancy).where(
+                    ValueDiscrepancy.target_type == "person",
+                    ValueDiscrepancy.target_id == person_id,
+                )
+            )
+            await db.execute(sa_delete(Person).where(Person.id == person_id))
+            await db.commit()
+
+
 @pytest.mark.asyncio
 @pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
 async def test_update_resolve_row_for_job_succeeds_on_draft_and_unpublished_but_not_published() -> None:

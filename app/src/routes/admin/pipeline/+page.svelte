@@ -517,6 +517,21 @@
 				</div>
 			</div>
 
+			<!-- Phase 50 (D-19): this screen is honestly PDF-only now that the
+			     corpus importer mints no AdminJob at all (plan 50-01) — a corpus
+			     source tag can never render here by construction. -->
+			<p
+				style="
+					font-size: 14px;
+					font-weight: 400;
+					color: #94a3b8;
+					margin: 0 0 16px 0;
+				"
+			>
+				This screen shows PDF-pipeline jobs only. Corpus arguments are
+				reached through /admin/arguments and /admin/review.
+			</p>
+
 			{#if incomplete && (!data.jobs || data.jobs.length === 0)}
 				<!-- Filter-on empty state: no paused/failed jobs (13-UI-SPEC §Component Inventory 3) -->
 				<div

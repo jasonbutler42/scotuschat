@@ -158,6 +158,15 @@ async def get_job(db: AsyncSession, job_id: int) -> AdminJob | None:
     # rather than AdminJob.argument_id, since a single-row exists() has no
     # need to join back to AdminJob — argument_id being None (ingest not yet
     # finished) correctly yields no ImportRun match (NOT NULL column) → "pdf".
+    #
+    # Phase 50 (D-19): this corpus branch is unreachable BY CONSTRUCTION as
+    # of this phase — the corpus importer stopped minting an AdminJob at
+    # all (plan 50-01), so no ImportRun with source=CORPUS can ever be
+    # correlated to a real job.argument_id here, and this subquery always
+    # evaluates false. The derivation is deliberately RETAINED rather than
+    # removed: Phase 999.11 may reintroduce a corpus-linked job when it
+    # reworks the PDF route (D-17's deferred ADMIN_JOB.import_run_id), at
+    # which point this correlation becomes live again with no further edit.
     is_corpus_result = await db.execute(
         select(
             exists().where(
@@ -264,6 +273,13 @@ async def list_jobs(
     rather than a second outerjoin because Argument -> ImportRun is 1:many
     (an argument accumulates multiple ImportRun rows over reruns/step-
     advances); a naive join would risk duplicate AdminJob rows in the result.
+
+    Phase 50 (D-19): this corpus branch is unreachable BY CONSTRUCTION as
+    of this phase — a fresh corpus import mints no AdminJob at all (plan
+    50-01), so `is_corpus_subq` always evaluates false for every row this
+    query can return. Retained rather than removed/simplified: Phase
+    999.11 may reintroduce a corpus-linked job when it reworks the PDF
+    route, at which point this derivation becomes live again unchanged.
     """
     is_corpus_subq = exists(
         select(ImportRun.id).where(

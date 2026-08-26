@@ -50,6 +50,23 @@ PUBLIC_SCHEMA_MODULE_PATHS = [
 # value_discrepancy field name. A public response must never carry any of
 # these; review state records an internal transcription-attribution
 # workflow, never a public credibility judgment about a speaker.
+#
+# Phase 50 (plan 50-07, Task 2): widened again for this phase's own new
+# vocabulary. "source"/"method" already banned every field literally named
+# `source`/`method` — this widening is about PROVING that generic ban also
+# covers the phase's new Argument.source/Argument.method/Case.source/
+# Case.method columns specifically (they share the exact same field names
+# as the Phase 49 ArgumentParticipant columns the ban was originally
+# written for, so no NEW key is required for them — see
+# test_argument_and_case_level_source_and_method_columns_exist_at_the_orm_layer
+# below for the explicit non-vacuity proof). `content_digest` (ImportRun,
+# D-13) and `oyez_speaker_id` (ArgumentParticipant/Person, D-04) are
+# genuinely new keys. `argument_discrepancies` (ReviewQueueArgumentItem,
+# plan 50-04) is the argument-scoped sibling of the constituent-scoped
+# `discrepancies` field the value_discrepancy-field bans above already
+# protect transitively (DiscrepancyDetail is reachable through it) — but
+# the LIST field name itself must also never appear on a public model, so
+# it is banned directly here too.
 BANNED_KEYS = (
     "trust_tier",
     "review_state",
@@ -58,7 +75,54 @@ BANNED_KEYS = (
     "incoming_value",
     "existing_value",
     "resolved_at",
+    "content_digest",
+    "oyez_speaker_id",
+    "argument_discrepancies",
 )
+
+# Phase 50 (plan 50-05/PD-17): the five reconcile-pass batch counters plus
+# arguments_reconciled — operator-facing stdout only (D-29), never a
+# public response field or a public page's rendered/referenced text.
+BANNED_COUNTER_NAMES = (
+    "arguments_reconciled",
+    "arguments_unchanged",
+    "values_accepted",
+    "values_rejected",
+    "discrepancies_recorded",
+    "utterance_sets_replaced",
+)
+
+# The genuinely public (non-admin) SvelteKit route files — every page and
+# server load function a public visitor's browser ever reaches. Mirrors
+# PUBLIC_SCHEMA_MODULE_PATHS's convention of an explicit, reviewable list
+# rather than a directory glob, so a new admin route added under
+# app/src/routes/admin/ is never accidentally swept in.
+PUBLIC_FRONTEND_PATHS = [
+    ROOT / "app" / "src" / "routes" / "+layout.svelte",
+    ROOT / "app" / "src" / "routes" / "attributions" / "+page.svelte",
+    ROOT / "app" / "src" / "routes" / "cases" / "+page.svelte",
+    ROOT / "app" / "src" / "routes" / "cases" / "+page.server.ts",
+    ROOT / "app" / "src" / "routes" / "cases" / "[slug]" / "+page.svelte",
+    ROOT / "app" / "src" / "routes" / "cases" / "[slug]" / "+page.server.ts",
+    ROOT
+    / "app"
+    / "src"
+    / "routes"
+    / "cases"
+    / "[slug]"
+    / "arguments"
+    / "[id]"
+    / "+page.svelte",
+    ROOT
+    / "app"
+    / "src"
+    / "routes"
+    / "cases"
+    / "[slug]"
+    / "arguments"
+    / "[id]"
+    / "+page.server.ts",
+]
 
 
 def _unwrap_annotation_types(annotation):
@@ -259,6 +323,131 @@ def test_admin_detail_contract_does_declare_trust_tier() -> None:
         "'review_state' — if this assertion fails, the D-34 leak-ban "
         "extension is vacuous for that key."
     )
+
+
+def test_review_queue_argument_item_does_declare_argument_discrepancies() -> None:
+    """
+    Phase 50 (plan 50-07) false-green guard for `argument_discrepancies`:
+    `ReviewQueueArgumentItem` (admin-only, plan 50-04) is the designated
+    carrier. If it did not declare this field, Test 1's
+    `argument_discrepancies` cases would pass for the wrong reason —
+    nothing to leak in the first place.
+    """
+    from api.schemas.admin_review import ReviewQueueArgumentItem
+
+    assert "argument_discrepancies" in ReviewQueueArgumentItem.model_fields, (
+        "ReviewQueueArgumentItem (admin-only) is expected to carry "
+        "'argument_discrepancies' per plan 50-04 — if this assertion fails, "
+        "the Phase 50 leak-ban extension is vacuous for that key."
+    )
+
+
+def test_argument_and_case_level_source_and_method_columns_exist_at_the_orm_layer() -> None:
+    """
+    Phase 50's Argument.source/Argument.method/Case.source/Case.method
+    columns (migration 0030) are not yet exposed on ANY Pydantic schema,
+    admin or public — grep across api/schemas/ confirms this at authoring
+    time. The generic 'source'/'method' bans in BANNED_KEYS (D-34) already
+    cover them by field-name match the moment any schema ever adds them,
+    so no NEW banned key is needed — but this test proves those columns
+    are real, named vocabulary at the ORM layer (not a typo that would
+    make the ban meaningless), matching this module's own established
+    "prove it's a ban, not an absence" discipline.
+    """
+    from api.models.models import Argument, Case
+
+    assert "source" in Argument.__table__.columns
+    assert "method" in Argument.__table__.columns
+    assert "source" in Case.__table__.columns
+    assert "method" in Case.__table__.columns
+
+
+def test_content_digest_and_oyez_speaker_id_exist_at_the_orm_layer_not_yet_any_schema() -> None:
+    """
+    `content_digest` (ImportRun, D-13) and `oyez_speaker_id`
+    (ArgumentParticipant/Person, D-04) are Phase 50 columns that exist
+    ONLY at the SQLAlchemy ORM layer as of this plan — no Pydantic schema,
+    admin or public, exposes either one yet (grep across api/schemas/
+    confirms this at authoring time). The usual "assert the ADMIN schema
+    DOES carry it" false-green guard is therefore not honestly
+    satisfiable for these two keys: there is nothing admin-facing to
+    point at, and fabricating one just to satisfy this test would be
+    scope creep no plan asked for.
+
+    This test proves the next-best non-vacuity fact instead: the columns
+    are real, named Phase 50 vocabulary at the ORM layer, not typo'd
+    strings banning nothing. Test 1's coverage of these two keys is
+    therefore currently, correctly, VACUOUS for every existing public
+    model (no schema anywhere carries them to leak) — documented here
+    explicitly rather than silently — while remaining a real, permanent
+    ban: the moment either column is ever surfaced through a NEW admin
+    schema, Test 1 already covers it with no further edit to this module.
+    """
+    from api.models.models import ArgumentParticipant, ImportRun, Person
+
+    assert "content_digest" in ImportRun.__table__.columns
+    assert "oyez_speaker_id" in ArgumentParticipant.__table__.columns
+    assert "oyez_speaker_id" in Person.__table__.columns
+
+
+def test_banned_keys_include_phase_50_vocabulary() -> None:
+    """
+    Direct membership check on the ban list itself: shrinking BANNED_KEYS
+    to drop any of this phase's new vocabulary fails this test
+    immediately, independent of which (if any) public model happens to
+    declare the field today.
+    """
+    for key in ("content_digest", "oyez_speaker_id", "argument_discrepancies"):
+        assert key in BANNED_KEYS, (
+            f"{key!r} was removed from BANNED_KEYS — Phase 50's leak-ban "
+            "extension (plan 50-07) requires this key to stay banned."
+        )
+
+
+# ---------------------------------------------------------------------------
+# Test: reconcile batch counters (PD-17) are operator-facing stdout only
+# ---------------------------------------------------------------------------
+
+
+def test_public_response_models_never_declare_reconcile_counter_names() -> None:
+    """
+    None of PD-17's five reconcile-pass batch counters (plus
+    arguments_reconciled) may ever be a field name on a public response
+    model or anything reachable from one — they are operator-facing
+    stdout only (D-29), never persisted to a row a public route could
+    serialize.
+    """
+    for root_model in PUBLIC_RESPONSE_MODELS:
+        for reachable in collect_model_graph(root_model):
+            for counter_name in BANNED_COUNTER_NAMES:
+                assert counter_name not in reachable.model_fields, (
+                    f"{reachable.__name__} (reachable from public response "
+                    f"model {root_model.__name__}) declares '{counter_name}' "
+                    "— reconcile batch counters are operator-facing stdout "
+                    "only (D-29) and must never reach a public response."
+                )
+
+
+def test_public_frontend_pages_never_reference_reconcile_counter_names() -> None:
+    """
+    No genuinely public (non-admin) SvelteKit page or server load function
+    references any of PD-17's batch counter names — they are printed to
+    the operator's own terminal by the pipeline CLI (D-29), never wired
+    into a public page's data or markup.
+    """
+    violations = []
+    for path in PUBLIC_FRONTEND_PATHS:
+        if not path.exists():
+            continue
+        text = path.read_text(encoding="utf-8")
+        for counter_name in BANNED_COUNTER_NAMES:
+            if counter_name in text:
+                violations.append(
+                    f"{path.name} references reconcile batch counter "
+                    f"'{counter_name}' — batch counters are operator-facing "
+                    "stdout only (D-29) and must never reach a public page."
+                )
+    assert not violations, "\n".join(violations)
 
 
 # ---------------------------------------------------------------------------

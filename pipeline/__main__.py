@@ -12,6 +12,11 @@ Subcommands:
               shared api.services.trust.recompute_argument_tier() service
               and report how many rows changed (Phase 48 D-09 drift-repair
               tool and falsifiable verification vehicle).
+    prune-runs — Deliberately and offline reclaim superseded ImportRun/
+              Utterance rows an import intentionally never deletes
+              (Phase 50 D-12). Never removes the run the public read path
+              currently serves, and never removes a run carrying an open
+              value_discrepancy row.
 
 Usage examples:
     python -m pipeline ingest \\
@@ -42,6 +47,7 @@ from pipeline.commands.import_convokit import (
     run_import_convokit,
 )
 from pipeline.commands.parse import run_parse
+from pipeline.commands.prune_runs import run_prune_runs
 from pipeline.commands.recompute_trust import run_recompute_trust
 from pipeline.commands.resolve import run_resolve
 from pipeline.commands.seed_aliases import run_seed_aliases
@@ -376,6 +382,52 @@ def main() -> None:
         help="Report what would change without writing anything",
     )
 
+    # -----------------------------------------------------------------------
+    # prune-runs subcommand (Phase 50, D-12)
+    # -----------------------------------------------------------------------
+    prune_runs_p = sub.add_parser(
+        "prune-runs",
+        help="Deliberately and offline reclaim superseded ImportRun/Utterance rows",
+        description=(
+            "Reclaims superseded ImportRun rows (and their Utterance rows) "
+            "that a re-import intentionally never deletes -- D-12's "
+            "counterpart to the always-reconcile-and-retain promise. "
+            "Never removes the run api/services/arguments.py's read path "
+            "currently serves for an argument, and never removes a run "
+            "carrying an OPEN value_discrepancy row, under any flag "
+            "combination. Deletion is a deliberate, separately-invoked "
+            "operator action -- never a side effect of an import."
+        ),
+    )
+    prune_runs_group = prune_runs_p.add_mutually_exclusive_group(required=True)
+    prune_runs_group.add_argument(
+        "--all",
+        action="store_true",
+        help="Scan and prune every argument",
+    )
+    prune_runs_group.add_argument(
+        "--argument-id",
+        type=int,
+        default=None,
+        help="Scan and prune exactly one argument by id",
+    )
+    prune_runs_p.add_argument(
+        "--dry-run",
+        action="store_true",
+        help=(
+            "Report what would be removed without deleting a single row"
+        ),
+    )
+    prune_runs_p.add_argument(
+        "--include-resolved-discrepancies",
+        action="store_true",
+        help=(
+            "Also delete RESOLVED value_discrepancy rows attached to a "
+            "prunable run before removing it. An OPEN row is never "
+            "deleted by this command under any flag."
+        ),
+    )
+
     try:
         args = parser.parse_args()
     except SystemExit as exc:
@@ -413,6 +465,8 @@ def main() -> None:
         asyncio.run(run_import_convokit(args))
     elif args.command == "recompute-trust":
         asyncio.run(run_recompute_trust(args))
+    elif args.command == "prune-runs":
+        asyncio.run(run_prune_runs(args))
 
 
 if __name__ == "__main__":

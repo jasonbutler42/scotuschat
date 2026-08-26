@@ -46,6 +46,7 @@ from typing import Optional
 
 from sqlalchemy import select, update
 
+from api.domain.authority import WriteDecision
 from api.models.models import (
     AdminJob,
     AdminJobStatus,
@@ -61,8 +62,86 @@ from api.models.models import (
     SpeakerAlias,
     Utterance,
 )
+from api.services.admin_review import apply_participant_value_change
 from api.services.trust import recompute_argument_tier
 from pipeline.db import get_session
+
+
+async def _apply_resolved_person_ids(
+    session,
+    argument_id: int,
+    resolved_map: dict[str, int],
+    run_source: str,
+    run_method: str,
+    import_run_id: int,
+) -> int:
+    """
+    Phase 50 (Task 1, D-21/D-22): the per-row gated replacement for the
+    former bulk UPDATE statement against ArgumentParticipant's person_id
+    column (Step 5). D-21 forbids a second, ungated write path onto
+    `argument_participants.person_id` — every row this resolve run
+    auto-matched must go through `apply_participant_value_change` instead.
+
+    Scoped by `(argument_id, raw_speaker_label)`, the SAME scoping the
+    former bulk statement used. `raw_speaker_label` is not guaranteed
+    unique per argument, so every matching row is gated individually (the
+    bulk statement would have updated all of them too).
+
+    `run_source`/`run_method` are the resolve run's OWN declared
+    provenance (`.value` strings, read off the run row by the caller —
+    never hardcoded) so a resolve run is distinguishable at the gate from
+    any other writer.
+
+    On any decision that writes (`ACCEPT`/`ACCEPT_AND_RECORD`), the
+    participant's `source`/`method` are unconditionally restamped from the
+    run — mirroring `import_convokit.py`'s `_restamp_corpus_provenance`
+    (D-07) — because a resolved participant with NULL provenance floors
+    the whole argument to UNCERTAIN through `derive_tier`.
+
+    A raw label with no matching `ArgumentParticipant` row is a genuine
+    anomaly (parse.py's participant-seeding step should have created one
+    for every non-stage-direction label) — not a silent skip. Returns the
+    count of such anomalies for the caller to report.
+    """
+    unmatched_count = 0
+    for raw_label, person_id in resolved_map.items():
+        result = await session.execute(
+            select(ArgumentParticipant).where(
+                ArgumentParticipant.argument_id == argument_id,
+                ArgumentParticipant.raw_speaker_label == raw_label,
+            )
+        )
+        matched_participants = result.scalars().all()
+        if not matched_participants:
+            print(
+                f"WARNING: resolved label {raw_label!r} has no matching "
+                f"ArgumentParticipant row for argument_id={argument_id} — "
+                "person_id was not written anywhere."
+            )
+            unmatched_count += 1
+            continue
+
+        for participant in matched_participants:
+            decision = await apply_participant_value_change(
+                session,
+                participant=participant,
+                field="person_id",
+                incoming_value=person_id,
+                incoming_source=run_source,
+                incoming_method=run_method,
+                import_run_id=import_run_id,
+            )
+            if decision in (WriteDecision.ACCEPT, WriteDecision.ACCEPT_AND_RECORD):
+                await session.execute(
+                    update(ArgumentParticipant)
+                    .where(
+                        ArgumentParticipant.id == participant.id,
+                        ArgumentParticipant.argument_id == argument_id,
+                    )
+                    .values(source=ImportSource(run_source), method=ImportMethod(run_method))
+                    .execution_options(synchronize_session=False)
+                )
+    return unmatched_count
 
 
 def normalize_label(raw: str) -> str:
@@ -247,6 +326,14 @@ async def _run_resolve_inner(args) -> None:
                     person_id = alias.person_id
 
                     # ---- Bulk UPDATE utterances (Pitfall 2: use raw_label) ----
+                    # PD-19 (50-CONTEXT.md): deliberately left ungated.
+                    # `Utterance` carries no `source`/`method`/`review_state`
+                    # column — Phase 47's D-05 dropped the per-row `strategy`
+                    # column precisely because utterances inherit provenance
+                    # from their parent `import_run`. There is no stored
+                    # authority here for the D-22 ladder to compare against,
+                    # so gating this write would be theatre. Do NOT "fix"
+                    # this by routing it through a gate.
                     await session.execute(
                         update(Utterance)
                         .where(
@@ -310,17 +397,25 @@ async def _run_resolve_inner(args) -> None:
 
             # ----------------------------------------------------------------
             # Step 5: Update argument_participants.person_id (Pitfall 7)
-            # Only for labels that were auto-resolved (resolved_map)
+            # Only for labels that were auto-resolved (resolved_map).
+            #
+            # Phase 50 (Task 1, D-21/D-22): this was formerly a bulk
+            # `update(ArgumentParticipant).values(person_id=...)` statement
+            # — an ungated writer D-22's own enumeration didn't name. Every
+            # write now goes through `_apply_resolved_person_ids`, a
+            # per-row `apply_participant_value_change` gate call, so an
+            # operator's own reassignment (`review_state=operator_edited`)
+            # survives a disagreeing alias HIT instead of being silently
+            # overwritten.
             # ----------------------------------------------------------------
-            for raw_label, person_id in resolved_map.items():
-                await session.execute(
-                    update(ArgumentParticipant)
-                    .where(
-                        ArgumentParticipant.argument_id == parse_run.argument_id,
-                        ArgumentParticipant.raw_speaker_label == raw_label,
-                    )
-                    .values(person_id=person_id)
-                    .execution_options(synchronize_session=False)  # Pitfall 3
+            if resolved_map:
+                await _apply_resolved_person_ids(
+                    session,
+                    parse_run.argument_id,
+                    resolved_map,
+                    resolve_run.source.value,
+                    resolve_run.method.value,
+                    resolve_run.id,
                 )
 
             # ----------------------------------------------------------------

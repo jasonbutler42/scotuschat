@@ -208,3 +208,467 @@ async def test_resolve_resumes_after_interrupt(async_session):
     already have person_id populated and only prompts for unresolved labels.
     """
     pytest.fail("not implemented")
+
+
+# ---------------------------------------------------------------------------
+# Phase 50 plan 50-06, Task 1: _apply_resolved_person_ids — the per-row
+# gated replacement for the former bulk ArgumentParticipant.person_id
+# UPDATE (D-21/D-22). Real-writer integration tests against a live DB.
+# ---------------------------------------------------------------------------
+
+
+def _make_resolve_session_cm(session):
+    from contextlib import asynccontextmanager
+
+    @asynccontextmanager
+    async def _cm():
+        yield session
+
+    return _cm
+
+
+async def _seed_resolve_fixture(
+    session,
+    *,
+    raw_label: str = "MR. FIXTURE",
+    existing_person_id=None,
+    review_state=None,
+    participant_source=None,
+    participant_method=None,
+):
+    """
+    Seed one Argument + one parse-step ImportRun + one Utterance +
+    one ArgumentParticipant for that raw_label, and a SpeakerAlias/Person
+    the alias table will HIT on. Returns
+    (argument, parse_run, participant, alias_person).
+    """
+    import datetime
+
+    from api.models.models import (
+        Argument,
+        ArgumentParticipant,
+        ImportMethod,
+        ImportRun,
+        ImportRunStatus,
+        ImportSource,
+        Person,
+        ReviewState,
+        SideEnum,
+        SpeakerAlias,
+        Utterance,
+    )
+    from pipeline.commands.resolve import normalize_label
+
+    review_state = review_state or ReviewState.UNREVIEWED
+
+    argument = Argument(argued_date=datetime.date(2024, 1, 1), question_number=1)
+    session.add(argument)
+    await session.flush()
+
+    parse_run = ImportRun(
+        argument_id=argument.id,
+        step="parse",
+        status=ImportRunStatus.COMPLETED,
+        source=ImportSource.PDF_PIPELINE,
+        method=ImportMethod.RULE_BASED,
+    )
+    session.add(parse_run)
+    await session.flush()
+
+    session.add(
+        Utterance(
+            argument_id=argument.id,
+            import_run_id=parse_run.id,
+            sequence=1,
+            raw_speaker_label=raw_label,
+            text="Some remark.",
+            is_stage_direction=False,
+            side=SideEnum.ADVOCATE,
+            person_id=None,
+        )
+    )
+    await session.flush()
+
+    participant = ArgumentParticipant(
+        argument_id=argument.id,
+        person_id=existing_person_id,
+        raw_speaker_label=raw_label,
+        side=SideEnum.ADVOCATE,
+        review_state=review_state,
+        source=participant_source,
+        method=participant_method,
+    )
+    session.add(participant)
+    await session.flush()
+
+    alias_person = Person(full_name=f"Alias Target for {raw_label}")
+    session.add(alias_person)
+    await session.flush()
+
+    session.add(
+        SpeakerAlias(
+            normalized_label=normalize_label(raw_label),
+            person_id=alias_person.id,
+        )
+    )
+    await session.flush()
+
+    return argument, parse_run, participant, alias_person
+
+
+async def _run_resolve_direct(async_session, parse_run_id: int):
+    import argparse
+
+    from pipeline.commands.resolve import run_resolve
+
+    await run_resolve(argparse.Namespace(run_id=parse_run_id, job_id=None))
+
+
+@requires_db
+@pytest.mark.asyncio
+async def test_resolve_alias_hit_on_null_person_id_writes_no_discrepancy(
+    async_session, monkeypatch
+):
+    """
+    An alias HIT against a participant whose person_id is NULL writes the
+    person id and creates no value_discrepancy row (PD-13 gap-fill).
+    """
+    from sqlalchemy import select
+
+    from api.models.models import ImportMethod, ImportSource, ValueDiscrepancy
+
+    argument, parse_run, participant, alias_person = await _seed_resolve_fixture(
+        async_session, raw_label="MR. GAPFILL", existing_person_id=None
+    )
+    monkeypatch.setattr(
+        "pipeline.commands.resolve.get_session",
+        _make_resolve_session_cm(async_session),
+    )
+
+    await _run_resolve_direct(async_session, parse_run.id)
+
+    await async_session.refresh(participant)
+    assert participant.person_id == alias_person.id
+    assert participant.source == ImportSource.PDF_PIPELINE
+    assert participant.method == ImportMethod.NORMALIZED
+
+    discrepancies = (
+        await async_session.execute(
+            select(ValueDiscrepancy).where(
+                ValueDiscrepancy.target_type == "argument_participant",
+                ValueDiscrepancy.target_id == participant.id,
+            )
+        )
+    ).scalars().all()
+    assert discrepancies == []
+
+
+@requires_db
+@pytest.mark.asyncio
+async def test_resolve_alias_hit_operator_edited_participant_survives(
+    async_session, monkeypatch
+):
+    """
+    An alias HIT against a participant whose person_id was already set to
+    a DIFFERENT person by an operator (review_state=operator_edited) does
+    NOT overwrite it, and creates exactly one discrepancy row.
+    """
+    from sqlalchemy import select
+
+    from api.models.models import Person, ReviewState, ValueDiscrepancy
+
+    operator_person = Person(full_name="Operator Assigned Person")
+    async_session.add(operator_person)
+    await async_session.flush()
+
+    argument, parse_run, participant, alias_person = await _seed_resolve_fixture(
+        async_session,
+        raw_label="MR. OPERATOR",
+        existing_person_id=operator_person.id,
+        review_state=ReviewState.OPERATOR_EDITED,
+    )
+    monkeypatch.setattr(
+        "pipeline.commands.resolve.get_session",
+        _make_resolve_session_cm(async_session),
+    )
+
+    await _run_resolve_direct(async_session, parse_run.id)
+
+    await async_session.refresh(participant)
+    assert participant.person_id == operator_person.id, (
+        "an operator-edited participant must survive a disagreeing alias HIT"
+    )
+
+    discrepancies = (
+        await async_session.execute(
+            select(ValueDiscrepancy).where(
+                ValueDiscrepancy.target_type == "argument_participant",
+                ValueDiscrepancy.target_id == participant.id,
+                ValueDiscrepancy.field == "person_id",
+            )
+        )
+    ).scalars().all()
+    assert len(discrepancies) == 1
+
+
+@requires_db
+@pytest.mark.asyncio
+async def test_resolve_alias_hit_matching_existing_person_id_no_discrepancy(
+    async_session, monkeypatch
+):
+    """
+    An alias HIT against a participant already carrying the SAME person id
+    writes nothing observable and creates no discrepancy row.
+    """
+    from sqlalchemy import select
+
+    from api.models.models import ValueDiscrepancy
+
+    # Seed the fixture first to get the alias-target person's id, then
+    # re-seed the participant to already carry that same id.
+    argument, parse_run, participant, alias_person = await _seed_resolve_fixture(
+        async_session, raw_label="MR. SAME", existing_person_id=None
+    )
+    participant.person_id = alias_person.id
+    await async_session.flush()
+
+    monkeypatch.setattr(
+        "pipeline.commands.resolve.get_session",
+        _make_resolve_session_cm(async_session),
+    )
+
+    await _run_resolve_direct(async_session, parse_run.id)
+
+    await async_session.refresh(participant)
+    assert participant.person_id == alias_person.id
+
+    discrepancies = (
+        await async_session.execute(
+            select(ValueDiscrepancy).where(
+                ValueDiscrepancy.target_type == "argument_participant",
+                ValueDiscrepancy.target_id == participant.id,
+            )
+        )
+    ).scalars().all()
+    assert discrepancies == []
+
+
+@requires_db
+@pytest.mark.asyncio
+async def test_resolve_utterance_bulk_update_still_runs(async_session, monkeypatch):
+    """
+    The Utterance.person_id bulk UPDATE (PD-19, deliberately ungated) still
+    runs and still updates every matching utterance row, independent of
+    the ArgumentParticipant gate conversion.
+    """
+    from sqlalchemy import select
+
+    from api.models.models import Utterance
+
+    argument, parse_run, participant, alias_person = await _seed_resolve_fixture(
+        async_session, raw_label="MR. UTTERANCE", existing_person_id=None
+    )
+    monkeypatch.setattr(
+        "pipeline.commands.resolve.get_session",
+        _make_resolve_session_cm(async_session),
+    )
+
+    await _run_resolve_direct(async_session, parse_run.id)
+
+    utterances = (
+        await async_session.execute(
+            select(Utterance).where(Utterance.argument_id == argument.id)
+        )
+    ).scalars().all()
+    assert len(utterances) == 1
+    assert utterances[0].person_id == alias_person.id
+
+
+@requires_db
+@pytest.mark.asyncio
+async def test_resolve_n_labels_issues_gate_calls_not_bulk_statement(
+    async_session, monkeypatch
+):
+    """
+    A resolve run over N auto-resolved labels issues N per-row gate calls,
+    not one bulk statement, and the resulting participant rows carry
+    source=pdf_pipeline (the resolve run's own declared provenance).
+    """
+    import datetime
+
+    from sqlalchemy import select
+
+    from api.models.models import (
+        Argument,
+        ArgumentParticipant,
+        ImportMethod,
+        ImportRun,
+        ImportRunStatus,
+        ImportSource,
+        Person,
+        SideEnum,
+        SpeakerAlias,
+        Utterance,
+    )
+    from pipeline.commands.resolve import normalize_label
+
+    argument = Argument(argued_date=datetime.date(2024, 1, 1), question_number=1)
+    async_session.add(argument)
+    await async_session.flush()
+
+    parse_run = ImportRun(
+        argument_id=argument.id,
+        step="parse",
+        status=ImportRunStatus.COMPLETED,
+        source=ImportSource.PDF_PIPELINE,
+        method=ImportMethod.RULE_BASED,
+    )
+    async_session.add(parse_run)
+    await async_session.flush()
+
+    labels = ["MR. ALPHA", "MS. BETA", "GEN. GAMMA"]
+    participants = []
+    for i, label in enumerate(labels):
+        async_session.add(
+            Utterance(
+                argument_id=argument.id,
+                import_run_id=parse_run.id,
+                sequence=i + 1,
+                raw_speaker_label=label,
+                text="Remark.",
+                is_stage_direction=False,
+                side=SideEnum.ADVOCATE,
+                person_id=None,
+            )
+        )
+        participant = ArgumentParticipant(
+            argument_id=argument.id,
+            person_id=None,
+            raw_speaker_label=label,
+            side=SideEnum.ADVOCATE,
+        )
+        async_session.add(participant)
+        participants.append(participant)
+
+        alias_person = Person(full_name=f"Person for {label}")
+        async_session.add(alias_person)
+        await async_session.flush()
+        async_session.add(
+            SpeakerAlias(
+                normalized_label=normalize_label(label),
+                person_id=alias_person.id,
+            )
+        )
+    await async_session.flush()
+
+    monkeypatch.setattr(
+        "pipeline.commands.resolve.get_session",
+        _make_resolve_session_cm(async_session),
+    )
+
+    await _run_resolve_direct(async_session, parse_run.id)
+
+    for participant in participants:
+        await async_session.refresh(participant)
+        assert participant.person_id is not None
+        assert participant.source == ImportSource.PDF_PIPELINE
+
+
+@requires_db
+@pytest.mark.asyncio
+async def test_resolve_outcome_gate_unchanged_paused_on_miss_completed_on_hit(
+    async_session, monkeypatch
+):
+    """
+    The run's outcome gate (paused on misses, completed on all-hit) is
+    unchanged by the gate conversion.
+    """
+    from sqlalchemy import select
+
+    from api.models.models import ImportRunStatus
+
+    # All-hit case
+    argument, parse_run, participant, alias_person = await _seed_resolve_fixture(
+        async_session, raw_label="MR. ALLHIT", existing_person_id=None
+    )
+    monkeypatch.setattr(
+        "pipeline.commands.resolve.get_session",
+        _make_resolve_session_cm(async_session),
+    )
+    await _run_resolve_direct(async_session, parse_run.id)
+    await async_session.refresh(parse_run)
+
+    from pipeline.commands.resolve import ImportRun as ResolveImportRun
+
+    resolve_runs = (
+        await async_session.execute(
+            select(ResolveImportRun).where(
+                ResolveImportRun.argument_id == argument.id,
+                ResolveImportRun.step == "resolve",
+            )
+        )
+    ).scalars().all()
+    assert len(resolve_runs) == 1
+    assert resolve_runs[0].status == ImportRunStatus.COMPLETED
+
+    # Miss case — a raw_speaker_label with no SpeakerAlias row
+    import datetime
+
+    from api.models.models import (
+        Argument,
+        ArgumentParticipant,
+        ImportMethod,
+        ImportRun,
+        ImportSource,
+        SideEnum,
+        Utterance,
+    )
+
+    miss_argument = Argument(argued_date=datetime.date(2024, 1, 1), question_number=2)
+    async_session.add(miss_argument)
+    await async_session.flush()
+
+    miss_parse_run = ImportRun(
+        argument_id=miss_argument.id,
+        step="parse",
+        status=ImportRunStatus.COMPLETED,
+        source=ImportSource.PDF_PIPELINE,
+        method=ImportMethod.RULE_BASED,
+    )
+    async_session.add(miss_parse_run)
+    await async_session.flush()
+
+    async_session.add(
+        Utterance(
+            argument_id=miss_argument.id,
+            import_run_id=miss_parse_run.id,
+            sequence=1,
+            raw_speaker_label="MR. NOBODY-KNOWS",
+            text="Unresolvable remark.",
+            is_stage_direction=False,
+            side=SideEnum.ADVOCATE,
+            person_id=None,
+        )
+    )
+    async_session.add(
+        ArgumentParticipant(
+            argument_id=miss_argument.id,
+            person_id=None,
+            raw_speaker_label="MR. NOBODY-KNOWS",
+            side=SideEnum.ADVOCATE,
+        )
+    )
+    await async_session.flush()
+
+    await _run_resolve_direct(async_session, miss_parse_run.id)
+
+    miss_resolve_runs = (
+        await async_session.execute(
+            select(ResolveImportRun).where(
+                ResolveImportRun.argument_id == miss_argument.id,
+                ResolveImportRun.step == "resolve",
+            )
+        )
+    ).scalars().all()
+    assert len(miss_resolve_runs) == 1
+    assert miss_resolve_runs[0].status == ImportRunStatus.NEEDS_REVIEW

@@ -423,6 +423,36 @@ def test_argument_level_discrepancy_row_badge_conditioned_on_non_empty_list() ->
     assert REVIEW_SOURCE.count("{#if item.argument_discrepancies.length > 0}") >= 2
 
 
+# ─────────────────────────────────────────────────────────────────────────
+# Phase 50 plan 50-04, Task 2: the argument-scoped Approve action (D-14,
+# D-19, PD-12). Structural source-text assertions only.
+# ─────────────────────────────────────────────────────────────────────────
+
+REVIEW_SERVER_PATH = ROOT / "app" / "src" / "routes" / "admin" / "review" / "+page.server.ts"
+REVIEW_SERVER_SOURCE = _source(REVIEW_SERVER_PATH)
+
+
+def test_approve_form_posts_to_the_approve_action() -> None:
+    assert '?/approve' in REVIEW_SOURCE
+
+
+def test_approve_form_guarded_by_candidate_status_condition() -> None:
+    match = re.search(
+        r"\{#if item\.status === 'candidate'\}.*?\{/if\}",
+        REVIEW_SOURCE,
+        re.DOTALL,
+    )
+    assert match, "expected an {#if item.status === 'candidate'} guard"
+    assert '?/approve' in match.group(0), (
+        "expected the ?/approve form to be inside the candidate-status guard"
+    )
+
+
+def test_approve_action_present_in_server_module_posting_to_argument_scoped_route() -> None:
+    assert "approve:" in REVIEW_SERVER_SOURCE
+    assert "/api/admin/arguments/${id}/approve" in REVIEW_SERVER_SOURCE
+
+
 def test_no_truncation_or_media_query_introduced_on_the_review_page() -> None:
     """
     49-UI-SPEC E1/E2 long-text and E6 overflow forbid truncation outright —

@@ -168,6 +168,40 @@ async function patchReviewAction(
 	return null;
 }
 
+/**
+ * POST helper for the argument-scoped Approve action (D-14/50-03) —
+ * `POST /api/admin/arguments/{id}/approve`. No request body: approve
+ * carries no operator-supplied data. Mirrors patchReviewAction's
+ * error-handling shape (auth header, non-OK -> operator-readable message,
+ * caller decides the redirect) so a non-OK response can never be swallowed
+ * into a silent no-op (Phase 48's list-page 422 swallow is the precedent
+ * this avoids, T-50-17).
+ */
+async function approveArgument(fetchFn: typeof fetch, id: string): Promise<{ error: string } | null> {
+	let res: Response;
+	try {
+		res = await fetchFn(`${FASTAPI_BASE_URL}/api/admin/arguments/${id}/approve`, {
+			method: 'POST',
+			headers: {
+				'X-Admin-Token': ADMIN_TOKEN,
+			},
+		});
+	} catch {
+		return { error: 'Could not approve this argument. Try again.' };
+	}
+
+	if (!res.ok) {
+		const payload: unknown = await res.json().catch(() => null);
+		const detail = (payload as { detail?: unknown } | null)?.detail;
+		if (typeof detail === 'string' && detail.length > 0) {
+			return { error: detail };
+		}
+		return { error: 'Could not approve this argument. Try again.' };
+	}
+
+	return null;
+}
+
 export const actions: Actions = {
 	confirm: async ({ request, fetch, url }) => {
 		const formData = await request.formData();
@@ -201,6 +235,22 @@ export const actions: Actions = {
 		const id = formData.get('id') as string;
 
 		const failure = await patchReviewAction(fetch, kind, id, 'reflag');
+		if (failure) return fail(422, failure);
+
+		throw redirect(303, url.pathname + url.search);
+	},
+
+	/**
+	 * approve — argument-scoped only (PD-12); no analogous action exists on
+	 * the People tab. Preserves the current filter/tab query string on the
+	 * post-action redirect, same as the three actions above, so approving
+	 * does not silently drop the operator's tab and filter selection.
+	 */
+	approve: async ({ request, fetch, url }) => {
+		const formData = await request.formData();
+		const id = formData.get('id') as string;
+
+		const failure = await approveArgument(fetch, id);
 		if (failure) return fail(422, failure);
 
 		throw redirect(303, url.pathname + url.search);

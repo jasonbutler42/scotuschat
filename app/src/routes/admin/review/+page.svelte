@@ -606,6 +606,25 @@
 											</ul>
 										</div>
 									{/if}
+									{#if item.status === 'candidate'}
+										<!-- Argument-scoped Approve (D-14/D-19/PD-12) — the only new
+										     per-argument action on this screen; deliberately rendered
+										     once per argument OUTSIDE the each-block/blockers-fallback
+										     pair above so it always appears for a CANDIDATE argument
+										     regardless of whether any flagged participant exists — a
+										     candidate argument queued solely via a degraded-tier or
+										     argument/case-discrepancy leg still needs to be
+										     approvable. Absent for every other status (D-19). -->
+										<div style="display: flex; gap: 8px; flex-wrap: wrap; padding: 12px 12px 0 12px;">
+											<form method="POST" action="?/approve" use:enhance>
+												<input type="hidden" name="id" value={item.id} />
+												<button
+													type="submit"
+													style="min-height: 36px; padding: 4px 12px; font-size: 14px; font-weight: 600; cursor: pointer; border: 1px solid #93c5fd; background-color: transparent; color: #93c5fd; border-radius: 6px;"
+												>Approve — move to Draft</button>
+											</form>
+										</div>
+									{/if}
 								</td>
 							</tr>
 						{/if}

@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 22
+open_count: 23
 waived_count: 0
 fixed_count: 7
-total_count: 29
-last_updated: 2026-08-26T13:51:01.301Z
+total_count: 30
+last_updated: 2026-08-26T15:35:23.632Z
 ---
 
 # Broken Windows Ledger
@@ -44,6 +44,7 @@ last_updated: 2026-08-26T13:51:01.301Z
 | 27 | 49 | deviation | app/src/routes/admin/people/+page.svelte |  | New finding during 49-12 (G-49-5c) live measurement: /admin/people overflows at 375px (scrollWidth 403 vs clientWidth 375) via an unwrapped <table> with no overflow-x container -- separate, pre-existing cause independent of AdminSubNav. Was previously masked by AdminSubNav's larger 423px overflow (both pegged the page at the same scrollWidth); only became independently visible after 49-12 fixed the sub-nav. Out of scope for 49-12 (files_modified did not include this page). Not fixed. | open |  | 2026-08-25T10:54:09.338Z |  |
 | 28 | 49 | unrun-verify | app/src/routes/admin/arguments/[id]/+page.svelte |  | Task 3 browser human-check (5 items) not observed — no browser tool available to the executor; see 49-11-SUMMARY.md Human-Check Items section | open |  | 2026-08-25T11:18:44.159Z |  |
 | 29 | 50 | deviation | pipeline/commands/import_convokit.py | 636 | _reconcile_conversation's compare-and-write body is deferred to plan 50-05 by design (50-01-PLAN.md Task 3 scope); it currently only establishes the digest-compare branch and writes nothing on a real content mismatch. | open |  | 2026-08-26T13:51:01.301Z |  |
+| 30 | 50-unified-import-path | unrun-verify | app/src/routes/admin/review/+page.svelte |  | 50-04 Task 2 human-check walkthrough not performed: Approve on a candidate corpus argument, tab/filter survival on redirect, Approve button absence post-transition, publish-after-approve, and no-truncation of a discrepancy value at 1280px and narrow viewports — no browser tool / .env admin credential access available to this executor (same constraint as 49-01/49-03/49-05/49-06). | open |  | 2026-08-26T15:35:23.632Z |  |
 
 ````json
 [
@@ -393,6 +394,18 @@ last_updated: 2026-08-26T13:51:01.301Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-08-26T13:51:01.301Z",
+    "resolved_at": null
+  },
+  {
+    "id": 30,
+    "kind": "unrun-verify",
+    "phase": "50-unified-import-path",
+    "file": "app/src/routes/admin/review/+page.svelte",
+    "line": null,
+    "description": "50-04 Task 2 human-check walkthrough not performed: Approve on a candidate corpus argument, tab/filter survival on redirect, Approve button absence post-transition, publish-after-approve, and no-truncation of a discrepancy value at 1280px and narrow viewports — no browser tool / .env admin credential access available to this executor (same constraint as 49-01/49-03/49-05/49-06).",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-08-26T15:35:23.632Z",
     "resolved_at": null
   }
 ]

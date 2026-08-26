@@ -333,7 +333,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 50-04-PLAN.md — `/admin/review` surfaces: argument- and case-level discrepancy render, and the Approve action on a candidate row (wave 3)
+- [x] 50-04-PLAN.md — `/admin/review` surfaces: argument- and case-level discrepancy render, and the Approve action on a candidate row (wave 3)
 - [ ] 50-05-PLAN.md — The reconcile compare-and-record pass: D-02 walk, D-07 restamp, D-08 published freeze, D-10 whole-set utterance replacement, `--dry-run` and the batch counters (wave 3)
 - [ ] 50-06-PLAN.md — The D-22 delegation sweep across resolve.py, parse.py and import_justices_csv.py, plus the D-24 executable behavioral gate (wave 3)
 

@@ -319,7 +319,7 @@ Plans:
   3. Re-running any import is idempotent — the same input yields the same rows and never clobbers operator-authored values.
   4. The authority ordering (operator > corpus > pdf/rule > pdf/llm) governs the overwrite decision on every writer.
 
-**Plans**: 1/7 plans executed (4 waves)
+**Plans**: 2/7 plans executed (4 waves)
 
 Plans:
 **Wave 1**
@@ -328,7 +328,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 50-02-PLAN.md — `apply_argument_value_change` / `apply_case_value_change` peer gates with the OQ-1 fail-closed NULL semantics, plus the argument- and case-level legs on the review attention predicate (wave 2)
+- [x] 50-02-PLAN.md — `apply_argument_value_change` / `apply_case_value_change` peer gates with the OQ-1 fail-closed NULL semantics, plus the argument- and case-level legs on the review attention predicate (wave 2)
 - [ ] 50-03-PLAN.md — The argument-scoped approve route, operator provenance stamping on the five Argument/Case compare-set columns, and delete-in-every-state-except-published with the value_discrepancy cascade fix (wave 2)
 
 **Wave 3** *(blocked on Wave 2 completion)*
@@ -417,7 +417,7 @@ Plans:
 | 47. Provenance Foundation | v1.8 | 6/6 | Complete    | 2026-08-18 |
 | 48. Trust & Lifecycle | v1.8 | 10/10 | Complete    | 2026-08-21 |
 | 49. Review Model | v1.8 | 12/12 | Complete    | 2026-08-25 |
-| 50. Unified Import Path | v1.8 | 1/7 | In Progress|  |
+| 50. Unified Import Path | v1.8 | 2/7 | In Progress|  |
 | 51. Design System & Noun Alignment | v1.8 | 0/TBD | Not started | - |
 
 ## Backlog

@@ -4,17 +4,17 @@ milestone: v1.8
 milestone_name: Import & Provenance Re-model
 current_phase: 50
 current_phase_name: Unified Import Path
-status: Phase 50 EXECUTING — Wave 1 plan 50-01 complete (2026-08-26): migration 0030, frozen content-digest contract, no-AdminJob tracer with byte-identical re-import proof. Waves 2-4 (50-02 through 50-07) remain.
-stopped_at: "Completed 50-01-PLAN.md (checkpoint resumed: Task 0 decision recorded, Tasks 1-3 executed)"
-last_updated: "2026-08-26T13:53:10.163Z"
+status: "Phase 50 EXECUTING — Wave 1 plan 50-01 complete (2026-08-26); Wave 2 plan 50-02 complete (2026-08-26): apply_argument_value_change/apply_case_value_change peer gates, PD-13 gap-fill (scope-guarded on the two existing gates), argument/case-level discrepancy visibility in /admin/review. 50-03 (Wave 2, other half) and Waves 3-4 (50-04 through 50-07) remain."
+stopped_at: Completed 50-02-PLAN.md
+last_updated: "2026-08-26T14:36:00.895Z"
 last_activity: 2026-08-26
 last_activity_desc: Phase 50 execution started
-state_head: 4f1c4530d421d2c01fbc3fc02708198d149a894c
+state_head: 1526961b0b696d1a38e4bd7442e5e314bca2c211
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 35
-  completed_plans: 29
+  completed_plans: 30
   percent: 60
 ---
 
@@ -32,13 +32,14 @@ See: .planning/PROJECT.md (updated 2026-08-18 — Phase 47 complete; corpus-firs
 ## Current Position
 
 Phase: 50 (Unified Import Path) — EXECUTING
-Last activity: 2026-08-26 — Plan 50-01 (Wave 1) complete
+Last activity: 2026-08-26 — Plan 50-02 (Wave 2) complete
 
-**Next action:** Wave 1 (`50-01`) is done. Proceed with Wave 2: `/gsd-execute-phase 50` to run `50-02` and `50-03`.
+**Next action:** Wave 2 plan `50-02` is done. `50-03` (Wave 2's other plan) is still outstanding. Proceed with `/gsd-execute-phase 50` to run `50-03`, then Waves 3-4.
 
 - **Wave 1: `50-01` — COMPLETE (2026-08-26).** Migration `0030` (six nullable columns, no backfill), the frozen `api/domain/content_digest.py` contract (Task 0 checkpoint: `freeze-as-proposed`), and the `type="tracer"` slice: corpus import creates zero `AdminJob` rows, stamps `oyez_speaker_id`/`content_digest`, survives a byte-identical double-import across all eight affected tables, and `approve_argument` + a reworked `reset_to_fixture` replace the AdminJob-based approve path. `_reconcile_conversation` establishes only the branch/digest-read/no-op guarantee — the real compare-and-write body is `50-05`'s. Full suite: 1507 passed, 5 xfailed, 0 failed. See `50-01-SUMMARY.md`.
-- Wave 2 (next): `50-02` (the `apply_argument_value_change` / `apply_case_value_change` peer gates + OQ-1 fail-closed NULL semantics), `50-03` (argument-scoped approve route, operator provenance stamping, delete-cascade fix).
-- Wave 3: `50-04` (`/admin/review` discrepancy render + Approve action), `50-05` (the reconcile compare-and-record pass — builds directly on `50-01`'s `_reconcile_conversation` branch), `50-06` (D-22 delegation sweep + D-24 behavioral gate).
+- **Wave 2 plan `50-02` — COMPLETE (2026-08-26).** `apply_argument_value_change`/`apply_case_value_change` — true peers of the two Phase 49 gate functions, both routing through the single `decide_write`. PD-07 fail-closed NULL-provenance pre-check. PD-13 gap-fill pre-check applied to all four gate functions, with a deliberate OPERATOR-authority scope guard on the two EXISTING gates (deviation — the literal unconditional plan text would have reopened the CR-02/CR-04 defect; see `50-02-SUMMARY.md`). `_argument_attention_predicate` legs 5/6 + `ReviewQueueArgumentItem.argument_discrepancies` make an argument-level or lead-case-level discrepancy visible in `/admin/review` (render itself is `50-04`'s). Full suite: 1535 passed, 5 xfailed, 0 failed (was 1507/5; +28 new tests, zero regressions). See `50-02-SUMMARY.md`.
+- Wave 2 (next): `50-03` (argument-scoped approve route, operator provenance stamping via the new gates, delete-cascade fix).
+- Wave 3: `50-04` (`/admin/review` discrepancy render including `argument_discrepancies` + Approve action), `50-05` (the reconcile compare-and-record pass — builds directly on `50-01`'s `_reconcile_conversation` branch and calls `50-02`'s two new gates), `50-06` (D-22 delegation sweep + D-24 behavioral gate).
 - Wave 4: `50-07` (offline `prune-runs`, public-leak ban, dispositioned writer inventory).
 
 Three researcher open questions were resolved by the operator at planning time and are LOCKED in the plans: **OQ-1** — nullable `source`/`method` on both `Argument` and `Case`, no backfill, NULL is unknown and fails closed; **OQ-2** — `reset_to_fixture` keeps all four reference states, "Mid-pipeline" preserved by seeding a `step="reconcile"` ImportRun; **OQ-3** — the comparison digest is read from the latest `step="parse"` run, and a diff writes a new `step="parse"` run.
@@ -205,6 +206,7 @@ items → 14.** Every closure carries its evidence in the file it closes; the co
 | Phase 49-review-model P12 | 70min | 4 tasks | 6 files |
 | Phase 49 P11 | 70min | 3 tasks | 9 files |
 | Phase 50 P01 | 70min | 4 tasks | 14 files |
+| Phase 50 P02 | 55min | 2 tasks | 5 files |
 
 v1.7 per-plan metrics cleared at this milestone boundary per the standard STATE.md reset; the underlying per-plan SUMMARY files remain in `.planning/milestones/v1.7-phases/`.
 
@@ -274,6 +276,7 @@ Full cross-milestone decision log lives in PROJECT.md's Key Decisions table. Per
 - [Phase 49]: 49-11: the page-level lock statement and Case card reuse 49-09's speakersLocked flag verbatim rather than renaming it, even though its scope now covers the whole page
 - [Phase 50]: 50-01 Task 0 checkpoint: froze the D-13 content-digest contract as freeze-as-proposed (sha256, JSON-framed 4-field tuple, byte-exact, person_id/side/section_hint excluded). — One-way door per D-13 — must be frozen before any digest is stored in the DB.
 - [Phase 50]: 50-01: _incoming_utterance_rows is a single shared, DB-write-free helper used by both the first-import write path and the reconcile no-op digest comparison. — Guarantees the digest can never disagree with the rows actually written, and lets the reconcile branch prove zero DB writes for D-09's byte-identical guarantee.
+- [Phase 50]: PD-13 gap-fill pre-check on the two EXISTING gates (apply_participant_value_change/apply_person_value_change) is scoped to rows whose existing authority has not already reached OPERATOR — The plan's literal unconditional text would have reopened the Phase 49 CR-02/CR-04 defect where a re-import could silently overwrite a participant an operator explicitly confirmed as unattributable; the two NEW gates (Argument/Case) apply PD-13 unconditionally since those tables have no review_state and no analogous risk
 
 ### Roadmap Evolution
 
@@ -333,8 +336,8 @@ at close.
 
 ## Session Continuity
 
-Last session: 2026-08-26T13:53:09.774Z
-Stopped at: Completed 50-01-PLAN.md (checkpoint resumed: Task 0 decision recorded, Tasks 1-3 executed)
+Last session: 2026-08-26T14:36:00.433Z
+Stopped at: Completed 50-02-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

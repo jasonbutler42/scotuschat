@@ -31,11 +31,14 @@ from api.models.models import (
     Case,
     CaseArgument,
     CourtTenure,
+    ImportMethod,
     ImportRun,
+    ImportSource,
     Person,
     ReviewState,
     SideEnum,
     Utterance,
+    ValueDiscrepancy,
 )
 from api.domain.authority import WriteDecision
 from api.domain.trust import TrustTier
@@ -60,6 +63,43 @@ class DuplicateArgumentError(ValueError):
         self.conflicting_argument_id = conflicting_argument_id
         self.docket = docket
         self.question = question
+
+
+async def _stamp_operator_provenance(db: AsyncSession, *, model, row_id: int) -> None:
+    """
+    Unconditionally stamp source=OPERATOR / method=MANUAL on one `Argument`
+    or `Case` row (PD-08, Phase 50 plan 50-03).
+
+    `Argument` and `Case` have no `review_state` column — operator
+    authority on their five compare-set columns (argued_date,
+    question_number, source_docket, case_name, docket_number) can only be
+    read off `source == "operator"` (api.domain.authority.authority_rank
+    rule 2). This helper is the ONLY place that makes the ladder's
+    `operator` rung reachable on these two tables. Deliberately scoped to
+    `Argument`/`Case` ONLY — do NOT call this for `ArgumentParticipant` or
+    `Person`, whose operator authority is carried by `review_state`
+    instead (D-22, Phase 49); stamping source/method there would be a
+    second, disagreeing authority mechanism on tables that already have
+    one.
+
+    Unconditional — no "if row.source is None" guard, unlike the
+    participant backfill precedent at
+    api/services/admin_jobs.py:1017-1018 (`resolve_participant_review`).
+    These columns describe where the CURRENT value came from, not where
+    the value originally came from (the same reasoning D-07, Phase 50,
+    gives for the reconcile restamp) — an operator who edits a field a
+    second time restamps it a second time.
+
+    Never commits — the caller's own commit covers this write. Uses
+    .execution_options(synchronize_session=False) (project-wide critical
+    guard, Pitfall 5).
+    """
+    await db.execute(
+        update(model)
+        .where(model.id == row_id)
+        .values(source=ImportSource.OPERATOR, method=ImportMethod.MANUAL)
+        .execution_options(synchronize_session=False)
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -573,11 +613,16 @@ async def update_argument(
         raise ValueError("No lead case found for this argument")
 
     # 3. Apply argued_date (T-11-VALID)
+    case_provenance_dirty = False
     if body.argued_date is not None:
         try:
             argument.argued_date = datetime.date.fromisoformat(body.argued_date)
         except ValueError:
             raise ValueError("invalid_date_format")
+        # PD-08: stamp operator provenance on the argument row's own write
+        # (Phase 50 plan 50-03) — the only way authority_rank can ever
+        # read this column as OPERATOR (Argument has no review_state).
+        await _stamp_operator_provenance(db, model=Argument, row_id=argument.id)
 
     # 4. Apply docket_number with collision check (T-11-DOCKET)
     if body.docket_number is not None:
@@ -599,10 +644,12 @@ async def update_argument(
             # in canonical form; the norm column is used for duplicate detection at
             # ingest time, not for display).
             lead_case.docket_number_norm = new_docket
+            case_provenance_dirty = True
 
     # 5. Apply case_name with slug logic (D-11, Pitfall 2, Pitfall 3)
     if body.case_name is not None:
         lead_case.case_name = body.case_name
+        case_provenance_dirty = True
         if argument.status == ArgumentStatusEnum.DRAFT:
             # DRAFT: re-derive slug from new case_name
             new_slug = _derive_slug(lead_case.case_name)
@@ -618,6 +665,12 @@ async def update_argument(
             lead_case.slug = new_slug
         # else: PUBLISHED or UNPUBLISHED — slug is frozen; only case_name
         # display updates (Pitfall 3, ALIST-01)
+
+    # PD-08: stamp operator provenance on the lead Case row — a case-only
+    # edit (case_name and/or docket_number) touches ONLY the Case row's
+    # provenance, never the Argument row's (Phase 50 plan 50-03).
+    if case_provenance_dirty:
+        await _stamp_operator_provenance(db, model=Case, row_id=lead_case.id)
 
     await db.commit()
     return await get_argument_detail(db, argument_id)
@@ -1045,25 +1098,50 @@ async def check_duplicate_argument(db: AsyncSession, docket: str, question: int)
 
 
 async def delete_argument(db: AsyncSession, argument_id: int) -> bool | None:
-    """Delete an argument and all dependent data (ADMIN-01).
+    """Delete an argument and all dependent data (ADMIN-01, D-25/PD-11, Phase 50).
 
-    Returns True on success, False if argument is not DRAFT — i.e. CANDIDATE
-    (the born state as of Phase 48 D-01; the retired PIPELINE value is also
-    rejected, since it is non-DRAFT), PUBLISHED, or UNPUBLISHED
-    (→ router 409, D-03/AEDIT-09), None if argument not found (→ router 404).
+    Returns True on success, False when the current status is PUBLISHED
+    (→ router 409), None if argument not found (→ router 404).
+
+    Deletable in every state except published (D-25/PD-11): CANDIDATE,
+    DRAFT, and UNPUBLISHED all delete. Delete is the strongest edit there
+    is, so this is D-35a's published-only doctrine (Phase 49) applied
+    consistently to the delete gate — the most useful shape under a
+    reseed-heavy workflow. The prior gate blocked CANDIDATE on the theory
+    that an active AdminJob might still reference it; that reasoning no
+    longer holds — corpus arguments carry no AdminJob at all as of this
+    phase (D-14/D-19), and a PDF job's argument_id is NULLed by cascade
+    step 7 below regardless of the argument's status.
 
     FK-ordered cascade (no ORM relationship cascades exist — manual only):
-      1. Utterances (references both import_run.id AND arguments.id — must go first)
-      2. ImportRuns (references arguments.id — after utterances)
-      3. ArgumentParticipants (references arguments.id)
-      4. CaseArguments (references arguments.id)
-      5. ArgumentStatusLog (the argument_status_log table; references
+      1. value_discrepancy rows scoped to this argument, its lead case
+         (ONLY when no OTHER argument also leads that case — Case is
+         shared, so its discrepancy rows are not this argument's to
+         delete otherwise), and its participants (D-26) — MUST run before
+         ImportRun rows are deleted: value_discrepancy.import_run_id is a
+         hard FK to import_run.id (migration 0028). The participant leg
+         is captured BEFORE step 4 deletes those rows, because
+         value_discrepancy.target_id is a SOFT reference with no FK to
+         catch the orphan otherwise. target_type == "person" rows are
+         NEVER touched — a Person is shared across every argument they
+         appear in, and deleting a person-scoped discrepancy here would
+         destroy another argument's review item.
+      1b. Any SURVIVING value_discrepancy row whose import_run_id still
+          points at one of THIS argument's own ImportRun rows has that
+          reference NULLed (import_run_id is nullable) — a person-scoped
+          or other-argument-participant-scoped row can legitimately be
+          attributed to this argument's own import/reconcile run.
+      2. Utterances (references both import_run.id AND arguments.id — must go first)
+      3. ImportRuns (references arguments.id — after utterances)
+      4. ArgumentParticipants (references arguments.id)
+      5. CaseArguments (references arguments.id)
+      6. ArgumentStatusLog (the argument_status_log table; references
          arguments.id, NOT NULL FK with no ondelete — Phase 48 D-22: every
          argument carries at least one status-log row from birth (D-03),
          so this step is required, not defensive; PostgreSQL applies
          RESTRICT without it)
-      6. AdminJob.argument_id NULLed (FK nullable, no ondelete — Pitfall 1: RESTRICT default)
-      7. Argument (last — all children cleared)
+      7. AdminJob.argument_id NULLed (FK nullable, no ondelete — Pitfall 1: RESTRICT default)
+      8. Argument (last — all children cleared)
 
     All delete() and update() statements use .execution_options(synchronize_session=False)
     (Pitfall 3 — project-wide critical guard for async SQLAlchemy).
@@ -1072,48 +1150,118 @@ async def delete_argument(db: AsyncSession, argument_id: int) -> bool | None:
     import_run.id — deleting import_run rows before utterances raises ForeignKeyViolation.
     Utterances MUST be deleted before import_run rows.
 
-    Only DRAFT arguments are deletable (T-21-01-PUB, T-26-02, T-26-13). CANDIDATE
-    is blocked because an active AdminJob may still reference it — deleting it
-    out from under a running job would permanently strand that job. PUBLISHED
-    and UNPUBLISHED are blocked because they represent live/previously-live
-    content. Client disabled state is defense-in-depth only; this server-side
-    gate is authoritative.
+    Client disabled state is defense-in-depth only; this server-side gate is
+    authoritative.
     """
     result = await db.execute(select(Argument).where(Argument.id == argument_id))
     argument = result.scalar_one_or_none()
     if argument is None:
         return None
-    # D-03 / AEDIT-09 / T-26-13: delete gate is a single positive condition
-    # keyed on status == DRAFT — any non-DRAFT status (PIPELINE, PUBLISHED,
-    # UNPUBLISHED) is rejected.
-    if argument.status != ArgumentStatusEnum.DRAFT:
+    # D-25/PD-11: delete gate is a single positive condition keyed on
+    # status == PUBLISHED — every OTHER status (CANDIDATE, DRAFT,
+    # UNPUBLISHED, and the retired PIPELINE value) is deletable.
+    if argument.status == ArgumentStatusEnum.PUBLISHED:
         return False
 
-    # Step 1: Delete utterances referencing this argument (must be before import_run rows)
+    # Step 1 (D-26): delete value_discrepancy rows scoped to this argument,
+    # captured BEFORE any of their referenced rows (participants, the
+    # argument itself) are deleted below — see the docstring's three-scope
+    # breakdown.
+    participant_ids_result = await db.execute(
+        select(ArgumentParticipant.id).where(ArgumentParticipant.argument_id == argument_id)
+    )
+    participant_ids = [row[0] for row in participant_ids_result.all()]
+
+    lead_case_ids_result = await db.execute(
+        select(CaseArgument.case_id).where(
+            CaseArgument.argument_id == argument_id,
+            CaseArgument.is_lead == True,  # noqa: E712
+        )
+    )
+    lead_case_ids = [row[0] for row in lead_case_ids_result.all()]
+    exclusive_lead_case_ids: list[int] = []
+    for case_id in lead_case_ids:
+        other_lead_result = await db.execute(
+            select(CaseArgument.argument_id).where(
+                CaseArgument.case_id == case_id,
+                CaseArgument.is_lead == True,  # noqa: E712
+                CaseArgument.argument_id != argument_id,
+            )
+        )
+        if other_lead_result.first() is None:
+            exclusive_lead_case_ids.append(case_id)
+
+    discrepancy_scope_conditions = [
+        and_(ValueDiscrepancy.target_type == "argument", ValueDiscrepancy.target_id == argument_id),
+    ]
+    if exclusive_lead_case_ids:
+        discrepancy_scope_conditions.append(
+            and_(
+                ValueDiscrepancy.target_type == "case",
+                ValueDiscrepancy.target_id.in_(exclusive_lead_case_ids),
+            )
+        )
+    if participant_ids:
+        discrepancy_scope_conditions.append(
+            and_(
+                ValueDiscrepancy.target_type == "argument_participant",
+                ValueDiscrepancy.target_id.in_(participant_ids),
+            )
+        )
+    await db.execute(
+        delete(ValueDiscrepancy)
+        .where(or_(*discrepancy_scope_conditions))
+        .execution_options(synchronize_session=False)
+    )
+    # Step 1b (D-26 follow-up): a SURVIVING value_discrepancy row (e.g.
+    # target_type="person", or a different argument's participant) can
+    # still reference one of THIS argument's own ImportRun rows as its
+    # import_run_id — Person is shared and a discrepancy on it can be
+    # attributed to any argument's reconcile/resolve pass, including this
+    # one. Every row this cascade should delete was already removed in
+    # step 1 above; anything still referencing one of this argument's
+    # import_run ids at this point is, by construction, a row that must
+    # NOT be deleted. import_run_id is a nullable FK
+    # (mirrors the AdminJob.argument_id NULL-out precedent in step 7
+    # below) — clear the reference rather than let ImportRun deletion in
+    # step 3 raise ForeignKeyViolation against a row this function must
+    # preserve.
+    own_import_run_ids_result = await db.execute(
+        select(ImportRun.id).where(ImportRun.argument_id == argument_id)
+    )
+    own_import_run_ids = [row[0] for row in own_import_run_ids_result.all()]
+    if own_import_run_ids:
+        await db.execute(
+            update(ValueDiscrepancy)
+            .where(ValueDiscrepancy.import_run_id.in_(own_import_run_ids))
+            .values(import_run_id=None)
+            .execution_options(synchronize_session=False)
+        )
+    # Step 2: Delete utterances referencing this argument (must be before import_run rows)
     await db.execute(
         delete(Utterance)
         .where(Utterance.argument_id == argument_id)
         .execution_options(synchronize_session=False)
     )
-    # Step 2: Delete import_run rows for this argument (after utterances)
+    # Step 3: Delete import_run rows for this argument (after utterances)
     await db.execute(
         delete(ImportRun)
         .where(ImportRun.argument_id == argument_id)
         .execution_options(synchronize_session=False)
     )
-    # Step 3: Delete argument_participants
+    # Step 4: Delete argument_participants
     await db.execute(
         delete(ArgumentParticipant)
         .where(ArgumentParticipant.argument_id == argument_id)
         .execution_options(synchronize_session=False)
     )
-    # Step 4: Delete case_arguments join rows
+    # Step 5: Delete case_arguments join rows
     await db.execute(
         delete(CaseArgument)
         .where(CaseArgument.argument_id == argument_id)
         .execution_options(synchronize_session=False)
     )
-    # Step 5: Delete argument_status_log rows — FK is NOT NULL with no ondelete
+    # Step 6: Delete argument_status_log rows — FK is NOT NULL with no ondelete
     # clause, so PostgreSQL applies RESTRICT (Phase 48 D-22). Every argument
     # carries at least one status-log row from birth (D-03), so this step is
     # required for every delete, not a defensive edge case.
@@ -1122,7 +1270,7 @@ async def delete_argument(db: AsyncSession, argument_id: int) -> bool | None:
         .where(ArgumentStatusLog.argument_id == argument_id)
         .execution_options(synchronize_session=False)
     )
-    # Step 6: NULL out AdminJob.argument_id — FK is nullable but has no ondelete clause;
+    # Step 7: NULL out AdminJob.argument_id — FK is nullable but has no ondelete clause;
     # PostgreSQL default RESTRICT will raise ForeignKeyViolation if not NULLed first (Pitfall 1)
     await db.execute(
         update(AdminJob)
@@ -1130,7 +1278,7 @@ async def delete_argument(db: AsyncSession, argument_id: int) -> bool | None:
         .values(argument_id=None)
         .execution_options(synchronize_session=False)
     )
-    # Step 7: Delete the argument itself
+    # Step 8: Delete the argument itself
     await db.execute(
         delete(Argument)
         .where(Argument.id == argument_id)
@@ -1229,6 +1377,14 @@ async def update_argument_metadata(
             .values(**values_to_set)
             .execution_options(synchronize_session=False)
         )
+        # PD-08: stamp operator provenance on the argument row when
+        # question_number or source_docket was written (Phase 50 plan
+        # 50-03) — the only way authority_rank can ever read either
+        # column as OPERATOR (Argument has no review_state). argued_date
+        # is deliberately NOT stamped here — this call site is scoped to
+        # exactly the two fields named by this task.
+        if "question_number" in values_to_set or "source_docket" in values_to_set:
+            await _stamp_operator_provenance(db, model=Argument, row_id=argument_id)
 
     # d. Update lead Case.case_name if provided
     if body.case_name is not None:

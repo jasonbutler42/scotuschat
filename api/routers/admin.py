@@ -1242,6 +1242,46 @@ async def unpublish_argument(
     return ArgumentDetail(**result)
 
 
+@router.post("/arguments/{argument_id}/approve", response_model=ArgumentDetail)
+async def approve_argument(
+    argument_id: int,
+    db: AsyncSession = Depends(get_db),
+) -> ArgumentDetail:
+    """
+    Transition a CANDIDATE argument to DRAFT, stamping resolved_at = now()
+    (D-14, Phase 50). This is the corpus path's replacement for
+    `approve_job` — `approve_job` stays as the PDF path's job-scoped
+    wrapper; a corpus argument never has an `AdminJob` to approve through
+    (D-14/D-19). No request body — approve carries no operator-supplied
+    data.
+
+    Auth is inherited from the router-level `verify_admin_token`
+    dependency; this route does NOT declare a per-route auth dependency.
+    `argument_id` is typed int, so FastAPI validates the path parameter
+    (T-49-idor precedent, T-50-03).
+
+    Returns 404 if the argument does not exist — the IDOR guard: the id is
+    never trusted without a matching row (T-11-IDOR precedent).
+    Returns 422 (plain-string detail, matching the publish/unpublish
+    routes' non-structured failure shape) if the argument is not currently
+    CANDIDATE — the double-approve guard.
+    Returns 200 through the same `ArgumentDetail` response model
+    `POST /arguments/{argument_id}/publish` returns, so the SvelteKit
+    action can re-render from the response without a second fetch.
+
+    ORDERING NOTE: registered immediately after `unpublish` so it sits with
+    its lifecycle siblings, after every literal `/arguments/*` segment
+    (mirrors the check-duplicate/stats/recent-drafts ordering note above).
+    """
+    try:
+        result = await arguments_service.approve_argument(db, argument_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    if result is None:
+        raise HTTPException(status_code=404, detail="Argument not found")
+    return ArgumentDetail(**result)
+
+
 @router.patch("/arguments/{argument_id}/metadata")
 async def update_argument_metadata(
     argument_id: int,
@@ -1318,24 +1358,30 @@ async def delete_argument(
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     """
-    Delete an argument only if it is a DRAFT (ADMIN-01, D-03/AEDIT-09).
+    Delete an argument unless it is published (ADMIN-01, D-25/PD-11, Phase 50).
 
-    Cascades deletion of all dependent rows in FK order:
-    utterances → import_run → argument_participants → case_arguments → argument.
+    Deletable in every state except published — candidate, draft, and
+    unpublished all delete cleanly; delete is the strongest edit there is,
+    so this mirrors D-35a's published-only doctrine applied consistently.
+
+    Cascades deletion of all dependent rows in FK order: value_discrepancy
+    (scoped to this argument, its lead case when exclusively led by it, and
+    its participants — D-26) → utterances → import_run → argument_participants
+    → case_arguments → argument_status_log → argument.
     AdminJob.argument_id rows are NULLed before the argument is deleted (Pitfall 1).
 
     Returns 200 + {"deleted": True} on success.
     Returns 404 if the argument does not exist (T-21-01-IDOR).
-    Returns 409 if argument.status is 'published' or 'unpublished' (T-21-01-PUB,
-    T-26-02 — server-side guard; client disabled state is defense-in-depth only).
+    Returns 409 if argument.status is 'published' (server-side guard;
+    client disabled state is defense-in-depth only).
 
     Auth inherited from router-level verify_admin_token dependency (T-21-01-AUTH).
     argument_id is typed int — FastAPI validates path param (T-21-01-IDOR, V5).
 
     ORDERING NOTE: This route is placed after all literal-path /arguments/* routes
-    (check-duplicate, publish, unpublish, metadata) so the literal segments are
-    resolved before the {argument_id} parameterized path (consistent with the
-    ordering note at the check-duplicate route).
+    (check-duplicate, publish, unpublish, approve, metadata) so the literal
+    segments are resolved before the {argument_id} parameterized path
+    (consistent with the ordering note at the check-duplicate route).
     """
     result = await arguments_service.delete_argument(db, argument_id)
     if result is None:
@@ -1343,7 +1389,7 @@ async def delete_argument(
     if result is False:
         raise HTTPException(
             status_code=409,
-            detail="Published and unpublished arguments cannot be deleted. Only drafts can be removed.",
+            detail="Published arguments cannot be deleted.",
         )
     return {"deleted": True}
 

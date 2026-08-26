@@ -28,14 +28,18 @@ from pathlib import Path
 from dateutil import parser as dateutil_parser
 from sqlalchemy import select
 
+from api.domain.authority import WriteDecision
 from api.domain.person_names import prepare_name_provenance, prepare_person_name
 from api.models.models import (
     CourtTenure,
+    ImportMethod,
+    ImportSource,
     OFFICE_ASSOCIATE,
     OFFICE_CHIEF,
     Person,
     ReviewState,
 )
+from api.services.admin_review import apply_person_value_change
 from pipeline.db import get_session
 
 # Phase 39 (D-01 through D-07): CSV "Reason Left" raw cell value -> canonical
@@ -276,20 +280,79 @@ async def run_import_justices_csv(args) -> None:
                 if not person.is_justice:
                     person.is_justice = True
                     people_upgraded += 1
-                # Phase 38 (D-16/T-38-11): blank-only prefill — never
-                # overwrite a part an operator has already saved. Each part
-                # is checked independently so a partially-completed row
-                # (e.g. an operator-added middle initial) still gets its
-                # remaining blank parts filled from this authoritative CSV
-                # row.
-                if person.first_name is None and prepared.first_name is not None:
-                    person.first_name = prepared.first_name
-                if person.middle_name is None and prepared.middle_name is not None:
-                    person.middle_name = prepared.middle_name
-                if person.last_name is None and prepared.last_name is not None:
-                    person.last_name = prepared.last_name
-                if person.name_suffix is None and prepared.name_suffix is not None:
-                    person.name_suffix = prepared.name_suffix
+                # Phase 50 (Task 3, D-21/D-22): each part now routes
+                # through the ONE authority gate (apply_person_value_change)
+                # instead of a raw blank-only Python assignment.
+                # incoming_source="seed" ranks with "corpus" in the ladder
+                # (authority_rank rule 3) — the correct rung for this tool.
+                # PD-13's gap-fill pre-check means the common case (a
+                # currently-blank part) is unchanged in effect: write, no
+                # discrepancy recorded. Only a part an operator has
+                # genuinely reviewed/edited (review_state carries that, not
+                # a bare non-None column value — D-22) newly refuses a
+                # disagreeing CSV value instead of relying on "the column
+                # happens to be non-None" as an implicit authority signal.
+                # A blank incoming part (CSV cell empty) is skipped
+                # entirely, same as the former `prepared.X is not None`
+                # guard — apply_person_value_change has no D-03 "no
+                # opinion" pre-check of its own, so a blank incoming value
+                # against a populated existing one must never reach it.
+                # Every gate call issues its own execution_options(
+                # synchronize_session=False) UPDATE, so the in-memory
+                # attribute is synced via a plain assignment on any
+                # accepted decision (mirrors import_convokit.py's
+                # _apply_extracted_name_provenance) -- a later reader of
+                # `person` in this same transaction must see the fresh
+                # value, not a stale pre-write one. Four explicit calls
+                # (not a loop) so each is independently visible in source.
+                if prepared.first_name is not None:
+                    decision = await apply_person_value_change(
+                        session,
+                        person=person,
+                        field="first_name",
+                        incoming_value=prepared.first_name,
+                        incoming_source=ImportSource.SEED.value,
+                        incoming_method=ImportMethod.DIRECT.value,
+                        import_run_id=None,
+                    )
+                    if decision in (WriteDecision.ACCEPT, WriteDecision.ACCEPT_AND_RECORD):
+                        setattr(person, "first_name", prepared.first_name)
+                if prepared.middle_name is not None:
+                    decision = await apply_person_value_change(
+                        session,
+                        person=person,
+                        field="middle_name",
+                        incoming_value=prepared.middle_name,
+                        incoming_source=ImportSource.SEED.value,
+                        incoming_method=ImportMethod.DIRECT.value,
+                        import_run_id=None,
+                    )
+                    if decision in (WriteDecision.ACCEPT, WriteDecision.ACCEPT_AND_RECORD):
+                        setattr(person, "middle_name", prepared.middle_name)
+                if prepared.last_name is not None:
+                    decision = await apply_person_value_change(
+                        session,
+                        person=person,
+                        field="last_name",
+                        incoming_value=prepared.last_name,
+                        incoming_source=ImportSource.SEED.value,
+                        incoming_method=ImportMethod.DIRECT.value,
+                        import_run_id=None,
+                    )
+                    if decision in (WriteDecision.ACCEPT, WriteDecision.ACCEPT_AND_RECORD):
+                        setattr(person, "last_name", prepared.last_name)
+                if prepared.name_suffix is not None:
+                    decision = await apply_person_value_change(
+                        session,
+                        person=person,
+                        field="name_suffix",
+                        incoming_value=prepared.name_suffix,
+                        incoming_source=ImportSource.SEED.value,
+                        incoming_method=ImportMethod.DIRECT.value,
+                        import_run_id=None,
+                    )
+                    if decision in (WriteDecision.ACCEPT, WriteDecision.ACCEPT_AND_RECORD):
+                        setattr(person, "name_suffix", prepared.name_suffix)
                 # Phase 39 (D-06): blank-only prefill for birthdate/death_date,
                 # same shape as the name-part prefills above — never overwrite
                 # a non-None operator-set value.
@@ -327,6 +390,9 @@ async def run_import_justices_csv(args) -> None:
                 ):
                     person.review_state = ReviewState.UNREVIEWED
             else:
+                # PD-20 (50-CONTEXT.md): a CREATE, not an overwrite — there
+                # is no stored value to arbitrate, so this stays deliberately
+                # ungated (matching parse.py's participant seeding).
                 person = Person(
                     full_name=full_name,
                     first_name=prepared.first_name,

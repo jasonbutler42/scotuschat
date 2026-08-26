@@ -4,17 +4,17 @@ milestone: v1.8
 milestone_name: Import & Provenance Re-model
 current_phase: 50
 current_phase_name: Unified Import Path
-status: "Phase 50 EXECUTING — Wave 3 complete (2026-08-26): 50-02/50-03 (Wave 2), 50-04 (/admin/review discrepancy render + argument-scoped Approve action), 50-05 (the real compare-and-record reconcile pass), 50-06 (D-22 delegation sweep for resolve.py/parse.py/import_justices_csv.py + the D-24 behavioral gate) all done. Only Wave 4 (50-07) remains."
-stopped_at: Completed 50-06-PLAN.md
-last_updated: "2026-08-26T17:11:33.470Z"
+status: "Phase 50 COMPLETE (2026-08-26): all 7 plans done — 50-01 (provenance foundation + tracer), 50-02/50-03 (Wave 2 gates + argument-scoped approve/delete), 50-04 (/admin/review discrepancy render + Approve action), 50-05 (the real compare-and-record reconcile pass), 50-06 (D-22 delegation sweep + D-24 behavioral gate), 50-07 (offline prune-runs, extended leak ban, /admin/pipeline PDF-only narrowing, D-24 dispositioned inventory, D-23 closure)."
+stopped_at: Completed 50-07-PLAN.md
+last_updated: "2026-08-26T17:52:31.456Z"
 last_activity: 2026-08-26
-last_activity_desc: Phase 50 execution continued — plan 50-06 complete
-state_head: 1439c37fcb8c61b0a629aa1f7c3bab69b08954a2
+last_activity_desc: Phase 50 execution complete — plan 50-07 (final plan) complete
+state_head: ef3ec8bf8c28e3ec04f325d5961507a2effd50e1
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 35
-  completed_plans: 34
+  completed_plans: 35
   percent: 60
 ---
 
@@ -31,10 +31,10 @@ See: .planning/PROJECT.md (updated 2026-08-18 — Phase 47 complete; corpus-firs
 
 ## Current Position
 
-Phase: 50 (Unified Import Path) — EXECUTING
-Last activity: 2026-08-26 — Plan 50-06 (Wave 3) complete
+Phase: 50 (Unified Import Path) — COMPLETE
+Last activity: 2026-08-26 — Plan 50-07 (Wave 4, final plan) complete
 
-**Next action:** Waves 1-3 are all complete. Proceed with `/gsd-execute-phase 50` to run the final Wave 4 plan (`50-07`).
+**Next action:** Phase 50 is fully executed (all 7 plans, all 4 waves). Run `/gsd-verify-work 50` to verify the phase goal was achieved, then `/gsd-discuss-phase 51` to start the next (and last v1.8) phase.
 
 - **Wave 1: `50-01` — COMPLETE (2026-08-26).** Migration `0030` (six nullable columns, no backfill), the frozen `api/domain/content_digest.py` contract (Task 0 checkpoint: `freeze-as-proposed`), and the `type="tracer"` slice: corpus import creates zero `AdminJob` rows, stamps `oyez_speaker_id`/`content_digest`, survives a byte-identical double-import across all eight affected tables, and `approve_argument` + a reworked `reset_to_fixture` replace the AdminJob-based approve path. `_reconcile_conversation` establishes only the branch/digest-read/no-op guarantee — the real compare-and-write body is `50-05`'s. Full suite: 1507 passed, 5 xfailed, 0 failed. See `50-01-SUMMARY.md`.
 - **Wave 2 plan `50-02` — COMPLETE (2026-08-26).** `apply_argument_value_change`/`apply_case_value_change` — true peers of the two Phase 49 gate functions, both routing through the single `decide_write`. PD-07 fail-closed NULL-provenance pre-check. PD-13 gap-fill pre-check applied to all four gate functions, with a deliberate OPERATOR-authority scope guard on the two EXISTING gates (deviation — the literal unconditional plan text would have reopened the CR-02/CR-04 defect; see `50-02-SUMMARY.md`). `_argument_attention_predicate` legs 5/6 + `ReviewQueueArgumentItem.argument_discrepancies` make an argument-level or lead-case-level discrepancy visible in `/admin/review` (render itself is `50-04`'s). Full suite: 1535 passed, 5 xfailed, 0 failed (was 1507/5; +28 new tests, zero regressions). See `50-02-SUMMARY.md`.
@@ -44,7 +44,8 @@ Last activity: 2026-08-26 — Plan 50-06 (Wave 3) complete
 - **Wave 3 plan `50-05` — COMPLETE (2026-08-26).** The real D-02 compare-and-record field walk replaces `50-01`'s placeholder: `Argument`/`Case`/`ArgumentParticipant`/`Person` compare-set fields walked through the Phase 49/50-02 gates in PD-14's fixed order on every reconcile pass; D-04 `oyez_speaker_id`-only pairing; D-06's lazy `step="reconcile"` run (predictor imports `admin_review`'s own no-opinion/gap-fill helpers directly, never re-implements — PD-15); D-07's unconditional restamp; D-08's PUBLISHED-argument record-only freeze; D-10/D-11/D-13's whole-set utterance replacement under a new `step="parse"` run; D-28's `--dry-run` plus PD-17's five new batch counters. Two auto-fixed deviations found via the tracer test: (1) Rule 2 — `Argument`/`Case` never stamped `source`/`method` at first-import creation (unlike `ArgumentParticipant`/`ImportRun`), breaking D-09's byte-identical proof once D-07's restamp started firing; (2) Rule 1 — a brand-new `Person`'s `review_state` is `None` in-memory pre-flush, crashing `apply_person_value_change`. 35 new tests; `WINDOWS.md` #29 (the deferred-body placeholder) marked fixed, #31 added for D-09's live walkthrough (phase gate, not this plan's own verify). Full suite: 1596 passed, 5 xfailed, 0 failed (was 1561/5; +35 new tests, zero regressions). See `50-05-SUMMARY.md`.
 - **Wave 3 plan `50-06` — COMPLETE (2026-08-26).** Closes the D-22 delegation sweep: `resolve.py`'s bulk `ArgumentParticipant.person_id` UPDATE replaced by a per-row `apply_participant_value_change` call (`Utterance.person_id` deliberately stays ungated, PD-19); `parse.py`'s `argued_date`/`case_name`/`source_docket` cover-metadata writes route through `apply_argument_value_change`/`apply_case_value_change` (the unconditional `case_name` overwrite is gone, T-50-20); `import_justices_csv.py`'s four blank-only name-part assignments become four `apply_person_value_change` calls (`incoming_source=seed`). SC-4 closes with `pipeline/tests/test_gated_column_writers.py` — 8 real-writer tests (not a source-text grep) plus a falsifiability control, hand-verified by temporarily reverting `resolve.py`'s writer and watching its named test fail. One test-fixture deviation (not a production bug): `test_rerun_preserves_operator_edited_parts_blank_only_prefill`'s fixture updated to carry `review_state=OPERATOR_EDITED`, revealing that `review_state` is PERSON-level (not per-field) — a new test (`test_rerun_upgrade_fills_all_blank_name_parts`) covers the all-blank prefill case separately. Full suite: 1618 passed, 5 xfailed, 0 failed (was 1596/5; +22 net new tests, zero regressions). See `50-06-SUMMARY.md`.
 - Wave 3 — DONE. All plans (`50-04`, `50-05`, `50-06`) complete.
-- Wave 4 (remaining): `50-07` (offline `prune-runs`, public-leak ban, dispositioned writer inventory).
+- **Wave 4 plan `50-07` — COMPLETE (2026-08-26).** `python -m pipeline prune-runs` (D-12): offline, deliberate reclamation of superseded `ImportRun`/`Utterance` rows — the served run (PD-22's exact `MAX(ImportRun.id)` select shape) is never a candidate, and a run with an OPEN `value_discrepancy` row is refused under every flag combination (PD-23). The public-leak ban extends to `content_digest`/`oyez_speaker_id`/`argument_discrepancies` and PD-17's six batch-counter names, with the false-green-guard convention extended in the same pass (an honest ORM-layer proof where no schema exposes a key yet). `/admin/pipeline` gains a one-line D-19 note; both `is_corpus` derivation sites in `admin_jobs.py` are commented as unreachable-by-construction, citing 999.11. `50-WRITER-INVENTORY.md` (24 rows, D-24) pairs plan 50-06's executable gate and found a third ungated writer pair (`parse.py`'s `_update_participant_sides`/`_update_participant_descriptors`) neither D-22's enumeration nor 50-06 caught — logged to `deferred-items.md`, not fixed (out of this plan's scope). D-23 closed in the same commit as the inventory (Phase 40.1 lesson): `deferred-items.md`'s Person-scoped `Status: open` now records the operator's no-Person-level-published-lock answer. Full suite: 1666 passed, 5 xfailed, 0 failed (was 1618/5; +48 new tests, zero regressions). See `50-07-SUMMARY.md`.
+- **Wave 4 — DONE. Phase 50 (Unified Import Path) is fully complete — all 7 plans, all 4 waves.**
 
 Three researcher open questions were resolved by the operator at planning time and are LOCKED in the plans: **OQ-1** — nullable `source`/`method` on both `Argument` and `Case`, no backfill, NULL is unknown and fails closed; **OQ-2** — `reset_to_fixture` keeps all four reference states, "Mid-pipeline" preserved by seeding a `step="reconcile"` ImportRun; **OQ-3** — the comparison digest is read from the latest `step="parse"` run, and a diff writes a new `step="parse"` run.
 
@@ -104,7 +105,7 @@ Phase 48 close-out notes (2026-08-21):
 - Test suite: **1209 passed, 5 xfailed, 0 failed, 0 skipped** (baseline at Phase 48 start was 1049;
   the 5 xfailed are the never-implemented Phase 31 stubs, tracked below, unchanged).
 
-Progress: [██████░░░░] 60% (2 of 5 v1.8 phases complete)
+Progress: [████████░░] 80% (4 of 5 v1.8 phases complete)
 
 ## Deferred Items
 
@@ -215,6 +216,7 @@ items → 14.** Every closure carries its evidence in the file it closes; the co
 | Phase 50-unified-import-path P04 | 45min | 2 tasks | 3 files |
 | Phase 50 P05 | 195min | 3 tasks | 3 files |
 | Phase 50 P06 | 130min | 3 tasks | 7 files |
+| Phase 50 P07 | 70min | 3 tasks | 8 files |
 
 v1.7 per-plan metrics cleared at this milestone boundary per the standard STATE.md reset; the underlying per-plan SUMMARY files remain in `.planning/milestones/v1.7-phases/`.
 
@@ -293,6 +295,11 @@ Full cross-milestone decision log lives in PROJECT.md's Key Decisions table. Per
 - [Phase 50]: Plan 50-05: Argument/Case first-import creation now stamps source=corpus/method=direct (matching ArgumentParticipant/ImportRun) -- a Rule 2 fix required for D-07's restamp to not itself break D-09's byte-identical re-import guarantee.
 - [Phase 50]: resolve.py/parse.py/import_justices_csv.py delegate every gated-column write to api.services.admin_review's authority gates (D-22 delegation sweep closed); SC-4 closed by an 8-test real-writer behavioral gate (test_gated_column_writers.py), not a source-text grep.
 - [Phase 50]: parse.py's source_docket write and import_convokit's name-provenance prefill are structurally gap-fill-only by design (a source-inspection test and a has_any_part guard respectively) -- their D-24 tests prove gap-fill correctness, not REJECT_AND_RECORD, and this is documented rather than silently narrowed.
+- [Phase 50]: 50-07: prune-runs' --dry-run path issues zero writes (never "write then roll back") -- an initial defensive session.rollback() under --dry-run was destroying isolated_session-based tests' own uncommitted seed data, since (unlike recompute-trust, whose rollback is load-bearing) this module's dry-run branch structurally never writes; removed once traced.
+- [Phase 50]: 50-07: content_digest/oyez_speaker_id are banned from public schemas in test_trust_public_leak_ban.py even though no schema (admin included) exposes either yet -- the usual false-green admin-schema-carries-it guard is documented as honestly unsatisfiable for these two keys, proven instead at the ORM layer, rather than fabricating an admin exposure this plan had no mandate to add.
+- [Phase 50]: 50-07: found (not fixed) a third ungated writer pair during the D-24 inventory build -- parse.py's _update_participant_sides/_update_participant_descriptors write ArgumentParticipant.side/.descriptor by direct assignment on every parse pass with no gate call, risking a re-parse silently overwriting an operator's own reassignment. Neither D-22's enumeration nor 50-06's parse.py conversion named it. Logged as a new deferred-items.md item (parse.py not in 50-07's files_modified); candidate for a small follow-up plan mirroring resolve.py's 50-06 conversion.
+- [Phase 50]: Phase 50 (Unified Import Path) is COMPLETE as of plan 50-07 -- all four in-scope requirements (IMPORT-01, IMPORT-03, IMPORT-04, IMPORT-05) satisfied. Two phase-gate human items remain open in WINDOWS.md (#30: 50-04's browser walkthrough; #31: 50-05's D-09 live double-import + operator-edit-survival walkthrough) -- neither closed by any plan in this phase; both need a human with `.env` admin credential access.
+- [Phase 50]: Phase 50 complete: prune-runs (D-12), extended leak ban, /admin/pipeline PDF-only narrowing (D-19), D-24 writer inventory, D-23 closed. — Plan 50-07 was the phase's final plan; all four requirements (IMPORT-01/03/04/05) now satisfied.
 
 ### Roadmap Evolution
 
@@ -352,14 +359,16 @@ at close.
 
 ## Session Continuity
 
-Last session: 2026-08-26T17:11:33.024Z
-Stopped at: Completed 50-06-PLAN.md
+Last session: 2026-08-26T17:52:12.010Z
+Stopped at: Completed 50-07-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
 
+- **Phase 50 (Unified Import Path) is complete — all 7 plans, all 4 waves.** Run `/gsd-verify-work 50` to verify the phase goal, then `/gsd-discuss-phase 51` to start Phase 51 (the last v1.8 phase, design system work).
+- **New deferred item from 50-07:** `pipeline/commands/parse.py`'s `_update_participant_sides`/`_update_participant_descriptors` write `ArgumentParticipant.side`/`.descriptor` ungated on every parse pass — a real risk of a re-parse silently overwriting an operator's own reassignment. See `deferred-items.md`'s "D-24 writer inventory (50-07)" section. Candidate for a small follow-up plan.
 - **Phase 49 (Review Model) is complete, including all four gap-closure plans (49-09 through 49-12).** All five REVIEW-0X requirements are `Complete`. Run `/gsd-verify-work 49` to re-close the phase against the reopened gaps.
 - **Recommended single-sitting browser pass** (see `49-EVIDENCE.md` §9 for the pre-49-11 order, plus the 5 new 49-11 Task 3 items in `49-11-SUMMARY.md`'s Human-Check Items section — WINDOWS.md entry 28): open `/admin`, click Reset to Fixture then Seed unresolved speaker; open the Complexity fixture's argument edit page (26-UAT Test 26); open `/admin/review` (49-01/49-05's items, D-32's visual rendering); exercise `CreatePersonPopover`/`/admin/help` (49-03's items); on `/admin/arguments/{id}` for a PUBLISHED argument, confirm the page-level lock statement, the Case card and Argument Details card render disabled, and Publish/Unpublish/Delete still work; optionally publish the Complexity fixture to check 14-UAT Test 8's public-page rendering.
-- **New operator question from 49-11 (D-35a), not yet answered:** should `Person`-scoped writers (`update_person`, `merge_people`, and siblings) be restricted at all, given a `Person` is shared across every argument they appear in? See `deferred-items.md`'s "one new operator question" section.
+- **Operator question from 49-11 (D-35a) — ANSWERED, closed 2026-08-25 (D-23, 50-CONTEXT.md):** no `Person`-level published lock. Zero implementation; see `deferred-items.md`'s Person-scoped section (status flipped to closed in the same commit as `50-07`'s writer inventory, per the Phase 40.1 lesson).
 - One standalone todo remains open from Phase 48: `2026-08-20-reset-to-fixture-stale-created-at-timestamps.md` — candidate for a future plan or `/gsd-review-backlog`. (`2026-08-21-widen-participant-editability-to-all-unpublished-states.md` is now closed — see `.planning/todos/completed/`.)
 - When ready, begin Phase 50 (Import Unification) with `/gsd-discuss-phase 50`.

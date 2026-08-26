@@ -319,7 +319,7 @@ Plans:
   3. Re-running any import is idempotent — the same input yields the same rows and never clobbers operator-authored values.
   4. The authority ordering (operator > corpus > pdf/rule > pdf/llm) governs the overwrite decision on every writer.
 
-**Plans**: 6/7 plans executed (4 waves)
+**Plans**: 7/7 plans executed (4 waves)
 
 Plans:
 **Wave 1**
@@ -339,7 +339,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 50-07-PLAN.md — The offline `prune-runs` command, the extended public-leak ban, the dispositioned writer inventory, and D-23's closure (wave 4)
+- [x] 50-07-PLAN.md — The offline `prune-runs` command, the extended public-leak ban, the dispositioned writer inventory, and D-23's closure (wave 4)
 
 ### Phase 51: Design System & Noun Alignment
 
@@ -417,7 +417,7 @@ Plans:
 | 47. Provenance Foundation | v1.8 | 6/6 | Complete    | 2026-08-18 |
 | 48. Trust & Lifecycle | v1.8 | 10/10 | Complete    | 2026-08-21 |
 | 49. Review Model | v1.8 | 12/12 | Complete    | 2026-08-25 |
-| 50. Unified Import Path | v1.8 | 6/7 | In Progress|  |
+| 50. Unified Import Path | v1.8 | 7/7 | In Progress|  |
 | 51. Design System & Noun Alignment | v1.8 | 0/TBD | Not started | - |
 
 ## Backlog

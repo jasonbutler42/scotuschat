@@ -36,11 +36,11 @@ Requirements for milestone v1.8. Each maps to exactly one roadmap phase.
 
 ### Unified Import Path (IMPORT)
 
-- [ ] **IMPORT-01**: Corpus import writes `import_run` directly (source=corpus) without fabricating PDF-pipeline artifacts
+- [x] **IMPORT-01**: Corpus import writes `import_run` directly (source=corpus) without fabricating PDF-pipeline artifacts
 - [ ] **IMPORT-02**: PDF pipeline path adapts to `import_run` as one strategy among peers — *split out of Phase 50 on 2026-08-25 to Phase 999.11 (BACKLOG); sits on the deferred PDF route*
-- [ ] **IMPORT-03**: `admin_job` references an `import_run` rather than inventing one; corpus CLI batch needs no admin_job
-- [ ] **IMPORT-04**: Re-import is idempotent — re-running yields the same result and never clobbers operator-authored values
-- [ ] **IMPORT-05**: Authority ordering (operator > corpus > pdf/rule > pdf/llm) governs overwrite decisions on every writer
+- [x] **IMPORT-03**: `admin_job` references an `import_run` rather than inventing one; corpus CLI batch needs no admin_job
+- [x] **IMPORT-04**: Re-import is idempotent — re-running yields the same result and never clobbers operator-authored values
+- [x] **IMPORT-05**: Authority ordering (operator > corpus > pdf/rule > pdf/llm) governs overwrite decisions on every writer
 
 ### Design System & Noun Alignment (DS)
 
@@ -85,11 +85,11 @@ Mappings confirmed by the v1.8 roadmap (`.planning/ROADMAP.md`), created 2026-08
 | REVIEW-03 | Phase 49 | Complete |
 | REVIEW-04 | Phase 49 | Complete |
 | REVIEW-05 | Phase 49 | Complete |
-| IMPORT-01 | Phase 50 | Pending |
+| IMPORT-01 | Phase 50 | Complete |
 | IMPORT-02 | Phase 999.11 (BACKLOG) | Deferred |
-| IMPORT-03 | Phase 50 | Pending |
-| IMPORT-04 | Phase 50 | Pending |
-| IMPORT-05 | Phase 50 | Pending |
+| IMPORT-03 | Phase 50 | Complete |
+| IMPORT-04 | Phase 50 | Complete |
+| IMPORT-05 | Phase 50 | Complete |
 | DS-01 | Phase 51 | Pending |
 | DS-02 | Phase 51 | Pending |
 | DS-03 | Phase 51 | Pending |

@@ -1720,3 +1720,255 @@ async def test_argument_no_longer_listed_once_its_only_discrepancy_closes(review
             )
             await db.commit()
         await _teardown_healthy_trusted_argument(ids)
+
+
+# ---------------------------------------------------------------------------
+# Phase 50 plan 50-02 (PD-09): legs 5/6 — an argument-level or lead-case-
+# level open discrepancy pulls the argument into the queue exactly once and
+# is carried on `argument_discrepancies`.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_argument_level_discrepancy_alone_includes_argument_once_with_detail(
+    review_client,
+) -> None:
+    """Leg 5: an argument with ONLY an open target_type="argument"
+    discrepancy is returned by list_review_queue_arguments exactly once,
+    and the row is carried in argument_discrepancies (distinct from the
+    per-constituent discrepancies list)."""
+    from api.core.database import AsyncSessionLocal
+    from api.services.admin_review import record_value_discrepancy
+
+    ids = await _seed_healthy_trusted_argument()
+    try:
+        async with AsyncSessionLocal() as db:
+            await record_value_discrepancy(
+                db,
+                target_type="argument",
+                target_id=ids["argument_id"],
+                field="question_number",
+                import_run_id=None,
+                incoming_value="2",
+                existing_value="1",
+                incoming_source="corpus",
+                incoming_method="direct",
+                existing_source="corpus",
+                existing_method="direct",
+            )
+            await db.commit()
+
+        response = await review_client.get(
+            "/api/admin/review/arguments", headers=_admin_headers()
+        )
+        assert response.status_code == 200
+        matches = [item for item in response.json() if item["id"] == ids["argument_id"]]
+        assert len(matches) == 1
+        item = matches[0]
+        assert len(item["argument_discrepancies"]) == 1
+        assert item["argument_discrepancies"][0]["field"] == "question_number"
+    finally:
+        from sqlalchemy import delete as sa_delete
+
+        from api.models.models import ValueDiscrepancy
+
+        async with AsyncSessionLocal() as db:
+            await db.execute(
+                sa_delete(ValueDiscrepancy).where(
+                    ValueDiscrepancy.target_type == "argument",
+                    ValueDiscrepancy.target_id == ids["argument_id"],
+                )
+            )
+            await db.commit()
+        await _teardown_healthy_trusted_argument(ids)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_lead_case_discrepancy_alone_includes_argument_once_with_detail(
+    review_client,
+) -> None:
+    """Leg 6: an argument whose LEAD case carries an open target_type="case"
+    discrepancy is returned exactly once, with the row carried in
+    argument_discrepancies."""
+    from api.core.database import AsyncSessionLocal
+    from api.services.admin_review import record_value_discrepancy
+
+    ids = await _seed_healthy_trusted_argument()
+    try:
+        async with AsyncSessionLocal() as db:
+            await record_value_discrepancy(
+                db,
+                target_type="case",
+                target_id=ids["case_id"],
+                field="case_name",
+                import_run_id=None,
+                incoming_value="Doe v. Bolton",
+                existing_value="Roe v. Wade",
+                incoming_source="corpus",
+                incoming_method="direct",
+                existing_source="corpus",
+                existing_method="direct",
+            )
+            await db.commit()
+
+        response = await review_client.get(
+            "/api/admin/review/arguments", headers=_admin_headers()
+        )
+        assert response.status_code == 200
+        matches = [item for item in response.json() if item["id"] == ids["argument_id"]]
+        assert len(matches) == 1
+        item = matches[0]
+        assert len(item["argument_discrepancies"]) == 1
+        assert item["argument_discrepancies"][0]["field"] == "case_name"
+    finally:
+        from sqlalchemy import delete as sa_delete
+
+        from api.models.models import ValueDiscrepancy
+
+        async with AsyncSessionLocal() as db:
+            await db.execute(
+                sa_delete(ValueDiscrepancy).where(
+                    ValueDiscrepancy.target_type == "case",
+                    ValueDiscrepancy.target_id == ids["case_id"],
+                )
+            )
+            await db.commit()
+        await _teardown_healthy_trusted_argument(ids)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_argument_satisfying_participant_leg_and_argument_leg_appears_once(
+    review_client,
+) -> None:
+    """An argument whose participant satisfies leg 1 (needs_review) AND
+    whose own row carries an open argument-level discrepancy (leg 5) still
+    appears exactly once — the OR-composition never double-lists a row
+    that qualifies through more than one leg."""
+    from api.core.database import AsyncSessionLocal
+    from api.services.admin_review import record_value_discrepancy
+
+    ids = await _seed_needs_review_participant()
+    try:
+        async with AsyncSessionLocal() as db:
+            await record_value_discrepancy(
+                db,
+                target_type="argument",
+                target_id=ids["argument_id"],
+                field="argued_date",
+                import_run_id=None,
+                incoming_value="2026-01-01",
+                existing_value=None,
+                incoming_source="corpus",
+                incoming_method="direct",
+                existing_source=None,
+                existing_method=None,
+            )
+            await db.commit()
+
+        response = await review_client.get(
+            "/api/admin/review/arguments", headers=_admin_headers()
+        )
+        assert response.status_code == 200
+        matches = [item for item in response.json() if item["id"] == ids["argument_id"]]
+        assert len(matches) == 1
+        item = matches[0]
+        assert len(item["constituents"]) == 1
+        assert len(item["argument_discrepancies"]) == 1
+    finally:
+        from sqlalchemy import delete as sa_delete
+
+        from api.models.models import ValueDiscrepancy
+
+        async with AsyncSessionLocal() as db:
+            await db.execute(
+                sa_delete(ValueDiscrepancy).where(
+                    ValueDiscrepancy.target_type == "argument",
+                    ValueDiscrepancy.target_id == ids["argument_id"],
+                )
+            )
+            await db.commit()
+        await _teardown_needs_review_participant(ids)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_stats_argument_count_matches_list_count_across_participant_argument_and_both_legs(
+    review_client,
+) -> None:
+    """get_review_queue_stats's argument count agrees with
+    list_review_queue_arguments's own length (D-30) across a fixture set
+    containing one participant-leg-only row, one argument-leg-only row, and
+    one row satisfying both simultaneously — using before/after deltas so
+    the assertion is independent of any other queue state in the shared
+    test database."""
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import ValueDiscrepancy
+    from api.services.admin_review import (
+        get_review_queue_stats,
+        list_review_queue_arguments,
+        record_value_discrepancy,
+    )
+
+    async with AsyncSessionLocal() as db:
+        stats_before = await get_review_queue_stats(db)
+        list_before = await list_review_queue_arguments(db)
+
+    participant_only_ids = await _seed_needs_review_participant()
+    argument_only_ids = await _seed_healthy_trusted_argument()
+    both_ids = await _seed_needs_review_participant()
+    try:
+        async with AsyncSessionLocal() as db:
+            await record_value_discrepancy(
+                db,
+                target_type="argument",
+                target_id=argument_only_ids["argument_id"],
+                field="question_number",
+                import_run_id=None,
+                incoming_value="2",
+                existing_value="1",
+                incoming_source="corpus",
+                incoming_method="direct",
+                existing_source="corpus",
+                existing_method="direct",
+            )
+            await record_value_discrepancy(
+                db,
+                target_type="argument",
+                target_id=both_ids["argument_id"],
+                field="question_number",
+                import_run_id=None,
+                incoming_value="2",
+                existing_value="1",
+                incoming_source="corpus",
+                incoming_method="direct",
+                existing_source="corpus",
+                existing_method="direct",
+            )
+            await db.commit()
+
+        async with AsyncSessionLocal() as db:
+            stats_after = await get_review_queue_stats(db)
+            list_after = await list_review_queue_arguments(db)
+
+        assert stats_after["arguments"] == stats_before["arguments"] + 3
+        assert len(list_after) == len(list_before) + 3
+        assert stats_after["arguments"] == len(list_after)
+    finally:
+        async with AsyncSessionLocal() as db:
+            from sqlalchemy import delete as sa_delete
+
+            await db.execute(
+                sa_delete(ValueDiscrepancy).where(
+                    ValueDiscrepancy.target_type == "argument",
+                    ValueDiscrepancy.target_id.in_(
+                        [argument_only_ids["argument_id"], both_ids["argument_id"]]
+                    ),
+                )
+            )
+            await db.commit()
+        await _teardown_needs_review_participant(participant_only_ids)
+        await _teardown_healthy_trusted_argument(argument_only_ids)
+        await _teardown_needs_review_participant(both_ids)

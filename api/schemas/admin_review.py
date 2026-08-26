@@ -85,6 +85,13 @@ class ReviewQueueArgumentItem(BaseModel):
     # constituents is empty, so a row queued solely via the degraded-tier
     # leg still has something real to show in the expanded panel.
     blockers: list[dict] = []
+    # Phase 50 plan 50-02 (PD-09): open value_discrepancy rows recorded
+    # directly against THIS argument's own value columns
+    # (target_type="argument") or against its LEAD case's columns
+    # (target_type="case") — distinct from `constituents[].discrepancies`,
+    # which cover only argument_participant-level rows. Reuses
+    # DiscrepancyDetail verbatim (no parallel schema class).
+    argument_discrepancies: list[DiscrepancyDetail] = []
 
 
 class ReviewQueuePersonItem(BaseModel):

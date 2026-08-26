@@ -616,6 +616,22 @@ def _argument_attention_predicate():
          disagreement records a discrepancy, operator value survives)
          was invisible in the queue entirely. This is REVIEW-02/REVIEW-04
          must_haves' central claim, not a peripheral case.)
+      5. the argument's own row has an open value_discrepancy
+         (`target_type == "argument"`) — Phase 50 plan 50-02 (PD-09).
+         `apply_argument_value_change` records these directly against
+         `Argument.id`; without this leg an argument-level disagreement
+         (e.g. `argued_date`/`question_number`/`source_docket`) would be
+         recorded but invisible, the same class of defect leg 4 above
+         closed for participants.
+      6. this argument's LEAD case has an open value_discrepancy
+         (`target_type == "case"`) — Phase 50 plan 50-02 (PD-09).
+         `Case` is shared across every argument that links it, so a
+         case-level disagreement (`case_name`/`docket_number`) must
+         surface on the arguments that link it as LEAD, not on every
+         argument that merely mentions the case. `CaseArgument` is
+         already joined and filtered to `is_lead == True` at both call
+         sites' own outer WHERE, so referencing `CaseArgument.case_id`
+         here needs no additional join or correlated subquery.
 
     Factored out (plan 49-05) so list_review_queue_arguments and
     get_review_queue_stats share the IDENTICAL expression — the dashboard
@@ -641,11 +657,31 @@ def _argument_attention_predicate():
         ArgumentParticipant.id.is_not(None),
         ArgumentParticipant.id.in_(discrepant_participant_ids_subq),
     )
+    discrepant_argument_ids_subq = (
+        select(ValueDiscrepancy.target_id)
+        .where(
+            ValueDiscrepancy.target_type == "argument",
+            ValueDiscrepancy.resolved_at.is_(None),
+        )
+        .distinct()
+    )
+    discrepant_argument_leg = Argument.id.in_(discrepant_argument_ids_subq)
+    discrepant_case_ids_subq = (
+        select(ValueDiscrepancy.target_id)
+        .where(
+            ValueDiscrepancy.target_type == "case",
+            ValueDiscrepancy.resolved_at.is_(None),
+        )
+        .distinct()
+    )
+    discrepant_lead_case_leg = CaseArgument.case_id.in_(discrepant_case_ids_subq)
     return or_(
         needs_review_leg,
         unresolved_participant_leg,
         degraded_tier_leg,
         discrepant_participant_leg,
+        discrepant_argument_leg,
+        discrepant_lead_case_leg,
     )
 
 
@@ -793,6 +829,7 @@ async def list_review_queue_arguments(
             Argument.argued_date,
             Argument.status,
             Argument.trust_tier,
+            Case.id.label("case_id"),
             Case.case_name,
             Case.docket_number,
             ArgumentParticipant.id.label("participant_id"),
@@ -904,6 +941,11 @@ async def list_review_queue_arguments(
                 "trust_tier": row.trust_tier.value,
                 "admin_job_id": row.admin_job_id,
                 "constituents": [],
+                "argument_discrepancies": [],
+                # Internal only — used below to scope the argument/case
+                # discrepancy query and the lead-case fan-out; popped
+                # before this dict is returned.
+                "_lead_case_id": row.case_id,
             }
             order.append(arg_id)
 
@@ -968,6 +1010,56 @@ async def list_review_queue_arguments(
                 }
             )
 
+    # Attach each argument's own open discrepancies and its lead case's
+    # (plan 50-02, PD-09) — ONE bounded query over the argument ids and
+    # lead case ids already collected above, never a per-row query.
+    # target_type disambiguates the two id spaces so an Argument.id and a
+    # Case.id that happen to collide numerically can never cross-attach.
+    # Ordered by id ASC (edge REVIEW-04/ordering), same convention as the
+    # constituent attachment above.
+    argument_ids = list(arguments.keys())
+    case_id_to_arg_ids: dict[int, list[int]] = {}
+    for _arg_id, _arg in arguments.items():
+        case_id_to_arg_ids.setdefault(_arg["_lead_case_id"], []).append(_arg_id)
+    if argument_ids:
+        arg_case_disc_rows = (
+            await db.execute(
+                select(ValueDiscrepancy)
+                .where(
+                    ValueDiscrepancy.resolved_at.is_(None),
+                    or_(
+                        and_(
+                            ValueDiscrepancy.target_type == "argument",
+                            ValueDiscrepancy.target_id.in_(argument_ids),
+                        ),
+                        and_(
+                            ValueDiscrepancy.target_type == "case",
+                            ValueDiscrepancy.target_id.in_(list(case_id_to_arg_ids.keys())),
+                        ),
+                    ),
+                )
+                .order_by(ValueDiscrepancy.id.asc())
+            )
+        ).scalars().all()
+        for d in arg_case_disc_rows:
+            detail = {
+                "id": d.id,
+                "field": d.field,
+                "existing_value": d.existing_value,
+                "existing_source": d.existing_source.value if d.existing_source else None,
+                "existing_method": d.existing_method.value if d.existing_method else None,
+                "incoming_value": d.incoming_value,
+                "incoming_source": d.incoming_source.value if d.incoming_source else None,
+                "incoming_method": d.incoming_method.value if d.incoming_method else None,
+                "created_at": d.created_at.isoformat(),
+            }
+            if d.target_type == "argument":
+                target_arg_ids = [d.target_id] if d.target_id in arguments else []
+            else:  # target_type == "case" — fan out to every argument that links it as lead
+                target_arg_ids = case_id_to_arg_ids.get(d.target_id, [])
+            for target_arg_id in target_arg_ids:
+                arguments[target_arg_id]["argument_discrepancies"].append(detail)
+
     items: list[dict] = []
     for arg_id in order:
         arg = arguments[arg_id]
@@ -977,6 +1069,7 @@ async def list_review_queue_arguments(
             constituent["has_open_discrepancy"] = len(open_discs) > 0
         arg["attention_count"] = len(arg["constituents"])
         arg["blockers"] = await summarize_tier_blockers(db, arg_id)
+        arg.pop("_lead_case_id", None)
         items.append(arg)
     return items
 

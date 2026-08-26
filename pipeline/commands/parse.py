@@ -31,6 +31,7 @@ from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from api.domain.authority import WriteDecision
 from api.models.models import (
     AdminJob,
     AdminJobStatus,
@@ -46,6 +47,7 @@ from api.models.models import (
     SideEnum,
     Utterance,
 )
+from api.services.admin_review import apply_argument_value_change, apply_case_value_change
 from api.services.argument_uniqueness import (
     find_argument_by_pair,
     is_argument_pair_violation,
@@ -66,6 +68,83 @@ def _normalize_dashes(text: str) -> str:
     text = text.replace('—', '-')
     text = text.replace('\u00ad', '-')  # U+00AD SOFT HYPHEN (explicit escape, not invisible literal)
     return text
+
+
+async def _write_cover_metadata_through_gate(
+    session: AsyncSession,
+    run: ImportRun,
+    argument: Argument,
+    cover_meta: dict,
+) -> None:
+    """
+    Phase 50 (Task 2, D-21/D-22): Blocks A (`argued_date`) and B
+    (`case_name`) route through here \u2014 the sanctioned single writer
+    (`api.services.admin_review`) rather than a direct UPDATE.
+    `incoming_source`/`incoming_method` are read off `run`'s own declared
+    `source`/`method` (`.value` strings), never hardcoded, so a
+    `rule_based` and an `llm_corrective` parse run are separately
+    distinguishable at the gate \u2014 this is what makes the two PDF authority
+    rungs separately provable per D-22. `import_run_id=run.id` attributes
+    any recorded discrepancy to this parse run.
+
+    Block D (`source_docket`) is deliberately NOT routed through this
+    helper \u2014 its `find_argument_by_pair` docket-collision check and
+    `IntegrityError` safety net must stay inline in `_run_parse_inner`
+    (`test_parse_docket_fill_uses_pair_precheck_and_named_race_
+    classification` asserts their exact code shape there via
+    `inspect.getsource`). Block D calls `apply_argument_value_change`
+    directly at its own call site, with the same
+    `incoming_source`/`incoming_method` convention this helper uses.
+
+    Block C (`cover_metadata`) is deliberately excluded \u2014 it is raw
+    extractor output, not a D-02 compare-set value, so it is never routed
+    through a gate.
+    """
+    incoming_source = run.source.value if run.source else None
+    incoming_method = run.method.value if run.method else None
+
+    # Block A: argued_date \u2192 Argument row.
+    if cover_meta.get("argued_date") is not None:
+        decision = await apply_argument_value_change(
+            session,
+            argument=argument,
+            field="argued_date",
+            incoming_value=cover_meta["argued_date"],
+            incoming_source=incoming_source,
+            incoming_method=incoming_method,
+            import_run_id=run.id,
+        )
+        if decision in (WriteDecision.ACCEPT, WriteDecision.ACCEPT_AND_RECORD):
+            print(f"argued_date written: {cover_meta['argued_date']}")
+
+    # Block B: case_name \u2192 lead Case row only (Pitfall 2 is_lead guard).
+    # D-22: this retires the former unconditional overwrite \u2014 a PDF cover
+    # extraction can no longer clobber a corpus- or operator-authored case
+    # name (T-50-20).
+    if cover_meta.get("case_name") is not None:
+        lead_result = await session.execute(
+            select(CaseArgument.case_id).where(
+                CaseArgument.argument_id == argument.id,
+                CaseArgument.is_lead == True,
+            )
+        )
+        lead_row = lead_result.first()
+        if lead_row:
+            lead_case = await session.get(Case, lead_row.case_id)
+            if lead_case is not None:
+                decision = await apply_case_value_change(
+                    session,
+                    case=lead_case,
+                    field="case_name",
+                    incoming_value=cover_meta["case_name"],
+                    incoming_source=incoming_source,
+                    incoming_method=incoming_method,
+                    import_run_id=run.id,
+                )
+                if decision in (WriteDecision.ACCEPT, WriteDecision.ACCEPT_AND_RECORD):
+                    print(f"case_name written: {cover_meta['case_name']!r}")
+        else:
+            print("case_name not written: no lead CaseArgument row found.")
 
 
 async def run_parse(args) -> None:
@@ -322,11 +401,21 @@ async def _run_parse_inner(args) -> None:
                 existing = {row[0] for row in existing_result.all()}
                 new_rows = [(lbl, side) for lbl, side in participant_labels if lbl not in existing]
                 for raw_label, side in new_rows:
+                    # PD-20 (50-CONTEXT.md): a CREATE, not an overwrite —
+                    # there is no stored value to arbitrate, so this is
+                    # deliberately NOT routed through a gate. It DOES need
+                    # source/method stamped at creation time (matching
+                    # import_convokit.py's corpus participants): a seeded
+                    # participant with NULL provenance floors the whole
+                    # argument to UNCERTAIN through derive_tier — the exact
+                    # defect Phase 49's D-18 fix chased.
                     session.add(ArgumentParticipant(
                         argument_id=run.argument_id,
                         raw_speaker_label=raw_label,
                         side=side,
                         person_id=None,
+                        source=ImportSource.PDF_PIPELINE,
+                        method=run.method,
                     ))
                 await session.flush()
                 print(f"Seeded {len(new_rows)} argument_participant row(s) ({len(existing)} already existed).")
@@ -337,41 +426,24 @@ async def _run_parse_inner(args) -> None:
         # Always overwrite — D-04 (no write-if-blank conditional).
         # -------------------------------------------------------------------
 
-        # Block A: argued_date → Argument row — only if currently NULL (D-09, Phase 19).
-        # Operator-entered values are never overwritten.
-        if cover_meta.get("argued_date") is not None:
-            await session.execute(
-                update(Argument)
-                .where(Argument.id == source_run.argument_id, Argument.argued_date.is_(None))
-                .values(argued_date=cover_meta["argued_date"])
-                .execution_options(synchronize_session=False)
-            )
-            print(f"argued_date written: {cover_meta['argued_date']}")
-
-        # Block B: case_name → lead Case row only (D-03, Pitfall 2 is_lead guard)
-        if cover_meta.get("case_name") is not None:
-            lead_result = await session.execute(
-                select(CaseArgument.case_id).where(
-                    CaseArgument.argument_id == source_run.argument_id,
-                    CaseArgument.is_lead == True,
-                )
-            )
-            lead_row = lead_result.first()
-            if lead_row:
-                await session.execute(
-                    update(Case)
-                    .where(Case.id == lead_row.case_id)
-                    .values(case_name=cover_meta["case_name"])
-                    .execution_options(synchronize_session=False)
-                )
-                print(f"case_name written: {cover_meta['case_name']!r}")
-            else:
-                print("case_name not written: no lead CaseArgument row found.")
+        # Block A + Block B: argued_date / case_name — routed through the
+        # D-22 authority gate (api.services.admin_review) rather than a
+        # direct UPDATE. Phase 50 (Task 2): the D-09/D-03 "only if
+        # currently NULL" predicate is gone — apply_argument_value_change's
+        # own PD-13 gap-fill rule expresses that more precisely, and now
+        # also detects (and rejects-and-records) a disagreeing overwrite
+        # instead of silently doing nothing. Block B in particular retires
+        # the former unconditional case_name overwrite (T-50-20).
+        argument_row = await session.get(Argument, source_run.argument_id)
+        if argument_row is not None:
+            await _write_cover_metadata_through_gate(session, run, argument_row, cover_meta)
 
         # Block C: cover_metadata unconditional write (D-07, D-09a, Phase 19).
         # Always writes raw extraction output regardless of whether extraction found anything.
         # Stores None when cover_meta is empty so the metadata card shows no hints.
         # Date objects must be serialized to ISO strings for JSONB compatibility.
+        # D-02 excludes derived/raw values from the compare set — this is raw
+        # extractor output, never routed through a gate (Phase 50 Task 2).
         cover_meta_json = (
             {k: v.isoformat() if hasattr(v, "isoformat") else v for k, v in cover_meta.items()}
             if cover_meta else None
@@ -386,7 +458,12 @@ async def _run_parse_inner(args) -> None:
             print(f"cover_metadata written ({len(cover_meta)} keys)")
 
         # Block D: source_docket conditional write — only if Argument.source_docket IS NULL (D-09b, Phase 19).
-        # Operator-entered values are never overwritten.
+        # Operator-entered values are never overwritten. Phase 50 (Task 2,
+        # D-22): the write itself now goes through apply_argument_value_change
+        # (the sanctioned single writer) instead of a direct UPDATE — the
+        # find_argument_by_pair collision check, its ValueError, and the
+        # IntegrityError safety net are UNCHANGED (a source-inspection
+        # regression test asserts their exact shape here).
         if cover_meta.get("primary_docket") is not None:
             argument_row = await session.get(Argument, source_run.argument_id)
             if argument_row is not None and argument_row.source_docket is None:
@@ -402,14 +479,14 @@ async def _run_parse_inner(args) -> None:
                         "the extracted docket and stored question number."
                     )
                 try:
-                    await session.execute(
-                        update(Argument)
-                        .where(
-                            Argument.id == source_run.argument_id,
-                            Argument.source_docket.is_(None),
-                        )
-                        .values(source_docket=cover_meta["primary_docket"])
-                        .execution_options(synchronize_session=False)
+                    decision = await apply_argument_value_change(
+                        session,
+                        argument=argument_row,
+                        field="source_docket",
+                        incoming_value=cover_meta["primary_docket"],
+                        incoming_source=run.source.value if run.source else None,
+                        incoming_method=run.method.value if run.method else None,
+                        import_run_id=run.id,
                     )
                     await session.flush()
                 except IntegrityError as exc:
@@ -420,7 +497,8 @@ async def _run_parse_inner(args) -> None:
                             "the extracted docket and stored question number."
                         ) from None
                     raise
-                print(f"source_docket written from cover: {cover_meta['primary_docket']!r}")
+                if decision in (WriteDecision.ACCEPT, WriteDecision.ACCEPT_AND_RECORD):
+                    print(f"source_docket written from cover: {cover_meta['primary_docket']!r}")
 
         # -------------------------------------------------------------------
         # Phase 16 PARSE-02: Update argument_participants.side from TOC mapping

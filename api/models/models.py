@@ -303,6 +303,19 @@ class Case(Base):
     slug = Column(String(200), nullable=False, unique=True)           # URL slug
     # Phase 29 — migration 0017: Oyez external case ID (historical corpus import)
     oyez_case_id = Column(String(50), nullable=True)
+    # Phase 50 — migration 0030 (OQ-1): declared provenance for this case's
+    # own row, reusing the SAME import_source/import_method PG enum types
+    # ImportRun and ArgumentParticipant already use (no new enum, no mapping
+    # layer). NULL is unknown provenance — no backfill (D-15/D-16); the
+    # authority gate in plan 50-02 fails closed on NULL.
+    source = Column(
+        SAEnum(ImportSource, name="import_source", values_callable=lambda e: [x.value for x in e]),
+        nullable=True,
+    )
+    method = Column(
+        SAEnum(ImportMethod, name="import_method", values_callable=lambda e: [x.value for x in e]),
+        nullable=True,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -359,6 +372,19 @@ class Argument(Base):
     cover_metadata = Column(JSONB, nullable=True)
     # Phase 29 — migration 0017: Oyez/ConvoKit external transcript ID (historical corpus import)
     oyez_transcript_id = Column(String(50), nullable=True)
+    # Phase 50 — migration 0030 (OQ-1): declared provenance for this
+    # argument's own row, reusing the SAME import_source/import_method PG
+    # enum types ImportRun and ArgumentParticipant already use. NULL is
+    # unknown provenance — no backfill (D-15/D-16); the authority gate in
+    # plan 50-02 fails closed on NULL.
+    source = Column(
+        SAEnum(ImportSource, name="import_source", values_callable=lambda e: [x.value for x in e]),
+        nullable=True,
+    )
+    method = Column(
+        SAEnum(ImportMethod, name="import_method", values_callable=lambda e: [x.value for x in e]),
+        nullable=True,
+    )
     # cases linked via case_arguments M:M join table
 
     __table_args__ = (
@@ -450,6 +476,12 @@ class ArgumentParticipant(Base):
         SAEnum(ImportMethod, name="import_method", values_callable=lambda e: [x.value for x in e]),
         nullable=True,
     )
+    # Phase 50 — migration 0030 (D-04/D-16): the explicit re-import pairing
+    # key — the ConvoKit speaker id this participant row was resolved from.
+    # Populated by the importer on every row it writes; no backfill on
+    # pre-existing rows. Width matches Person.oyez_speaker_id and
+    # ImportRun.external_id, which carry the same ConvoKit id vocabulary.
+    oyez_speaker_id = Column(String(50), nullable=True)
 
 
 # ---------------------------------------------------------------------------
@@ -494,6 +526,12 @@ class ImportRun(Base):
     pdf_path = Column(String(500), nullable=True)    # local path to immutable PDF
     pdf_url = Column(String(1000), nullable=True)    # original download URL
     prompt_version = Column(String(50), nullable=True)  # for schema version tracking
+    # Phase 50 — migration 0030 (D-13/OQ-3): frozen sha256 hex digest (see
+    # api.domain.content_digest) of this argument's ordered utterance
+    # content, carried by step="parse" runs only — a step="reconcile" run
+    # carries no comparison digest (OQ-3). NULL means "predates this phase"
+    # or "not a parse run" — never backfilled (D-15/D-16).
+    content_digest = Column(String(64), nullable=True)
 
 
 # ---------------------------------------------------------------------------

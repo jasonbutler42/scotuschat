@@ -30,7 +30,7 @@ from sqlalchemy import and_, case, or_, select, update
 from sqlalchemy import func as sqlfunc
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.domain.authority import WriteDecision, decide_write
+from api.domain.authority import AuthorityRank, WriteDecision, authority_rank, decide_write
 from api.domain.person_names import normalize_name_part
 from api.domain.trust import TrustTier
 from api.models.models import (
@@ -52,6 +52,15 @@ from api.services.trust import recompute_argument_tier, summarize_tier_blockers
 # contract (REVIEW-01/encoding); every other field routes through a
 # generic strip-and-blank-to-None normalization.
 _NAME_PART_FIELDS = frozenset({"first_name", "middle_name", "last_name", "name_suffix"})
+
+# Phase 50 plan 50-02 (D-02/PD-06): the compare set for the two new peer
+# gates. Derived values (slug, term_year, docket_number_norm,
+# oyez_case_id, status, trust_tier, published_at, resolved_at,
+# cover_metadata, source_dockets) are deliberately absent — D-02 excludes
+# derived values, and lifecycle columns are governed by their own
+# transitions, not by authority.
+_ARGUMENT_GATED_FIELDS = frozenset({"argued_date", "question_number", "source_docket"})
+_CASE_GATED_FIELDS = frozenset({"case_name", "docket_number"})
 
 
 def _stringify(value) -> str | None:
@@ -94,6 +103,28 @@ def _values_differ(field: str, incoming, existing) -> bool:
         norm_incoming = _normalize_generic(incoming)
         norm_existing = _normalize_generic(existing)
     return norm_incoming != norm_existing
+
+
+def _is_gap_fill(field: str, incoming_value, existing_value) -> bool:
+    """
+    PD-13: True when the stored side normalizes to blank/None and the
+    incoming side does not. Filling a genuine gap is not a disagreement —
+    without this rule a legitimately blank field becomes permanently
+    unfillable once a row carries any authority-bearing provenance, and
+    every subsequent import regenerates the identical discrepancy row.
+
+    Reuses the SAME field-appropriate normalizer `_values_differ` uses
+    (`normalize_name_part` for the four name-part fields, else
+    `_normalize_generic`) so this helper can never disagree with
+    `_values_differ` about what counts as blank.
+    """
+    if field in _NAME_PART_FIELDS:
+        norm_existing = normalize_name_part(existing_value, field_name=field) if existing_value else None
+        norm_incoming = normalize_name_part(incoming_value, field_name=field) if incoming_value else None
+    else:
+        norm_existing = _normalize_generic(existing_value)
+        norm_incoming = _normalize_generic(incoming_value)
+    return norm_existing is None and norm_incoming is not None
 
 
 async def record_value_discrepancy(
@@ -184,6 +215,38 @@ async def apply_participant_value_change(
     existing_method_value = participant.method.value if participant.method else ""
     existing_review_state_value = participant.review_state.value
 
+    # PD-13 gap-fill pre-check, scoped to rows the operator has not
+    # already reviewed (D-22/CR-02 regression guard — deviation, see
+    # 50-02-SUMMARY.md). PD-13's rule is for a field NOBODY has reviewed
+    # yet (e.g. a never-resolved person_id); it is not license to bypass a
+    # row an operator already reviewed and explicitly left blank (e.g.
+    # "confirm as unattributable", which deliberately keeps person_id
+    # NULL). Applying gap-fill unconditionally here would let ANY
+    # lower-authority write — even a stale pipeline resolve — silently
+    # fill that intentionally-blank field, reopening exactly the defect
+    # CR-02/CR-04 (Phase 49) fixed and
+    # test_resolve_job_cannot_overwrite_confirmed_unattributable_participant
+    # regression-tests. So gap-fill here only fires when this row's OWN
+    # existing authority has not already reached the OPERATOR ceiling —
+    # once it has, the row falls through to the ordinary ladder below,
+    # which correctly rejects-and-records a same-or-lower-authority write
+    # against it, gap or not.
+    if (
+        _is_gap_fill(field, incoming_value, existing_value)
+        and authority_rank(existing_source_value, existing_method_value, existing_review_state_value)
+        != AuthorityRank.OPERATOR
+    ):
+        await db.execute(
+            update(ArgumentParticipant)
+            .where(
+                ArgumentParticipant.id == participant.id,
+                ArgumentParticipant.argument_id == participant.argument_id,
+            )
+            .values(**{field: incoming_value})
+            .execution_options(synchronize_session=False)
+        )
+        return WriteDecision.ACCEPT
+
     decision = decide_write(
         incoming_source=incoming_source,
         incoming_method=incoming_method,
@@ -251,6 +314,22 @@ async def apply_person_value_change(
 
     existing_review_state_value = person.review_state.value
 
+    # PD-13 gap-fill pre-check, scoped identically to
+    # apply_participant_value_change's own guard above (same defect class,
+    # same fix) — a blank name part on a row already reviewed to OPERATOR
+    # authority is a deliberate operator decision, not an unreviewed gap.
+    if (
+        _is_gap_fill(field, incoming_value, existing_value)
+        and authority_rank("", "", existing_review_state_value) != AuthorityRank.OPERATOR
+    ):
+        await db.execute(
+            update(Person)
+            .where(Person.id == person.id)
+            .values(**{field: incoming_value})
+            .execution_options(synchronize_session=False)
+        )
+        return WriteDecision.ACCEPT
+
     decision = decide_write(
         incoming_source=incoming_source,
         incoming_method=incoming_method,
@@ -282,6 +361,226 @@ async def apply_person_value_change(
             incoming_method=incoming_method,
             existing_source=None,
             existing_method=None,
+        )
+
+    return decision
+
+
+def _existing_authority_is_unknown(row, existing_value) -> bool:
+    """
+    PD-07/OQ-1: True when the stored value is populated (non-blank after
+    generic normalization) but the row's own `source` column is NULL —
+    provenance genuinely unknown, never merely low authority.
+
+    Why this can't just hand `("", "")` to `decide_write`: an unstamped
+    triple normalizes to `AuthorityRank.UNKNOWN` (rank 0), which
+    `AuthorityRank.CORPUS` (rank 3) strictly outranks — that would let a
+    corpus re-import silently overwrite a row nobody has ever declared
+    provenance for, exactly the outcome OQ-1 forbids. This check fails the
+    write closed instead of routing an unknown-provenance row through the
+    ladder at all.
+    """
+    return _normalize_generic(existing_value) is not None and row.source is None
+
+
+async def apply_argument_value_change(
+    db: AsyncSession,
+    *,
+    argument: Argument,
+    field: str,
+    incoming_value,
+    incoming_source: str,
+    incoming_method: str,
+    import_run_id: int | None = None,
+) -> WriteDecision | None:
+    """
+    The peer authority gate for `arguments` (D-31/D-31a, PD-06, OQ-1).
+    Every write to one of D-02's `Argument` compare-set columns
+    (`_ARGUMENT_GATED_FIELDS`) must go through this function — no second,
+    ungated write path may survive.
+
+    `Argument` has no `review_state` column (PD-08) — existing authority is
+    read off `source`/`method` only, with `existing_review_state=""`
+    passed to `decide_write` so `authority_rank`'s rule 1 never fires for
+    this table. A populated stored value whose `source` IS NULL fails
+    closed (PD-07/OQ-1) rather than being handed to `decide_write` as
+    `("", "")`. A `None`/blank incoming value against a populated stored
+    value is "no opinion" and returns `None` — no write, no record, no
+    `decide_write` call (D-03). A blank stored value receiving a non-blank
+    incoming value is a gap-fill (PD-13) — write, no record.
+
+    Never commits, never recomputes the trust tier — the caller owns both.
+    """
+    if field not in _ARGUMENT_GATED_FIELDS:
+        raise ValueError(f"field {field!r} is not a gated Argument field")
+
+    existing_value = getattr(argument, field)
+
+    # D-03: a missing/blank incoming value against a populated stored
+    # value is an absence of information, not a claim that the value is
+    # empty — no write, no record, no decide_write call.
+    if _normalize_generic(incoming_value) is None and _normalize_generic(existing_value) is not None:
+        return None
+
+    # PD-13: filling a genuine gap is not a disagreement. `Argument` has no
+    # review_state and no "operator confirmed this stays blank" concept
+    # (PD-08) — unlike the participant/person guard above, there is no
+    # existing-authority scope to check here.
+    if _is_gap_fill(field, incoming_value, existing_value):
+        await db.execute(
+            update(Argument)
+            .where(Argument.id == argument.id)
+            .values(**{field: incoming_value})
+            .execution_options(synchronize_session=False)
+        )
+        return WriteDecision.ACCEPT
+
+    # PD-07 fail-closed pre-check: a populated stored value with unknown
+    # (NULL source) provenance never yields to a differing incoming value.
+    if _existing_authority_is_unknown(argument, existing_value) and _values_differ(
+        field, incoming_value, existing_value
+    ):
+        await record_value_discrepancy(
+            db,
+            target_type="argument",
+            target_id=argument.id,
+            field=field,
+            import_run_id=import_run_id,
+            incoming_value=incoming_value,
+            existing_value=existing_value,
+            incoming_source=incoming_source,
+            incoming_method=incoming_method,
+            existing_source=None,
+            existing_method=None,
+        )
+        return WriteDecision.REJECT_AND_RECORD
+
+    existing_source_value = argument.source.value if argument.source else ""
+    existing_method_value = argument.method.value if argument.method else ""
+
+    decision = decide_write(
+        incoming_source=incoming_source,
+        incoming_method=incoming_method,
+        incoming_review_state="",
+        existing_source=existing_source_value,
+        existing_method=existing_method_value,
+        existing_review_state="",
+        values_differ=_values_differ(field, incoming_value, existing_value),
+    )
+
+    if decision in (WriteDecision.ACCEPT, WriteDecision.ACCEPT_AND_RECORD):
+        await db.execute(
+            update(Argument)
+            .where(Argument.id == argument.id)
+            .values(**{field: incoming_value})
+            .execution_options(synchronize_session=False)
+        )
+
+    if decision in (WriteDecision.ACCEPT_AND_RECORD, WriteDecision.REJECT_AND_RECORD):
+        await record_value_discrepancy(
+            db,
+            target_type="argument",
+            target_id=argument.id,
+            field=field,
+            import_run_id=import_run_id,
+            incoming_value=incoming_value,
+            existing_value=existing_value,
+            incoming_source=incoming_source,
+            incoming_method=incoming_method,
+            existing_source=existing_source_value or None,
+            existing_method=existing_method_value or None,
+        )
+
+    return decision
+
+
+async def apply_case_value_change(
+    db: AsyncSession,
+    *,
+    case: Case,
+    field: str,
+    incoming_value,
+    incoming_source: str,
+    incoming_method: str,
+    import_run_id: int | None = None,
+) -> WriteDecision | None:
+    """
+    The peer authority gate for `cases` (D-31/D-31a, PD-06, OQ-1). Same
+    body as `apply_argument_value_change` above, against
+    `_CASE_GATED_FIELDS` and `target_type="case"` — `Case` also has no
+    `review_state` (PD-08), so `existing_review_state=""` here too.
+
+    Never commits, never recomputes the trust tier — the caller owns both.
+    """
+    if field not in _CASE_GATED_FIELDS:
+        raise ValueError(f"field {field!r} is not a gated Case field")
+
+    existing_value = getattr(case, field)
+
+    if _normalize_generic(incoming_value) is None and _normalize_generic(existing_value) is not None:
+        return None
+
+    if _is_gap_fill(field, incoming_value, existing_value):
+        await db.execute(
+            update(Case)
+            .where(Case.id == case.id)
+            .values(**{field: incoming_value})
+            .execution_options(synchronize_session=False)
+        )
+        return WriteDecision.ACCEPT
+
+    if _existing_authority_is_unknown(case, existing_value) and _values_differ(
+        field, incoming_value, existing_value
+    ):
+        await record_value_discrepancy(
+            db,
+            target_type="case",
+            target_id=case.id,
+            field=field,
+            import_run_id=import_run_id,
+            incoming_value=incoming_value,
+            existing_value=existing_value,
+            incoming_source=incoming_source,
+            incoming_method=incoming_method,
+            existing_source=None,
+            existing_method=None,
+        )
+        return WriteDecision.REJECT_AND_RECORD
+
+    existing_source_value = case.source.value if case.source else ""
+    existing_method_value = case.method.value if case.method else ""
+
+    decision = decide_write(
+        incoming_source=incoming_source,
+        incoming_method=incoming_method,
+        incoming_review_state="",
+        existing_source=existing_source_value,
+        existing_method=existing_method_value,
+        existing_review_state="",
+        values_differ=_values_differ(field, incoming_value, existing_value),
+    )
+
+    if decision in (WriteDecision.ACCEPT, WriteDecision.ACCEPT_AND_RECORD):
+        await db.execute(
+            update(Case)
+            .where(Case.id == case.id)
+            .values(**{field: incoming_value})
+            .execution_options(synchronize_session=False)
+        )
+
+    if decision in (WriteDecision.ACCEPT_AND_RECORD, WriteDecision.REJECT_AND_RECORD):
+        await record_value_discrepancy(
+            db,
+            target_type="case",
+            target_id=case.id,
+            field=field,
+            import_run_id=import_run_id,
+            incoming_value=incoming_value,
+            existing_value=existing_value,
+            incoming_source=incoming_source,
+            incoming_method=incoming_method,
+            existing_source=existing_source_value or None,
+            existing_method=existing_method_value or None,
         )
 
     return decision

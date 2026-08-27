@@ -45,6 +45,32 @@
 		goto('/admin/review?tab=' + tab);
 	}
 
+	// ── Form-action URLs (G-50-4a).
+	//
+	// A bare action="?/name" REPLACES the page's query string, so the server
+	// action saw url.search === "?/name" and redirect(303, ...) dropped the
+	// operator's tab and filters — after every approve/confirm/reflag they
+	// landed back on the unfiltered top of the queue. Carrying the live
+	// filter query in the action URL is what lets filterRedirect() in
+	// +page.server.ts send them back where they were.
+	//
+	// $derived, NOT a plain const off `data`: each action redirects and the
+	// load re-runs, replacing `data`. A captured const would freeze these
+	// action URLs at their first-render values — the stale-prop-capture
+	// class this codebase has been bitten by before.
+	const filterQuery = $derived.by(() => {
+		const params = new URLSearchParams();
+		params.set('tab', data.tab);
+		if (data.status) params.set('status', data.status);
+		if (data.tier) params.set('tier', data.tier);
+		if (data.review_state) params.set('review_state', data.review_state);
+		return params.toString();
+	});
+
+	function actionUrl(name: string) {
+		return `?${filterQuery}&/${name}`;
+	}
+
 	function selectStatus(value: string) {
 		gotoWithParams({ status: value === 'all' ? null : value });
 	}
@@ -558,7 +584,7 @@
 
 													<div style="display: flex; gap: 8px; flex-wrap: wrap;">
 														{#if constituent.person_id !== null && constituent.review_state === 'needs_review'}
-															<form method="POST" action="?/confirm" use:enhance>
+															<form method="POST" action={actionUrl('confirm')} use:enhance>
 																<input type="hidden" name="id" value={constituent.participant_id} />
 																<button
 																	type="submit"
@@ -567,7 +593,7 @@
 															</form>
 														{/if}
 														{#if constituent.person_id === null}
-															<form method="POST" action="?/confirmUnattributable" use:enhance>
+															<form method="POST" action={actionUrl('confirmUnattributable')} use:enhance>
 																<input type="hidden" name="id" value={constituent.participant_id} />
 																<button
 																	type="submit"
@@ -580,7 +606,7 @@
 															style="display: inline-flex; align-items: center; font-size: 14px; color: #93c5fd; text-decoration: underline;"
 														>{argumentEditLabel(item)}</a>
 														{#if constituent.review_state === 'operator_confirmed' || constituent.review_state === 'operator_edited'}
-															<form method="POST" action="?/reflag" use:enhance>
+															<form method="POST" action={actionUrl('reflag')} use:enhance>
 																<input type="hidden" name="id" value={constituent.participant_id} />
 																<button
 																	type="submit"
@@ -616,7 +642,7 @@
 										     argument/case-discrepancy leg still needs to be
 										     approvable. Absent for every other status (D-19). -->
 										<div style="display: flex; gap: 8px; flex-wrap: wrap; padding: 12px 12px 0 12px;">
-											<form method="POST" action="?/approve" use:enhance>
+											<form method="POST" action={actionUrl('approve')} use:enhance>
 												<input type="hidden" name="id" value={item.id} />
 												<button
 													type="submit"
@@ -664,7 +690,7 @@
 							<td style="padding: 12px; border-bottom: 1px solid #334155; vertical-align: top; white-space: nowrap;">
 								<div style="display: flex; gap: 8px; flex-wrap: wrap;">
 									{#if person.review_state === 'needs_review' || person.review_state === 'unreviewed'}
-										<form method="POST" action="?/confirm" use:enhance>
+										<form method="POST" action={actionUrl('confirm')} use:enhance>
 											<input type="hidden" name="kind" value="person" />
 											<input type="hidden" name="id" value={person.id} />
 											<button
@@ -678,7 +704,7 @@
 										style="display: inline-flex; align-items: center; font-size: 14px; color: #93c5fd; text-decoration: underline;"
 									>Edit</a>
 									{#if person.review_state === 'operator_confirmed' || person.review_state === 'operator_edited'}
-										<form method="POST" action="?/reflag" use:enhance>
+										<form method="POST" action={actionUrl('reflag')} use:enhance>
 											<input type="hidden" name="kind" value="person" />
 											<input type="hidden" name="id" value={person.id} />
 											<button

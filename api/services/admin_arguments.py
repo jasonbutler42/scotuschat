@@ -1402,6 +1402,18 @@ async def update_argument_metadata(
                 .values(case_name=body.case_name)
                 .execution_options(synchronize_session=False)
             )
+            # PD-08 / G-50-2a: stamp operator provenance on the lead Case,
+            # exactly as `update_argument`'s own case_name write does. Both
+            # functions are operator-facing routes onto the SAME column, so
+            # both must reach the same rung of the ladder. Without this the
+            # edit stayed at CORPUS authority (Case has no `review_state`;
+            # `source` is the only carrier), and a disagreeing corpus
+            # re-import was rejected only by the equal-rank tie rather than
+            # by operator authority — with `value_discrepancy` then
+            # attributing the operator's own value to `corpus`, which is
+            # what /admin/review rendered back to them. Found by the D-09
+            # live walkthrough, 2026-08-26.
+            await _stamp_operator_provenance(db, model=Case, row_id=lead_ca.case_id)
 
     try:
         await db.commit()

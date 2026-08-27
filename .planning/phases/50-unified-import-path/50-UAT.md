@@ -3,7 +3,7 @@ status: complete
 phase: 50-unified-import-path
 source: 50-01-SUMMARY.md, 50-02-SUMMARY.md, 50-03-SUMMARY.md, 50-04-SUMMARY.md, 50-05-SUMMARY.md, 50-06-SUMMARY.md, 50-07-SUMMARY.md
 started: 2026-08-27T02:06:11Z
-updated: 2026-08-27T11:10:09Z
+updated: 2026-08-27T12:09:57Z
 ---
 
 ## Current Test
@@ -28,6 +28,7 @@ coverage_id: injected (migration 0030 shipped this phase)
 ### 2. D-09 live double-import diff + operator-edit survival
 expected: Live walkthrough on the dev DB: reset_to_fixture -> corpus import -> snapshot all eight affected tables -> byte-identical re-import -> diff shows zero new rows and zero changed column values; then edit a value as operator -> re-import with a disagreeing corpus value -> the operator value survives and a value_discrepancy row is recorded.
 result: issue
+resolution: "Both gaps (G-50-2a, G-50-2b) FIXED 2026-08-27; re-verified live — an operator case_name edit now holds source=operator across three consecutive re-imports, and D-09's byte-identical invariant still holds across all eight tables."
 source: live-verified (2026-08-26 session)
 reported: "D-09 first half PASSES: reset_to_fixture -> re-import of all four fixtures -> snapshot diff was byte-identical across all eight tables (0 new rows, 0 changed values). Second half FAILS on provenance: the operator value survives, but operator AUTHORITY does not."
 severity: major
@@ -58,6 +59,7 @@ coverage_id: 50-04 D1 (WINDOWS.md #30)
 ### 4. Argument-scoped Approve action end to end
 expected: A CANDIDATE argument's expanded /admin/review panel shows 'Approve — move to Draft'. Clicking it posts to the argument-scoped approve route, the row's status then reads Draft, the Approve button is gone, the active tab/filter survives the redirect, and the argument can then be published.
 result: issue
+resolution: "G-50-4a FIXED 2026-08-27; re-verified live — the post-approve URL keeps all four filter axes and the Candidate filter stays pressed."
 source: live-verified (2026-08-26 session, Playwright)
 reported: "Approve itself works end to end, but the operator's tab and status filter are dropped on the post-approve redirect -- the exact leg WINDOWS.md #30 flagged."
 severity: minor
@@ -331,8 +333,9 @@ blocked: 0
 ## Gaps
 
 - gap_id: G-50-2a
+  status_note: FIXED 2026-08-27
   truth: "An operator edit to Case.case_name reaches OPERATOR authority, so a disagreeing corpus re-import is REJECT_AND_RECORD on authority grounds and the audit row attributes the stored value to the operator."
-  status: failed
+  status: resolved
   reason: "update_argument_metadata writes Case.case_name without calling _stamp_operator_provenance, while update_argument does. Live: case 733 edited via PATCH /api/admin/arguments/1813/metadata stayed source=corpus/method=direct; case 734 edited via PATCH /api/admin/arguments/1814 became source=operator/method=manual. Same column, same operator intent, two different authority outcomes. The value still survived the re-import, but only by the corpus==corpus equal-rank tie, and value_discrepancy row 16 misattributes the human's value as existing_source='corpus' -- which /admin/review then renders to the operator as '(corpus/direct)'."
   severity: major
   test: 2
@@ -342,6 +345,13 @@ blocked: 0
   missing:
     - "Call _stamp_operator_provenance(db, model=Case, row_id=lead_ca.case_id) after the case_name write in update_argument_metadata."
     - "Regression test asserting both operator routes leave cases.source='operator' after a case_name edit."
+  resolved_by: "api/services/admin_arguments.py — _stamp_operator_provenance on update_argument_metadata's lead-Case write"
+  resolved_at: 2026-08-27
+  fix: "Added the missing _stamp_operator_provenance(db, model=Case, row_id=lead_ca.case_id) after step (d)'s update(Case).values(case_name=...), matching update_argument's own case_name write. The three AsyncMock db.execute-sequence tests the docstring warns about are unaffected — none of them passes case_name, so the new call never fires for them (verified: 85 passed)."
+  fix_tests:
+    - "test_update_argument_metadata_stamps_case_provenance_on_case_name_write"
+    - "test_both_operator_routes_onto_case_name_agree_on_authority — parity guard, asserts both routes land on AuthorityRank.OPERATOR"
+  falsifiability: "Verified 2026-08-27 by removing the stamp call and confirming both tests fail (AuthorityRank.UNKNOWN != OPERATOR)."
 
 - gap_id: G-50-2b
   status_note: FIXED 2026-08-27
@@ -371,8 +381,9 @@ blocked: 0
   falsifiability: "Verified 2026-08-27 by restoring the per-field restamp in the Case walk and confirming the two behavioral tests AND the structural guard fail; the structural guard was strengthened after a first version passed under the reverted code."
 
 - gap_id: G-50-4a
+  status_note: FIXED 2026-08-27
   truth: "Approving an argument from /admin/review preserves the operator's tab and status filter across the post-action redirect."
-  status: failed
+  status: resolved
   reason: "Live: with the Candidate filter active (URL ?tab=arguments&status=candidate), clicking Approve landed on /admin/review?/approve with the filter reset to All and all 5 rows showing. The approve action does redirect(303, url.pathname + url.search), but inside a SvelteKit form action url.search is the action query '?/approve', never the page's filter query -- because every form on the page declares a bare action=\"?/name\", which replaces the query string rather than extending it. The action's own docstring claims it 'Preserves the current filter/tab query string ... so approving does not silently drop the operator's tab and filter selection'; it does not."
   severity: minor
   test: 4
@@ -385,3 +396,17 @@ blocked: 0
     - "Carry tab/status into the form action (hidden inputs, or action={`?${$page.url.searchParams}&/approve`}) and redirect using those values."
     - "Test asserting the post-approve redirect URL retains tab and status."
   notes: "Pre-existing across all four review actions, not introduced by Phase 50 -- but Phase 50's approve action inherited it, and this is exactly the leg WINDOWS.md #30 named as unverified."
+  resolved_by: "app/src/routes/admin/review/+page.svelte (actionUrl) + +page.server.ts (filterRedirect)"
+  resolved_at: 2026-08-27
+  fix: "Two halves. Client: a $derived filterQuery over all four axes (tab/status/tier/review_state) and an actionUrl(name) helper; all six forms now declare action={actionUrl('...')} instead of a bare action=\"?/name\", so the filter query actually reaches the server action. $derived rather than a const off `data` — each action redirects and the load re-runs, and a captured const would freeze the action URLs (this codebase's stale-prop-capture class). Server: a filterRedirect(url) helper strips SvelteKit's own action key (the param whose name starts with '/') so the redirect target is a clean linkable filter URL; all four actions now redirect through it."
+  fix_tests:
+    - "test_no_review_form_declares_a_bare_action_query — the defect shape itself"
+    - "test_every_review_form_action_carries_the_live_filter_query"
+    - "test_action_url_helper_builds_from_the_live_filter_state — asserts $derived, and all four axes"
+    - "test_every_server_action_redirects_through_the_filter_preserving_helper"
+    - "test_filter_redirect_strips_sveltekits_own_action_key"
+    - "test_approve_form_posts_to_the_approve_action / _guarded_by_candidate_status_condition — updated to the new shape"
+  fix_tests_caveat: "These are source-grep contract tests: they pin the SHAPE, not the runtime behaviour. Per this project's documented $state-proxy-vs-grep trap, a green grep test has masked a fully broken control on this very screen before. The behavioural proof is the live Playwright walkthrough below."
+  live_verification: "2026-08-27, Playwright: with ?tab=arguments&status=candidate active, the approve form's action attribute read '?tab=arguments&status=candidate&/approve' and the post-approve URL was '?tab=arguments&status=candidate' with the Candidate filter still pressed (was '?/approve' with the filter reset to All). Re-checked with all four axes set (status+tier+review_state) — all preserved, no '&/approve' residue."
+  live_verification_gap: "The People-tab confirm/reflag actions were NOT exercised live — no actionable People rows existed under the filters tried. They share the same actionUrl helper and the same filterRedirect, so they are covered by construction and by the contract tests, but not by a live click."
+  falsifiability: "Verified 2026-08-27 by reverting each half independently: the client half alone fails 3 tests, the server half alone fails 1."

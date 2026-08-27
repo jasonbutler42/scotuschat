@@ -128,6 +128,33 @@ export const load: PageServerLoad = async ({ fetch, url }) => {
 };
 
 /**
+ * Post-action redirect target, preserving the operator's tab and filters
+ * (G-50-4a).
+ *
+ * `url.pathname + url.search` was NOT enough on its own. Inside a form
+ * action `url` is the ACTION url, so its search is whatever the form's
+ * `action` attribute put there — with the bare `action="?/approve"` these
+ * forms used to declare, that was literally `?/approve` and every filter
+ * was dropped, landing the operator back on the unfiltered top of the
+ * queue after each action. The forms now carry the live filter query
+ * (see `actionUrl` in +page.svelte); this helper drops SvelteKit's own
+ * action key — the one param whose name starts with `/` — so the redirect
+ * target is a clean, linkable filter URL rather than one that still
+ * carries `&/approve`.
+ *
+ * Found by the D-09/50-04 live walkthrough, 2026-08-26; the previous
+ * behaviour contradicted these actions' own docstrings.
+ */
+function filterRedirect(url: URL): string {
+	const params = new URLSearchParams(url.search);
+	for (const key of [...params.keys()]) {
+		if (key.startsWith('/')) params.delete(key);
+	}
+	const queryString = params.toString();
+	return queryString ? `${url.pathname}?${queryString}` : url.pathname;
+}
+
+/**
  * Shared PATCH helper for the three resolve-action form actions below —
  * each POSTs the corresponding fixed action verb the server chose (never
  * a client-supplied field name/value, T-49-massassign) to
@@ -211,7 +238,7 @@ export const actions: Actions = {
 		const failure = await patchReviewAction(fetch, kind, id, 'confirm');
 		if (failure) return fail(502, failure);
 
-		throw redirect(303, url.pathname + url.search);
+		throw redirect(303, filterRedirect(url));
 	},
 
 	/**
@@ -226,7 +253,7 @@ export const actions: Actions = {
 		const failure = await patchReviewAction(fetch, 'participants', id, 'confirm_unattributable');
 		if (failure) return fail(422, failure);
 
-		throw redirect(303, url.pathname + url.search);
+		throw redirect(303, filterRedirect(url));
 	},
 
 	reflag: async ({ request, fetch, url }) => {
@@ -237,7 +264,7 @@ export const actions: Actions = {
 		const failure = await patchReviewAction(fetch, kind, id, 'reflag');
 		if (failure) return fail(422, failure);
 
-		throw redirect(303, url.pathname + url.search);
+		throw redirect(303, filterRedirect(url));
 	},
 
 	/**
@@ -253,6 +280,6 @@ export const actions: Actions = {
 		const failure = await approveArgument(fetch, id);
 		if (failure) return fail(422, failure);
 
-		throw redirect(303, url.pathname + url.search);
+		throw redirect(303, filterRedirect(url));
 	},
 };

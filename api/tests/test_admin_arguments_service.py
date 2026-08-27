@@ -2469,3 +2469,97 @@ async def test_update_participant_side_rejects_unresolved_side() -> None:
 
     with pytest.raises(ValueError):
         await update_participant_side(sentinel_session, 1, 1, SideEnum.ADVOCATE)
+
+
+# ---------------------------------------------------------------------------
+# G-50-2a: update_argument_metadata and update_argument are both
+# operator-facing routes onto the SAME lead-Case column (case_name), so both
+# must reach the same rung of the authority ladder. update_argument_metadata
+# wrote the column without stamping, leaving the edit at CORPUS authority --
+# found by the D-09 live walkthrough, 2026-08-26, not by these tests'
+# predecessors (each route was only ever tested against itself).
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_update_argument_metadata_stamps_case_provenance_on_case_name_write() -> None:
+    """The G-50-2a regression: after update_argument_metadata() writes the
+    lead case's case_name, the lead Case row must reach OPERATOR authority.
+
+    Case has no `review_state`, so `source` is the only carrier of the
+    ladder's operator rung (api.domain.authority.authority_rank rule 2) --
+    an unstamped edit is indistinguishable from a corpus value.
+    """
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import Argument, Case, ImportMethod, ImportSource
+    from api.schemas.admin_arguments import MetadataUpdate
+    from api.services.admin_arguments import update_argument_metadata
+
+    ids = await _seed_draft_argument_with_lead_case_for_stamping()
+    try:
+        async with AsyncSessionLocal() as db:
+            ok = await update_argument_metadata(
+                db, ids["argument_id"], MetadataUpdate(case_name="Metadata Renamed Fixture")
+            )
+        assert ok is True
+
+        async with AsyncSessionLocal() as db:
+            case = await db.get(Case, ids["case_id"])
+            assert case.case_name == "Metadata Renamed Fixture"
+            assert case.source == ImportSource.OPERATOR
+            assert case.method == ImportMethod.MANUAL
+
+            # A case-only edit must not stamp the argument row -- the same
+            # scoping update_argument observes (PD-08).
+            arg = await db.get(Argument, ids["argument_id"])
+            assert arg.source is None, "a case-only edit must not stamp the argument row"
+            assert arg.method is None
+    finally:
+        await _teardown_draft_argument_with_lead_case(ids)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_both_operator_routes_onto_case_name_agree_on_authority() -> None:
+    """Parity guard (G-50-2a): whichever operator route writes case_name,
+    the lead Case must land on the same rung. This is the assertion whose
+    absence let the two routes drift apart."""
+    from api.core.database import AsyncSessionLocal
+    from api.domain.authority import AuthorityRank, authority_rank
+    from api.models.models import Case
+    from api.schemas.admin_arguments import ArgumentUpdate, MetadataUpdate
+    from api.services.admin_arguments import update_argument, update_argument_metadata
+
+    ranks = {}
+    for label, apply in (
+        ("update_argument", "argument"),
+        ("update_argument_metadata", "metadata"),
+    ):
+        ids = await _seed_draft_argument_with_lead_case_for_stamping()
+        try:
+            async with AsyncSessionLocal() as db:
+                if apply == "argument":
+                    await update_argument(
+                        db, ids["argument_id"], ArgumentUpdate(case_name=f"Renamed via {label}")
+                    )
+                else:
+                    await update_argument_metadata(
+                        db, ids["argument_id"], MetadataUpdate(case_name=f"Renamed via {label}")
+                    )
+
+            async with AsyncSessionLocal() as db:
+                case = await db.get(Case, ids["case_id"])
+                ranks[label] = authority_rank(
+                    case.source.value if case.source else "",
+                    case.method.value if case.method else "",
+                    "",  # Case has no review_state
+                )
+        finally:
+            await _teardown_draft_argument_with_lead_case(ids)
+
+    assert ranks["update_argument"] == AuthorityRank.OPERATOR
+    assert ranks["update_argument_metadata"] == AuthorityRank.OPERATOR
+    assert ranks["update_argument"] == ranks["update_argument_metadata"], (
+        f"the two operator routes onto case_name disagree on authority: {ranks}"
+    )

@@ -40,6 +40,24 @@ def _source(path: Path) -> str:
 REVIEW_SOURCE = _source(REVIEW_PAGE_PATH)
 
 
+def _strip_comments(source: str) -> str:
+    """Drop comments so these greps assert on CODE, not on prose.
+
+    Without this, a comment that merely NAMES the defect shape it warns
+    against (e.g. explaining why a bare `action="?/name"` is wrong) trips
+    the very test guarding against it — the fix documenting itself would
+    fail the fix. Strips HTML comments, block comments, and line comments,
+    leaving `://` in URLs alone.
+    """
+    source = re.sub(r"<!--.*?-->", "", source, flags=re.DOTALL)
+    source = re.sub(r"/\*.*?\*/", "", source, flags=re.DOTALL)
+    source = re.sub(r"(?<!:)//[^\n]*", "", source)
+    return source
+
+
+REVIEW_SOURCE_CODE = _strip_comments(REVIEW_SOURCE)
+
+
 # ─────────────────────────────────────────────────────────────────────────
 # Tabs, status segments, review-state/tier filter option labels (E3, E4)
 # ─────────────────────────────────────────────────────────────────────────
@@ -430,10 +448,16 @@ def test_argument_level_discrepancy_row_badge_conditioned_on_non_empty_list() ->
 
 REVIEW_SERVER_PATH = ROOT / "app" / "src" / "routes" / "admin" / "review" / "+page.server.ts"
 REVIEW_SERVER_SOURCE = _source(REVIEW_SERVER_PATH)
+REVIEW_SERVER_SOURCE_CODE = _strip_comments(REVIEW_SERVER_SOURCE)
 
 
 def test_approve_form_posts_to_the_approve_action() -> None:
-    assert '?/approve' in REVIEW_SOURCE
+    # G-50-4a: the target is now actionUrl('approve'), which resolves to
+    # "?<live filter query>&/approve". A BARE ?/approve is the defect --
+    # it replaces the page's query string, so the server action's
+    # url.search is just "?/approve" and the operator's tab and filters
+    # are dropped on the redirect.
+    assert "actionUrl('approve')" in REVIEW_SOURCE
 
 
 def test_approve_form_guarded_by_candidate_status_condition() -> None:
@@ -443,8 +467,8 @@ def test_approve_form_guarded_by_candidate_status_condition() -> None:
         re.DOTALL,
     )
     assert match, "expected an {#if item.status === 'candidate'} guard"
-    assert '?/approve' in match.group(0), (
-        "expected the ?/approve form to be inside the candidate-status guard"
+    assert "actionUrl('approve')" in match.group(0), (
+        "expected the approve form to be inside the candidate-status guard"
     )
 
 
@@ -469,3 +493,93 @@ def test_no_truncation_or_media_query_introduced_on_the_review_page() -> None:
     assert "overflow: hidden" not in REVIEW_SOURCE
     assert "@media" not in REVIEW_SOURCE
     assert "class=" not in REVIEW_SOURCE
+
+
+# ---------------------------------------------------------------------------
+# G-50-4a: the operator's tab and filters must survive every /admin/review
+# form action's post-action redirect.
+#
+# A bare action="?/name" REPLACES the page's query string, so inside the
+# server action `url.search` was literally "?/name" and
+# redirect(303, url.pathname + url.search) dropped every filter -- landing
+# the operator back on the unfiltered top of the queue after each action,
+# the opposite of what those actions' own docstrings claimed. Pre-existing
+# across all four actions; found by the 50-04 live browser walkthrough,
+# 2026-08-26.
+#
+# NOTE ON THESE TESTS' LIMITS: these are source-grep contract tests. They
+# pin the SHAPE of the fix, not its runtime behaviour -- per this project's
+# own documented $state-proxy-vs-grep trap, a green grep test has masked a
+# fully broken control here before. The behavioural proof is the live
+# Playwright walkthrough recorded in 50-UAT.md (all four filter axes
+# verified surviving an approve round trip, 2026-08-27).
+# ---------------------------------------------------------------------------
+
+
+def test_no_review_form_declares_a_bare_action_query() -> None:
+    """The defect shape itself: `action="?/name"` with no filter query."""
+    bare = re.findall(r'action="\?/(\w+)"', REVIEW_SOURCE_CODE)
+    assert bare == [], (
+        f"these forms still declare a bare action query and will drop the "
+        f"operator's tab/filters on redirect (G-50-4a): {bare}"
+    )
+
+
+def test_every_review_form_action_carries_the_live_filter_query() -> None:
+    """Every <form> on the page routes through actionUrl(), which prefixes
+    the live filter query onto the action key."""
+    form_actions = re.findall(r"<form[^>]*action=\{([^}]+)\}", REVIEW_SOURCE_CODE)
+    assert form_actions, "expected at least one form with a dynamic action"
+    non_conforming = [a for a in form_actions if "actionUrl(" not in a]
+    assert non_conforming == [], (
+        f"form actions bypassing actionUrl() will drop the operator's "
+        f"filters (G-50-4a): {non_conforming}"
+    )
+
+
+def test_action_url_helper_builds_from_the_live_filter_state() -> None:
+    """actionUrl must read a $derived filter query, never a plain const
+    captured off `data` -- after each action the load re-runs and `data` is
+    replaced, and a captured const would freeze the action URLs at their
+    first-render values (this codebase's stale-prop-capture class)."""
+    assert "function actionUrl(" in REVIEW_SOURCE
+    match = re.search(r"const filterQuery = (\$derived[.\w]*)", REVIEW_SOURCE)
+    assert match, (
+        "filterQuery must be a $derived off `data` -- a plain const would go "
+        "stale after the post-action redirect re-runs the load"
+    )
+    # All four filter axes must be carried, not just tab/status.
+    filter_block = REVIEW_SOURCE[match.start() : match.start() + 600]
+    for axis in ("tab", "status", "tier", "review_state"):
+        assert axis in filter_block, f"filterQuery drops the {axis!r} filter axis"
+
+
+def test_every_server_action_redirects_through_the_filter_preserving_helper() -> None:
+    """No action may redirect to `url.pathname + url.search` directly --
+    inside a form action that search is the ACTION query, not the page's."""
+    assert "function filterRedirect(" in REVIEW_SERVER_SOURCE_CODE
+    assert "url.pathname + url.search" not in REVIEW_SERVER_SOURCE_CODE, (
+        "an action still redirects to the raw action url (G-50-4a)"
+    )
+    redirects = re.findall(r"throw redirect\(303, ([^)]+\)?)\)", REVIEW_SERVER_SOURCE_CODE)
+    assert redirects, "expected at least one 303 redirect"
+    non_conforming = [r for r in redirects if "filterRedirect(" not in r]
+    assert non_conforming == [], (
+        f"these redirects bypass filterRedirect() (G-50-4a): {non_conforming}"
+    )
+
+
+def test_filter_redirect_strips_sveltekits_own_action_key() -> None:
+    """The redirect target must be a clean, linkable filter URL -- carrying
+    `&/approve` through would make it neither."""
+    match = re.search(
+        r"function filterRedirect\(url: URL\): string \{.*?\n\}",
+        REVIEW_SERVER_SOURCE,
+        re.DOTALL,
+    )
+    assert match, "expected a filterRedirect(url) helper"
+    body = match.group(0)
+    assert "startsWith('/')" in body, (
+        "filterRedirect must drop SvelteKit's action key (the param whose "
+        "name starts with '/')"
+    )

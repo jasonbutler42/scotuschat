@@ -3,7 +3,7 @@ status: complete
 phase: 50-unified-import-path
 source: 50-01-SUMMARY.md, 50-02-SUMMARY.md, 50-03-SUMMARY.md, 50-04-SUMMARY.md, 50-05-SUMMARY.md, 50-06-SUMMARY.md, 50-07-SUMMARY.md
 started: 2026-08-27T02:06:11Z
-updated: 2026-08-27T03:08:56Z
+updated: 2026-08-27T11:10:09Z
 ---
 
 ## Current Test
@@ -344,8 +344,9 @@ blocked: 0
     - "Regression test asserting both operator routes leave cases.source='operator' after a case_name edit."
 
 - gap_id: G-50-2b
+  status_note: FIXED 2026-08-27
   truth: "Operator authority on Argument/Case is durable -- once an operator edit is stamped, a corpus reconcile pass cannot silently demote the row below the OPERATOR rung."
-  status: failed
+  status: resolved
   reason: "_restamp_corpus_provenance is a ROW-level update (source=corpus/method=direct on the whole row) fired from a PER-FIELD decision. Argument and Case have no review_state column, so source is the only carrier of operator authority (per _stamp_operator_provenance's own docstring). Live proof: case 734 was stamped operator/manual; on re-import case_name was REJECT_AND_RECORD but the sibling docket_number agreed and returned ACCEPT, firing the row-level restamp -- reverting the whole row to corpus/direct. Discrepancy row 17 (first re-import) records existing_source='operator'; row 18 (second re-import, no further operator action) records existing_source='corpus'. Control case 736, where BOTH compare fields disagreed so neither returned ACCEPT, kept source=operator across the same re-import -- isolating the cause."
   severity: major
   test: 2
@@ -356,6 +357,18 @@ blocked: 0
     - "Make provenance demotion field-aware, or suppress the restamp for a row that has any REJECT_AND_RECORD decision on the same pass."
     - "Test: operator-edit field A, leave field B agreeing, re-import, assert the row still reads source='operator' and the discrepancy row records existing_source='operator' on every subsequent pass."
   notes: "ArgumentParticipant and Person are NOT exposed -- their operator authority is carried by review_state, which this helper deliberately does not touch. Argument and Case are the two affected tables."
+  resolved_by: "pipeline/commands/import_convokit.py — _row_should_restamp predicate + one restamp decision per row"
+  resolved_at: 2026-08-27
+  fix: "Added _row_should_restamp(decisions): a row is demoted to corpus/direct only when its COMPLETE compare-set walk accepted at least one write AND rejected nothing. All three call sites (Argument, Case, ArgumentParticipant) now accumulate per-field decisions across the whole walk and restamp once at the end, instead of firing per accepted field. Fail-closed in the same spirit as authority_rank rule 6: a row still holding an outranking stored value is never demoted."
+  fix_tests:
+    - "test_case_rejected_field_is_not_demoted_by_an_agreeing_sibling — the exact live scenario"
+    - "test_case_operator_authority_is_durable_across_repeated_reimports — the row-18 symptom, 3 passes"
+    - "test_argument_rejected_field_is_not_demoted_by_an_agreeing_sibling"
+    - "test_participant_rejected_field_is_not_demoted_by_an_agreeing_sibling"
+    - "test_case_clean_accepting_walk_still_restamps — over-correction guard, D-07 preserved"
+    - "test_row_should_restamp_* — 3 unit tests on the predicate"
+    - "test_every_restamp_call_site_is_gated_on_the_row_level_predicate — structural guard"
+  falsifiability: "Verified 2026-08-27 by restoring the per-field restamp in the Case walk and confirming the two behavioral tests AND the structural guard fail; the structural guard was strengthened after a first version passed under the reverted code."
 
 - gap_id: G-50-4a
   truth: "Approving an argument from /admin/review preserves the operator's tab and status filter across the post-action redirect."

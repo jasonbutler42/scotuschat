@@ -71,6 +71,7 @@ from __future__ import annotations
 import argparse
 import functools
 from collections import defaultdict
+from collections.abc import Sequence
 from datetime import date
 from pathlib import Path
 
@@ -916,21 +917,61 @@ async def _pair_participants_by_speaker_id(
     }
 
 
+def _row_should_restamp(decisions: Sequence[WriteDecision | None]) -> bool:
+    """
+    Decide whether one row's whole-row provenance may be demoted to
+    corpus/direct after its full compare-set walk (G-50-2b).
+
+    `source`/`method` are ROW-level columns, but `decide_write` runs
+    PER-FIELD. Firing the restamp from a single field's ACCEPT therefore
+    demoted the entire row -- including sibling fields whose stored value
+    had just been REJECT_AND_RECORDed for outranking the incoming one. On
+    `Argument` and `Case` that silently destroyed operator authority,
+    because neither table has a `review_state` column and `source` is the
+    only carrier of the ladder's `operator` rung (see
+    `api.services.admin_arguments._stamp_operator_provenance`). Found by
+    the D-09 live walkthrough, 2026-08-26: an operator-edited `case_name`
+    was rejected while its sibling `docket_number` agreed, and the
+    agreeing field's ACCEPT reverted the row to corpus/direct.
+
+    The rule, fail-closed in the same spirit as `authority_rank`'s
+    rule 6: a row that still holds at least one field whose stored value
+    OUTRANKED this pass's incoming value is not a wholly corpus-sourced
+    row, so it is never demoted. The row keeps the higher authority; a
+    later disagreeing corpus write is then still rejected and recorded,
+    leaving an audit trail, rather than being silently accepted.
+
+    Returns True only when the walk both (a) accepted at least one write
+    and (b) rejected nothing. A gate returns `None` for a field it has no
+    opinion on (incoming blank against a populated stored value), so the
+    sequence is mixed; a `None` neither licenses nor blocks a restamp, and
+    an all-`None` walk wrote nothing and must not restamp.
+    """
+    if any(d == WriteDecision.REJECT_AND_RECORD for d in decisions):
+        return False
+    return any(
+        d in (WriteDecision.ACCEPT, WriteDecision.ACCEPT_AND_RECORD) for d in decisions
+    )
+
+
 async def _restamp_corpus_provenance(session, model, row_id: int) -> None:
     """
-    D-07 (PD-16): after ANY accepted overwrite on this reconcile pass,
-    unconditionally restamp `source`/`method` to corpus/direct -- even a
-    row that already carried a `source` value. The provenance columns
-    describe where the value came FROM, not where it originally came
-    from. `review_state` is deliberately NOT touched here (see D-07's
-    rationale in 50-CONTEXT.md). `Person` has no `source`/`method`
-    columns, so this is only ever called for `Argument`, `Case`, and
-    `ArgumentParticipant`.
+    D-07 (PD-16): after an accepted overwrite on this reconcile pass,
+    restamp `source`/`method` to corpus/direct -- even a row that already
+    carried a `source` value. The provenance columns describe where the
+    value came FROM, not where it originally came from. `review_state` is
+    deliberately NOT touched here (see D-07's rationale in
+    50-CONTEXT.md). `Person` has no `source`/`method` columns, so this is
+    only ever called for `Argument`, `Case`, and `ArgumentParticipant`.
 
-    Distinct from the backfill-only precedent at
+    Unconditional WITHIN a row -- it does not consult the row's existing
+    `source`, so it is still distinct from the backfill-only precedent at
     `api/services/admin_jobs.py`'s `resolve_participant_review` (guarded
-    on `participant.source is None`) -- that precedent must NOT be reused
-    verbatim here; D-07 requires an unconditional restamp.
+    on `participant.source is None`), which must NOT be reused verbatim
+    here. What D-07's "unconditional" never licensed is demoting a row on
+    behalf of a field that was rejected: every caller must gate this on
+    `_row_should_restamp` over that row's COMPLETE compare-set walk, and
+    call it once per row rather than once per accepted field (G-50-2b).
     """
     await session.execute(
         update(model)
@@ -1025,6 +1066,9 @@ async def _reconcile_conversation(
         ("question_number", None, argument.question_number),
         ("source_docket", case_fields.get("docket_no"), argument.source_docket),
     )
+    # G-50-2b: collect this row's per-field decisions across the WHOLE
+    # compare-set walk and restamp once at the end, never per field.
+    argument_decisions: list[WriteDecision | None] = []
     for arg_field, incoming_value, existing_value in argument_field_plan:
         if is_published:
             existing_source_value = argument.source.value if argument.source else None
@@ -1049,8 +1093,9 @@ async def _reconcile_conversation(
                 existing_value=existing_value,
                 has_no_opinion_check=True,
             )
-            if decision in (WriteDecision.ACCEPT, WriteDecision.ACCEPT_AND_RECORD):
-                await _restamp_corpus_provenance(session, Argument, argument.id)
+            argument_decisions.append(decision)
+    if _row_should_restamp(argument_decisions):
+        await _restamp_corpus_provenance(session, Argument, argument.id)
 
     # ---- PD-14 items 4-5: lead Case fields ----
     lead_case = await _fetch_lead_case(session, argument.id)
@@ -1059,6 +1104,10 @@ async def _reconcile_conversation(
             ("case_name", _case_name_from_fields(case_fields), lead_case.case_name),
             ("docket_number", case_fields.get("docket_no"), lead_case.docket_number),
         )
+        # G-50-2b: one restamp decision per row, over the whole walk. This
+        # is the exact pair the live walkthrough caught -- an operator's
+        # `case_name` rejected while `docket_number` agreed.
+        case_decisions: list[WriteDecision | None] = []
         for c_field, incoming_value, existing_value in case_field_plan:
             if is_published:
                 existing_source_value = lead_case.source.value if lead_case.source else None
@@ -1083,8 +1132,9 @@ async def _reconcile_conversation(
                     existing_value=existing_value,
                     has_no_opinion_check=True,
                 )
-                if decision in (WriteDecision.ACCEPT, WriteDecision.ACCEPT_AND_RECORD):
-                    await _restamp_corpus_provenance(session, Case, lead_case.id)
+                case_decisions.append(decision)
+        if _row_should_restamp(case_decisions):
+            await _restamp_corpus_provenance(session, Case, lead_case.id)
 
     # No Person/ArgumentParticipant resolution happens for the digest
     # computation below -- an empty resolved_participants seed means every
@@ -1137,6 +1187,10 @@ async def _reconcile_conversation(
             )
             visited_person_ids.add(person.id)
 
+            # G-50-2b: accumulate across this participant's three compare-set
+            # fields; the single restamp decision comes after the walk.
+            participant_decisions: list[WriteDecision | None] = []
+
             decision = await _reconcile_field(
                 ctx,
                 functools.partial(apply_participant_value_change, participant=participant),
@@ -1146,10 +1200,7 @@ async def _reconcile_conversation(
                 existing_value=participant.person_id,
                 has_no_opinion_check=False,
             )
-            if decision in (WriteDecision.ACCEPT, WriteDecision.ACCEPT_AND_RECORD):
-                await _restamp_corpus_provenance(
-                    session, ArgumentParticipant, participant.id
-                )
+            participant_decisions.append(decision)
 
             side_meta = advocates.get(speaker_id)
             side_code = side_meta.get("side") if isinstance(side_meta, dict) else side_meta
@@ -1165,10 +1216,7 @@ async def _reconcile_conversation(
                 existing_value=participant.side,
                 has_no_opinion_check=False,
             )
-            if decision in (WriteDecision.ACCEPT, WriteDecision.ACCEPT_AND_RECORD):
-                await _restamp_corpus_provenance(
-                    session, ArgumentParticipant, participant.id
-                )
+            participant_decisions.append(decision)
 
             # descriptor: corpus never supplies one (PDF-cover-extractor-only
             # field) -- incoming is always None; walked for PD-14 order.
@@ -1181,7 +1229,9 @@ async def _reconcile_conversation(
                 existing_value=participant.descriptor,
                 has_no_opinion_check=False,
             )
-            if decision in (WriteDecision.ACCEPT, WriteDecision.ACCEPT_AND_RECORD):
+            participant_decisions.append(decision)
+
+            if _row_should_restamp(participant_decisions):
                 await _restamp_corpus_provenance(
                     session, ArgumentParticipant, participant.id
                 )

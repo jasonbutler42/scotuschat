@@ -1284,3 +1284,267 @@ def test_dry_run_flag_registered_on_cli():
         timeout=30,
     )
     assert "--dry-run" in result.stdout
+
+
+# ===========================================================================
+# G-50-2b: row-level provenance must not be demoted on behalf of a field
+# that was REJECTED on the same pass.
+#
+# Found by the D-09 live walkthrough (2026-08-26), not by these tests'
+# predecessors -- every one of them exercised a SINGLE field per row, and
+# the defect only appears when one row's compare-set walk mixes an accept
+# with a reject. `source` is the only carrier of operator authority on
+# `Argument`/`Case` (neither has `review_state`), so demoting the row
+# silently destroyed the ladder's `operator` rung for the rejected field.
+# ===========================================================================
+
+
+def test_row_should_restamp_blocks_when_any_field_rejected():
+    """A mixed walk never demotes -- this is the G-50-2b rule itself."""
+    assert (
+        import_convokit_module._row_should_restamp(
+            [WriteDecision.ACCEPT, WriteDecision.REJECT_AND_RECORD]
+        )
+        is False
+    )
+    assert (
+        import_convokit_module._row_should_restamp(
+            [WriteDecision.ACCEPT_AND_RECORD, WriteDecision.REJECT_AND_RECORD]
+        )
+        is False
+    )
+    # Order must not matter -- the reject may be walked first or last.
+    assert (
+        import_convokit_module._row_should_restamp(
+            [WriteDecision.REJECT_AND_RECORD, WriteDecision.ACCEPT]
+        )
+        is False
+    )
+
+
+def test_row_should_restamp_allows_a_clean_accepting_walk():
+    """D-07 is preserved for the case it was actually written for."""
+    assert import_convokit_module._row_should_restamp([WriteDecision.ACCEPT]) is True
+    assert (
+        import_convokit_module._row_should_restamp(
+            [WriteDecision.ACCEPT, WriteDecision.ACCEPT_AND_RECORD, None]
+        )
+        is True
+    )
+
+
+def test_row_should_restamp_blocks_a_walk_that_wrote_nothing():
+    """An all-no-opinion or empty walk changed no value, so the row's
+    provenance still describes where its CURRENT values came from."""
+    assert import_convokit_module._row_should_restamp([]) is False
+    assert import_convokit_module._row_should_restamp([None, None]) is False
+    assert (
+        import_convokit_module._row_should_restamp([WriteDecision.REJECT_AND_RECORD])
+        is False
+    )
+
+
+async def test_case_rejected_field_is_not_demoted_by_an_agreeing_sibling(async_session):
+    """The exact live scenario: an operator-edited `case_name` is rejected
+    while the sibling `docket_number` agrees. The agreeing field's ACCEPT
+    must not strip the row's operator authority (G-50-2b)."""
+    docket = _unique_docket()
+    argument, case = await _seed_argument(
+        async_session,
+        docket=docket,
+        case_name="OPERATOR EDIT — Pet v. Resp",
+        case_source=ImportSource.OPERATOR,
+        case_method=ImportMethod.MANUAL,
+    )
+    await _seed_parse_run(async_session, argument)
+
+    # case_name disagrees (corpus derives "Pet v. Resp"); docket_number agrees.
+    case_fields = _case_fields(docket)
+
+    counters = await _reconcile(async_session, argument, case_fields=case_fields)
+
+    await async_session.refresh(case)
+    assert case.case_name == "OPERATOR EDIT — Pet v. Resp"  # value survived
+    # The authority that PROTECTED it must survive too -- this is the bug.
+    assert case.source == ImportSource.OPERATOR
+    assert case.method == ImportMethod.MANUAL
+    assert counters["values_rejected"] >= 1
+
+    # And the audit row must attribute the stored value to the operator,
+    # not to corpus -- what /admin/review renders to the operator.
+    discrepancies = await _open_discrepancies(async_session, "case", case.id)
+    matching = [d for d in discrepancies if d.field == "case_name"]
+    assert len(matching) == 1
+    assert matching[0].existing_source == ImportSource.OPERATOR.value
+    assert matching[0].existing_method == ImportMethod.MANUAL.value
+
+
+async def test_case_operator_authority_is_durable_across_repeated_reimports(
+    async_session,
+):
+    """The row-18 symptom: authority held on the first re-import but was
+    gone by the second, with no operator action in between."""
+    docket = _unique_docket()
+    argument, case = await _seed_argument(
+        async_session,
+        docket=docket,
+        case_name="OPERATOR EDIT — Pet v. Resp",
+        case_source=ImportSource.OPERATOR,
+        case_method=ImportMethod.MANUAL,
+    )
+    await _seed_parse_run(async_session, argument)
+    case_fields = _case_fields(docket)
+
+    for pass_number in (1, 2, 3):
+        await _reconcile(async_session, argument, case_fields=case_fields)
+        await async_session.refresh(case)
+        assert case.case_name == "OPERATOR EDIT — Pet v. Resp", (
+            f"operator value lost on pass {pass_number}"
+        )
+        assert case.source == ImportSource.OPERATOR, (
+            f"operator authority demoted on pass {pass_number}"
+        )
+
+
+async def test_case_clean_accepting_walk_still_restamps(async_session):
+    """Guard against over-correcting: a walk with NO rejection must still
+    demote a lower-authority row to corpus (D-07's original purpose)."""
+    docket = _unique_docket()
+    argument, case = await _seed_argument(
+        async_session,
+        docket=docket,
+        case_name="Pet v. Resp",
+        case_source=ImportSource.PDF_PIPELINE,
+        case_method=ImportMethod.RULE_BASED,
+    )
+    await _seed_parse_run(async_session, argument)
+
+    # Both Case fields agree with the corpus -> ACCEPT, ACCEPT, no reject.
+    case_fields = _case_fields(docket)
+
+    await _reconcile(async_session, argument, case_fields=case_fields)
+
+    await async_session.refresh(case)
+    assert case.source == ImportSource.CORPUS  # D-07 restamp still fires
+    assert case.method == ImportMethod.DIRECT
+
+
+async def test_argument_rejected_field_is_not_demoted_by_an_agreeing_sibling(
+    async_session,
+):
+    """Same rule on `Argument` -- `source_docket` rejected, `argued_date`
+    accepted as a gap-fill on the same pass."""
+    docket = _unique_docket()
+    argument, _case = await _seed_argument(
+        async_session,
+        docket=docket,
+        argued_date=None,  # blank -> the corpus date is a gap-fill ACCEPT
+        source=ImportSource.OPERATOR,
+        method=ImportMethod.MANUAL,
+    )
+    await _seed_parse_run(async_session, argument)
+    argument.source_docket = "55-0001"
+    await async_session.flush()
+
+    case_fields = _case_fields("55-0001")
+    case_fields["docket_no"] = "55-9999"  # incoming disagrees -> REJECT
+
+    counters = await _reconcile(async_session, argument, case_fields=case_fields)
+
+    await async_session.refresh(argument)
+    assert argument.source_docket == "55-0001"  # operator value survived
+    assert argument.argued_date is not None  # sibling gap-fill did land
+    assert argument.source == ImportSource.OPERATOR  # authority survived
+    assert argument.method == ImportMethod.MANUAL
+    assert counters["values_rejected"] >= 1
+
+    discrepancies = await _open_discrepancies(async_session, "argument", argument.id)
+    matching = [d for d in discrepancies if d.field == "source_docket"]
+    assert len(matching) == 1
+    assert matching[0].existing_source == ImportSource.OPERATOR.value
+
+
+async def test_participant_rejected_field_is_not_demoted_by_an_agreeing_sibling(
+    async_session,
+):
+    """`ArgumentParticipant` carries operator authority on `review_state`,
+    so its `source` demotion was never the load-bearing defect -- but the
+    same one-restamp-per-row rule applies, and its walk is the widest
+    (person_id / side / descriptor)."""
+    argument, _case = await _seed_argument(async_session)
+    await _seed_parse_run(async_session, argument)
+    original_person = await _seed_person(async_session, full_name="Original Person")
+    corpus_person = await _seed_person(
+        async_session, full_name="Corpus Person", oyez_speaker_id="spk_1"
+    )
+    participant = await _seed_participant(
+        async_session,
+        argument,
+        raw_speaker_label="MR. ORIGINAL",
+        oyez_speaker_id="spk_1",
+        person=original_person,
+        side=SideEnum.ADVOCATE,
+        source=ImportSource.OPERATOR,
+        method=ImportMethod.MANUAL,
+        review_state=ReviewState.OPERATOR_EDITED,
+    )
+
+    # person_id disagrees (operator reassigned it) -> REJECT.
+    # side agrees (both ADVOCATE) -> ACCEPT.
+    conversation = _conversation(advocates={"spk_1": {"side": 1}})
+    speakers_index = {"spk_1": {"name": "Corpus Person", "is_justice": False}}
+
+    counters = await _reconcile(
+        async_session,
+        argument,
+        conversation=conversation,
+        speakers_index=speakers_index,
+        turns=[],
+    )
+
+    await async_session.refresh(participant)
+    assert participant.person_id == original_person.id  # operator value survived
+    assert participant.source == ImportSource.OPERATOR  # not demoted
+    assert participant.method == ImportMethod.MANUAL
+    assert counters["values_rejected"] >= 1
+    assert corpus_person.id != original_person.id
+
+
+def test_every_restamp_call_site_is_gated_on_the_row_level_predicate():
+    """Structural guard (G-50-2b): a future field added to any compare-set
+    walk must not reintroduce a per-field restamp. Every call to
+    `_restamp_corpus_provenance` outside its own definition must be paired
+    with an `_row_should_restamp(...)` guard, and the old per-field shape
+    (`if decision in (...ACCEPT...): await _restamp_corpus_provenance(`)
+    must not reappear anywhere.
+
+    Falsifiability-checked 2026-08-27 by restoring the per-field restamp in
+    the Case walk and confirming this test fails.
+    """
+    source = inspect.getsource(import_convokit_module)
+    # Strip BOTH helper definitions so only genuine CALL sites are counted —
+    # each definition mentions its own name and would mask a lost guard.
+    call_sites = source.replace(
+        inspect.getsource(import_convokit_module._restamp_corpus_provenance), ""
+    ).replace(inspect.getsource(import_convokit_module._row_should_restamp), "")
+
+    call_count = call_sites.count("_restamp_corpus_provenance(")
+    guard_count = call_sites.count("_row_should_restamp(")
+    assert call_count == 3, (
+        f"expected 3 restamp call sites (Argument/Case/Participant), got {call_count}"
+    )
+    assert guard_count == call_count, (
+        f"{call_count} restamp call sites but {guard_count} row-level guards — "
+        "a per-field restamp has been reintroduced (G-50-2b)"
+    )
+
+    # The old per-field shape, at any indentation.
+    per_field = re.compile(
+        r"if decision in \(\s*WriteDecision\.ACCEPT,\s*WriteDecision\.ACCEPT_AND_RECORD,?\s*\):"
+        r"\s*await _restamp_corpus_provenance\(",
+        re.S,
+    )
+    assert not per_field.search(source), (
+        "a per-field `if decision in (...): await _restamp_corpus_provenance(` "
+        "has been reintroduced (G-50-2b)"
+    )

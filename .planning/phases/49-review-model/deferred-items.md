@@ -172,6 +172,8 @@ source directly (per D-24's own instruction) rather than trusting D-22's enumera
 50-05/50-06 fixed (`resolve.py`'s bulk `person_id` UPDATE, `import_convokit`'s
 `_apply_extracted_name_provenance`).
 
+**STATUS: CLOSED 2026-08-27.** Both writers now route through `apply_participant_value_change` with restamp-on-accept, mirroring `resolve.py::_apply_resolved_person_ids`. Found still open by the phase-50 goal verification, which judged it a genuine partial failure of SC-4/IMPORT-05 ("on every writer") rather than an acceptable deferral. Covered by three new `test_gated_column_writers.py` tests plus a structural guard, falsifiability-checked. Original finding below, kept for the record.
+
 **The defect:** `pipeline/commands/parse.py::_update_participant_sides` and
 `::_update_participant_descriptors` (Phase 16 PARSE-02 / Phase 22 PJOB-13, both pre-dating
 Phase 49's authority ladder) write `ArgumentParticipant.side`/`.descriptor` by direct ORM

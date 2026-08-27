@@ -72,7 +72,11 @@ from pipeline.commands.import_convokit import (
     _apply_extracted_name_provenance,
     _reconcile_conversation,
 )
-from pipeline.commands.parse import _write_cover_metadata_through_gate
+from pipeline.commands.parse import (
+    _update_participant_descriptors,
+    _update_participant_sides,
+    _write_cover_metadata_through_gate,
+)
 from pipeline.commands.resolve import _apply_resolved_person_ids
 
 # pytest.ini configures asyncio_mode=auto -- async def test_* functions are
@@ -564,3 +568,179 @@ async def test_control_direct_ungated_update_changes_value_with_no_discrepancy_r
 
     discrepancies = await _open_discrepancies(async_session, "argument", argument.id, "argued_date")
     assert discrepancies == [], "the ungated control records NO discrepancy"
+
+
+# ===========================================================================
+# parse.py's TOC-mapping participant writers (SC-4 / IMPORT-05)
+#
+# The last two ungated writers onto a gated ArgumentParticipant column --
+# 50-WRITER-INVENTORY.md rows 23-24, "UNGATED -- defect, deferred". Because
+# participant rows persist across re-parses, the former direct ORM assignment
+# let a re-parse silently overwrite a side/descriptor an operator had already
+# set through the gated admin route. Found by the phase-50 goal verification,
+# 2026-08-27, after the phase's own UAT and code review had both passed over it.
+# ===========================================================================
+
+
+async def _seed_parse_run(session, argument, *, source, method):
+    run = ImportRun(
+        argument_id=argument.id,
+        step="parse",
+        status=ImportRunStatus.RUNNING,
+        source=source,
+        method=method,
+    )
+    session.add(run)
+    await session.flush()
+    return run
+
+
+async def test_parse_participant_side_writer_rejects_lower_authority(async_session):
+    """
+    Real writer: `parse._update_participant_sides`.
+
+    An operator-edited `side` survives a disagreeing TOC mapping from a
+    PDF-pipeline parse run byte-identical, and exactly one open
+    value_discrepancy row is recorded for (argument_participant, side).
+    """
+    argument, _case = await _seed_argument_and_case(async_session)
+    participant = ArgumentParticipant(
+        argument_id=argument.id,
+        raw_speaker_label="MR. GATETEST",
+        side=SideEnum.RESPONDENT,
+        review_state=ReviewState.OPERATOR_EDITED,
+    )
+    async_session.add(participant)
+    await async_session.flush()
+
+    run = await _seed_parse_run(
+        async_session,
+        argument,
+        source=ImportSource.PDF_PIPELINE,
+        method=ImportMethod.RULE_BASED,
+    )
+
+    updated = await _update_participant_sides(
+        async_session,
+        argument.id,
+        {"GATETEST": SideEnum.PETITIONER.value},
+        run_source=run.source.value,
+        run_method=run.method.value,
+        import_run_id=run.id,
+    )
+
+    await async_session.refresh(participant)
+    assert participant.side == SideEnum.RESPONDENT, (
+        "an operator-edited side must survive a disagreeing re-parse"
+    )
+    assert updated == 0, "a rejected write must not be counted as updated"
+    discrepancies = await _open_discrepancies(
+        async_session, "argument_participant", participant.id, "side"
+    )
+    assert len(discrepancies) == 1
+    assert discrepancies[0].incoming_value == SideEnum.PETITIONER.value
+    assert discrepancies[0].existing_value == SideEnum.RESPONDENT.value
+
+
+async def test_parse_participant_descriptor_writer_rejects_lower_authority(
+    async_session,
+):
+    """Real writer: `parse._update_participant_descriptors`."""
+    argument, _case = await _seed_argument_and_case(async_session)
+    participant = ArgumentParticipant(
+        argument_id=argument.id,
+        raw_speaker_label="MR. GATETEST",
+        side=SideEnum.ADVOCATE,
+        descriptor="Operator Descriptor",
+        review_state=ReviewState.OPERATOR_EDITED,
+    )
+    async_session.add(participant)
+    await async_session.flush()
+
+    run = await _seed_parse_run(
+        async_session,
+        argument,
+        source=ImportSource.PDF_PIPELINE,
+        method=ImportMethod.RULE_BASED,
+    )
+
+    updated = await _update_participant_descriptors(
+        async_session,
+        argument.id,
+        {"GATETEST": "TOC Descriptor"},
+        run_source=run.source.value,
+        run_method=run.method.value,
+        import_run_id=run.id,
+    )
+
+    await async_session.refresh(participant)
+    assert participant.descriptor == "Operator Descriptor"
+    assert updated == 0
+    discrepancies = await _open_discrepancies(
+        async_session, "argument_participant", participant.id, "descriptor"
+    )
+    assert len(discrepancies) == 1
+
+
+async def test_parse_participant_side_writer_still_writes_an_unreviewed_row(
+    async_session,
+):
+    """
+    Over-correction guard: gating must not break the ordinary path. An
+    UNREVIEWED participant with no competing authority still takes the TOC
+    mapping, and the accepted write restamps the row from the parse run so
+    it does not floor the argument to UNCERTAIN via derive_tier.
+    """
+    argument, _case = await _seed_argument_and_case(async_session)
+    participant = ArgumentParticipant(
+        argument_id=argument.id,
+        raw_speaker_label="MR. GATETEST",
+        side=SideEnum.UNKNOWN,
+        review_state=ReviewState.UNREVIEWED,
+    )
+    async_session.add(participant)
+    await async_session.flush()
+
+    run = await _seed_parse_run(
+        async_session,
+        argument,
+        source=ImportSource.PDF_PIPELINE,
+        method=ImportMethod.RULE_BASED,
+    )
+
+    updated = await _update_participant_sides(
+        async_session,
+        argument.id,
+        {"GATETEST": SideEnum.PETITIONER.value},
+        run_source=run.source.value,
+        run_method=run.method.value,
+        import_run_id=run.id,
+    )
+
+    await async_session.refresh(participant)
+    assert participant.side == SideEnum.PETITIONER, "the ordinary TOC path must still write"
+    assert updated == 1
+    assert participant.source == ImportSource.PDF_PIPELINE
+    assert participant.method == ImportMethod.RULE_BASED
+
+
+def test_no_ungated_participant_column_assignment_remains_in_parse() -> None:
+    """
+    Structural guard (SC-4/IMPORT-05): neither TOC writer may go back to a
+    direct ORM assignment onto a gated ArgumentParticipant column.
+    """
+    import inspect
+
+    from pipeline.commands import parse as parse_module
+
+    for fn, field in (
+        (parse_module._update_participant_sides, "side"),
+        (parse_module._update_participant_descriptors, "descriptor"),
+    ):
+        source = inspect.getsource(fn)
+        assert "apply_participant_value_change(" in source, (
+            f"{fn.__name__} no longer routes {field!r} through the authority gate"
+        )
+        assert f"p.{field} = " not in source, (
+            f"{fn.__name__} reintroduced a direct ORM assignment onto {field!r}"
+        )

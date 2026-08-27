@@ -47,7 +47,11 @@ from api.models.models import (
     SideEnum,
     Utterance,
 )
-from api.services.admin_review import apply_argument_value_change, apply_case_value_change
+from api.services.admin_review import (
+    apply_argument_value_change,
+    apply_case_value_change,
+    apply_participant_value_change,
+)
 from api.services.argument_uniqueness import (
     find_argument_by_pair,
     is_argument_pair_violation,
@@ -506,7 +510,14 @@ async def _run_parse_inner(args) -> None:
         # D-08: unmatched participants stay UNKNOWN; partial updates are accepted.
         # -------------------------------------------------------------------
         if advocate_sides and run.argument_id is not None:
-            sides_updated = await _update_participant_sides(session, run.argument_id, advocate_sides)
+            sides_updated = await _update_participant_sides(
+                session,
+                run.argument_id,
+                advocate_sides,
+                run_source=run.source.value if run.source else None,
+                run_method=run.method.value if run.method else None,
+                import_run_id=run.id,
+            )
             print(f"Participant sides updated: {sides_updated} row(s) from TOC mapping.")
 
         # -------------------------------------------------------------------
@@ -515,7 +526,14 @@ async def _run_parse_inner(args) -> None:
         # D-11: missing subtitle → NULL title; never raises.
         # -------------------------------------------------------------------
         if advocate_titles and run.argument_id is not None:
-            titles_updated = await _update_participant_descriptors(session, run.argument_id, advocate_titles)
+            titles_updated = await _update_participant_descriptors(
+                session,
+                run.argument_id,
+                advocate_titles,
+                run_source=run.source.value if run.source else None,
+                run_method=run.method.value if run.method else None,
+                import_run_id=run.id,
+            )
             print(f"Participant descriptors updated: {titles_updated} row(s) from TOC mapping.")
 
         # -------------------------------------------------------------------
@@ -580,15 +598,37 @@ async def _update_participant_sides(
     session: AsyncSession,
     argument_id: int,
     sides_map: "dict[str, str]",
+    run_source: str | None,
+    run_method: str | None,
+    import_run_id: int,
 ) -> int:
     """
     Update argument_participants.side for advocates whose normalized last name
     matches a key in sides_map ({last_name_upper: SideEnum_value}).
 
-    Returns count of participant rows updated. Unmatched participants stay
-    UNKNOWN (D-08 partial update). Known limitation (Pitfall 4): last-name
-    collision means a second advocate with the same last name overwrites the
-    first mapping in sides_map — accepted for Phase 16.
+    Returns the count of rows the authority gate actually ACCEPTED. Unmatched
+    participants stay UNKNOWN (D-08 partial update). Known limitation
+    (Pitfall 4): last-name collision means a second advocate with the same
+    last name overwrites the first mapping in sides_map — accepted for
+    Phase 16.
+
+    Phase 50 (D-21/D-22, SC-4/IMPORT-05): every write goes through
+    `apply_participant_value_change` rather than a direct ORM assignment.
+    This function and its `descriptor` twin were the last two ungated
+    writers onto a gated `ArgumentParticipant` column — the pair
+    `50-WRITER-INVENTORY.md` rows 23-24 recorded as "UNGATED — defect,
+    deferred". Because participant rows persist across re-parses, the
+    direct assignment let a re-parse silently overwrite a side an operator
+    had already reassigned through the gated admin route: the exact
+    clobber-an-operator-edit failure this phase exists to close. Found by
+    the phase-50 goal verification, 2026-08-27.
+
+    `run_source`/`run_method` are the parse run's OWN declared provenance
+    (`.value` strings read off the run row by the caller — never
+    hardcoded), so a parse-run write is distinguishable at the gate from a
+    corpus or operator one. Mirrors `resolve.py::_apply_resolved_person_ids`,
+    including its restamp-on-accept: a written participant carrying NULL
+    provenance would floor the whole argument to UNCERTAIN via `derive_tier`.
     """
     if not sides_map:
         return 0
@@ -606,8 +646,30 @@ async def _update_participant_sides(
             continue
         label_last = _normalize_label_last_name(p.raw_speaker_label)
         if label_last and label_last.upper() in sides_map:
-            p.side = SideEnum(sides_map[label_last.upper()])
-            updated += 1
+            decision = await apply_participant_value_change(
+                session,
+                participant=p,
+                field="side",
+                incoming_value=SideEnum(sides_map[label_last.upper()]),
+                incoming_source=run_source,
+                incoming_method=run_method,
+                import_run_id=import_run_id,
+            )
+            if decision in (WriteDecision.ACCEPT, WriteDecision.ACCEPT_AND_RECORD):
+                if run_source is not None and run_method is not None:
+                    await session.execute(
+                        update(ArgumentParticipant)
+                        .where(
+                            ArgumentParticipant.id == p.id,
+                            ArgumentParticipant.argument_id == argument_id,
+                        )
+                        .values(
+                            source=ImportSource(run_source),
+                            method=ImportMethod(run_method),
+                        )
+                        .execution_options(synchronize_session=False)
+                    )
+                updated += 1
 
     return updated
 
@@ -616,14 +678,22 @@ async def _update_participant_descriptors(
     session: AsyncSession,
     argument_id: int,
     descriptors_map: "dict[str, str]",
+    run_source: str | None,
+    run_method: str | None,
+    import_run_id: int,
 ) -> int:
     """
     Update argument_participants.descriptor for advocates whose normalized last
     name matches a key in descriptors_map ({last_name_upper: descriptor_string}).
 
-    Returns count of participant rows updated. Unmatched participants keep
-    NULL descriptor (D-11). Descriptor is stored as a plain string — no enum
-    cast. (Phase 44 D-05: renamed from _update_participant_titles.)
+    Returns the count of rows the authority gate actually ACCEPTED. Unmatched
+    participants keep NULL descriptor (D-11). Descriptor is stored as a plain
+    string — no enum cast. (Phase 44 D-05: renamed from
+    _update_participant_titles.)
+
+    Phase 50 (D-21/D-22, SC-4/IMPORT-05): gated exactly as its `side` twin
+    above — see that docstring for why the former direct ORM assignment was
+    a live operator-clobber path.
     """
     if not descriptors_map:
         return 0
@@ -641,8 +711,30 @@ async def _update_participant_descriptors(
             continue
         label_last = _normalize_label_last_name(p.raw_speaker_label)
         if label_last and label_last.upper() in descriptors_map:
-            p.descriptor = descriptors_map[label_last.upper()]
-            updated += 1
+            decision = await apply_participant_value_change(
+                session,
+                participant=p,
+                field="descriptor",
+                incoming_value=descriptors_map[label_last.upper()],
+                incoming_source=run_source,
+                incoming_method=run_method,
+                import_run_id=import_run_id,
+            )
+            if decision in (WriteDecision.ACCEPT, WriteDecision.ACCEPT_AND_RECORD):
+                if run_source is not None and run_method is not None:
+                    await session.execute(
+                        update(ArgumentParticipant)
+                        .where(
+                            ArgumentParticipant.id == p.id,
+                            ArgumentParticipant.argument_id == argument_id,
+                        )
+                        .values(
+                            source=ImportSource(run_source),
+                            method=ImportMethod(run_method),
+                        )
+                        .execution_options(synchronize_session=False)
+                    )
+                updated += 1
 
     return updated
 

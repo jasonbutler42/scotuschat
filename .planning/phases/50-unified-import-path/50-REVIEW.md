@@ -93,6 +93,20 @@ are not re-reported here.
 
 ### CR-01: Published-argument reconcile drops participant disagreements instead of recording them
 
+> **RESOLVED 2026-08-27** — `_reconcile_conversation` now runs a record-only
+> branch for a PUBLISHED argument's paired participants, mirroring the
+> Argument/Case legs: `person_id`/`side`/`descriptor` go through
+> `_record_published_diff`, so a genuine disagreement is recorded as an open
+> `value_discrepancy` while nothing is written. A new read-only
+> `_lookup_person_readonly` replaces `_resolve_person` on that path (the
+> latter creates Persons, backfills `oyez_speaker_id`, and applies name
+> provenance — all writes D-08 forbids). Deliberately still skipped when
+> published: the four `Person` name-part writes (genuinely gap-fill-only)
+> and the new-participant-creation leg (creating a row is a write). The
+> false docstring claim is corrected in place. Five tests added, including
+> the over-correction guard and a no-rows-created guard; falsifiability-
+> checked by restoring the blanket skip and watching three fail.
+
 **File:** `pipeline/commands/import_convokit.py:1106-1206` (see also the docstring at 1106-1112)
 **Issue:**
 `_reconcile_conversation` walks the whole D-02 compare set. For `Argument`
@@ -145,6 +159,17 @@ next reader, and add a test asserting a published argument with a
 person_id/side disagreement produces an open `value_discrepancy` row.
 
 ### CR-02: `update_argument_metadata` never stamps operator provenance on its `case_name` (and `argued_date`) writes
+
+> **RESOLVED 2026-08-27** — both halves. `case_name` now calls
+> `_stamp_operator_provenance(db, model=Case, ...)` after its write (this
+> half was also found independently by the Phase 50 UAT walkthrough as gap
+> G-50-2a, where its live effect was visible: `/admin/review` rendered an
+> operator-typed value as `(corpus/direct)`). `argued_date` is no longer
+> scoped out of the Argument stamp condition — CR-02 asked for either that
+> or a recorded product decision to leave it out, and parity with
+> `update_argument` (which does stamp on its own `argued_date` write) is the
+> answer. Four tests, including a parity guard per column asserting both
+> operator routes land on `AuthorityRank.OPERATOR`; falsifiability-checked.
 
 **File:** `api/services/admin_arguments.py:1291-1413` (case_name write at ~1391-1406; argued_date write at ~1349-1350; contrast with `update_argument` at 545-676)
 **Issue:**

@@ -1492,7 +1492,7 @@ async def test_participant_rejected_field_is_not_demoted_by_an_agreeing_sibling(
     # person_id disagrees (operator reassigned it) -> REJECT.
     # side agrees (both ADVOCATE) -> ACCEPT.
     conversation = _conversation(advocates={"spk_1": {"side": 1}})
-    speakers_index = {"spk_1": {"name": "Corpus Person", "is_justice": False}}
+    speakers_index = {"spk_1": {"name": "Corpus Person", "type": "advocate"}}
 
     counters = await _reconcile(
         async_session,
@@ -1548,3 +1548,242 @@ def test_every_restamp_call_site_is_gated_on_the_row_level_predicate():
         "a per-field `if decision in (...): await _restamp_corpus_provenance(` "
         "has been reintroduced (G-50-2b)"
     )
+
+
+# ===========================================================================
+# CR-01 (50-REVIEW.md): a PUBLISHED argument's participant leg must COMPARE
+# AND RECORD, not be skipped outright.
+#
+# The Argument/Case legs always honoured D-08's record-only contract; the
+# participant/Person leg was gated behind a blanket `if not is_published:`,
+# justified by a claim that nothing there could ever accept-and-record. True
+# for the four Person name-part writes, false for person_id/side/descriptor,
+# which go through the full authority gate. Net effect: on a LIVE published
+# argument a genuine speaker reassignment or side disagreement was silently
+# dropped — never written (correct) and never surfaced (not correct).
+# ===========================================================================
+
+
+async def _seed_published_argument(session):
+    from datetime import datetime, timezone
+
+    argument, case = await _seed_argument(
+        session,
+        status=ArgumentStatusEnum.PUBLISHED,
+        source=ImportSource.CORPUS,
+        method=ImportMethod.DIRECT,
+    )
+    argument.published_at = datetime(2020, 1, 1, tzinfo=timezone.utc)
+    await session.flush()
+    await _seed_parse_run(session, argument)
+    return argument, case
+
+
+async def test_published_argument_records_participant_person_id_disagreement(
+    async_session,
+):
+    """CR-01's headline case: the corpus re-resolves a speaker to a DIFFERENT
+    Person that already exists. Nothing may be written; the disagreement must
+    still reach the operator as an open value_discrepancy."""
+    argument, _case = await _seed_published_argument(async_session)
+    stored_person = await _seed_person(async_session, full_name="Stored Person")
+    corpus_person = await _seed_person(
+        async_session, full_name="Corpus Person", oyez_speaker_id="spk_1"
+    )
+    participant = await _seed_participant(
+        async_session,
+        argument,
+        raw_speaker_label="MR. STORED",
+        oyez_speaker_id="spk_1",
+        person=stored_person,
+        side=SideEnum.ADVOCATE,
+    )
+
+    conversation = _conversation(advocates={"spk_1": {"side": 1}})
+    speakers_index = {"spk_1": {"name": "Corpus Person", "type": "advocate"}}
+
+    counters = await _reconcile(
+        async_session,
+        argument,
+        conversation=conversation,
+        speakers_index=speakers_index,
+    )
+
+    await async_session.refresh(participant)
+    # Nothing written (D-08 still holds).
+    assert participant.person_id == stored_person.id
+    assert counters.get("values_accepted", 0) == 0
+    assert counters.get("values_rejected", 0) == 0
+    assert counters["published_writes_skipped"] == 1
+
+    # But the disagreement IS recorded (CR-01).
+    discrepancies = await _open_discrepancies(
+        async_session, "argument_participant", participant.id
+    )
+    person_rows = [d for d in discrepancies if d.field == "person_id"]
+    assert len(person_rows) == 1, (
+        "a published argument's participant reassignment must be recorded, not dropped"
+    )
+    assert person_rows[0].incoming_value == str(corpus_person.id)
+    assert person_rows[0].existing_value == str(stored_person.id)
+
+
+async def test_published_argument_records_participant_side_disagreement(async_session):
+    """The other gated participant field CR-01 names."""
+    argument, _case = await _seed_published_argument(async_session)
+    person = await _seed_person(
+        async_session, full_name="Same Person", oyez_speaker_id="spk_1"
+    )
+    participant = await _seed_participant(
+        async_session,
+        argument,
+        raw_speaker_label="MR. SAME",
+        oyez_speaker_id="spk_1",
+        person=person,
+        side=SideEnum.UNKNOWN,
+    )
+
+    # Same person, but the corpus says this speaker is on the bench. A
+    # justice reaches the pairing set through its UTTERANCES, not the
+    # advocates map -- `incoming_speaker_ids` is (utterance speakers |
+    # advocates keys), so a bench speaker with neither is never paired and
+    # nothing is compared at all.
+    conversation = _conversation(advocates={})
+    speakers_index = {"spk_1": {"name": "Same Person", "type": "justice"}}
+    turns = [{"conversation_id": argument.oyez_transcript_id, "text": "A question.", "speaker": "spk_1"}]
+
+    counters = await _reconcile(
+        async_session,
+        argument,
+        conversation=conversation,
+        speakers_index=speakers_index,
+        turns=turns,
+    )
+
+    await async_session.refresh(participant)
+    assert participant.side == SideEnum.UNKNOWN  # unwritten
+    assert counters.get("values_accepted", 0) == 0
+
+    discrepancies = await _open_discrepancies(
+        async_session, "argument_participant", participant.id
+    )
+    assert any(d.field == "side" for d in discrepancies), (
+        "a published argument's side disagreement must be recorded, not dropped"
+    )
+
+
+async def test_published_argument_agreeing_participant_records_nothing(async_session):
+    """Over-correction guard: recording only fires on a genuine disagreement.
+    A published argument whose participants agree must stay at zero rows."""
+    argument, _case = await _seed_published_argument(async_session)
+    person = await _seed_person(
+        async_session, full_name="Agreeing Person", oyez_speaker_id="spk_1"
+    )
+    participant = await _seed_participant(
+        async_session,
+        argument,
+        raw_speaker_label="MR. AGREE",
+        oyez_speaker_id="spk_1",
+        person=person,
+        side=SideEnum.BENCH,
+    )
+
+    conversation = _conversation(advocates={})
+    speakers_index = {"spk_1": {"name": "Agreeing Person", "type": "justice"}}
+    turns = [{"conversation_id": argument.oyez_transcript_id, "text": "A question.", "speaker": "spk_1"}]
+
+    await _reconcile(
+        async_session,
+        argument,
+        conversation=conversation,
+        speakers_index=speakers_index,
+        turns=turns,
+    )
+
+    discrepancies = await _open_discrepancies(
+        async_session, "argument_participant", participant.id
+    )
+    assert discrepancies == []
+
+
+async def test_published_argument_participant_leg_creates_no_person_or_participant(
+    async_session,
+):
+    """D-08's write ban still holds on the new record-only path: an unknown
+    corpus speaker must not mint a Person (the read-only lookup returns None)
+    and must not mint an ArgumentParticipant."""
+    argument, _case = await _seed_published_argument(async_session)
+    person = await _seed_person(
+        async_session, full_name="Known Person", oyez_speaker_id="spk_1"
+    )
+    await _seed_participant(
+        async_session,
+        argument,
+        raw_speaker_label="MR. KNOWN",
+        oyez_speaker_id="spk_1",
+        person=person,
+        side=SideEnum.BENCH,
+    )
+
+    people_before = len((await async_session.execute(select(Person))).scalars().all())
+    participants_before = len(
+        (
+            await async_session.execute(
+                select(ArgumentParticipant).where(
+                    ArgumentParticipant.argument_id == argument.id
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+
+    # spk_2 is a speaker this database has never seen.
+    conversation = _conversation(advocates={"spk_2": {"side": 1}})
+    speakers_index = {
+        "spk_1": {"name": "Known Person", "type": "justice"},
+        "spk_2": {"name": "Never Seen Before", "type": "advocate"},
+    }
+
+    counters = await _reconcile(
+        async_session,
+        argument,
+        conversation=conversation,
+        speakers_index=speakers_index,
+    )
+
+    people_after = len((await async_session.execute(select(Person))).scalars().all())
+    participants_after = len(
+        (
+            await async_session.execute(
+                select(ArgumentParticipant).where(
+                    ArgumentParticipant.argument_id == argument.id
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    assert people_after == people_before, "the record-only branch created a Person"
+    assert participants_after == participants_before, (
+        "the record-only branch created an ArgumentParticipant"
+    )
+    assert counters.get("people_created", 0) == 0
+    assert counters.get("participants_created", 0) == 0
+
+
+def test_published_participant_leg_is_not_skipped_wholesale() -> None:
+    """Structural guard: the blanket `if not is_published:` that hid the
+    participant leg must not come back without a record-only counterpart."""
+    source = inspect.getsource(import_convokit_module._reconcile_conversation)
+    assert 'target_type="argument_participant"' in source, (
+        "the published record-only branch for participants is gone (CR-01)"
+    )
+    # The read-only lookup must be what the published branch uses -- never
+    # _resolve_person, which creates/backfills/stamps.
+    lookup = inspect.getsource(import_convokit_module._lookup_person_readonly)
+    for forbidden in ("session.add(", "_apply_extracted_name_provenance", "counters"):
+        assert forbidden not in lookup, (
+            f"_lookup_person_readonly performs a write or side effect ({forbidden!r}) "
+            "— it runs on the published path where D-08 forbids writes"
+        )

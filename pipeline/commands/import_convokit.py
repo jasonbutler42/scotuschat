@@ -1154,12 +1154,85 @@ async def _reconcile_conversation(
     incoming_speaker_ids |= set(advocates.keys())
 
     # ---- PD-14 items 6-7: paired participants + their Person name-parts.
-    # D-08: skipped entirely on a PUBLISHED argument -- there is nothing
-    # here that could ever accept-and-record even on the ordinary path
-    # (_apply_extracted_name_provenance only ever gap-fills or no-ops, see
-    # its own docstring), so the record-only branch would have nothing to
-    # record; the new-participant-creation leg below IS a write (a brand
-    # new row), so it is unconditionally skipped for a published argument.
+    #
+    # D-08 on a PUBLISHED argument: compare and RECORD, never write —
+    # the same contract the Argument/Case legs above already honour via
+    # `_record_published_diff`.
+    #
+    # This block used to be skipped ENTIRELY when published, justified by
+    # the claim that nothing here could ever accept-and-record. That claim
+    # holds only for the four `Person` name-part writes
+    # (`_apply_extracted_name_provenance` really is gap-fill-or-no-op). It
+    # was false for `ArgumentParticipant.person_id`/`.side`/`.descriptor`,
+    # which go through `apply_participant_value_change` — a full authority
+    # gate that returns ACCEPT_AND_RECORD or REJECT_AND_RECORD whenever
+    # the values genuinely differ. So a corpus re-import that re-resolved
+    # a speaker to a different Person, or disagreed on a side, was
+    # silently dropped on a live published argument: never written
+    # (correct) but never surfaced to the operator either (50-REVIEW.md
+    # CR-01).
+    #
+    # Still skipped when published, deliberately: the Person name-part
+    # writes (gap-fill only — genuinely nothing to record) and the
+    # new-participant-creation leg below (creating a row IS a write).
+    if is_published:
+        paired = await _pair_participants_by_speaker_id(
+            session, argument.id, incoming_speaker_ids
+        )
+        for speaker_id, participant in paired.items():
+            speaker_meta = speakers_index.get(speaker_id) or {}
+            is_justice = _is_justice_type(speaker_meta)
+            if is_justice is None:
+                is_justice = False
+            full_name = (
+                speaker_meta.get("name") or speaker_meta.get("full_name") or speaker_id
+            )
+            existing_source_value = participant.source.value if participant.source else None
+            existing_method_value = participant.method.value if participant.method else None
+
+            incoming_person = await _lookup_person_readonly(session, speaker_id, full_name)
+            if incoming_person is not None:
+                await _record_published_diff(
+                    ctx,
+                    target_type="argument_participant",
+                    target_id=participant.id,
+                    field="person_id",
+                    incoming_value=incoming_person.id,
+                    existing_value=participant.person_id,
+                    existing_source=existing_source_value,
+                    existing_method=existing_method_value,
+                )
+
+            side_meta = advocates.get(speaker_id)
+            side_code = side_meta.get("side") if isinstance(side_meta, dict) else side_meta
+            incoming_side = (
+                SideEnum.BENCH if is_justice else _ADVOCATE_SIDE_MAP.get(side_code, SideEnum.UNKNOWN)
+            )
+            await _record_published_diff(
+                ctx,
+                target_type="argument_participant",
+                target_id=participant.id,
+                field="side",
+                incoming_value=incoming_side,
+                existing_value=participant.side,
+                existing_source=existing_source_value,
+                existing_method=existing_method_value,
+            )
+
+            # descriptor: corpus never supplies one, so this is always a
+            # no-opinion skip inside _record_published_diff. Walked anyway
+            # to keep PD-14's field order identical on both branches.
+            await _record_published_diff(
+                ctx,
+                target_type="argument_participant",
+                target_id=participant.id,
+                field="descriptor",
+                incoming_value=None,
+                existing_value=participant.descriptor,
+                existing_source=existing_source_value,
+                existing_method=existing_method_value,
+            )
+
     if not is_published:
         paired = await _pair_participants_by_speaker_id(
             session, argument.id, incoming_speaker_ids
@@ -1673,6 +1746,37 @@ async def _resolve_person(
     await session.flush()
     counters["people_created"] = counters.get("people_created", 0) + 1
     return person
+
+
+async def _lookup_person_readonly(session, speaker_id: str, full_name: str) -> Person | None:
+    """
+    Read-only twin of `_resolve_person`'s identity lookup, for the
+    PUBLISHED record-only branch (50-REVIEW.md CR-01).
+
+    Same D-11 key order — `Person.oyez_speaker_id` first, then
+    `Person.full_name` — but it never creates a `Person`, never backfills
+    `oyez_speaker_id`, never applies name provenance, and never touches a
+    counter. Every one of those is a write, and D-08 forbids writes on a
+    published argument; `_resolve_person` does all four, which is why it
+    cannot be reused here.
+
+    Returns `None` when the corpus names somebody this database has never
+    seen. There is then no comparable stored `person_id` — recording a
+    "disagreement" between a name and an id would pollute the discrepancy
+    log with something no operator could act on, and materialising an id
+    to compare against is exactly the write D-08 forbids. The case CR-01
+    exists to catch (and D-04 calls the highest-value one) is the corpus
+    re-resolving a speaker to a DIFFERENT Person we already know about,
+    which this does surface.
+    """
+    result = await session.execute(
+        select(Person).where(Person.oyez_speaker_id == speaker_id)
+    )
+    person = result.scalar_one_or_none()
+    if person is not None:
+        return person
+    result = await session.execute(select(Person).where(Person.full_name == full_name))
+    return result.scalar_one_or_none()
 
 
 async def _check_bench_tenure_mismatch(session, person_id: int, argued_date) -> bool:

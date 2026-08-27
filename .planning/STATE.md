@@ -4,11 +4,11 @@ milestone: v1.8
 milestone_name: Import & Provenance Re-model
 current_phase: 50
 current_phase_name: Unified Import Path
-status: "Phase 50 (Unified Import Path) COMPLETE and VERIFIED 2026-08-27. All 7 plans, all 4 waves, 4/4 success criteria verified in 50-VERIFICATION.md. UAT complete 35/35. Phase-50 verification also closed 50-REVIEW.md CR-01 and CR-02 and the SC-4 ungated-writer gap. One provenance-label defect (trivial-ACCEPT restamp) accepted as known debt under an operator override and logged to deferred-items.md. Next: Phase 51 (Design System & Noun Alignment), the last v1.8 phase."
-stopped_at: Phase 50 verified and closed
+status: "Phase 50 COMPLETE and VERIFIED 2026-08-27; debridement pass done 2026-08-27. All 7 plans, all 4 waves, 4/4 success criteria verified in 50-VERIFICATION.md. UAT complete 35/35. Phase-50 verification also closed 50-REVIEW.md CR-01 and CR-02 and the SC-4 ungated-writer gap. One provenance-label defect (trivial-ACCEPT restamp) accepted as known debt under an operator override and logged to deferred-items.md. Next: Phase 51 (Design System & Noun Alignment), the last v1.8 phase."
+stopped_at: Debridement complete; ready to start Phase 51
 last_updated: "2026-08-27T20:53:26Z"
 last_activity: 2026-08-27
-last_activity_desc: Phase 50 verified complete; four review gates disabled per operator
+last_activity_desc: Debridement pass — test suite and code comments cleaned; defect + testing policies added
 state_head: 922aa7466c951e46e295477bac55a621a0c22fb2
 progress:
   total_phases: 5
@@ -29,12 +29,56 @@ See: .planning/PROJECT.md (updated 2026-08-18 — Phase 47 complete; corpus-firs
 
 **Phase 50 scope resolved 2026-08-25** (at `/gsd-plan-phase 50` time, by the operator): the phase's 2026-08-18 scope flag is closed **corpus-only**. Its PDF half — old success criterion 2, IMPORT-02, "the PDF pipeline path reads and writes `import_run` as one strategy among peers" — **split out to Phase 999.11 (BACKLOG)**, on the deferred PDF route. Phase 50 now carries 4 requirements (IMPORT-01, IMPORT-03, IMPORT-04, IMPORT-05) and 4 success criteria, renumbered. IMPORT-05's authority ordering stays here **in full** (all four rungs, one total ordering function); its `operator`/`corpus` rungs get live corpus proof, its `pdf/rule_based`/`pdf/llm_corrective` rungs get real-writer-test proof — the same verification split Phase 47 established. Recorded in ROADMAP.md (Phase 50 section + v1.8 bullet + Backlog 999.11), REQUIREMENTS.md (IMPORT-02 remapped, coverage note), and PROJECT.md Key Decisions. Discuss and plan are both DONE: `50-CONTEXT.md` (30 locked decisions), `50-RESEARCH.md`, `50-PATTERNS.md`, `50-VALIDATION.md` and 7 PLAN.md files are on disk.
 
+## Debridement Pass (2026-08-27)
+
+A one-off cleanup between Phase 50 and Phase 51, at operator direction. Not a
+phase; no requirements, no plans.
+
+**Two standing policies now live in CLAUDE.md** and govern all later work:
+
+- **Defect Policy** — defects whose correct behavior is already determined
+  (concurrency, FK cascades, idempotency, failing tests, stale-state bugs) are
+  fixed silently and reported in one line. Only questions needing the operator's
+  taste (what a screen shows, whether a state is reachable, domain semantics,
+  scope) get asked. This overrides GSD's default checkpoint/UAT instincts.
+- **Testing Policy** — no static source-text contract tests for frontend
+  behavior; tests retire with the behavior they pinned; no phase-numbered test
+  modules for new work; ~2:1 test:code as a guideline whose real question is
+  whether a given piece of tooling makes sense for the developers actually on
+  this project (one person, no hand-off).
+
+**What changed:**
+
+- 16 test files deleted (6,319 LOC) — fourteen pure static frontend contract
+  modules plus two pinned to behavior later phases removed. 4 more files trimmed
+  of their `.svelte`-reading tests while keeping every live DB assertion.
+- 728 lines across 45 production files stripped of planning-artifact citations
+  (D-NN / Phase N / plan refs / T-NN). Pass 1 of two; explanation prose kept
+  intact. A token-stream check proved no executable code changed.
+- Local tool state (`.claude/`, `.codex/`, `.gsd/`), operator uploads, dry-run
+  output, and root screenshots are now gitignored.
+
+**Suite: 1306 passed, 5 xfailed, 0 failed** (was 1666/5/0 — every disappeared
+test was deleted deliberately). Test:code ratio 2.44:1 -> 2.04:1.
+
+**Deferred:** Pass 2 of the comment cleanup — collapsing multi-line narration to
+the invariant the code depends on, and citations that are the grammatical
+subject of their sentence. Needs judgment, not a regex; review file-by-file
+whenever the operator wants it.
+
+**Corrected during the pass:** an earlier recommendation to delete `AdminJob`
+was wrong. It is still the live backbone of the PDF ingest/parse/resolve path
+and the `/admin/pipeline` UI — 26 production files. The only genuinely dead
+weight is two `is_corpus` subquery branches already commented as retained for
+999.11. Leave it alone.
+
 ## Current Position
 
 Phase: 50 (Unified Import Path) — COMPLETE & VERIFIED (2026-08-27)
-Last activity: 2026-08-26 — Plan 50-07 (Wave 4, final plan) complete
+Last activity: 2026-08-27 — debridement pass (see below)
 
-**Next action:** Phase 50 is closed. Run `/gsd-discuss-phase 51` to start Design System & Noun Alignment — the last v1.8 phase.
+**Next action:** Run `/gsd-discuss-phase 51` to start Design System & Noun
+Alignment — the last v1.8 phase. Working tree is clean; suite is green.
 
 **Workflow config changed 2026-08-27 (operator):** `nyquist_validation`, `security_enforcement`, `ui_review`, and `api_coverage_gate` are now OFF; `code_review` stays ON. Rationale: across phase 50 the three disabled review gates produced nothing (two never ran; nyquist left a draft VALIDATION.md), `api_coverage_gate` emitted only an advisory asking to confirm a true statement, and `code_review` was the gate that found the two most substantive defects. Both verify:pre and verify:post now resolve to zero active gates.
 

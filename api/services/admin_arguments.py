@@ -1377,13 +1377,22 @@ async def update_argument_metadata(
             .values(**values_to_set)
             .execution_options(synchronize_session=False)
         )
-        # PD-08: stamp operator provenance on the argument row when
-        # question_number or source_docket was written (Phase 50 plan
-        # 50-03) — the only way authority_rank can ever read either
-        # column as OPERATOR (Argument has no review_state). argued_date
-        # is deliberately NOT stamped here — this call site is scoped to
-        # exactly the two fields named by this task.
-        if "question_number" in values_to_set or "source_docket" in values_to_set:
+        # PD-08 / G-50-2a / CR-02: stamp operator provenance on the argument
+        # row for EVERY gated column this function writes — the only way
+        # authority_rank can ever read one as OPERATOR (Argument has no
+        # review_state).
+        #
+        # argued_date used to be excluded here, scoped out as "not one of
+        # the two fields named by this task" (Phase 50 plan 50-03). That
+        # scoping left this route disagreeing with `update_argument`, which
+        # DOES stamp the argument row on its own argued_date write — the
+        # same two-routes-onto-one-column divergence that made an operator's
+        # case_name edit indistinguishable from a corpus value. An operator
+        # correcting the argued date from the pipeline-job metadata card
+        # deserves the same authority as one correcting it from the Case
+        # card. 50-REVIEW.md CR-02 called for either this or a recorded
+        # product decision to leave it out; parity is the answer.
+        if values_to_set.keys() & {"question_number", "source_docket", "argued_date"}:
             await _stamp_operator_provenance(db, model=Argument, row_id=argument_id)
 
     # d. Update lead Case.case_name if provided

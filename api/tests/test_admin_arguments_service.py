@@ -2563,3 +2563,75 @@ async def test_both_operator_routes_onto_case_name_agree_on_authority() -> None:
     assert ranks["update_argument"] == ranks["update_argument_metadata"], (
         f"the two operator routes onto case_name disagree on authority: {ranks}"
     )
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_update_argument_metadata_stamps_operator_provenance_on_argued_date_write() -> None:
+    """The second half of 50-REVIEW.md CR-02 / G-50-2a.
+
+    argued_date was explicitly scoped out of this function's stamp
+    condition, leaving it disagreeing with update_argument -- which does
+    stamp the argument row on its own argued_date write. Same
+    two-routes-onto-one-column divergence as the case_name half.
+    """
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import Argument, ImportMethod, ImportSource
+    from api.schemas.admin_arguments import MetadataUpdate
+    from api.services.admin_arguments import update_argument_metadata
+
+    ids = await _seed_draft_argument_with_lead_case_for_stamping()
+    try:
+        async with AsyncSessionLocal() as db:
+            ok = await update_argument_metadata(
+                db, ids["argument_id"], MetadataUpdate(argued_date="1955-11-15")
+            )
+        assert ok is True
+
+        async with AsyncSessionLocal() as db:
+            arg = await db.get(Argument, ids["argument_id"])
+            assert arg.argued_date is not None
+            assert arg.source == ImportSource.OPERATOR
+            assert arg.method == ImportMethod.MANUAL
+    finally:
+        await _teardown_draft_argument_with_lead_case(ids)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_both_operator_routes_onto_argued_date_agree_on_authority() -> None:
+    """Parity guard for argued_date, matching the case_name one above."""
+    from api.core.database import AsyncSessionLocal
+    from api.domain.authority import AuthorityRank, authority_rank
+    from api.models.models import Argument
+    from api.schemas.admin_arguments import ArgumentUpdate, MetadataUpdate
+    from api.services.admin_arguments import update_argument, update_argument_metadata
+
+    ranks = {}
+    for label in ("update_argument", "update_argument_metadata"):
+        ids = await _seed_draft_argument_with_lead_case_for_stamping()
+        try:
+            async with AsyncSessionLocal() as db:
+                if label == "update_argument":
+                    await update_argument(
+                        db, ids["argument_id"], ArgumentUpdate(argued_date="1955-11-15")
+                    )
+                else:
+                    await update_argument_metadata(
+                        db, ids["argument_id"], MetadataUpdate(argued_date="1955-11-15")
+                    )
+            async with AsyncSessionLocal() as db:
+                arg = await db.get(Argument, ids["argument_id"])
+                ranks[label] = authority_rank(
+                    arg.source.value if arg.source else "",
+                    arg.method.value if arg.method else "",
+                    "",  # Argument has no review_state
+                )
+        finally:
+            await _teardown_draft_argument_with_lead_case(ids)
+
+    assert ranks["update_argument"] == AuthorityRank.OPERATOR
+    assert ranks["update_argument_metadata"] == AuthorityRank.OPERATOR
+    assert ranks["update_argument"] == ranks["update_argument_metadata"], (
+        f"the two operator routes onto argued_date disagree on authority: {ranks}"
+    )

@@ -1,17 +1,21 @@
 """
-Phase 38 Plan 09 — Docket-value operator-facing feedback UI contract.
+TypeScript/Python parity for the docket-value shape rule (G-38-6).
 
-Locks TypeScript/Python parity for the docket-value shape rule (G-38-6 gap
-closure, item 3 of the UAT `missing` list) by *source extraction plus Python
-execution of the extracted rule* — deliberately not by spawning `node`.
+The docket pattern and max length are declared in BOTH `api/domain/
+docket_values.py` and its TypeScript twin. A divergence between them is a
+real bug class: the browser would accept a value the server then rejects,
+or vice versa. These tests EXTRACT the rule from the TypeScript source and
+EXECUTE it in Python against every fixture case, so a drift in either
+declaration fails here.
 
-Rationale: the existing api/tests/test_phase38_people_ui_contract.py node
-driver currently errors in this environment because its inline driver script
-interpolates a Windows path into a JavaScript string literal and the
-backslashes are consumed. A docket rule is one anchored pattern plus one
-integer, which source extraction can lock exactly and without an external
-toolchain dependency. No DB, no network, no node — this module passes with
-no DATABASE_URL set.
+That extract-and-execute shape is why this module survives the testing
+policy's ban on static source contracts: it does not assert that a string
+is present, it runs the extracted rule and compares behavior.
+
+No DB, no network, no node — passes with no DATABASE_URL set.
+
+Trimmed 2026-08-27 (debridement pass): 8 declaration-presence greps against
+`.svelte`/`+page.server.ts` removed. See CLAUDE.md -> Testing Policy.
 """
 
 import json
@@ -30,12 +34,6 @@ from api.domain.docket_values import (
 ROOT = Path(__file__).parents[2]
 DOCKET_VALUES_TS_PATH = ROOT / "app" / "src" / "lib" / "docketValues.ts"
 FIXTURE_PATH = ROOT / "api" / "tests" / "fixtures" / "docket_value_cases.json"
-DOCKET_PILL_INPUT_PATH = ROOT / "app" / "src" / "lib" / "components" / "DocketPillInput.svelte"
-ARGUMENT_DETAILS_CARD_PATH = ROOT / "app" / "src" / "lib" / "components" / "ArgumentDetailsCard.svelte"
-PIPELINE_PAGE_SVELTE_PATH = ROOT / "app" / "src" / "routes" / "admin" / "pipeline" / "+page.svelte"
-PIPELINE_PAGE_SERVER_PATH = ROOT / "app" / "src" / "routes" / "admin" / "pipeline" / "+page.server.ts"
-
-
 def _source(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
@@ -127,37 +125,6 @@ def test_extracted_rule_matches_python_on_every_fixture_case(ts_source: str, fix
 # ─────────────────────────────────────────────────────────────────────────
 
 
-def test_docket_pill_input_imports_and_calls_normalize_docket_value() -> None:
-    source = _source(DOCKET_PILL_INPUT_PATH)
-    assert "from '$lib/docketValues'" in source
-    assert "normalizeDocketValue(" in source
-
-
-def test_docket_pill_input_declares_enforce_shape_prop_defaulting_false() -> None:
-    source = _source(DOCKET_PILL_INPUT_PATH)
-    assert "enforceShape?: boolean;" in source
-    assert "enforceShape = false" in source
-
-
-def test_docket_pill_input_renders_role_alert_shape_error() -> None:
-    source = _source(DOCKET_PILL_INPUT_PATH)
-    assert 'role="alert"' in source
-
-
-def test_argument_details_card_does_not_reference_enforce_shape() -> None:
-    source = _source(ARGUMENT_DETAILS_CARD_PATH)
-    assert "enforceShape" not in source
-
-
-def test_pipeline_page_svelte_passes_enforce_shape_to_docket_pill_input() -> None:
-    source = _source(PIPELINE_PAGE_SVELTE_PATH)
-    assert "<DocketPillInput" in source
-    # Find the (single) DocketPillInput usage and confirm enforceShape is on it.
-    match = re.search(r"<DocketPillInput\b[^>]*/>", source, flags=re.DOTALL)
-    assert match, "Could not find a self-closing <DocketPillInput ... /> usage"
-    assert "enforceShape" in match.group(0)
-
-
 # ─────────────────────────────────────────────────────────────────────────
 # Task 3: SvelteKit action re-check with accurate operator copy. A forged
 # docket[] value must be rejected server-side before FastAPI is called, and
@@ -165,21 +132,3 @@ def test_pipeline_page_svelte_passes_enforce_shape_to_docket_pill_input() -> Non
 # ─────────────────────────────────────────────────────────────────────────
 
 
-def test_pipeline_page_server_imports_and_calls_normalize_docket_value() -> None:
-    source = _source(PIPELINE_PAGE_SERVER_PATH)
-    assert "from '$lib/docketValues'" in source
-    assert "normalizeDocketValue(" in source
-
-
-def test_pipeline_page_server_returns_fail_400_for_docket_error_branch() -> None:
-    source = _source(PIPELINE_PAGE_SERVER_PATH)
-    assert re.search(r"return fail\(400,\s*\{\s*error:", source), (
-        "expected a fail(400, { error: ... }) return in the docket-error branch"
-    )
-
-
-def test_pipeline_page_server_keeps_generic_run_start_failure_copy() -> None:
-    """Proves the docket-specific narrowing did not replace the pre-existing
-    generic run-start failure copy used by every other failure branch."""
-    source = _source(PIPELINE_PAGE_SERVER_PATH)
-    assert "Could not start the run. Check the URL and try again." in source

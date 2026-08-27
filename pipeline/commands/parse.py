@@ -4,21 +4,21 @@ Pipeline parse command — full implementation.
 Implements the parse step: pdfplumber extraction + rule-based state machine
 parser + instructor/Claude LLM corrective pass → utterance rows written to DB.
 
-State machine (PIPE-10):
+State machine:
   pending → running → completed (or failed with failure_reason)
 
-Re-run behavior (PIPE-11):
+Re-run behavior:
   Re-running parse for a new import_run_id creates new utterance rows.
   Prior run's utterance rows are NEVER deleted.
 
-Failure classification (PIPE-06):
+Failure classification:
   - Structural (InstructorRetryException, BadRequestError): set status=failed,
     failure_reason, return early — do NOT retry
   - Transient (RateLimitError, APIConnectionError after all tenacity retries):
     same outcome — set failed + failure_reason
 
-PIPE-04: Every utterance row has import_run_id set, and its provenance is
-inherited from the parent import_run's source/method (Phase 47, PROV-01) —
+Every utterance row has import_run_id set, and its provenance is
+inherited from the parent import_run's source/method —
 there is no per-utterance strategy column any more.
 person_id is NULL at parse time — Phase 2 (Resolve) populates it.
 """
@@ -88,7 +88,7 @@ async def _write_cover_metadata_through_gate(
     `source`/`method` (`.value` strings), never hardcoded, so a
     `rule_based` and an `llm_corrective` parse run are separately
     distinguishable at the gate \u2014 this is what makes the two PDF authority
-    rungs separately provable per D-22. `import_run_id=run.id` attributes
+    rungs separately provable. `import_run_id=run.id` attributes
     any recorded discrepancy to this parse run.
 
     Block D (`source_docket`) is deliberately NOT routed through this
@@ -122,9 +122,9 @@ async def _write_cover_metadata_through_gate(
             print(f"argued_date written: {cover_meta['argued_date']}")
 
     # Block B: case_name \u2192 lead Case row only (Pitfall 2 is_lead guard).
-    # D-22: this retires the former unconditional overwrite \u2014 a PDF cover
+    # This retires the former unconditional overwrite \u2014 a PDF cover
     # extraction can no longer clobber a corpus- or operator-authored case
-    # name (T-50-20).
+    # name.
     if cover_meta.get("case_name") is not None:
         lead_result = await session.execute(
             select(CaseArgument.case_id).where(
@@ -164,12 +164,12 @@ async def run_parse(args) -> None:
     Sequence:
         0. (job-driven) Mark admin_jobs RUNNING / PARSE
         1. Load ImportRun by run_id
-        2. Transition: pending → running (PIPE-10)
+        2. Transition: pending → running
         3. Extract pages via pdfplumber
         4. Rule-based parse pass (primary, ~95% coverage)
         5. LLM corrective pass (optional — falls back gracefully on failure)
-        6. Write utterance rows (PIPE-03, PIPE-04, PIPE-11)
-        7. Transition: running → completed (PIPE-10)
+        6. Write utterance rows
+        7. Transition: running → completed
         8. (job-driven) Mark admin_jobs COMPLETED
     """
     try:
@@ -230,9 +230,9 @@ async def _run_parse_inner(args) -> None:
         )
 
     # Cover metadata extraction (CPU-only, synchronous pdfplumber — runs before
-    # the async DB session per Pitfall 1). Returns {} on any failure (D-05).
+    # the async DB session per Pitfall 1). Returns {} on any failure.
     cover_meta = extract_cover_metadata(pdf_path)
-    # Single TOC read for both sides and titles (D-12). Returns empty maps on any failure (D-11).
+    # Single TOC read for both sides and titles. Returns empty maps on any failure.
     toc = extract_toc_data(pdf_path)
     advocate_sides = toc["sides"]
     advocate_titles = toc["titles"]
@@ -253,7 +253,7 @@ async def _run_parse_inner(args) -> None:
 
         # -------------------------------------------------------------------
         # Step 3: Extract pages from PDF
-        # CR-05: extraction uses source_run.pdf_path directly. The ImportRun
+        # Extraction uses source_run.pdf_path directly. The ImportRun
         # for this attempt is NOT added to the session until after the dry-run
         # check (step 6) — this ensures dry-run never commits a row to the DB.
         # -------------------------------------------------------------------
@@ -328,7 +328,7 @@ async def _run_parse_inner(args) -> None:
             parse_strategy = "rule_based"
 
         # -------------------------------------------------------------------
-        # Step 6: Dry-run exit — checked BEFORE creating ImportRun row (CR-05)
+        # Step 6: Dry-run exit — checked BEFORE creating ImportRun row
         # The session has not had run added yet so __aexit__ commits nothing
         # meaningful (only the source_run read, which is read-only).
         # -------------------------------------------------------------------
@@ -342,7 +342,7 @@ async def _run_parse_inner(args) -> None:
         # (PIPE-11). Placed after dry-run check so no row is ever written in
         # dry-run mode.
         #
-        # Phase 47 (PROV-01/T-47-07): translate the local parse_strategy
+        # Translate the local parse_strategy
         # string onto the closed ImportMethod vocabulary here — the run's
         # `method` is derived from the branch actually taken (parse_with_llm
         # returned vs raised above), never from a caller-supplied value.
@@ -365,13 +365,13 @@ async def _run_parse_inner(args) -> None:
         print(f"Created parse import_run id={run.id} (argument_id={run.argument_id})")
 
         # -------------------------------------------------------------------
-        # Step 7: Write utterance rows (PIPE-03, PIPE-04, PIPE-11)
+        # Step 7: Write utterance rows
         # -------------------------------------------------------------------
         print(f"Writing {len(utterances)} utterance rows ...")
         for u in utterances:
             utterance = Utterance(
                 argument_id=run.argument_id,
-                import_run_id=run.id,             # PIPE-04: every row links to this run
+                import_run_id=run.id,             # Every row links to this run
                 sequence=u["sequence"],
                 raw_speaker_label=u.get("raw_speaker_label"),
                 text=u["text"],
@@ -385,7 +385,7 @@ async def _run_parse_inner(args) -> None:
         await session.flush()
 
         # -------------------------------------------------------------------
-        # Step 7b: Seed argument_participants (PEOPLE-04)
+        # Step 7b: Seed argument_participants
         # One row per unique speaker label so resolve.py UPDATE has rows to hit.
         # person_id stays NULL — Resolve step sets it via UPDATE.
         # Select-before-insert handles parse re-runs safely.
@@ -405,7 +405,7 @@ async def _run_parse_inner(args) -> None:
                 existing = {row[0] for row in existing_result.all()}
                 new_rows = [(lbl, side) for lbl, side in participant_labels if lbl not in existing]
                 for raw_label, side in new_rows:
-                    # PD-20 (50-CONTEXT.md): a CREATE, not an overwrite —
+                    # A CREATE, not an overwrite —
                     # there is no stored value to arbitrate, so this is
                     # deliberately NOT routed through a gate. It DOES need
                     # source/method stamped at creation time (matching
@@ -425,7 +425,7 @@ async def _run_parse_inner(args) -> None:
                 print(f"Seeded {len(new_rows)} argument_participant row(s) ({len(existing)} already existed).")
 
         # -------------------------------------------------------------------
-        # Phase 16 PARSE-01: Write cover metadata to existing rows (D-02, D-03, D-04)
+        # Phase 16 PARSE-01: Write cover metadata to existing rows
         # Both UPDATE blocks are after the dry-run gate (Pitfall 3 guard).
         # Always overwrite — D-04 (no write-if-blank conditional).
         # -------------------------------------------------------------------
@@ -437,12 +437,12 @@ async def _run_parse_inner(args) -> None:
         # own PD-13 gap-fill rule expresses that more precisely, and now
         # also detects (and rejects-and-records) a disagreeing overwrite
         # instead of silently doing nothing. Block B in particular retires
-        # the former unconditional case_name overwrite (T-50-20).
+        # the former unconditional case_name overwrite.
         argument_row = await session.get(Argument, source_run.argument_id)
         if argument_row is not None:
             await _write_cover_metadata_through_gate(session, run, argument_row, cover_meta)
 
-        # Block C: cover_metadata unconditional write (D-07, D-09a, Phase 19).
+        # Block C: cover_metadata unconditional write.
         # Always writes raw extraction output regardless of whether extraction found anything.
         # Stores None when cover_meta is empty so the metadata card shows no hints.
         # Date objects must be serialized to ISO strings for JSONB compatibility.
@@ -461,7 +461,7 @@ async def _run_parse_inner(args) -> None:
         if cover_meta:
             print(f"cover_metadata written ({len(cover_meta)} keys)")
 
-        # Block D: source_docket conditional write — only if Argument.source_docket IS NULL (D-09b, Phase 19).
+        # Block D: source_docket conditional write — only if Argument.source_docket IS NULL.
         # Operator-entered values are never overwritten. Phase 50 (Task 2,
         # D-22): the write itself now goes through apply_argument_value_change
         # (the sanctioned single writer) instead of a direct UPDATE — the
@@ -507,7 +507,7 @@ async def _run_parse_inner(args) -> None:
         # -------------------------------------------------------------------
         # Phase 16 PARSE-02: Update argument_participants.side from TOC mapping
         # Placed after step 7b flush (rows exist) and after dry-run gate (Pitfall 3).
-        # D-08: unmatched participants stay UNKNOWN; partial updates are accepted.
+        # Unmatched participants stay UNKNOWN; partial updates are accepted.
         # -------------------------------------------------------------------
         if advocate_sides and run.argument_id is not None:
             sides_updated = await _update_participant_sides(
@@ -523,7 +523,7 @@ async def _run_parse_inner(args) -> None:
         # -------------------------------------------------------------------
         # Phase 22 PJOB-13: Update argument_participants.title from TOC subtitle lines.
         # Mirrors the sides update — same session, same placement after 7b flush.
-        # D-11: missing subtitle → NULL title; never raises.
+        # Missing subtitle → NULL title; never raises.
         # -------------------------------------------------------------------
         if advocate_titles and run.argument_id is not None:
             titles_updated = await _update_participant_descriptors(
@@ -537,7 +537,7 @@ async def _run_parse_inner(args) -> None:
             print(f"Participant descriptors updated: {titles_updated} row(s) from TOC mapping.")
 
         # -------------------------------------------------------------------
-        # Step 8: Transition running → completed (PIPE-10)
+        # Step 8: Transition running → completed
         # -------------------------------------------------------------------
         run.status = ImportRunStatus.COMPLETED
         run.completed_at = datetime.now(timezone.utc)
@@ -547,7 +547,7 @@ async def _run_parse_inner(args) -> None:
             f"method={run.method.value}"
         )
 
-        # D-07/writer #3 (48-RESEARCH.md), Pitfall 2: recompute inside this
+        # D-07/writer #3, Pitfall 2: recompute inside this
         # same get_session() block, on the success path only (after the
         # COMPLETED transition, not before) -- the failure-transition helper
         # that marks a run FAILED must never stamp a tier as though parse
@@ -612,7 +612,7 @@ async def _update_participant_sides(
     last name overwrites the first mapping in sides_map — accepted for
     Phase 16.
 
-    Phase 50 (D-21/D-22, SC-4/IMPORT-05): every write goes through
+    Every write goes through
     `apply_participant_value_change` rather than a direct ORM assignment.
     This function and its `descriptor` twin were the last two ungated
     writers onto a gated `ArgumentParticipant` column — the pair
@@ -687,11 +687,11 @@ async def _update_participant_descriptors(
     name matches a key in descriptors_map ({last_name_upper: descriptor_string}).
 
     Returns the count of rows the authority gate actually ACCEPTED. Unmatched
-    participants keep NULL descriptor (D-11). Descriptor is stored as a plain
+    participants keep NULL descriptor. Descriptor is stored as a plain
     string — no enum cast. (Phase 44 D-05: renamed from
     _update_participant_titles.)
 
-    Phase 50 (D-21/D-22, SC-4/IMPORT-05): gated exactly as its `side` twin
+    Gated exactly as its `side` twin
     above — see that docstring for why the former direct ORM assignment was
     a live operator-clobber path.
     """

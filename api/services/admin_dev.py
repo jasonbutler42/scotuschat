@@ -1,5 +1,5 @@
 """
-Dev-only destructive reset service (Phase 43, DEVTOOL-01/DEVTOOL-02).
+Dev-only destructive reset service.
 
 D-07 keeps this module's router (api/routers/admin_dev.py) unmounted outside
 development — settings.environment must equal "development" for
@@ -80,7 +80,7 @@ class ResetIncompleteError(Exception):
     ever returning a success response. A short `fixtures` list is never a
     valid 200.
 
-    Phase 50 (D-14/D-19): no longer also raised for a missing AdminJob row
+    No longer also raised for a missing AdminJob row
     — the corpus importer no longer creates one at all."""
 
 
@@ -173,7 +173,7 @@ async def _seed_reconcile_run_fixture(
     db: AsyncSession, argument_id: int, *, conversation_id: str
 ) -> None:
     """
-    Phase 50 (D-04/OQ-2): seed ONE `step="reconcile"` ImportRun for the
+    Seed ONE `step="reconcile"` ImportRun for the
     Mid-pipeline dev fixture, replacing the pre-Phase-50 `AdminJob.status =
     RUNNING` flip (there is no AdminJob to flip anymore, D-14/D-19).
 
@@ -229,14 +229,14 @@ async def reset_to_fixture(db: AsyncSession, corpus_dir: str | Path | None = Non
     resolved_corpus_dir = Path(corpus_dir) if corpus_dir else DEFAULT_CORPUS_DIR
     _require_corpus_files(resolved_corpus_dir)
 
-    # 2. TRUNCATE — one statement, one transaction, per D-01.
+    # 2. TRUNCATE — one statement, one transaction.
     await db.execute(text(TRUNCATE_SQL))
     await db.commit()
 
     # 3-4. Reseed each fixture through the real importer, then verify its
     # Argument row landed. Collect (entry, argument_id) pairs in
     # FIXTURE_SET declaration order for the state-realization step below.
-    # Phase 50 (D-14/D-19): no paired AdminJob check anymore — the corpus
+    # No paired AdminJob check anymore — the corpus
     # importer no longer creates one at all.
     fixture_rows: list[tuple[dict, int]] = []
     for entry in FIXTURE_SET:
@@ -276,7 +276,7 @@ async def reset_to_fixture(db: AsyncSession, corpus_dir: str | Path | None = Non
 
         fixture_rows.append((entry, argument.id))
 
-    # 5. State realization (D-03, D-04) — runs strictly AFTER every fixture
+    # 5. State realization — runs strictly AFTER every fixture
     # has landed and passed its existence check above, so every Argument
     # row referenced below is guaranteed to exist before any transition is
     # attempted. Looked up by id collected during the reseed loop, never
@@ -291,7 +291,7 @@ async def reset_to_fixture(db: AsyncSession, corpus_dir: str | Path | None = Non
     # imported" state.
 
     # Fixture 13015 (Draft target): CANDIDATE -> DRAFT via the real
-    # argument-scoped service function (D-03, D-14). approve_argument
+    # argument-scoped service function. approve_argument
     # stamps resolved_at and writes the ArgumentStatusLog row — this module
     # performs none of those writes itself.
     draft_argument_id = ids_by_conversation["13015"]
@@ -330,7 +330,7 @@ async def reset_to_fixture(db: AsyncSession, corpus_dir: str | Path | None = Non
         argument = (
             await db.execute(select(Argument).where(Argument.id == argument_id))
         ).scalar_one()
-        # PD-05: the highest-id ImportRun for this argument reports its
+        # The highest-id ImportRun for this argument reports its
         # step, which together with argument_status keeps all four
         # reference states distinguishable: Complexity = candidate/parse,
         # Draft = draft/parse, Published = published/parse, Mid-pipeline =
@@ -368,7 +368,7 @@ async def seed_unresolved_speaker_fixture(
     conversation_id: str = DEFAULT_UNRESOLVED_SPEAKER_CONVERSATION_ID,
 ) -> dict:
     """
-    Dev-only mechanism (D-33a) that nulls the person_id of one advocate-side
+    Dev-only mechanism that nulls the person_id of one advocate-side
     ArgumentParticipant on a fixture argument (the Complexity fixture,
     conversation 15169, by default) and sets its review_state to
     needs_review, so the unresolved-speaker case -- the main thing the
@@ -403,7 +403,7 @@ async def seed_unresolved_speaker_fixture(
     PDF-pipeline MISS would, so the fixture stays representative rather
     than invented.
 
-    Dev-only for the same reason reset_to_fixture is (D-07): the router
+    Dev-only for the same reason reset_to_fixture is: the router
     this is mounted on (api/routers/admin_dev.py) is only ever registered
     on the FastAPI app when settings.environment == "development" -- see
     api/main.py's guarded include_router call. There is no handler-level
@@ -459,7 +459,7 @@ async def seed_unresolved_speaker_fixture(
         }
 
     # Deterministic — the same row every time — never a random/first-scan
-    # pick. "Non-BENCH" per D-33a's action text: BENCH participants are
+    # pick. "Non-BENCH"
     # justices, not the advocate-side speaker this fixture is meant to
     # represent.
     #

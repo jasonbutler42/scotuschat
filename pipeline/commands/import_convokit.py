@@ -1,27 +1,27 @@
 """
 Pipeline import-convokit command.
 
-Term-batched orchestration (D-07) for Phase 29's bulk historical import: for
+Term-batched orchestration for Phase 29's bulk historical import: for
 one October Term (--term) or an inclusive range (--term-range), scaffolds
 Case / Argument / CaseArgument / ImportRun rows, resolves bench/advocate
 speakers into Person + ArgumentParticipant rows, streams each argument's
-utterances.jsonl turns into Utterance rows (D-18), splits detected stage
-directions into their own rows (D-16/D-17), and prints a per-batch summary
-report (D-14).
+utterances.jsonl turns into Utterance rows, splits detected stage
+directions into their own rows, and prints a per-batch summary
+report.
 
 Built task-by-task:
     29-04 Task 1: CLI subcommand, --term/--term-range validation,
         --corpus-dir validation, and the per-term file-loading skeleton.
     29-04 Task 2: idempotent Case/Argument/CaseArgument/ImportRun entity
-        creation, apolitical field stripping (T-29-02), and per-conversation
-        resilience (T-29-05b).
+        creation, apolitical field stripping, and per-conversation
+        resilience.
     29-04 Task 3: bench/advocate speaker resolution into Person (D-11 key
         order) + ArgumentParticipant rows (side classification, D-12/D-13).
-    29-05 Task 1: streaming utterance import (D-18) -- one Utterance row per
+    29-05 Task 1: streaming utterance import -- one Utterance row per
         ConvoKit turn, \\n segment boundaries preserved verbatim, stage
         directions split into their own rows via
-        pipeline.corpus.stage_directions.detect_stage_direction (D-16/D-17).
-    29-05 Task 2: per-batch/rollup summary report (D-14).
+        pipeline.corpus.stage_directions.detect_stage_direction.
+    29-05 Task 2: per-batch/rollup summary report.
 
 Join key note: each cases.jsonl row's term-prefixed identifier lives in its
 "id" field (e.g. "1955_71"), matching conversations.json's per-conversation
@@ -45,7 +45,7 @@ roster. This plan wires them up for every id in the conversation's
 unchanged to resolve each utterance turn's speaker as well.
 
 Utterance streaming note (Plan 05, Task 1): utterances.jsonl (~900MB) is
-never loaded whole (T-29-03) -- one streaming pass per term is made via
+never loaded whole -- one streaming pass per term is made via
 pipeline.corpus.loader.stream_utterances_for_conversation_ids, filtered to
 that term's conversation_id set, grouping rows into an in-memory
 conversation_id -> [turn, ...] index that is held only for the term
@@ -60,7 +60,7 @@ Usage:
     python -m pipeline import-convokit --term 1955 --corpus-dir data/corpus
     python -m pipeline import-convokit --conversation-id 15169
 
-Phase 42 (D-01) added --conversation-id: a scoped single-conversation import
+Phase 42 added --conversation-id: a scoped single-conversation import
 path that derives its own October Term from the conversation's own case_id
 field (never operator-supplied), for landing exactly one conversation
 without pulling in the rest of its term as a side effect.
@@ -83,7 +83,7 @@ from api.domain.authority import WriteDecision, decide_write
 from api.domain.content_digest import compute_utterance_digest
 from api.domain.person_names import prepare_name_provenance, split_legacy_full_name
 from api.services.admin_review import (
-    _is_gap_fill,  # noqa: F401 -- Phase 50 (PD-15): imported directly (never
+    _is_gap_fill,  # noqa: F401 -- Phase 50: imported directly (never
     # re-implemented) so the lazy-run predictor below can never diverge from
     # the gate's own gap-fill decision.
     _normalize_generic,  # noqa: F401 -- ditto, for the D-03 blank-incoming
@@ -127,7 +127,7 @@ from pipeline.corpus.loader import (
 )
 from pipeline.db import get_session
 
-# Matches the data/corpus/ scaffolding (D-20/D-21) -- the operator copies the
+# Matches the data/corpus/ scaffolding -- the operator copies the
 # ConvoKit source files here locally; it is gitignored, not tracked.
 DEFAULT_CORPUS_DIR = Path("data/corpus")
 
@@ -341,11 +341,11 @@ async def _get_or_create_case(session, case_fields: dict, counters: dict) -> Cas
     same-docket cases from different terms). If that misses, falls back to
     the (docket_number, term_year) composite -- this is what lets a docket
     already occupied by the ordinary PDF pipeline (no oyez_case_id set) be
-    reused rather than duplicated (CR-01); the existing row's oyez_case_id
+    reused rather than duplicated; the existing row's oyez_case_id
     is then backfilled, mirroring the same pattern already used for
-    Person.oyez_speaker_id (D-11). term_year comes DIRECTLY from
-    cases.jsonl's allowlisted "year" field (D-15) -- never derived from
-    argued_date's calendar year. Lead-docket-only (D-19): this is the single
+    Person.oyez_speaker_id. term_year comes DIRECTLY from
+    cases.jsonl's allowlisted "year" field -- never derived from
+    argued_date's calendar year. Lead-docket-only: this is the single
     Case row for the conversation's docket; no consolidated-companion
     sourcing happens here.
 
@@ -437,7 +437,7 @@ async def _import_conversation(
     splitting (29-05 Task 1) for this conversation's `turns` (already
     filtered/grouped by the caller from utterances.jsonl, T-29-03).
 
-    Phase 50 (D-01): a conversation whose oyez_transcript_id already
+    A conversation whose oyez_transcript_id already
     exists is no longer skipped -- it is handed to _reconcile_conversation,
     which ALWAYS reconciles (the real compare-and-write body plan 50-05
     builds out; plan 50-01 only established the branch and the digest
@@ -479,8 +479,8 @@ async def _import_conversation(
         )
         return
 
-    # ---- Idempotent Argument dedup on oyez_transcript_id (D-08) ----
-    # Phase 50 (D-01): no more skip-existing early return -- an already-
+    # ---- Idempotent Argument dedup on oyez_transcript_id ----
+    # No more skip-existing early return -- an already-
     # imported conversation is handed to the reconcile branch instead.
     existing_argument_result = await session.execute(
         select(Argument).where(Argument.oyez_transcript_id == conversation_id)
@@ -545,7 +545,7 @@ async def _import_conversation(
         # write time like every other corpus-stamped row in this module
         # (ArgumentParticipant, ImportRun) -- without this, a fresh corpus
         # argument's source/method stay NULL until the FIRST reconcile
-        # pass restamps them (D-07), which is itself a real column-value
+        # pass restamps them, which is itself a real column-value
         # change and breaks D-09's byte-identical re-import guarantee.
         source=ImportSource.CORPUS,
         method=ImportMethod.DIRECT,
@@ -573,7 +573,7 @@ async def _import_conversation(
             "error, counted in docket_question_conflict, skipped."
         )
         return
-    # D-03: log the born-state transition immediately on the flush success
+    # Log the born-state transition immediately on the flush success
     # path -- placing it here means the docket/question conflict-rollback
     # branch above (which returns early) can never orphan a status-log row.
     # This is a genuinely new write site: neither this file nor ingest.py
@@ -646,7 +646,7 @@ async def _import_conversation(
     # dual-write of the ConvoKit conversation id (Argument.oyez_transcript_id,
     # set above at argument creation, remains the live dedup key and public
     # API field -- RESEARCH.md Pitfall 1). No pdf_path/pdf_url -- the corpus
-    # path fabricates no PDF artifacts (PROV-06). content_digest (D-13) is
+    # path fabricates no PDF artifacts. content_digest is
     # stamped at construction time, not via a later UPDATE.
     run = ImportRun(
         argument_id=argument.id,
@@ -674,14 +674,14 @@ async def _import_conversation(
         argued_date=argued_date,
     )
 
-    # D-07/writer #1 (48-RESEARCH.md): stamp the tier last, after every
+    # D-07/writer #1: stamp the tier last, after every
     # constituent (utterances, participants) for this argument has been
     # written -- the floor must see the complete set. get_session() commits
     # on clean exit of run_import_convokit's `async with` block, so this
     # call is inside the same birth transaction; no session.commit() is
     # added here (48-RESEARCH.md Pitfall 2).
     #
-    # Phase 50 (D-14/D-19): no AdminJob is created here -- the corpus path
+    # No AdminJob is created here -- the corpus path
     # no longer fabricates a job to borrow the PDF path's resolve/approve
     # machinery. A corpus argument reaches DRAFT via api.services.
     # admin_arguments.approve_argument instead (Task 3, argument-scoped).
@@ -693,7 +693,7 @@ class _ReconcileContext:
     Phase 50 plan 50-05 (Task 1): per-argument bookkeeping shared by every
     helper in a single `_reconcile_conversation` pass -- the session, the
     argument, the running counters, the dry-run flag, and the lazily
-    minted `step="reconcile"` `ImportRun` id (D-06). One instance per
+    minted `step="reconcile"` `ImportRun` id. One instance per
     reconcile call; never reused across arguments.
     """
 
@@ -709,7 +709,7 @@ class _ReconcileContext:
 
 async def _ensure_reconcile_run(ctx: _ReconcileContext) -> int:
     """
-    D-06: create the `step="reconcile"` `ImportRun` on first call and
+    Create the `step="reconcile"` `ImportRun` on first call and
     return its id thereafter -- memoized on `ctx.reconcile_run_id`.
 
     MUST NEVER be called speculatively -- only from a code path that is
@@ -728,7 +728,7 @@ async def _ensure_reconcile_run(ctx: _ReconcileContext) -> int:
         source=ImportSource.CORPUS,
         method=ImportMethod.DIRECT,
         external_id=ctx.conversation_id,
-        content_digest=None,  # OQ-3: a reconcile run carries no comparison digest
+        content_digest=None,  # A reconcile run carries no comparison digest
     )
     ctx.session.add(run)
     await ctx.session.flush()
@@ -742,9 +742,9 @@ def _needs_reconcile_run(
     """
     Predicts whether calling the real gate for this field could write-and-
     record or reject-and-record -- i.e. whether `_ensure_reconcile_run`
-    must fire before the gate call (D-06). Used ONLY to decide whether to
+    must fire before the gate call. Used ONLY to decide whether to
     eagerly mint the lazy run; it never makes or duplicates the gate's own
-    accept/reject/record decision (PD-15).
+    accept/reject/record decision.
 
     Reuses admin_review's own `_normalize_generic`/`_is_gap_fill`/
     `_values_differ` (imported directly, never re-implemented) so this
@@ -762,7 +762,7 @@ def _needs_reconcile_run(
     Argument/Case fields (whose gates implement the blank-incoming
     no-opinion pre-check), False for ArgumentParticipant/Person fields
     (whose gates do not -- PD-15's "the reconcile pass does NOT
-    re-implement [D-03]" is about the real write path, not this
+    re-implement" is about the real write path, not this
     same-outcome-guaranteed predictor).
     """
     if (
@@ -777,7 +777,7 @@ def _needs_reconcile_run(
 
 
 def _count_decision(counters: dict, decision) -> None:
-    """PD-17: increment the four write/record whole-batch counters from
+    """Increment the four write/record whole-batch counters from
     one gate call's returned `WriteDecision` (or `None` for D-03's
     no-opinion, which increments nothing)."""
     if decision is None:
@@ -801,7 +801,7 @@ async def _reconcile_field(
     has_no_opinion_check: bool,
 ):
     """
-    Walk one D-02 compare-set field through its authority gate (D-21) on
+    Walk one D-02 compare-set field through its authority gate on
     the ordinary (non-published, non-dry-run) path.
 
     `gate_call` is a `functools.partial` of one of the four gate
@@ -847,7 +847,7 @@ async def _record_published_diff(
     existing_method: str | None,
 ) -> None:
     """
-    D-08: the PUBLISHED-argument record-only branch. Never calls a gate
+    The PUBLISHED-argument record-only branch. Never calls a gate
     and never writes a column -- compares `incoming_value` against
     `existing_value` directly and records one open `value_discrepancy`
     row when (and only when) they genuinely disagree.
@@ -889,9 +889,9 @@ async def _pair_participants_by_speaker_id(
     session, argument_id: int, incoming_speaker_ids: set[str]
 ) -> dict[str, ArgumentParticipant]:
     """
-    D-04: build a `oyez_speaker_id -> ArgumentParticipant` map for this
+    Build a `oyez_speaker_id -> ArgumentParticipant` map for this
     argument's STORED rows, read-only, ordered by `ArgumentParticipant.id`
-    ASC (PD-14). Pairing is on `oyez_speaker_id` ONLY -- never
+    ASC. Pairing is on `oyez_speaker_id` ONLY -- never
     `raw_speaker_label`, never a `Person` lookup.
 
     A stored row is included ONLY when its `oyez_speaker_id` is non-NULL
@@ -920,7 +920,7 @@ async def _pair_participants_by_speaker_id(
 def _row_should_restamp(decisions: Sequence[WriteDecision | None]) -> bool:
     """
     Decide whether one row's whole-row provenance may be demoted to
-    corpus/direct after its full compare-set walk (G-50-2b).
+    corpus/direct after its full compare-set walk.
 
     `source`/`method` are ROW-level columns, but `decide_write` runs
     PER-FIELD. Firing the restamp from a single field's ACCEPT therefore
@@ -956,11 +956,11 @@ def _row_should_restamp(decisions: Sequence[WriteDecision | None]) -> bool:
 
 async def _restamp_corpus_provenance(session, model, row_id: int) -> None:
     """
-    D-07 (PD-16): after an accepted overwrite on this reconcile pass,
+    After an accepted overwrite on this reconcile pass,
     restamp `source`/`method` to corpus/direct -- even a row that already
     carried a `source` value. The provenance columns describe where the
     value came FROM, not where it originally came from. `review_state` is
-    deliberately NOT touched here (see D-07's rationale in
+    deliberately NOT touched here (
     50-CONTEXT.md). `Person` has no `source`/`method` columns, so this is
     only ever called for `Argument`, `Case`, and `ArgumentParticipant`.
 
@@ -971,7 +971,7 @@ async def _restamp_corpus_provenance(session, model, row_id: int) -> None:
     here. What D-07's "unconditional" never licensed is demoting a row on
     behalf of a field that was rejected: every caller must gate this on
     `_row_should_restamp` over that row's COMPLETE compare-set walk, and
-    call it once per row rather than once per accepted field (G-50-2b).
+    call it once per row rather than once per accepted field.
     """
     await session.execute(
         update(model)
@@ -1025,7 +1025,7 @@ async def _reconcile_conversation(
     It is still walked (present in PD-14's order) for documentation/
     symmetry, at zero cost.
 
-    D-08: when `argument.status == PUBLISHED`, the ENTIRE pass runs in
+    When `argument.status == PUBLISHED`, the ENTIRE pass runs in
     record-only mode via `_record_published_diff` for the Argument/Case
     legs -- no gate is called, no column is written, no participant/
     person walk happens (nothing there could ever accept-and-record once
@@ -1035,9 +1035,9 @@ async def _reconcile_conversation(
     `published_writes_skipped` increments exactly once per pass,
     unconditionally.
 
-    Utterance replacement (D-10/D-11/D-13) is delegated to
+    Utterance replacement is delegated to
     `_replace_utterance_set` when the incoming content digest differs
-    from the latest stored `step="parse"` run's (OQ-3) -- see that
+    from the latest stored `step="parse"` run's -- see that
     function and the digest-comparison block at the end of this one.
     """
     ctx = _ReconcileContext(
@@ -1066,7 +1066,7 @@ async def _reconcile_conversation(
         ("question_number", None, argument.question_number),
         ("source_docket", case_fields.get("docket_no"), argument.source_docket),
     )
-    # G-50-2b: collect this row's per-field decisions across the WHOLE
+    # Collect this row's per-field decisions across the WHOLE
     # compare-set walk and restamp once at the end, never per field.
     argument_decisions: list[WriteDecision | None] = []
     for arg_field, incoming_value, existing_value in argument_field_plan:
@@ -1104,7 +1104,7 @@ async def _reconcile_conversation(
             ("case_name", _case_name_from_fields(case_fields), lead_case.case_name),
             ("docket_number", case_fields.get("docket_no"), lead_case.docket_number),
         )
-        # G-50-2b: one restamp decision per row, over the whole walk. This
+        # One restamp decision per row, over the whole walk. This
         # is the exact pair the live walkthrough caught -- an operator's
         # `case_name` rejected while `docket_number` agreed.
         case_decisions: list[WriteDecision | None] = []
@@ -1260,7 +1260,7 @@ async def _reconcile_conversation(
             )
             visited_person_ids.add(person.id)
 
-            # G-50-2b: accumulate across this participant's three compare-set
+            # Accumulate across this participant's three compare-set
             # fields; the single restamp decision comes after the walk.
             participant_decisions: list[WriteDecision | None] = []
 
@@ -1375,7 +1375,7 @@ async def _reconcile_conversation(
 
 async def _replace_utterance_set(ctx: _ReconcileContext, incoming_rows: list[dict]) -> None:
     """
-    D-10/D-11/D-13: whole-set utterance replacement under a NEW
+    Whole-set utterance replacement under a NEW
     `step="parse"`/`COMPLETED` `ImportRun`, minted and populated in the
     SAME transaction as the reconcile pass's caller (`run_import_convokit`
     's per-conversation `async with get_session()` block, D-30) -- never
@@ -1391,12 +1391,12 @@ async def _replace_utterance_set(ctx: _ReconcileContext, incoming_rows: list[dic
     mid-write rolls the whole thing back (D-30's own per-argument
     atomicity, unchanged).
 
-    Deletes nothing (D-12) -- superseded rows and their run are retained;
-    `pipeline prune-runs` (plan 50-07) is the only thing that ever removes
+    Deletes nothing -- superseded rows and their run are retained;
+    `pipeline prune-runs` is the only thing that ever removes
     them.
 
     Person ids on the new rows come from the POST-reconcile
-    `ArgumentParticipant` state (D-11), never the raw corpus speaker
+    `ArgumentParticipant` state, never the raw corpus speaker
     mapping: `_import_utterances` is called with a FRESH
     `resolved_participants={}`, so its own `_resolve_and_link_participant`
     call performs a fresh `(argument_id, raw_speaker_label)` lookup for
@@ -1443,7 +1443,7 @@ async def _predict_reconcile(
     is_published: bool,
 ) -> None:
     """
-    Phase 50 plan 50-05 Task 3 (D-28): the `--dry-run` prediction path.
+    Phase 50 plan 50-05 Task 3: the `--dry-run` prediction path.
     Computes every decision `_reconcile_conversation`'s ordinary path
     would reach -- the SAME extracted incoming values, the SAME
     `decide_write` ladder call -- but touches ZERO rows: no gate call
@@ -1567,7 +1567,7 @@ async def _predict_reconcile(
 
 
 # ---------------------------------------------------------------------------
-# Task 3: speaker resolution -- Person (D-11) + ArgumentParticipant (side)
+# Task 3: speaker resolution -- Person + ArgumentParticipant (side)
 # ---------------------------------------------------------------------------
 
 
@@ -1576,7 +1576,7 @@ def _is_justice_type(speaker_meta: dict) -> bool | None:
     Read speakers.json's speaker `type` field as the AUTHORITATIVE bench vs.
     advocate signal (RESEARCH.md Open Question 3) -- never inferred from a
     speaker id's naming convention (e.g. a "j__" prefix). Returns None when
-    the type is missing/unrecognized so the caller can flag it (D-12)
+    the type is missing/unrecognized so the caller can flag it
     instead of guessing.
     """
     speaker_type = speaker_meta.get("type")
@@ -1619,9 +1619,9 @@ async def _apply_extracted_name_provenance(session, person: Person, full_name: s
     High-confidence, round-trip-exact split (`auto_apply=True`, D-11) -- an
     ambiguous/uncertain interpretation (Low/Medium) is still recorded in
     the provenance envelope so the operator can see what the extractor
-    thought it saw (D-18), but is never silently written into the
+    thought it saw, but is never silently written into the
     authoritative saved columns, and the row's `review_state` is set to
-    NEEDS_REVIEW for the People directory's Name review filter (D-12).
+    NEEDS_REVIEW for the People directory's Name review filter.
 
     Note the asymmetry deliberately (Phase 49 D-08, D-11, D-24): the
     confident branch below sets UNREVIEWED, never a human-only operator
@@ -1669,7 +1669,7 @@ async def _apply_extracted_name_provenance(session, person: Person, full_name: s
         person.first_name or person.middle_name or person.last_name or person.name_suffix
     )
     if has_any_part:
-        # D-16: never overwrite a row that already carries any saved part --
+        # Never overwrite a row that already carries any saved part --
         # whether authored by an operator or a prior confident extraction.
         return
 
@@ -1700,10 +1700,10 @@ async def _resolve_person(
     session, speaker_id: str, full_name: str, is_justice: bool, counters: dict
 ) -> Person:
     """
-    Resolve or create a Person for `speaker_id`, per D-11's key order:
+    Resolve or create a Person for `speaker_id`
     Person.oyez_speaker_id checked FIRST, then Person.full_name (D-13, same
     exact-match dedup as the justice importer). When a full_name match is
-    found with no oyez_speaker_id yet, backfill it (D-11) so the next run
+    found with no oyez_speaker_id yet, backfill it so the next run
     matches by the stable ID.
 
     Phase 38 (D-14-D-18, T-38-10/T-38-11): every resolution path -- brand
@@ -1786,7 +1786,7 @@ async def _check_bench_tenure_mismatch(session, person_id: int, argued_date) -> 
     boundary (`start_date <= argued_date`), open-ended `end_date` treated
     as still active (`end_date IS NULL OR end_date >= argued_date`).
     Read-only: issues a single `select(CourtTenure)`, never creates,
-    updates, or deletes a `CourtTenure` row (D-03) and never touches
+    updates, or deletes a `CourtTenure` row and never touches
     `Person.is_justice`.
     """
     result = await session.execute(
@@ -1810,7 +1810,7 @@ async def _resolve_and_link_participant(
 ) -> ArgumentParticipant | None:
     """
     Resolve `speaker_id` to a Person and idempotently create its
-    ArgumentParticipant row for `argument_id` (D-11/D-12/D-13).
+    ArgumentParticipant row for `argument_id`.
 
     Returns None -- creating no Person/ArgumentParticipant row at all --
     when speakers.json's `type` is ConvoKit's own "no identifiable speaker"
@@ -1821,7 +1821,7 @@ async def _resolve_and_link_participant(
     `side_code` is the raw conversations.json 0/1/2/3 advocate side code;
     it is ignored (side is always BENCH) when the resolved speaker's
     speakers.json `type` classifies as a justice. No automated QA gate on
-    identity matching (D-12) -- ambiguous/missing types are imported and
+    identity matching -- ambiguous/missing types are imported and
     counted in counters["speakers_flagged"] for the batch summary, never
     silently skipped.
 
@@ -1832,7 +1832,7 @@ async def _resolve_and_link_participant(
     A mismatch increments `counters["bench_tenure_mismatch"]` and prints a
     warning naming the speaker id, `argued_date`, and the earliest
     `CourtTenure.start_date` on record for that person -- `side` is left
-    UNCHANGED (still BENCH) per the operator's warn-and-count-only
+    UNCHANGED (still BENCH)
     decision; no `ArgumentParticipant.side` reassignment happens here.
     When `argued_date` is None (nullable column, no parseable transcript
     date), no tenure check runs and today's behavior is unchanged --
@@ -1910,10 +1910,10 @@ async def _resolve_and_link_participant(
         # gets source=CORPUS/method=DIRECT -> TRUSTED, mirroring the
         # ImportRun stamp this same module already writes above. Without
         # this, source/method stay NULL and derive_tier floors every
-        # freshly-resolved corpus participant to UNCERTAIN (D-18).
+        # freshly-resolved corpus participant to UNCERTAIN.
         source=ImportSource.CORPUS,
         method=ImportMethod.DIRECT,
-        # Phase 50 (D-04): the explicit re-import pairing key -- the
+        # The explicit re-import pairing key -- the
         # ConvoKit speaker id this participant row was resolved from.
         # Threaded into every corpus participant this importer writes so
         # plan 50-05's reconcile pass can pair by id rather than by the
@@ -1928,14 +1928,14 @@ async def _resolve_and_link_participant(
 
 # ---------------------------------------------------------------------------
 # 29-05 Task 1: utterance streaming + stage-direction row-splitting
-# (D-16/D-17/D-18)
+#
 # ---------------------------------------------------------------------------
 
 
 def _split_turn_into_rows(text: str) -> list[tuple[str, bool]]:
     """
     Split one ConvoKit turn's `text` on its `\\n`-delimited segment
-    boundaries (D-18) and classify each segment via
+    boundaries and classify each segment via
     stage_directions.detect_stage_direction (D-16/D-17 -- no re-implemented
     regex here).
 
@@ -1984,7 +1984,7 @@ def _incoming_utterance_rows(
     malformed-row validation (V5), and sequence-assignment logic through
     this ONE place -- two implementations of "the incoming row set" is
     exactly how the digest would start disagreeing with the rows actually
-    written (D-13).
+    written.
 
     Each returned row dict carries the four D-13-frozen digest fields
     (`sequence`, `raw_speaker_label`, `text`, `is_stage_direction`) PLUS one
@@ -2158,7 +2158,7 @@ async def _import_utterances(
                     is_stage_direction=True,
                     side=SideEnum.UNKNOWN,
                     person_id=None,
-                    section_hint=None,  # D-04: stage directions never
+                    section_hint=None,  # Stage directions never
                     # carry or change a section.
                 )
             )
@@ -2195,7 +2195,7 @@ async def _import_utterances(
 
         resolved_side = participant.side if participant else SideEnum.UNKNOWN
 
-        # D-04: derive section_hint. Only a PETITIONER/RESPONDENT/AMICUS
+        # Derive section_hint. Only a PETITIONER/RESPONDENT/AMICUS
         # side can open a section; BENCH, UNKNOWN, and "no attributable
         # speaker" rows fall through with section_hint left None and
         # current_section_side/respondent_section_started untouched (they
@@ -2226,7 +2226,7 @@ async def _import_utterances(
                 import_run_id=import_run_id,
                 sequence=sequence,
                 raw_speaker_label=row["raw_speaker_label"],
-                text=text,  # D-18: verbatim, \n preserved
+                text=text,  # Verbatim, \n preserved
                 is_stage_direction=False,
                 side=resolved_side,
                 person_id=participant.person_id if participant else None,
@@ -2239,7 +2239,7 @@ async def _import_utterances(
 
 
 # ---------------------------------------------------------------------------
-# 29-05 Task 2: per-batch/rollup summary report (D-14)
+# 29-05 Task 2: per-batch/rollup summary report
 # ---------------------------------------------------------------------------
 
 # Every counter key referenced by the summary print, in report order. Using
@@ -2247,7 +2247,7 @@ async def _import_utterances(
 # introduced here don't need every call site retrofitted.
 _SUMMARY_COUNTER_KEYS: tuple[str, ...] = (
     "arguments_created",
-    # Phase 50 (D-01/PD-03): "skipped_existing" is RETIRED, not repurposed
+    # "skipped_existing" is RETIRED, not repurposed
     # -- D-01 removes the early return no code path incremented it from,
     # and a permanently-zero "arguments skipped" line would misreport what
     # the batch did. Replaced by arguments_reconciled/arguments_unchanged
@@ -2267,15 +2267,15 @@ _SUMMARY_COUNTER_KEYS: tuple[str, ...] = (
     # Phase 42 Task 3 (item 2, bench-warn-only, operator-approved
     # 2026-07-30): a speaker typed a Justice in speakers.json with no
     # CourtTenure row covering the argument's argued_date. Flag-only --
-    # side is never reassigned for this counter (D-03).
+    # side is never reassigned for this counter.
     "bench_tenure_mismatch",
-    # Phase 50 plan 50-05 (PD-17): the reconcile pass's own whole-batch
+    # Phase 50 plan 50-05: the reconcile pass's own whole-batch
     # totals -- values accepted/rejected by the authority ladder across
     # every D-02 compare-set field, discrepancies recorded (the union of
     # every ACCEPT_AND_RECORD/REJECT_AND_RECORD outcome plus every
     # PUBLISHED-argument record-only disagreement), utterance sets fully
-    # replaced under a new step="parse" run (D-10), and PUBLISHED-argument
-    # passes that ran in record-only mode (D-08). No per-speaker or
+    # replaced under a new step="parse" run, and PUBLISHED-argument
+    # passes that ran in record-only mode. No per-speaker or
     # per-person breakdown of any of these (project apolitical constraint,
     # D-29's own no-report-file decision).
     "values_accepted",
@@ -2287,7 +2287,7 @@ _SUMMARY_COUNTER_KEYS: tuple[str, ...] = (
 
 
 def _new_counters() -> dict:
-    """Fresh, fully-initialized per-term counters dict (D-14)."""
+    """Fresh, fully-initialized per-term counters dict."""
     return {key: 0 for key in _SUMMARY_COUNTER_KEYS} | {"participants_created": 0}
 
 
@@ -2300,7 +2300,7 @@ def _accumulate_counters(rollup: dict, term_counters: dict) -> dict:
 
 def _print_summary(label: str, counters: dict) -> None:
     """
-    Print one per-batch summary block (D-14): term year, arguments
+    Print one per-batch summary block: term year, arguments
     created, arguments reconciled (content differs, or no stored digest --
     Phase 50 D-01/D-13, plan 50-05 does the actual compare-and-write) and
     arguments unchanged (identical content digest, zero-write no-op), cases
@@ -2320,7 +2320,7 @@ def _print_summary(label: str, counters: dict) -> None:
     parse run, and PUBLISHED-argument passes run in record-only mode.
 
     `label` carries a "DRY RUN" marker when the batch ran under --dry-run
-    (D-28) so an operator can never mistake a dry-run report for a
+ so an operator can never mistake a dry-run report for a
     completed batch -- see run_import_convokit.
     """
     c = counters
@@ -2372,11 +2372,11 @@ async def run_import_convokit(args) -> None:
     one scoped conversation's) conversation_id set and grouped into an
     in-memory conversation_id -> [turn, ...] index, then delegates each
     conversation to _import_conversation (entity creation, speaker
-    resolution, and utterance import). Prints a per-term summary (D-14); a
+    resolution, and utterance import). Prints a per-term summary; a
     --term-range spanning more than one term also prints a final rollup
     block.
 
-    Phase 50 plan 50-05 (D-28): `--dry-run` (`getattr(args, "dry_run",
+    Phase 50 plan 50-05: `--dry-run` (`getattr(args, "dry_run",
     False)` -- the same backward-compatible-Namespace convention
     `_resolve_scoped_conversation` already uses for `conversation_id`, so
     every pre-existing test `argparse.Namespace()` without a `dry_run`
@@ -2417,7 +2417,7 @@ async def run_import_convokit(args) -> None:
         conversations = load_conversations_for_term(conversations_path, term)
 
         if scoped_conversation_id is not None:
-            # D-01: narrow to exactly the one scoped conversation BEFORE
+            # Narrow to exactly the one scoped conversation BEFORE
             # wanted_ids is built below, so the streaming pass over the
             # 900MB utterances.jsonl file filters to one conversation
             # instead of the whole term.

@@ -31,7 +31,7 @@ async def get_cases(db: AsyncSession) -> list[dict]:
         .join(CaseArgument, CaseArgument.case_id == Case.id)
         .join(Argument, CaseArgument.argument_id == Argument.id)
         .where(CaseArgument.is_lead == True)  # noqa: E712 — SQLAlchemy requires == True
-        .where(Argument.published_at.isnot(None))  # hide unpublished arguments (D-06)
+        .where(Argument.published_at.isnot(None))  # hide unpublished arguments
         # Phase 48 plan 10, Defect 2: unpublish_argument deliberately RETAINS
         # published_at (D-02, so the Status card can show the last publish
         # date) — so published_at alone no longer distinguishes PUBLISHED

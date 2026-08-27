@@ -11,7 +11,7 @@ conventions exactly.
 This is the ONE definition of "the same utterance content" for D-13's
 change detection: a re-import compares this digest against the stored
 `import_run.content_digest` of an argument's latest `step="parse"` run
-(OQ-3) and only walks the full compare-and-write path when they differ.
+ and only walks the full compare-and-write path when they differ.
 
 THE CONTRACT IS FROZEN. It was frozen at Task 0's `checkpoint:decision`
 gate (`freeze-as-proposed`) precisely because every digest already stored
@@ -22,7 +22,7 @@ change to the field list or serialization requires bumping
 `DIGEST_VERSION` and a deliberate full-corpus repass; it must never be
 changed silently in place.
 
-Frozen shape (see 50-01-PLAN.md Task 0 for the full sign-off):
+Frozen shape:
   - Algorithm: hashlib.sha256, lowercase hex digest, 64 characters.
   - Input: the ordered incoming utterance rows for ONE argument, in the
     exact order `_import_utterances` would write them, ascending

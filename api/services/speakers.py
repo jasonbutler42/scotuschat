@@ -6,7 +6,7 @@ queries, avoiding N+1 loops.  Returns a plain list[dict] — the router's
 response_model=list[SpeakerPopoverEntry] validates and serializes the output.
 
 appointing_president_party IS included in the assembled dict, per tenure.
-Phase 14 (T-14-02) originally kept this admin-only under the apolitical
+Phase 14 originally kept this admin-only under the apolitical
 framing constraint; Phase 39 (39-CONTEXT.md D-11/D-12) reverses that: the
 value describes the *appointing president's* party — factual historical
 record about a president, not the Justice — and is emitted identically for
@@ -54,14 +54,14 @@ def _tenure_role_name(
     tenures: list[dict],
     argued_date: datetime.date | None,
 ) -> str | None:
-    """Return the formal title for the tenure covering argued_date (D-13),
+    """Return the formal title for the tenure covering argued_date,
     or the most-recent tenure's formal title as D-14 fallback.
 
     Args:
         tenures: List of dicts with keys ``office``, ``start_date``, ``end_date``.
                  ``office`` is the canonical storage value ("chief"/"associate");
                  this helper projects it to the formal display title via
-                 ``office_title()`` (D-15) — valid records never fall back to a
+                 ``office_title()`` — valid records never fall back to a
                  generic "Justice" label.
                  ``start_date`` and ``end_date`` must be ``datetime.date`` objects
                  (not strings) so direct date comparison works without parsing.
@@ -134,11 +134,11 @@ async def get_argument_speakers(
     the router's response_model), or None per the publish gate above.
     """
     # Step 0 — Fetch the argument's argued_date + published_at + status ------
-    # Gate on published_at (BUG-01/D-02): an absent row or a NULL publish
+    # Gate on published_at: an absent row or a NULL publish
     # timestamp both return None here, distinct from the legitimate [] case
     # below (published argument, zero resolved speakers). Phase 48 plan 10,
     # Defect 2: published_at alone is insufficient — unpublish_argument
-    # deliberately RETAINS published_at (D-02), so an UNPUBLISHED argument
+    # deliberately RETAINS published_at, so an UNPUBLISHED argument
     # also gates to None via the status check below, in ADDITION to the
     # published_at check above (never in place of it — see
     # test_published_gate.py's exact-substring assertions).
@@ -203,7 +203,7 @@ async def get_argument_speakers(
                 "office": t.office,
                 "start_date": str(t.start_date) if t.start_date else None,
                 "end_date": str(t.end_date) if t.end_date else None,
-                # Phase 39 (D-01): raw canonical value, carried end to end.
+                # Raw canonical value, carried end to end.
                 "reason_left": t.reason_left,
                 # Phase 39 (D-13, promote): the per-tenure appointing
                 # president, replacing the retired top-level Step 5 field.
@@ -232,7 +232,7 @@ async def get_argument_speakers(
         side = side_by_person.get(person.id)
 
         # Resolve role_name via tenure date-range lookup for bench speakers,
-        # or via the label map for advocates (ROLE-01/ROLE-02).
+        # or via the label map for advocates.
         if side == SideEnum.BENCH:
             role_name = _tenure_role_name(
                 date_tenures_by_person.get(person.id) or [],

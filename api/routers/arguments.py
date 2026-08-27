@@ -54,8 +54,8 @@ async def get_speakers(
     """
     Return speaker popover data for all resolved speakers in an argument.
 
-    Returns 404 if the argument ID is not found or is not published (BUG-01/D-02) —
-    identical detail string to get_utterances's 404 (D-01). Returns an empty list
+    Returns 404 if the argument ID is not found or is not published —
+    identical detail string to get_utterances's 404. Returns an empty list
     (not 404) when the argument is published but no utterances have been resolved
     (person_id IS NULL).
     argument_id validated as int by FastAPI — non-integer path values produce 422

@@ -1,5 +1,5 @@
 """
-Trust-tier recompute service (Phase 48, D-07).
+Trust-tier recompute service.
 
 Thin DB-touching layer over the pure api.domain.trust module: reads exactly
 one argument's constituent rows (utterances + argument_participants),
@@ -10,9 +10,9 @@ own mutation (48-RESEARCH.md Pitfall 2). Every writer path in this phase
 participant edits, publish, unpublish, the offline recompute-trust CLI)
 calls recompute_argument_tier before its own commit.
 
-D-10: reads only per-argument `utterances` and `argument_participants` rows
+Reads only per-argument `utterances` and `argument_participants` rows
 scoped to exactly one argument_id — it never queries the `people` table.
-D-11: a NULL person_id (unresolved speaker/participant) contributes
+A NULL person_id (unresolved speaker/participant) contributes
 TrustTier.UNCERTAIN to the floor — QUALIFIED by Phase 49 D-17: an
 ArgumentParticipant with person_id IS NULL AND review_state ==
 operator_confirmed (the "confirm as unattributable" resolve action)
@@ -22,9 +22,9 @@ so it can never trigger the lift as a side effect. D-12:
 is_stage_direction=true utterance rows are excluded from the floor
 entirely (no speaker to attribute); this is NOT extended to side=UNKNOWN
 rows, which still contribute normally.
-D-13: every utterance constituent's review_state is still supplied as the
+Every utterance constituent's review_state is still supplied as the
 literal api.domain.trust.UNREVIEWED — no per-utterance review signal
-exists. Phase 49 (D-18) fills this module's own participant-branch slot:
+exists. Phase 49 fills this module's own participant-branch slot:
 `_load_constituents` now reads each ArgumentParticipant's real
 `(source, method, review_state)` triple and calls derive_tier() with it,
 in place of the Phase 48 placeholder that contributed nothing for a
@@ -42,11 +42,11 @@ from api.models.models import Argument, ArgumentParticipant, ImportRun, ReviewSt
 
 class TrustGateBlocked(ValueError):
     """
-    Raised by publish_argument (plan 48-06) when the UNCERTAIN publish gate
+    Raised by publish_argument when the UNCERTAIN publish gate
     blocks a publish attempt with no (or a blank) override_reason.
 
     Carries the structured tier + blocker breakdown so the router/SvelteKit
-    layer can render "why blocked" (D-19/D-20) rather than a bare string.
+    layer can render "why blocked" rather than a bare string.
     Calling super().__init__("uncertain_tier_blocked") keeps this
     compatible with the codebase's existing `except ValueError as exc:
     ...detail=str(exc)` router pattern (update_argument's
@@ -103,9 +103,9 @@ async def _load_constituents(
         blocker_counts[code] = blocker_counts.get(code, 0) + 1
 
     for person_id, is_stage_direction, source, method in utterance_rows:
-        if is_stage_direction:  # D-12 — no speaker to attribute, no risk
+        if is_stage_direction:  # No speaker to attribute, no risk
             continue
-        if person_id is None:  # D-11 — unresolved speaker floors to UNCERTAIN
+        if person_id is None:  # Unresolved speaker floors to UNCERTAIN
             tiers.append(TrustTier.UNCERTAIN)
             _bump("unresolved_utterance_speaker")
             continue
@@ -116,8 +116,8 @@ async def _load_constituents(
 
     for person_id, review_state, source, method in participant_rows:
         if person_id is None:
-            # D-17: an unresolved speaker (person_id IS NULL) still floors
-            # to UNCERTAIN by default (D-11) — EXCEPT when the operator has
+            # An unresolved speaker (person_id IS NULL) still floors
+            # to UNCERTAIN by default — EXCEPT when the operator has
             # explicitly confirmed this participant as unattributable
             # (review_state == operator_confirmed via
             # resolve_participant_review's "confirm_unattributable"
@@ -135,7 +135,7 @@ async def _load_constituents(
                 tiers.append(TrustTier.UNCERTAIN)
                 _bump("unresolved_participant")
             continue
-        # D-18: a resolved participant now contributes a real tier —
+        # A resolved participant now contributes a real tier —
         # Pitfall 1: pass .value for every enum-typed column, mirroring the
         # utterance branch above. source/method are nullable; review_state
         # is NOT NULL (always present) as of migration 0028.

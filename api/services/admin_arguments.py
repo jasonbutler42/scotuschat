@@ -2,9 +2,9 @@
 Business logic for admin argument management.
 
 Responsibilities:
-  - Directory listing of all arguments with lead case metadata (D-01)
-  - Argument detail query with consolidated dockets (D-10)
-  - Argument update with slug re-derivation and freeze-on-publish (D-11)
+  - Directory listing of all arguments with lead case metadata
+  - Argument detail query with consolidated dockets
+  - Argument update with slug re-derivation and freeze-on-publish
   - Slug and docket collision detection before write (T-11-SLUG, T-11-DOCKET)
   - Publish / Unpublish with resolved_at pre-condition guard (D-07, T-11-PUBGATE)
 
@@ -70,7 +70,7 @@ async def _stamp_operator_provenance(db: AsyncSession, *, model, row_id: int) ->
     Unconditionally stamp source=OPERATOR / method=MANUAL on one `Argument`
     or `Case` row (PD-08, Phase 50 plan 50-03).
 
-    `Argument` and `Case` have no `review_state` column — operator
+    `Argument` and `Case` have no `review_state` column
     authority on their five compare-set columns (argued_date,
     question_number, source_docket, case_name, docket_number) can only be
     read off `source == "operator"` (api.domain.authority.authority_rank
@@ -78,7 +78,7 @@ async def _stamp_operator_provenance(db: AsyncSession, *, model, row_id: int) ->
     `operator` rung reachable on these two tables. Deliberately scoped to
     `Argument`/`Case` ONLY — do NOT call this for `ArgumentParticipant` or
     `Person`, whose operator authority is carried by `review_state`
-    instead (D-22, Phase 49); stamping source/method there would be a
+    instead; stamping source/method there would be a
     second, disagreeing authority mechanism on tables that already have
     one.
 
@@ -117,7 +117,7 @@ async def list_arguments(db: AsyncSession, status: str | None = None) -> list[di
     Only joins where CaseArgument.is_lead == True so the result is one row per
     argument regardless of how many consolidated dockets the argument has.
 
-    status (DASH-02, D-05/D-06) is an optional single-value filter narrowing
+    status is an optional single-value filter narrowing
     the list to one of "draft"/"published"/"unpublished" (the exact
     ArgumentStatusEnum.value strings). It is validated against an allow-list
     of those three values BEFORE ever being passed to ArgumentStatusEnum() —
@@ -141,7 +141,7 @@ async def list_arguments(db: AsyncSession, status: str | None = None) -> list[di
         .join(CaseArgument, CaseArgument.argument_id == Argument.id)
         .join(Case, CaseArgument.case_id == Case.id)
         .where(CaseArgument.is_lead == True)  # noqa: E712
-        # D-02: exclude candidate-state arguments from admin list (Pitfall 7);
+        # Exclude candidate-state arguments from admin list (Pitfall 7);
         # ALIST-02/Phase 48 D-04: DRAFT, PUBLISHED, and UNPUBLISHED are all
         # surfaced — only CANDIDATE-status arguments (the born state as of
         # Phase 48 D-01) are hidden. Candidate visibility is Phase 49's
@@ -184,7 +184,7 @@ async def list_arguments(db: AsyncSession, status: str | None = None) -> list[di
 
 
 async def get_argument_stats(db: AsyncSession) -> dict:
-    """Aggregate stat-card counts for the Arguments card (DASH-01).
+    """Aggregate stat-card counts for the Arguments card.
 
     One grouped COUNT query keyed on Argument.status, restricted to
     DRAFT/PUBLISHED/UNPUBLISHED (ALIST-02 parity — CANDIDATE-status rows,
@@ -257,7 +257,7 @@ async def get_utterance_count(db: AsyncSession) -> int:
 
 
 async def list_argument_speakers(db: AsyncSession, argument_id: int) -> list[dict]:
-    """Return a unified bench+advocate speaker row per ArgumentParticipant (D-05).
+    """Return a unified bench+advocate speaker row per ArgumentParticipant.
 
     Mirrors admin_people.list_resolve_rows_for_job's per-participant row-building
     shape (advocate vs. bench branching, tenure prefetch avoiding N+1), but keyed
@@ -417,7 +417,7 @@ async def get_argument_detail(db: AsyncSession, argument_id: int) -> dict | None
     )
     consolidated_rows = consolidated_result.all()
 
-    # Compute tenure gap warnings (D-15): bench participants whose argued_date
+    # Compute tenure gap warnings: bench participants whose argued_date
     # is not covered by any of their CourtTenure rows.
     tenure_gap_warnings: list[dict] = []
     if argument.argued_date is not None:
@@ -456,7 +456,7 @@ async def get_argument_detail(db: AsyncSession, argument_id: int) -> dict | None
                     }
                 )
 
-    # Load resolved advocate participants (D-12): non-BENCH ArgumentParticipant rows
+    # Load resolved advocate participants: non-BENCH ArgumentParticipant rows
     # where person_id IS NOT NULL (unresolved participants cannot be role-assigned).
     advocate_result = await db.execute(
         select(
@@ -549,7 +549,7 @@ async def update_argument(
 
     Returns None if the argument does not exist (router → 404 IDOR guard T-11-IDOR).
 
-    Published guard (D-35, D-35a, operator, 2026-08-24): raises ValueError when
+    Published guard: raises ValueError when
     the owning argument's status is PUBLISHED. D-35a is the operator's
     whole-argument answer to the scope question D-35's first half (plan
     49-09) left open in deferred-items.md — "lock everything," not just
@@ -562,7 +562,7 @@ async def update_argument(
     argued_date, case_name, and docket_number all stayed writable on live
     public data — that gap is what this guard closes.
 
-    Slug logic (D-11, ALIST-01):
+    Slug logic:
       - When body.case_name is provided AND argument.status == DRAFT:
         re-derive slug from new case_name and write to lead_case.slug.
         Pre-write collision check: if another Case has the same slug, raise
@@ -619,7 +619,7 @@ async def update_argument(
             argument.argued_date = datetime.date.fromisoformat(body.argued_date)
         except ValueError:
             raise ValueError("invalid_date_format")
-        # PD-08: stamp operator provenance on the argument row's own write
+        # Stamp operator provenance on the argument row's own write
         # (Phase 50 plan 50-03) — the only way authority_rank can ever
         # read this column as OPERATOR (Argument has no review_state).
         await _stamp_operator_provenance(db, model=Argument, row_id=argument.id)
@@ -666,7 +666,7 @@ async def update_argument(
         # else: PUBLISHED or UNPUBLISHED — slug is frozen; only case_name
         # display updates (Pitfall 3, ALIST-01)
 
-    # PD-08: stamp operator provenance on the lead Case row — a case-only
+    # Stamp operator provenance on the lead Case row — a case-only
     # edit (case_name and/or docket_number) touches ONLY the Case row's
     # provenance, never the Argument row's (Phase 50 plan 50-03).
     if case_provenance_dirty:
@@ -677,7 +677,7 @@ async def update_argument(
 
 
 async def approve_argument(db: AsyncSession, argument_id: int) -> dict | None:
-    """Transition an argument from CANDIDATE to DRAFT (Phase 50, D-14).
+    """Transition an argument from CANDIDATE to DRAFT.
 
     This is the argument-scoped peer of `api.services.admin_jobs.approve_job`
     (PATTERNS.md rates that function an exact analog) with the job legs
@@ -726,12 +726,12 @@ async def approve_argument(db: AsyncSession, argument_id: int) -> dict | None:
         .execution_options(synchronize_session=False)
     )
     db.add(ArgumentStatusLog(argument_id=argument_id, status=ArgumentStatusEnum.DRAFT))
-    # D-07: not itself a constituent change, but every writer recomputes
+    # Not itself a constituent change, but every writer recomputes
     # (48-RESEARCH.md writer #4) — one bounded per-argument query guarantees
     # the tier is truthful the moment the argument becomes operator-visible.
     await recompute_argument_tier(db, argument_id)
     await db.commit()
-    # Phase 31 fix: the bulk update() above uses synchronize_session=False,
+    # The bulk update() above uses synchronize_session=False,
     # so the already-loaded `argument` object never syncs to the new status
     # in this session's identity map. Refresh it before the caller's own
     # re-read (same db.refresh() precedent unpublish_argument/publish_
@@ -744,7 +744,7 @@ async def publish_argument(
     db: AsyncSession, argument_id: int, override_reason: str | None = None
 ) -> dict | None:
     """Stamp published_at = now() and status = PUBLISHED, making the argument
-    publicly visible. Re-publish from UNPUBLISHED is allowed (D-02 / AEDIT-08).
+    publicly visible. Re-publish from UNPUBLISHED is allowed.
 
     Two distinct gates, evaluated in this order (Phase 48 D-14):
       1. `resolved_at IS NULL` — a non-overridable completeness precondition
@@ -757,12 +757,12 @@ async def publish_argument(
          if it is `TrustTier.UNCERTAIN`, publishing is blocked unless a
          non-blank `override_reason` is supplied. This is the only overridable
          gate. The override authorizes exactly this publish attempt — it is
-         never sticky (D-16): an unpublish then republish while still
+         never sticky: an unpublish then republish while still
          UNCERTAIN is blocked again and requires a fresh reason.
 
     A blank/whitespace-only `override_reason` (after `.strip()`) is rejected
     server-side with a distinct tagged `ValueError("blank_override_reason")`
-    — this check is authoritative regardless of what the UI does (D-17); a
+    — this check is authoritative regardless of what the UI does; a
     disabled client button is defense-in-depth only.
 
     Returns None if the argument does not exist (router → 404 T-11-IDOR).
@@ -771,14 +771,14 @@ async def publish_argument(
     Raises ValueError("Already published") if already published.
     Raises TrustGateBlocked (api.services.trust) if the tier is UNCERTAIN and
     no reason (or only a None) was supplied — carries the tier and the
-    blocker breakdown (D-19/D-20) for the caller to render "why blocked".
+    blocker breakdown for the caller to render "why blocked".
     Raises ValueError("blank_override_reason") if a reason was supplied but
     is empty after stripping.
 
     Writes one ArgumentStatusLog row (status=PUBLISHED) in the same
     transaction as the Argument update (T-26-03 — audit trail, D-09). When
     the trust gate was overridden, that row also carries the stripped
-    `override_reason` and the `trust_tier_at_transition` (D-15); a normal,
+    `override_reason` and the `trust_tier_at_transition`; a normal,
     non-blocked publish leaves both of those columns NULL — the override
     path is not accidentally mandatory (D-16 edge).
 
@@ -792,11 +792,11 @@ async def publish_argument(
         return None
 
     # D-07 / T-11-PUBGATE: backend must enforce this independently of the UI.
-    # D-14: this gate is non-overridable — evaluated before override_reason
+    # This gate is non-overridable — evaluated before override_reason
     # is ever consulted.
     if argument.resolved_at is None:
         raise ValueError("Cannot publish: resolve step not yet complete")
-    # D-02: guard keys on status (not published_at) so re-publish from
+    # Guard keys on status (not published_at) so re-publish from
     # UNPUBLISHED succeeds; only an already-PUBLISHED argument is rejected.
     if argument.status == ArgumentStatusEnum.PUBLISHED:
         raise ValueError("Already published")
@@ -818,7 +818,7 @@ async def publish_argument(
                 raise ValueError("blank_override_reason")
             blockers = await summarize_tier_blockers(db, argument_id)
             raise TrustGateBlocked(current_tier, blockers)
-        # D-16: the override authorizes exactly this publish attempt; nothing
+        # The override authorizes exactly this publish attempt; nothing
         # persistent is written to carry it forward to a future attempt.
         override_reason_to_log = reason
         tier_at_transition = current_tier
@@ -840,7 +840,7 @@ async def publish_argument(
         )
     )
     await db.commit()
-    # Phase 31 fix: the bulk update() above uses synchronize_session=False, so
+    # The bulk update() above uses synchronize_session=False, so
     # the `argument` object already loaded into this session's identity map
     # (via the select() at the top of this function) is never synced to the
     # new column values. get_argument_detail()'s own select() for the same
@@ -867,7 +867,7 @@ async def update_participant_side(
     argument_id AND participant_id — a participant that belongs to a different
     argument will return None → router returns 404.
 
-    Mass-assignment guard (T-26-04): only ``side`` and ``descriptor`` are writable
+    Mass-assignment guard: only ``side`` and ``descriptor`` are writable
     via this function.
 
     T-15-02-BENCH — RETIRED AS SATISFIED, NOT RELAXED (D-35, 2026-08-24, operator,
@@ -920,7 +920,7 @@ async def update_participant_side(
     shown, not cleared"), so a naive write on the way back out would otherwise
     submit an empty string and clobber the value this guard protects.
 
-    Published guard (D-35, D-31a): raises ValueError when the owning argument's
+    Published guard: raises ValueError when the owning argument's
     status is PUBLISHED — participant data is read-only once an argument has
     been published. The predicate is published-only (CANDIDATE, DRAFT, and
     UNPUBLISHED all remain editable), matching the folded todo `2026-08-21-
@@ -932,14 +932,14 @@ async def update_participant_side(
     "no status guard today." The check runs before the participant SELECT and
     therefore before either `apply_participant_value_change` call below,
     because that call records a `value_discrepancy` as part of deciding a
-    write (D-16) — a refusal placed after it would leave a discrepancy row and
+    write — a refusal placed after it would leave a discrepancy row and
     a `review_state` advance behind for a write that never happened.
 
     Returns:
         dict with ``id``, ``side``, and ``descriptor`` on success.
         None if the participant does not exist under this argument_id (→ 404).
     """
-    # Pure-input guard (T-26-14) — validates the incoming `side` value alone
+    # Pure-input guard — validates the incoming `side` value alone
     # and must raise before the session is ever touched
     # (test_update_participant_side_rejects_unresolved_side calls this
     # function with a sentinel `None` session to prove exactly that). The
@@ -974,7 +974,7 @@ async def update_participant_side(
     if participant is None:
         return None  # router → 404
 
-    # Phase 49 (D-31/D-31a): every value write to this table routes through
+    # Every value write to this table routes through
     # the ONE authority-gated writer — no second, ungated write path
     # survives. incoming_source/incoming_method are always "operator"/
     # "manual" here: this function is an operator-facing edit path.
@@ -1027,7 +1027,7 @@ async def update_participant_side(
     # persisted_descriptor must not claim a write that did not happen: on a
     # BENCH write the descriptor gate above is never reached, so the return
     # value reports the row's EXISTING (unchanged) descriptor rather than an
-    # ignored incoming one (RESOLVE-13).
+    # ignored incoming one.
     persisted_descriptor = (
         descriptor if descriptor is not None and side != SideEnum.BENCH else participant.descriptor
     )
@@ -1043,7 +1043,7 @@ async def update_participant_side(
 async def unpublish_argument(db: AsyncSession, argument_id: int) -> dict | None:
     """Set status = UNPUBLISHED on an argument, hiding it from the public site.
 
-    published_at is intentionally LEFT UNCHANGED (D-02) so the Status card can
+    published_at is intentionally LEFT UNCHANGED so the Status card can
     still show the argument's most recent publish date.
 
     Returns None if the argument does not exist (router → 404 T-11-IDOR).
@@ -1077,7 +1077,7 @@ async def unpublish_argument(db: AsyncSession, argument_id: int) -> dict | None:
     # itself changes the tier's inputs.
     await recompute_argument_tier(db, argument_id)
     await db.commit()
-    # Phase 31 fix: same stale-identity-map issue as publish_argument above —
+    # Same stale-identity-map issue as publish_argument above —
     # refresh the already-loaded `argument` object so get_argument_detail()'s
     # re-select in this same session reflects the committed UNPUBLISHED status.
     await db.refresh(argument)
@@ -1088,7 +1088,7 @@ async def check_duplicate_argument(db: AsyncSession, docket: str, question: int)
     """Check if an argument with (source_docket, question_number) already exists.
 
     Returns dict with keys 'exists' (bool) and 'argument_id' (int | None).
-    Called by the JS preflight endpoint (D-04, Phase 19).
+    Called by the JS preflight endpoint.
 
     No 404 — absence of a match is a valid 200 response.
     Uses parameterized query (T-19-03-03: no string interpolation, SQLAlchemy bind params).
@@ -1098,28 +1098,28 @@ async def check_duplicate_argument(db: AsyncSession, docket: str, question: int)
 
 
 async def delete_argument(db: AsyncSession, argument_id: int) -> bool | None:
-    """Delete an argument and all dependent data (ADMIN-01, D-25/PD-11, Phase 50).
+    """Delete an argument and all dependent data.
 
     Returns True on success, False when the current status is PUBLISHED
     (→ router 409), None if argument not found (→ router 404).
 
-    Deletable in every state except published (D-25/PD-11): CANDIDATE,
+    Deletable in every state except published: CANDIDATE,
     DRAFT, and UNPUBLISHED all delete. Delete is the strongest edit there
-    is, so this is D-35a's published-only doctrine (Phase 49) applied
+    is, so this is D-35a's published-only doctrine applied
     consistently to the delete gate — the most useful shape under a
     reseed-heavy workflow. The prior gate blocked CANDIDATE on the theory
     that an active AdminJob might still reference it; that reasoning no
     longer holds — corpus arguments carry no AdminJob at all as of this
-    phase (D-14/D-19), and a PDF job's argument_id is NULLed by cascade
+    phase, and a PDF job's argument_id is NULLed by cascade
     step 7 below regardless of the argument's status.
 
     FK-ordered cascade (no ORM relationship cascades exist — manual only):
       1. value_discrepancy rows scoped to this argument, its lead case
          (ONLY when no OTHER argument also leads that case — Case is
          shared, so its discrepancy rows are not this argument's to
-         delete otherwise), and its participants (D-26) — MUST run before
+         delete otherwise), and its participants — MUST run before
          ImportRun rows are deleted: value_discrepancy.import_run_id is a
-         hard FK to import_run.id (migration 0028). The participant leg
+         hard FK to import_run.id. The participant leg
          is captured BEFORE step 4 deletes those rows, because
          value_discrepancy.target_id is a SOFT reference with no FK to
          catch the orphan otherwise. target_type == "person" rows are
@@ -1137,7 +1137,7 @@ async def delete_argument(db: AsyncSession, argument_id: int) -> bool | None:
       5. CaseArguments (references arguments.id)
       6. ArgumentStatusLog (the argument_status_log table; references
          arguments.id, NOT NULL FK with no ondelete — Phase 48 D-22: every
-         argument carries at least one status-log row from birth (D-03),
+         argument carries at least one status-log row from birth,
          so this step is required, not defensive; PostgreSQL applies
          RESTRICT without it)
       7. AdminJob.argument_id NULLed (FK nullable, no ondelete — Pitfall 1: RESTRICT default)
@@ -1157,13 +1157,13 @@ async def delete_argument(db: AsyncSession, argument_id: int) -> bool | None:
     argument = result.scalar_one_or_none()
     if argument is None:
         return None
-    # D-25/PD-11: delete gate is a single positive condition keyed on
+    # Delete gate is a single positive condition keyed on
     # status == PUBLISHED — every OTHER status (CANDIDATE, DRAFT,
     # UNPUBLISHED, and the retired PIPELINE value) is deletable.
     if argument.status == ArgumentStatusEnum.PUBLISHED:
         return False
 
-    # Step 1 (D-26): delete value_discrepancy rows scoped to this argument,
+    # Step 1: delete value_discrepancy rows scoped to this argument,
     # captured BEFORE any of their referenced rows (participants, the
     # argument itself) are deleted below — see the docstring's three-scope
     # breakdown.
@@ -1263,7 +1263,7 @@ async def delete_argument(db: AsyncSession, argument_id: int) -> bool | None:
     )
     # Step 6: Delete argument_status_log rows — FK is NOT NULL with no ondelete
     # clause, so PostgreSQL applies RESTRICT (Phase 48 D-22). Every argument
-    # carries at least one status-log row from birth (D-03), so this step is
+    # carries at least one status-log row from birth, so this step is
     # required for every delete, not a defensive edge case.
     await db.execute(
         delete(ArgumentStatusLog)
@@ -1292,14 +1292,14 @@ async def update_argument_metadata(
     db: AsyncSession, argument_id: int, body: MetadataUpdate
 ) -> bool:
     """Update Argument.argued_date, Argument.source_docket, and lead Case.case_name
-    from the job detail metadata card (D-15, Phase 19).
+    from the job detail metadata card.
 
     Returns False if argument_id not found (router converts to 404 — T-19-03-02).
 
     Mass-assignment guard (T-19-03-01): ONLY argued_date, source_docket on Argument
     and case_name on the lead Case are writable via this function.
 
-    Published guard (D-35, D-35a, operator, 2026-08-24): raises ValueError when
+    Published guard: raises ValueError when
     the owning argument's status is PUBLISHED. This function had NO status
     check at any layer before D-35a — not the service, not the router, not
     the SvelteKit action — and it writes argued_date, source_docket,
@@ -1338,11 +1338,11 @@ async def update_argument_metadata(
             raise ValueError("invalid_date_format")
 
     # c. Update Argument row — only write fields that were explicitly provided.
-    # WR-01: always writing source_docket=body.source_docket would NULL an existing
+    # Always writing source_docket=body.source_docket would NULL an existing
     # docket when the operator saves the form with that field left blank.
     # Distinguish "field omitted from the request" (model_fields_set) from "field
     # present but empty/null" — the latter is an explicit clear and must write NULL,
-    # not silently no-op (WR-01, 30.1-REVIEW.md).
+    # not silently no-op.
     values_to_set: dict = {}
     if "argued_date" in body.model_fields_set:
         values_to_set["argued_date"] = parsed_date
@@ -1352,15 +1352,15 @@ async def update_argument_metadata(
         values_to_set["source_docket"] = body.source_dockets[0]
     elif body.source_docket is not None:
         values_to_set["source_docket"] = body.source_docket
-    # Phase 23 (PJOB-07 / T-23-02): parse question_number from free-text string.
+    # Parse question_number from free-text string.
     # Non-numeric input is silently skipped (never raises 500 per T-23-02) — but an
-    # explicitly-cleared value (empty/null) must NULL the column, not no-op (WR-01).
+    # explicitly-cleared value (empty/null) must NULL the column, not no-op.
     if "question_number" in body.model_fields_set:
         if body.question_number is not None and body.question_number.strip():
             try:
                 values_to_set["question_number"] = int(body.question_number)
             except ValueError:
-                pass  # Non-numeric value — skip silently per T-23-02
+                pass  # Non-numeric value — skip silently
         else:
             values_to_set["question_number"] = None
     final_docket = values_to_set.get("source_docket", argument.source_docket)
@@ -1377,7 +1377,7 @@ async def update_argument_metadata(
             .values(**values_to_set)
             .execution_options(synchronize_session=False)
         )
-        # PD-08 / G-50-2a / CR-02: stamp operator provenance on the argument
+        # Stamp operator provenance on the argument
         # row for EVERY gated column this function writes — the only way
         # authority_rank can ever read one as OPERATOR (Argument has no
         # review_state).
@@ -1411,7 +1411,7 @@ async def update_argument_metadata(
                 .values(case_name=body.case_name)
                 .execution_options(synchronize_session=False)
             )
-            # PD-08 / G-50-2a: stamp operator provenance on the lead Case,
+            # Stamp operator provenance on the lead Case,
             # exactly as `update_argument`'s own case_name write does. Both
             # functions are operator-facing routes onto the SAME column, so
             # both must reach the same rung of the ladder. Without this the

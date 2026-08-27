@@ -2,27 +2,27 @@
 
 These schemas back the Phase 11 Argument Metadata Editing routes:
   - ArgumentListItem  — one row in the /admin/arguments list (lead case metadata)
-  - ConsolidatedDocket — a single non-lead docket number for read-only display (D-10)
+  - ConsolidatedDocket — a single non-lead docket number for read-only display
   - ArgumentDetail    — full argument data for the edit form (includes consolidated dockets)
   - ArgumentUpdate    — PATCH body (mass-assignment allow-list: only three editable fields)
 
 Phase 15 additions:
   - ParticipantSideUpdate — PATCH body for argument_participants.side (ROLE-03, T-15-02-MASS)
-  - TenureGapWarning      — inline warning when bench argued_date outside all tenures (D-15)
+  - TenureGapWarning — inline warning when bench argued_date outside all tenures
   - ArgumentListItem.status  — explicit lifecycle status
   - ArgumentDetail.tenure_gap_warnings — list of TenureGapWarning per affected bench speaker
 
 Phase 26 additions:
   - StatusLogEntry — one ArgumentStatusLog row (status, created_at); ArgumentDetail.status_log
-    is the edit page's Status history list, oldest first (T-26-03)
+    is the edit page's Status history list, oldest first
   - SpeakerRow — unified bench+advocate row (utterance_count, descriptor, bench_role, missing_tenure,
     person_edit_href); ArgumentDetail.speakers replaces the participants + tenure_gap_warnings
-    split for the rebuilt edit page (D-05, AEDIT-05/06/07)
-  - ParticipantSideUpdate.descriptor — advocate descriptor, writable alongside side (D-06, AEDIT-06)
+    split for the rebuilt edit page
+  - ParticipantSideUpdate.descriptor — advocate descriptor, writable alongside side
 
 Phase 44 additions:
   - ParticipantSideUpdate.descriptor and SpeakerRow.descriptor/.descriptor_hint — full-stack
-    rename of the equivalent pre-Phase-44 field names (D-05).
+    rename of the equivalent pre-Phase-44 field names.
 
 Security notes:
   - ArgumentUpdate allow-list is exactly {case_name, docket_number, argued_date} (T-11-MASS).
@@ -44,14 +44,14 @@ from api.models.models import ArgumentStatusEnum, SideEnum
 class ParticipantSideUpdate(BaseModel):
     """PATCH body for argument_participants.side and descriptor (ROLE-03, Phase 26 D-06).
 
-    Mass-assignment guard (T-26-04): ONLY ``side`` and ``descriptor`` are writable
+    Mass-assignment guard: ONLY ``side`` and ``descriptor`` are writable
     via this schema.  No other ArgumentParticipant column can be set.  Every side
     value including BENCH is accepted (T-15-02-BENCH retired as satisfied by D-35,
-    plan 49-10 — see api/services/admin_arguments.py::update_participant_side's
+    See api/services/admin_arguments.py::update_participant_side's
     docstring for the four compensating controls); unresolved values (UNKNOWN, the
     legacy ADVOCATE literal) are still rejected.  ``descriptor`` is optional —
     omitting it (None) leaves the existing descriptor unchanged; it is written
-    only for non-BENCH participants (RESOLVE-13) — a BENCH write leaves the
+    only for non-BENCH participants — a BENCH write leaves the
     stored descriptor untouched even when one is supplied.
     """
 
@@ -60,7 +60,7 @@ class ParticipantSideUpdate(BaseModel):
 
 
 class StatusLogEntry(BaseModel):
-    """One ArgumentStatusLog row (Phase 26, T-26-03).
+    """One ArgumentStatusLog row.
 
     Surfaced on the argument edit page's Status history list, ordered
     oldest-first by get_argument_detail's query (ArgumentStatusLog.id.asc() —
@@ -82,7 +82,7 @@ class StatusLogEntry(BaseModel):
 
 
 class SpeakerRow(BaseModel):
-    """One unified bench+advocate row for the argument edit page Speakers section (D-05).
+    """One unified bench+advocate row for the argument edit page Speakers section.
 
     Replaces the old advocate-only ``participants`` + ``tenure_gap_warnings`` split
     (both retained below for backward compatibility) with a single row shape covering
@@ -121,7 +121,7 @@ class SpeakerRow(BaseModel):
 
 
 class TenureGapWarning(BaseModel):
-    """A bench speaker whose argued_date falls outside all their CourtTenure rows (D-15).
+    """A bench speaker whose argued_date falls outside all their CourtTenure rows.
 
     Surfaced as an inline warning on the argument edit page.  The ``argued_date``
     field is a serialized "YYYY-MM-DD" string for display.
@@ -133,7 +133,7 @@ class TenureGapWarning(BaseModel):
 
 
 class ConsolidatedDocket(BaseModel):
-    """A non-lead docket number for read-only display (D-10).
+    """A non-lead docket number for read-only display.
 
     Represents one consolidated case docket linked to the same argument
     but not designated as the lead case.
@@ -146,12 +146,12 @@ class ArgumentListItem(BaseModel):
     """One row in the /admin/arguments list.
 
     Returns lead case metadata only — non-lead (consolidated) dockets are
-    shown only on the detail page (D-10).
+    shown only on the detail page.
     resolved_at and published_at expose the argument's pipeline / publish state
     so the list page can render status badges without a per-row detail fetch.
-    status (Phase 15) is the explicit lifecycle enum value.  The list only
+    status is the explicit lifecycle enum value. The list only
     returns DRAFT and PUBLISHED rows (pipeline-state arguments are excluded, D-02).
-    argued_date is Optional[datetime.date] after migration 0011 (D-08 / Phase 19).
+    argued_date is Optional[datetime.date] after migration 0011.
     trust_tier (Phase 48 plan 10): admin-only — never surfaced on any public
     schema (apolitical hard constraint, enforced by
     api/tests/test_trust_public_leak_ban.py). This field backs only
@@ -162,12 +162,12 @@ class ArgumentListItem(BaseModel):
     """
 
     id: int
-    argued_date: Optional[datetime.date] = None  # nullable after migration 0011 (D-08)
+    argued_date: Optional[datetime.date] = None  # nullable after migration 0011
     case_name: str          # lead case
     docket_number: str      # lead case
     resolved_at: Optional[datetime.datetime] = None
     published_at: Optional[datetime.datetime] = None
-    status: ArgumentStatusEnum   # Phase 15 — always DRAFT or PUBLISHED in list results
+    status: ArgumentStatusEnum   # Always DRAFT or PUBLISHED in list results
     trust_tier: TrustTier = TrustTier.UNCERTAIN  # Phase 48 plan 10, admin-only
 
     model_config = {"from_attributes": True}
@@ -176,7 +176,7 @@ class ArgumentListItem(BaseModel):
 class AdvocateParticipant(BaseModel):
     """An advocate participant in an argument with their current role assignment.
 
-    Used on the argument edit page (D-12) to render the per-advocate role dropdown.
+    Used on the argument edit page to render the per-advocate role dropdown.
     participant_id is the ArgumentParticipant.id — used to PATCH the side field.
     person_id links to the people directory for the "Edit person" navigation.
     side is one of PETITIONER, RESPONDENT, AMICUS, UNKNOWN (never BENCH).
@@ -191,20 +191,20 @@ class AdvocateParticipant(BaseModel):
 class ArgumentDetail(BaseModel):
     """Full argument data for the edit form.
 
-    Extends ArgumentListItem with slug and consolidated_dockets (D-10).
+    Extends ArgumentListItem with slug and consolidated_dockets.
     slug is displayed read-only when published_at IS NOT NULL (frozen per D-11).
-    tenure_gap_warnings (Phase 15, D-15): list of bench speakers whose
+    tenure_gap_warnings: list of bench speakers whose
     argued_date falls outside all their CourtTenure rows.
-    participants (Phase 15, D-12): list of resolved advocate participants for
+    participants: list of resolved advocate participants for
     the per-argument role editor — excludes BENCH participants. Retained for
     backward compatibility alongside the Phase 26 ``speakers`` field below.
-    source_docket (Phase 19, D-01): new column; exposed for job detail metadata card.
-    cover_metadata (Phase 19, D-07): raw cover extractor output; exposed for hint text.
-    status_log (Phase 26, D-05, T-26-03): every ArgumentStatusLog row for this
+    source_docket: new column; exposed for job detail metadata card.
+    cover_metadata: raw cover extractor output; exposed for hint text.
+    status_log: every ArgumentStatusLog row for this
     argument, oldest first — the edit page's Status history list.
-    speakers (Phase 26, D-05, AEDIT-05/06/07): unified bench+advocate row set
+    speakers: unified bench+advocate row set
     from list_argument_speakers, replacing the old advocate-only participants +
-    tenure_gap_warnings split for the rebuilt edit page (Plan 26-04).
+    tenure_gap_warnings split for the rebuilt edit page.
     trust_tier (Phase 48 D-20): admin-only — never surfaced on any public
     schema (apolitical hard constraint, enforced by
     api/tests/test_trust_public_leak_ban.py). Defaults to UNCERTAIN so a
@@ -212,16 +212,16 @@ class ArgumentDetail(BaseModel):
     """
 
     id: int
-    argued_date: Optional[datetime.date] = None  # nullable after migration 0011 (D-08)
+    argued_date: Optional[datetime.date] = None  # nullable after migration 0011
     case_name: str
     docket_number: str
     slug: str
     resolved_at: Optional[datetime.datetime] = None
     published_at: Optional[datetime.datetime] = None
-    status: ArgumentStatusEnum = ArgumentStatusEnum.DRAFT  # Phase 15
+    status: ArgumentStatusEnum = ArgumentStatusEnum.DRAFT
     trust_tier: TrustTier = TrustTier.UNCERTAIN  # Phase 48 D-20
     consolidated_dockets: list[ConsolidatedDocket] = []
-    tenure_gap_warnings: list[TenureGapWarning] = []       # Phase 15
+    tenure_gap_warnings: list[TenureGapWarning] = []
     participants: list[AdvocateParticipant] = []           # Phase 15 D-12
     source_docket: Optional[str] = None                   # Phase 19 D-01
     source_dockets: list[str] = []                        # Phase 23 D-MULTI-DOCKET
@@ -287,7 +287,7 @@ class PublishRequest(BaseModel):
 
 
 class MetadataUpdate(BaseModel):
-    """PATCH body for argument metadata from job detail page (D-15, Phase 19).
+    """PATCH body for argument metadata from job detail page.
 
     Mass-assignment guard (T-19-03-01, extended Phase 23 T-23-01, T-23-07):
     ONLY case_name, source_docket, source_dockets, argued_date, and question_number
@@ -296,20 +296,20 @@ class MetadataUpdate(BaseModel):
     argued_date is accepted as an ISO 8601 string "YYYY-MM-DD"; parsed by the
     service layer with datetime.date.fromisoformat() (V5 Input Validation pattern).
     source_docket is the primary docket string (e.g. "14-556") from the pipeline
-    start form or cover extractor — stored on Argument.source_docket (D-01).
-    source_dockets is the full ordered docket list for consolidated cases (D-MULTI-DOCKET);
+    start form or cover extractor — stored on Argument.source_docket.
+    source_dockets is the full ordered docket list for consolidated cases;
     when provided, the service writes both source_dockets (normalized) and source_docket
     (= first element, the canonical dedup key). Prefer sending source_dockets; the service
     falls back to source_docket for older callers that omit source_dockets.
-    question_number is accepted as free text (PJOB-06); the service parses to int
-    via a guarded int() call, skipping silently on ValueError (T-23-02).
+    question_number is accepted as free text; the service parses to int
+    via a guarded int() call, skipping silently on ValueError.
     """
 
     case_name: Optional[str] = None
     source_docket: Optional[str] = None
     source_dockets: Optional[list[str]] = None  # Phase 23 D-MULTI-DOCKET
     argued_date: Optional[str] = None   # ISO date string "YYYY-MM-DD"
-    question_number: Optional[str] = None  # free text; parsed to int in service (PJOB-06)
+    question_number: Optional[str] = None  # free text; parsed to int in service
 
     @field_validator("case_name", "source_docket", mode="before")
     @classmethod

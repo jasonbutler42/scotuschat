@@ -1,6 +1,6 @@
 """Pydantic v2 response models for the admin dashboard stat-card / Needs-Attention API.
 
-Phase 28 additions (DASH-01, DASH-03):
+Phase 28 additions:
   - ArgumentStats     — Arguments stat-card counts (total/published/draft/unpublished)
   - RecentDraft       — one row in the Arguments "recent drafts" sub-list
   - PeopleStats       — People stat-card counts (total/incomplete), combined both tabs

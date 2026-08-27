@@ -228,7 +228,7 @@ async def _run_resolve_inner(args) -> None:
             argument_id=parse_run.argument_id,
             step="resolve",
             status=ImportRunStatus.RUNNING,
-            # Phase 47 (PROV-01): resolve is deterministic normalize_label +
+            # Resolve is deterministic normalize_label +
             # an alias-table lookup with no LLM involvement — `normalized` is
             # the correct closed-vocabulary member (RESEARCH.md Pattern 2).
             source=ImportSource.PDF_PIPELINE,
@@ -326,7 +326,7 @@ async def _run_resolve_inner(args) -> None:
                     person_id = alias.person_id
 
                     # ---- Bulk UPDATE utterances (Pitfall 2: use raw_label) ----
-                    # PD-19 (50-CONTEXT.md): deliberately left ungated.
+                    # Deliberately left ungated.
                     # `Utterance` carries no `source`/`method`/`review_state`
                     # column — Phase 47's D-05 dropped the per-row `strategy`
                     # column precisely because utterances inherit provenance
@@ -456,7 +456,7 @@ async def _run_resolve_inner(args) -> None:
                     f"resolve import_run.id = {resolve_run.id}"
                 )
 
-            # D-07/writer #5 (48-RESEARCH.md), Pitfall 2: recompute once,
+            # D-07/writer #5, Pitfall 2: recompute once,
             # after every person_id update above and after the outcome
             # branch (paused-with-misses or completed) has set
             # resolve_run.status -- not per match, so the floor sees the

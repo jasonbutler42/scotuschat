@@ -1,5 +1,5 @@
 """
-Curated-vocabulary stage-direction detection (D-16/D-17).
+Curated-vocabulary stage-direction detection.
 
 D-17 requires matching against a curated vocabulary inside EITHER
 brackets or parens, typo-tolerantly -- never a blind "anything inside

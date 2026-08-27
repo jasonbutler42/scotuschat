@@ -9,7 +9,7 @@ from api.models.models import AdminJobStatus, AdminJobStep, SideEnum
 
 
 class AdminJobCreateURL(BaseModel):
-    """Request body for creating a new pipeline job via PDF URL (PIPE-12)."""
+    """Request body for creating a new pipeline job via PDF URL."""
 
     pdf_url: str
 
@@ -20,7 +20,7 @@ class ParseStats(BaseModel):
     Assembled from scalar COUNT query results at render time — not an ORM row.
     No from_attributes config needed (constructed from plain dicts, not ORM objects).
 
-    Phase 23 expansion (PJOB-10/11/12):
+    Phase 23 expansion:
       speaker_count retained for backward compat with polling TS interface.
       bench_count / advocate_count / total_speaker_count: speaker breakdown.
       case_name / argued_date / primary_docket: cover_metadata pass-through.
@@ -29,11 +29,11 @@ class ParseStats(BaseModel):
 
     utterance_count: int
     speaker_count: int  # retained for backward compat; equals total_speaker_count
-    # Phase 23 — speaker breakdown (PJOB-10)
+    # Speaker breakdown
     bench_count: Optional[int] = None
     advocate_count: Optional[int] = None
     total_speaker_count: Optional[int] = None
-    # Phase 23 — cover_metadata pass-through (PJOB-10/12)
+    # Cover_metadata pass-through
     case_name: Optional[str] = None
     argued_date: Optional[str] = None      # ISO date string "YYYY-MM-DD"
     primary_docket: Optional[str] = None
@@ -56,15 +56,15 @@ class AdminJobResponse(BaseModel):
     error_message: Optional[str] = None
     created_at: datetime.datetime
     updated_at: datetime.datetime
-    # Phase 26 gap closure (PLIST-05): true when the job's linked argument has
+    # Phase 26 gap closure: true when the job's linked argument has
     # already been created (its status is no longer PIPELINE), mirroring the
     # already_created state RunReadiness reports for the detail page. Defaults
     # to False for get_job (single-job path derives its archived signal from
     # the readiness endpoint instead) and is populated for real by list_jobs
     # via an Argument outerjoin.
     is_archived: bool = False
-    # Phase 30: "pdf" for jobs created via the ingest pipeline, "corpus" for
-    # jobs created directly by import-convokit (Phase 30, D-01). Derived via
+    # "pdf" for jobs created via the ingest pipeline, "corpus" for
+    # jobs created directly by import-convokit. Derived via
     # an exists() subquery on ImportRun.source == ImportSource.CORPUS in
     # both list_jobs() and get_job() — see api/services/admin_jobs.py.
     source: Literal["pdf", "corpus"] = "pdf"
@@ -86,17 +86,17 @@ class ResolveRequest(BaseModel):
 
 
 class PersonCreate(BaseModel):
-    """Request body for creating a new person inline during discrepancy review (D-12, D-13).
+    """Request body for creating a new person inline during discrepancy review.
 
-    Phase 25 (PJOB-19): raw_speaker_label + side make this a job-scoped mini
+    Raw_speaker_label + side make this a job-scoped mini
     create-person request. When both are present, create_person_for_job sets
     Person.is_justice from side == BENCH and updates the matching job-owned
     ArgumentParticipant row (identified by raw_speaker_label) with the new
-    person_id and side in the same transaction (D-12). role_id and role_name
+    person_id and side in the same transaction. role_id and role_name
     remain backward-compatible for callers that do not use the mini popover
     (raw_speaker_label/side omitted).
 
-    Phase 38 (D-01, D-03, D-09, T-38-07): there is no `full_name` field here
+    There is no `full_name` field here
     at all — mirroring api.schemas.admin_people.PersonCreateRequest, this
     mini-create request carries only structured name parts (all Optional at
     the schema level; the first-or-last minimum-data invariant is enforced
@@ -137,12 +137,12 @@ class PersonResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Phase 25: Run readiness and failed-step recovery (D-01 through D-08, D-18, D-20)
+# Run readiness and failed-step recovery (D-01 through D-08, D-18, D-20)
 # ---------------------------------------------------------------------------
 
 
 class ReadinessBlocker(BaseModel):
-    """A single reason Create Argument is not yet available (D-02).
+    """A single reason Create Argument is not yet available.
 
     code is a stable machine-readable identifier for the blocker; message is
     the operator-facing copy shown in the run status card blocker checklist.
@@ -156,12 +156,12 @@ class RunReadiness(BaseModel):
     """Backend-derived Create Argument readiness for the run status card (D-01 through D-04).
 
     state is one of:
-      not_ready       — one or more strict blockers exist (D-02); blockers is non-empty.
-      ready           — no blockers remain; the Create Argument CTA is enabled (D-03).
+      not_ready — one or more strict blockers exist; blockers is non-empty.
+      ready — no blockers remain; the Create Argument CTA is enabled.
       already_created — the linked argument has left the pipeline lifecycle state;
-                         the page becomes read-only provenance (D-04, D-18, D-20).
+                         the page becomes read-only provenance.
 
-    argument_edit_href is only set for the already_created state (D-04) — it links
+    argument_edit_href is only set for the already_created state — it links
     to the argument editor, never to a pipeline recovery action.
     """
 
@@ -173,9 +173,9 @@ class RunReadiness(BaseModel):
 class FailedStepRecovery(BaseModel):
     """Step-specific failed-run guidance, kept separate from the raw technical error.
 
-    guidance is short, human, step-specific copy shown first (D-06, D-07, D-08).
+    guidance is short, human, step-specific copy shown first.
     raw_error is the unedited AdminJob.error_message, meant for an expandable
-    technical details block — never merged into guidance (T-25-03).
+    technical details block — never merged into guidance.
     href always points at the pipeline list page so the operator starts a
     corrected new run through ordinary creation (D-05, D-06, PJOB-22
     superseded by 25-UI-SPEC.md).
@@ -188,14 +188,14 @@ class FailedStepRecovery(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Phase 25: Job-scoped resolve-row mutation (D-14, D-18, PJOB-14, PJOB-18)
+# Job-scoped resolve-row mutation
 # ---------------------------------------------------------------------------
 
 
 class ResolveRowUpdate(BaseModel):
     """Request body for the job-scoped resolve-row side/descriptor mutation.
 
-    Mass-assignment guard (T-25-15): ONLY side and descriptor are writable via
+    Mass-assignment guard: ONLY side and descriptor are writable via
     this schema. participant_id identifies the target row; ownership is
     re-verified server-side against the job's linked argument before any
     mutation (T-25-14 IDOR guard) — this schema does not accept argument_id.
@@ -203,9 +203,9 @@ class ResolveRowUpdate(BaseModel):
     Unlike ParticipantSideUpdate (api/schemas/admin_arguments.py), side here MAY
     be BENCH — this is the resolve-scoped write path, not the advocate-only
     argument-editor path. descriptor is ignored (forced to null) server-side
-    whenever side == BENCH (PJOB-15).
+    whenever side == BENCH.
 
-    WR-03: descriptor is capped at 500 characters to match
+    Descriptor is capped at 500 characters to match
     ArgumentParticipant.descriptor (String(500)) — without this, an
     over-length descriptor would raise an unhandled asyncpg DataError (500)
     instead of the 422 validation-error pattern used everywhere else in this

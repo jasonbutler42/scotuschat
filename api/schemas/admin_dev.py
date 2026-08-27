@@ -1,6 +1,6 @@
 """Pydantic v2 response models for the dev-only "Reset to Fixture" endpoint.
 
-Phase 43 (DEVTOOL-01, DEVTOOL-02). This schema locks the FULL response
+Phase 43. This schema locks the FULL response
 contract now, even though Plan 43-01 only populates one entry (the Complexity
 fixture, conversation 15169) — Plan 43-03 (frontend) codes against this shape
 in parallel with Plan 43-02 (service expansion to all four fixtures).
@@ -23,7 +23,7 @@ class ResetFixtureItem(BaseModel):
     role: str
     argument_id: int
     argument_status: str
-    # Phase 50 (D-14/D-19, PD-05): replaces the retired AdminJob-status
+    # Replaces the retired AdminJob-status
     # field -- there is no AdminJob for a corpus fixture anymore. The step
     # of the fixture argument's highest-id ImportRun, which together with
     # argument_status keeps all four reference states distinguishable:
@@ -37,7 +37,7 @@ class ResetToFixtureResponse(BaseModel):
 
 
 class SeedUnresolvedSpeakerResponse(BaseModel):
-    """Phase 49 (D-33a). Mirrors ResetToFixtureResponse's plain-BaseModel,
+    """Phase 49. Mirrors ResetToFixtureResponse's plain-BaseModel,
     hand-built-dict convention -- no from_attributes, no ORM row."""
 
     argument_id: int

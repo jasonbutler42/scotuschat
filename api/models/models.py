@@ -86,11 +86,11 @@ class ArgumentStatusEnum(str, enum.Enum):
     DRAFT = "draft"
     PUBLISHED = "published"
     UNPUBLISHED = "unpublished"
-    CANDIDATE = "candidate"  # Phase 48 (D-01): the new born state, replaces PIPELINE
+    CANDIDATE = "candidate"  # The new born state, replaces PIPELINE
 
 
 class ReviewState(str, enum.Enum):
-    """Phase 49 (D-09): four-state operator review status. PERMANENT once
+    """Four-state operator review status. PERMANENT once
     migration 0028 mints the `review_state` PG enum type — PostgreSQL has
     no ALTER TYPE ... DROP VALUE, so none of these four values can ever be
     renamed or removed (operator-confirmed one-way door, plan 49-01
@@ -139,23 +139,20 @@ class Person(Base):
     role_id = Column(Integer, ForeignKey("roles.id"), nullable=True)
     bio_text = Column(Text, nullable=True)
     photo_url = Column(String(500), nullable=True)
-    # Phase 9 additions — migration 0006
+    # Phase 9 additions
     first_name = Column(String(150), nullable=True)
     last_name = Column(String(150), nullable=True)
     middle_name = Column(String(150), nullable=True)
     name_suffix = Column(String(50), nullable=True)
-    # Phase 22 — migration 0013: appointment columns moved to court_tenures
-    # Phase 18 — migration 0010
+    # Appointment columns moved to court_tenures
     is_justice = Column(Boolean, nullable=False, server_default=false())
-    # Phase 27 — migration 0016
     birthdate = Column(Date, nullable=True)
-    # Phase 39 — migration 0023
     death_date = Column(Date, nullable=True)
-    # Phase 29 — migration 0017: Oyez/ConvoKit external speaker ID (historical corpus import)
+    # Oyez/ConvoKit external speaker ID (historical corpus import)
     oyez_speaker_id = Column(String(100), nullable=True)
-    # Phase 49 — migration 0029 (D-08, D-09, D-12): unified review record,
+    # Unified review record,
     # folding the Phase 38 name_needs_review/name_extraction_metadata pair
-    # (migration 0022) into the shared record used across the review model.
+    # into the shared record used across the review model.
     # review_state is the SAME four-value `review_state` PG enum type
     # `ArgumentParticipant.review_state` uses (D-09 — one vocabulary, not
     # two lookalikes) — NOT NULL with server_default='unreviewed', so every
@@ -163,7 +160,7 @@ class Person(Base):
     # separate backfill beyond the one deterministic legacy mapping
     # migration 0029 performs. provenance_metadata is a durable,
     # independently-persisted extraction/migration audit trail — an
-    # operator edit (D-11) never clears, rewrites, or appends to it (D-12);
+    # operator edit never clears, rewrites, or appends to it;
     # only a fresh extraction/migration pass ever replaces it. There is no
     # compatibility alias for either legacy name — REVIEW-05 removes the
     # parallel mechanism outright.
@@ -180,19 +177,19 @@ class Person(Base):
 # Table 3: court_tenures
 # Service periods for Justices (office, start date, end date)
 #
-# Phase 37 (D-01, D-17): office is a binary Chief/Associate value — the
+# Office is a binary Chief/Associate value — the
 # legacy free-text `seat` column (e.g. "Associate Justice Seat 3") was
 # renamed to `office` by migration 0020 and constrained to exactly the two
 # canonical values below by migration 0021's named CHECK constraint
 # (ck_court_tenures_office) + NOT NULL. There is no `seat` compatibility
-# alias anywhere in the active model (D-17).
+# alias anywhere in the active model.
 # ---------------------------------------------------------------------------
 
 OFFICE_CHIEF = "chief"
 OFFICE_ASSOCIATE = "associate"
 VALID_OFFICES = (OFFICE_CHIEF, OFFICE_ASSOCIATE)
 
-# Canonical -> formal display title (D-15). Editor labels stay compact
+# Canonical -> formal display title. Editor labels stay compact
 # ("Chief"/"Associate", D-14) — this mapping is only for read-only summaries
 # and popovers that must render the formal "Chief Justice"/"Associate
 # Justice" wording.
@@ -203,7 +200,7 @@ OFFICE_TITLES = {
 
 
 def office_title(office: str) -> str:
-    """Return the formal display title for a canonical office value (D-15).
+    """Return the formal display title for a canonical office value.
 
     Exhaustive over VALID_OFFICES — raises KeyError for any other input.
     An office value outside VALID_OFFICES reaching this helper indicates a
@@ -213,7 +210,7 @@ def office_title(office: str) -> str:
     return OFFICE_TITLES[office]
 
 
-# Phase 39 (D-01, D-15): the reason a tenure ended — a constrained enum with
+# The reason a tenure ended — a constrained enum with
 # exactly three values, nullable PERMANENTLY (D-02: an open/active tenure
 # never has a reason, and a few historical rows have no recorded value).
 # Named reason_left-specific (not a generic REASON_*/VALID_REASONS name) to
@@ -224,7 +221,7 @@ REASON_DIED = "died"
 REASON_PROMOTED = "promoted"
 VALID_REASONS_LEFT = (REASON_RETIRED, REASON_DIED, REASON_PROMOTED)
 
-# Canonical -> formal display title (D-15), locked by 39-UI-SPEC.md's
+# Canonical -> formal display title, locked by 39-UI-SPEC.md's
 # Copywriting Contract.
 REASON_LEFT_TITLES = {
     REASON_RETIRED: "Retired",
@@ -234,14 +231,14 @@ REASON_LEFT_TITLES = {
 
 
 def reason_left_title(reason: str) -> str:
-    """Return the formal display title for a canonical reason_left value (D-15).
+    """Return the formal display title for a canonical reason_left value.
 
     Exhaustive over VALID_REASONS_LEFT — raises KeyError for any other input,
     including None. An out-of-vocabulary reason_left value reaching this
     helper indicates a data-integrity bug the DB CHECK constraint
     (ck_court_tenures_reason_left) should already have prevented; it must
     not be silently coerced. Callers render no reason line for a null
-    reason_left (D-02) without calling this helper at all.
+    reason_left without calling this helper at all.
     """
     return REASON_LEFT_TITLES[reason]
 
@@ -264,10 +261,10 @@ class CourtTenure(Base):
     office = Column(String(100), nullable=False)
     start_date = Column(Date)
     end_date = Column(Date, nullable=True)  # null = currently active
-    # Phase 22 — migration 0013: moved from people table (PEDIT-10)
+    # Moved from people table
     appointed_by = Column(String(200), nullable=True)
     appointing_president_party = Column(String(50), nullable=True)
-    # Phase 39 — migration 0024 (D-01/D-02): permanently nullable — an open
+    # Permanently nullable — an open
     # tenure and a tenure with no recorded reason are both storable. The ORM
     # CheckConstraint above is self-documentation only; Alembic remains the
     # sole DDL authority (CLAUDE.md).
@@ -285,7 +282,7 @@ class CourtTenure(Base):
 class Case(Base):
     __tablename__ = "cases"
     __table_args__ = (
-        # Migration 0018: historical docket numbers recycle across October
+        # Historical docket numbers recycle across October
         # Terms (e.g. docket "71" is a different, unrelated case in nearly
         # a dozen different terms) -- modern dockets embed the term and stay
         # unique on their own, so this composite constraint is a superset,
@@ -301,12 +298,12 @@ class Case(Base):
     case_name = Column(String(500), nullable=False)
     term_year = Column(Integer, nullable=False)
     slug = Column(String(200), nullable=False, unique=True)           # URL slug
-    # Phase 29 — migration 0017: Oyez external case ID (historical corpus import)
+    # Oyez external case ID (historical corpus import)
     oyez_case_id = Column(String(50), nullable=True)
-    # Phase 50 — migration 0030 (OQ-1): declared provenance for this case's
+    # Declared provenance for this case's
     # own row, reusing the SAME import_source/import_method PG enum types
     # ImportRun and ArgumentParticipant already use (no new enum, no mapping
-    # layer). NULL is unknown provenance — no backfill (D-15/D-16); the
+    # layer). NULL is unknown provenance — no backfill; the
     # authority gate in plan 50-02 fails closed on NULL.
     source = Column(
         SAEnum(ImportSource, name="import_source", values_callable=lambda e: [x.value for x in e]),
@@ -328,31 +325,31 @@ class Argument(Base):
     __tablename__ = "arguments"
 
     id = Column(Integer, primary_key=True)
-    # Phase 19 (D-08): nullable — job-driven ingest leaves NULL instead of a synthetic date.
+    # Nullable — job-driven ingest leaves NULL instead of a synthetic date.
     argued_date = Column(Date, nullable=True)
-    # Migration 0019 (AEDIT-04): nullable, no default — blank = NULL = "unknown",
+    # Nullable, no default — blank = NULL = "unknown",
     # parity with argued_date above (not a mandatory Q1/Q2 value anymore).
     question_number = Column(Integer, nullable=True)
     # NULL = resolve not yet completed; retains its pipeline-completion meaning.
     # resolved_at IS NOT NULL means the pipeline resolve step has stamped this argument.
     resolved_at = Column(DateTime(timezone=True), nullable=True)
-    # Phase 11 (D-05): public visibility gate — replaces resolved_at as the public filter.
+    # Public visibility gate — replaces resolved_at as the public filter.
     # NULL = unpublished (hidden from /cases/); Non-NULL = published and publicly visible.
     # resolved_at retains its pipeline-completion meaning and is unchanged.
     published_at = Column(DateTime(timezone=True), nullable=True)
-    # Phase 15 (D-01): explicit lifecycle status — pipeline/draft/published.
+    # Explicit lifecycle status — pipeline/draft/published.
     # Backfilled from published_at/resolved_at by migration 0008.
-    # The public /cases route continues to filter on published_at IS NOT NULL (D-03).
+    # The public /cases route continues to filter on published_at IS NOT NULL.
     status = Column(
         SAEnum(ArgumentStatusEnum, name="argument_status",
                values_callable=lambda e: [x.value for x in e]),
         nullable=False,
         default=ArgumentStatusEnum.CANDIDATE,
     )
-    # Phase 48 (D-06/D-07): materialized floor rollup of this argument's
+    # Materialized floor rollup of this argument's
     # constituent utterances/participants, recomputed in-transaction by
     # every writer via api.services.trust.recompute_argument_tier. NOT NULL
-    # with server_default='uncertain' (migration 0027) — fail-closed, no
+    # with server_default='uncertain' — fail-closed, no
     # in-migration backfill (the project DB is disposable per operator lean).
     trust_tier = Column(
         SAEnum(TrustTier, name="trust_tier", values_callable=lambda e: [x.value for x in e]),
@@ -360,22 +357,22 @@ class Argument(Base):
         server_default="uncertain",
         default=TrustTier.UNCERTAIN,
     )
-    # Phase 19 (D-01): primary docket used at ingest time; NULL when operator did not supply one.
+    # Primary docket used at ingest time; NULL when operator did not supply one.
     # Used with question_number for the unique deduplication constraint (see __table_args__).
     source_docket = Column(String(50), nullable=True)
-    # Phase 23 (D-MULTI-DOCKET): full ordered list of dockets for consolidated cases.
+    # Full ordered list of dockets for consolidated cases.
     # source_docket = source_dockets[0] — service keeps these in sync on every write.
     # UNIQUE constraint remains on source_docket (not this array) — dedup logic unchanged.
     source_dockets = Column(ARRAY(String(50)), nullable=True)
-    # Phase 19 (D-07): raw cover extractor output written unconditionally by parse step.
+    # Raw cover extractor output written unconditionally by parse step.
     # Read by the job detail page to render "Extracted: [value]" hint text.
     cover_metadata = Column(JSONB, nullable=True)
-    # Phase 29 — migration 0017: Oyez/ConvoKit external transcript ID (historical corpus import)
+    # Oyez/ConvoKit external transcript ID (historical corpus import)
     oyez_transcript_id = Column(String(50), nullable=True)
-    # Phase 50 — migration 0030 (OQ-1): declared provenance for this
+    # Declared provenance for this
     # argument's own row, reusing the SAME import_source/import_method PG
     # enum types ImportRun and ArgumentParticipant already use. NULL is
-    # unknown provenance — no backfill (D-15/D-16); the authority gate in
+    # unknown provenance — no backfill; the authority gate in
     # plan 50-02 fails closed on NULL.
     source = Column(
         SAEnum(ImportSource, name="import_source", values_callable=lambda e: [x.value for x in e]),
@@ -388,7 +385,7 @@ class Argument(Base):
     # cases linked via case_arguments M:M join table
 
     __table_args__ = (
-        # Prevents duplicate argument rows when docket is known (D-01).
+        # Prevents duplicate argument rows when docket is known.
         # NULL semantics: multiple rows with source_docket = NULL do NOT violate
         # this constraint — deduplication only applies when docket is known.
         UniqueConstraint(
@@ -401,13 +398,13 @@ class Argument(Base):
 
 # ---------------------------------------------------------------------------
 # Table 6: case_arguments
-# M:M join table — one argument can cover multiple consolidated cases (INFRA-02).
+# M:M join table — one argument can cover multiple consolidated cases.
 # Composite PK (case_id, argument_id) prevents duplicate rows.
 # ---------------------------------------------------------------------------
 
 
 class CaseArgument(Base):
-    """M:M join table — one argument can cover multiple consolidated cases (INFRA-02)."""
+    """M:M join table — one argument can cover multiple consolidated cases."""
 
     __tablename__ = "case_arguments"
 
@@ -450,10 +447,10 @@ class ArgumentParticipant(Base):
     person_id = Column(Integer, ForeignKey("people.id"), nullable=True)  # null until resolved
     raw_speaker_label = Column(String(200), nullable=False)
     side = Column(SAEnum(SideEnum, name="side", values_callable=lambda e: [x.value for x in e]), nullable=False)
-    # Phase 22 — migration 0013: TOC subtitle from cover extractor (PJOB-13)
+    # TOC subtitle from cover extractor
     # Phase 44 D-05 — migration 0025: renamed title -> descriptor (full-stack rename)
     descriptor = Column(String(500), nullable=True)
-    # Phase 49 — migration 0028 (D-09/D-10/D-19): operator review status for
+    # Operator review status for
     # this participant. NOT NULL with server_default='unreviewed' — every
     # row that existed before migration 0028 reads UNREVIEWED with no
     # separate backfill UPDATE (PostgreSQL applies the non-volatile
@@ -464,7 +461,7 @@ class ArgumentParticipant(Base):
         server_default="unreviewed",
         default=ReviewState.UNREVIEWED,
     )
-    # Phase 49 — migration 0028 (D-20): reuse the EXISTING import_source /
+    # Reuse the EXISTING import_source /
     # import_method PG enum types verbatim — no new enum, no mapping layer,
     # because derive_tier already keys on this vocabulary. Both nullable:
     # not every existing participant row has known provenance.
@@ -476,7 +473,7 @@ class ArgumentParticipant(Base):
         SAEnum(ImportMethod, name="import_method", values_callable=lambda e: [x.value for x in e]),
         nullable=True,
     )
-    # Phase 50 — migration 0030 (D-04/D-16): the explicit re-import pairing
+    # The explicit re-import pairing
     # key — the ConvoKit speaker id this participant row was resolved from.
     # Populated by the importer on every row it writes; no backfill on
     # pre-existing rows. Width matches Person.oyez_speaker_id and
@@ -505,7 +502,7 @@ class ImportRun(Base):
         nullable=False,
         default=ImportRunStatus.PENDING,
     )
-    # Phase 47 (D-02): declared explicitly by every writer, no default —
+    # Declared explicitly by every writer, no default —
     # provenance is correct by construction on every new row, never inferred.
     source = Column(
         SAEnum(ImportSource, name="import_source", values_callable=lambda e: [x.value for x in e]),
@@ -526,11 +523,11 @@ class ImportRun(Base):
     pdf_path = Column(String(500), nullable=True)    # local path to immutable PDF
     pdf_url = Column(String(1000), nullable=True)    # original download URL
     prompt_version = Column(String(50), nullable=True)  # for schema version tracking
-    # Phase 50 — migration 0030 (D-13/OQ-3): frozen sha256 hex digest (see
+    # Frozen sha256 hex digest (see
     # api.domain.content_digest) of this argument's ordered utterance
     # content, carried by step="parse" runs only — a step="reconcile" run
-    # carries no comparison digest (OQ-3). NULL means "predates this phase"
-    # or "not a parse run" — never backfilled (D-15/D-16).
+    # carries no comparison digest. NULL means "predates this phase"
+    # or "not a parse run" — never backfilled.
     content_digest = Column(String(64), nullable=True)
 
 
@@ -538,9 +535,9 @@ class ImportRun(Base):
 # Table 10: utterances
 # One row per spoken turn or stage direction.
 # BigInteger PK — could accumulate millions of rows over many arguments.
-# person_id is null at parse time; populated by the Resolve step (Phase 2).
+# person_id is null at parse time; populated by the Resolve step.
 # import_run_id links each row to the import run that produced it (PIPE-04,
-# PIPE-11). Phase 47 (D-05): the per-row `strategy` column is dropped —
+# PIPE-11). Phase 47: the per-row `strategy` column is dropped —
 # utterances inherit provenance from their parent import_run's source/method.
 # ---------------------------------------------------------------------------
 
@@ -615,12 +612,12 @@ class ArgumentStatusLog(Base):
         nullable=False,
     )
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
-    # Phase 48 (D-15, D-17): non-empty free text required server-side only
+    # Non-empty free text required server-side only
     # when this row records a publish override past the UNCERTAIN gate.
     override_reason = Column(Text, nullable=True)
-    # Phase 48 (D-15): the argument's trust_tier at the moment of this
+    # The argument's trust_tier at the moment of this
     # transition, populated only for override rows. Binds to the trust_tier
-    # PG enum type (migration 0027) — does NOT create a shadow type.
+    # PG enum type — does NOT create a shadow type.
     trust_tier_at_transition = Column(
         SAEnum(TrustTier, name="trust_tier", values_callable=lambda e: [x.value for x in e]),
         nullable=True,
@@ -631,8 +628,8 @@ class ArgumentStatusLog(Base):
 # Table 13: admin_jobs
 # Tracks operator-initiated pipeline jobs submitted via the admin UI.
 # status and current_step use PG enums defined in migration 0003.
-# argument_id is nullable FK — NULL until ingest creates the argument row (D-02).
-# discrepancies is JSONB — read as a batch during fire-and-poll (D-03).
+# argument_id is nullable FK — NULL until ingest creates the argument row.
+# discrepancies is JSONB — read as a batch during fire-and-poll.
 # ---------------------------------------------------------------------------
 
 
@@ -665,13 +662,13 @@ class AdminJob(Base):
 
 # ---------------------------------------------------------------------------
 # Table 14: value_discrepancy
-# Phase 49 (D-13/D-14/D-15): per-value operator-review bookkeeping recorded
+# Per-value operator-review bookkeeping recorded
 # when a re-import's incoming value disagrees with an existing value of
 # equal-or-higher authority. This is NOT the legacy admin_jobs.discrepancies
-# JSONB blob above (D-14) — that field is unrelated pipeline-resolve batch
+# JSONB blob above — that field is unrelated pipeline-resolve batch
 # data; this table is the new, generalized discrepancy record introduced by
 # the review model. Natural key is (target_type, target_id, field,
-# import_run_id) (D-13) but is NOT a UNIQUE constraint — D-15: a repeat
+# import_run_id) but is NOT a UNIQUE constraint — D-15: a repeat
 # import can legitimately disagree on more than one field, so a fresh row
 # must be able to sit alongside an already-resolved one for the same key.
 # ---------------------------------------------------------------------------
@@ -680,7 +677,7 @@ class AdminJob(Base):
 class ValueDiscrepancy(Base):
     """Per-value operator-review bookkeeping for a re-import disagreement.
 
-    NOT the legacy `admin_jobs.discrepancies` JSONB blob (D-14) — this is a
+    NOT the legacy `admin_jobs.discrepancies` JSONB blob — this is a
     distinct, structured table introduced by the Phase 49 review model.
     """
 

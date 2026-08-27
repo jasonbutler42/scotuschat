@@ -44,7 +44,7 @@ from typing import Optional
 
 # Accepted-length cap. Real docket shapes ("22-915", "job-1120",
 # "14-556-TEST-SEED") are all well under this; it exists to bound the
-# arbitrary-file-write / DoS surface (T-38-21), not to model any real docket
+# arbitrary-file-write / DoS surface, not to model any real docket
 # format.
 DOCKET_VALUE_MAX_LENGTH = 64
 

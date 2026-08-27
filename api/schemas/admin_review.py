@@ -1,4 +1,4 @@
-"""Pydantic v2 request/response models for the admin review-queue API (Phase 49).
+"""Pydantic v2 request/response models for the admin review-queue API.
 
 Plan 49-01 shipped a thin end-to-end tracer (Arguments queue, one Confirm
 action). Plan 49-04 widens this module: the full three-action resolve set
@@ -80,12 +80,12 @@ class ReviewQueueArgumentItem(BaseModel):
     attention_count: int
     admin_job_id: Optional[int] = None
     constituents: list[ReviewQueueConstituent]
-    # Plan 49-05: the summarize_tier_blockers breakdown for this argument
+    # The summarize_tier_blockers breakdown for this argument
     # (list of {"code": str, "count": int} dicts) — populated even when
     # constituents is empty, so a row queued solely via the degraded-tier
     # leg still has something real to show in the expanded panel.
     blockers: list[dict] = []
-    # Phase 50 plan 50-02 (PD-09): open value_discrepancy rows recorded
+    # Phase 50 plan 50-02: open value_discrepancy rows recorded
     # directly against THIS argument's own value columns
     # (target_type="argument") or against its LEAD case's columns
     # (target_type="case") — distinct from `constituents[].discrepancies`,
@@ -95,7 +95,7 @@ class ReviewQueueArgumentItem(BaseModel):
 
 
 class ReviewQueuePersonItem(BaseModel):
-    """One row in the `/admin/review` People-tab queue (D-02)."""
+    """One row in the `/admin/review` People-tab queue."""
 
     id: int
     full_name: str
@@ -106,7 +106,7 @@ class ReviewQueuePersonItem(BaseModel):
 
 
 class ReviewQueueStats(BaseModel):
-    """Summary counts for the dashboard StatCard (D-30) — plan 49-05.
+    """Summary counts for the dashboard StatCard — plan 49-05.
 
     Backed by ``get_review_queue_stats``'s two dedicated COUNT queries,
     which share the exact inclusion predicates the list endpoints use, so
@@ -128,7 +128,7 @@ class ReviewActionRequest(BaseModel):
     the URL path, and the field being written is chosen server-side by the
     action verb, per ``ParticipantSideUpdate``'s established pattern.
 
-    "edit" deliberately has no literal here (D-23): editing a value is a
+    "edit" deliberately has no literal here: editing a value is a
     deep link into the existing editors (update_participant_side,
     update_resolve_row_for_job, update_person), whose writes already route
     through the Task 2 authority gate — there is no fourth PATCH to build.

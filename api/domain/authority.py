@@ -1,6 +1,6 @@
 """
 Pure, dependency-light domain contract for the write-acceptance authority
-ladder (Phase 49, REVIEW-02, D-31/D-31a/D-31b).
+ladder.
 
 This module has NO FastAPI/SQLAlchemy/Alembic imports. It must remain
 importable by API services, pipeline commands, tests, and Alembic
@@ -28,7 +28,7 @@ Authority order (highest to lowest), from
 `("seed", "direct")` and `("corpus", "direct")` identically (both TRUSTED) —
 see 49-04-PLAN.md's flagged assumptions.
 
-D-22: an operator EDIT does NOT rewrite a row's stored `source`/`method` —
+An operator EDIT does NOT rewrite a row's stored `source`/`method` —
 the row keeps its original provenance as a durable record of where the
 value came from. Operator authority is instead carried entirely by
 `review_state ∈ {operator_confirmed, operator_edited}`. `authority_rank`
@@ -55,7 +55,7 @@ class AuthorityRank(int, enum.Enum):
 
 
 class WriteDecision(str, enum.Enum):
-    """The three reachable outcomes of `decide_write` (D-31b).
+    """The three reachable outcomes of `decide_write`.
 
     A `(accepted, should_record)` boolean pair would make `(False, False)`
     — reject silently — expressible, which is exactly the behavior D-16
@@ -163,7 +163,7 @@ def decide_write(
     operator) revising their own earlier decision, which is the single
     most ordinary action this subsystem supports and must always succeed.
     So OPERATOR/OPERATOR is ACCEPT_AND_RECORD, not REJECT_AND_RECORD — the
-    write applies and the superseded value is still recorded (D-16). Every
+    write applies and the superseded value is still recorded. Every
     other equal-rank pair (CORPUS/CORPUS, PDF_RULE_BASED/PDF_RULE_BASED,
     PDF_LLM/PDF_LLM, UNKNOWN/UNKNOWN) keeps the plain "equal rejects" rule
     unchanged — CORPUS/CORPUS in particular is REVIEW-02's own boundary

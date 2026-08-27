@@ -58,7 +58,7 @@ def _scrape_job_id(argv: list[str]) -> int | None:
     """
     Extract the integer following --job-id in argv, or None if absent/unparseable.
 
-    T-24-10: only the integer job-id is trusted/used from argv here — no other
+    Only the integer job-id is trusted/used from argv here — no other
     operator-supplied token is echoed anywhere, so there is no log-injection
     surface from a rejected/malformed docket value.
     """
@@ -84,7 +84,7 @@ def _write_early_failure(job_id: int | None, message: str) -> None:
     """
     if job_id is None:
         return
-    # T-24-10: bound the message before it reaches the DB — an argparse usage/
+    # Bound the message before it reaches the DB — an argparse usage/
     # error string must never bloat the error_message Text column unbounded.
     bounded_message = message[:500]
 
@@ -114,7 +114,7 @@ def main() -> None:
     # imports _scrape_job_id/_write_early_failure without invoking main() —
     # does not mutate the process-wide asyncio event loop policy. That
     # import-time mutation previously leaked into every test that ran later
-    # in the same pytest session (Phase 31, T-31-18): it silently changed the
+    # in the same pytest session: it silently changed the
     # behavior of unrelated asyncio.run() calls (e.g.
     # pipeline/commands/resolve.py's KeyboardInterrupt handling). A real CLI
     # invocation (`python -m pipeline ...`) still sets __name__ == "__main__"
@@ -290,7 +290,7 @@ def main() -> None:
     )
 
     # -----------------------------------------------------------------------
-    # import-convokit subcommand (Phase 29, D-07)
+    # import-convokit subcommand
     # -----------------------------------------------------------------------
     import_convokit_p = sub.add_parser(
         "import-convokit",
@@ -347,7 +347,7 @@ def main() -> None:
     )
 
     # -----------------------------------------------------------------------
-    # recompute-trust subcommand (Phase 48, D-09)
+    # recompute-trust subcommand
     # -----------------------------------------------------------------------
     recompute_trust_p = sub.add_parser(
         "recompute-trust",
@@ -383,7 +383,7 @@ def main() -> None:
     )
 
     # -----------------------------------------------------------------------
-    # prune-runs subcommand (Phase 50, D-12)
+    # prune-runs subcommand
     # -----------------------------------------------------------------------
     prune_runs_p = sub.add_parser(
         "prune-runs",
@@ -431,7 +431,7 @@ def main() -> None:
     try:
         args = parser.parse_args()
     except SystemExit as exc:
-        # T-24-09: argparse raises SystemExit before any command logic runs
+        # Argparse raises SystemExit before any command logic runs
         # (e.g. a flag-like docket value rejected as an unrecognized option).
         # Because pipeline_spawn.py launches this subprocess with stdout/stderr
         # DEVNULL, this failure would otherwise be completely invisible — the

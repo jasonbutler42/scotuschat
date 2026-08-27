@@ -21,7 +21,7 @@ Endpoints:
     Write operator-confirmed speaker aliases and mark the job completed.
 
   POST /api/admin/jobs/{job_id}/people
-    Create a new person inline during discrepancy review (D-13).
+    Create a new person inline during discrepancy review.
 
 Auth:
   All routes are protected via the router-level verify_admin_token dependency
@@ -30,7 +30,7 @@ Auth:
 
 Prefix:
   /api/admin — full prefix (not bare /admin) to avoid collision with
-  SvelteKit's /admin/* page routes (D-09).
+  SvelteKit's /admin/* page routes.
 """
 
 import asyncio
@@ -108,9 +108,9 @@ async def verify_admin_token(x_admin_token: str = Header(...)) -> None:
     Throwaway token check — Phase 6 replaces this with HMAC session cookie auth.
 
     The dependency is injected at the router level so Phase 6 can swap it
-    without touching individual route signatures (D-12).
+    without touching individual route signatures.
 
-    Security notes (T-05-01, T-05-05):
+    Security notes:
     - The inbound token value must never be logged or echoed in a response.
     - The settings.admin_token value must never be logged or echoed in a response.
     - The 401 response body is the constant string "Unauthorized" — no token
@@ -178,7 +178,7 @@ def _normalize_dockets(
         if not stripped or stripped in seen:
             return
         if stripped.startswith("-"):
-            # T-24-08: reject flag-like values before they can reach subprocess argv
+            # Reject flag-like values before they can reach subprocess argv
             raise HTTPException(
                 status_code=422,
                 detail=f"Docket value {stripped!r} cannot start with '-'.",
@@ -186,7 +186,7 @@ def _normalize_dockets(
         try:
             value = normalize_docket_value(stripped)
         except DocketValueError as exc:
-            # T-38-20/G-38-6: reject path-hazard and over-length docket values
+            # Reject path-hazard and over-length docket values
             # before create_job creates an AdminJob row or spawns the ingest
             # subprocess. Message text is owned by the domain module.
             raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -247,9 +247,9 @@ async def admin_health() -> dict:
 async def create_job(
     pdf_url: Optional[str] = Form(None),
     pdf_file: Optional[UploadFile] = File(None),
-    primary_docket: Optional[str] = Form(None),  # CR-01: backward-compat single-docket callers
+    primary_docket: Optional[str] = Form(None),  # Backward-compat single-docket callers
     source_dockets: list[str] = Form(default=[]),  # Phase 24 Plan 04: full run-start docket list
-    question_number: int = Form(1),              # CR-01: pass through to ingest for D-01 deduplication
+    question_number: int = Form(1),              # Pass through to ingest for D-01 deduplication
     db: AsyncSession = Depends(get_db),
 ) -> AdminJobResponse:
     """
@@ -257,11 +257,11 @@ async def create_job(
 
     Modes:
     - URL mode: pdf_url must be a valid https://...supremecourt.gov/... URL.
-      Validated at the route boundary (T-07-01) before any job creation.
-    - Upload mode: pdf_file must have content_type 'application/pdf' (T-07-04).
+      Validated at the route boundary before any job creation.
+    - Upload mode: pdf_file must have content_type 'application/pdf'.
       Bytes are uploaded to DO Spaces; the spaces_key is stored on the job.
 
-    Docket normalization (T-24-07): primary_docket and repeated source_dockets
+    Docket normalization: primary_docket and repeated source_dockets
     values are merged, trimmed, de-duplicated preserving order via
     _normalize_dockets. The normalized list's first element is the effective
     primary docket; the full list is stored on admin_jobs.source_dockets and
@@ -278,20 +278,20 @@ async def create_job(
         job = await jobs_service.create_job(
             db, pdf_url=pdf_url, source_dockets=normalized_dockets or None
         )
-        # CR-01: include --primary-docket/--dockets and --question so D-01 deduplication fires
+        # Include --primary-docket/--dockets and --question so D-01 deduplication fires
         ingest_args = ["--url", pdf_url, "--question", str(question_number)]
         ingest_args += _dockets_to_ingest_args(normalized_dockets)
         spawn_pipeline_step("ingest", job.id, ingest_args)
         return job  # type: ignore[return-value]
 
     elif pdf_file is not None:
-        # Upload mode: validate content type (T-07-04)
+        # Upload mode: validate content type
         if pdf_file.content_type != "application/pdf":
             raise HTTPException(
                 status_code=422,
                 detail="Uploaded file must be a PDF (application/pdf).",
             )
-        # WR-04: content_type is client-supplied — verify PDF magic bytes as a
+        # Content_type is client-supplied — verify PDF magic bytes as a
         # second layer so a non-PDF payload with a spoofed content-type is rejected.
         header = await pdf_file.read(4)
         await pdf_file.seek(0)
@@ -310,7 +310,7 @@ async def create_job(
             # Object storage configured — upload and pass the key to ingest.
             key = f"uploads/{job.id}.pdf"
             loop = asyncio.get_running_loop()
-            # WR-06: wrap upload in try/except so a storage failure marks the job
+            # Wrap upload in try/except so a storage failure marks the job
             # FAILED rather than leaving an orphaned PENDING job row with no subprocess.
             try:
                 await loop.run_in_executor(
@@ -341,7 +341,7 @@ async def create_job(
             )
             await db.commit()
             await db.refresh(job)
-            # CR-01: pass --primary-docket/--dockets and --question through upload path too
+            # Pass --primary-docket/--dockets and --question through upload path too
             spaces_ingest_args = ["--spaces-key", key, "--question", str(question_number)]
             spaces_ingest_args += _dockets_to_ingest_args(normalized_dockets)
             spawn_pipeline_step("ingest", job.id, spaces_ingest_args)
@@ -351,10 +351,10 @@ async def create_job(
             uploads_dir.mkdir(parents=True, exist_ok=True)
             local_path = uploads_dir / f"{job.id}.pdf"
             local_path.write_bytes(file_bytes)
-            # WR-06: no update()/db.add() happens between create_job()'s commit
+            # No update()/db.add() happens between create_job()'s commit
             # and here, so a second db.commit() would be a no-op — just refresh.
             await db.refresh(job)
-            # CR-01: pass --primary-docket/--dockets and --question through local-file path too
+            # Pass --primary-docket/--dockets and --question through local-file path too
             local_ingest_args = ["--local-file", str(local_path.resolve()), "--question", str(question_number)]
             local_ingest_args += _dockets_to_ingest_args(normalized_dockets)
             spawn_pipeline_step("ingest", job.id, local_ingest_args)
@@ -387,7 +387,7 @@ async def get_pipeline_stats_route(
     db: AsyncSession = Depends(get_db),
 ) -> PipelineStats:
     """
-    Aggregate stat-card counts for the Pipeline runs dashboard card (DASH-01).
+    Aggregate stat-card counts for the Pipeline runs dashboard card.
 
     CRITICAL ordering note (mirrors T-19-03-05 / check-duplicate): this literal
     route MUST be registered before GET /jobs/{job_id} so FastAPI resolves the
@@ -405,14 +405,14 @@ async def get_job(
     """
     Poll endpoint — return the full AdminJob row and advance the job if ready.
 
-    Step-advance side effect (D-05):
+    Step-advance side effect:
     - If current_step=INGEST and status=COMPLETED: atomically advance to
       PARSE/RUNNING, derive the ingest run-id via get_run_id_for_step, and
       spawn the parse subprocess.
     - If current_step=PARSE and status=COMPLETED: atomically advance to
       RESOLVE/RUNNING, derive the parse run-id, and spawn resolve.
 
-    The run-id is re-derived on every poll from import_run (PIPE-17) —
+    The run-id is re-derived on every poll from import_run —
     no cached state, so a re-entrant poll after browser close/reopen works.
 
     NEVER advances a job that is PAUSED, FAILED, or COMPLETED (D-16 guard).
@@ -540,7 +540,7 @@ async def get_job_pdf(
         filename = job.original_filename or f"argument-{job_id}.pdf"
         # Sanitize filename for Content-Disposition header to prevent header injection.
         # Strip CR, LF, NUL, backslash, and double-quote which break RFC 6266 syntax
-        # or allow response splitting (CR-01).
+        # or allow response splitting.
         safe_filename = re.sub(r'[\r\n"\x00-\x1f\\]', '_', filename)
         headers = {
             "Content-Disposition": (
@@ -661,7 +661,7 @@ async def preview_bench_role(
 
     Read-only — never writes ArgumentParticipant.person_id or any other row.
     Scoped by job_id, never a client-supplied argument_id, matching the
-    sibling resolve-rows routes' IDOR guard (T-25-06/T-25-14): the argument
+    sibling resolve-rows routes' IDOR guard: the argument
     (and its argued_date) is always derived from the job.
 
     Returns 422 if the job does not exist or has no linked argument.
@@ -687,16 +687,16 @@ async def list_people(
     Return Person rows for the Bench/Advocate directory tabs (PDIR-01 through PDIR-06).
 
     Query params:
-    - is_justice: tab filter (D-01/D-02) — true = Bench, false = Advocate, omitted = no filter
-    - missing: single field-label click-to-filter (D-04) — one of the exact labels
+    - is_justice: tab filter — true = Bench, false = Advocate, omitted = no filter
+    - missing: single field-label click-to-filter — one of the exact labels
       _missing_fields produces ("first name"/"last name"/"photo"/"bio"/"birthdate"/
       "no tenures"); any other value is ignored by the service, never interpolated into SQL
     - tenure_gaps=true: return only bench speakers with at least one argued_date outside
-      all their CourtTenure windows (D-15, Phase 15) — Bench-tab-only
+      all their CourtTenure windows — Bench-tab-only
 
-    Phase 27 (D-10): the person-level Role join is gone — PersonListItem no
+    The person-level Role join is gone — PersonListItem no
     longer carries a Role display name; the returned shape now includes
-    argument_count/tenure_coverage/has_tenure_gap per row (PDIR-03/PDIR-04).
+    argument_count/tenure_coverage/has_tenure_gap per row.
 
     Rule-1 auto-fix (27-03): this route previously called
     people_service.list_people(db, incomplete=..., tenure_gaps=...), a
@@ -716,16 +716,16 @@ async def create_person(
     db: AsyncSession = Depends(get_db),
 ) -> PersonDetail:
     """
-    Create a standalone person from the People directory's "Create person" flow (D-09).
+    Create a standalone person from the People directory's "Create person" flow.
 
     This is a general, unscoped create — unlike POST /jobs/{job_id}/people
     below, it carries no pipeline-run guard and no participant-row linkage;
     the sole guard on this route is the standard admin-auth dependency
-    already applied to every route on this router (T-27-05). Returns the
+    already applied to every route on this router. Returns the
     full PersonDetail so the create page's redirect lands on a fully
-    populated editor (D-09).
+    populated editor.
 
-    Returns 422 (Phase 38, D-09) if the submitted structured parts leave
+    Returns 422 if the submitted structured parts leave
     neither first_name nor last_name present after normalization, or (D-01,
     D-04, T-38-07) if the request body includes a full_name field at all —
     PersonCreateRequest has no such field; Full Name is always derived
@@ -745,12 +745,12 @@ async def create_person_for_job(
     db: AsyncSession = Depends(get_db),
 ) -> PersonResponse:
     """
-    Create a new person inline during discrepancy review (D-13).
+    Create a new person inline during discrepancy review.
 
     Used by the "Add new person" flow in the Resolve step card. The created
     person is immediately selectable as the corrected alias for a discrepancy.
 
-    Phase 25 mini create-person popover (D-12, PJOB-19): when the request body
+    Phase 25 mini create-person popover: when the request body
     includes raw_speaker_label and side, this also sets Person.is_justice from
     side == BENCH and updates the matching job-owned ArgumentParticipant's
     person_id/side in the same guarded transaction (see
@@ -759,7 +759,7 @@ async def create_person_for_job(
     Bio, photo, and tenure dates remain Phase 27 scope (People Editor).
 
     Returns 422 if the job's linked argument is published — its data is
-    read-only once published; unpublish it first to edit it (D-35/D-35a).
+    read-only once published; unpublish it first to edit it.
     """
     try:
         person = await jobs_service.create_person_for_job(db, job_id, body)
@@ -773,7 +773,7 @@ async def get_people_stats_route(
     db: AsyncSession = Depends(get_db),
 ) -> PeopleStats:
     """
-    Aggregate stat-card counts for the People dashboard card (DASH-01).
+    Aggregate stat-card counts for the People dashboard card.
 
     CRITICAL ordering note (mirrors T-19-03-05 / check-duplicate): this literal
     route MUST be registered before GET /people/{person_id} so FastAPI resolves
@@ -789,7 +789,7 @@ async def get_incomplete_people_route(
 ) -> list[IncompletePerson]:
     """
     Top-5 incomplete people across both tabs for the People Needs Attention
-    sub-list (DASH-03).
+    sub-list.
 
     CRITICAL ordering note: this literal route MUST be registered before
     GET /people/{person_id} so FastAPI resolves the literal segment
@@ -821,7 +821,7 @@ async def get_person(
     db: AsyncSession = Depends(get_db),
 ) -> PersonDetail:
     """
-    Return full person data for the edit form (PEOPLE-03, D-07, D-08).
+    Return full person data for the edit form.
 
     Includes all tenure rows for the person ordered by start_date.
     Returns 404 if the person does not exist (T-08-IDOR).
@@ -839,19 +839,19 @@ async def update_person(
     db: AsyncSession = Depends(get_db),
 ) -> PersonDetail:
     """
-    Update a person's name, role, bio, photo, and tenure rows (PEOPLE-03, D-09).
+    Update a person's name, role, bio, photo, and tenure rows.
 
     Mass-assignment guard: PersonUpdate ONLY exposes bio_text, photo_url,
     tenures, first_name, last_name, middle_name, name_suffix, is_justice,
     birthdate — no other Person columns can be set, and `extra="forbid"`
-    (Phase 38, T-38-07) rejects any undeclared field outright, including
+ rejects any undeclared field outright, including
     full_name (T-08-MASS). full_name itself is never writable here at all —
     it is always derived server-side from the structured name parts
     (D-01, D-04).
     Returns 404 if the person does not exist (T-08-IDOR).
     Returns 422 if a tenure date string is malformed (T-08-DATE), or if a
     name-part edit would leave neither first_name nor last_name present
-    after merging with the person's stored parts (Phase 38, D-09).
+    after merging with the person's stored parts.
     """
     try:
         updated = await people_service.update_person(db, person_id, body)
@@ -870,7 +870,7 @@ async def upload_person_photo(
     db: AsyncSession = Depends(get_db),
 ) -> PersonDetail:
     """
-    Upload or set a photo for a person (PADM-01).
+    Upload or set a photo for a person.
 
     File path (D-03 file-takes-precedence): validates content_type (first gate)
     and Pillow Image.open/verify (second gate, server-side truth). Non-images → 422.
@@ -947,10 +947,10 @@ async def get_merge_preview(
     db: AsyncSession = Depends(get_db),
 ) -> MergePreview:
     """
-    Return transfer counts for a prospective merge (PADM-04).
+    Return transfer counts for a prospective merge.
 
     target_id is accepted as a query param for the frontend contract, but counts
-    derive from the source (person_id) — per Plan 01 D-09.
+    derive from the source (person_id) —.
     Returns 404 if the source person does not exist (T-12-IDOR).
     Auth inherited from router-level dependency (T-12-AUTH).
     """
@@ -967,7 +967,7 @@ async def merge_person(
     db: AsyncSession = Depends(get_db),
 ) -> PersonDetail:
     """
-    Merge source person (person_id) into target person (body.target_id) (PADM-03).
+    Merge source person (person_id) into target person (body.target_id).
 
     Transfers all FK rows from source to target in a single atomic transaction,
     then deletes the source person. Returns the updated target PersonDetail.
@@ -990,7 +990,7 @@ async def delete_person(
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     """
-    Delete a person only if they have no associated FK rows (PADM-02).
+    Delete a person only if they have no associated FK rows.
 
     Returns 200 + {"deleted": True} on success.
     Returns 404 if the person does not exist (T-12-IDOR).
@@ -1015,17 +1015,17 @@ async def list_arguments(
     db: AsyncSession = Depends(get_db),
 ) -> list[ArgumentListItem]:
     """
-    Return all arguments with lead case metadata, sorted argued_date DESC (D-01).
+    Return all arguments with lead case metadata, sorted argued_date DESC.
 
     One row per argument — consolidated dockets are not shown here (see detail endpoint).
 
     Query params:
-    - status: optional single-value filter (DASH-02, D-05/D-06) — one of
+    - status: optional single-value filter — one of
       "draft"/"published"/"unpublished". Any other value (including
       "candidate", the born state as of Phase 48 D-01 and never a
       selectable filter — D-04, absent, or unrecognized) is ignored by the
       service and the full list is returned; never interpolated into SQL,
-      never raises 422 (D-05).
+      never raises 422.
     """
     args = await arguments_service.list_arguments(db, status=status)
     return [ArgumentListItem(**a) for a in args]
@@ -1038,7 +1038,7 @@ async def check_duplicate_argument(
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     """
-    JS preflight: check if (source_docket, question_number) already exists (D-04, Phase 19).
+    JS preflight: check if (source_docket, question_number) already exists.
 
     Returns 200 always — absence of a match is a valid response.
     Response: {"exists": bool, "argument_id": int | null}.
@@ -1056,7 +1056,7 @@ async def get_argument_stats_route(
     db: AsyncSession = Depends(get_db),
 ) -> ArgumentStats:
     """
-    Aggregate stat-card counts for the Arguments dashboard card (DASH-01).
+    Aggregate stat-card counts for the Arguments dashboard card.
 
     CRITICAL ordering note (mirrors T-19-03-05 / check-duplicate): this literal
     route MUST be registered before GET /arguments/{argument_id} so FastAPI
@@ -1073,7 +1073,7 @@ async def get_recent_drafts_route(
 ) -> list[RecentDraft]:
     """
     Top-5 most recently created DRAFT arguments for the Arguments Needs
-    Attention sub-list (DASH-03).
+    Attention sub-list.
 
     CRITICAL ordering note: this literal route MUST be registered before
     GET /arguments/{argument_id} so FastAPI resolves the literal segment
@@ -1088,7 +1088,7 @@ async def get_utterance_count_route(
     db: AsyncSession = Depends(get_db),
 ) -> UtteranceCount:
     """
-    Total Utterance row count for the Utterances dashboard stat card (DASH-01).
+    Total Utterance row count for the Utterances dashboard stat card.
 
     No {id}-parameterized sibling route exists for /utterances today, so there
     is no ordering hazard — placed here alongside the other new stats routes
@@ -1104,7 +1104,7 @@ async def get_argument(
     db: AsyncSession = Depends(get_db),
 ) -> ArgumentDetail:
     """
-    Return full argument data for the edit form (D-02, D-10).
+    Return full argument data for the edit form.
 
     Includes lead case fields (case_name, docket_number, slug) and a
     consolidated_dockets list for read-only display.
@@ -1123,7 +1123,7 @@ async def update_argument(
     db: AsyncSession = Depends(get_db),
 ) -> ArgumentDetail:
     """
-    Update an argument's argued_date and its lead case's case_name / docket_number (D-02).
+    Update an argument's argued_date and its lead case's case_name / docket_number.
 
     Mass-assignment guard: ArgumentUpdate ONLY exposes case_name, docket_number,
     argued_date — published_at and slug are never writable via PATCH (T-11-MASS).
@@ -1132,7 +1132,7 @@ async def update_argument(
     (T-11-SLUG, T-11-DOCKET). The detail string carries "slug_collision" or
     "docket_collision" so the SvelteKit layer can display the specific error message.
     Returns 422 if the argument is published — its data is read-only once
-    published; unpublish it first to edit it (D-35/D-35a).
+    published; unpublish it first to edit it.
     """
     try:
         updated = await arguments_service.update_argument(db, argument_id, body)
@@ -1219,9 +1219,9 @@ async def unpublish_argument(
     db: AsyncSession = Depends(get_db),
 ) -> ArgumentDetail:
     """
-    Set status=UNPUBLISHED, hiding the argument from the public site (D-07, D-08).
+    Set status=UNPUBLISHED, hiding the argument from the public site.
 
-    published_at is deliberately RETAINED, not cleared (D-02) — the Status
+    published_at is deliberately RETAINED, not cleared — the Status
     card shows the argument's most recent publish date even after
     unpublishing. Public visibility is governed by status == PUBLISHED
     (checked in addition to published_at IS NOT NULL by all three public
@@ -1289,7 +1289,7 @@ async def update_argument_metadata(
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     """
-    Save operator-reviewed metadata from job detail page (D-15, Phase 19).
+    Save operator-reviewed metadata from job detail page.
 
     Updates Argument.argued_date, Argument.source_docket, and lead Case.case_name.
     Auth inherited at router level (T-19-03-04).
@@ -1297,7 +1297,7 @@ async def update_argument_metadata(
     Returns 404 if the argument does not exist (T-19-03-02 IDOR guard).
     Returns 422 if argued_date is malformed.
     Returns 422 if the argument is published — its data is read-only once
-    published; unpublish it first to edit it (D-35/D-35a).
+    published; unpublish it first to edit it.
     Returns 409 if the write violates a DB constraint (defense-in-depth;
     T-30.1-06 — never leaks the raw DB/asyncpg message).
     Returns {"success": True} on success.
@@ -1358,7 +1358,7 @@ async def delete_argument(
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     """
-    Delete an argument unless it is published (ADMIN-01, D-25/PD-11, Phase 50).
+    Delete an argument unless it is published.
 
     Deletable in every state except published — candidate, draft, and
     unpublished all delete cleanly; delete is the strongest edit there is,
@@ -1394,7 +1394,7 @@ async def delete_argument(
     return {"deleted": True}
 
 
-# TODO(D-10): orphaned by Phase 27 — person-level roles removed; safe to
+# TODO: orphaned by Phase 27 — person-level roles removed; safe to
 # delete once confirmed. Plan 27-05 deletes this route's only caller (the
 # createRole form action on app/src/routes/admin/people/[id]/+page.server.ts);
 # flagged here rather than deleted to avoid breaking imports mid-phase.
@@ -1418,7 +1418,7 @@ async def list_participants(
     db: AsyncSession = Depends(get_db),
 ) -> list[ParticipantItem]:
     """
-    Return resolved participants for the argument linked to this job (D-02, PEOPLE-04).
+    Return resolved participants for the argument linked to this job.
 
     Only includes participants where person_id IS NOT NULL (resolved by the pipeline).
     Returns 404 if the job does not exist or has no argument linked yet.
@@ -1430,7 +1430,7 @@ async def list_participants(
 
 
 # ---------------------------------------------------------------------------
-# Phase 15: Approve and Participant-Side endpoints
+# Approve and Participant-Side endpoints
 # ---------------------------------------------------------------------------
 
 
@@ -1440,7 +1440,7 @@ async def approve_job(
     db: AsyncSession = Depends(get_db),
 ) -> AdminJobResponse:
     """
-    Approve a pipeline job — transitions argument from pipeline to draft state (D-09).
+    Approve a pipeline job — transitions argument from pipeline to draft state.
 
     Sets argument.status = 'draft' and stamps argument.resolved_at = now().
     Sets admin_job.status = COMPLETED.
@@ -1466,7 +1466,7 @@ async def delete_job(
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     """
-    Delete a pipeline run (admin_job row) by id (ADMIN-02).
+    Delete a pipeline run (admin_job row) by id.
 
     Removes ONLY the admin_jobs row — the linked argument, its import_run step rows,
     and its utterances are all unaffected (D-10, D-11, Pitfall 6).
@@ -1504,10 +1504,10 @@ async def update_participant_side(
     IDOR guard (T-15-02-IDOR): the participant must belong to the specified
     argument — a cross-argument update attempt returns 404.
 
-    Mass-assignment guard (T-26-04): only ``side`` and ``descriptor`` are
+    Mass-assignment guard: only ``side`` and ``descriptor`` are
     writable via this endpoint (ParticipantSideUpdate exposes only those
     fields). descriptor is optional — omitting it leaves the existing
-    descriptor unchanged; it is never written on a BENCH side (RESOLVE-13).
+    descriptor unchanged; it is never written on a BENCH side.
 
     Accepted values (T-15-02-BENCH retired as satisfied, D-35, plan 49-10):
     every side value including BENCH is now accepted here — see
@@ -1515,7 +1515,7 @@ async def update_participant_side(
     the four compensating controls the retirement relies on. Unresolved
     values (UNKNOWN, the legacy ADVOCATE literal) are still rejected.
 
-    Published guard (D-35): returns 422 if the owning argument's status is
+    Published guard: returns 422 if the owning argument's status is
     PUBLISHED — participant data is read-only once an argument has been
     published. Unpublish the argument first to edit it.
 

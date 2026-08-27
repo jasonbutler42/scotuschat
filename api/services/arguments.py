@@ -36,7 +36,7 @@ async def get_argument_with_utterances(
 ) -> dict | None:
     """
     Return argument metadata + latest-run utterances, or None if not found
-    or not published (BUG-01/D-02).
+    or not published.
 
     Returns a dict with shape:
         {
@@ -57,9 +57,9 @@ async def get_argument_with_utterances(
     arg_result = await db.execute(
         select(Argument)
         .where(Argument.id == argument_id)
-        .where(Argument.published_at.isnot(None))  # hide unpublished arguments (BUG-01/D-02)
+        .where(Argument.published_at.isnot(None))  # hide unpublished arguments
         # Phase 48 plan 10, Defect 2: unpublish_argument deliberately RETAINS
-        # published_at (D-02) — gate on status too, in ADDITION to the
+        # published_at — gate on status too, in ADDITION to the
         # published_at predicate above (never in place of it — see
         # test_published_gate.py's exact-substring assertions).
         .where(Argument.status == ArgumentStatusEnum.PUBLISHED)
@@ -96,7 +96,7 @@ async def get_argument_with_utterances(
         return None
 
     # --- Step 3: Find the latest completed parse run for this argument ------
-    # Users always see the output of the most recent COMPLETED parse run (PIPE-11).
+    # Users always see the output of the most recent COMPLETED parse run.
     # Use the import_run table (not MAX on utterances) to avoid surfacing
     # partial writes from a crashed run with a higher ID.
     max_run_result = await db.execute(
@@ -109,7 +109,7 @@ async def get_argument_with_utterances(
     max_run_id = max_run_result.scalar_one_or_none()
 
     # --- Step 4: Fetch utterances for that run, ordered by sequence --------
-    # JOIN to people + roles to embed speaker_name and speaker_role (D-10).
+    # JOIN to people + roles to embed speaker_name and speaker_role.
     # Returns Row tuples (Utterance, speaker_name, speaker_role) — not scalars.
     # Build dicts explicitly: from_attributes=True cannot pull labeled columns
     # from SQLAlchemy Row tuples (Pitfall 6).

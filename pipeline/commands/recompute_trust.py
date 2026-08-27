@@ -1,5 +1,5 @@
 """
-Pipeline recompute-trust command (Phase 48, D-09).
+Pipeline recompute-trust command.
 
 This is D-09's drift-repair tool and D-21's falsifiable verification
 vehicle: after a fresh `reset_to_fixture`, `python -m pipeline recompute-trust
@@ -15,7 +15,7 @@ module has no FastAPI import and is reachable only via
 
 It derives NOTHING of its own: every recompute goes through
 api.services.trust.recompute_argument_tier, the single shared service every
-writer in this codebase already calls (TRUST-01) — so this CLI can never
+writer in this codebase already calls — so this CLI can never
 disagree with the API about what a tier should be.
 
 Usage:

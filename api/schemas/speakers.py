@@ -2,7 +2,7 @@
 Public speaker popover schemas.
 
 appointing_president_party is included on each tenure entry. Phase 14
-(T-14-02) originally kept this field out of the public schema on apolitical
+ originally kept this field out of the public schema on apolitical
 grounds; Phase 39 (39-CONTEXT.md D-11/D-12) reverses that decision because the
 value describes the *appointing president's* party affiliation — a partisan
 officeholder by definition, and factual historical record — not the Justice's,
@@ -29,7 +29,7 @@ class TenureEntry(BaseModel):
     office: Optional[str] = None
     start_date: Optional[str] = None  # DB Date serialized as "YYYY-MM-DD"
     end_date: Optional[str] = None    # None = currently active Justice
-    # Phase 39 (D-01/D-15): the raw canonical reason_left value
+    # The raw canonical reason_left value
     # ("retired"/"died"/"promoted") is carried end to end; projection to the
     # formal display title ("Retired"/"Died in office"/"Promoted") happens
     # at the render boundary (SpeakerPopover.svelte), not here — same
@@ -60,8 +60,8 @@ class SpeakerPopoverEntry(BaseModel):
     person_id: int
     full_name: str
     role_name: Optional[str] = None
-    photo_url: Optional[str] = None   # raw DB value; URL reconstructed in +page.server.ts (D-03)
-    # Phase 39 (D-13): the top-level `appointing_president` field that lived
+    photo_url: Optional[str] = None   # raw DB value; URL reconstructed in +page.server.ts
+    # The top-level `appointing_president` field that lived
     # here (hardcoded null since Phase 22) is retired. The concept moved onto
     # each `TenureEntry` as `appointed_by` (see above) — do not re-add a
     # top-level field.
@@ -69,6 +69,6 @@ class SpeakerPopoverEntry(BaseModel):
     death_date: Optional[str] = None  # DB Date serialized as "YYYY-MM-DD"; None when living/unknown
     bio_text: Optional[str] = None    # None when no bio is on file
     tenure: list[TenureEntry] = []
-    side: Optional[str] = None        # raw SideEnum value for isBench rendering logic (Phase 15)
+    side: Optional[str] = None        # raw SideEnum value for isBench rendering logic
 
     model_config = ConfigDict(from_attributes=True)

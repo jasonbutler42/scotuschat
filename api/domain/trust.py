@@ -1,5 +1,5 @@
 """
-Pure, dependency-light domain contract for trust-tier derivation (Phase 48).
+Pure, dependency-light domain contract for trust-tier derivation.
 
 This module has NO FastAPI/SQLAlchemy/Alembic imports. It must remain
 importable by API services, pipeline commands, tests, and Alembic
@@ -29,7 +29,7 @@ review_state and never states what an operator-sourced, unreviewed row
 derives). It was flagged in .planning/phases/48-trust-lifecycle/48-01-
 PLAN.md's <flagged_assumptions> section pending operator confirmation, and
 was CONFIRMED by the operator on 2026-08-21 at the plan 48-09 sign-off
-checkpoint (see 48-09-SUMMARY.md) — this is now an operator-confirmed
+checkpoint — this is now an operator-confirmed
 derivation rule, not an outstanding assumption. The rationale stands
 unchanged: mapping an operator-authored value to VERIFIED follows the
 authority ladder (operator ranks highest) and the note's own worked
@@ -54,7 +54,7 @@ class TrustTier(str, enum.Enum):
     UNCERTAIN = "uncertain"
 
 
-# Least-trusted first, so min() over this ordering is the floor (TRUST-02).
+# Least-trusted first, so min() over this ordering is the floor.
 _TIER_ORDER: dict[TrustTier, int] = {
     TrustTier.UNCERTAIN: 0,
     TrustTier.PROVISIONAL: 1,
@@ -62,7 +62,7 @@ _TIER_ORDER: dict[TrustTier, int] = {
     TrustTier.VERIFIED: 3,
 }
 
-# D-13: every Phase 48 caller passes this literal as review_state — no
+# Every Phase 48 caller passes this literal as review_state — no
 # per-argument-participant review signal exists yet (ArgumentParticipant has
 # no review_state/method column today). Phase 49 will supply a real
 # per-participant value in its place; derive_tier's three-argument signature
@@ -74,7 +74,7 @@ def derive_tier(source: str, method: str, review_state: str) -> TrustTier:
     """
     Map one (source, method, review_state) triple to exactly one TrustTier.
 
-    This is the ONLY place this mapping exists (TRUST-01/D-07) — every
+    This is the ONLY place this mapping exists — every
     runtime (API service layer, offline pipeline CLI, Alembic migrations,
     tests) must call this function rather than re-implementing any part of
     the vocabulary below.

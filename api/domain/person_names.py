@@ -1,5 +1,5 @@
 """
-Pure, dependency-light domain contract for person-name authority (Phase 38).
+Pure, dependency-light domain contract for person-name authority.
 
 Covers D-01, D-03, D-05-D-11, D-18, D-22 from
 .planning/phases/38-full-name-vs-name-parts-rethink/38-CONTEXT.md:
@@ -8,7 +8,7 @@ Covers D-01, D-03, D-05-D-11, D-18, D-22 from
     whitespace normalization, canonical `First Middle Last, Suffix`
     formatting, and the first-or-last minimum-data invariant.
   - prepare_name_provenance: validation for the `{value, raw, confidence}`
-    extraction-provenance envelope (D-18/D-22).
+    extraction-provenance envelope.
   - split_legacy_full_name: a conservative, fixture-driven legacy Full Name
     splitter that only ever auto-applies a structurally unambiguous,
     round-trip-exact split (D-10-D-12).
@@ -43,7 +43,7 @@ _PART_BOUNDS = {
     "name_suffix": NAME_SUFFIX_MAX_LENGTH,
 }
 
-# Provenance envelope bounds (T-38-01) — value mirrors a single name part;
+# Provenance envelope bounds — value mirrors a single name part;
 # raw mirrors the full extracted-source-text bound used by full_name.
 PROVENANCE_VALUE_MAX_LENGTH = 150
 PROVENANCE_RAW_MAX_LENGTH = 300
@@ -76,7 +76,7 @@ def normalize_name_part(raw: Optional[str], *, field_name: str) -> Optional[str]
     """
     Trim and collapse internal whitespace; map blank to None.
 
-    Never changes capitalization or punctuation (D-06/D-07) — initials,
+    Never changes capitalization or punctuation — initials,
     hyphens, apostrophes, particles, compound values, and suffix spelling
     are preserved exactly as authored. Raises PersonNameError (never
     truncates) when the normalized value exceeds the column bound for
@@ -104,7 +104,7 @@ def format_full_name(
     suffix: Optional[str],
 ) -> str:
     """
-    Canonical `First Middle Last, Suffix` formatter (D-05).
+    Canonical `First Middle Last, Suffix` formatter.
 
     Blank Middle/Suffix are omitted without leaving extra spaces or
     punctuation. Callers are expected to have already normalized each part
@@ -143,8 +143,8 @@ def prepare_person_name(
     """
     Normalize authored name parts and derive the canonical full_name.
 
-    One shared derivation rule for every create/update write path (D-01/D-03):
-    normalize each part, require at least first or last (D-09), then derive
+    One shared derivation rule for every create/update write path:
+    normalize each part, require at least first or last, then derive
     full_name from the normalized parts. Raises PersonNameError when both
     first and last are blank after normalization.
     """
@@ -171,7 +171,7 @@ def prepare_person_name(
 
 
 # ---------------------------------------------------------------------------
-# Provenance envelope (D-18/D-22, T-38-01)
+# Provenance envelope
 # ---------------------------------------------------------------------------
 
 
@@ -186,14 +186,14 @@ def prepare_name_provenance(
     value: Optional[str], raw: Optional[str], confidence: str
 ) -> NameProvenance:
     """
-    Validate a single extracted-field provenance envelope (D-18, T-38-01).
+    Validate a single extracted-field provenance envelope.
 
     Accepts only value/raw strings within bounds and a qualitative
     High/Medium/Low confidence label (D-22, case-insensitive input,
     normalized to canonical Title-case output). Raises PersonNameError for
     malformed/oversized envelopes. Raw text is preserved exactly apart from
     the length bound — never re-trimmed or rewritten — so the operator sees
-    the exact extracted source text (D-18).
+    the exact extracted source text.
     """
     confidence_key = (confidence or "").strip().lower()
     if confidence_key not in _CONFIDENCE_CANONICAL:
@@ -270,10 +270,10 @@ def split_legacy_full_name(full_name: str) -> SplitResult:
     """
     Conservatively split a legacy `full_name` string into structured parts.
 
-    Pure and deterministic (T-38-02) — repeated calls on the same input
+    Pure and deterministic — repeated calls on the same input
     always return an identical SplitResult. Only ever returns
     auto_apply=True for a High-confidence, round-trip-exact split of a
-    structurally unambiguous shape (D-10/D-11): two or three
+    structurally unambiguous shape: two or three
     whitespace-separated tokens, with an optional recognized suffix
     following a comma, and no recognized name particle among the tokens.
 
@@ -282,9 +282,9 @@ def split_legacy_full_name(full_name: str) -> SplitResult:
     leading comma (order/punctuation ambiguity), unrecognized comma usage,
     or a split that does not reformat back to the exact original string —
     is returned unapplied with a reason, preserving the original full_name
-    for the caller to keep unchanged and flag for review (D-11/D-12). This
+    for the caller to keep unchanged and flag for review. This
     function never guesses; it does not synthesize punctuation or reorder
-    tokens (D-06/D-07).
+    tokens.
     """
     stripped = full_name.strip()
     if not stripped:

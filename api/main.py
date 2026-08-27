@@ -34,7 +34,7 @@ app.include_router(people_router.router)
 app.include_router(admin_router.router)
 app.include_router(admin_review_router.router)
 
-# Dev-only "Reset to Fixture" router (Phase 43, D-02/D-07): mounted ONLY when
+# Dev-only "Reset to Fixture" router: mounted ONLY when
 # settings.environment == "development" (allow-list comparison). In every
 # other environment this route is genuinely unregistered — a request to it
 # 404s because FastAPI never learned the route exists, not because a

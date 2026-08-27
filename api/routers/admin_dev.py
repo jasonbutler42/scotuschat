@@ -1,9 +1,9 @@
 """
-Dev-only admin router — "Reset to Fixture" (Phase 43, DEVTOOL-01/DEVTOOL-02)
-and "Seed unresolved speaker" (Phase 49, D-33a).
+Dev-only admin router — "Reset to Fixture"
+and "Seed unresolved speaker".
 
 This router is ONLY mounted on the FastAPI app (api/main.py) when
-settings.environment == "development" (D-07). In every other environment it
+settings.environment == "development". In every other environment it
 is genuinely absent — a request to it 404s because the route was never
 registered, not because a handler refused it with a 403.
 
@@ -62,7 +62,7 @@ async def seed_unresolved_speaker(db: AsyncSession = Depends(get_db)):
     """
     Null the person_id of one advocate-side participant on the Complexity
     fixture argument, so the unresolved-speaker case can be produced on
-    demand in a browser (D-33a). See
+    demand in a browser. See
     api.services.admin_dev.seed_unresolved_speaker_fixture's docstring for
     why this exists and why it is dev-only.
 

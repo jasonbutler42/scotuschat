@@ -1,5 +1,5 @@
 """
-Pipeline prune-runs command (Phase 50, D-12).
+Pipeline prune-runs command.
 
 D-01's always-reconcile behavior and D-10's whole-set utterance replacement
 both mean a repeat import RETAINS superseded rows rather than deleting them
@@ -16,7 +16,7 @@ module has no FastAPI import and is reachable only via
 
 Safety rules (50-07-PLAN.md decision record):
 
-    PD-22 — a run is a prune candidate only when it is NOT the run
+    A run is a prune candidate only when it is NOT the run
     `api/services/arguments.py`'s `MAX(ImportRun.id) WHERE step='parse'
     AND status='completed'` select would return for its argument. That
     select is the exact definition of "the run the public currently
@@ -28,7 +28,7 @@ Safety rules (50-07-PLAN.md decision record):
     Every other step (`"ingest"`, `"resolve"`) is left untouched — this
     command's scope is exactly the two steps D-10/D-12 name.
 
-    PD-23 — `value_discrepancy.import_run_id` is a hard FK to
+    `value_discrepancy.import_run_id` is a hard FK to
     `import_run.id`. A run carrying one or more OPEN (`resolved_at IS
     NULL`) discrepancy rows is refused under every flag combination —
     counted and printed by name, never silently skipped and never
@@ -66,7 +66,7 @@ async def _prunable_run_ids(
     include_resolved_discrepancies: bool = False,
 ) -> dict:
     """
-    Compute the prune-eligible run set for one argument (PD-22/PD-23).
+    Compute the prune-eligible run set for one argument.
 
     Returns a dict:
         served_run_id: int | None
@@ -89,7 +89,7 @@ async def _prunable_run_ids(
     Read-only — issues no write of its own. The caller decides whether to
     act on `prunable` (a real run) or merely report it (--dry-run).
     """
-    # PD-22: re-derive api/services/arguments.py's exact served-run select
+    # Re-derive api/services/arguments.py's exact served-run select
     # shape — never an equivalent-looking variant — so the two can never
     # disagree about which run the public currently sees.
     served_run_id = (
@@ -131,7 +131,7 @@ async def _prunable_run_ids(
             )
         ).scalar_one()
         if open_count > 0:
-            # PD-23: an open row blocks its run's removal under every flag
+            # An open row blocks its run's removal under every flag
             # combination — never silently skipped, never cascaded.
             skipped_open.append((run_id, open_count))
             continue

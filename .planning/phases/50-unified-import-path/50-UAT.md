@@ -3,7 +3,7 @@ status: complete
 phase: 50-unified-import-path
 source: 50-01-SUMMARY.md, 50-02-SUMMARY.md, 50-03-SUMMARY.md, 50-04-SUMMARY.md, 50-05-SUMMARY.md, 50-06-SUMMARY.md, 50-07-SUMMARY.md
 started: 2026-08-27T02:06:11Z
-updated: 2026-08-27T12:09:57Z
+updated: 2026-08-27T14:58:12Z
 ---
 
 ## Current Test
@@ -27,9 +27,29 @@ coverage_id: injected (migration 0030 shipped this phase)
 
 ### 2. D-09 live double-import diff + operator-edit survival
 expected: Live walkthrough on the dev DB: reset_to_fixture -> corpus import -> snapshot all eight affected tables -> byte-identical re-import -> diff shows zero new rows and zero changed column values; then edit a value as operator -> re-import with a disagreeing corpus value -> the operator value survives and a value_discrepancy row is recorded.
-result: issue
-resolution: "Both gaps (G-50-2a, G-50-2b) FIXED 2026-08-27; re-verified live — an operator case_name edit now holds source=operator across three consecutive re-imports, and D-09's byte-identical invariant still holds across all eight tables."
-source: live-verified (2026-08-26 session)
+result: pass
+result_history:
+  - date: 2026-08-26
+    result: issue
+    note: "First observation. Byte-identical half passed; operator-edit half failed on provenance (G-50-2a, G-50-2b). Preserved below under `reported`/`observed` — this entry is re-recorded, not rewritten."
+  - date: 2026-08-27
+    result: pass
+    note: "Re-observed live after both gaps were fixed (commits ae2598d23, 519a4b37c)."
+reobserved: |
+  2026-08-27, live against the dev DB, both fixes in place:
+    - reset_to_fixture -> re-import of all four fixtures -> snapshot diff BYTE-IDENTICAL
+      across all eight tables (0 new rows, 0 changed values). D-09 first half intact,
+      i.e. the restamp-timing change did not regress it.
+    - Operator edits case_name via PATCH /api/admin/arguments/{id}/metadata (the route
+      that never stamped): lead Case now reaches source=operator/method=manual, and the
+      argument row is correctly NOT stamped by a case-only edit.
+    - Three consecutive disagreeing re-imports: the operator value AND source=operator
+      hold on every pass (it degraded to corpus on pass 2 before), and every
+      value_discrepancy row records existing_source=operator/existing_method=manual.
+    - /admin/review renders the operator's own value as "(operator/manual)"; it read
+      "(corpus/direct)" before.
+  Full suite at time of re-observation: 1682 passed, 5 xfailed, 0 failed.
+source: live-verified (2026-08-26 first observation; 2026-08-27 re-observation)
 reported: "D-09 first half PASSES: reset_to_fixture -> re-import of all four fixtures -> snapshot diff was byte-identical across all eight tables (0 new rows, 0 changed values). Second half FAILS on provenance: the operator value survives, but operator AUTHORITY does not."
 severity: major
 observed: |
@@ -52,15 +72,38 @@ observed: |
   A two-field case renders both pairs. At 1280x900 no truncation; at 390x844 no text
   clipping (scrollWidth == clientWidth) and no page-level horizontal scroll.
   NOTE: the panel faithfully renders whatever provenance the row carries -- which is
-  how G-50-2a is visible in the UI as "(corpus/direct)" on an operator-typed value.
-  That is a data defect, not a render defect; the render leg passes.
+  how G-50-2a was visible in the UI as "(corpus/direct)" on an operator-typed value.
+  That was a data defect, not a render defect; the render leg passed then and still
+  passes. Since G-50-2a was fixed (2026-08-27) the same panel renders
+  "(operator/manual)" for that value -- re-checked live.
 coverage_id: 50-04 D1 (WINDOWS.md #30)
 
 ### 4. Argument-scoped Approve action end to end
 expected: A CANDIDATE argument's expanded /admin/review panel shows 'Approve — move to Draft'. Clicking it posts to the argument-scoped approve route, the row's status then reads Draft, the Approve button is gone, the active tab/filter survives the redirect, and the argument can then be published.
-result: issue
-resolution: "G-50-4a FIXED 2026-08-27; re-verified live — the post-approve URL keeps all four filter axes and the Candidate filter stays pressed."
-source: live-verified (2026-08-26 session, Playwright)
+result: pass
+result_history:
+  - date: 2026-08-26
+    result: issue
+    note: "First observation. Approve worked end to end; the tab/filter-survival leg failed (G-50-4a). Preserved below under `reported`/`observed` — this entry is re-recorded, not rewritten."
+  - date: 2026-08-27
+    result: pass
+    note: "Re-observed live after G-50-4a was fixed (commit 519a4b37c)."
+reobserved: |
+  2026-08-27, live via Playwright at 1280x900, fix in place:
+    - With ?tab=arguments&status=candidate active, the approve form's action attribute
+      reads "?tab=arguments&status=candidate&/approve" (was a bare "?/approve").
+    - After clicking Approve the URL is "?tab=arguments&status=candidate" with the
+      Candidate filter still pressed and the approved row correctly gone from the
+      filtered view (was "?/approve" with the filter reset to All, 5 rows).
+    - Re-checked with all four axes set (status+tier+review_state): all preserved on
+      the redirect, no "&/approve" residue in the target URL.
+    - The 2026-08-26 PASS legs (button on CANDIDATE only, Candidate->Draft, button gone
+      post-transition, publish-after-approve) were unaffected by the fix and stand.
+  NOT re-observed: the People-tab confirm/reflag actions — no actionable People rows
+  existed under the filters tried. They share the same actionUrl helper and the same
+  filterRedirect, so they are covered by construction and by contract tests, but not
+  by a live click. Carried forward as a known limit, not claimed as verified.
+source: live-verified (2026-08-26 first observation; 2026-08-27 re-observation, Playwright)
 reported: "Approve itself works end to end, but the operator's tab and status filter are dropped on the post-approve redirect -- the exact leg WINDOWS.md #30 flagged."
 severity: minor
 observed: |
@@ -324,11 +367,12 @@ verification: grep -q 'awaiting the operator' deferred-items.md (absent, confirm
 ## Summary
 
 total: 35
-passed: 33
-issues: 2
+passed: 35
+issues: 0
 pending: 0
 skipped: 0
 blocked: 0
+issues_found_and_fixed: 3  # G-50-2a, G-50-2b, G-50-4a — all fixed and re-observed 2026-08-27
 
 ## Gaps
 

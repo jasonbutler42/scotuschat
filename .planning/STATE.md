@@ -4,18 +4,18 @@ milestone: v1.8
 milestone_name: Import & Provenance Re-model
 current_phase: 50
 current_phase_name: Unified Import Path
-status: "Phase 50 COMPLETE (2026-08-26): all 7 plans done — 50-01 (provenance foundation + tracer), 50-02/50-03 (Wave 2 gates + argument-scoped approve/delete), 50-04 (/admin/review discrepancy render + Approve action), 50-05 (the real compare-and-record reconcile pass), 50-06 (D-22 delegation sweep + D-24 behavioral gate), 50-07 (offline prune-runs, extended leak ban, /admin/pipeline PDF-only narrowing, D-24 dispositioned inventory, D-23 closure)."
-stopped_at: Completed 50-07-PLAN.md
-last_updated: "2026-08-26T17:52:31.456Z"
-last_activity: 2026-08-26
-last_activity_desc: Phase 50 execution complete — plan 50-07 (final plan) complete
-state_head: ef3ec8bf8c28e3ec04f325d5961507a2effd50e1
+status: "Phase 50 (Unified Import Path) COMPLETE and VERIFIED 2026-08-27. All 7 plans, all 4 waves, 4/4 success criteria verified in 50-VERIFICATION.md. UAT complete 35/35. Phase-50 verification also closed 50-REVIEW.md CR-01 and CR-02 and the SC-4 ungated-writer gap. One provenance-label defect (trivial-ACCEPT restamp) accepted as known debt under an operator override and logged to deferred-items.md. Next: Phase 51 (Design System & Noun Alignment), the last v1.8 phase."
+stopped_at: Phase 50 verified and closed
+last_updated: "2026-08-27T20:53:26Z"
+last_activity: 2026-08-27
+last_activity_desc: Phase 50 verified complete; four review gates disabled per operator
+state_head: 922aa7466c951e46e295477bac55a621a0c22fb2
 progress:
   total_phases: 5
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 35
   completed_plans: 35
-  percent: 60
+  percent: 80
 ---
 
 # Project State
@@ -31,10 +31,12 @@ See: .planning/PROJECT.md (updated 2026-08-18 — Phase 47 complete; corpus-firs
 
 ## Current Position
 
-Phase: 50 (Unified Import Path) — COMPLETE
+Phase: 50 (Unified Import Path) — COMPLETE & VERIFIED (2026-08-27)
 Last activity: 2026-08-26 — Plan 50-07 (Wave 4, final plan) complete
 
-**Next action:** Phase 50 is fully executed (all 7 plans, all 4 waves). Run `/gsd-verify-work 50` to verify the phase goal was achieved, then `/gsd-discuss-phase 51` to start the next (and last v1.8) phase.
+**Next action:** Phase 50 is closed. Run `/gsd-discuss-phase 51` to start Design System & Noun Alignment — the last v1.8 phase.
+
+**Workflow config changed 2026-08-27 (operator):** `nyquist_validation`, `security_enforcement`, `ui_review`, and `api_coverage_gate` are now OFF; `code_review` stays ON. Rationale: across phase 50 the three disabled review gates produced nothing (two never ran; nyquist left a draft VALIDATION.md), `api_coverage_gate` emitted only an advisory asking to confirm a true statement, and `code_review` was the gate that found the two most substantive defects. Both verify:pre and verify:post now resolve to zero active gates.
 
 - **Wave 1: `50-01` — COMPLETE (2026-08-26).** Migration `0030` (six nullable columns, no backfill), the frozen `api/domain/content_digest.py` contract (Task 0 checkpoint: `freeze-as-proposed`), and the `type="tracer"` slice: corpus import creates zero `AdminJob` rows, stamps `oyez_speaker_id`/`content_digest`, survives a byte-identical double-import across all eight affected tables, and `approve_argument` + a reworked `reset_to_fixture` replace the AdminJob-based approve path. `_reconcile_conversation` establishes only the branch/digest-read/no-op guarantee — the real compare-and-write body is `50-05`'s. Full suite: 1507 passed, 5 xfailed, 0 failed. See `50-01-SUMMARY.md`.
 - **Wave 2 plan `50-02` — COMPLETE (2026-08-26).** `apply_argument_value_change`/`apply_case_value_change` — true peers of the two Phase 49 gate functions, both routing through the single `decide_write`. PD-07 fail-closed NULL-provenance pre-check. PD-13 gap-fill pre-check applied to all four gate functions, with a deliberate OPERATOR-authority scope guard on the two EXISTING gates (deviation — the literal unconditional plan text would have reopened the CR-02/CR-04 defect; see `50-02-SUMMARY.md`). `_argument_attention_predicate` legs 5/6 + `ReviewQueueArgumentItem.argument_discrepancies` make an argument-level or lead-case-level discrepancy visible in `/admin/review` (render itself is `50-04`'s). Full suite: 1535 passed, 5 xfailed, 0 failed (was 1507/5; +28 new tests, zero regressions). See `50-02-SUMMARY.md`.

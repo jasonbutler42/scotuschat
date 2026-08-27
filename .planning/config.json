@@ -8,7 +8,7 @@
     "research": true,
     "plan_check": true,
     "verifier": true,
-    "nyquist_validation": true,
+    "nyquist_validation": false,
     "auto_advance": false,
     "_auto_chain_active": false,
     "test_command": "./.venv/bin/python -m pytest",
@@ -19,12 +19,14 @@
     "ui_safety_gate": true,
     "tdd_mode": false,
     "code_review": true,
-    "ui_review": true,
+    "ui_review": false,
     "code_review_depth": "standard",
     "text_mode": false,
     "research_before_questions": false,
     "skip_discuss": false,
-    "use_worktrees": false
+    "use_worktrees": false,
+    "security_enforcement": false,
+    "api_coverage_gate": false
   },
   "ship": {
     "pr_body_sections": [

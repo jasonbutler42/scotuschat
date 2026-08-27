@@ -204,3 +204,47 @@ this same file's history.
 `_update_participant_sides`/`_update_participant_descriptors` to per-row gate calls,
 mirroring 50-06's `resolve.py` conversion, with its own `test_gated_column_writers.py`
 coverage.
+
+---
+
+## Trivial-ACCEPT provenance restamp (found 2026-08-27, phase-50 goal verification)
+
+**Status: open — accepted as known debt, operator override recorded in `50-VERIFICATION.md`.**
+
+**The defect.** `decide_write` returns `ACCEPT` for two different situations: a
+genuine gap-fill (stored side blank, incoming populated) and a trivial agreement
+(the values already match). Callers cannot tell them apart from the decision
+alone, so they restamp the row's `source`/`method` for both — treating a write
+that changed nothing as an authority event.
+
+**Where:**
+- `pipeline/commands/import_convokit.py::_row_should_restamp` — the severe one.
+  `Argument`/`Case` have no `review_state`, so `source` is the only carrier of
+  operator authority. An OPERATOR-stamped row whose compare-set fields all AGREE
+  with the corpus is demoted `operator -> corpus` on a byte-identical re-import.
+  Reproduced against real code 2026-08-27.
+- `pipeline/commands/resolve.py::_apply_resolved_person_ids` — pre-existing since
+  plan 50-06.
+- `pipeline/commands/parse.py::_update_participant_sides` /
+  `::_update_participant_descriptors` — inherited 2026-08-27 by mirroring
+  `resolve.py`. Narrower: `review_state` protects operator data on
+  `ArgumentParticipant`, so the blast radius is the PDF path's internal
+  `rule_based`-vs-`llm_corrective` tiers.
+
+**Why it is debt and not a blocker.** No data loss in any reproduction — the
+stored value always survives. What degrades is the label recording where the
+value came from, and the `value_discrepancy` row derived from it. It fires only
+when the incoming value already agrees, so nothing is overwritten.
+
+**Same class as G-50-2b, different trigger.** G-50-2b was a row-level provenance
+write driven by a *rejected sibling* field; this is one driven by an *accept that
+wrote nothing*. The G-50-2b fix closed the first door only — worth remembering
+that fixing one trigger of a class does not close the class.
+
+**The fix, when someone is next in these files.** Restamp only when the accepted
+write actually changed the value: gate each restamp on `_values_differ(field,
+incoming, existing)` in addition to the existing decision check. `_values_differ`
+is already imported in all three modules. Add a test for the operator-demotion
+case (an OPERATOR row whose fields all agree must stay OPERATOR across a
+re-import) — the existing G-50-2b tests all use a disagreeing sibling and so pass
+straight through this defect.

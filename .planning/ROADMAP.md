@@ -149,7 +149,7 @@ Full phase details: `.planning/milestones/v1.7-ROADMAP.md`
 - [x] **Phase 47: Provenance Foundation** - `import_run` generalizes `pipeline_run` with declared `source`/`method` + external-id lineage; PDF-only fields go nullable; every import path stamps provenance at write time (disposable DB → clean rebuild, no legacy backfill) (completed 2026-08-18)
 - [x] **Phase 48: Trust & Lifecycle** - Materialized `trust_tier` rollup, `candidate`-on-arrival status, and a single `published_at` promotion gate hard-blocked on UNCERTAIN with a logged operator override (completed 2026-08-21)
 - [x] **Phase 49: Review Model** - Four-state `review_state` on operator-editable rows, discrepancy recording on re-import, and a filterable operator review queue (generalizes `name_needs_review`) (completed 2026-08-25)
-- [ ] **Phase 50: Unified Import Path** - Corpus import writes `import_run` directly as a first-class strategy (no fabricated PDF-pipeline artifacts); `admin_job` re-points; re-import is idempotent and authority-governed so it never clobbers operator work (PDF half split to 999.11 on 2026-08-25 per the corpus-first decision)
+- [x] **Phase 50: Unified Import Path** - Corpus import writes `import_run` directly as a first-class strategy (no fabricated PDF-pipeline artifacts); `admin_job` re-points; re-import is idempotent and authority-governed so it never clobbers operator work (PDF half split to 999.11 on 2026-08-25 per the corpus-first decision) (completed 2026-08-27)
 - [ ] **Phase 51: Design System & Noun Alignment** - Public noun aligned to "arguments" (`/cases` → arguments, redirects preserved) plus shared component library, design tokens, and listing style (absorbs backlog 999.4 / 999.6 / 999.8)
 
 ## Phase Details
@@ -319,7 +319,7 @@ Plans:
   3. Re-running any import is idempotent — the same input yields the same rows and never clobbers operator-authored values.
   4. The authority ordering (operator > corpus > pdf/rule > pdf/llm) governs the overwrite decision on every writer.
 
-**Plans**: 7/7 plans executed (4 waves)
+**Plans**: 7/7 plans executed (4 waves) — **COMPLETE 2026-08-27**, verified 4/4 success criteria (`50-VERIFICATION.md`, one operator-overridden provenance-label gap logged to `deferred-items.md`)
 
 Plans:
 **Wave 1**

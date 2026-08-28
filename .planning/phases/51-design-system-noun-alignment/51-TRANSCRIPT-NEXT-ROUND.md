@@ -1,6 +1,6 @@
 ---
 created: 2026-08-28
-status: open — for discussion after /clear
+status: item 1 FIXED (22ab9a5f3); item 2 answered in 51-TRANSCRIPT-COLOUR-EXPLORATION.md
 source: operator, from a zoomed screenshot of the live transcript on iPhone
 binds: plan 51-07 follow-up (transcript reading layer, D-19 Style B2)
 ---
@@ -14,6 +14,14 @@ before doing anything.
 ---
 
 ## 1. DEFECT — bench/advocate margin asymmetry (fix, not a design question)
+
+> **RESOLVED 2026-08-28 — `22ab9a5f3`.** Root cause was neither the `order` swap
+> nor the button's box in the way guessed: `align-items` was unset on the rail
+> column and a `<button>` resolves `width:auto` to fit-content rather than
+> filling its block container, so the avatar parked at the rail's inline-start
+> on *both* sides. The 8px of rail slack therefore landed inside the gap for
+> bench and outside it for advocate. Pinning the avatar to the rail's outer
+> edge per side gives 4px/4px, verified in Playwright.
 
 Operator: *"Notice the discrepancy between in the margins between bench and
 advocate? Bench is wider. Make that the same as for advocate."*
@@ -47,6 +55,13 @@ both a `Bench:` and an `Advocate:` row, and compare the two gaps directly.
 ---
 
 ## 2. EXPLORATION — speaker colour differentiation (operator wants options, not a decision)
+
+> **ANSWERED 2026-08-28 → `51-TRANSCRIPT-COLOUR-EXPLORATION.md`.** Headline: the
+> premise does not survive measurement. The 88% cap separates the two sides by
+> only 6.2px, so it buys no breathing room at all while costing 6 chars/line;
+> at 100% the separation is 44px. The width change needs no colour work. Three
+> colour options are rendered and costed in that document, plus a P-03 luminance
+> defect found in the *existing* side tokens.
 
 Operator's framing: *"One other thing telegram does that lets them get away with
 using more horizontal space is that they color code you vs other speakers. That

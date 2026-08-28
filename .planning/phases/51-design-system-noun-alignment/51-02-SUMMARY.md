@@ -251,3 +251,10 @@ None — no external service configuration required.
 ---
 *Phase: 51-design-system-noun-alignment*
 *Completed: 2026-08-28*
+
+## Self-Check: PASSED
+
+- All created files verified present on disk (`api/domain/argument_slug.py`, `alembic/versions/0031_argument_slug.py`, `api/tests/test_argument_slug.py`).
+- All 4 commits verified in `git log`: `5d34366f5`, `f7962d8c3`, `1f560bea8`, `ab67bd69b`.
+- All acceptance criteria for Task 3 and Task 4 re-run and confirmed passing.
+- Full suite re-run after all fixes: 1318 passed, 5 xfailed, 0 failed.

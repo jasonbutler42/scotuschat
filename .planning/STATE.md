@@ -5,16 +5,16 @@ milestone_name: Import & Provenance Re-model
 current_phase: 51
 current_phase_name: Design System & Noun Alignment
 status: "Phase 50 COMPLETE and VERIFIED 2026-08-27; debridement pass done 2026-08-27. All 7 plans, all 4 waves, 4/4 success criteria verified in 50-VERIFICATION.md. UAT complete 35/35. Phase-50 verification also closed 50-REVIEW.md CR-01 and CR-02 and the SC-4 ungated-writer gap. One provenance-label defect (trivial-ACCEPT restamp) accepted as known debt under an operator override and logged to deferred-items.md. Next: Phase 51 (Design System & Noun Alignment), the last v1.8 phase."
-stopped_at: Completed 51-04-PLAN.md
-last_updated: "2026-08-28T15:34:50.369Z"
+stopped_at: Completed 51-05-PLAN.md
+last_updated: "2026-08-28T15:58:54.685Z"
 last_activity: 2026-08-28
-last_activity_desc: Phase 51 Wave 2 plan 51-03 (design tokens) complete
-state_head: 883401dc9409344ed1d594bf7133c19ca5be3454
+last_activity_desc: Phase 51 Wave 2 plan 51-05 (component-directory split) complete
+state_head: 6fed9adc289cde6b328b343884bf72b0192f4637
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 45
-  completed_plans: 39
+  completed_plans: 40
   percent: 80
 ---
 
@@ -110,8 +110,32 @@ module still passed (reverted byte-identical). 16 new tests in
 `api/tests/test_public_arguments_listing.py`. Full suite: 1378 passed, 5
 xfailed, 0 failed (was 1318 before this plan). See `51-04-SUMMARY.md`.
 
-**Next action:** Execute the remaining Wave 2 plan (`51-05` component-directory
-split), then `/gsd-verify-work 51` once all 10 plans are done.
+**Wave 2 plan `51-05` — COMPLETE (2026-08-28).** `app/src/lib/components/` (15
+files) split into `lib/public/` (5: `ChatBubble`, `StageDirection`,
+`SectionRail`, `SpeakerPopover`, `MobileNavBar`) and `lib/admin/` (9:
+`AdminSubNav`, `ArgumentDetailsCard`, `CopyableExtractedValue`,
+`CreatePersonPopover`, `DocketPillInput`, `FailedStepGuidance`,
+`ResolveCard`, `RunStatusCard`, `StatCard`), with `lib/components/` slimmed
+to `TopNav.svelte` alone — the one component genuinely imported by both the
+root and admin layouts (confirmed by grep, not assumed).
+`app/src/lib/README.md` states the four-location placement rule for future
+components. Pure `git mv` rename with zero behavioural change, mechanically
+proven: every changed line across both move commits is an import path.
+One stale import fixed in a test fixture
+(`app/tests/fixtures/copyable-extracted-value-main.ts`), found by the
+plan's own required whole-repo grep. `npm run check`/`npm run build` both
+green; full suite unchanged at 1378 passed / 5 xfailed / 0 failed. DS-02
+stays `Pending` — shared with plan `51-06` (creates `lib/primitives/`),
+which has not yet produced a SUMMARY (shared-ID gate). **Open for a
+human:** all four `app/tests/*.browser.test.mjs` could not run to
+completion — no Chromium/Edge binary in this sandbox (same constraint
+51-02/51-03 hit); `npm run check`+`npm run build` both green is the
+strongest available signal for an import-only rename. See
+`51-05-SUMMARY.md`.
+
+**Next action:** Wave 2 is now fully complete (`51-03`, `51-04`, `51-05` all
+done). Proceed to Wave 3 per the phase plan sequence, then
+`/gsd-verify-work 51` once all 10 plans are done.
 
 **Wave 1 outcomes that bind later waves:**
 
@@ -334,6 +358,7 @@ items → 14.** Every closure carries its evidence in the file it closes; the co
 | Phase 51 P02 | 65min | 4 tasks | 23 files |
 | Phase 51 P03 | 50min | 3 tasks | 7 files |
 | Phase 51 P04 | 80min | 3 tasks | 6 files |
+| Phase 51 P05 | 45min | 3 tasks | 23 files |
 
 v1.7 per-plan metrics cleared at this milestone boundary per the standard STATE.md reset; the underlying per-plan SUMMARY files remain in `.planning/milestones/v1.7-phases/`.
 
@@ -481,8 +506,8 @@ at close.
 
 ## Session Continuity
 
-Last session: 2026-08-28T15:34:41.133Z
-Stopped at: Completed 51-04-PLAN.md
+Last session: 2026-08-28T15:58:52.807Z
+Stopped at: Completed 51-05-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

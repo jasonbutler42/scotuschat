@@ -30,6 +30,90 @@ from api.models.models import (
 )
 
 
+async def list_terms(db: AsyncSession) -> list[dict]:
+    """
+    Return one row per October Term that has at least one published
+    argument, with a count of that term's published arguments.
+
+    Phase 51 plan 51-04 (D-14/D-15): the term-grouped replacement for
+    `GET /cases`'s flat, ungrouped listing.
+
+    Extends the same base query shape `get_cases()` (api/services/cases.py)
+    uses — the `CaseArgument.is_lead == True` join (so a consolidated
+    docket such as Obergefell 14-556/562/571/574 contributes one row, not
+    four) plus both published predicates, in ADDITION to each other, never
+    in place of each other: `unpublish_argument` deliberately retains
+    `published_at` (Phase 48 plan 10, Defect 2), so `published_at` alone no
+    longer distinguishes PUBLISHED from UNPUBLISHED — see
+    test_published_gate.py's exact-substring assertions.
+
+    `term_year` lives on `Case`, not `Argument` — the grouping key is
+    reached through the `is_lead` join, never assumed to exist on
+    `Argument` directly. Counting `Argument.id` distinct means the join can
+    never inflate a term's count. The WHERE predicates give "a term with
+    zero published arguments does not appear at all" for free — no outer
+    join is used, which would resurrect empty terms.
+
+    Ordered by `Case.term_year` descending (most recent term first),
+    matching `get_cases()`'s `argued_date DESC` intent.
+    """
+    result = await db.execute(
+        select(Case.term_year, func.count(func.distinct(Argument.id)))
+        .join(CaseArgument, CaseArgument.case_id == Case.id)
+        .join(Argument, CaseArgument.argument_id == Argument.id)
+        .where(CaseArgument.is_lead == True)  # noqa: E712 — SQLAlchemy requires == True
+        .where(Argument.published_at.isnot(None))  # hide unpublished arguments
+        .where(Argument.status == ArgumentStatusEnum.PUBLISHED)
+        .group_by(Case.term_year)
+        .order_by(Case.term_year.desc())
+    )
+    rows = result.all()
+    return [
+        {"term_year": term_year, "argument_count": argument_count}
+        for term_year, argument_count in rows
+    ]
+
+
+async def list_arguments_for_term(db: AsyncSession, term_year: int) -> list[dict]:
+    """
+    Return a term's published arguments, one row per consolidated docket
+    (via the same `is_lead` join `list_terms()` and `get_cases()` use).
+
+    Same base query as `list_terms()` — `is_lead` join plus both published
+    predicates — with `Case.term_year == term_year` added. D-16 (51-01
+    checkpoint, Variant A selected): no `argument_participants` -> `people`
+    join is built; that join is deferred, not discarded (see
+    `51-DESIGN-DECISIONS.md` "Term-row variant (D-16)").
+
+    Ordered by `Argument.argued_date` descending with `Argument.id` as a
+    stable tiebreaker, so a term whose arguments share an argued date does
+    not reorder between requests.
+    """
+    result = await db.execute(
+        select(Case, Argument)
+        .join(CaseArgument, CaseArgument.case_id == Case.id)
+        .join(Argument, CaseArgument.argument_id == Argument.id)
+        .where(CaseArgument.is_lead == True)  # noqa: E712 — SQLAlchemy requires == True
+        .where(Case.term_year == term_year)
+        .where(Argument.published_at.isnot(None))  # hide unpublished arguments
+        .where(Argument.status == ArgumentStatusEnum.PUBLISHED)
+        .order_by(Argument.argued_date.desc(), Argument.id.desc())
+    )
+    rows = result.all()
+    return [
+        {
+            "argument_id": argument.id,
+            "slug": argument.slug,
+            "case_name": case.case_name,
+            "docket_number": case.docket_number,
+            "term_year": case.term_year,
+            "argued_date": argument.argued_date,
+            "question_number": argument.question_number,
+        }
+        for case, argument in rows
+    ]
+
+
 async def get_argument_by_slug(db: AsyncSession, slug: str) -> int | None:
     """
     Resolve a public `Argument.slug` to its `id`, under the SAME

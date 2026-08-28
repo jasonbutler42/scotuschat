@@ -17,12 +17,24 @@ Endpoints:
     above, resolving a slug to an argument id first. Four-segment paths —
     they cannot collide with the three-segment {argument_id} routes above,
     so no declaration-order dependency is introduced between them.
+
+  GET /arguments/terms
+  GET /arguments/term/{term_year}
+    Phase 51 plan 51-04 (D-14/D-15): the term-grouped public listing IA —
+    an index of October Terms with published-argument counts, and a
+    term-scoped list of that term's arguments. Both are two-segment paths
+    and cannot collide with the three-segment {argument_id} routes or the
+    four-segment by-slug routes above, so no declaration-order dependency
+    is introduced. `derive_argument_slug` (api/domain/argument_slug.py,
+    D-13) already refuses to mint the bare slug "term", so this route can
+    never be shadowed by an argument slug.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Path
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.core.database import get_db
+from api.schemas.arguments import TermArgumentsResponse, TermIndexResponse
 from api.schemas.speakers import SpeakerPopoverEntry
 from api.schemas.utterance import ArgumentUtterancesResponse
 from api.services import arguments as argument_service
@@ -125,3 +137,35 @@ async def get_speakers_by_slug(
     if result is None:
         raise HTTPException(status_code=404, detail="Argument not found")
     return result
+
+
+@router.get("/terms", response_model=TermIndexResponse)
+async def get_terms(
+    db: AsyncSession = Depends(get_db),
+) -> TermIndexResponse:
+    """
+    Return every October Term with at least one published argument, each
+    carrying a count of that term's published arguments (D-14/D-15).
+
+    Returns an empty `terms` list when nothing is published — never a 404.
+    """
+    results = await argument_service.list_terms(db)
+    return TermIndexResponse(terms=results)
+
+
+@router.get("/term/{term_year}", response_model=TermArgumentsResponse)
+async def get_term_arguments(
+    term_year: int = Path(..., ge=1789, le=2200),
+    db: AsyncSession = Depends(get_db),
+) -> TermArgumentsResponse:
+    """
+    Return a term's published arguments (D-14/D-15).
+
+    The `ge`/`le` bounds produce a 422 for a non-numeric or absurd year
+    before the service layer runs — the same integer-bounds rationale as
+    the `{argument_id}` routes above — which is what lets the SvelteKit
+    route (plan 51-08) turn a bad year into a genuine 404 while a
+    real-but-empty term stays a 200 with an empty `arguments` list.
+    """
+    results = await argument_service.list_arguments_for_term(db, term_year)
+    return TermArgumentsResponse(term_year=term_year, arguments=results)

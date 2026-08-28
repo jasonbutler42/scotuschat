@@ -353,12 +353,44 @@ Plans:
   3. Design tokens (color / type / spacing) are established as the visual foundation (absorbs backlog 999.8).
   4. The arguments listing style is decided and implemented (absorbs backlog 999.6).
 
-**Plans**: TBD
+**Plans**: 10 plans (6 waves)
 **UI hint**: yes
+
+> **Note (2026-08-27, planning):** Success Criterion 1 above and DS-01 in `REQUIREMENTS.md` still
+> carry the redirect clause. Per `51-CONTEXT.md` D-11 both are amended by plan `51-02` Task 4 —
+> gated on the operator confirming the flat, no-redirect URL shape at that plan's D-10 checkpoint.
+> The amendment is deliberately not pre-applied here, so the requirement text is not changed ahead
+> of the decision that authorises it.
 
 Plans:
 
-- [ ] TBD (planned via `/gsd-plan-phase 51`)
+**Wave 1**
+
+- [ ] 51-01-PLAN.md — Figma-first design pass (Tokens / Primitives / Public / Admin) plus the two blocking operator decisions: icon library (D-18) and term-row variant (D-16)
+- [ ] 51-02-PLAN.md — TRACER: `Argument.slug` migration 0031, slug generation with the `term` reserved word, slug-resolving API, the flat `/arguments` route tree, `/cases` deleted, and the D-11 requirements amendment
+
+**Wave 2** *(blocked on Wave 1)*
+
+- [ ] 51-03-PLAN.md — Tailwind removal, the two-layer token set in `app.css`, the value-to-token map, and a rewritten DESIGN-SYSTEM.md
+- [ ] 51-04-PLAN.md — Term-grouped listing API (`/arguments/terms`, `/arguments/term/{year}`), extended leak ban and published-gate contracts
+- [ ] 51-05-PLAN.md — Component directory split into `lib/primitives/` / `lib/public/` / `lib/admin/`, proven behaviour-neutral
+
+**Wave 3** *(blocked on Wave 2)*
+
+- [ ] 51-06-PLAN.md — `lib/primitives/` Button, Badge, Input, Card, with the blocking package-legitimacy gate before any icon-library install
+- [ ] 51-07-PLAN.md — Transcript reading layer (D-09), public component token conversion, and the folded speaker-duplication todo
+
+**Wave 4** *(blocked on Wave 3)*
+
+- [ ] 51-08-PLAN.md — `/arguments` term index, `/arguments/term/[year]`, `TermRow.svelte`, first public-listing browser test, and retirement of the `/cases` API surface
+
+**Wave 5** *(blocked on Wave 4)*
+
+- [ ] 51-09-PLAN.md — Global token conversion sweep via a tested script, residual audit, and the D-08 surfaced-artifact register
+
+**Wave 6** *(blocked on Wave 5)*
+
+- [ ] 51-10-PLAN.md — Operator rulings on every surfaced artifact, documentation reconciliation, and the end-to-end walkthrough
 
 ## Progress
 

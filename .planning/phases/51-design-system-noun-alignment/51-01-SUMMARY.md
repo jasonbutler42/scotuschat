@@ -121,6 +121,15 @@ coverage:
         ref: "across all 6 turn/bench and turn/advocate frames: distinct fontSize == [18], distinct fontName.style == ['Regular'], identical: true"
         status: pass
     human_judgment: false
+  - id: D11
+    description: "arguments-transcript reproduces the validated v1.0 chat-bubble layout D-09 keeps: BENCH left-aligned, ADVOCATE right-aligned, bubble max-width 72%, square top-left corner, 3px left border, avatar and speaker label in the side colour"
+    requirement: "DS-04"
+    verification:
+      - kind: other
+        ref: "all turn/bench frames primaryAxisAlignItems == MIN, all turn/advocate == MAX, sidesAreOpposed: true; typographic parity re-verified after the rebuild (distinct sizes [18], distinct weights ['Regular'])"
+        status: pass
+    human_judgment: true
+    rationale: "Operator caught the original frame using a single-column layout with a coloured left rail instead of the left/right chat bubbles. Corrected against the ChatBubble.svelte source contract. The operator should confirm the corrected frame reads right before plan 51-07 builds from it."
   - id: D10
     description: "51-DESIGN-DECISIONS.md records the Figma URL and team, the icon-library choice with its informing count, the Button loading-variant answer, and the term-row variant with the deferral clause"
     requirement: "DS-03"
@@ -232,6 +241,26 @@ and then run this plan inline.
 
 Each of the first two failed atomically — Figma applies nothing when a script throws — so
 no partial nodes were left behind.
+
+**Operator-caught defect: the transcript frame ignored the chat-bubble metaphor.** The
+first version of `arguments-transcript` used a single column of turns with a coloured
+left rail. That contradicts D-09, which keeps the chat-bubble metaphor, and the explicit
+locked contract in `ChatBubble.svelte`:
+
+```
+// D-05: BENCH: left-aligned; ADVOCATE or UNKNOWN: right-aligned
+justify-content: {isBench ? 'flex-start' : 'flex-end'}
+```
+
+Rebuilt against that source contract: bench left-aligned, advocate right-aligned, bubble
+max-width 72%, square top-left corner, 1px border with a 3px left edge, avatar circle and
+speaker label carrying the side colour. Typographic parity re-verified after the rebuild —
+side is encoded by alignment, avatar fill and label colour, never by prominence. A second
+pass then moved the avatar initials from beside the circle (where they rendered as dark
+text on a dark bubble) to centred inside it, matching the component.
+
+Fixed in 51-01 rather than deferred to 51-07 because 51-07 reads this frame as its
+reference input, so a wrong frame would have propagated into the implementation.
 
 ## Known Stubs
 

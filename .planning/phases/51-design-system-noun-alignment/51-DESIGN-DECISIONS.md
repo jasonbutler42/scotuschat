@@ -135,10 +135,14 @@ Measured in the codebase, not estimated:
 | Added by the E4 decision below | 1 | loading spinner, now shipping on the shared primitive |
 | **Total** | **7** | |
 
-`lucide-svelte` is MIT, tree-shakable per icon (bundle cost scales with what is
+`lucide-svelte` is ISC, tree-shakable per icon (bundle cost scales with what is
 imported), actively maintained, and has zero CSS-framework coupling — which fits the
 post-Tailwind D-01 direction. It matches the one-SVG-per-icon shape the two existing
 hand-rolled sites already use.
+
+*(Correction, 2026-08-28: this paragraph originally read "MIT" — the package's actual
+license is ISC. Corrected in place as a one-word factual fix; see the D-18 amendment
+below for why the package name itself changed at install time.)*
 
 **Blocking prerequisite:** this install must clear the blocking package-legitimacy
 checkpoint in plan 51-06 (threat T-51-SC) before it lands. No RESEARCH.md Package
@@ -348,3 +352,84 @@ looked risky against a *statically* bottom-parked avatar. With sticky, at the st
 long run the name is near the top of the viewport and the avatar is pinned near the bottom
 of it — both on screen at once. Do not add a sticky speaker name; it was considered and is
 not needed.
+
+---
+
+## D-18 amendment — package substitution (operator, 2026-08-28)
+
+Plan 51-06's Task 1 package-legitimacy gate (T-51-SC) ran `npm view` (read-only, no
+install) against the exact package name D-18 recorded, `lucide-svelte`, before any
+install was attempted, per the gate's own rule.
+
+### Finding: `lucide-svelte` is deprecated
+
+The package's npm listing states, verbatim: *"DEPRECATED ⚠️ — Package deprecated. Please
+use `@lucide/svelte` instead."* Facts gathered read-only via `npm view`, `npm view time`,
+and the npm downloads API:
+
+| Fact | `lucide-svelte` (deprecated) | `@lucide/svelte` (successor) |
+|---|---|---|
+| Latest version | `1.0.1` | `1.35.0` |
+| Last publish | 2026-05-15 (~3.5 months stale) | 2026-08-28 (hours before this check) |
+| First publish | 2022-01-16 | 2025-01-24 |
+| Weekly downloads | 378,611 | 798,280 |
+| Repository | `github.com/lucide-icons/lucide.git` (`packages/lucide-svelte`) | `github.com/lucide-icons/lucide.git` (`packages/svelte`) |
+| Maintainer | `ericfennis` | `ericfennis` (same person) |
+| License | ISC | ISC |
+| Transitive dependencies | none | none |
+| `svelte` peer range | `^3 \|\| ^4 \|\| ^5.0.0-next.42` | `^5` |
+
+Both resolve to the same real, active GitHub org/repo under the same maintainer — this
+is the legitimate scoped-package rename `lucide-icons` made, not an impersonation or
+slopsquat candidate. The `svelte` peer range on the deprecated package is a second,
+independent staleness signal beyond the deprecation notice itself: `^5.0.0-next.42`
+targets a Svelte 5 *prerelease*, while this project runs stable `svelte ^5.30.0`, and
+`@lucide/svelte`'s clean `^5` range matches it directly.
+
+### Decision: substitute `@lucide/svelte@^1.35.0`
+
+**Operator-approved 2026-08-28.** Installing `@lucide/svelte` rather than the literal
+`lucide-svelte` D-18 named honours D-18's *stated intent* — "actively maintained... zero
+CSS-framework coupling" — rather than reversing it: the deprecated package is exactly the
+opposite of "actively maintained" now that its own registry entry says so. This is a
+package-identity substitution within D-18's decision, not a new dependency decision
+requiring a fresh D-18-style tradeoff table — the icon-count rationale, the "reach for
+`bits-ui` where ARIA is hard, hand-roll/use `lucide` otherwise" rule, and the 7-icon
+total from the original D-18 section all still hold unchanged.
+
+Caret range `^1.35.0` (not an exact pin) is a deliberate operator choice — allow minor
+updates rather than freeze to a package published hours before this decision.
+
+Install command run: `npm --prefix app install @lucide/svelte@^1.35.0`. Verified after
+install: `git diff app/package.json` shows exactly one line added (`"@lucide/svelte":
+"^1.35.0"`); `git diff app/package-lock.json` shows exactly one new
+`node_modules/@lucide/svelte` entry with `"dependencies"` absent (zero transitive
+dependencies) and `"license": "ISC"`; `esbuild`'s presence in the lockfile is unchanged
+(count 2 before and after — a pre-existing transitive dependency of `vite`, not
+introduced by this install).
+
+### Supply-chain check: no install-time code execution
+
+`@lucide/svelte`'s `package.json` declares only `build`/`test`/lint-family scripts, no
+`install`/`postinstall`/`preinstall` script — consuming the package as a dependency runs
+no third-party code at install time. `npm install` did surface an unrelated
+`allow-scripts` warning naming `esbuild@0.25.12`'s pre-existing install script (a
+transitive dependency of `vite`, already present in the lockfile before this install,
+not introduced by it) — noted here for completeness, out of scope for this gate, and not
+a new risk this decision introduces.
+
+### License correction (MIT → ISC)
+
+Both `51-UI-SPEC.md`'s Dependency Candidates table and this file's original D-18 section
+stated the license as MIT. The actual license of both `lucide-svelte` and
+`@lucide/svelte` is **ISC** — confirmed via `npm view <pkg> license` and the installed
+lockfile entry. ISC is permissive and functionally equivalent to MIT for this purpose,
+so the correction does not change the decision, but a decision record misstating a
+license is a defect. Corrected in place (one word) in both files; this amendment is the
+audit trail for that correction.
+
+### Net effect on the D-18 icon inventory
+
+Unchanged. The 7-icon total, the per-surface breakdown, and the accessible-name contract
+recorded in the original D-18 section all bind `@lucide/svelte` identically to how they
+would have bound `lucide-svelte` — only the installed package name and version changed.

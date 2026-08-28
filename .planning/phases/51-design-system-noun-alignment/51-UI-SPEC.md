@@ -177,7 +177,7 @@ D-18 is a standing rule: identifying candidates is Claude's job; adopting a depe
 
 | Candidate | Tradeoffs |
 |---|---|
-| **`lucide-svelte`** | MIT, ~1,500 tree-shakable Svelte icon components, actively maintained, zero CSS-framework coupling (fits post-Tailwind D-01). Matches the "one SVG per icon" shape the two existing hand-rolled icon sites already use. Adds one new dependency; each imported icon is its own small component so bundle cost scales with actual usage, not the whole set. |
+| **`lucide-svelte`** | ISC (corrected 2026-08-28; originally recorded here as MIT — see `51-DESIGN-DECISIONS.md` D-18 amendment), ~1,500 tree-shakable Svelte icon components, actively maintained, zero CSS-framework coupling (fits post-Tailwind D-01). Matches the "one SVG per icon" shape the two existing hand-rolled icon sites already use. Adds one new dependency; each imported icon is its own small component so bundle cost scales with actual usage, not the whole set. **Note: adopted as the scoped successor package `@lucide/svelte` — see the D-18 amendment.** |
 | **`@iconify/svelte`** | Access to effectively every open icon set through one dynamic component. Heavier for this project's actual need (a handful of icons): the dynamic-lookup model is less tree-shakable per-icon than `lucide-svelte`'s discrete components, and pulls in a runtime resolver this project doesn't otherwise need. |
 | **Continue hand-rolled inline SVG (status quo, zero new dependency)** | Consistent with today's near-zero icon footprint (2 files) and D-01's anti-bloat spirit. Scales worse if D-08's admin-refactor surfacing pass turns up many action icons across the 15 existing components — each one becomes a hand-maintained inline `<svg>` block with no shared sizing/stroke convention. |
 

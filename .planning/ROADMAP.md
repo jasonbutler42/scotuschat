@@ -150,7 +150,7 @@ Full phase details: `.planning/milestones/v1.7-ROADMAP.md`
 - [x] **Phase 48: Trust & Lifecycle** - Materialized `trust_tier` rollup, `candidate`-on-arrival status, and a single `published_at` promotion gate hard-blocked on UNCERTAIN with a logged operator override (completed 2026-08-21)
 - [x] **Phase 49: Review Model** - Four-state `review_state` on operator-editable rows, discrepancy recording on re-import, and a filterable operator review queue (generalizes `name_needs_review`) (completed 2026-08-25)
 - [x] **Phase 50: Unified Import Path** - Corpus import writes `import_run` directly as a first-class strategy (no fabricated PDF-pipeline artifacts); `admin_job` re-points; re-import is idempotent and authority-governed so it never clobbers operator work (PDF half split to 999.11 on 2026-08-25 per the corpus-first decision) (completed 2026-08-27)
-- [ ] **Phase 51: Design System & Noun Alignment** - Public noun aligned to "arguments" (`/cases` → arguments, redirects preserved) plus shared component library, design tokens, and listing style (absorbs backlog 999.4 / 999.6 / 999.8)
+- [ ] **Phase 51: Design System & Noun Alignment** - Public noun aligned to "arguments" (`/cases` → arguments, flat slug-based URLs, no redirect layer) plus shared component library, design tokens, and listing style (absorbs backlog 999.4 / 999.6 / 999.8)
 
 ## Phase Details
 
@@ -343,24 +343,18 @@ Plans:
 
 ### Phase 51: Design System & Noun Alignment
 
-**Goal**: With the corrected domain language settled, the public side finally reflects it. The public route/noun aligns to "arguments" (`/cases` → arguments) with redirects preserving every existing shareable URL. A shared component library is extracted for reused UI (absorbs backlog 999.4), design tokens (color / type / spacing) are established as the visual foundation (absorbs backlog 999.8), and the arguments listing style is decided and implemented (absorbs backlog 999.6). Deliberately sequenced last so the UI reflects the corrected domain model and unified import lifecycle rather than being reworked twice.
+**Goal**: With the corrected domain language settled, the public side finally reflects it. The public route/noun aligns to "arguments" (`/cases` → arguments) via flat, slug-based URLs (`/arguments`, `/arguments/term/{year}`, `/arguments/{slug}`), with the `/cases` route tree deleted and no redirect layer *(amended 2026-08-27 per Phase 51 CONTEXT.md D-10/D-11: DEPLOY-01 is unchecked, no deploy configuration exists in the repository, and the app has never been deployed)*. A shared component library is extracted for reused UI (absorbs backlog 999.4), design tokens (color / type / spacing) are established as the visual foundation (absorbs backlog 999.8), and the arguments listing style is decided and implemented (absorbs backlog 999.6). Deliberately sequenced last so the UI reflects the corrected domain model and unified import lifecycle rather than being reworked twice.
 **Depends on**: Phase 50 (deliberately last — the UI reflects the fully corrected domain language and unified import model)
 **Requirements**: DS-01, DS-02, DS-03, DS-04
 **Success Criteria** (what must be TRUE):
 
-  1. The public route/noun is aligned to "arguments" (`/cases` → arguments), and every previously shareable URL still resolves via redirects.
+  1. `/arguments`, `/arguments/term/{year}`, and `/arguments/{slug}` all resolve, and the `/cases` route tree no longer exists *(amended 2026-08-27 per Phase 51 CONTEXT.md D-10/D-11 — DEPLOY-01 is unchecked and no deploy configuration exists in the repository, so no redirect layer is built)*.
   2. Reused UI is extracted into a shared component library (absorbs backlog 999.4).
   3. Design tokens (color / type / spacing) are established as the visual foundation (absorbs backlog 999.8).
   4. The arguments listing style is decided and implemented (absorbs backlog 999.6).
 
 **Plans**: 10 plans (6 waves)
 **UI hint**: yes
-
-> **Note (2026-08-27, planning):** Success Criterion 1 above and DS-01 in `REQUIREMENTS.md` still
-> carry the redirect clause. Per `51-CONTEXT.md` D-11 both are amended by plan `51-02` Task 4 —
-> gated on the operator confirming the flat, no-redirect URL shape at that plan's D-10 checkpoint.
-> The amendment is deliberately not pre-applied here, so the requirement text is not changed ahead
-> of the decision that authorises it.
 
 Plans:
 

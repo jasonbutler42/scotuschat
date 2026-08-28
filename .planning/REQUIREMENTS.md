@@ -44,7 +44,7 @@ Requirements for milestone v1.8. Each maps to exactly one roadmap phase.
 
 ### Design System & Noun Alignment (DS)
 
-- [ ] **DS-01**: Public route/noun aligned to "arguments" (`/cases` → arguments) with redirects preserving existing URLs
+- [ ] **DS-01**: Public route/noun aligned to "arguments" (`/cases` → arguments) — flat, slug-based URLs (`/arguments`, `/arguments/term/{year}`, `/arguments/{slug}`); the `/cases` route tree is deleted with no redirect layer *(amended 2026-08-27 per Phase 51 CONTEXT.md D-10/D-11: DEPLOY-01 is unchecked, no deploy configuration exists in the repository, and the app has never been deployed, so the URLs the original clause promised to preserve exist only on localhost)*
 - [ ] **DS-02**: Shared component library extracted for reused UI (absorbs backlog 999.4)
 - [ ] **DS-03**: Design tokens (color / type / spacing) established as the visual foundation (absorbs backlog 999.8)
 - [ ] **DS-04**: Arguments listing style decided and implemented (absorbs backlog 999.6)

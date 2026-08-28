@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { Popover } from 'bits-ui';
-	import ChatBubble from '$lib/components/ChatBubble.svelte';
-	import StageDirection from '$lib/components/StageDirection.svelte';
-	import SectionRail from '$lib/components/SectionRail.svelte';
-	import MobileNavBar from '$lib/components/MobileNavBar.svelte';
-	import SpeakerPopover from '$lib/components/SpeakerPopover.svelte';
+	import ChatBubble from '$lib/public/ChatBubble.svelte';
+	import StageDirection from '$lib/public/StageDirection.svelte';
+	import SectionRail from '$lib/public/SectionRail.svelte';
+	import MobileNavBar from '$lib/public/MobileNavBar.svelte';
+	import SpeakerPopover from '$lib/public/SpeakerPopover.svelte';
 
 	interface TenureRow {
 		// Canonical "chief"/"associate" storage value (Phase 37 D-15/D-17) — formal

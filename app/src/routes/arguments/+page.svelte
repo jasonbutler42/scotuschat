@@ -29,7 +29,7 @@
 			padding: 16px 24px;
 		"
 	>
-		<!-- Page heading: "Cases" — 20px, weight 600, #e2e8f0 -->
+		<!-- Page heading: "Arguments" (DS-01 noun alignment) — 20px, weight 600, #e2e8f0 -->
 		<h1
 			style="
 				font-size: 20px;
@@ -39,7 +39,7 @@
 				line-height: 1.2;
 			"
 		>
-			Cases
+			Arguments
 		</h1>
 	</header>
 
@@ -61,7 +61,7 @@
 					margin: 0 0 12px 0;
 				"
 			>
-				No cases loaded
+				No arguments published yet
 			</h2>
 			<p
 				style="
@@ -72,13 +72,13 @@
 					line-height: 1.6;
 				"
 			>
-				No arguments have been ingested yet. Run the ingest and parse pipeline steps to add cases.
+				Check back soon — new oral arguments are added regularly.
 			</p>
 		{:else}
-			<!-- Case list: each case as a card linking to /cases/{slug} -->
+			<!-- Argument list: each row links to /arguments/{argument_slug} (D-10) -->
 			{#each data.cases as c (c.id)}
 				<a
-					href="/cases/{c.slug}"
+					href="/arguments/{c.argument_slug}"
 					style="
 						background-color: #1e293b;
 						border: 1px solid #334155;

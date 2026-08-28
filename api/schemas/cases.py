@@ -24,6 +24,12 @@ class CaseItem(BaseModel):
     # Optional: nullable at the DB layer as of migration 0019,
     # mirroring argued_date's nullable-column handling directly above.
     question_number: int | None = None
+    # The argument's public URL slug (Phase 51 plan 51-02, D-10/D-12) — the
+    # href target on each row of the /arguments listing. Optional because
+    # migration 0031 adds Argument.slug nullable, no backfill (reseed-not-
+    # migrate); a pre-existing row reseeded through the real import path
+    # always has one, but the type stays honest about the DB contract.
+    argument_slug: str | None = None
 
     model_config = {"from_attributes": True}
 

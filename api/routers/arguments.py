@@ -10,6 +10,13 @@ Endpoints:
   GET /arguments/{argument_id}/speakers
     Returns speaker popover data for all resolved speakers in an argument.
     Empty list when no utterances have been resolved (person_id IS NULL).
+
+  GET /arguments/by-slug/{slug}/utterances
+  GET /arguments/by-slug/{slug}/speakers
+    Phase 51 plan 51-02 (D-10/D-12): the public-URL peers of the two routes
+    above, resolving a slug to an argument id first. Four-segment paths —
+    they cannot collide with the three-segment {argument_id} routes above,
+    so no declaration-order dependency is introduced between them.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Path
@@ -22,6 +29,13 @@ from api.services import arguments as argument_service
 from api.services import speakers as speakers_service
 
 router = APIRouter(prefix="/arguments", tags=["arguments"])
+
+# T-51-02-01: a slug is untrusted input reaching a database query. Rejecting
+# anything outside lowercase-alphanumeric-hyphen with a 422 before the
+# service layer runs closes a path-traversal / injection primitive (e.g. a
+# URL-encoded "../etc/passwd" segment) the same way the integer routes'
+# ge/le bounds close theirs.
+_SLUG_PATH = Path(..., min_length=1, max_length=200, pattern=r"^[a-z0-9-]+$")
 
 
 @router.get("/{argument_id}/utterances", response_model=ArgumentUtterancesResponse)
@@ -63,6 +77,50 @@ async def get_speakers(
     The ge/le bounds match the `Integer` (int4) DB column's range so an out-of-range
     ID 422s cleanly instead of raising an unhandled driver error and 500ing.
     """
+    result = await speakers_service.get_argument_speakers(db, argument_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Argument not found")
+    return result
+
+
+@router.get("/by-slug/{slug}/utterances", response_model=ArgumentUtterancesResponse)
+async def get_utterances_by_slug(
+    slug: str = _SLUG_PATH,
+    db: AsyncSession = Depends(get_db),
+) -> ArgumentUtterancesResponse:
+    """
+    The public-URL peer of `GET /{argument_id}/utterances` (D-10, D-12):
+    resolves `slug` to an argument id under the published gate, then
+    delegates to the exact same service call the integer route uses — no
+    second query-shape to keep in sync.
+
+    Returns 404 (same detail string as the integer route) when the slug
+    does not resolve to a published argument.
+    """
+    argument_id = await argument_service.get_argument_by_slug(db, slug)
+    if argument_id is None:
+        raise HTTPException(status_code=404, detail="Argument not found")
+    result = await argument_service.get_argument_with_utterances(db, argument_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Argument not found")
+    return result
+
+
+@router.get("/by-slug/{slug}/speakers", response_model=list[SpeakerPopoverEntry])
+async def get_speakers_by_slug(
+    slug: str = _SLUG_PATH,
+    db: AsyncSession = Depends(get_db),
+) -> list[SpeakerPopoverEntry]:
+    """
+    The public-URL peer of `GET /{argument_id}/speakers` (D-10, D-12).
+    Returns 404 (same detail string as the integer route) when the slug
+    does not resolve to a published argument. Returns an empty list (not
+    404) when the argument is published but no utterances have been
+    resolved (person_id IS NULL) — identical to the integer route.
+    """
+    argument_id = await argument_service.get_argument_by_slug(db, slug)
+    if argument_id is None:
+        raise HTTPException(status_code=404, detail="Argument not found")
     result = await speakers_service.get_argument_speakers(db, argument_id)
     if result is None:
         raise HTTPException(status_code=404, detail="Argument not found")

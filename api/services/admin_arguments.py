@@ -665,6 +665,14 @@ async def update_argument(
             lead_case.slug = new_slug
         # else: PUBLISHED or UNPUBLISHED — slug is frozen; only case_name
         # display updates (Pitfall 3, ALIST-01)
+        #
+        # D-12 (Phase 51 plan 51-02) IMMUTABILITY GUARD: this branch re-derives
+        # ONLY lead_case.slug (the Case's own public URL segment). It must
+        # NEVER also re-derive argument.slug — that column is stamped once at
+        # import (api.domain.argument_slug.derive_argument_slug) and is
+        # permanent so a shared /arguments/{slug} link survives a case-name
+        # typo fix. Do not add an argument.slug re-derivation here, in the
+        # DRAFT branch above, or anywhere else in this function.
 
     # Stamp operator provenance on the lead Case row — a case-only
     # edit (case_name and/or docket_number) touches ONLY the Case row's

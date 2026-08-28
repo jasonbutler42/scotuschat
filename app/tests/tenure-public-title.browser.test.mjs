@@ -1,7 +1,8 @@
 /**
  * Phase 37 Plan 04 — public read-only tenure title regression (D-15/D-17).
+ * Retargeted to /arguments/{slug} (Phase 51 plan 51-02, D-10/D-12).
  *
- * Exercises the real public argument view (/cases/[slug]/arguments/[id]) end to
+ * Exercises the real public argument view (/arguments/[slug]) end to
  * end against a mock FASTAPI backend: clicks a bench speaker's avatar to open
  * SpeakerPopover.svelte and asserts the rendered tenure line is the formal
  * "Chief Justice"/"Associate Justice" title immediately preceding the unchanged
@@ -125,6 +126,7 @@ async function waitForExpression(cdp, expression, timeoutMs = 15_000) {
 // Fixture data ---------------------------------------------------------------
 
 const ARGUMENT_ID = 7;
+const ARGUMENT_SLUG = 'fixture-v-example';
 
 function argumentPayload() {
 	return {
@@ -155,6 +157,7 @@ function argumentPayload() {
 			},
 		],
 		argument: {
+			argument_id: ARGUMENT_ID,
 			case_name: 'Fixture v. Example',
 			docket_number: '24-100',
 			argued_date: '2024-10-01',
@@ -193,11 +196,11 @@ function speakersPayload() {
 test('public argument view renders formal Chief/Associate Justice titles, never raw office or generic fallback', { timeout: 60_000 }, async () => {
 	const mockApi = createServer((request, response) => {
 		response.setHeader('content-type', 'application/json');
-		if (request.method === 'GET' && request.url === `/arguments/${ARGUMENT_ID}/utterances`) {
+		if (request.method === 'GET' && request.url === `/arguments/by-slug/${ARGUMENT_SLUG}/utterances`) {
 			response.end(JSON.stringify(argumentPayload()));
 			return;
 		}
-		if (request.method === 'GET' && request.url === `/arguments/${ARGUMENT_ID}/speakers`) {
+		if (request.method === 'GET' && request.url === `/arguments/by-slug/${ARGUMENT_SLUG}/speakers`) {
 			response.end(JSON.stringify(speakersPayload()));
 			return;
 		}
@@ -233,7 +236,7 @@ test('public argument view renders formal Chief/Associate Justice titles, never 
 			stdio: 'ignore',
 			windowsHide: true,
 		});
-		const casePath = `/cases/fixture-v-example/arguments/${ARGUMENT_ID}`;
+		const casePath = `/arguments/${ARGUMENT_SLUG}`;
 		await waitFor(`http://127.0.0.1:${appPort}${casePath}`);
 
 		browser = spawn(executable, [

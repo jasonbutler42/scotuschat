@@ -30,6 +30,31 @@ from api.models.models import (
 )
 
 
+async def get_argument_by_slug(db: AsyncSession, slug: str) -> int | None:
+    """
+    Resolve a public `Argument.slug` to its `id`, under the SAME
+    two-predicate published gate `get_argument_with_utterances` uses below
+    (`published_at IS NOT NULL` AND `status == PUBLISHED`) — never one
+    predicate instead of the other (T-51-02-02: a single-predicate gate
+    would let an UNPUBLISHED-but-previously-published argument leak
+    through `published_at`, which `unpublish_argument` deliberately
+    retains, Phase 48 plan 10 Defect 2).
+
+    Returns None when the slug does not resolve to a published argument —
+    the caller (router) turns that into a 404 identical to the
+    integer-id 404, never distinguishing "slug does not exist" from
+    "slug exists but is not published" (same non-disclosure precedent as
+    the integer-id routes).
+    """
+    result = await db.execute(
+        select(Argument.id)
+        .where(Argument.slug == slug)
+        .where(Argument.published_at.isnot(None))
+        .where(Argument.status == ArgumentStatusEnum.PUBLISHED)
+    )
+    return result.scalar_one_or_none()
+
+
 async def get_argument_with_utterances(
     db: AsyncSession,
     argument_id: int,

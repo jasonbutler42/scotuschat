@@ -79,6 +79,7 @@ from dateutil import parser as dateutil_parser
 from sqlalchemy import func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 
+from api.domain.argument_slug import derive_argument_slug
 from api.domain.authority import WriteDecision, decide_write
 from api.domain.content_digest import compute_utterance_digest
 from api.domain.person_names import prepare_name_provenance, split_legacy_full_name
@@ -420,6 +421,22 @@ async def _next_question_number(session, source_docket: str) -> int:
     return 1 if current_max is None else current_max + 1
 
 
+async def _taken_slugs_like(session, base_slug: str) -> set[str]:
+    """
+    Return every existing `Argument.slug` value starting with `base_slug`
+    (Phase 51 plan 51-02, D-12). Scoped by prefix rather than a full-table
+    scan -- collisions only matter among arguments that share the same
+    case-name-derived base. `session.flush()` is called before every
+    `Argument` insert in this module, so a slug minted earlier in the SAME
+    batch is already visible to this SELECT even though the batch has not
+    committed yet.
+    """
+    result = await session.execute(
+        select(Argument.slug).where(Argument.slug.like(f"{base_slug}%"))
+    )
+    return {row[0] for row in result.all() if row[0] is not None}
+
+
 async def _import_conversation(
     session,
     conversation_id: str,
@@ -526,10 +543,27 @@ async def _import_conversation(
         session, case_fields["docket_no"]
     )
 
+    # D-12/D-13: mint this argument's public slug once, here, at first
+    # import. question_number is the primary suffix discriminator (see
+    # api/domain/argument_slug.py's module docstring for the corpus-scale
+    # rationale) -- it is always populated and unique-by-construction for
+    # this write path, unlike argued_date which the real corpus leaves
+    # None or colliding for ~46% of multi-argument cases.
+    case_name = _case_name_from_fields(case_fields)
+    base_slug_for_taken_query = _derive_slug(case_name) or "argument"
+    taken_slugs = await _taken_slugs_like(session, base_slug_for_taken_query)
+    argument_slug = derive_argument_slug(
+        case_name,
+        question_number=next_question_number,
+        argued_date=argued_date,
+        taken=taken_slugs,
+    )
+
     argument = Argument(
         argued_date=argued_date,
         question_number=next_question_number,
         source_docket=case_fields["docket_no"],
+        slug=argument_slug,
         # Phase 30 fix (supersedes Phase 29's D-06 for this write, see
         # 30-RESEARCH.md Pitfall 1): every read path that gates Resolve-card
         # editability keys on ArgumentStatusEnum.CANDIDATE (Phase 48 D-01

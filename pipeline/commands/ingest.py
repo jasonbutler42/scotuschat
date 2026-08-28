@@ -497,11 +497,34 @@ async def _run_ingest_inner(args) -> None:
         # primary/first docket — the canonical dedup key used by the UNIQUE
         # constraint (source_docket, question_number). Dedup logic is unchanged;
         # it still keys off source_docket alone, never source_dockets.
+        parsed_argued_date = date.fromisoformat(argued_date) if argued_date else None  # Nullable
+
+        # D-12/D-13 (Phase 51 plan 51-02): mint this argument's public slug
+        # once, here, at first import — the PDF-path peer of
+        # import_convokit.py's identical write-time stamp. Deferred import
+        # (not module-level) because api.domain.argument_slug imports
+        # _derive_slug FROM this module, which would otherwise be a
+        # circular import.
+        from api.domain.argument_slug import derive_argument_slug
+
+        argument_slug_base = _derive_slug(effective_case_name) or "argument"
+        taken_slugs_result = await session.execute(
+            select(Argument.slug).where(Argument.slug.like(f"{argument_slug_base}%"))
+        )
+        taken_slugs = {row[0] for row in taken_slugs_result.all() if row[0] is not None}
+        argument_slug = derive_argument_slug(
+            effective_case_name,
+            question_number=args.question,
+            argued_date=parsed_argued_date,
+            taken=taken_slugs,
+        )
+
         argument = Argument(
-            argued_date=date.fromisoformat(argued_date) if argued_date else None,  # Nullable
+            argued_date=parsed_argued_date,
             question_number=args.question,
             source_docket=primary_docket or (all_dockets[0] if all_dockets else None),
             source_dockets=all_dockets or None,
+            slug=argument_slug,
             # No explicit status= kwarg here, deliberately (48-RESEARCH.md
             # Anti-Patterns): this write relies on the model default, which
             # Phase 48 D-01 changed to ArgumentStatusEnum.CANDIDATE. Adding

@@ -382,6 +382,14 @@ class Argument(Base):
         SAEnum(ImportMethod, name="import_method", values_callable=lambda e: [x.value for x in e]),
         nullable=True,
     )
+    # Public URL slug (Phase 51 plan 51-02, D-12). Nullable — no backfill on
+    # migration (reseed-not-migrate, CLAUDE.md); populated at import time by
+    # api.domain.argument_slug.derive_argument_slug and NEVER recomputed
+    # afterward, including when the lead case's case_name is later edited
+    # (see api/services/admin_arguments.py::update_argument, which touches
+    # only Case.slug, never this column — do not add a re-derivation here).
+    # Mirrors Case.slug's column shape (String(200), unique) exactly.
+    slug = Column(String(200), nullable=True, unique=True)
     # cases linked via case_arguments M:M join table
 
     __table_args__ = (

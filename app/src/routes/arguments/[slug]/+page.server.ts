@@ -10,15 +10,20 @@ interface RawSpeaker {
 	[key: string]: unknown;
 }
 
+// D-10/D-12 (Phase 51 plan 51-02): params.slug replaces params.id — resolves
+// via the new by-slug endpoints, which apply the SAME published gate
+// get_argument_with_utterances always has. Primary fetch fails closed
+// (throw error); the secondary speakers fetch degrades to [] inside
+// try/catch, unchanged from the pre-existing pattern.
 export const load: PageServerLoad = async ({ params, fetch }) => {
-	const res = await fetch(`${FASTAPI_BASE_URL}/arguments/${params.id}/utterances`);
+	const res = await fetch(`${FASTAPI_BASE_URL}/arguments/by-slug/${params.slug}/utterances`);
 	if (!res.ok) throw error(res.status, 'Failed to load argument');
 	const data = await res.json();
 
 	// Fetch speakers for the popover card — degrade gracefully on non-OK (must not break argument page)
 	let speakers: Array<RawSpeaker & { photo_url_full: string | null; is_bench: boolean }> = [];
 	try {
-		const speakersRes = await fetch(`${FASTAPI_BASE_URL}/arguments/${params.id}/speakers`);
+		const speakersRes = await fetch(`${FASTAPI_BASE_URL}/arguments/by-slug/${params.slug}/speakers`);
 		if (speakersRes.ok) {
 			const raw: RawSpeaker[] = await speakersRes.json();
 			speakers = raw.map((s) => {
@@ -45,7 +50,7 @@ export const load: PageServerLoad = async ({ params, fetch }) => {
 	return {
 		utterances: data.utterances,
 		argument: data.argument, // includes case_name, docket_number, argued_date, question_number
-		argument_id: parseInt(params.id),
+		argument_id: data.argument.argument_id,
 		speakers, // plain array — SvelteKit serializes Map as {} (Pitfall 2); +page.svelte builds Map via $derived
 		// D-22/T-29-11: visibility decided server-side from oyez_transcript_id — never
 		// fetch/decide in browser code (Architecture Rule 2: FASTAPI_BASE_URL server-only)

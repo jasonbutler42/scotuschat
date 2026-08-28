@@ -20,12 +20,12 @@
 			SCOTUS CHAT
 		</span>
 
-		<!-- Public variant: Cases link (accent) + Admin link (muted, right-aligned) -->
+		<!-- Public variant: Arguments link (accent) + Admin link (muted, right-aligned) -->
 		<a
-			href="/cases"
+			href="/arguments"
 			style="font-size: 14px; color: #93c5fd; text-decoration: none;"
 		>
-			Cases
+			Arguments
 		</a>
 		<a
 			href="/attributions"

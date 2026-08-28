@@ -78,10 +78,22 @@ weight is two `is_corpus` subquery branches already commented as retained for
 ## Current Position
 
 Phase: 51 (Design System & Noun Alignment) — EXECUTING
-Last activity: 2026-08-28 — Plan 51-02 (Wave 1) complete
+Last activity: 2026-08-28 — Wave 1 complete (plans 51-01, 51-02). Post-merge gate
+green: build clean, 1318 passed / 5 xfailed / 0 failed.
 
-**Next action:** Execute the next Wave 1 plan (`51-01`) or a later-wave plan whose
-dependencies are satisfied, then `/gsd-verify-work 51` once all 10 plans are done.
+**Next action:** Execute Wave 2 (`51-03` design tokens, `51-04` term-grouped API,
+`51-05` component-directory split), then `/gsd-verify-work 51` once all 10 plans are done.
+
+**Wave 1 outcomes that bind later waves:**
+- `51-01` closed the three blocking rulings, recorded in `51-DESIGN-DECISIONS.md`:
+  D-16 → **Variant A** (minimal term row; advocate join deferred, not discarded),
+  D-18 → **`lucide-svelte`** (blocked on the 51-06 package-legitimacy gate before install),
+  UI-SPEC E4 → loading variant on the **shared** Button primitive.
+- Figma file `KICu66PtMLHk4fmxJYPggx` is the reference 51-03 (semantic variable names →
+  `app/src/app.css :root`) and 51-06 (frame names → `lib/primitives/*.svelte`) read from.
+- **A `gsd-executor` subagent cannot reach the Figma MCP in this project** — `ToolSearch` is
+  disabled in subagents and the Figma tools are deferred. Figma-touching tasks must run
+  inline in the orchestrator session. 51-01 ran inline for this reason.
 
 **Wave 1 plan `51-02` — COMPLETE (2026-08-28).** `Argument.slug` (migration
 0031, nullable, no backfill), `api.domain.argument_slug.derive_argument_slug`

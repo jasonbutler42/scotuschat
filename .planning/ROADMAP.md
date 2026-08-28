@@ -353,14 +353,14 @@ Plans:
   3. Design tokens (color / type / spacing) are established as the visual foundation (absorbs backlog 999.8).
   4. The arguments listing style is decided and implemented (absorbs backlog 999.6).
 
-**Plans**: 1/10 plans executed (6 waves)
+**Plans**: 2/10 plans executed (6 waves)
 **UI hint**: yes
 
 Plans:
 
 **Wave 1**
 
-- [ ] 51-01-PLAN.md — Figma-first design pass (Tokens / Primitives / Public / Admin) plus the two blocking operator decisions: icon library (D-18) and term-row variant (D-16)
+- [x] 51-01-PLAN.md — Figma-first design pass (Tokens / Primitives / Public / Admin) plus the two blocking operator decisions: icon library (D-18) and term-row variant (D-16)
 - [x] 51-02-PLAN.md — TRACER: `Argument.slug` migration 0031, slug generation with the `term` reserved word, slug-resolving API, the flat `/arguments` route tree, `/cases` deleted, and the D-11 requirements amendment
 
 **Wave 2** *(blocked on Wave 1)*
@@ -444,7 +444,7 @@ Plans:
 | 48. Trust & Lifecycle | v1.8 | 10/10 | Complete    | 2026-08-21 |
 | 49. Review Model | v1.8 | 12/12 | Complete    | 2026-08-25 |
 | 50. Unified Import Path | v1.8 | 7/7 | In Progress|  |
-| 51. Design System & Noun Alignment | v1.8 | 1/10 | In Progress|  |
+| 51. Design System & Noun Alignment | v1.8 | 2/10 | In Progress|  |
 
 ## Backlog
 

@@ -69,11 +69,11 @@
 
 <div
 	style="
-		max-width: min(72%, 68ch);
+		max-width: min(var(--bubble-max-width), 68ch);
 		background-color: var(--color-surface);
 		border: 1px solid var(--color-border);
 		border-radius: {borderRadius};
-		padding: var(--space-sm) var(--space-md);
+		padding: var(--space-sm) var(--bubble-pad-x);
 	"
 >
 	{#if showSpeakerName}

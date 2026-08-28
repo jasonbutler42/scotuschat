@@ -72,6 +72,19 @@
 	   Consumed by the transcript's sticky rail avatar (D-19). */
 	--sticky-bottom-inset: var(--space-sm);
 
+	/* Transcript reading-layer geometry. Broken out as tokens because MEASURE
+	   (characters per line) is the thing D-09 actually cares about, and measure
+	   is the product of all four of these — not of the type size. At 390px the
+	   desktop values yielded 17 characters per line; comfortable sustained
+	   reading is 45-75, and Telegram (the operator's reference for this layout)
+	   achieves ~35 on the same class of device with 17pt type. The gap was
+	   entirely width allocation, so these tighten on mobile and the type size
+	   is left alone. */
+	--transcript-pad-x: var(--space-lg);
+	--transcript-rail-gap: var(--space-sm);
+	--bubble-max-width: 72%;
+	--bubble-pad-x: var(--space-md);
+
 	font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
@@ -80,6 +93,15 @@
 @media (max-width: 768px) {
 	:root {
 		--sticky-bottom-inset: calc(var(--touch-target) + var(--space-sm));
+
+		/* Every one of these buys characters per line. The 72% cap in particular
+		   is inherited from v1.0, where the avatar sat INSIDE the bubble and no
+		   rail existed — so it now compounds with the rail's 40px and narrows
+		   the text twice, which nobody intended. */
+		--transcript-pad-x: var(--space-sm);
+		--transcript-rail-gap: var(--space-xs);
+		--bubble-max-width: 88%;
+		--bubble-pad-x: var(--space-sm);
 	}
 }
 

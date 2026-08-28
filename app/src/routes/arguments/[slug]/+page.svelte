@@ -318,7 +318,7 @@
 		<!-- Chat column: utterance stream, grouped into runs (D-19). No `overflow`
 		     property is set on this element or any ancestor between here and the
 		     document scroll root — see the sticky-avatar ancestor audit below. -->
-		<div style="padding: var(--space-2xl) var(--space-lg);">
+		<div style="padding: var(--space-2xl) var(--transcript-pad-x);">
 			{#if !data.utterances || data.utterances.length === 0}
 				<!-- Empty state -->
 				<p
@@ -361,11 +361,20 @@
 									display: flex;
 									justify-content: {isBench ? 'flex-start' : 'flex-end'};
 									align-items: stretch;
-									gap: var(--space-sm);
+									gap: var(--transcript-rail-gap);
 								"
 							>
 								<!-- Rail column: 40px gutter, stretched to run height by the
-								     row's align-items:stretch. `justify-content:flex-end` pushes
+								     row's align-items:stretch. The 32px avatar leaves 8px of slack
+								     in that gutter, and `align-items` decides which edge it lands
+								     on. It must land on the OUTER edge for both sides, so the
+								     avatar-to-bubble gap is `--transcript-rail-gap` alone and reads
+								     identically for bench and advocate. Without it the avatar
+								     defaults to the rail's inline-start on both sides — a `<button>`
+								     resolves `width:auto` to fit-content rather than filling its
+								     block container — which put the slack inside the gap for bench
+								     (12px) and outside it for advocate (4px).
+								     `justify-content:flex-end` pushes
 								     the (single, run-level) avatar to the bottom of the column
 								     when the column is taller than the avatar — the "short run,
 								     avatar rests at the bottom" case. `position:sticky;bottom` on
@@ -379,6 +388,7 @@
 										align-self: stretch;
 										display: flex;
 										flex-direction: column;
+										align-items: {isBench ? 'flex-end' : 'flex-start'};
 									"
 								>
 									<!-- `margin-top:auto` — NOT `justify-content:flex-end` on the
@@ -427,7 +437,7 @@
 								     gap between them (the smaller vertical-rhythm step — D-19
 								     corners already read as one grouped shape). flex:1 gives this
 								     column a definite width so each ChatBubble's own
-								     max-width:min(72%, 68ch) resolves against it, not against an
+								     max-width:min(var(--bubble-max-width), 68ch) resolves against it, not against an
 								     auto/content-based width. -->
 								<div
 									style="
@@ -448,7 +458,7 @@
 										     a no-op) while the bubble inside it falls back to the
 										     block default and hugs the LEFT edge. That put advocate
 										     bubbles ~86px away from their own right-hand avatar.
-										     `width:100%` keeps the bubble's max-width:min(72%,68ch)
+										     `width:100%` keeps the bubble's max-width:min(--bubble-max-width,68ch)
 										     resolving against the stack, and `justify-content` puts
 										     the bubble on the speaker's own side. -->
 										<div

@@ -3,19 +3,19 @@ gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: Import & Provenance Re-model
 current_phase: 51
-current_phase_name: design-system-noun-alignment
+current_phase_name: Design System & Noun Alignment
 status: "Phase 50 COMPLETE and VERIFIED 2026-08-27; debridement pass done 2026-08-27. All 7 plans, all 4 waves, 4/4 success criteria verified in 50-VERIFICATION.md. UAT complete 35/35. Phase-50 verification also closed 50-REVIEW.md CR-01 and CR-02 and the SC-4 ungated-writer gap. One provenance-label defect (trivial-ACCEPT restamp) accepted as known debt under an operator override and logged to deferred-items.md. Next: Phase 51 (Design System & Noun Alignment), the last v1.8 phase."
-stopped_at: Phase 51 UI-SPEC approved
-last_updated: "2026-08-28T01:44:19.528Z"
-last_activity: 2026-08-27
-last_activity_desc: Debridement pass — test suite and code comments cleaned; defect + testing policies added
-state_head: d65332c9d550afa168037b612c4c5d308a70d014
+stopped_at: Completed 51-02-PLAN.md
+last_updated: "2026-08-28T12:45:41.989Z"
+last_activity: 2026-08-28
+last_activity_desc: Phase 51 execution started
+state_head: 1f560bea86ae018bb8bb9b561bdfe401daed8dad
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 45
-  completed_plans: 35
-  percent: 78
+  completed_plans: 36
+  percent: 80
 ---
 
 # Project State
@@ -25,7 +25,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-18 — Phase 47 complete; corpus-first / PDF-deferred scope decision recorded)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** Phase 50 — Unified Import Path
+**Current focus:** Phase 51 — Design System & Noun Alignment
 
 **Phase 50 scope resolved 2026-08-25** (at `/gsd-plan-phase 50` time, by the operator): the phase's 2026-08-18 scope flag is closed **corpus-only**. Its PDF half — old success criterion 2, IMPORT-02, "the PDF pipeline path reads and writes `import_run` as one strategy among peers" — **split out to Phase 999.11 (BACKLOG)**, on the deferred PDF route. Phase 50 now carries 4 requirements (IMPORT-01, IMPORT-03, IMPORT-04, IMPORT-05) and 4 success criteria, renumbered. IMPORT-05's authority ordering stays here **in full** (all four rungs, one total ordering function); its `operator`/`corpus` rungs get live corpus proof, its `pdf/rule_based`/`pdf/llm_corrective` rungs get real-writer-test proof — the same verification split Phase 47 established. Recorded in ROADMAP.md (Phase 50 section + v1.8 bullet + Backlog 999.11), REQUIREMENTS.md (IMPORT-02 remapped, coverage note), and PROJECT.md Key Decisions. Discuss and plan are both DONE: `50-CONTEXT.md` (30 locked decisions), `50-RESEARCH.md`, `50-PATTERNS.md`, `50-VALIDATION.md` and 7 PLAN.md files are on disk.
 
@@ -77,11 +77,32 @@ weight is two `is_corpus` subquery branches already commented as retained for
 
 ## Current Position
 
-Phase: 51 (design-system-noun-alignment) — READY TO EXECUTE
-Last activity: 2026-08-27 — debridement pass (see below)
+Phase: 51 (Design System & Noun Alignment) — EXECUTING
+Last activity: 2026-08-28 — Plan 51-02 (Wave 1) complete
 
-**Next action:** Run `/gsd-discuss-phase 51` to start Design System & Noun
-Alignment — the last v1.8 phase. Working tree is clean; suite is green.
+**Next action:** Execute the next Wave 1 plan (`51-01`) or a later-wave plan whose
+dependencies are satisfied, then `/gsd-verify-work 51` once all 10 plans are done.
+
+**Wave 1 plan `51-02` — COMPLETE (2026-08-28).** `Argument.slug` (migration
+0031, nullable, no backfill), `api.domain.argument_slug.derive_argument_slug`
+(reserved-word guard D-13; `question_number` chosen as the primary
+collision discriminator after querying the real ~7,800-row ConvoKit corpus —
+`argued_date` collides or is null in 45.6% of the 952 cases that ever need a
+suffix), and the `type="tracer"` slice: one published corpus argument
+reachable end to end at `/arguments/{slug}` — `GET /arguments/by-slug/{slug}/
+{utterances,speakers}` sharing `get_argument_with_utterances`'s exact
+published gate, `/cases` route tree deleted with no redirect layer (D-10/D-11),
+DS-01 and the Phase 51 ROADMAP entry amended to match. Checkpoints 1/2 (the
+stored-immutable-slug and flat-no-redirect one-way-door decisions) resolved
+directly from `51-CONTEXT.md`'s already-locked decisions, not re-prompted.
+Live-proven: a real `POST /admin/dev/reset-to-fixture` reseed left zero
+published-with-null-slug rows, and a real vite dev server + uvicorn backend
+rendered `/arguments` and `/arguments/{slug}` correctly (verified via curl —
+no browser binary in this sandbox; logged as an unrun-verify item). Two
+pre-existing tests broken by this plan's own edits were found and fixed
+(byte-identical-404 count, one stale frontend static-contract test deleted
+per the Testing Policy). Full suite: 1318 passed, 5 xfailed, 0 failed. See
+`51-02-SUMMARY.md`.
 
 **Workflow config changed 2026-08-27 (operator):** `nyquist_validation`, `security_enforcement`, `ui_review`, and `api_coverage_gate` are now OFF; `code_review` stays ON. Rationale: across phase 50 the three disabled review gates produced nothing (two never ran; nyquist left a draft VALIDATION.md), `api_coverage_gate` emitted only an advisory asking to confirm a true statement, and `code_review` was the gate that found the two most substantive defects. Both verify:pre and verify:post now resolve to zero active gates.
 
@@ -266,6 +287,7 @@ items → 14.** Every closure carries its evidence in the file it closes; the co
 | Phase 50 P05 | 195min | 3 tasks | 3 files |
 | Phase 50 P06 | 130min | 3 tasks | 7 files |
 | Phase 50 P07 | 70min | 3 tasks | 8 files |
+| Phase 51 P02 | 65min | 4 tasks | 23 files |
 
 v1.7 per-plan metrics cleared at this milestone boundary per the standard STATE.md reset; the underlying per-plan SUMMARY files remain in `.planning/milestones/v1.7-phases/`.
 
@@ -349,6 +371,8 @@ Full cross-milestone decision log lives in PROJECT.md's Key Decisions table. Per
 - [Phase 50]: 50-07: found (not fixed) a third ungated writer pair during the D-24 inventory build -- parse.py's _update_participant_sides/_update_participant_descriptors write ArgumentParticipant.side/.descriptor by direct assignment on every parse pass with no gate call, risking a re-parse silently overwriting an operator's own reassignment. Neither D-22's enumeration nor 50-06's parse.py conversion named it. Logged as a new deferred-items.md item (parse.py not in 50-07's files_modified); candidate for a small follow-up plan mirroring resolve.py's 50-06 conversion.
 - [Phase 50]: Phase 50 (Unified Import Path) is COMPLETE as of plan 50-07 -- all four in-scope requirements (IMPORT-01, IMPORT-03, IMPORT-04, IMPORT-05) satisfied. Two phase-gate human items remain open in WINDOWS.md (#30: 50-04's browser walkthrough; #31: 50-05's D-09 live double-import + operator-edit-survival walkthrough) -- neither closed by any plan in this phase; both need a human with `.env` admin credential access.
 - [Phase 50]: Phase 50 complete: prune-runs (D-12), extended leak ban, /admin/pipeline PDF-only narrowing (D-19), D-24 writer inventory, D-23 closed. — Plan 50-07 was the phase's final plan; all four requirements (IMPORT-01/03/04/05) now satisfied.
+- [Phase 51]: Checkpoints 1/2 resolved from already-locked 51-CONTEXT.md decisions (D-10/D-11/D-12/D-13), not re-prompted — CLAUDE.md Defect Policy: a locked decision in a phase CONTEXT.md is Claude's to act on, not re-ask
+- [Phase 51]: question_number chosen over argued_date as the Argument.slug collision-suffix discriminator — Verified against the real ~7,800-row corpus: argued_date collides or is null in 45.6% of the 952 multi-argument cases; question_number is always populated and unique-by-construction
 
 ### Roadmap Evolution
 
@@ -408,9 +432,9 @@ at close.
 
 ## Session Continuity
 
-Last session: 2026-08-28T00:07:39.208Z
-Stopped at: Phase 51 UI-SPEC approved
-Resume file: .planning/phases/51-design-system-noun-alignment/51-UI-SPEC.md
+Last session: 2026-08-28T12:45:40.884Z
+Stopped at: Completed 51-02-PLAN.md
+Resume file: None
 
 ## Operator Next Steps
 

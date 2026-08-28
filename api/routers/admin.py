@@ -1224,8 +1224,10 @@ async def unpublish_argument(
     published_at is deliberately RETAINED, not cleared — the Status
     card shows the argument's most recent publish date even after
     unpublishing. Public visibility is governed by status == PUBLISHED
-    (checked in addition to published_at IS NOT NULL by all three public
-    read paths — api.services.cases.get_cases,
+    (checked in addition to published_at IS NOT NULL by all four public
+    read paths — api.services.arguments.list_terms,
+    api.services.arguments.list_arguments_for_term (Phase 51 plan 51-08,
+    replacing the retired flat-listing get_cases function),
     api.services.arguments.get_argument_with_utterances,
     api.services.speakers.get_argument_speakers — Phase 48 plan 10,
     Defect 2 fix), never by clearing published_at.

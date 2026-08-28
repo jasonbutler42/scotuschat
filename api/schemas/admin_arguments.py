@@ -156,7 +156,9 @@ class ArgumentListItem(BaseModel):
     schema (apolitical hard constraint, enforced by
     api/tests/test_trust_public_leak_ban.py). This field backs only
     GET /api/admin/arguments (the admin router), outside that test's
-    derivation scope (which walks only api.routers.cases/arguments/people).
+    derivation scope (which walks only api.routers.arguments/people —
+    Phase 51 plan 51-08 retired the cases-endpoint router module, its
+    last consumer gone).
     Defaults to UNCERTAIN so a list dict built before this column existed
     cannot 500 the endpoint, mirroring ArgumentDetail.trust_tier's own default.
     """

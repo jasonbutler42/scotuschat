@@ -16,7 +16,7 @@ import uuid
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import delete
+from sqlalchemy import delete, select
 
 from api.models.models import Argument, ArgumentStatusEnum, Case, CaseArgument
 from api.tests.test_arguments import assert_no_key_anywhere
@@ -494,3 +494,179 @@ async def test_by_slug_utterances_live_response_never_leaks_trust_tier(
     assert response.status_code == 200
     body = response.json()
     assert_no_key_anywhere(body, "trust_tier", "GET /arguments/by-slug/{slug}/utterances response")
+
+
+# ---------------------------------------------------------------------------
+# Phase 48 Plan 10 Defect 2 regression, folded in from the retired
+# api/tests/test_phase48_unpublish_visibility.py (Phase 51 plan 51-08):
+# unpublish must actually hide the argument from every public read path.
+#
+# `unpublish_argument` sets `status = UNPUBLISHED` and deliberately leaves
+# `published_at` set (D-02, so the Status card can show the last publish
+# date). Before Phase 48 plan 10, every public read path gated ONLY on
+# `Argument.published_at.isnot(None)`, so an UNPUBLISHED argument (whose
+# `published_at` stays set) remained fully visible — the operator's only
+# "take this down" control took nothing down.
+#
+# This module seeds a DRAFT argument, publishes it (proving visibility),
+# unpublishes it, and proves absence across all four public read paths:
+#   - api.services.arguments.list_terms
+#   - api.services.arguments.list_arguments_for_term
+#   - api.services.arguments.get_argument_with_utterances
+#   - api.services.speakers.get_argument_speakers
+# plus a router-level 404 check on GET /arguments/{id}/utterances.
+#
+# Retargeted from the retired flat-listing service function get_cases
+# (its whole module was deleted once its last consumer was removed) onto
+# the two-function term-grouped replacement — both are checked, since
+# list_terms is a per-term COUNT while list_arguments_for_term is the
+# per-row listing get_cases used to be, and unpublish must not leak
+# through either shape.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="DATABASE_URL not configured")
+async def test_unpublished_argument_is_absent_from_all_public_read_paths(
+    client: AsyncClient,
+) -> None:
+    """
+    Seed a DRAFT argument, publish it (with an override reason — this
+    synthetic argument has zero constituents and floors to UNCERTAIN per
+    D-13), confirm it IS visible via all four public read paths, then
+    unpublish it and confirm it is ABSENT from all four — plus a
+    router-level 404 on GET /arguments/{id}/utterances.
+    """
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import Argument, ArgumentStatusEnum, ArgumentStatusLog, Case, CaseArgument
+    from api.services.admin_arguments import publish_argument, unpublish_argument
+    from api.services.arguments import (
+        get_argument_with_utterances,
+        list_arguments_for_term,
+        list_terms,
+    )
+    from api.services.speakers import get_argument_speakers
+
+    year = 1970 + (uuid.uuid4().int % 100)
+    suffix = uuid.uuid4().hex[:10]
+
+    async with AsyncSessionLocal() as db:
+        arg = Argument(
+            status=ArgumentStatusEnum.DRAFT,
+            resolved_at=datetime.datetime.now(datetime.timezone.utc),
+        )
+        db.add(arg)
+        await db.flush()
+
+        # get_argument_detail (which publish_argument's return value
+        # delegates to) requires a lead case to return non-None.
+        case = Case(
+            docket_number=f"PAL-UNPUB-{suffix}",
+            docket_number_norm=f"pal-unpub-{suffix}",
+            case_name="Synthetic Test Case v. Unpublish Visibility",
+            term_year=year,
+            slug=f"synthetic-test-case-v-unpublish-visibility-{suffix}",
+        )
+        db.add(case)
+        await db.flush()
+
+        db.add(CaseArgument(case_id=case.id, argument_id=arg.id, is_lead=True))
+        await db.commit()
+
+        arg_id = arg.id
+        case_id = case.id
+
+    try:
+        # --- publish (with override — zero-constituent floors to UNCERTAIN) ---
+        async with AsyncSessionLocal() as db:
+            result = await publish_argument(
+                db, arg_id, override_reason="unpublish visibility regression test"
+            )
+        assert result is not None
+        assert result["status"] == ArgumentStatusEnum.PUBLISHED
+
+        # --- confirm visible via all four public read paths -----------------
+        async with AsyncSessionLocal() as db:
+            terms = await list_terms(db)
+            assert any(t["term_year"] == year for t in terms), (
+                "published argument's term must appear in list_terms()"
+            )
+
+            term_arguments = await list_arguments_for_term(db, year)
+            assert any(a["argument_id"] == arg_id for a in term_arguments), (
+                "published argument must appear in list_arguments_for_term()"
+            )
+
+            detail = await get_argument_with_utterances(db, arg_id)
+            assert detail is not None, (
+                "published argument must resolve via get_argument_with_utterances"
+            )
+
+            speakers = await get_argument_speakers(db, arg_id)
+            assert speakers is not None, (
+                "published argument must resolve via get_argument_speakers "
+                "(an empty [] speaker list is fine — the argument itself must resolve)"
+            )
+
+        utterances_response = await client.get(f"/arguments/{arg_id}/utterances")
+        assert utterances_response.status_code == 200
+
+        # --- unpublish --------------------------------------------------------
+        async with AsyncSessionLocal() as db:
+            unpub_result = await unpublish_argument(db, arg_id)
+        assert unpub_result is not None
+        assert unpub_result["status"] == ArgumentStatusEnum.UNPUBLISHED
+        # published_at is deliberately retained (D-02) — this is the whole
+        # point of Defect 2: the bug is NOT that published_at is missing.
+        assert unpub_result["published_at"] is not None
+
+        # --- confirm ABSENT from all four public read paths --------------------
+        async with AsyncSessionLocal() as db:
+            terms_after = await list_terms(db)
+            assert not any(t["term_year"] == year for t in terms_after), (
+                "UNPUBLISHED argument's term must be absent from list_terms() "
+                "once it was the term's only argument (published_at retained "
+                "per D-02) — Defect 2."
+            )
+
+            term_arguments_after = await list_arguments_for_term(db, year)
+            assert not any(a["argument_id"] == arg_id for a in term_arguments_after), (
+                "UNPUBLISHED argument (published_at retained per D-02) must be "
+                "absent from list_arguments_for_term() — Defect 2."
+            )
+
+            detail_after = await get_argument_with_utterances(db, arg_id)
+            assert detail_after is None, (
+                "UNPUBLISHED argument must return None from "
+                "get_argument_with_utterances() — Defect 2."
+            )
+
+            speakers_after = await get_argument_speakers(db, arg_id)
+            assert speakers_after is None, (
+                "UNPUBLISHED argument must return None from "
+                "get_argument_speakers() — Defect 2's third, previously-unnamed leak path."
+            )
+
+        # --- router-level: direct fetch must 404, not silently succeed ---------
+        utterances_after = await client.get(f"/arguments/{arg_id}/utterances")
+        assert utterances_after.status_code == 404
+    finally:
+        # --- cleanup (FK-ordered, mirroring test_admin_arguments_service.py) ---
+        async with AsyncSessionLocal() as db:
+            log_result = await db.execute(
+                select(ArgumentStatusLog).where(ArgumentStatusLog.argument_id == arg_id)
+            )
+            log_rows = log_result.scalars().all()
+            ca = await db.get(CaseArgument, {"case_id": case_id, "argument_id": arg_id})
+            if ca is not None:
+                await db.delete(ca)
+            for row in log_rows:
+                await db.delete(row)
+            await db.flush()
+            case_row = await db.get(Case, case_id)
+            if case_row is not None:
+                await db.delete(case_row)
+            arg_row = await db.get(Argument, arg_id)
+            if arg_row is not None:
+                await db.delete(arg_row)
+            await db.commit()

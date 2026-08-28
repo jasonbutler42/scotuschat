@@ -35,11 +35,12 @@ async def list_terms(db: AsyncSession) -> list[dict]:
     Return one row per October Term that has at least one published
     argument, with a count of that term's published arguments.
 
-    Phase 51 plan 51-04 (D-14/D-15): the term-grouped replacement for
-    `GET /cases`'s flat, ungrouped listing.
+    Phase 51 plan 51-04 (D-14/D-15): the term-grouped replacement for the
+    old flat, ungrouped case-listing endpoint (retired in plan 51-08 once
+    its last consumer was removed).
 
-    Extends the same base query shape `get_cases()` (api/services/cases.py)
-    uses — the `CaseArgument.is_lead == True` join (so a consolidated
+    Extends the same base query shape that retired endpoint's `get_cases()`
+    used — the `CaseArgument.is_lead == True` join (so a consolidated
     docket such as Obergefell 14-556/562/571/574 contributes one row, not
     four) plus both published predicates, in ADDITION to each other, never
     in place of each other: `unpublish_argument` deliberately retains

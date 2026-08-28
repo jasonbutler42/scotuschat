@@ -18,7 +18,6 @@ from api.routers import admin as admin_router
 from api.routers import admin_dev as admin_dev_router
 from api.routers import admin_review as admin_review_router
 from api.routers import arguments as arguments_router
-from api.routers import cases as cases_router
 from api.routers import people as people_router
 
 app = FastAPI(
@@ -29,7 +28,6 @@ app = FastAPI(
 )
 
 app.include_router(arguments_router.router)
-app.include_router(cases_router.router)
 app.include_router(people_router.router)
 app.include_router(admin_router.router)
 app.include_router(admin_review_router.router)

@@ -101,14 +101,18 @@ def _assert_pre_existing_routers_still_mounted(paths: list[str]) -> None:
     Regression guard: the gate did not accidentally take the whole admin
     surface (or any other pre-existing router) down with it.
 
-    Actual mount prefixes per api/routers/{admin,arguments,cases,people}.py:
-    admin is under /api/admin; arguments/cases/people have NO /api prefix
+    Actual mount prefixes per api/routers/{admin,arguments,people}.py:
+    admin is under /api/admin; arguments/people have NO /api prefix
     (api/routers/arguments.py: APIRouter(prefix="/arguments", ...), etc.) —
-    NOT /api/arguments, /api/cases, /api/people.
+    NOT /api/arguments, /api/people. (A third pre-existing router formerly
+    checked here was retired in Phase 51 plan 51-08 once its last consumer
+    was removed; the /arguments/term sub-path assertion below is this
+    module's replacement coverage, not a like-for-like swap of the deleted
+    line.)
     """
     assert any(p.startswith("/api/admin") for p in paths)
     assert any(p.startswith("/arguments") for p in paths)
-    assert any(p.startswith("/cases") for p in paths)
+    assert any(p.startswith("/arguments/term") for p in paths)
     assert any(p.startswith("/people") for p in paths)
 
 

@@ -10,22 +10,28 @@ Pure-Python schema construction: no DB, no async, no fixtures.
 
 Trimmed 2026-08-27 (debridement pass): 8 static frontend-source assertions
 about focus order and error copy removed. See CLAUDE.md -> Testing Policy.
+
+Retargeted 2026-08-28 (Phase 51 plan 51-08): the first test below
+constructed CaseItem (the retired cases-list schema, GET /cases) —
+retired once its last consumer was removed. Retargeted onto
+ArgumentListItem (api/schemas/arguments.py, GET /arguments/term/
+{term_year}), which carries the identical nullable-question_number
+contract for the same reason.
 """
 
 from pathlib import Path
 
 
-def test_case_item_accepts_null_question_number() -> None:
-    """Constructing CaseItem with question_number=None must not raise."""
-    from api.schemas.cases import CaseItem
+def test_argument_list_item_accepts_null_question_number() -> None:
+    """Constructing ArgumentListItem with question_number=None must not raise."""
+    from api.schemas.arguments import ArgumentListItem
 
-    item = CaseItem(
-        id=1,
+    item = ArgumentListItem(
+        argument_id=1,
         slug="synthetic-case",
         case_name="Synthetic Case",
         docket_number="1955-71",
         term_year=1955,
-        argument_id=1,
         question_number=None,
         argued_date=None,
     )

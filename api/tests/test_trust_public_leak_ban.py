@@ -14,16 +14,24 @@ silently.
 Pure module: no DB, no fixtures, no skip markers — modeled on
 api/tests/test_phase45_popover_boxmodel_contract.py's static-contract
 shape. The model set under test is DERIVED from the `response_model=` of
-every route registered on the public routers (api.routers.cases,
-api.routers.arguments, api.routers.people), so a newly added public route
-that is not covered fails this module rather than passing silently
-(T-48-LEAKFUTURE).
+every route registered on the public routers (api.routers.arguments,
+api.routers.people), so a newly added public route that is not covered
+fails this module rather than passing silently (T-48-LEAKFUTURE).
 
 Phase 51 (plan 51-04): the term-grouped public listing models
 (`api/schemas/arguments.py` — `TermSummary`, `TermIndexResponse`,
 `ArgumentListItem`, `TermArgumentsResponse`) joined the covered set. No new
 banned key was needed — the new models expose identification fields only
 (term year, case name, docket, date, a published-record count).
+
+Phase 51 (plan 51-08): the flat-listing cases router and its schema
+module retired — their last consumer (the transitional `/arguments` flat
+listing plan 51-02 shipped) was replaced by the term-grouped listing
+above. The old list-response model is gone;
+`test_public_model_derivation_is_non_empty`'s required-name check now
+names `TermIndexResponse` instead. `PUBLIC_FRONTEND_PATHS` below points
+at this phase's surviving public routes rather than the six deleted
+files under the retired cases route directory.
 """
 
 from __future__ import annotations
@@ -39,13 +47,11 @@ from pydantic import BaseModel
 ROOT = Path(__file__).parents[2]
 
 PUBLIC_ROUTER_MODULE_NAMES = [
-    "api.routers.cases",
     "api.routers.arguments",
     "api.routers.people",
 ]
 
 PUBLIC_SCHEMA_MODULE_PATHS = [
-    ROOT / "api" / "schemas" / "cases.py",
     ROOT / "api" / "schemas" / "people.py",
     ROOT / "api" / "schemas" / "utterance.py",
     ROOT / "api" / "schemas" / "speakers.py",
@@ -108,28 +114,16 @@ BANNED_COUNTER_NAMES = (
 PUBLIC_FRONTEND_PATHS = [
     ROOT / "app" / "src" / "routes" / "+layout.svelte",
     ROOT / "app" / "src" / "routes" / "attributions" / "+page.svelte",
-    ROOT / "app" / "src" / "routes" / "cases" / "+page.svelte",
-    ROOT / "app" / "src" / "routes" / "cases" / "+page.server.ts",
-    ROOT / "app" / "src" / "routes" / "cases" / "[slug]" / "+page.svelte",
-    ROOT / "app" / "src" / "routes" / "cases" / "[slug]" / "+page.server.ts",
-    ROOT
-    / "app"
-    / "src"
-    / "routes"
-    / "cases"
-    / "[slug]"
-    / "arguments"
-    / "[id]"
-    / "+page.svelte",
-    ROOT
-    / "app"
-    / "src"
-    / "routes"
-    / "cases"
-    / "[slug]"
-    / "arguments"
-    / "[id]"
-    / "+page.server.ts",
+    # Phase 51 plan 51-08: the six deleted routes-cases-family entries this
+    # list used to carry are replaced by this phase's surviving public
+    # surfaces (D-10/D-14 term-grouped listing + slug transcript route).
+    ROOT / "app" / "src" / "routes/arguments/+page.svelte",
+    ROOT / "app" / "src" / "routes/arguments/+page.server.ts",
+    ROOT / "app" / "src" / "routes/arguments/term/[year]/+page.svelte",
+    ROOT / "app" / "src" / "routes/arguments/term/[year]/+page.server.ts",
+    ROOT / "app" / "src" / "routes/arguments/[slug]/+page.svelte",
+    ROOT / "app" / "src" / "routes/arguments/[slug]/+page.server.ts",
+    ROOT / "app" / "src" / "lib/public/TermRow.svelte",
 ]
 
 
@@ -276,12 +270,13 @@ def test_public_model_derivation_is_non_empty() -> None:
     assert PUBLIC_RESPONSE_MODELS, (
         "PUBLIC_RESPONSE_MODELS derivation returned an empty set — the "
         "structural leak-ban would pass vacuously. Check that "
-        "api.routers.cases/arguments/people import cleanly and declare "
+        "api.routers.arguments/people import cleanly and declare "
         "response_model= on their routes."
     )
     derived_names = {m.__name__ for m in PUBLIC_RESPONSE_MODELS}
     for required_name in (
-        "CaseListResponse",
+        "TermIndexResponse",
+        "TermArgumentsResponse",
         "ArgumentUtterancesResponse",
         "SpeakerPopoverEntry",
         "PersonResponse",
@@ -455,6 +450,36 @@ def test_public_frontend_pages_never_reference_reconcile_counter_names() -> None
                     f"'{counter_name}' — batch counters are operator-facing "
                     "stdout only (D-29) and must never reach a public page."
                 )
+    assert not violations, "\n".join(violations)
+
+
+def test_public_frontend_pages_never_use_public_fastapi_base_url() -> None:
+    """
+    No genuinely public (non-admin) SvelteKit server load file imports
+    `PUBLIC_FASTAPI_BASE_URL` — `FASTAPI_BASE_URL` must always come from
+    `$env/static/private`, never a `PUBLIC_`-prefixed env var (CLAUDE.md
+    hard constraint), which would ship the FastAPI base URL into the
+    client bundle.
+
+    Migrated from the retired tests/test_cases_api.py's
+    test_no_public_fastapi_base_url_in_cases_pages (Phase 51 plan 51-08) —
+    that test scoped narrowly to the retired cases route directory under
+    app/src/routes, which plan 51-02 already deleted. Retargeted onto
+    PUBLIC_FRONTEND_PATHS, the same reviewable file list the two tests
+    above already sweep, rather than a
+    fresh directory glob.
+    """
+    violations = []
+    for path in PUBLIC_FRONTEND_PATHS:
+        if path.suffix != ".ts" or not path.exists():
+            continue
+        text = path.read_text(encoding="utf-8", errors="ignore")
+        if "PUBLIC_FASTAPI_BASE_URL" in text:
+            violations.append(
+                f"{path.name} references 'PUBLIC_FASTAPI_BASE_URL' — "
+                "FASTAPI_BASE_URL must be imported from $env/static/private "
+                "only (CLAUDE.md hard constraint)."
+            )
     assert not violations, "\n".join(violations)
 
 

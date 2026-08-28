@@ -62,7 +62,25 @@
 	--touch-target: 44px;
 	--touch-target-dense: 36px;
 
+	/* How far above the viewport bottom a bottom-anchored sticky element must
+	   park to stay visible. Desktop has nothing in the way, so it is just the
+	   normal gap. Below 768px `MobileNavBar` is `position: fixed; bottom: 0`
+	   with an OPAQUE --color-surface background and `min-height: var(--touch-target)`,
+	   so anything parked at a plain --space-sm is painted underneath it and
+	   silently disappears. That is not a sticky failure and reads exactly like
+	   one: the element is positioned correctly and simply cannot be seen.
+	   Consumed by the transcript's sticky rail avatar (D-19). */
+	--sticky-bottom-inset: var(--space-sm);
+
 	font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* Keep this breakpoint in step with MobileNavBar.svelte's own @media rule —
+   if that bar's visibility threshold or height changes, this must follow. */
+@media (max-width: 768px) {
+	:root {
+		--sticky-bottom-inset: calc(var(--touch-target) + var(--space-sm));
+	}
 }
 
 /* Explicit base reset (Phase 51 D-01) — replaces Tailwind preflight, which this

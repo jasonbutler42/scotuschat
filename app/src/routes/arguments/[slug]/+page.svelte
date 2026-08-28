@@ -376,12 +376,25 @@
 										order: {isBench ? 0 : 1};
 										width: 40px;
 										flex-shrink: 0;
+										align-self: stretch;
 										display: flex;
 										flex-direction: column;
-										justify-content: flex-end;
 									"
 								>
-									<div style="position: sticky; bottom: var(--space-sm);">
+									<!-- `margin-top:auto` — NOT `justify-content:flex-end` on the
+									     column — is what parks the avatar at the run's bottom.
+									     Both are equivalent in Chromium (measured: the avatar holds
+									     y=804..836 at every scroll offset through a 5,225px run at
+									     390x844). WebKit is the reason for the difference: sticky
+									     descendants of a flex container whose position comes from
+									     `justify-content` are a long-standing iOS Safari weak spot,
+									     whereas an auto margin resolves during flex layout and
+									     leaves the sticky offset to apply cleanly afterwards.
+									     `align-self:stretch` is stated explicitly rather than
+									     inherited, so the column keeps a definite height — a rail
+									     that hugs the 32px avatar has no travel range and sticky
+									     silently does nothing. -->
+									<div style="margin-top: auto; position: sticky; bottom: var(--sticky-bottom-inset);">
 										{#if first.person_id != null}
 											<button
 												type="button"
@@ -428,7 +441,24 @@
 									"
 								>
 									{#each item.utterances as u, idx (u.sequence)}
-										<div id={anchorId(u)}>
+										<!-- The section-anchor wrapper MUST carry the side alignment
+										     itself. It is a plain block otherwise, and a plain block
+										     spans the stack's full width — so the stack's
+										     `align-items` aligns THIS wrapper (already full width, so
+										     a no-op) while the bubble inside it falls back to the
+										     block default and hugs the LEFT edge. That put advocate
+										     bubbles ~86px away from their own right-hand avatar.
+										     `width:100%` keeps the bubble's max-width:min(72%,68ch)
+										     resolving against the stack, and `justify-content` puts
+										     the bubble on the speaker's own side. -->
+										<div
+											id={anchorId(u)}
+											style="
+												width: 100%;
+												display: flex;
+												justify-content: {isBench ? 'flex-start' : 'flex-end'};
+											"
+										>
 											<ChatBubble
 												utterance={u}
 												position={runPosition(item.utterances.length, idx)}

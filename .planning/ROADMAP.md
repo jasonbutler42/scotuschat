@@ -353,7 +353,7 @@ Plans:
   3. Design tokens (color / type / spacing) are established as the visual foundation (absorbs backlog 999.8).
   4. The arguments listing style is decided and implemented (absorbs backlog 999.6).
 
-**Plans**: 2/10 plans executed (6 waves)
+**Plans**: 3/10 plans executed (6 waves)
 **UI hint**: yes
 
 Plans:
@@ -365,7 +365,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1)*
 
-- [ ] 51-03-PLAN.md — Tailwind removal, the two-layer token set in `app.css`, the value-to-token map, and a rewritten DESIGN-SYSTEM.md
+- [x] 51-03-PLAN.md — Tailwind removal, the two-layer token set in `app.css`, the value-to-token map, and a rewritten DESIGN-SYSTEM.md
 - [ ] 51-04-PLAN.md — Term-grouped listing API (`/arguments/terms`, `/arguments/term/{year}`), extended leak ban and published-gate contracts
 - [ ] 51-05-PLAN.md — Component directory split into `lib/primitives/` / `lib/public/` / `lib/admin/`, proven behaviour-neutral
 
@@ -444,7 +444,7 @@ Plans:
 | 48. Trust & Lifecycle | v1.8 | 10/10 | Complete    | 2026-08-21 |
 | 49. Review Model | v1.8 | 12/12 | Complete    | 2026-08-25 |
 | 50. Unified Import Path | v1.8 | 7/7 | In Progress|  |
-| 51. Design System & Noun Alignment | v1.8 | 2/10 | In Progress|  |
+| 51. Design System & Noun Alignment | v1.8 | 3/10 | In Progress|  |
 
 ## Backlog
 

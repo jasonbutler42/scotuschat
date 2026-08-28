@@ -11,6 +11,10 @@
 	// enforcement authority — this only gives the operator immediate,
 	// specific feedback at the control instead of a crashed job later.
 	import { normalizeDocketValue, DocketValueError, docketValueErrorMessage } from '$lib/docketValues';
+	// Phase 51 (D-17): the free-text entry field below adopts the shared
+	// Input primitive instead of a raw <input>, picking up its touch-target
+	// and token-based styling. See the adoption note above the markup.
+	import Input from '$lib/primitives/Input.svelte';
 
 	type ConfidenceBand = 'High' | 'Medium' | 'Low';
 	interface DocketProvenance {
@@ -111,14 +115,10 @@
 
 	// Compose with — do not replace — the existing caller-driven invalid/
 	// descriptionId contract: when both the caller's `invalid` and this
-	// component's own shapeError are active, both ids are referenced.
+	// component's own shapeError are active, both ids are referenced. Their
+	// composition now happens inside the Input primitive (describedBy for the
+	// caller-owned id, errorMessage/errorId for this component's own).
 	let hasError = $derived(!readonly && (invalid || Boolean(shapeError)));
-	let describedByIds = $derived.by(() => {
-		const ids: string[] = [];
-		if (!readonly && invalid && descriptionId) ids.push(descriptionId);
-		if (!readonly && shapeError) ids.push(shapeErrorId);
-		return ids.length > 0 ? ids.join(' ') : undefined;
-	});
 </script>
 
 <!-- Hidden inputs: one per pill — server reads FormData.getAll(name) -->
@@ -245,18 +245,28 @@
 	</div>
 {/if}
 
-<!-- Docket text input (Pitfall 3 guard: Enter must call e.preventDefault() before addPill) -->
+<!-- Docket text input (Pitfall 3 guard: Enter must call e.preventDefault() before addPill).
+     Phase 51 (D-17): renders through the shared Input primitive, adopting
+     its touch-target and token-based styling. DocketPillInput's external
+     prop shape (invalid, descriptionId) and behavior are unchanged — Input's
+     `describedBy` carries the caller-owned external alert id (rendered by
+     the caller, unchanged), and `errorMessage`/`errorId` carry this
+     component's own internal shapeError alert (now rendered by Input
+     itself instead of a local <p>, same id, same role="alert", same
+     var(--color-destructive) styling). -->
 <p style="font-size: 13px; font-weight: 400; color: #64748b; margin: 0 0 4px 0;">
 	Type a docket number and press Enter to add it.
 </p>
-<input
-	bind:this={inputElement}
+<Input
+	bind:ref={inputElement}
 	{id}
 	type="text"
 	bind:value={docketInput}
 	disabled={readonly}
-	aria-invalid={hasError ? 'true' : undefined}
-	aria-describedby={describedByIds}
+	invalid={hasError}
+	describedBy={!readonly && invalid && descriptionId ? descriptionId : undefined}
+	errorMessage={!readonly ? shapeError : null}
+	errorId={shapeErrorId}
 	oninput={() => {
 		// Clear the shape error as soon as the operator starts correcting the
 		// value — never clears the caller-driven `invalid` state, which is
@@ -269,24 +279,4 @@
 			if (!readonly) addPill();
 		}
 	}}
-	style="
-		width: 100%;
-		background-color: #0f1117;
-		border: 1px solid {hasError ? '#ef4444' : '#334155'};
-		border-radius: 6px;
-		padding: 8px 12px;
-		font-size: 16px;
-		color: #e2e8f0;
-		box-sizing: border-box;
-		font-family: inherit;
-	"
 />
-{#if !readonly && shapeError}
-	<p
-		id={shapeErrorId}
-		role="alert"
-		style="font-size: 13px; font-weight: 400; color: #ef4444; margin: 4px 0 0 0;"
-	>
-		{shapeError}
-	</p>
-{/if}

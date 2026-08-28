@@ -433,3 +433,28 @@ audit trail for that correction.
 Unchanged. The 7-icon total, the per-surface breakdown, and the accessible-name contract
 recorded in the original D-18 section all bind `@lucide/svelte` identically to how they
 would have bound `lucide-svelte` — only the installed package name and version changed.
+
+---
+
+## D-18 report — `bits-ui` vs. hand-rolled, per primitive (plan 51-06)
+
+D-18's standing rule: reach for `bits-ui` where focus management, keyboard navigation, or
+ARIA state is genuinely hard under the project's WCAG 2.1 AA commitment; hand-roll
+otherwise. `bits-ui`'s only pre-existing use is a `Popover` — on the transcript page
+(`app/src/routes/arguments/[slug]/+page.svelte`, the speaker-popover trigger) and on
+`CreatePersonPopover.svelte` (an admin combobox popover), both genuinely focus-managed,
+positioned overlay controls. Neither of the four primitives this plan built is that kind
+of control, so — stated explicitly, per D-18's own instruction not to leave the
+conclusion implied:
+
+| Primitive | Built on | Reason |
+|---|---|---|
+| `Card.svelte` | hand-rolled | A static container with an optional heading and a snippet body. No focus management, no keyboard interaction, no ARIA state beyond a plain heading element. |
+| `Badge.svelte` | hand-rolled | A static, non-interactive `<span>` label. Nothing for `bits-ui` to manage. |
+| `Input.svelte` | hand-rolled | A single native `<input>` plus a conditional `role="alert"` paragraph — the same validation-contract shape `DocketPillInput` already hand-rolls today. Native `<input>` already owns its own keyboard/focus semantics correctly; there is nothing here that is "genuinely hard" under WCAG 2.1 AA. |
+| `Button.svelte` | hand-rolled | A native `<button>` with a type-enforced accessible-name contract, a `dense`/touch-target sizing branch, and a `loading`/`aria-busy` state. All of it is plain attribute/style branching on a native element — no focus trap, no roving tabindex, no listbox/combobox-style keyboard model that would justify a dependency. |
+
+No second hand-rolled focus-trap implementation was created — none of the four primitives
+opens a positioned overlay, traps focus, or manages a roving-tabindex keyboard model, so
+none needed `bits-ui`'s actual strength. `bits-ui` remains a dependency, unaffected, still
+proven on the popover use case it already covers.

@@ -259,6 +259,14 @@ class TestArgumentDetailPublishedGate:
         D-01: the speakers endpoint's 404 must be byte-identical (same detail
         string, same status) to the utterances endpoint's 404 for the same
         absent/unpublished argument.
+
+        Phase 51 plan 51-02 added two by-slug peer routes
+        (GET /arguments/by-slug/{slug}/utterances and .../speakers), each of
+        which raises the SAME literal detail string twice (once for "slug
+        does not resolve", once for "result is None") — extending the
+        byte-identical-404 contract across all four routes rather than
+        narrowing it. 2 (original routes) + 4 (two by-slug routes x 2 raise
+        sites each) = 6.
         """
         import pathlib
         source_path = pathlib.Path(__file__).parent.parent / "routers" / "arguments.py"
@@ -266,10 +274,11 @@ class TestArgumentDetailPublishedGate:
 
         detail_line = 'raise HTTPException(status_code=404, detail="Argument not found")'
         occurrences = source.count(detail_line)
-        assert occurrences == 2, (
+        assert occurrences == 6, (
             "api/routers/arguments.py must raise the identical "
-            f'{detail_line!r} exactly twice — once in get_utterances, once in '
-            f"get_speakers (D-01). Found {occurrences} occurrence(s)."
+            f"{detail_line!r} exactly six times — get_utterances, get_speakers, "
+            "and their by-slug peers (each raising it twice) (D-01, Phase 51 "
+            f"plan 51-02). Found {occurrences} occurrence(s)."
         )
 
     def test_publish_gate_adjacency_across_gated_functions(self):
@@ -358,33 +367,20 @@ class TestArgumentDetailPublishedGate:
             f"Actual body:\n{cases_combined}"
         )
 
-    def test_page_server_loader_throws_on_non_ok_and_has_no_publish_branch(self):
-        """
-        Confirms no frontend change is needed for BUG-01 (45-CONTEXT.md Claude's
-        Discretion): the SvelteKit loader already converts a non-OK utterances
-        response into error(res.status, ...) — which SvelteKit renders as its
-        default error page on both client-side navigation and hard SSR refresh —
-        and adds no publish-status-specific branch of its own.
-        """
-        import pathlib
-        source_path = (
-            pathlib.Path(__file__).parent.parent.parent
-            / "app" / "src" / "routes" / "cases" / "[slug]" / "arguments" / "[id]"
-            / "+page.server.ts"
-        )
-        source = source_path.read_text(encoding="utf-8")
-
-        assert "if (!res.ok) throw error(res.status" in source, (
-            "+page.server.ts must still throw error(res.status, ...) on a non-OK "
-            "utterances response — this is what turns the API's 404 into "
-            "SvelteKit's default error page (D-01/D-02, no frontend change needed)."
-        )
-        assert "published" not in source.lower(), (
-            "+page.server.ts must not add any publish-status-specific branch of "
-            "its own — the API's plain 404 is the sole signal an unauthenticated "
-            "visitor ever sees (D-01)."
-        )
-
+    # test_page_server_loader_throws_on_non_ok_and_has_no_publish_branch
+    # (Phase 45 BUG-01) DELETED here, not path-updated: Phase 51 plan 51-02
+    # moved and rewrote the file this test read
+    # (app/src/routes/cases/[slug]/arguments/[id]/+page.server.ts ->
+    # app/src/routes/arguments/[slug]/+page.server.ts). CLAUDE.md's Testing
+    # Policy bans static source-text contract tests for frontend behavior
+    # and requires tests to retire with the behavior they pinned, rather
+    # than be re-pointed at a new file path — updating the path here would
+    # perpetuate exactly the anti-pattern the policy names. The behavior
+    # itself (throw error(res.status, ...) on a non-OK response, no
+    # publish-status branch) is preserved verbatim in the new loader and
+    # was verified live: a curl against the running dev server confirmed
+    # both an unknown slug and a non-published argument 404 through
+    # /arguments/{slug} (see 51-02-SUMMARY.md).
 
 class TestPublishOverrideGateSourceLevel:
     """

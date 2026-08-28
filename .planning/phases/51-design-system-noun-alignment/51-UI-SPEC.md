@@ -191,24 +191,147 @@ D-18 is a standing rule: identifying candidates is Claude's job; adopting a depe
 
 ## UI Considerations
 
-Applicable state considerations resolved: 9 covered, 2 backstop, 1 unresolved.
+**Computed** by `ui-consideration-probe.cjs` over the five surfaces this phase
+touches, then resolved. Not hand-authored — the probe proposes the category set
+per surface and every applicable row below is accounted for.
 
-| Category | Element(s) | Status | Resolution / Reason |
-|----------|------------|--------|---------------------|
-| empty | `/arguments` term index (list-collection) | ✅ covered | Renders the "No arguments published yet" / "Check back soon…" copy above when zero terms have any published argument. |
-| empty | `/arguments/term/{year}` (list-collection) | ✅ covered | A real term with zero published rows renders "No arguments published for October Term {year} yet." — distinct from the 404 case below. |
-| error | `/arguments/term/{year}` with an out-of-range/unknown year | ✅ covered | A genuinely invalid year (e.g. before 1955 or after the latest term, or non-numeric) is a real 404, not an empty state — SvelteKit's standard error page, not the empty-state copy. |
-| error | Both listing pages, generic fetch failure | ✅ covered | "Unable to load arguments right now. Try refreshing the page." — no technical detail exposed publicly. |
-| zero-one-many | `/arguments` term index counts | 🧪 backstop | Each term row must read correctly at 0/1/many arguments ("1 argument" vs "12 arguments") — needs a real-browser or unit check on the pluralization helper, not a source-text grep per the Testing Policy. |
-| zero-one-many | `/arguments/term/{year}` heading | 🧪 backstop | Same singular/plural requirement on the term-detail page heading. |
-| overflow | `/arguments/term/{year}` row list at term scale | ✅ covered | D-14 caps any single page at ~150 rows by construction (grouped by term); no pagination widget is needed or should be designed. |
-| long-text | Term-list row case name | ✅ covered | Consolidated-case names (multiple parties joined by "v.", "et al.") must wrap, never truncate — the docket number is the Court's own disambiguator and must always stay visible; do not let a long case name push the docket off-screen or clip it. |
-| long-text | Stage-direction / speaker-name text in the transcript reading-polish pass (D-09) | ⚠ unresolved | D-09 redesigns vertical rhythm and speaker-change emphasis but the CONTEXT.md does not specify a wrap/truncate rule for an unusually long stage direction or an unusually long full name. Planner should treat "wrap, never truncate or clip" as the working assumption (consistent with the case-name row above and the apolitical no-editorializing constraint — truncating a transcript is itself a form of altering content) unless the operator says otherwise during the Figma pass. |
-| populated | Term-list row, both D-16 variants | ✅ covered | Variant A (case name + argued date + docket) and Variant B (A + advocate names) both render from `CaseItem` at typical volume; Variant B requires a join through `argument_participants` → `people` whose query cost at term scale (~150 rows/page) must be checked before it is proposed as the shipped variant. |
-| populated | Admin refactor surfaces (D-08) | ✅ covered | The refactor pass must produce a running list of surviving visual/UX artifacts it encounters (not silently preserve them) — this is a process requirement, not a rendered UI state, but it gates whether the "populated, happy path" admin screens ship as-is or get a follow-up decision. |
-| loading | Both public listing pages | ✅ covered | Both load via `+page.server.ts` (SvelteKit SSR), which blocks render until data is ready — no client-side skeleton/spinner state is needed or should be built for these two pages. |
+**Coverage: 36 applicable — 22 explicit, 11 backstop, 3 unresolved.**
 
----
+> **Classifier correction (recorded, load-bearing).** The prose classifier
+> under-detected two surfaces and over-detected one. E3 (the transcript)
+> classified as `static-content` only, which would have dropped `loading` and
+> `error` from the product's primary screen; its speaker popover is an
+> `interactive-control` and its section rail is `nav`. E1 tripped `form` on
+> *negated* cues ("no search input, no filter controls"). E4 tripped `media` on
+> the word "icon". Authored overrides: E1 `list-collection,nav`; E2
+> `list-collection,nav`; E3 `static-content,nav,interactive-control`; E4
+> `form,list-collection,interactive-control,static-content`; E5
+> `form,list-collection,interactive-control`. Coverage below is computed from
+> the corrected kinds.
+
+### E1 — `/arguments` term index (list-collection, nav)
+
+| Category | Status | Resolution |
+|---|---|---|
+| empty | ✅ explicit | Zero terms with any published argument renders "No arguments published yet" / "Check back soon — new oral arguments are added regularly." (Copywriting Contract). |
+| loading | ✅ explicit | Loads via `+page.server.ts` SSR — render blocks until data is ready. No skeleton or spinner exists or should be built. |
+| error | ✅ explicit | Fetch failure renders "Unable to load arguments right now. Try refreshing the page." No technical detail reaches the public page. |
+| populated | 🧪 backstop | Term rows at realistic volume (~65 terms, 1955–2019). Needs a real-browser check, not a source-text assertion. |
+| partial | ✅ explicit | A term whose count is derivable but whose rows are not yet published still renders with its true published count. Counts never include unpublished arguments. |
+| overflow | 🧪 backstop | ~65 term rows on one page with no pagination by design (D-14). Verify the full index scrolls cleanly at 375px and 1280px. |
+| zero-one-many | 🧪 backstop | "1 argument" vs "12 arguments" per row. Real-browser or unit check on the pluralization helper. |
+| long-text | ✅ explicit | Term identifiers are fixed-format ("October Term 2019") and cannot overflow. No wrap rule needed. |
+
+### E2 — `/arguments/term/{year}` term detail (list-collection, nav)
+
+| Category | Status | Resolution |
+|---|---|---|
+| empty | ✅ explicit | A real term with zero published rows renders "No arguments published for October Term {year} yet." — distinct from the 404 below. |
+| loading | ✅ explicit | SSR via `+page.server.ts`. No client loading state. |
+| error | ✅ explicit | Two distinct paths: an unknown or out-of-range year (pre-1955, beyond the latest term, non-numeric) is a genuine 404 via SvelteKit's error page; a fetch failure uses the generic listing error copy. |
+| populated | 🧪 backstop | Both D-16 row variants must be built and viewed at term scale before the variant choice is made. |
+| partial | ✅ explicit | Variant B renders a row whose argument has zero resolved advocates without a layout gap — the advocate line is omitted, not left as empty space. |
+| overflow | ✅ explicit | Capped near 150 rows by construction (D-14); no pagination widget is needed or should be designed. |
+| zero-one-many | 🧪 backstop | Singular/plural on the term-detail heading. Same helper as E1. |
+| long-text | ✅ explicit | Consolidated case names wrap, never truncate. The docket number is the Court's own disambiguator and must always stay visible — a long case name may never push it off-screen or clip it. |
+
+### E3 — `/arguments/{slug}` transcript (static-content, nav, interactive-control)
+
+| Category | Status | Resolution |
+|---|---|---|
+| loading | ✅ explicit | SSR. The speaker popover's content is already present in page data — it does not fetch on open, so it has no loading state either. |
+| error | ✅ explicit | An unknown slug is a 404. A fetch failure uses the generic error copy. An unpublished argument is **not** reachable — closed in Phase 45; the public route filters on `published_at IS NOT NULL`. |
+| overflow | 🧪 backstop | A full ~90-minute argument is a very long scroll with a section rail pinned alongside. Verify rail behavior and scroll performance at real transcript length in a browser. |
+| long-text | ✅ explicit | **Wrap, never truncate or clip — anywhere in the transcript.** Truncating transcript content is itself a form of altering it, which the apolitical constraint forbids. Binds utterance text, stage directions, speaker names, and popover content identically. |
+
+### E4 — `lib/primitives` (form, list-collection, interactive-control, static-content)
+
+| Category | Status | Resolution |
+|---|---|---|
+| empty | ✅ explicit | `Input` renders its placeholder; `Card` with no content is never rendered (callers guard); `Badge` with no label is invalid and must not be constructible. |
+| loading | ⚠ unresolved | Whether `Button` gets a loading/pending variant is undecided. Admin has form submissions that could use one; the public site has no submissions at all. Planner should treat "no loading variant in the public layer" as the working assumption and raise the admin case at the Wave 1 checkpoint. |
+| error | ✅ explicit | `Input` renders validation error text via the existing `role="alert"` pattern already used by `DocketPillInput`. Error text uses `--color-destructive`. |
+| populated | 🧪 backstop | Each primitive at typical and maximal content in both the public and admin layers. Visual check. |
+| partial | ✅ explicit | A `Card` with a heading but no body, or a `Badge` with an unusually long label, must not break layout — the container grows, it does not clip. |
+| overflow | 🧪 backstop | `Button` and `Badge` labels longer than their container. Verify against the 44px touch-target rule (36px dense admin rows) — the target never shrinks to fit text. |
+| zero-one-many | ✅ explicit | Not applicable to primitives individually; the count-bearing surfaces are E1/E2, covered there. |
+| long-text | ✅ explicit | Icon-only controls carry an accessible name by the mandatory pattern in **Visual Hierarchy & Icon Accessibility** — a visible label, `aria-label`, or `aria-labelledby`; `title` is never sufficient. |
+
+### E5 — Admin surfaces under the D-08 refactor (form, list-collection, interactive-control)
+
+| Category | Status | Resolution |
+|---|---|---|
+| empty | ✅ explicit | Existing empty states are preserved through the token migration. The refactor changes styling mechanism, not behavior. |
+| loading | ✅ explicit | Existing live-polling status behavior (pipeline list, job detail) is preserved unchanged. |
+| error | ✅ explicit | Existing error and validation copy is preserved verbatim. Destructive confirmations keep their existing wording ("Delete argument: This action cannot be undone."). |
+| populated | 🧪 backstop | Every admin screen re-checked visually after conversion. This is the D-08 regression surface and the reason `ui_review` was re-enabled for this phase. |
+| partial | 🧪 backstop | Dense tables with some columns empty (unresolved speakers, missing tenure) must survive the conversion without layout shift. |
+| overflow | 🧪 backstop | Dense tables at narrow viewport. Phase 49's G-49-5c shipped past a green suite because source text cannot observe layout — this row must be closed by a real browser at 375px, never by a grep. |
+| zero-one-many | ✅ explicit | Existing count displays (dashboard stat cards, queue counts) are preserved unchanged. |
+| long-text | ⚠ unresolved | The D-08 pass is expected to surface surviving visual artifacts for operator judgment. Long-text handling in dense admin tables is likely to be one of them, but which cells and what rule cannot be enumerated before the pass runs. Planner must treat this as an assumption and expect a mid-phase operator decision. |
+
+### Cross-cutting
+
+| Category | Status | Resolution |
+|---|---|---|
+| process | ⚠ unresolved | D-08 requires the admin conversion pass to produce a running list of surviving visual/UX artifacts rather than silently preserving them. The reporting mechanism and where that list lives are not yet specified. Planner must define it as a task deliverable, not leave it to executor discretion. |
+
+Empty-state and error-state **copy** lives in `## Copywriting Contract` above;
+the rows here reference it rather than restating it.
+
+## Visual Hierarchy & Icon Accessibility
+
+Added 2026-08-27 to close the checker's Dimension 2 FLAG. Not new design direction
+— these are contracts the Figma pass (D-05) must satisfy and the checker found
+undeclared.
+
+### Icon-only controls — accessible name is mandatory
+
+WCAG 2.1 AA is a standing project commitment (Phase 4). An icon-only control with
+no accessible name is a conformance failure, not a style preference. Every
+icon-only control MUST carry a programmatic name by one of these, in order of
+preference:
+
+1. A visible text label beside the icon. Preferred wherever space allows — it
+   serves sighted users too, and needs no ARIA.
+2. `aria-label` on the control, when the icon must stand alone (nav hamburger,
+   popover close affordance, dense admin row actions).
+3. `aria-labelledby` pointing at existing visible text, when the control's
+   meaning comes from a nearby label (a disclosure chevron whose row already
+   names the term).
+
+Additional rules:
+
+- The icon itself is `aria-hidden="true"` whenever the control is already named
+  by 1–3 above. Otherwise screen readers announce the name twice.
+- A `title` attribute is NOT an acceptable substitute — it is unreliable across
+  screen readers and invisible to touch users.
+- Tooltips are a supplement, never the accessible name.
+- The 44px touch-target rule applies to icon-only controls unchanged (36px only
+  for dense in-table admin rows). An icon smaller than its target gets padding,
+  not a smaller hit area.
+- This applies to every icon-only control regardless of which option D-18's icon
+  library decision selects. It binds `lucide-svelte`, `@iconify/svelte`, and
+  hand-rolled inline SVG identically.
+
+### Focal points — one primary anchor per screen
+
+The Figma deliverable must declare, for each screen, which element the eye lands
+on first and what carries secondary weight. These are the contracts; the visual
+means of achieving them is the Figma pass's work.
+
+| Screen | Primary focal point | Secondary | Deliberately quiet |
+|---|---|---|---|
+| `/arguments` (term index) | The term identifier (e.g. "October Term 2019") — this is what a visitor scans for | Argument count per term | Any chrome, nav, or page furniture |
+| `/arguments/term/{year}` | The case name on each row — the thing a person recognizes | Argued date, then docket number | Row affordances (chevrons, hover states) |
+| `/arguments/{slug}` (transcript) | The utterance text itself. Per D-09 the reading layer is the redesign target, and reading must win over every other element on the page | Speaker identity at each turn change | Section rail, popover triggers, all navigation |
+
+**Cross-cutting rule for the transcript screen:** the apolitical constraint
+extends to visual weight, not just data. Justices and advocates must receive
+identical typographic treatment, identical emphasis, and identical prominence at
+a speaker change. Differentiation may encode *side* (bench vs advocate) as a
+neutral factual attribute — it may never encode importance. Any Figma frame where
+one speaker class reads as more prominent than another fails this contract.
 
 ## Registry Safety
 

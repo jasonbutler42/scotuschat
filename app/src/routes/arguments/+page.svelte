@@ -1,115 +1,97 @@
 <script lang="ts">
-	let { data } = $props();
+	// D-14/D-15/D-16 (Phase 51 plan 51-08): the term index. Replaces the
+	// transitional flat listing plan 51-02 shipped against `/cases`. Focal
+	// points per 51-UI-SPEC.md: the term identifier is primary, the
+	// published-argument count is secondary, all chrome is deliberately
+	// quiet. No CTA by design (D-14) — a row IS the action.
+	import { formatArgumentCount } from '$lib/formatting';
 
-	/**
-	 * Format an argued_date string (e.g. "2015-04-28") as "April 28, 2015".
-	 * Uses Intl.DateTimeFormat per the UI-SPEC Copywriting Contract.
-	 * The date comes from the API as a date string (YYYY-MM-DD).
-	 * We append T00:00:00 to force local-date parsing and avoid UTC midnight
-	 * roll-back on systems west of UTC.
-	 */
-	function formatDate(dateStr: string | null | undefined): string {
-		if (!dateStr) return 'Date unknown';
-		const date = new Date(dateStr + 'T00:00:00');
-		return new Intl.DateTimeFormat('en-US', {
-			month: 'long',
-			day: 'numeric',
-			year: 'numeric'
-		}).format(date);
-	}
+	let { data } = $props();
 </script>
 
-<!-- Page background (#0f1117) -->
-<main style="background-color: #0f1117; min-height: 100vh;">
-	<!-- Header bar: full-width, #1e293b, border-bottom #334155 -->
+<main style="background-color: var(--color-bg); min-height: 100vh;">
 	<header
 		style="
-			background-color: #1e293b;
-			border-bottom: 1px solid #334155;
-			padding: 16px 24px;
+			background-color: var(--color-surface);
+			border-bottom: 1px solid var(--color-border);
+			padding: var(--space-md) var(--space-lg);
 		"
 	>
-		<!-- Page heading: "Arguments" (DS-01 noun alignment) — 20px, weight 600, #e2e8f0 -->
 		<h1
 			style="
-				font-size: 20px;
-				font-weight: 600;
-				color: #e2e8f0;
+				font-size: var(--font-size-heading);
+				font-weight: var(--font-weight-semibold);
+				line-height: var(--line-height-heading);
+				color: var(--color-text-primary);
 				margin: 0;
-				line-height: 1.2;
 			"
 		>
 			Arguments
 		</h1>
 	</header>
 
-	<!-- Content area: max-width 860px, centered, padding 48px 24px -->
 	<div
 		style="
 			max-width: 860px;
 			margin: 0 auto;
-			padding: 48px 24px;
+			padding: var(--space-2xl) var(--space-lg);
 		"
 	>
-		{#if !data.cases || data.cases.length === 0}
-			<!-- Empty state per UI-SPEC copywriting contract -->
+		{#if !data.terms || data.terms.length === 0}
 			<h2
 				style="
-					font-size: 20px;
-					font-weight: 600;
-					color: #e2e8f0;
-					margin: 0 0 12px 0;
+					font-size: var(--font-size-heading);
+					font-weight: var(--font-weight-semibold);
+					color: var(--color-text-primary);
+					margin: 0 0 var(--space-sm) 0;
 				"
 			>
 				No arguments published yet
 			</h2>
 			<p
 				style="
-					font-size: 16px;
-					font-weight: 400;
-					color: #94a3b8;
+					font-size: var(--font-size-body);
+					font-weight: var(--font-weight-regular);
+					color: var(--color-text-secondary);
 					margin: 0;
-					line-height: 1.6;
+					line-height: var(--line-height-body);
 				"
 			>
 				Check back soon — new oral arguments are added regularly.
 			</p>
 		{:else}
-			<!-- Argument list: each row links to /arguments/{argument_slug} (D-10) -->
-			{#each data.cases as c (c.id)}
+			{#each data.terms as term (term.term_year)}
 				<a
-					href="/arguments/{c.argument_slug}"
+					href="/arguments/term/{term.term_year}"
 					style="
-						background-color: #1e293b;
-						border: 1px solid #334155;
+						background-color: var(--color-surface);
+						border: 1px solid var(--color-border);
 						border-radius: 6px;
-						padding: 16px;
-						margin-bottom: 16px;
+						padding: var(--space-md);
+						margin-bottom: var(--space-md);
 						display: block;
 						text-decoration: none;
 					"
 				>
-					<!-- Case name: 20px, weight 600, #e2e8f0 -->
 					<span
 						style="
-							font-size: 20px;
-							font-weight: 600;
-							color: #e2e8f0;
+							font-size: var(--font-size-lead);
+							font-weight: var(--font-weight-semibold);
+							color: var(--color-text-primary);
 							display: block;
-							margin-bottom: 4px;
+							margin-bottom: var(--space-xs);
 						"
 					>
-						{c.case_name}
+						October Term {term.term_year}
 					</span>
-					<!-- Subline: docket + argued date — 14px, weight 400, #94a3b8 -->
 					<span
 						style="
-							font-size: 14px;
-							font-weight: 400;
-							color: #94a3b8;
+							font-size: var(--font-size-caption);
+							font-weight: var(--font-weight-regular);
+							color: var(--color-text-secondary);
 						"
 					>
-						No. {c.docket_number} · Argued {formatDate(c.argued_date)}
+						{formatArgumentCount(term.argument_count)}
 					</span>
 				</a>
 			{/each}

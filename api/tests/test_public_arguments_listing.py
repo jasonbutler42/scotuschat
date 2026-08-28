@@ -20,6 +20,7 @@ from sqlalchemy import delete
 
 from api.core import database as _database
 from api.models.models import Argument, ArgumentStatusEnum, Case, CaseArgument
+from api.tests.test_arguments import assert_no_key_anywhere
 
 # `AsyncSessionLocal` is None at import time and only assigned inside the
 # FastAPI lifespan (api/core/database.py) — a `from ... import
@@ -407,3 +408,73 @@ async def test_term_detail_shared_argued_date_orders_stably(
 
     assert set(first_order) == {id_a, id_b}
     assert first_order == second_order
+
+
+# ---------------------------------------------------------------------------
+# Task 3: live leak assertions — the half a static schema sweep structurally
+# cannot see (T-51-04-06).
+#
+# api/tests/test_trust_public_leak_ban.py's static sweep derives response
+# models from each public router's declared `response_model=` and walks
+# their DECLARED fields. It cannot see a payload that never passes through a
+# declared model at all — a route with no response_model, a raw JSONResponse
+# return, or a dict/Any-typed field whose runtime keys no declared-field
+# sweep can enumerate. These three tests fetch the real endpoint and walk
+# the DECODED JSON body recursively with assert_no_key_anywhere (imported,
+# not copied, from api/tests/test_arguments.py), covering every new
+# unauthenticated public payload this phase ships:
+#   - GET /arguments/terms
+#   - GET /arguments/term/{term_year}
+#   - GET /arguments/by-slug/{slug}/utterances (route added by plan 51-02)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="DATABASE_URL not configured")
+async def test_terms_live_response_never_leaks_trust_tier(client: AsyncClient, seeded: _SeededFixture) -> None:
+    """GET /arguments/terms — live decoded JSON body, walked recursively."""
+    year = 1940 + (uuid.uuid4().int % 100)
+    await seeded.add_argument(term_year=year, question_number=1)
+
+    response = await client.get("/arguments/terms")
+    assert response.status_code == 200
+    body = response.json()
+    assert_no_key_anywhere(body, "trust_tier", "GET /arguments/terms response")
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="DATABASE_URL not configured")
+async def test_term_detail_live_response_never_leaks_trust_tier(
+    client: AsyncClient, seeded: _SeededFixture
+) -> None:
+    """GET /arguments/term/{term_year} — live decoded JSON body, against a seeded, populated term."""
+    year = 1950 + (uuid.uuid4().int % 100)
+    await seeded.add_argument(term_year=year, question_number=1)
+
+    response = await client.get(f"/arguments/term/{year}")
+    assert response.status_code == 200
+    body = response.json()
+    assert_no_key_anywhere(body, "trust_tier", "GET /arguments/term/{term_year} response")
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="DATABASE_URL not configured")
+async def test_by_slug_utterances_live_response_never_leaks_trust_tier(
+    client: AsyncClient, seeded: _SeededFixture
+) -> None:
+    """
+    GET /arguments/by-slug/{slug}/utterances — live decoded JSON body,
+    against a seeded published argument. This route was added by plan
+    51-02; plan 51-04's live-leak coverage extends to it too, since it is
+    one of the three new unauthenticated public payloads this phase ships
+    (the other two are this module's own two term-grouped endpoints).
+    """
+    suffix = uuid.uuid4().hex[:10]
+    slug = f"test-fixture-leak-check-{suffix}"
+    year = 1960 + (uuid.uuid4().int % 100)
+    await seeded.add_argument(term_year=year, question_number=1, slug=slug)
+
+    response = await client.get(f"/arguments/by-slug/{slug}/utterances")
+    assert response.status_code == 200
+    body = response.json()
+    assert_no_key_anywhere(body, "trust_tier", "GET /arguments/by-slug/{slug}/utterances response")

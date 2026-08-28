@@ -18,6 +18,12 @@ every route registered on the public routers (api.routers.cases,
 api.routers.arguments, api.routers.people), so a newly added public route
 that is not covered fails this module rather than passing silently
 (T-48-LEAKFUTURE).
+
+Phase 51 (plan 51-04): the term-grouped public listing models
+(`api/schemas/arguments.py` — `TermSummary`, `TermIndexResponse`,
+`ArgumentListItem`, `TermArgumentsResponse`) joined the covered set. No new
+banned key was needed — the new models expose identification fields only
+(term year, case name, docket, date, a published-record count).
 """
 
 from __future__ import annotations
@@ -43,6 +49,8 @@ PUBLIC_SCHEMA_MODULE_PATHS = [
     ROOT / "api" / "schemas" / "people.py",
     ROOT / "api" / "schemas" / "utterance.py",
     ROOT / "api" / "schemas" / "speakers.py",
+    # Phase 51 plan 51-04: term-grouped public listing models.
+    ROOT / "api" / "schemas" / "arguments.py",
 ]
 
 # D-34 (plan 49-04): the ban widens from a single key to the whole Phase 49

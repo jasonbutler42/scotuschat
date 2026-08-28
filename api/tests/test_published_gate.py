@@ -151,6 +151,67 @@ class TestPublishedGate:
             )
 
 
+class TestTermGroupedListingPublishedGate:
+    """
+    Source-level assertions ensuring the published gate (T-51-04-01) covers
+    both new term-grouped listing service functions (Phase 51 plan 51-04),
+    mirroring TestPublishedGate's style for get_cases(). Each function must
+    filter on BOTH Argument.published_at.isnot(None) AND
+    Argument.status == PUBLISHED — in addition to each other, never in
+    place of each other, since unpublish_argument deliberately retains
+    published_at (Phase 48 plan 10 Defect 2). No live database is required
+    for this class.
+    """
+
+    def test_list_terms_uses_published_at_filter(self):
+        lines = _service_function_source_lines("arguments.py", "list_terms")
+        assert lines, "Could not extract list_terms() body from api/services/arguments.py"
+
+        combined = "\n".join(lines)
+        assert "Argument.published_at.isnot" in combined, (
+            "list_terms() must filter on Argument.published_at.isnot(None) "
+            "(T-51-04-01 published gate). "
+            f"Actual body (non-comment lines):\n{combined}"
+        )
+
+    def test_list_terms_uses_status_published_filter(self):
+        lines = _service_function_source_lines("arguments.py", "list_terms")
+        assert lines, "Could not extract list_terms() body from api/services/arguments.py"
+
+        combined = "\n".join(lines)
+        assert "ArgumentStatusEnum.PUBLISHED" in combined, (
+            "list_terms() must ALSO filter on Argument.status == "
+            "ArgumentStatusEnum.PUBLISHED, in addition to published_at "
+            "(T-51-04-01) — published_at alone no longer distinguishes "
+            "PUBLISHED from UNPUBLISHED (unpublish_argument retains it). "
+            f"Actual body (non-comment lines):\n{combined}"
+        )
+
+    def test_list_arguments_for_term_uses_published_at_filter(self):
+        lines = _service_function_source_lines("arguments.py", "list_arguments_for_term")
+        assert lines, "Could not extract list_arguments_for_term() body from api/services/arguments.py"
+
+        combined = "\n".join(lines)
+        assert "Argument.published_at.isnot" in combined, (
+            "list_arguments_for_term() must filter on "
+            "Argument.published_at.isnot(None) (T-51-04-01 published gate). "
+            f"Actual body (non-comment lines):\n{combined}"
+        )
+
+    def test_list_arguments_for_term_uses_status_published_filter(self):
+        lines = _service_function_source_lines("arguments.py", "list_arguments_for_term")
+        assert lines, "Could not extract list_arguments_for_term() body from api/services/arguments.py"
+
+        combined = "\n".join(lines)
+        assert "ArgumentStatusEnum.PUBLISHED" in combined, (
+            "list_arguments_for_term() must ALSO filter on Argument.status "
+            "== ArgumentStatusEnum.PUBLISHED, in addition to published_at "
+            "(T-51-04-01) — published_at alone no longer distinguishes "
+            "PUBLISHED from UNPUBLISHED (unpublish_argument retains it). "
+            f"Actual body (non-comment lines):\n{combined}"
+        )
+
+
 class TestArgumentDetailPublishedGate:
     """
     Source-level assertions ensuring the publish gate (BUG-01/D-02) covers both

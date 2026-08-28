@@ -263,3 +263,88 @@ rather than a rewrite.
    transcripts already contain. Operator named this as the exact use case for the sticky
    avatar and as future work. B2 already renders multi-paragraph runs, so when this lands
    it is a parsing change feeding an existing renderer, not a redesign.
+
+---
+
+## D-19 amendments (operator, 2026-08-28, after seeing B2 rendered)
+
+### Grouped corners softened to 2px
+
+Adjoining corners are **2px**, not 0. The run's outer corners stay **6px**. A
+single-utterance run keeps all four at 6px. Operator's call on sight: a hard 0 read as a
+seam; 2px frames the group without one.
+
+| Position in run | top-left | top-right | bottom-left | bottom-right |
+|---|---|---|---|---|
+| single (run of 1) | 6 | 6 | 6 | 6 |
+| first | 6 | 6 | **2** | **2** |
+| middle | **2** | **2** | **2** | **2** |
+| last | **2** | **2** | 6 | 6 |
+
+### The sticky-avatar rule, stated exactly
+
+Operator's rule, verbatim: *"the rule for the avatar is that it is always visible for a
+given utterance. As long as the utterance is on the screen, you should see the avatar. If
+the entire utterance fits on the screen, then the avatar would sit at the bottom."*
+
+Operator confirmed after checking that **this is exactly how Telegram behaves**, and that
+recreating Telegram's handling is the intent. Treat Telegram as the reference
+implementation for this behaviour.
+
+**Mechanism:** `position: sticky` with a **`bottom`** offset on the avatar, inside a rail
+column stretched to the full height of its run. Offset: `--space-sm` (8px).
+
+**No animation, confirmed by the operator:** *"There is no animation when the avatar is
+gone. It just scrolls away with the utterance."* So no transition, no fade, no transform —
+plain CSS sticky and nothing else. Do not add a `transition` to the avatar's position or
+opacity, and do not animate the un-stick moment. The avatar's departure is simply its run
+leaving the viewport. This also means `prefers-reduced-motion` needs no special handling
+here: there is no motion to reduce beyond the scroll the reader is already driving.
+
+That one declaration produces every required state:
+
+| Scroll state | Behaviour | Rule satisfied |
+|---|---|---|
+| Run entirely below the viewport | Avatar off screen with its run | correct — utterance not on screen |
+| Tall run, top on screen, bottom below | Avatar pulled up, pinned near viewport bottom | visible |
+| Scrolled into the middle of a tall run | Avatar stays pinned, travels with the reader | visible |
+| Run's bottom scrolls into view | Avatar un-sticks, settles at the run's bottom edge | visible |
+| Run scrolled off the top | Avatar leaves with its run | correct — utterance not on screen |
+| Short run, fully on screen | Sticky never engages; avatar rests at the run's bottom | "sits at the bottom" |
+
+**Run-level, not utterance-level.** The rail slot spans the whole RUN and holds ONE avatar,
+even though the operator stated the rule per utterance. This satisfies the per-utterance
+rule for every utterance in the run, because sticky keeps the avatar on screen whenever any
+part of the run is on screen. Do NOT give each utterance in a run its own avatar — that
+would reintroduce exactly the repetition the outside rail exists to remove.
+
+### Failure modes — read before implementing
+
+`position: sticky` fails **silently**. It does not warn, it does not error; it just behaves
+as `static` and the avatar scrolls away. The two causes, in order of likelihood:
+
+1. **Any ancestor between the sticky element and the scroll container having
+   `overflow: hidden | clip | scroll | auto` kills it.** Check every level: the rail column,
+   the run row, the runs container, the reading area, the page wrapper, and any layout
+   shell. This is the single most common reason sticky "doesn't work". Note that
+   `overflow: hidden` on the *bubble* is harmless — the bubble is a sibling of the avatar,
+   not an ancestor of it.
+2. **The rail column must actually stretch to the run's full height.** If it hugs the
+   avatar (36–40px), sticky has no travel range and the avatar cannot move. In a flex row
+   this means the column must stretch rather than hug — do not let it size to content.
+
+Verify by scrolling a real opening-argument-length utterance in a browser, not by reading
+the CSS. This is precisely the class of frontend claim the project's Testing Policy says a
+source-text assertion cannot prove.
+
+### Resolved: the name/avatar split is accepted
+
+The open sub-question flagged when B2 was first shown — that the speaker name sits on the
+first bubble while the avatar parks at the bottom, ~400px apart in a long run — is
+**resolved: accept the split.** Operator: *"I'm fine with the name and avatar being split."*
+
+The concern largely dissolves under the sticky rule rather than being traded away. It only
+looked risky against a *statically* bottom-parked avatar. With sticky, at the start of a
+long run the name is near the top of the viewport and the avatar is pinned near the bottom
+of it — both on screen at once. Do not add a sticky speaker name; it was considered and is
+not needed.

@@ -5,16 +5,16 @@ milestone_name: Import & Provenance Re-model
 current_phase: 51
 current_phase_name: Design System & Noun Alignment
 status: "Phase 50 COMPLETE and VERIFIED 2026-08-27; debridement pass done 2026-08-27. All 7 plans, all 4 waves, 4/4 success criteria verified in 50-VERIFICATION.md. UAT complete 35/35. Phase-50 verification also closed 50-REVIEW.md CR-01 and CR-02 and the SC-4 ungated-writer gap. One provenance-label defect (trivial-ACCEPT restamp) accepted as known debt under an operator override and logged to deferred-items.md. Next: Phase 51 (Design System & Noun Alignment), the last v1.8 phase."
-stopped_at: Completed 51-06-PLAN.md
-last_updated: "2026-08-28T17:23:43.952Z"
+stopped_at: Completed 51-07-PLAN.md
+last_updated: "2026-08-28T18:12:33.315Z"
 last_activity: 2026-08-28
-last_activity_desc: "Phase 51 Wave 3 plan 51-06 (shared primitives: Button/Badge/Input/Card) complete"
-state_head: 4ec7258c50a40c7e3a6e266872f74601fe930235
+last_activity_desc: "Phase 51 Wave 3 plan 51-07 (transcript reading polish, D-19 run grouping + sticky rail avatar, IN-02/IN-03 duplication cleanup) complete"
+state_head: 5de8946e90f343f3405e9334e8e0eb06ba21eb20
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 45
-  completed_plans: 41
+  completed_plans: 42
   percent: 80
 ---
 
@@ -166,8 +166,42 @@ browser is available (confirmed by reading it — it drives a different,
 unrelated `docket_number` field on the argument-detail page). See
 `51-06-SUMMARY.md` Issues Encountered.
 
+**Wave 3 plan `51-07` — COMPLETE (2026-08-28).** Closed the folded
+IN-02/IN-03 duplication todo (`app/src/lib/types/speaker.ts` — single
+`TenureRow`/`SpeakerDetail` site; `SpeakerPopover.svelte`'s duplicated
+side-colour ternary collapsed to one computation site) and shipped D-19's
+Style B2 transcript reading layer: run grouping via `$derived.by` before
+layout (the structural unit — consecutive same-speaker utterances,
+stage directions always terminate a run), one sticky outside-rail avatar
+per run (`position:sticky;bottom:var(--space-sm)`, flex-column
+`justify-content:flex-end` so it rests at the run's bottom when short and
+travels/pins when tall), and the 6/2px corner-rounding table via a new
+`position` prop on `ChatBubble`. All five `lib/public/` components plus
+the transcript route are now token-only (zero raw hex, confirmed after
+excluding a `{#each` grep false-positive — Svelte's each-block syntax
+happens to match the hex-literal regex, pre-existing, not a real
+literal). P-06 compliance found and fixed along the way: `SpeakerPopover`'s
+bio text used a 3-line `-webkit-line-clamp` + "Read more" toggle (Phase 45
+BUG-02's fix for an unrelated card-overflow problem) — removed, since P-06
+explicitly bans truncating popover content; the bio now always renders in
+full. Landmine audit: zero top-level `const` captures off `data` in the
+route (already all `$derived`/`$derived.by`). Verified live via a real
+vite dev server + mock API + curl SSR fetch (no browser tool in this
+sandbox): 2 `role="article"` runs, 1 `role="note"` stage direction,
+correct 6/2px radii per run position, correct section-anchor id, live
+`position:sticky` declaration all present. `npm run check`/`build` both
+green; bare `pytest -q`: 1378 passed, 5 xfailed, 0 failed (unchanged —
+frontend-only plan). Fixed a pre-existing stale selector in
+`tenure-public-title.browser.test.mjs` (queried `.popover-card p` for
+tenure info that has rendered as `<span>` since some prior pass, not this
+plan). **Open for a human:** the sticky-avatar scroll behavior over real
+distance, the Figma frame comparison at 375px/1280px, the Justice-vs-
+advocate visual-weight side-by-side, and a full-length argument scroll
+test — no browser tool / Figma MCP available to this executor. See
+`51-07-SUMMARY.md` Issues Encountered.
+
 **Next action:** Wave 3 continues per the phase plan sequence
-(`51-07` onward), then `/gsd-verify-work 51` once all 10 plans are done.
+(`51-08` onward), then `/gsd-verify-work 51` once all 10 plans are done.
 
 **Wave 1 outcomes that bind later waves:**
 
@@ -392,6 +426,7 @@ items → 14.** Every closure carries its evidence in the file it closes; the co
 | Phase 51 P04 | 80min | 3 tasks | 6 files |
 | Phase 51 P05 | 45min | 3 tasks | 23 files |
 | Phase 51 P06 | 46min | 3 tasks | 10 files |
+| Phase 51 P07 | 45min | 3 tasks | 8 files |
 
 v1.7 per-plan metrics cleared at this milestone boundary per the standard STATE.md reset; the underlying per-plan SUMMARY files remain in `.planning/milestones/v1.7-phases/`.
 
@@ -482,6 +517,8 @@ Full cross-milestone decision log lives in PROJECT.md's Key Decisions table. Per
 - [Phase 51]: Phase 51 plan 51-04: term-grouped public API (GET /arguments/terms, GET /arguments/term/{term_year}) shipped per D-14/D-15/D-16 Variant A (minimal row, no advocate join). Leak-ban and published-gate contracts extended and proven non-vacuous live. Full suite 1378 passed, 5 xfailed, 0 failed.
 - [Phase 51]: Substituted @lucide/svelte for the deprecated lucide-svelte D-18 named (operator-approved) — Package-legitimacy gate found lucide-svelte deprecated in favor of the actively-maintained scoped successor, same maintainer/repo
 - [Phase 51]: Button's icon-only accessible-name contract enforced by a TypeScript discriminated union, not a runtime check — Plan required the omission to be impossible to construct; a compile error satisfies that more strongly than a runtime assertion
+- [Phase 51]: D-19 Style B2 transcript redesign shipped: run grouping via $derived.by before layout, one sticky outside-rail avatar per run (position:sticky;bottom, flex-column justify-content:flex-end), 6/2px corner-rounding table on ChatBubble's new position prop. — Closes DS-02's reading-layer half; the folded IN-02/IN-03 duplication todo closed in the same plan (shared file, shared scope).
+- [Phase 51]: Bio clamp+expand (Phase 45 BUG-02's -webkit-line-clamp) removed from SpeakerPopover.svelte — P-06 bans truncating popover content; bio now always renders in full. — Auto-fixed under Defect Policy Rule 2 (missing critical constraint compliance), found while sweeping lib/public/ for the plan's own hard prohibition.
 
 ### Roadmap Evolution
 
@@ -541,8 +578,8 @@ at close.
 
 ## Session Continuity
 
-Last session: 2026-08-28T17:23:42.955Z
-Stopped at: Completed 51-06-PLAN.md
+Last session: 2026-08-28T18:12:32.198Z
+Stopped at: Completed 51-07-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

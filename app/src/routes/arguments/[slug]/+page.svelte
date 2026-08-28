@@ -5,38 +5,7 @@
 	import SectionRail from '$lib/public/SectionRail.svelte';
 	import MobileNavBar from '$lib/public/MobileNavBar.svelte';
 	import SpeakerPopover from '$lib/public/SpeakerPopover.svelte';
-
-	interface TenureRow {
-		// Canonical "chief"/"associate" storage value (Phase 37 D-15/D-17) — formal
-		// title projection happens in SpeakerPopover.svelte, not here.
-		office: string | null;
-		start_date: string | null;
-		end_date: string | null;
-		// Canonical "retired"/"died"/"promoted" storage value, or null when the
-		// tenure has no recorded reason (Phase 39 D-01/D-02) — formal title
-		// projection happens in SpeakerPopover.svelte, not here.
-		reason_left: string | null;
-		// Phase 39 (D-13, promote not add-alongside): per-tenure appointing
-		// president, replacing the retired top-level appointing_president field.
-		appointed_by: string | null;
-		// Phase 39 (D-11/D-12, reverses T-14-02): factual historical record about
-		// the appointing president, not the Justice.
-		appointing_president_party: string | null;
-	}
-
-	interface SpeakerDetail {
-		person_id: number;
-		full_name: string;
-		role_name: string | null;
-		photo_url_full: string | null;
-		is_bench: boolean;
-		tenure: TenureRow[];
-		// Phase 39 (D-13): the top-level appointing_president field retired here
-		// — the concept moved onto each TenureRow as appointed_by (see above).
-		birthdate: string | null;
-		death_date: string | null;
-		bio_text: string | null;
-	}
+	import type { SpeakerDetail } from '$lib/types/speaker';
 
 	let { data } = $props();
 

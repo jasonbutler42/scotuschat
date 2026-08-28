@@ -27,3 +27,18 @@ scope for that phase (pre-existing, cosmetic quality items, not bugs).
 - Collapse `avatarBg`/`sideColor` into one constant.
 - Extract `TenureRow`/`SpeakerDetail` into a shared module (e.g.
   `$lib/types/speaker.ts`) and import from both call sites.
+
+## Resolution (2026-08-28, Phase 51 plan 51-07)
+
+Closed exactly as suggested. `app/src/lib/types/speaker.ts` (new module,
+framework-free, matches the `participantSide.ts` convention) now holds the
+single `TenureRow`/`SpeakerDetail` declaration, moved verbatim (field for
+field, no shape change) from `SpeakerPopover.svelte` and
+`app/src/routes/arguments/[slug]/+page.svelte` (the file this todo names as
+`.../cases/.../+page.svelte` moved during plan 51-02's D-10 route rename).
+Both call sites now import the type. `SpeakerPopover.svelte`'s duplicated
+`avatarBg`/`sideColor` — both computed from the identical
+`isBench ? '#94a3b8' : '#93c5fd'` ternary — collapsed into one `sideColor`
+computation site referencing `var(--color-side-bench)` /
+`var(--color-side-advocate)`, used at every site that previously read either
+variable.

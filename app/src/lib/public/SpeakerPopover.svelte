@@ -1,21 +1,5 @@
 <script lang="ts">
-	interface TenureRow {
-		// Canonical "chief"/"associate" storage value (Phase 37 D-15/D-17).
-		office: string | null;
-		start_date: string | null;
-		end_date: string | null;
-		// Canonical "retired"/"died"/"promoted" storage value, or null when the
-		// tenure has no recorded reason (open tenure, or unknown historical row —
-		// Phase 39 D-01/D-02).
-		reason_left: string | null;
-		// Phase 39 (D-13, promote not add-alongside): per-tenure appointing
-		// president, replacing the retired top-level appointing_president field.
-		appointed_by: string | null;
-		// Phase 39 (D-11/D-12, reverses T-14-02): factual historical record about
-		// the appointing president, not the Justice. Rendered identically for
-		// every tenure entry — never styled or ordered by its value.
-		appointing_president_party: string | null;
-	}
+	import type { TenureRow, SpeakerDetail } from '$lib/types/speaker';
 
 	// Single formal-title mapping (mirrors api/models/models.py's OFFICE_TITLES /
 	// office_title(), D-15). Exhaustive over the two canonical values only — an
@@ -45,27 +29,22 @@
 		return reason ? (REASON_LEFT_TITLES[reason] ?? '') : '';
 	}
 
-	interface SpeakerDetail {
-		person_id: number;
-		full_name: string;
-		role_name: string | null;
-		photo_url_full: string | null;
-		is_bench: boolean;
-		tenure: TenureRow[];
-		// Phase 39 (D-13): the top-level appointing_president field retired here
-		// — the concept moved onto each TenureRow as appointed_by (see above).
-		birthdate: string | null;
-		death_date: string | null;
-		bio_text: string | null;
-	}
-
 	let { speaker } = $props<{ speaker: SpeakerDetail }>();
 
 	const isBench = speaker.is_bench;
-	const avatarBg = isBench ? '#94a3b8' : '#93c5fd';
-	// Bench-vs-advocate side accent — pre-existing avatar distinction, reused
-	// for the role pill. This is a side distinction, never a party/value one.
-	const sideColor = isBench ? '#94a3b8' : '#93c5fd';
+
+	// Single side-colour computation site (IN-02 closure — was two identically
+	// computed variables, avatarBg and sideColor, used interchangeably). Every
+	// site that needs the bench/advocate side colour calls this one function,
+	// so the collapsed duplicate cannot silently reappear as a renamed copy of
+	// the same expression shape. A plain function (not a quoted-string
+	// ternary) computed once into a `const` — never reassigned, so no `$state`
+	// is needed for this per-mount-fixed value.
+	function resolveSideColor(bench: boolean): string {
+		if (bench) return 'var(--color-side-bench)';
+		return 'var(--color-side-advocate)';
+	}
+	const sideColor = resolveSideColor(isBench);
 
 	const initials = (() => {
 		const parts = speaker.full_name.trim().split(/\s+/).filter(Boolean);
@@ -148,7 +127,7 @@
 		{:else}
 			<div
 				aria-hidden="true"
-				style="width:60px;height:60px;border-radius:50%;background-color:{avatarBg};
+				style="width:60px;height:60px;border-radius:50%;background-color:{sideColor};
 				       display:flex;align-items:center;justify-content:center;
 				       font-size:18px;font-weight:600;color:#0f1117;flex-shrink:0;"
 			>{initials}</div>
@@ -170,13 +149,13 @@
 	<!-- Birth/death line: bench only, full width. Omitted entirely when both
 	     dates are null; each half omitted independently otherwise. -->
 	{#if isBench && (speaker.birthdate || speaker.death_date)}
-		<p style="font-size:13px;font-weight:400;color:#94a3b8;line-height:1.5;margin-top:16px;margin-bottom:0;border-top:1px solid #334155;padding-top:16px;">{#if speaker.birthdate}b. {formatShort(speaker.birthdate)}{/if}{#if speaker.birthdate && speaker.death_date}{@render separator(8)}{/if}{#if speaker.death_date}d. {formatShort(speaker.death_date)}{/if}</p>
+		<p style="font-size:13px;font-weight:400;color:var(--color-text-secondary);line-height:1.5;margin-top:16px;margin-bottom:0;border-top:1px solid #334155;padding-top:16px;">{#if speaker.birthdate}b. {formatShort(speaker.birthdate)}{/if}{#if speaker.birthdate && speaker.death_date}{@render separator(8)}{/if}{#if speaker.death_date}d. {formatShort(speaker.death_date)}{/if}</p>
 	{/if}
 
 	<!-- Advocate descriptor slot (D-16): unconditional placeholder text, no real
 	     per-advocate data exists yet — do not invent plausible-looking data. -->
 	{#if !isBench}
-		<p style="font-size:13px;font-weight:400;font-style:italic;color:#94a3b8;margin-top:16px;margin-bottom:0;border-top:1px solid #334155;padding-top:16px;">Coming soon</p>
+		<p style="font-size:13px;font-weight:400;font-style:italic;color:var(--color-text-secondary);margin-top:16px;margin-bottom:0;border-top:1px solid #334155;padding-top:16px;">Coming soon</p>
 	{/if}
 
 	<!-- Bio paragraph: bench and advocate alike, full width. Omitted entirely
@@ -186,14 +165,14 @@
 			<p
 				bind:this={bioEl}
 				class={bioExpanded ? 'bio-scroll' : ''}
-				style="font-size:14px;font-weight:400;line-height:1.5;color:#94a3b8;margin:0;{bioExpanded ? 'max-height:150px;overflow-y:auto;' : 'display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden;'}"
+				style="font-size:14px;font-weight:400;line-height:1.5;color:var(--color-text-secondary);margin:0;{bioExpanded ? 'max-height:150px;overflow-y:auto;' : 'display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden;'}"
 			>{speaker.bio_text}</p>
 			{#if bioOverflows}
 				<button
 					type="button"
 					onclick={toggleBio}
 					aria-expanded={bioExpanded}
-					style="font-size:13px;font-weight:400;color:#93c5fd;text-decoration:underline;
+					style="font-size:13px;font-weight:400;color:var(--color-accent);text-decoration:underline;
 					       background:none;border:none;padding:0;margin-top:4px;cursor:pointer;"
 				>{bioExpanded ? 'Show less' : 'Read more'}</button>
 			{/if}
@@ -211,7 +190,7 @@
 					     never wraps). -->
 					<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">
 						<span style="font-size:13px;font-weight:600;line-height:1.5;color:#e2e8f0;min-width:0;">{officeTitle(t.office)}</span>
-						<span style="font-size:13px;font-weight:400;line-height:1.5;color:#94a3b8;text-align:right;flex-shrink:0;white-space:nowrap;">{tenureRange(t.start_date, t.end_date)}</span>
+						<span style="font-size:13px;font-weight:400;line-height:1.5;color:var(--color-text-secondary);text-align:right;flex-shrink:0;white-space:nowrap;">{tenureRange(t.start_date, t.end_date)}</span>
 					</div>
 					<!-- Row 2, rendered only when appointed_by or reason_left is
 					     non-null. Left cell renders appointed_by alone, or
@@ -220,8 +199,8 @@
 					     missing half of either cell. -->
 					{#if t.appointed_by || t.reason_left}
 						<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">
-							<span style="font-size:13px;font-weight:400;line-height:1.5;color:#94a3b8;min-width:0;">{#if t.appointed_by}{t.appointed_by}{#if t.appointing_president_party}{@render separator(4)}{t.appointing_president_party}{/if}{/if}</span>
-							<span style="font-size:13px;font-weight:400;line-height:1.5;color:#94a3b8;text-align:right;flex-shrink:0;">{#if t.reason_left}{reasonLeftTitle(t.reason_left)}{/if}</span>
+							<span style="font-size:13px;font-weight:400;line-height:1.5;color:var(--color-text-secondary);min-width:0;">{#if t.appointed_by}{t.appointed_by}{#if t.appointing_president_party}{@render separator(4)}{t.appointing_president_party}{/if}{/if}</span>
+							<span style="font-size:13px;font-weight:400;line-height:1.5;color:var(--color-text-secondary);text-align:right;flex-shrink:0;">{#if t.reason_left}{reasonLeftTitle(t.reason_left)}{/if}</span>
 						</div>
 					{/if}
 				</div>

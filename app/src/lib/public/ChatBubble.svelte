@@ -28,7 +28,15 @@
 		showSpeakerName?: boolean;
 	}>();
 
-	const isBench = utterance.side === 'BENCH';
+	// Every value below is $derived, NOT const. A plain `const` off a prop is
+	// captured once at component init and then frozen — and these bubbles ARE
+	// reused across renders: the inner `{#each}` on the transcript route is keyed
+	// by `u.sequence`, so navigating from one argument to another hands an
+	// existing instance a DIFFERENT `utterance` with the same sequence number.
+	// With consts that meant the wrong speaker name and the wrong side colour
+	// surviving the navigation. Same defect class as the published-lock stale-prop
+	// bug; svelte-check flags it as `state_referenced_locally`.
+	const isBench = $derived(utterance.side === 'BENCH');
 	// D-05: BENCH: left-aligned; ADVOCATE or UNKNOWN: right-aligned.
 	// Side is encoded only via position (handled by the route's row layout)
 	// and this neutral speaker-label colour — never via size or weight (P-03).
@@ -36,9 +44,9 @@
 		if (bench) return 'var(--color-side-bench)';
 		return 'var(--color-side-advocate)';
 	}
-	const labelColor = resolveLabelColor(isBench);
-	const displayName = utterance.speaker_name ?? utterance.raw_speaker_label ?? '';
-	const displayRole = utterance.speaker_role ?? null;
+	const labelColor = $derived(resolveLabelColor(isBench));
+	const displayName = $derived(utterance.speaker_name ?? utterance.raw_speaker_label ?? '');
+	const displayRole = $derived(utterance.speaker_role ?? null);
 
 	// D-19 corner-rounding table (2px amendment). CSS border-radius shorthand
 	// order is top-left top-right bottom-right bottom-left; every row here has
@@ -52,7 +60,11 @@
 	function resolveRadius(pos: RunPosition): string {
 		return RADIUS_BY_POSITION[pos];
 	}
-	const borderRadius = resolveRadius(position);
+	// $derived, not const: an utterance's position within its run changes when the
+	// run's composition changes (an adjacent same-speaker turn appears or goes
+	// away), while `u.sequence` — the each-key — stays the same. A frozen value
+	// here would leave a bubble rounded as `middle` when it had become `last`.
+	const borderRadius = $derived(resolveRadius(position));
 </script>
 
 <div

@@ -234,3 +234,38 @@ None — no external service configuration required.
 - FOUND commit `65e9bc5fa` (Task 1)
 - FOUND commit `a737f7d76` (Task 2)
 - FOUND commit `5de8946e9` (Task 3)
+
+---
+
+## Orchestrator post-plan defect fix (2026-08-28)
+
+Found by the Wave 3 build gate, fixed under the Defect Policy (reactivity /
+stale-prop bugs are Claude's — fix, don't ask). Commit `59167733e`.
+
+**What broke.** `ChatBubble.svelte` held five values as plain `const` off props:
+`isBench`, `labelColor`, `displayName`, `displayRole` (all inherited from the v1.0
+component, predating this phase) and `borderRadius` (introduced by this plan's
+Task 3). A `const` off a prop is captured once at component init and frozen.
+
+**Why it was reachable.** These bubbles are reused. The transcript route's inner
+`{#each item.utterances as u, idx (u.sequence)}` is keyed by `u.sequence`, so a
+client-side navigation from one argument to another hands an existing ChatBubble
+instance a *different* `utterance` carrying the same sequence number. With consts
+that meant the wrong speaker name and the wrong side colour survived the
+navigation — public-facing incorrectness, not cosmetics. Independently,
+`position` changes when a run's composition changes while `u.sequence` does not,
+so a bubble could stay rounded as `middle` after becoming `last`.
+
+**What fixed it.** All five converted to `$derived`.
+
+**What proves it.** `svelte-check` went 38 → 33 warnings — exactly the five
+`state_referenced_locally` reports on this file, with 0 errors; build green;
+bare `pytest -q` 1378 passed / 5 xfailed / 0 failed. No browser was required:
+the warning is emitted by static analysis of the reactivity graph, which is one
+of the few frontend claims this project *can* prove without rendering.
+
+**Do not "fix" the 33 remaining warnings of the same code.** They are the
+deliberate `$state`-seeded-from-`$props` pattern used for editable admin fields,
+where a failed save's value must take priority over the loaded record. The
+distinguishing question is whether a value must **track** the prop (`$derived`) or
+merely **start from** it (`$state`) — same warning, opposite correct answers.

@@ -5,16 +5,16 @@ milestone_name: Import & Provenance Re-model
 current_phase: 51
 current_phase_name: Design System & Noun Alignment
 status: "Phase 50 COMPLETE and VERIFIED 2026-08-27; debridement pass done 2026-08-27. All 7 plans, all 4 waves, 4/4 success criteria verified in 50-VERIFICATION.md. UAT complete 35/35. Phase-50 verification also closed 50-REVIEW.md CR-01 and CR-02 and the SC-4 ungated-writer gap. One provenance-label defect (trivial-ACCEPT restamp) accepted as known debt under an operator override and logged to deferred-items.md. Next: Phase 51 (Design System & Noun Alignment), the last v1.8 phase."
-stopped_at: Completed 51-03-PLAN.md
-last_updated: "2026-08-28T15:01:53.920Z"
+stopped_at: Completed 51-04-PLAN.md
+last_updated: "2026-08-28T15:34:50.369Z"
 last_activity: 2026-08-28
 last_activity_desc: Phase 51 Wave 2 plan 51-03 (design tokens) complete
-state_head: 6752090d1cf2cd1f30dcdaf954c5690eda704c76
+state_head: 883401dc9409344ed1d594bf7133c19ca5be3454
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 45
-  completed_plans: 38
+  completed_plans: 39
   percent: 80
 ---
 
@@ -78,19 +78,40 @@ weight is two `is_corpus` subquery branches already commented as retained for
 ## Current Position
 
 Phase: 51 (Design System & Noun Alignment) — EXECUTING
-Last activity: 2026-08-28 — Wave 1 complete (plans 51-01, 51-02). Wave 2 plan `51-03`
-(design tokens, D-01/D-02/D-03) complete. Tailwind removed (0 packages added, 69
+Last activity: 2026-08-28 — Wave 1 complete (plans 51-01, 51-02). Wave 2 plans `51-03`
+(design tokens, D-01/D-02/D-03) and `51-04` (term-grouped public API, D-14/D-15/D-16)
+complete. Tailwind removed (0 packages added, 69
 removed); full two-layer token set (14 primitives + 37 semantic names) authored in
 `app/src/app.css`, matching plan 51-01's Figma `semantic` collection exactly;
 `51-TOKEN-MAP.md` published; `.planning/codebase/DESIGN-SYSTEM.md` rewritten. Full
-suite unchanged: 1318 passed / 5 xfailed / 0 failed. `npm run check`/`npm run build`
+suite unchanged after 51-03: 1318 passed / 5 xfailed / 0 failed. `npm run check`/`npm run build`
 both green. **Open for a human:** 3 of 4 required browser tests and the plan's
 backstop visual truth (no layout shift from preflight removal) could not be
 observed — no Chromium/Edge binary in this sandbox (same constraint 51-02 hit).
 See `51-03-SUMMARY.md` Issues Encountered.
 
-**Next action:** Execute the remaining Wave 2 plans (`51-04` term-grouped API,
-`51-05` component-directory split), then `/gsd-verify-work 51` once all 10 plans are done.
+**Wave 2 plan `51-04` — COMPLETE (2026-08-28).** `GET /arguments/terms` (term
+index with published-argument counts) and `GET /arguments/term/{term_year}`
+(term-scoped listing), backed by `list_terms`/`list_arguments_for_term` in
+`api/services/arguments.py` — both extend the same `is_lead`-joined,
+both-published-predicates query shape `get_cases()` already uses, grouping on
+`Case.term_year` and counting `DISTINCT Argument.id` so a consolidated docket
+never inflates a count. D-16 Variant A (locked in `51-01`) applied: no
+`argument_participants` -> `people` join, no `advocates` field —
+`api/schemas/arguments.py`'s `ArgumentListItem` ships the minimal row only.
+The structural leak-ban (`test_trust_public_leak_ban.py`) and published-gate
+contract (`test_published_gate.py`) were both extended to cover the new
+module/functions, and — per the plan's own non-vacuity requirement — both
+extensions were proven live rather than asserted: a temporary `trust_tier`
+field made the leak-ban fail (reverted), and a temporary
+`response_model=None` route returning a raw dict with an injected banned key
+made the new live decoded-JSON assertion fail while the static leak-ban
+module still passed (reverted byte-identical). 16 new tests in
+`api/tests/test_public_arguments_listing.py`. Full suite: 1378 passed, 5
+xfailed, 0 failed (was 1318 before this plan). See `51-04-SUMMARY.md`.
+
+**Next action:** Execute the remaining Wave 2 plan (`51-05` component-directory
+split), then `/gsd-verify-work 51` once all 10 plans are done.
 
 **Wave 1 outcomes that bind later waves:**
 
@@ -312,6 +333,7 @@ items → 14.** Every closure carries its evidence in the file it closes; the co
 | Phase 50 P07 | 70min | 3 tasks | 8 files |
 | Phase 51 P02 | 65min | 4 tasks | 23 files |
 | Phase 51 P03 | 50min | 3 tasks | 7 files |
+| Phase 51 P04 | 80min | 3 tasks | 6 files |
 
 v1.7 per-plan metrics cleared at this milestone boundary per the standard STATE.md reset; the underlying per-plan SUMMARY files remain in `.planning/milestones/v1.7-phases/`.
 
@@ -399,6 +421,7 @@ Full cross-milestone decision log lives in PROJECT.md's Key Decisions table. Per
 - [Phase 51]: question_number chosen over argued_date as the Argument.slug collision-suffix discriminator — Verified against the real ~7,800-row corpus: argued_date collides or is null in 45.6% of the 952 multi-argument cases; question_number is always populated and unique-by-construction
 - [Phase 51]: 10 of 24 hex values found in app/src recorded as open rows in 51-TOKEN-MAP.md rather than mapped to a token — No match in the Figma-sourced 14-primitive palette; plan explicitly forbids inventing a token for an unmapped value
 - [Phase 51]: color-text-advocate token dropped rather than aliased (zero live var() call sites confirmed via grep) — Existing components hardcode 93c5fd/94a3b8 hex literals directly rather than reading the CSS variable, so removing it left nothing referenced-but-undefined
+- [Phase 51]: Phase 51 plan 51-04: term-grouped public API (GET /arguments/terms, GET /arguments/term/{term_year}) shipped per D-14/D-15/D-16 Variant A (minimal row, no advocate join). Leak-ban and published-gate contracts extended and proven non-vacuous live. Full suite 1378 passed, 5 xfailed, 0 failed.
 
 ### Roadmap Evolution
 
@@ -458,8 +481,8 @@ at close.
 
 ## Session Continuity
 
-Last session: 2026-08-28T15:01:44.576Z
-Stopped at: Completed 51-03-PLAN.md
+Last session: 2026-08-28T15:34:41.133Z
+Stopped at: Completed 51-04-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

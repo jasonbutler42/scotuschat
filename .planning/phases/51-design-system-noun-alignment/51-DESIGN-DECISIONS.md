@@ -3,13 +3,19 @@ phase: 51-design-system-noun-alignment
 plan: 01
 type: design-decisions
 created: 2026-08-28
-decisions: [D-16, D-18, E4]
+updated: 2026-08-28
+decisions: [D-16, D-18, E4, D-19]
 ---
 
 # Phase 51 — Design Decisions
 
 Produced by plan 51-01. Records the Figma deliverable D-05 puts ahead of code, and
 the three operator decisions that plans 51-04, 51-06 and 51-08 are blocked on.
+
+**Amended 2026-08-28 during Wave 2** with the transcript-style decision (D-19), which
+was not an anticipated checkpoint — it arose when the operator caught plan 51-01's
+transcript frame ignoring the chat-bubble metaphor, and asked to see options before
+committing. It binds plan 51-07. See the last section.
 
 ## Figma deliverable (D-05, D-06, D-07)
 
@@ -167,3 +173,93 @@ shared primitive under `app/src/lib/primitives/`, not in an admin-only wrapper. 
 spinner is the 7th icon and comes from `lucide-svelte` per the decision above. Public
 callers simply never pass the prop — the state is reachable only from admin form
 submissions, which are the only submissions that exist.
+
+---
+
+## Transcript style (D-19 — added 2026-08-28 during execution)
+
+**Decision: Style B2 — bubbles with the avatar in an outside rail**, with two operator
+changes from the first pass. Selected after four options were rendered side by side in
+Figma under the `transcript-style-exploration` section.
+
+Operator's framing, which is the constraint that outranks the styling: *"for this whole
+project, the only thing that has been consistent is that the bench is on one side and
+advocates on the other."* Every option preserved that; it is not up for revision.
+
+### Why this decision exists at all
+
+Plan 51-01's first `arguments-transcript` frame dropped the chat-bubble metaphor D-09
+keeps, and used a single column with a coloured left rail. The operator caught it. Fixing
+the frame surfaced the real question — the metaphor was never the only open choice, and
+the operator asked to see options before committing. This section records the outcome so
+plan 51-07 implements a chosen design rather than an accident.
+
+### The four options considered
+
+| Style | Shape | Consecutive-utterance behaviour |
+|---|---|---|
+| A | Avatar inside the bubble header (what the code had) | None — avatar and name repeat on every bubble |
+| **B2** | **Avatar in a 40px outside rail on the speaker's side** | **Rail slot spans the run; corners group; name appears once** |
+| C | Two permanent tracks with a centre spine | Stacked in-track, name dropped |
+| D | No bubbles; side by hanging edge + hairline | One run = one hairline, one label, paragraph breaks |
+
+### Change 1 — grouped corners
+
+Within a run of back-to-back utterances by one speaker, a corner that faces an adjacent
+bubble is squared and only the run's outer corners stay rounded, so a run reads as one
+framed shape without a box drawn around it.
+
+| Position in run | top-left | top-right | bottom-left | bottom-right |
+|---|---|---|---|---|
+| single (run of 1) | 6 | 6 | 6 | 6 |
+| first | 6 | 6 | 0 | 0 |
+| middle | 0 | 0 | 0 | 0 |
+| last | 0 | 0 | 6 | 6 |
+
+Squared is a hard `0`, not a small token value. Operator may soften to 2px on sight.
+
+### Change 2 — the rail avatar is sticky, parked at the bottom
+
+The avatar is bottom-aligned in the rail rather than top-aligned, and in production it is
+**sticky**: it travels down the rail as the reader scrolls and parks near the bottom of the
+viewport, so identity stays on screen through a very long passage. Operator's reason:
+opening arguments run long enough that a top-anchored avatar scrolls away entirely.
+
+Figma can only render the parked end-state; the travel is a scroll behaviour, not a static
+property. The `transcript-style-B2-selected` frame includes an opening-argument-length
+utterance specifically so the parked position is visible against a realistic worst case.
+
+**Open sub-question for plan 51-07, flagged not decided.** With the avatar parked at the
+bottom and the speaker name on the first bubble, the two halves of a speaker's identity sit
+at opposite ends of a long run (~400px apart in the sample). Sticky scrolling solves it for
+a reader mid-passage but not at the start of a run. Three candidate answers, operator's
+call at implementation time: make the name sticky too so both travel together; reduce the
+avatar to re-identification only and let the name carry introduction; or accept the split
+on the grounds that the avatar's job is re-identification during scroll, not introduction.
+
+### Run grouping is now load-bearing (operator: yes, build it in 51-07)
+
+Turns MUST be grouped by consecutive speaker into runs **before** layout. This is not a
+styling detail:
+
+- Change 1 cannot be expressed without knowing a bubble's first/middle/last position.
+- Change 2 needs one rail slot spanning the whole run, not one per utterance.
+- Styles C and D would need the same grouping, so it is not B2-specific.
+- It is the groundwork any future style switcher requires.
+
+Consequence for plan 51-07: the renderer separates grouping from presentation. Group turns
+into runs first, then lay a run out. A later style change becomes a rendering variant
+rather than a rewrite.
+
+### Deferred, recorded here so the rationale is not lost
+
+1. **Style switcher** — offering the reader a choice of transcript styles matched to
+   familiar messaging interfaces. Operator was explicit that this is NOT a priority now.
+   The rationale is a founding purpose of the project — reading ease — plus two stated
+   hypotheses the operator marked as unverified: that different readers want different
+   visuals, and that familiarity would increase engagement and discovery. Run grouping is
+   the prerequisite and is being built regardless, so this stays cheap to reach later.
+2. **Paragraph-splitting of long utterances** — using the paragraph breaks the source PDF
+   transcripts already contain. Operator named this as the exact use case for the sticky
+   avatar and as future work. B2 already renders multi-paragraph runs, so when this lands
+   it is a parsing change feeding an existing renderer, not a redesign.

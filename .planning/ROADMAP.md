@@ -353,7 +353,7 @@ Plans:
   3. Design tokens (color / type / spacing) are established as the visual foundation (absorbs backlog 999.8).
   4. The arguments listing style is decided and implemented (absorbs backlog 999.6).
 
-**Plans**: 7/10 plans executed (6 waves)
+**Plans**: 8/10 plans executed (6 waves)
 **UI hint**: yes
 
 Plans:
@@ -376,7 +376,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3)*
 
-- [ ] 51-08-PLAN.md — `/arguments` term index, `/arguments/term/[year]`, `TermRow.svelte`, first public-listing browser test, and retirement of the `/cases` API surface
+- [x] 51-08-PLAN.md — `/arguments` term index, `/arguments/term/[year]`, `TermRow.svelte`, first public-listing browser test, and retirement of the `/cases` API surface
 
 **Wave 5** *(blocked on Wave 4)*
 
@@ -444,7 +444,7 @@ Plans:
 | 48. Trust & Lifecycle | v1.8 | 10/10 | Complete    | 2026-08-21 |
 | 49. Review Model | v1.8 | 12/12 | Complete    | 2026-08-25 |
 | 50. Unified Import Path | v1.8 | 7/7 | In Progress|  |
-| 51. Design System & Noun Alignment | v1.8 | 7/10 | In Progress|  |
+| 51. Design System & Noun Alignment | v1.8 | 8/10 | In Progress|  |
 
 ## Backlog
 

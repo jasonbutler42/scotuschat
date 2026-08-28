@@ -5,16 +5,16 @@ milestone_name: Import & Provenance Re-model
 current_phase: 51
 current_phase_name: Design System & Noun Alignment
 status: "Phase 50 COMPLETE and VERIFIED 2026-08-27; debridement pass done 2026-08-27. All 7 plans, all 4 waves, 4/4 success criteria verified in 50-VERIFICATION.md. UAT complete 35/35. Phase-50 verification also closed 50-REVIEW.md CR-01 and CR-02 and the SC-4 ungated-writer gap. One provenance-label defect (trivial-ACCEPT restamp) accepted as known debt under an operator override and logged to deferred-items.md. Next: Phase 51 (Design System & Noun Alignment), the last v1.8 phase."
-stopped_at: Completed 51-07-PLAN.md
-last_updated: "2026-08-28T18:12:33.315Z"
+stopped_at: Completed 51-08-PLAN.md
+last_updated: "2026-08-28T19:24:49.639Z"
 last_activity: 2026-08-28
-last_activity_desc: "Phase 51 Wave 3 plan 51-07 (transcript reading polish, D-19 run grouping + sticky rail avatar, IN-02/IN-03 duplication cleanup) complete"
-state_head: 5de8946e90f343f3405e9334e8e0eb06ba21eb20
+last_activity_desc: Phase 51 Wave 3 plan 51-08 (arguments term index + term detail, D-16 Variant A TermRow, /cases API surface retired) complete
+state_head: c39ac456712362235c0879744643e14b6c05f8cd
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 45
-  completed_plans: 42
+  completed_plans: 43
   percent: 80
 ---
 
@@ -200,8 +200,43 @@ advocate visual-weight side-by-side, and a full-length argument scroll
 test — no browser tool / Figma MCP available to this executor. See
 `51-07-SUMMARY.md` Issues Encountered.
 
-**Next action:** Wave 3 continues per the phase plan sequence
-(`51-08` onward), then `/gsd-verify-work 51` once all 10 plans are done.
+**Wave 4 plan `51-08` — COMPLETE (2026-08-28).** `/arguments` is now the
+term index (`GET /arguments/terms`), `/arguments/term/{year}` the term
+detail (`GET /arguments/term/{term_year}`), replacing plan 51-02's
+transitional flat listing. `TermRow.svelte` ships D-16 Variant A's locked
+three-field row (case name, argued date, docket number) — no advocate
+line, no `argument_participants` -> `people` join, exactly as
+`51-DESIGN-DECISIONS.md` recorded. `app/src/lib/formatting.ts` is the
+single `formatDate`/`formatArgumentCount` definition site both listing
+routes share. Added `app/src/routes/arguments/+error.svelte` (Rule 2 —
+not in the plan's file list) so the Copywriting Contract's error string
+renders with no leaked HTTP status number, which SvelteKit's default
+fallback error page would otherwise expose. Task 3 retired the `/cases`
+API surface (`api/routers/cases.py`, `api/services/cases.py`,
+`api/schemas/cases.py`) now that its last consumer (plan 51-02's
+transitional listing) is gone — every guarantee its tests carried
+(is_lead consolidated-docket filter, `create_all` ban, server-only
+`FASTAPI_BASE_URL`, published-gate source assertions, unpublish
+invisibility, the live trust-tier leak-ban half, two router-mount
+regression guards) was migrated onto its replacement rather than dropped;
+`GET /cases` now 404s. A whole-repo grep sweep (not just the plan's own
+suggested patterns) found and fixed a consumer the plan's read_first list
+missed: `tests/test_admin_router.py::test_main_py_still_registers_all_existing_routers`
+asserted `cases_router` presence and would have failed the suite — flipped
+to assert absence. Bare `pytest -q`: 1348 passed, 5 xfailed, 0 failed
+(was 1378 before this plan — net count reflects both new tests added and
+the deleted cases-specific test modules/classes). `npm run check`/`build`
+both green. **Open for a human:** the plan's own first real-browser test
+for the public listing (`app/tests/arguments-listing.browser.test.mjs`,
+6 cases) is written but unrun — no Chromium/Edge binary in this sandbox,
+same constraint every prior Phase 51 plan hit; the ~65-term/~150-row
+viewport-scroll backstop truths and the Figma `d16-comparison` frame
+match are also unobserved (no Figma MCP access to this executor either).
+See `51-08-SUMMARY.md`.
+
+**Next action:** `/gsd-verify-work 51` once the remaining plans
+(`51-09` token sweep, `51-10` phase-wide inventory) are done — those two
+are unaffected by 51-08's scope and can proceed independently.
 
 **Wave 1 outcomes that bind later waves:**
 
@@ -427,6 +462,7 @@ items → 14.** Every closure carries its evidence in the file it closes; the co
 | Phase 51 P05 | 45min | 3 tasks | 23 files |
 | Phase 51 P06 | 46min | 3 tasks | 10 files |
 | Phase 51 P07 | 45min | 3 tasks | 8 files |
+| Phase 51 P08 | 66min | 3 tasks | 26 files |
 
 v1.7 per-plan metrics cleared at this milestone boundary per the standard STATE.md reset; the underlying per-plan SUMMARY files remain in `.planning/milestones/v1.7-phases/`.
 
@@ -519,6 +555,8 @@ Full cross-milestone decision log lives in PROJECT.md's Key Decisions table. Per
 - [Phase 51]: Button's icon-only accessible-name contract enforced by a TypeScript discriminated union, not a runtime check — Plan required the omission to be impossible to construct; a compile error satisfies that more strongly than a runtime assertion
 - [Phase 51]: D-19 Style B2 transcript redesign shipped: run grouping via $derived.by before layout, one sticky outside-rail avatar per run (position:sticky;bottom, flex-column justify-content:flex-end), 6/2px corner-rounding table on ChatBubble's new position prop. — Closes DS-02's reading-layer half; the folded IN-02/IN-03 duplication todo closed in the same plan (shared file, shared scope).
 - [Phase 51]: Bio clamp+expand (Phase 45 BUG-02's -webkit-line-clamp) removed from SpeakerPopover.svelte — P-06 bans truncating popover content; bio now always renders in full. — Auto-fixed under Defect Policy Rule 2 (missing critical constraint compliance), found while sweeping lib/public/ for the plan's own hard prohibition.
+- [Phase 51]: Added app/src/routes/arguments/+error.svelte (Rule 2) so the Copywriting Contract's error string renders with no leaked HTTP status number — SvelteKit's built-in fallback error page renders the raw status code, which the plan's error-state contract forbids
+- [Phase 51]: Renamed api/tests/test_case_item_argued_date_optional.py to test_argument_list_item_argued_date_optional.py — Plan instruction: rename a retargeted test whose name still says CaseItem once its assertions moved onto ArgumentListItem
 
 ### Roadmap Evolution
 
@@ -578,8 +616,8 @@ at close.
 
 ## Session Continuity
 
-Last session: 2026-08-28T18:12:32.198Z
-Stopped at: Completed 51-07-PLAN.md
+Last session: 2026-08-28T19:24:49.154Z
+Stopped at: Completed 51-08-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

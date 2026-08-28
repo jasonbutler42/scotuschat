@@ -279,3 +279,131 @@ async def test_terms_absent_when_only_argument_is_unpublished(client: AsyncClien
     response = await client.get("/arguments/terms")
     years_present = {t["term_year"] for t in response.json()["terms"]}
     assert year not in years_present
+
+
+# ---------------------------------------------------------------------------
+# Task 2: GET /arguments/term/{term_year}
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="DATABASE_URL not configured")
+async def test_term_detail_lists_only_published_arguments_for_that_term(
+    client: AsyncClient, seeded: _SeededFixture
+) -> None:
+    """
+    GET /arguments/term/{year} lists only published arguments whose lead
+    case has that term_year — a published argument in a different term, and
+    a draft argument in the same term, are both excluded.
+    """
+    year = 1900 + (uuid.uuid4().int % 100)
+    other_year = year + 1
+
+    included_id = await seeded.add_argument(term_year=year, question_number=1)
+    await seeded.add_argument(term_year=other_year, question_number=1)
+    await seeded.add_argument(
+        term_year=year,
+        question_number=2,
+        status=ArgumentStatusEnum.DRAFT,
+        published_at=None,
+    )
+
+    response = await client.get(f"/arguments/term/{year}")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["term_year"] == year
+    argument_ids = [a["argument_id"] for a in body["arguments"]]
+    assert argument_ids == [included_id]
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="DATABASE_URL not configured")
+async def test_term_detail_real_empty_term_returns_200_not_404(client: AsyncClient) -> None:
+    """
+    A real, in-range year with no seeded data (1799) returns 200 with an
+    empty `arguments` list — never a 404. This is the UI-SPEC E2 "empty"
+    row: an empty term is not the same as a non-existent one.
+    """
+    response = await client.get("/arguments/term/1799")
+    assert response.status_code == 200
+    assert response.json() == {"term_year": 1799, "arguments": []}
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="DATABASE_URL not configured")
+async def test_term_detail_non_numeric_year_returns_422(client: AsyncClient) -> None:
+    response = await client.get("/arguments/term/notayear")
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="DATABASE_URL not configured")
+async def test_term_detail_out_of_range_year_returns_422(client: AsyncClient) -> None:
+    response = await client.get("/arguments/term/99999")
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="DATABASE_URL not configured")
+async def test_term_detail_excludes_unpublished_with_retained_published_at(
+    client: AsyncClient, seeded: _SeededFixture
+) -> None:
+    """
+    An argument whose `status` is UNPUBLISHED but whose `published_at` is
+    still non-null is absent from the term-detail response for its term
+    (same both-predicates gate as the term index).
+    """
+    year = 1910 + (uuid.uuid4().int % 100)
+
+    await seeded.add_argument(
+        term_year=year,
+        question_number=1,
+        status=ArgumentStatusEnum.UNPUBLISHED,
+        published_at=datetime.datetime.now(datetime.timezone.utc),
+    )
+
+    response = await client.get(f"/arguments/term/{year}")
+    assert response.status_code == 200
+    assert response.json()["arguments"] == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="DATABASE_URL not configured")
+async def test_term_detail_consolidated_docket_contributes_one_row(
+    client: AsyncClient, seeded: _SeededFixture
+) -> None:
+    """A consolidated case (one lead + three non-lead case_arguments rows) contributes exactly one row."""
+    year = 1920 + (uuid.uuid4().int % 100)
+
+    argument_id = await seeded.add_argument(term_year=year, question_number=1, extra_lead_cases=3)
+
+    response = await client.get(f"/arguments/term/{year}")
+    assert response.status_code == 200
+    argument_ids = [a["argument_id"] for a in response.json()["arguments"]]
+    assert argument_ids == [argument_id]
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="DATABASE_URL not configured")
+async def test_term_detail_shared_argued_date_orders_stably(
+    client: AsyncClient, seeded: _SeededFixture
+) -> None:
+    """
+    Two arguments in the same term sharing an argued_date return in a
+    stable order (tiebroken by Argument.id) across two consecutive
+    requests — no accidental reordering between calls.
+    """
+    year = 1930 + (uuid.uuid4().int % 100)
+    shared_date = datetime.date(year, 1, 15)
+
+    id_a = await seeded.add_argument(term_year=year, question_number=1, argued_date=shared_date)
+    id_b = await seeded.add_argument(term_year=year, question_number=2, argued_date=shared_date)
+
+    first_response = await client.get(f"/arguments/term/{year}")
+    second_response = await client.get(f"/arguments/term/{year}")
+
+    first_order = [a["argument_id"] for a in first_response.json()["arguments"]]
+    second_order = [a["argument_id"] for a in second_response.json()["arguments"]]
+
+    assert set(first_order) == {id_a, id_b}
+    assert first_order == second_order

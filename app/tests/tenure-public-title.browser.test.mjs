@@ -287,9 +287,19 @@ test('public argument view renders formal Chief/Associate Justice titles, never 
 				await delay(150);
 			}
 			assert.ok(opened, `popover never opened for ${ariaLabel} after retried clicks`);
+			// The name renders as the popover's one <p>; the tenure office title
+			// and its date range render as two side-by-side <span> elements in a
+			// flex row (SpeakerPopover.svelte's tenure-list block), not as a
+			// single combined <p> — querying `.popover-card p` alone (as this
+			// test originally did) silently misses the tenure line entirely,
+			// stale since whichever pass split the tenure row into a two-column
+			// flex layout. This fixture has no role pill, no birth/death line,
+			// and no appointed_by/reason_left second row, so exactly one <p> and
+			// exactly two <span>s render — deterministic, not a loosened match.
 			return cdp.evaluate(`(() => {
-				const paragraphs = [...document.querySelectorAll('.popover-card p')];
-				return paragraphs.map((p) => p.textContent.trim());
+				const name = document.querySelector('.popover-card p')?.textContent.trim() ?? null;
+				const spans = [...document.querySelectorAll('.popover-card span')].map((s) => s.textContent.trim());
+				return { name, officeTitle: spans[0] ?? null, tenureRange: spans[1] ?? null };
 			})()`);
 		}
 
@@ -298,18 +308,19 @@ test('public argument view renders formal Chief/Associate Justice titles, never 
 			await waitForExpression(cdp, `!document.querySelector('.popover-card')`);
 		}
 
-		// Chief fixture — formal title precedes the unchanged open-ended range.
-		const chiefParagraphs = await openPopoverAndReadTenureLine('View Fixture Chief details');
-		assert.deepEqual(chiefParagraphs, ['Fixture Chief', 'Chief Justice — 2005–present']);
-		assert.doesNotMatch(chiefParagraphs[1], /\bchief\b/, 'raw canonical office value must not render');
-		assert.doesNotMatch(chiefParagraphs[1], /^Justice\b/, 'must not fall back to the generic "Justice" title');
+		// Chief fixture — formal title, unchanged open-ended range, in the two
+		// dedicated tenure-row cells (not concatenated into one string).
+		const chief = await openPopoverAndReadTenureLine('View Fixture Chief details');
+		assert.deepEqual(chief, { name: 'Fixture Chief', officeTitle: 'Chief Justice', tenureRange: '2005–present' });
+		assert.doesNotMatch(chief.officeTitle, /\bchief\b/, 'raw canonical office value must not render');
+		assert.doesNotMatch(chief.officeTitle, /^Justice\b/, 'must not fall back to the generic "Justice" title');
 		await closePopover();
 
-		// Associate fixture — formal title precedes the unchanged closed range.
-		const associateParagraphs = await openPopoverAndReadTenureLine('View Fixture Associate details');
-		assert.deepEqual(associateParagraphs, ['Fixture Associate', 'Associate Justice — 1994–2005']);
-		assert.doesNotMatch(associateParagraphs[1], /\bassociate\b/, 'raw canonical office value must not render');
-		assert.doesNotMatch(associateParagraphs[1], /^Justice\b/, 'must not fall back to the generic "Justice" title');
+		// Associate fixture — formal title, unchanged closed range.
+		const associate = await openPopoverAndReadTenureLine('View Fixture Associate details');
+		assert.deepEqual(associate, { name: 'Fixture Associate', officeTitle: 'Associate Justice', tenureRange: '1994–2005' });
+		assert.doesNotMatch(associate.officeTitle, /\bassociate\b/, 'raw canonical office value must not render');
+		assert.doesNotMatch(associate.officeTitle, /^Justice\b/, 'must not fall back to the generic "Justice" title');
 	} finally {
 		cdp?.close();
 		await terminateTree(browser);

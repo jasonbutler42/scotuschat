@@ -1,7 +1,7 @@
 <script lang="ts">
 	import '../../app.css';
 	import { page } from '$app/state';
-	import AdminSubNav from '$lib/components/AdminSubNav.svelte';
+	import AdminSubNav from '$lib/admin/AdminSubNav.svelte';
 	import TopNav from '$lib/components/TopNav.svelte';
 	let { children } = $props();
 </script>

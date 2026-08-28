@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { tick } from 'svelte';
-	import CopyableExtractedValue from '$lib/components/CopyableExtractedValue.svelte';
-	import DocketPillInput from '$lib/components/DocketPillInput.svelte';
+	import CopyableExtractedValue from '$lib/admin/CopyableExtractedValue.svelte';
+	import DocketPillInput from '$lib/admin/DocketPillInput.svelte';
 
 	type DuplicateArgumentConflict = {
 		code: 'duplicate_argument';

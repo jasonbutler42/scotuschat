@@ -4,7 +4,7 @@
 	// existing plain-string editable contract. Plain string entries render with
 	// byte-identical markup/behavior to before this phase — this is an additive,
 	// backward-compatible extension, not a replacement of the editable-input role.
-	import CopyableExtractedValue from '$lib/components/CopyableExtractedValue.svelte';
+	import CopyableExtractedValue from '$lib/admin/CopyableExtractedValue.svelte';
 	// Phase 38 gap closure (G-38-6, item 3): opt-in client-side shape feedback,
 	// mirroring api/domain/docket_values.py. The backend (plan 38-07 at the
 	// FastAPI boundary, plan 38-08 inside the pipeline) remains the sole

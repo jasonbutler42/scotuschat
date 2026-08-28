@@ -1,5 +1,5 @@
 <script lang="ts">
-	import StatCard from '$lib/components/StatCard.svelte';
+	import StatCard from '$lib/admin/StatCard.svelte';
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 

@@ -3,7 +3,7 @@
 	import { slide } from 'svelte/transition';
 	import { tick } from 'svelte';
 	import { previewFullName } from '$lib/personNames';
-	import CopyableExtractedValue from '$lib/components/CopyableExtractedValue.svelte';
+	import CopyableExtractedValue from '$lib/admin/CopyableExtractedValue.svelte';
 
 	let { data, form } = $props();
 

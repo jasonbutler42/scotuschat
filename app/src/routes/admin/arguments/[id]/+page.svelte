@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { tick } from 'svelte';
-	import ArgumentDetailsCard from '$lib/components/ArgumentDetailsCard.svelte';
-	import CopyableExtractedValue from '$lib/components/CopyableExtractedValue.svelte';
+	import ArgumentDetailsCard from '$lib/admin/ArgumentDetailsCard.svelte';
+	import CopyableExtractedValue from '$lib/admin/CopyableExtractedValue.svelte';
 	// G-49-3/D-35 (plan 49-10): the bucket rule, the boundary-crossing
 	// predicate, and the operator-visible role labels are shared with
 	// ResolveCard.svelte — both cards import from the single source of

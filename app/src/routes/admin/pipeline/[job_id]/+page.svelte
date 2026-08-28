@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
 	import { enhance } from '$app/forms';
-	import ArgumentDetailsCard from '$lib/components/ArgumentDetailsCard.svelte';
-	import CopyableExtractedValue from '$lib/components/CopyableExtractedValue.svelte';
-	import RunStatusCard from '$lib/components/RunStatusCard.svelte';
-	import ResolveCard from '$lib/components/ResolveCard.svelte';
-	import FailedStepGuidance from '$lib/components/FailedStepGuidance.svelte';
+	import ArgumentDetailsCard from '$lib/admin/ArgumentDetailsCard.svelte';
+	import CopyableExtractedValue from '$lib/admin/CopyableExtractedValue.svelte';
+	import RunStatusCard from '$lib/admin/RunStatusCard.svelte';
+	import ResolveCard from '$lib/admin/ResolveCard.svelte';
+	import FailedStepGuidance from '$lib/admin/FailedStepGuidance.svelte';
 
 	let { data, form } = $props();
 

@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { flushSync } from 'svelte';
 	import { enhance } from '$app/forms';
-	import CopyableExtractedValue from '$lib/components/CopyableExtractedValue.svelte';
-	import CreatePersonPopover from '$lib/components/CreatePersonPopover.svelte';
+	import CopyableExtractedValue from '$lib/admin/CopyableExtractedValue.svelte';
+	import CreatePersonPopover from '$lib/admin/CreatePersonPopover.svelte';
 	// G-49-3/D-35 (plan 49-10): the bucket rule, the operator-visible role
 	// labels, and the specific-advocate-role helper are shared with the
 	// argument-detail Speakers card — both cards import from the single

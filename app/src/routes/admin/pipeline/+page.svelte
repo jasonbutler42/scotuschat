@@ -4,7 +4,7 @@
 
 <script lang="ts">
 	import { goto, invalidateAll } from '$app/navigation';
-	import DocketPillInput from '$lib/components/DocketPillInput.svelte';
+	import DocketPillInput from '$lib/admin/DocketPillInput.svelte';
 
 	let { data, form } = $props();
 

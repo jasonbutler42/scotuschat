@@ -1,7 +1,3 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
 :root {
 	--color-bg: #0f1117;
 	--color-surface: #1e293b;
@@ -14,8 +10,48 @@
 	font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
+/* Explicit base reset (Phase 51 D-01) — replaces Tailwind preflight, which this
+   codebase relied on for margin zeroing and form-control normalization even
+   though no Tailwind utility class is used anywhere in app/src. Every rule
+   below was checked against a real load-bearing dependency in the codebase
+   before being added, not carried over speculatively. */
+
 *, *::before, *::after {
 	box-sizing: border-box;
+}
+
+h1, h2, h3, h4, h5, h6, p, figure, blockquote, dl, dd {
+	margin: 0;
+}
+
+button, input, optgroup, select, textarea {
+	font-family: inherit;
+	font-size: 100%;
+	font-weight: inherit;
+	line-height: inherit;
+	color: inherit;
+	margin: 0;
+	padding: 0;
+}
+
+button, [type='button'], [type='submit'] {
+	background-color: transparent;
+	background-image: none;
+}
+
+a {
+	color: inherit;
+	text-decoration: inherit;
+}
+
+img, svg, video, canvas {
+	display: block;
+	vertical-align: middle;
+}
+
+img, video {
+	max-width: 100%;
+	height: auto;
 }
 
 body {

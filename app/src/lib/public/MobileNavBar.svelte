@@ -38,13 +38,13 @@
 			bottom: 0;
 			left: 0;
 			right: 0;
-			background-color: #1e293b;
-			border-top: 1px solid #334155;
+			background-color: var(--color-surface);
+			border-top: 1px solid var(--color-border);
 			flex-direction: row;
 			overflow-x: auto;
-			gap: 8px;
-			padding: 8px 16px;
-			min-height: 44px;
+			gap: var(--space-sm);
+			padding: var(--space-sm) var(--space-md);
+			min-height: var(--touch-target);
 			align-items: center;
 		"
 	>
@@ -59,14 +59,14 @@
 				}}
 				style="
 					border-radius: 20px;
-					padding: 6px 14px;
-					font-size: 13px;
+					padding: var(--space-xs) var(--space-sm);
+					font-size: var(--font-size-caption);
 					cursor: pointer;
 					white-space: nowrap;
 					background-color: transparent;
-					color: {activeSection === sec.hint ? '#e2e8f0' : '#94a3b8'};
-					border: 1px solid {activeSection === sec.hint ? '#93c5fd' : '#334155'};
-					font-weight: {activeSection === sec.hint ? 600 : 400};
+					color: {activeSection === sec.hint ? 'var(--color-text-primary)' : 'var(--color-text-secondary)'};
+					border: 1px solid {activeSection === sec.hint ? 'var(--color-accent)' : 'var(--color-border)'};
+					font-weight: {activeSection === sec.hint ? 'var(--font-weight-semibold)' : 'var(--font-weight-regular)'};
 				"
 			>
 				{sec.label}

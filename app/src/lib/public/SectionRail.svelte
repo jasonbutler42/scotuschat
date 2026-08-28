@@ -30,7 +30,7 @@
 	});
 </script>
 
-<nav aria-label="Argument sections" style="position: sticky; top: 0; padding: 24px 16px; align-self: start;">
+<nav aria-label="Argument sections" style="position: sticky; top: 0; padding: var(--space-lg) var(--space-md); align-self: start;">
 	{#each sections as sec (sec.hint)}
 		<button
 			aria-current={activeSection === sec.hint ? 'true' : undefined}
@@ -44,16 +44,16 @@
 				display: block;
 				width: 100%;
 				text-align: left;
-				padding: 8px 12px;
-				margin-bottom: 4px;
+				padding: var(--space-sm) var(--space-md);
+				margin-bottom: var(--space-xs);
 				border: none;
 				cursor: pointer;
 				border-radius: 4px;
-				font-size: 13px;
-				background-color: {activeSection === sec.hint ? '#1e293b' : 'transparent'};
-				color: {activeSection === sec.hint ? '#e2e8f0' : '#94a3b8'};
-				border-left: 3px solid {activeSection === sec.hint ? '#93c5fd' : 'transparent'};
-				font-weight: {activeSection === sec.hint ? 600 : 400};
+				font-size: var(--font-size-caption);
+				background-color: {activeSection === sec.hint ? 'var(--color-surface)' : 'transparent'};
+				color: {activeSection === sec.hint ? 'var(--color-text-primary)' : 'var(--color-text-secondary)'};
+				border-left: 3px solid {activeSection === sec.hint ? 'var(--color-accent)' : 'transparent'};
+				font-weight: {activeSection === sec.hint ? 'var(--font-weight-semibold)' : 'var(--font-weight-regular)'};
 			"
 		>
 			{sec.label}

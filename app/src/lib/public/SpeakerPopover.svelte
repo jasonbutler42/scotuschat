@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { TenureRow, SpeakerDetail } from '$lib/types/speaker';
+	import type { SpeakerDetail } from '$lib/types/speaker';
 
 	// Single formal-title mapping (mirrors api/models/models.py's OFFICE_TITLES /
 	// office_title(), D-15). Exhaustive over the two canonical values only — an
@@ -55,22 +55,6 @@
 
 	let showInitials = $state(false);
 
-	// Bio clamp + expand (39-UI-SPEC.md "Bio text clamp + expand"). The toggle
-	// only renders when the text is genuinely clamped — a short bio must never
-	// show "Read more" with nothing to expand.
-	let bioExpanded = $state(false);
-	let bioOverflows = $state(false);
-	let bioEl: HTMLParagraphElement | null = $state(null);
-
-	$effect(() => {
-		if (!bioEl || bioExpanded) return;
-		bioOverflows = bioEl.scrollHeight > bioEl.clientHeight + 1;
-	});
-
-	function toggleBio(): void {
-		bioExpanded = !bioExpanded;
-	}
-
 	// Compact date formatting for the popover's birth/death line — deliberately
 	// distinct from the argument page's full-month formatDate() helper; the
 	// compact form exists for the tighter popover card only.
@@ -112,11 +96,11 @@
 	}
 </script>
 
-{#snippet separator(pad: number)}<span style="padding:0 {pad}px;">·</span>{/snippet}
+{#snippet separator(pad: string)}<span style="padding:0 {pad};">·</span>{/snippet}
 <div class="popover-card">
 	<!-- Header row: avatar + name/pill stack. Stays horizontal at every width —
 	     a 60px avatar never needs to drop below a short name/pill stack. -->
-	<div style="display:flex;flex-direction:row;align-items:flex-start;gap:16px;">
+	<div style="display:flex;flex-direction:row;align-items:flex-start;gap:var(--space-md);">
 		{#if speaker.photo_url_full && !showInitials}
 			<img
 				src={speaker.photo_url_full}
@@ -129,18 +113,20 @@
 				aria-hidden="true"
 				style="width:60px;height:60px;border-radius:50%;background-color:{sideColor};
 				       display:flex;align-items:center;justify-content:center;
-				       font-size:18px;font-weight:600;color:#0f1117;flex-shrink:0;"
+				       font-size:var(--font-size-lead);font-weight:var(--font-weight-semibold);
+				       color:var(--color-bg);flex-shrink:0;"
 			>{initials}</div>
 		{/if}
 
 		<div>
-			<p style="font-size:16px;font-weight:600;color:#e2e8f0;margin:0;">{speaker.full_name}</p>
+			<p style="font-size:var(--font-size-body);font-weight:var(--font-weight-semibold);color:var(--color-text-primary);margin:0;">{speaker.full_name}</p>
 			<!-- Role pill — only rendered when role_name is non-null, exactly as today -->
 			{#if speaker.role_name}
 				<span
 					style="display:inline-block;border:1px solid {sideColor};border-radius:9999px;
-					       padding:2px 10px;font-size:12px;font-weight:600;line-height:1.2;
-					       color:{sideColor};margin-top:4px;"
+					       padding:var(--space-xs) var(--space-sm);font-size:var(--font-size-caption);
+					       font-weight:var(--font-weight-semibold);line-height:1.2;
+					       color:{sideColor};margin-top:var(--space-xs);"
 				>{speaker.role_name}</span>
 			{/if}
 		</div>
@@ -149,48 +135,41 @@
 	<!-- Birth/death line: bench only, full width. Omitted entirely when both
 	     dates are null; each half omitted independently otherwise. -->
 	{#if isBench && (speaker.birthdate || speaker.death_date)}
-		<p style="font-size:13px;font-weight:400;color:var(--color-text-secondary);line-height:1.5;margin-top:16px;margin-bottom:0;border-top:1px solid #334155;padding-top:16px;">{#if speaker.birthdate}b. {formatShort(speaker.birthdate)}{/if}{#if speaker.birthdate && speaker.death_date}{@render separator(8)}{/if}{#if speaker.death_date}d. {formatShort(speaker.death_date)}{/if}</p>
+		<p style="font-size:var(--font-size-caption);font-weight:var(--font-weight-regular);color:var(--color-text-secondary);line-height:var(--line-height-body);margin-top:var(--space-md);margin-bottom:0;border-top:1px solid var(--color-border);padding-top:var(--space-md);">{#if speaker.birthdate}b. {formatShort(speaker.birthdate)}{/if}{#if speaker.birthdate && speaker.death_date}{@render separator('var(--space-sm)')}{/if}{#if speaker.death_date}d. {formatShort(speaker.death_date)}{/if}</p>
 	{/if}
 
 	<!-- Advocate descriptor slot (D-16): unconditional placeholder text, no real
 	     per-advocate data exists yet — do not invent plausible-looking data. -->
 	{#if !isBench}
-		<p style="font-size:13px;font-weight:400;font-style:italic;color:var(--color-text-secondary);margin-top:16px;margin-bottom:0;border-top:1px solid #334155;padding-top:16px;">Coming soon</p>
+		<p style="font-size:var(--font-size-caption);font-weight:var(--font-weight-regular);font-style:italic;color:var(--color-text-secondary);margin-top:var(--space-md);margin-bottom:0;border-top:1px solid var(--color-border);padding-top:var(--space-md);">Coming soon</p>
 	{/if}
 
 	<!-- Bio paragraph: bench and advocate alike, full width. Omitted entirely
-	     when there is no bio text on file — no "No bio available" filler. -->
+	     when there is no bio text on file — no "No bio available" filler.
+	     P-06: renders in full, always — no clamp, no truncation, no internal
+	     scroll cap. The Phase 45 BUG-02 clamp-and-expand affordance (a
+	     3-line vendor box-clamp collapsed state with a "Read more" toggle)
+	     is removed here: it is exactly the pattern P-06 bans for popover
+	     content. Long bios simply make the popover taller; nothing is ever
+	     hidden. -->
 	{#if speaker.bio_text}
-		<div style="margin-top:16px;border-top:1px solid #334155;padding-top:16px;">
-			<p
-				bind:this={bioEl}
-				class={bioExpanded ? 'bio-scroll' : ''}
-				style="font-size:14px;font-weight:400;line-height:1.5;color:var(--color-text-secondary);margin:0;{bioExpanded ? 'max-height:150px;overflow-y:auto;' : 'display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden;'}"
-			>{speaker.bio_text}</p>
-			{#if bioOverflows}
-				<button
-					type="button"
-					onclick={toggleBio}
-					aria-expanded={bioExpanded}
-					style="font-size:13px;font-weight:400;color:var(--color-accent);text-decoration:underline;
-					       background:none;border:none;padding:0;margin-top:4px;cursor:pointer;"
-				>{bioExpanded ? 'Show less' : 'Read more'}</button>
-			{/if}
+		<div style="margin-top:var(--space-md);border-top:1px solid var(--color-border);padding-top:var(--space-md);">
+			<p style="font-size:var(--font-size-caption);font-weight:var(--font-weight-regular);line-height:var(--line-height-body);color:var(--color-text-secondary);margin:0;">{speaker.bio_text}</p>
 		</div>
 	{/if}
 
 	<!-- Tenure list: bench only, full width, below the bio. API order preserved
 	     — no client-side re-sort. One block per tenure, up to 3 lines each. -->
 	{#if isBench && speaker.tenure.length > 0}
-		<div style="border-top:1px solid #334155;margin-top:16px;padding-top:16px;">
+		<div style="border-top:1px solid var(--color-border);margin-top:var(--space-md);padding-top:var(--space-md);">
 			{#each speaker.tenure as t, i}
-				<div style="margin-top:{i === 0 ? '0' : '8px'};">
+				<div style="margin-top:{i === 0 ? '0' : 'var(--space-sm)'};">
 					<!-- Row 1, always rendered: office title (left, semibold, the only
 					     promoted element) and its month-and-year range (right-aligned,
 					     never wraps). -->
-					<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">
-						<span style="font-size:13px;font-weight:600;line-height:1.5;color:#e2e8f0;min-width:0;">{officeTitle(t.office)}</span>
-						<span style="font-size:13px;font-weight:400;line-height:1.5;color:var(--color-text-secondary);text-align:right;flex-shrink:0;white-space:nowrap;">{tenureRange(t.start_date, t.end_date)}</span>
+					<div style="display:flex;justify-content:space-between;align-items:baseline;gap:var(--space-sm);">
+						<span style="font-size:var(--font-size-caption);font-weight:var(--font-weight-semibold);line-height:var(--line-height-body);color:var(--color-text-primary);min-width:0;">{officeTitle(t.office)}</span>
+						<span style="font-size:var(--font-size-caption);font-weight:var(--font-weight-regular);line-height:var(--line-height-body);color:var(--color-text-secondary);text-align:right;flex-shrink:0;white-space:nowrap;">{tenureRange(t.start_date, t.end_date)}</span>
 					</div>
 					<!-- Row 2, rendered only when appointed_by or reason_left is
 					     non-null. Left cell renders appointed_by alone, or
@@ -198,9 +177,9 @@
 					     cell renders reason_left alone. Never a placeholder for the
 					     missing half of either cell. -->
 					{#if t.appointed_by || t.reason_left}
-						<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">
-							<span style="font-size:13px;font-weight:400;line-height:1.5;color:var(--color-text-secondary);min-width:0;">{#if t.appointed_by}{t.appointed_by}{#if t.appointing_president_party}{@render separator(4)}{t.appointing_president_party}{/if}{/if}</span>
-							<span style="font-size:13px;font-weight:400;line-height:1.5;color:var(--color-text-secondary);text-align:right;flex-shrink:0;">{#if t.reason_left}{reasonLeftTitle(t.reason_left)}{/if}</span>
+						<div style="display:flex;justify-content:space-between;align-items:baseline;gap:var(--space-sm);">
+							<span style="font-size:var(--font-size-caption);font-weight:var(--font-weight-regular);line-height:var(--line-height-body);color:var(--color-text-secondary);min-width:0;">{#if t.appointed_by}{t.appointed_by}{#if t.appointing_president_party}{@render separator('var(--space-xs)')}{t.appointing_president_party}{/if}{/if}</span>
+							<span style="font-size:var(--font-size-caption);font-weight:var(--font-weight-regular);line-height:var(--line-height-body);color:var(--color-text-secondary);text-align:right;flex-shrink:0;">{#if t.reason_left}{reasonLeftTitle(t.reason_left)}{/if}</span>
 						</div>
 					{/if}
 				</div>
@@ -211,28 +190,7 @@
 
 <style>
 	.popover-card {
-		padding: 24px;
+		padding: var(--space-lg);
 		display: block;
-	}
-
-	/* Bio-scoped scroll (BUG-02 revision, Figma "person popover with bio
-	   examples" frame): only the expanded bio paragraph scrolls internally,
-	   capped at 150px — the card itself no longer owns any scroll or height
-	   ceiling. Thin custom scrollbar per explicit operator direction at the
-	   Phase 45 checkpoint; thumb reuses the existing #334155 divider color
-	   rather than introducing a new one. */
-	.bio-scroll {
-		scrollbar-width: thin;
-		scrollbar-color: #334155 transparent;
-	}
-	.bio-scroll::-webkit-scrollbar {
-		width: 3px;
-	}
-	.bio-scroll::-webkit-scrollbar-track {
-		background: transparent;
-	}
-	.bio-scroll::-webkit-scrollbar-thumb {
-		background: #334155;
-		border-radius: 2px;
 	}
 </style>

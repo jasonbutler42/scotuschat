@@ -3,30 +3,26 @@
 	// First shared card component in the codebase — every other admin page
 	// previously rolled its own inline card markup (28-PATTERNS.md).
 	//
+	// Phase 51 (D-17): delegates to $lib/primitives/Card, which is now the
+	// single definition site for the card surface/border/radius/padding.
+	// StatCard keeps its existing public prop shape unchanged so every
+	// current call site (admin/+page.svelte) works untouched.
+	//
 	// D-10: the container style below is a FIXED literal — never conditional
 	// on counts/urgency. Do not branch on card type inside this component;
 	// each card's differently-shaped breakdown body is composed by the caller
 	// via the `children` snippet.
-	let { title, children } = $props();
+	import Card from '$lib/primitives/Card.svelte';
+	import type { Snippet } from 'svelte';
+
+	interface StatCardProps {
+		title: string;
+		children: Snippet;
+	}
+
+	let { title, children }: StatCardProps = $props();
 </script>
 
-<div
-	style="
-		background-color: #1e293b;
-		border: 1px solid #334155;
-		border-radius: 8px;
-		padding: 24px;
-	"
->
-	<h2
-		style="
-			font-size: 20px;
-			font-weight: 600;
-			color: #e2e8f0;
-			margin: 0 0 16px 0;
-		"
-	>
-		{title}
-	</h2>
+<Card {title}>
 	{@render children()}
-</div>
+</Card>

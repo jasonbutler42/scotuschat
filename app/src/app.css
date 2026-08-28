@@ -1,12 +1,67 @@
 :root {
-	--color-bg: #0f1117;
-	--color-surface: #1e293b;
-	--color-border: #334155;
-	--color-text-primary: #e2e8f0;
-	--color-text-secondary: #94a3b8;
-	--color-text-advocate: #93c5fd;
---color-stage-accent: #d97706;
-	--color-stage-text: #fcd34d;
+	/* ── Layer 1: primitive palette (raw hex, referenced only by layer 2 below) ── */
+	--slate-950: #0f1117;
+	--slate-800: #1e293b;
+	--slate-700: #334155;
+	--slate-400: #94a3b8;
+	--slate-300: #e2e8f0;
+	--slate-200: #cbd5e1;
+	--blue-300: #93c5fd;
+	--amber-600: #d97706;
+	--amber-400: #fbbf24;
+	--amber-300: #fcd34d;
+	--green-400: #4ade80;
+	--violet-400: #a78bfa;
+	--orange-400: #fb923c;
+	--red-500: #ef4444;
+
+	/* ── Layer 2: semantic roles — component code references only these ── */
+	--color-bg: var(--slate-950);
+	--color-surface: var(--slate-800);
+	--color-accent: var(--blue-300);
+	--color-destructive: var(--red-500);
+	--color-border: var(--slate-700);
+	--color-text-primary: var(--slate-300);
+	--color-text-secondary: var(--slate-400);
+	--color-side-bench: var(--slate-400);
+	--color-side-advocate: var(--blue-300);
+	--color-stage-accent: var(--amber-600);
+	--color-stage-text: var(--amber-300);
+
+	/* Admin-only lifecycle status colors — never rendered on the public site */
+	--color-status-published: var(--green-400);
+	--color-status-draft: var(--violet-400);
+	--color-status-unpublished: var(--orange-400);
+	--color-status-warning: var(--amber-400);
+	--color-status-archived: var(--slate-200);
+
+	/* Spacing scale — seven steps, all multiples of 4 */
+	--space-xs: 4px;
+	--space-sm: 8px;
+	--space-md: 16px;
+	--space-lg: 24px;
+	--space-xl: 32px;
+	--space-2xl: 48px;
+	--space-3xl: 64px;
+
+	/* Type scale — five semantic steps, two weights (D-03) */
+	--font-size-caption: 14px;
+	--line-height-caption: 1.4;
+	--font-size-body: 16px;
+	--line-height-body: 1.5;
+	--font-size-lead: 18px;
+	--line-height-lead: 1.6;
+	--font-size-heading: 20px;
+	--line-height-heading: 1.2;
+	--font-size-display: 32px;
+	--line-height-display: 1.2;
+	--font-weight-regular: 400;
+	--font-weight-semibold: 600;
+
+	/* Touch targets — WCAG 2.1 AA default plus the dense in-table admin exception */
+	--touch-target: 44px;
+	--touch-target-dense: 36px;
+
 	font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
@@ -62,7 +117,7 @@ body {
 }
 
 *:focus-visible {
-	outline: 2px solid #93c5fd;
+	outline: 2px solid var(--color-accent);
 	outline-offset: 3px;
 	border-radius: 4px;
 }

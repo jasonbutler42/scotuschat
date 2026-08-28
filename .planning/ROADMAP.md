@@ -353,7 +353,7 @@ Plans:
   3. Design tokens (color / type / spacing) are established as the visual foundation (absorbs backlog 999.8).
   4. The arguments listing style is decided and implemented (absorbs backlog 999.6).
 
-**Plans**: 5/10 plans executed (6 waves)
+**Plans**: 6/10 plans executed (6 waves)
 **UI hint**: yes
 
 Plans:
@@ -371,7 +371,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2)*
 
-- [ ] 51-06-PLAN.md — `lib/primitives/` Button, Badge, Input, Card, with the blocking package-legitimacy gate before any icon-library install
+- [x] 51-06-PLAN.md — `lib/primitives/` Button, Badge, Input, Card, with the blocking package-legitimacy gate before any icon-library install
 - [ ] 51-07-PLAN.md — Transcript reading layer (D-09), public component token conversion, and the folded speaker-duplication todo
 
 **Wave 4** *(blocked on Wave 3)*
@@ -444,7 +444,7 @@ Plans:
 | 48. Trust & Lifecycle | v1.8 | 10/10 | Complete    | 2026-08-21 |
 | 49. Review Model | v1.8 | 12/12 | Complete    | 2026-08-25 |
 | 50. Unified Import Path | v1.8 | 7/7 | In Progress|  |
-| 51. Design System & Noun Alignment | v1.8 | 5/10 | In Progress|  |
+| 51. Design System & Noun Alignment | v1.8 | 6/10 | In Progress|  |
 
 ## Backlog
 

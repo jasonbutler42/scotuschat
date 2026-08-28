@@ -5,16 +5,16 @@ milestone_name: Import & Provenance Re-model
 current_phase: 51
 current_phase_name: Design System & Noun Alignment
 status: "Phase 50 COMPLETE and VERIFIED 2026-08-27; debridement pass done 2026-08-27. All 7 plans, all 4 waves, 4/4 success criteria verified in 50-VERIFICATION.md. UAT complete 35/35. Phase-50 verification also closed 50-REVIEW.md CR-01 and CR-02 and the SC-4 ungated-writer gap. One provenance-label defect (trivial-ACCEPT restamp) accepted as known debt under an operator override and logged to deferred-items.md. Next: Phase 51 (Design System & Noun Alignment), the last v1.8 phase."
-stopped_at: Completed 51-05-PLAN.md
-last_updated: "2026-08-28T15:58:54.685Z"
+stopped_at: Completed 51-06-PLAN.md
+last_updated: "2026-08-28T17:23:43.952Z"
 last_activity: 2026-08-28
-last_activity_desc: Phase 51 Wave 2 plan 51-05 (component-directory split) complete
-state_head: 6fed9adc289cde6b328b343884bf72b0192f4637
+last_activity_desc: "Phase 51 Wave 3 plan 51-06 (shared primitives: Button/Badge/Input/Card) complete"
+state_head: 4ec7258c50a40c7e3a6e266872f74601fe930235
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 45
-  completed_plans: 40
+  completed_plans: 41
   percent: 80
 ---
 
@@ -133,9 +133,41 @@ completion — no Chromium/Edge binary in this sandbox (same constraint
 strongest available signal for an import-only rename. See
 `51-05-SUMMARY.md`.
 
-**Next action:** Wave 2 is now fully complete (`51-03`, `51-04`, `51-05` all
-done). Proceed to Wave 3 per the phase plan sequence, then
-`/gsd-verify-work 51` once all 10 plans are done.
+**Wave 3 plan `51-06` — COMPLETE (2026-08-28).** Four D-17 primitives
+(`Button`, `Badge`, `Input`, `Card`) landed in `app/src/lib/primitives/`,
+filenames matching the Figma `Primitives` frame names, every value a
+`var(--token)` reference, no primitive importing from `lib/public` or
+`lib/admin`. `StatCard.svelte` now delegates to `Card` (one card definition
+site, live render path on the admin dashboard); `DocketPillInput.svelte`'s
+free-text field now delegates to `Input` (external prop shape and behavior
+unchanged). Task 1's blocking package-legitimacy checkpoint (T-51-SC) caught
+a real defect before it landed: `lucide-svelte` — the package D-18
+recorded — is deprecated in favor of the scoped `@lucide/svelte` successor
+(same maintainer/repo, clean `svelte ^5` peer range vs. the deprecated
+package's prerelease range). Operator approved the substitution;
+`@lucide/svelte@^1.35.0` installed, exactly one dependency added, zero
+transitive deps. A pre-existing MIT->ISC license misstatement for the
+package was corrected in `51-UI-SPEC.md` and `51-DESIGN-DECISIONS.md`.
+`Button`'s icon-only accessible-name contract (label/ariaLabel/
+ariaLabelledby) is enforced by a TypeScript discriminated union — proven
+live with a deliberate temporary violation (compile error), then reverted,
+same for `Badge`'s required `label`. `51-DESIGN-DECISIONS.md` gained the
+D-18 bits-ui-vs-hand-rolled report (all four primitives hand-rolled; none
+needed a focus-managed overlay or roving-tabindex control). `npm run
+check`/`npm run build` both green; bare `pytest -q`: 1378 passed, 5
+xfailed, 0 failed (unchanged — frontend-only plan). DS-02/DS-03 stay
+`Pending` — shared-ID gate holds them for later sibling plans in this
+phase. **Open for a human:** the admin dashboard's stat cards, the
+pipeline page's docket field, and `case-required-recovery.browser.test.mjs`
+itself were not observed in a real browser — no Chromium/Edge binary in
+this sandbox (same constraint every prior plan in this phase hit); that
+browser test also does not exercise `DocketPillInput`'s field even where a
+browser is available (confirmed by reading it — it drives a different,
+unrelated `docket_number` field on the argument-detail page). See
+`51-06-SUMMARY.md` Issues Encountered.
+
+**Next action:** Wave 3 continues per the phase plan sequence
+(`51-07` onward), then `/gsd-verify-work 51` once all 10 plans are done.
 
 **Wave 1 outcomes that bind later waves:**
 
@@ -359,6 +391,7 @@ items → 14.** Every closure carries its evidence in the file it closes; the co
 | Phase 51 P03 | 50min | 3 tasks | 7 files |
 | Phase 51 P04 | 80min | 3 tasks | 6 files |
 | Phase 51 P05 | 45min | 3 tasks | 23 files |
+| Phase 51 P06 | 46min | 3 tasks | 10 files |
 
 v1.7 per-plan metrics cleared at this milestone boundary per the standard STATE.md reset; the underlying per-plan SUMMARY files remain in `.planning/milestones/v1.7-phases/`.
 
@@ -447,6 +480,8 @@ Full cross-milestone decision log lives in PROJECT.md's Key Decisions table. Per
 - [Phase 51]: 10 of 24 hex values found in app/src recorded as open rows in 51-TOKEN-MAP.md rather than mapped to a token — No match in the Figma-sourced 14-primitive palette; plan explicitly forbids inventing a token for an unmapped value
 - [Phase 51]: color-text-advocate token dropped rather than aliased (zero live var() call sites confirmed via grep) — Existing components hardcode 93c5fd/94a3b8 hex literals directly rather than reading the CSS variable, so removing it left nothing referenced-but-undefined
 - [Phase 51]: Phase 51 plan 51-04: term-grouped public API (GET /arguments/terms, GET /arguments/term/{term_year}) shipped per D-14/D-15/D-16 Variant A (minimal row, no advocate join). Leak-ban and published-gate contracts extended and proven non-vacuous live. Full suite 1378 passed, 5 xfailed, 0 failed.
+- [Phase 51]: Substituted @lucide/svelte for the deprecated lucide-svelte D-18 named (operator-approved) — Package-legitimacy gate found lucide-svelte deprecated in favor of the actively-maintained scoped successor, same maintainer/repo
+- [Phase 51]: Button's icon-only accessible-name contract enforced by a TypeScript discriminated union, not a runtime check — Plan required the omission to be impossible to construct; a compile error satisfies that more strongly than a runtime assertion
 
 ### Roadmap Evolution
 
@@ -506,8 +541,8 @@ at close.
 
 ## Session Continuity
 
-Last session: 2026-08-28T15:58:52.807Z
-Stopped at: Completed 51-05-PLAN.md
+Last session: 2026-08-28T17:23:42.955Z
+Stopped at: Completed 51-06-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

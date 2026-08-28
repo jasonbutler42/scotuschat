@@ -18,17 +18,29 @@ import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import delete
 
-from api.core import database as _database
 from api.models.models import Argument, ArgumentStatusEnum, Case, CaseArgument
 from api.tests.test_arguments import assert_no_key_anywhere
 
 # `AsyncSessionLocal` is None at import time and only assigned inside the
-# FastAPI lifespan (api/core/database.py) — a `from ... import
-# AsyncSessionLocal` at module scope here would bind this module's name to
-# that pre-lifespan None permanently. Reference `_database.AsyncSessionLocal`
-# as a module attribute instead, so every lookup re-reads the current
-# (post-lifespan-startup) value, matching the deferred-import pattern
-# established in test_published_gate.py's helpers.
+# FastAPI lifespan (api/core/database.py), so it must never be bound at module
+# scope here — neither the name (`from ... import AsyncSessionLocal`, which
+# would freeze the pre-lifespan None) NOR the module object
+# (`from api.core import database as _database`, which freezes the pre-RESET
+# module).
+#
+# The module-object form is the subtler trap and it is why this file failed
+# under a bare `pytest` run: `tests/test_admin_router.py::
+# test_api_main_imports_without_error` deletes and re-imports every `api.*`
+# module mid-suite, and pytest.ini's `testpaths = tests pipeline/tests
+# api/tests` runs `tests/` FIRST. A module-scope binding here therefore points
+# at the pre-reset `api.core.database` while conftest's `_api_lifespan` fixture
+# sets `AsyncSessionLocal` on the post-reset one — two disconnected module
+# graphs, exactly as `api/tests/conftest.py::_api_lifespan` documents. The
+# failure only hides when `api/tests` is collected first, which is what an
+# explicit-path invocation like `pytest api/tests tests pipeline/tests` does.
+#
+# Import inside each function that needs it, so the lookup re-resolves
+# `sys.modules` at call time. This matches `test_arguments.py`'s helpers.
 
 
 def _db_configured() -> bool:
@@ -79,11 +91,13 @@ class _SeededFixture:
         Commits so the ASGI client (its own AsyncSessionLocal session) can
         see the rows.
         """
+        from api.core.database import AsyncSessionLocal
+
         suffix = uuid.uuid4().hex[:10]
         if published_at is None and status == ArgumentStatusEnum.PUBLISHED:
             published_at = datetime.datetime.now(datetime.timezone.utc)
 
-        async with _database.AsyncSessionLocal() as db:
+        async with AsyncSessionLocal() as db:
             lead_case = Case(
                 docket_number=f"PAL-{suffix}",
                 docket_number_norm=f"pal-{suffix}",
@@ -134,7 +148,9 @@ class _SeededFixture:
             return arg.id
 
     async def teardown(self) -> None:
-        async with _database.AsyncSessionLocal() as db:
+        from api.core.database import AsyncSessionLocal
+
+        async with AsyncSessionLocal() as db:
             await db.execute(
                 delete(CaseArgument).where(CaseArgument.argument_id.in_(self.argument_ids))
             )

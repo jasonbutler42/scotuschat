@@ -14,12 +14,7 @@
 	// at 6px.
 	type RunPosition = 'single' | 'first' | 'middle' | 'last';
 
-	let {
-		utterance,
-		position = 'single',
-		showSpeakerName = true,
-		labelColor = undefined
-	} = $props<{
+	let { utterance, position = 'single', showSpeakerName = true } = $props<{
 		utterance: {
 			person_id: number | null;
 			side: string;
@@ -31,11 +26,6 @@
 		};
 		position?: RunPosition;
 		showSpeakerName?: boolean;
-		/** Per-speaker colour from the route's L* 78 ramp. The route owns the
-		 *  assignment because it is a function of the ARGUMENT's roster, which a
-		 *  single bubble cannot see. Falls back to the side colour when absent so
-		 *  this component still renders standalone. */
-		labelColor?: string;
 	}>();
 
 	// Every value below is $derived, NOT const. A plain `const` off a prop is
@@ -47,16 +37,15 @@
 	// surviving the navigation. Same defect class as the published-lock stale-prop
 	// bug; svelte-check flags it as `state_referenced_locally`.
 	const isBench = $derived(utterance.side === 'BENCH');
-	// D-05: BENCH: left-aligned; ADVOCATE or UNKNOWN: right-aligned.
-	// Side is encoded only via position (handled by the route's row layout) —
-	// never via size or weight (P-03). The label colour identifies the SPEAKER,
-	// not the side: every speaker in an argument carries their own hue from a
-	// ramp held at one luminance, so no speaker reads louder than another.
-	function resolveSideColor(bench: boolean): string {
-		if (bench) return 'var(--color-side-bench)';
-		return 'var(--color-side-advocate)';
-	}
-	const resolvedLabelColor = $derived(labelColor ?? resolveSideColor(isBench));
+	// D-05: BENCH: left-aligned; ADVOCATE or UNKNOWN: right-aligned. Side is
+	// encoded only via position (handled by the route's row layout) — never via
+	// size or weight (P-03).
+	//
+	// The speaker-name colour is NOT computed here. The route declares
+	// --speaker-color / --family-color / --side-color on the run's row, and the
+	// `.speaker-ink` rule in app.css decides which one the active variant paints
+	// with. Keeping the choice in CSS is what lets the switcher swap palettes
+	// without re-rendering a bubble.
 	const displayName = $derived(utterance.speaker_name ?? utterance.raw_speaker_label ?? '');
 	const displayRole = $derived(utterance.speaker_role ?? null);
 
@@ -99,10 +88,10 @@
 			"
 		>
 			<span
+				class="speaker-ink"
 				style="
 					font-size: var(--font-size-caption);
 					font-weight: var(--font-weight-semibold);
-					color: {resolvedLabelColor};
 				"
 			>
 				{displayName}

@@ -29,27 +29,23 @@
 		return reason ? (REASON_LEFT_TITLES[reason] ?? '') : '';
 	}
 
-	let { speaker, accentColor = undefined } = $props<{
+	let { speaker, paletteVars = '' } = $props<{
 		speaker: SpeakerDetail;
-		/** Per-speaker colour from the route's L* 78 ramp, so the popover matches
-		 *  the avatar that opened it. Falls back to the side colour when absent. */
-		accentColor?: string;
+		/** The route's --speaker-color/--family-color/--side-color declarations for
+		 *  this person, so the popover paints the same hue as the avatar that
+		 *  opened it under whichever colour variant is active. */
+		paletteVars?: string;
 	}>();
 
 	const isBench = speaker.is_bench;
 
-	// Single side-colour computation site (IN-02 closure — was two identically
-	// computed variables, avatarBg and sideColor, used interchangeably). Every
-	// site that needs the bench/advocate side colour calls this one function,
-	// so the collapsed duplicate cannot silently reappear as a renamed copy of
-	// the same expression shape. A plain function (not a quoted-string
-	// ternary) computed once into a `const` — never reassigned, so no `$state`
-	// is needed for this per-mount-fixed value.
-	function resolveSideColor(bench: boolean): string {
-		if (bench) return 'var(--color-side-bench)';
-		return 'var(--color-side-advocate)';
-	}
-	const sideColor = accentColor ?? resolveSideColor(isBench);
+	// No side-colour computation here any more (this is where IN-02's collapsed
+	// avatarBg/sideColor pair used to live). The avatar and the role pill paint
+	// from the `.speaker-*` rules in app.css, driven by the route's palette
+	// declarations on .popover-card, so the person keeps the same colour as the
+	// avatar that opened the popover under every colour variant — and the
+	// duplicate cannot reappear because there is no local colour value left to
+	// copy.
 
 	const initials = (() => {
 		const parts = speaker.full_name.trim().split(/\s+/).filter(Boolean);
@@ -102,7 +98,7 @@
 </script>
 
 {#snippet separator(pad: string)}<span style="padding:0 {pad};">·</span>{/snippet}
-<div class="popover-card">
+<div class="popover-card" style={paletteVars}>
 	<!-- Header row: avatar + name/pill stack. Stays horizontal at every width —
 	     a 60px avatar never needs to drop below a short name/pill stack. -->
 	<div style="display:flex;flex-direction:row;align-items:flex-start;gap:var(--space-md);">
@@ -116,7 +112,8 @@
 		{:else}
 			<div
 				aria-hidden="true"
-				style="width:60px;height:60px;border-radius:50%;background-color:{sideColor};
+				class="speaker-fill"
+				style="width:60px;height:60px;border-radius:50%;
 				       display:flex;align-items:center;justify-content:center;
 				       font-size:var(--font-size-lead);font-weight:var(--font-weight-semibold);
 				       color:var(--color-bg);flex-shrink:0;"
@@ -128,10 +125,11 @@
 			<!-- Role pill — only rendered when role_name is non-null, exactly as today -->
 			{#if speaker.role_name}
 				<span
-					style="display:inline-block;border:1px solid {sideColor};border-radius:9999px;
+					class="speaker-ink speaker-stroke"
+					style="display:inline-block;border-width:1px;border-style:solid;border-radius:9999px;
 					       padding:var(--space-xs) var(--space-sm);font-size:var(--font-size-caption);
 					       font-weight:var(--font-weight-semibold);line-height:1.2;
-					       color:{sideColor};margin-top:var(--space-xs);"
+					       margin-top:var(--space-xs);"
 				>{speaker.role_name}</span>
 			{/if}
 		</div>

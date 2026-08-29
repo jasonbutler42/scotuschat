@@ -5,6 +5,7 @@
 	import SectionRail from '$lib/public/SectionRail.svelte';
 	import MobileNavBar from '$lib/public/MobileNavBar.svelte';
 	import SpeakerPopover from '$lib/public/SpeakerPopover.svelte';
+	import VariantSwitcher from '$lib/public/VariantSwitcher.svelte';
 	import type { SpeakerDetail } from '$lib/types/speaker';
 
 	let { data } = $props();
@@ -82,34 +83,72 @@
 	// redundant accelerator, never the identifier: the initials are inside every
 	// avatar and the name is on the first bubble of every run.
 	const SPEAKER_SLOT_COUNT = 11;
+	const BENCH_SLOT_COUNT = 6;
+	const ADVOCATE_SLOT_COUNT = 4;
+	const UNRESOLVED = 'var(--color-speaker-unresolved)';
+
+	/**
+	 * The three candidate colours for one speaker, one per colour variant. All
+	 * three are emitted onto the DOM together and CSS picks which one paints —
+	 * that is what makes the switcher a CSS-only swap (see .speaker-fill in
+	 * app.css). Computing them here rather than in CSS is unavoidable: two of
+	 * the three depend on the speaker's index within THIS argument's roster,
+	 * which is data only the route has.
+	 */
+	type SpeakerPalette = { speaker: string; family: string; side: string };
+
 	const speakerSlots = $derived.by(() => {
 		// Keyed both ways on purpose: the transcript and roster know a speaker by
 		// display name, while the popover only ever has a person_id. Both must
 		// resolve to the SAME hue or tapping an avatar would recolour the person.
-		const byName = new Map<string, string>();
-		const byPersonId = new Map<number, string>();
-		let i = 0;
+		const byName = new Map<string, SpeakerPalette>();
+		const byPersonId = new Map<number, SpeakerPalette>();
+		// Unresolved speakers consume no slot in any of the three scales, so one
+		// missing person does not shift every later speaker's hue.
+		let all = 0;
+		let bench = 0;
+		let advocate = 0;
 		for (const u of data.utterances) {
 			if (u.is_stage_direction) continue;
 			const key = u.speaker_name ?? u.raw_speaker_label ?? '';
 			if (!key || byName.has(key)) continue;
-			// Unresolved speakers do not consume a slot, so one missing person does
-			// not shift every later speaker's hue.
-			const color =
-				u.person_id == null
-					? 'var(--color-speaker-unresolved)'
-					: `var(--color-speaker-${(i++ % SPEAKER_SLOT_COUNT) + 1})`;
-			byName.set(key, color);
-			if (u.person_id != null) byPersonId.set(u.person_id, color);
+			const isBenchSide = u.side === 'BENCH';
+			let palette: SpeakerPalette;
+			if (u.person_id == null) {
+				palette = { speaker: UNRESOLVED, family: UNRESOLVED, side: UNRESOLVED };
+			} else {
+				palette = {
+					speaker: `var(--color-speaker-${(all++ % SPEAKER_SLOT_COUNT) + 1})`,
+					family: isBenchSide
+						? `var(--color-bench-${(bench++ % BENCH_SLOT_COUNT) + 1})`
+						: `var(--color-advocate-${(advocate++ % ADVOCATE_SLOT_COUNT) + 1})`,
+					side: isBenchSide ? 'var(--color-side-bench)' : 'var(--color-side-advocate)'
+				};
+			}
+			byName.set(key, palette);
+			if (u.person_id != null) byPersonId.set(u.person_id, palette);
 		}
 		return { byName, byPersonId };
 	});
-	function speakerColor(name: string): string {
-		return speakerSlots.byName.get(name) ?? 'var(--color-speaker-unresolved)';
+
+	const UNRESOLVED_PALETTE: SpeakerPalette = {
+		speaker: UNRESOLVED,
+		family: UNRESOLVED,
+		side: UNRESOLVED
+	};
+
+	/** The custom-property declarations to drop on any element that contains a
+	 *  speaker's avatar or name. They inherit, so one declaration site covers a
+	 *  whole row. */
+	function paletteVars(p: SpeakerPalette): string {
+		return `--speaker-color:${p.speaker};--family-color:${p.family};--side-color:${p.side};`;
 	}
-	function speakerColorForPerson(personId: number | null | undefined): string {
-		if (personId == null) return 'var(--color-speaker-unresolved)';
-		return speakerSlots.byPersonId.get(personId) ?? 'var(--color-speaker-unresolved)';
+	function speakerVars(name: string): string {
+		return paletteVars(speakerSlots.byName.get(name) ?? UNRESOLVED_PALETTE);
+	}
+	function speakerVarsForPerson(personId: number | null | undefined): string {
+		if (personId == null) return paletteVars(UNRESOLVED_PALETTE);
+		return paletteVars(speakerSlots.byPersonId.get(personId) ?? UNRESOLVED_PALETTE);
 	}
 
 	// D-04: Section anchors derived from section_hint — lowercase values confirmed in RESEARCH.md Pitfall 1
@@ -217,7 +256,7 @@
 				{#if currentSpeaker}
 					<SpeakerPopover
 						speaker={currentSpeaker}
-						accentColor={speakerColorForPerson(currentSpeaker.person_id)}
+						paletteVars={speakerVarsForPerson(currentSpeaker.person_id)}
 					/>
 				{/if}
 			</Popover.Content>
@@ -275,7 +314,7 @@
 						Bench
 					</p>
 					{#each roster.bench as speaker (speaker.name)}
-						<div style="display:flex;align-items:center;gap:var(--space-sm);margin:0 0 var(--space-xs) 0;">
+						<div style="display:flex;align-items:center;gap:var(--space-sm);margin:0 0 var(--space-xs) 0;{speakerVars(speaker.name)}">
 							{#if speaker.person_id != null}
 								<button
 									type="button"
@@ -283,12 +322,12 @@
 									style="background:none;border:none;padding:var(--space-xs);cursor:pointer;border-radius:50%;display:flex;align-items:center;justify-content:center;"
 									aria-label="View {speaker.name} details"
 								>
-									<div aria-hidden="true" style="width:32px;height:32px;border-radius:50%;background-color:{speakerColor(speaker.name)};display:flex;align-items:center;justify-content:center;font-size:var(--font-size-caption);font-weight:var(--font-weight-semibold);color:var(--color-bg);flex-shrink:0;">
+									<div aria-hidden="true" class="speaker-fill" style="width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:var(--font-size-caption);font-weight:var(--font-weight-semibold);color:var(--color-bg);flex-shrink:0;">
 										{getInitials(speaker.name)}
 									</div>
 								</button>
 							{:else}
-								<div aria-hidden="true" style="width:32px;height:32px;border-radius:50%;background-color:{speakerColor(speaker.name)};display:flex;align-items:center;justify-content:center;font-size:var(--font-size-caption);font-weight:var(--font-weight-semibold);color:var(--color-bg);flex-shrink:0;margin:var(--space-xs);">
+								<div aria-hidden="true" class="speaker-fill" style="width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:var(--font-size-caption);font-weight:var(--font-weight-semibold);color:var(--color-bg);flex-shrink:0;margin:var(--space-xs);">
 									{getInitials(speaker.name)}
 								</div>
 							{/if}
@@ -309,7 +348,7 @@
 						Advocates
 					</p>
 					{#each roster.advocates as speaker (speaker.name)}
-						<div style="display:flex;align-items:center;gap:var(--space-sm);margin:0 0 var(--space-xs) 0;">
+						<div style="display:flex;align-items:center;gap:var(--space-sm);margin:0 0 var(--space-xs) 0;{speakerVars(speaker.name)}">
 							{#if speaker.person_id != null}
 								<button
 									type="button"
@@ -317,12 +356,12 @@
 									style="background:none;border:none;padding:var(--space-xs);cursor:pointer;border-radius:50%;display:flex;align-items:center;justify-content:center;"
 									aria-label="View {speaker.name} details"
 								>
-									<div aria-hidden="true" style="width:32px;height:32px;border-radius:50%;background-color:{speakerColor(speaker.name)};display:flex;align-items:center;justify-content:center;font-size:var(--font-size-caption);font-weight:var(--font-weight-semibold);color:var(--color-bg);flex-shrink:0;">
+									<div aria-hidden="true" class="speaker-fill" style="width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:var(--font-size-caption);font-weight:var(--font-weight-semibold);color:var(--color-bg);flex-shrink:0;">
 										{getInitials(speaker.name)}
 									</div>
 								</button>
 							{:else}
-								<div aria-hidden="true" style="width:32px;height:32px;border-radius:50%;background-color:{speakerColor(speaker.name)};display:flex;align-items:center;justify-content:center;font-size:var(--font-size-caption);font-weight:var(--font-weight-semibold);color:var(--color-bg);flex-shrink:0;margin:var(--space-xs);">
+								<div aria-hidden="true" class="speaker-fill" style="width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:var(--font-size-caption);font-weight:var(--font-weight-semibold);color:var(--color-bg);flex-shrink:0;margin:var(--space-xs);">
 									{getInitials(speaker.name)}
 								</div>
 							{/if}
@@ -413,6 +452,7 @@
 									justify-content: {isBench ? 'flex-start' : 'flex-end'};
 									align-items: stretch;
 									gap: var(--transcript-rail-gap);
+									{speakerVars(displayName)}
 								"
 							>
 								<!-- Rail column: 40px gutter, stretched to run height by the
@@ -464,18 +504,16 @@
 												style="background:none;border:none;padding:0;cursor:pointer;border-radius:50%;
 												       display:flex;align-items:center;justify-content:center;"
 											>
-												<div aria-hidden="true" style="
+												<div aria-hidden="true" class="speaker-fill" style="
 													width: 32px; height: 32px; border-radius: 50%;
-													background-color: {speakerColor(displayName)};
 													display: flex; align-items: center; justify-content: center;
 													font-size: var(--font-size-caption); font-weight: var(--font-weight-semibold);
 													color: var(--color-bg); flex-shrink: 0;
 												">{getInitials(displayName)}</div>
 											</button>
 										{:else}
-											<div aria-hidden="true" style="
+											<div aria-hidden="true" class="speaker-fill" style="
 												width: 32px; height: 32px; border-radius: 50%;
-												background-color: {speakerColor(displayName)};
 												display: flex; align-items: center; justify-content: center;
 												font-size: var(--font-size-caption); font-weight: var(--font-weight-semibold);
 												color: var(--color-bg); flex-shrink: 0;
@@ -524,7 +562,6 @@
 												utterance={u}
 												position={runPosition(item.utterances.length, idx)}
 												showSpeakerName={idx === 0}
-												labelColor={speakerColor(displayName)}
 											/>
 										</div>
 									{/each}
@@ -537,6 +574,7 @@
 		</div>
 	</div>
 	<MobileNavBar sections={sectionAnchors} />
+	<VariantSwitcher />
 
 	</Popover.Root>
 </main>

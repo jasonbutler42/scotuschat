@@ -70,6 +70,22 @@
 	/* A speaker the resolve step could not identify is a different KIND of thing
 	   from an identified one, so it gets its own neutral rather than a slot. */
 	--color-speaker-unresolved: var(--slate-400);
+
+	/* Side-family slots — the alternative palette in which hue still varies per
+	   speaker but the two sides draw from opposite arcs of the wheel, so side
+	   survives in colour. Same L* 78 ramp, so the P-03 equality holds here too.
+	   Only reachable through the variant switcher; see --avatar-fill below. */
+	--color-bench-1: var(--l78-amber);
+	--color-bench-2: var(--l78-orange);
+	--color-bench-3: var(--l78-red);
+	--color-bench-4: var(--l78-pink);
+	--color-bench-5: var(--l78-violet);
+	--color-bench-6: var(--l78-yellow-green);
+	--color-advocate-1: var(--l78-blue);
+	--color-advocate-2: var(--l78-teal);
+	--color-advocate-3: var(--l78-cyan);
+	--color-advocate-4: var(--l78-green);
+
 	--color-stage-accent: var(--amber-600);
 	--color-stage-text: var(--amber-300);
 
@@ -135,6 +151,40 @@
 
 /* Keep this breakpoint in step with MobileNavBar.svelte's own @media rule —
    if that bar's visibility threshold or height changes, this must follow. */
+/* ── Transcript variant axes (operator-facing switcher, VariantSwitcher.svelte) ──
+   Applied as data attributes on <html>. Deliberately plain attribute selectors
+   on :root so every axis is independent and composable, and so a variant is
+   provably nothing but a redefinition of tokens — if a variant ever needed a
+   component change it would not belong here. */
+/* The transcript declares THREE candidate colours as custom properties on each
+   speaker-bearing row — --speaker-color (per speaker, side-blind),
+   --family-color (per speaker, opposite hue arcs per side) and --side-color
+   (two colours by side) — and the active variant decides which one paints.
+
+   That decision has to be a RULE, not a custom-property indirection. A
+   declaration like `--fill: var(--speaker-color)` at :root is substituted where
+   it is DECLARED, not where it is used, so it resolves against a
+   --speaker-color that does not exist at :root and inherits down as invalid.
+   Class rules also mean the painted elements must NOT carry an inline
+   background-color/color, which would outrank them. */
+.speaker-fill { background-color: var(--speaker-color, var(--color-speaker-unresolved)); }
+.speaker-ink { color: var(--speaker-color, var(--color-speaker-unresolved)); }
+.speaker-stroke { border-color: var(--speaker-color, var(--color-speaker-unresolved)); }
+
+:root[data-colour='family'] .speaker-fill { background-color: var(--family-color); }
+:root[data-colour='family'] .speaker-ink { color: var(--family-color); }
+:root[data-colour='family'] .speaker-stroke { border-color: var(--family-color); }
+
+:root[data-colour='side'] .speaker-fill { background-color: var(--side-color); }
+:root[data-colour='side'] .speaker-ink { color: var(--side-color); }
+:root[data-colour='side'] .speaker-stroke { border-color: var(--side-color); }
+
+/* Applied at every viewport, not just mobile, so the control always does
+   something visible. On desktop the bubble's own min(…, 68ch) still binds. */
+:root[data-width='88'] { --bubble-max-width: 88%; }
+:root[data-width='94'] { --bubble-max-width: 94%; }
+:root[data-width='100'] { --bubble-max-width: 100%; }
+
 @media (max-width: 768px) {
 	:root {
 		--sticky-bottom-inset: calc(var(--touch-target) + var(--space-sm));

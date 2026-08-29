@@ -14,7 +14,12 @@
 	// at 6px.
 	type RunPosition = 'single' | 'first' | 'middle' | 'last';
 
-	let { utterance, position = 'single', showSpeakerName = true } = $props<{
+	let {
+		utterance,
+		position = 'single',
+		showSpeakerName = true,
+		labelColor = undefined
+	} = $props<{
 		utterance: {
 			person_id: number | null;
 			side: string;
@@ -26,6 +31,11 @@
 		};
 		position?: RunPosition;
 		showSpeakerName?: boolean;
+		/** Per-speaker colour from the route's L* 78 ramp. The route owns the
+		 *  assignment because it is a function of the ARGUMENT's roster, which a
+		 *  single bubble cannot see. Falls back to the side colour when absent so
+		 *  this component still renders standalone. */
+		labelColor?: string;
 	}>();
 
 	// Every value below is $derived, NOT const. A plain `const` off a prop is
@@ -38,13 +48,15 @@
 	// bug; svelte-check flags it as `state_referenced_locally`.
 	const isBench = $derived(utterance.side === 'BENCH');
 	// D-05: BENCH: left-aligned; ADVOCATE or UNKNOWN: right-aligned.
-	// Side is encoded only via position (handled by the route's row layout)
-	// and this neutral speaker-label colour — never via size or weight (P-03).
-	function resolveLabelColor(bench: boolean): string {
+	// Side is encoded only via position (handled by the route's row layout) —
+	// never via size or weight (P-03). The label colour identifies the SPEAKER,
+	// not the side: every speaker in an argument carries their own hue from a
+	// ramp held at one luminance, so no speaker reads louder than another.
+	function resolveSideColor(bench: boolean): string {
 		if (bench) return 'var(--color-side-bench)';
 		return 'var(--color-side-advocate)';
 	}
-	const labelColor = $derived(resolveLabelColor(isBench));
+	const resolvedLabelColor = $derived(labelColor ?? resolveSideColor(isBench));
 	const displayName = $derived(utterance.speaker_name ?? utterance.raw_speaker_label ?? '');
 	const displayRole = $derived(utterance.speaker_role ?? null);
 
@@ -90,7 +102,7 @@
 				style="
 					font-size: var(--font-size-caption);
 					font-weight: var(--font-weight-semibold);
-					color: {labelColor};
+					color: {resolvedLabelColor};
 				"
 			>
 				{displayName}

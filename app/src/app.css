@@ -15,6 +15,28 @@
 	--orange-400: #fb923c;
 	--red-500: #ef4444;
 
+	/* Per-speaker ramp. EVERY entry is solved to CIE L* 78 at OKLCH chroma 0.09,
+	   so they vary in hue and in nothing else: 8.06-8.15:1 against
+	   --color-surface and 10.40-10.52:1 against --color-bg, i.e. within 1% of
+	   each other. That equality is not decoration, it is what makes a
+	   per-speaker palette legal under P-03 — no speaker may read as louder than
+	   any other. The L* is in the name so a twelfth entry cannot be added
+	   casually: solve it to 78 or it does not belong here.
+	   --l78-blue is within 0.2 L* of --blue-300, so the advocate side keeps the
+	   colour it already shipped. */
+	--l78-blue: #94c6f9;
+	--l78-orange: #f1b48b;
+	--l78-teal: #7bd1ba;
+	--l78-pink: #f4acc7;
+	--l78-yellow-green: #bdc783;
+	--l78-indigo: #b6bcfc;
+	--l78-red: #f9aea7;
+	--l78-cyan: #73cede;
+	--l78-amber: #dcbe7d;
+	--l78-violet: #d6b4f0;
+	--l78-green: #99ce9a;
+	--l78-slate: #b5c3d1;
+
 	/* ── Layer 2: semantic roles — component code references only these ── */
 	--color-bg: var(--slate-950);
 	--color-surface: var(--slate-800);
@@ -23,8 +45,31 @@
 	--color-border: var(--slate-700);
 	--color-text-primary: var(--slate-300);
 	--color-text-secondary: var(--slate-400);
-	--color-side-bench: var(--slate-400);
+	/* --slate-400 (L* 66.5, 5.71:1) against --blue-300 (L* 78.0, 8.11:1) made the
+	   advocate side measurably brighter than the bench across 164 avatar fills —
+	   side encoded as prominence, which P-03 forbids. Bench now sits on the same
+	   L* 78 as advocate. */
+	--color-side-bench: var(--l78-slate);
 	--color-side-advocate: var(--blue-300);
+
+	/* Speaker identity slots (D-19 / P-03). Assigned by the speaker's index in an
+	   argument's roster, NOT by side, NOT by a hash, and NOT randomly — see the
+	   route's `speakerColor`. Ordered so consecutive slots are far apart in hue,
+	   because consecutive slots go to speakers who alternate on screen. */
+	--color-speaker-1: var(--l78-blue);
+	--color-speaker-2: var(--l78-orange);
+	--color-speaker-3: var(--l78-teal);
+	--color-speaker-4: var(--l78-pink);
+	--color-speaker-5: var(--l78-yellow-green);
+	--color-speaker-6: var(--l78-indigo);
+	--color-speaker-7: var(--l78-red);
+	--color-speaker-8: var(--l78-cyan);
+	--color-speaker-9: var(--l78-amber);
+	--color-speaker-10: var(--l78-violet);
+	--color-speaker-11: var(--l78-green);
+	/* A speaker the resolve step could not identify is a different KIND of thing
+	   from an identified one, so it gets its own neutral rather than a slot. */
+	--color-speaker-unresolved: var(--slate-400);
 	--color-stage-accent: var(--amber-600);
 	--color-stage-text: var(--amber-300);
 
@@ -94,13 +139,18 @@
 	:root {
 		--sticky-bottom-inset: calc(var(--touch-target) + var(--space-sm));
 
-		/* Every one of these buys characters per line. The 72% cap in particular
-		   is inherited from v1.0, where the avatar sat INSIDE the bubble and no
-		   rail existed — so it now compounds with the rail's 40px and narrows
-		   the text twice, which nobody intended. */
+		/* Every one of these buys characters per line. The cap in particular is
+		   inherited from v1.0, where the avatar sat INSIDE the bubble and no rail
+		   existed — so it compounded with the rail's 40px and narrowed the text
+		   twice, which nobody intended. Measured at 390px: at 88% a bench bubble
+		   and an advocate bubble sat 6.2px apart, so the cap bought no
+		   side separation at all while costing 6 characters per line. At 100%
+		   the bubble edges coincide with the stack edges and the rail's 44px
+		   offset becomes visible on BOTH edges — the sides read further apart,
+		   not closer. */
 		--transcript-pad-x: var(--space-sm);
 		--transcript-rail-gap: var(--space-xs);
-		--bubble-max-width: 88%;
+		--bubble-max-width: 100%;
 		--bubble-pad-x: var(--space-sm);
 	}
 }

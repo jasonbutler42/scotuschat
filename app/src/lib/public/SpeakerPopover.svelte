@@ -29,7 +29,12 @@
 		return reason ? (REASON_LEFT_TITLES[reason] ?? '') : '';
 	}
 
-	let { speaker } = $props<{ speaker: SpeakerDetail }>();
+	let { speaker, accentColor = undefined } = $props<{
+		speaker: SpeakerDetail;
+		/** Per-speaker colour from the route's L* 78 ramp, so the popover matches
+		 *  the avatar that opened it. Falls back to the side colour when absent. */
+		accentColor?: string;
+	}>();
 
 	const isBench = speaker.is_bench;
 
@@ -44,7 +49,7 @@
 		if (bench) return 'var(--color-side-bench)';
 		return 'var(--color-side-advocate)';
 	}
-	const sideColor = resolveSideColor(isBench);
+	const sideColor = accentColor ?? resolveSideColor(isBench);
 
 	const initials = (() => {
 		const parts = speaker.full_name.trim().split(/\s+/).filter(Boolean);

@@ -64,6 +64,54 @@
 		return { bench, advocates };
 	});
 
+	// Per-speaker colour (P-03). Side is NOT the axis here: every speaker in an
+	// argument gets their own hue from the L* 78 ramp, so no speaker — justice or
+	// advocate — reads as louder than any other. Side stays encoded where it has
+	// always been encoded, in position: which half of the row the bubble occupies
+	// and which side the rail sits on.
+	//
+	// Assignment is by INDEX IN FIRST-APPEARANCE ORDER, deliberately not by a
+	// hash of the name and emphatically not at random. `ChatBubble` is keyed by
+	// `u.sequence` and reused across navigation, so a value that is not a pure
+	// function of the argument's own roster would survive into the next argument
+	// — the same defect class as the prop-capture bug. An index is stable within
+	// a page load, stable across re-render, varied within an argument, and free
+	// to differ between arguments, which is exactly the requirement.
+	//
+	// The ramp has 11 slots and wraps. Wrapping is acceptable because hue is a
+	// redundant accelerator, never the identifier: the initials are inside every
+	// avatar and the name is on the first bubble of every run.
+	const SPEAKER_SLOT_COUNT = 11;
+	const speakerSlots = $derived.by(() => {
+		// Keyed both ways on purpose: the transcript and roster know a speaker by
+		// display name, while the popover only ever has a person_id. Both must
+		// resolve to the SAME hue or tapping an avatar would recolour the person.
+		const byName = new Map<string, string>();
+		const byPersonId = new Map<number, string>();
+		let i = 0;
+		for (const u of data.utterances) {
+			if (u.is_stage_direction) continue;
+			const key = u.speaker_name ?? u.raw_speaker_label ?? '';
+			if (!key || byName.has(key)) continue;
+			// Unresolved speakers do not consume a slot, so one missing person does
+			// not shift every later speaker's hue.
+			const color =
+				u.person_id == null
+					? 'var(--color-speaker-unresolved)'
+					: `var(--color-speaker-${(i++ % SPEAKER_SLOT_COUNT) + 1})`;
+			byName.set(key, color);
+			if (u.person_id != null) byPersonId.set(u.person_id, color);
+		}
+		return { byName, byPersonId };
+	});
+	function speakerColor(name: string): string {
+		return speakerSlots.byName.get(name) ?? 'var(--color-speaker-unresolved)';
+	}
+	function speakerColorForPerson(personId: number | null | undefined): string {
+		if (personId == null) return 'var(--color-speaker-unresolved)';
+		return speakerSlots.byPersonId.get(personId) ?? 'var(--color-speaker-unresolved)';
+	}
+
 	// D-04: Section anchors derived from section_hint — lowercase values confirmed in RESEARCH.md Pitfall 1
 	const sectionAnchors = $derived(
 		data.utterances
@@ -167,7 +215,10 @@
 				       min-width: 300px; max-width: 400px;"
 			>
 				{#if currentSpeaker}
-					<SpeakerPopover speaker={currentSpeaker} />
+					<SpeakerPopover
+						speaker={currentSpeaker}
+						accentColor={speakerColorForPerson(currentSpeaker.person_id)}
+					/>
 				{/if}
 			</Popover.Content>
 		</Popover.Portal>
@@ -232,12 +283,12 @@
 									style="background:none;border:none;padding:var(--space-xs);cursor:pointer;border-radius:50%;display:flex;align-items:center;justify-content:center;"
 									aria-label="View {speaker.name} details"
 								>
-									<div aria-hidden="true" style="width:32px;height:32px;border-radius:50%;background-color:var(--color-side-bench);display:flex;align-items:center;justify-content:center;font-size:var(--font-size-caption);font-weight:var(--font-weight-semibold);color:var(--color-bg);flex-shrink:0;">
+									<div aria-hidden="true" style="width:32px;height:32px;border-radius:50%;background-color:{speakerColor(speaker.name)};display:flex;align-items:center;justify-content:center;font-size:var(--font-size-caption);font-weight:var(--font-weight-semibold);color:var(--color-bg);flex-shrink:0;">
 										{getInitials(speaker.name)}
 									</div>
 								</button>
 							{:else}
-								<div aria-hidden="true" style="width:32px;height:32px;border-radius:50%;background-color:var(--color-side-bench);display:flex;align-items:center;justify-content:center;font-size:var(--font-size-caption);font-weight:var(--font-weight-semibold);color:var(--color-bg);flex-shrink:0;margin:var(--space-xs);">
+								<div aria-hidden="true" style="width:32px;height:32px;border-radius:50%;background-color:{speakerColor(speaker.name)};display:flex;align-items:center;justify-content:center;font-size:var(--font-size-caption);font-weight:var(--font-weight-semibold);color:var(--color-bg);flex-shrink:0;margin:var(--space-xs);">
 									{getInitials(speaker.name)}
 								</div>
 							{/if}
@@ -266,12 +317,12 @@
 									style="background:none;border:none;padding:var(--space-xs);cursor:pointer;border-radius:50%;display:flex;align-items:center;justify-content:center;"
 									aria-label="View {speaker.name} details"
 								>
-									<div aria-hidden="true" style="width:32px;height:32px;border-radius:50%;background-color:var(--color-side-advocate);display:flex;align-items:center;justify-content:center;font-size:var(--font-size-caption);font-weight:var(--font-weight-semibold);color:var(--color-bg);flex-shrink:0;">
+									<div aria-hidden="true" style="width:32px;height:32px;border-radius:50%;background-color:{speakerColor(speaker.name)};display:flex;align-items:center;justify-content:center;font-size:var(--font-size-caption);font-weight:var(--font-weight-semibold);color:var(--color-bg);flex-shrink:0;">
 										{getInitials(speaker.name)}
 									</div>
 								</button>
 							{:else}
-								<div aria-hidden="true" style="width:32px;height:32px;border-radius:50%;background-color:var(--color-side-advocate);display:flex;align-items:center;justify-content:center;font-size:var(--font-size-caption);font-weight:var(--font-weight-semibold);color:var(--color-bg);flex-shrink:0;margin:var(--space-xs);">
+								<div aria-hidden="true" style="width:32px;height:32px;border-radius:50%;background-color:{speakerColor(speaker.name)};display:flex;align-items:center;justify-content:center;font-size:var(--font-size-caption);font-weight:var(--font-weight-semibold);color:var(--color-bg);flex-shrink:0;margin:var(--space-xs);">
 									{getInitials(speaker.name)}
 								</div>
 							{/if}
@@ -415,7 +466,7 @@
 											>
 												<div aria-hidden="true" style="
 													width: 32px; height: 32px; border-radius: 50%;
-													background-color: {isBench ? 'var(--color-side-bench)' : 'var(--color-side-advocate)'};
+													background-color: {speakerColor(displayName)};
 													display: flex; align-items: center; justify-content: center;
 													font-size: var(--font-size-caption); font-weight: var(--font-weight-semibold);
 													color: var(--color-bg); flex-shrink: 0;
@@ -424,7 +475,7 @@
 										{:else}
 											<div aria-hidden="true" style="
 												width: 32px; height: 32px; border-radius: 50%;
-												background-color: {isBench ? 'var(--color-side-bench)' : 'var(--color-side-advocate)'};
+												background-color: {speakerColor(displayName)};
 												display: flex; align-items: center; justify-content: center;
 												font-size: var(--font-size-caption); font-weight: var(--font-weight-semibold);
 												color: var(--color-bg); flex-shrink: 0;
@@ -473,6 +524,7 @@
 												utterance={u}
 												position={runPosition(item.utterances.length, idx)}
 												showSpeakerName={idx === 0}
+												labelColor={speakerColor(displayName)}
 											/>
 										</div>
 									{/each}

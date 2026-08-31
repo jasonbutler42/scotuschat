@@ -91,19 +91,19 @@
 
 <div
 	style="
-		background-color: #1e293b;
-		border: 1px solid #334155;
+		background-color: var(--color-surface);
+		border: 1px solid var(--color-border);
 		border-radius: 8px;
-		padding: 24px;
-		margin-bottom: 24px;
+		padding: var(--space-lg);
+		margin-bottom: var(--space-lg);
 	"
 >
 	<h2
 		style="
-			font-size: 20px;
-			font-weight: 600;
-			color: #e2e8f0;
-			margin: 0 0 24px 0;
+			font-size: var(--font-size-heading);
+			font-weight: var(--font-weight-semibold);
+			color: var(--color-text-primary);
+			margin: 0 0 var(--space-lg) 0;
 			line-height: 1.2;
 		"
 	>
@@ -138,10 +138,10 @@
 		}}
 	>
 		<!-- Docket field -->
-		<div style="margin-bottom: 16px;">
+		<div style="margin-bottom: var(--space-md);">
 			<label
 				for="docket-input"
-				style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
+				style="display: block; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin-bottom: var(--space-sm);"
 			>
 				Docket
 			</label>
@@ -158,9 +158,9 @@
 				/>
 			{/key}
 			<!-- Docket hint row: always visible (D-07/PJOB-04); read-only pills (D-09) -->
-			<div style="margin-top: 4px; display: flex; align-items: center; flex-wrap: wrap; gap: 4px;">
+			<div style="margin-top: var(--space-xs); display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-xs);">
 				<span
-					style="font-size: 14px; font-weight: 400; color: #94a3b8;"
+					style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary);"
 				>Extracted:</span>
 				{#if hints.dockets.length > 0}
 					{#each hints.dockets as hintDocket}
@@ -173,10 +173,10 @@
 		</div>
 
 		<!-- Question number field -->
-		<div style="margin-bottom: 16px;">
+		<div style="margin-bottom: var(--space-md);">
 			<label
 				for="question-number-input"
-				style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
+				style="display: block; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin-bottom: var(--space-sm);"
 			>
 				Question number
 			</label>
@@ -188,28 +188,28 @@
 				disabled={readonly}
 				style="
 					width: 100%;
-					background-color: #0f1117;
-					border: 1px solid #334155;
+					background-color: var(--color-bg);
+					border: 1px solid var(--color-border);
 					border-radius: 6px;
-					padding: 8px 12px;
-					font-size: 16px;
-					color: #e2e8f0;
+					padding: var(--space-sm) 12px;
+					font-size: var(--font-size-body);
+					color: var(--color-text-primary);
 					box-sizing: border-box;
 					font-family: inherit;
 				"
 			/>
 			<!-- Question number hint row: always visible (D-07/D-08/PJOB-04) -->
-			<div style="font-size: 14px; font-weight: 400; color: #94a3b8; margin-top: 4px; margin-bottom: 0; display: flex; align-items: center; flex-wrap: wrap;">
+			<div style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin-top: var(--space-xs); margin-bottom: 0; display: flex; align-items: center; flex-wrap: wrap;">
 				<span>Extracted:</span>
 				<CopyableExtractedValue value={hints.question_number} copyLabel="Copy question number" />
 			</div>
 		</div>
 
 		<!-- Argued date field -->
-		<div style="margin-bottom: 24px;">
+		<div style="margin-bottom: var(--space-lg);">
 			<label
 				for="argued-date-input"
-				style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
+				style="display: block; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin-bottom: var(--space-sm);"
 			>
 				Argued date
 			</label>
@@ -222,18 +222,18 @@
 				disabled={readonly}
 				style="
 					width: 100%;
-					background-color: #0f1117;
-					border: 1px solid #334155;
+					background-color: var(--color-bg);
+					border: 1px solid var(--color-border);
 					border-radius: 6px;
-					padding: 8px 12px;
-					font-size: 16px;
-					color: #e2e8f0;
+					padding: var(--space-sm) 12px;
+					font-size: var(--font-size-body);
+					color: var(--color-text-primary);
 					box-sizing: border-box;
 					font-family: inherit;
 				"
 			/>
 			<!-- Argued date hint row: always visible (D-07/D-08/PJOB-04) -->
-			<div style="font-size: 14px; font-weight: 400; color: #94a3b8; margin-top: 4px; margin-bottom: 0; display: flex; align-items: center; flex-wrap: wrap; gap: 4px;">
+			<div style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin-top: var(--space-xs); margin-bottom: 0; display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-xs);">
 				<span>Extracted:</span>
 				<CopyableExtractedValue value={formatExtractedDate(hints.argued_date)} copyLabel="Copy argued date" />
 				{#if !readonly && validExtractedArguedDate}
@@ -242,12 +242,12 @@
 						onclick={useExtractedArguedDate}
 						title="Fill argued date with the extracted value"
 						style="
-							min-height: 36px;
+							min-height: var(--touch-target-dense);
 							background: transparent;
-							border: 1px solid #334155;
+							border: 1px solid var(--color-border);
 							border-radius: 4px;
-							padding: 4px 8px;
-							color: #93c5fd;
+							padding: var(--space-xs) var(--space-sm);
+							color: var(--color-accent);
 							font: inherit;
 							cursor: pointer;
 						"
@@ -260,9 +260,9 @@
 		{#if form?.saved}
 			<p
 				style="
-					font-size: 14px;
-					color: #4ade80;
-					margin-bottom: 16px;
+					font-size: var(--font-size-caption);
+					color: var(--color-status-published);
+					margin-bottom: var(--space-md);
 				"
 			>
 				Saved.
@@ -275,9 +275,9 @@
 				role="alert"
 				tabindex="-1"
 				style="
-					font-size: 14px;
-					color: #ef4444;
-					margin-bottom: 16px;
+					font-size: var(--font-size-caption);
+					color: var(--color-destructive);
+					margin-bottom: var(--space-md);
 				"
 			>
 				{#if docketRequired}
@@ -302,14 +302,14 @@
 				disabled={saving}
 				style="
 					width: 100%;
-					min-height: 44px;
-					background-color: #1e293b;
-					border: 1px solid #93c5fd;
+					min-height: var(--touch-target);
+					background-color: var(--color-surface);
+					border: 1px solid var(--color-accent);
 					border-radius: 6px;
-					padding: 8px 16px;
-					font-size: 16px;
-					font-weight: 600;
-					color: #e2e8f0;
+					padding: var(--space-sm) var(--space-md);
+					font-size: var(--font-size-body);
+					font-weight: var(--font-weight-semibold);
+					color: var(--color-text-primary);
 					cursor: {saving ? 'not-allowed' : 'pointer'};
 					opacity: {saving ? '0.7' : '1'};
 					font-family: inherit;

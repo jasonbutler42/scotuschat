@@ -9,7 +9,7 @@
 <!-- Full-bleed dark background, vertically/horizontally centered -->
 <main
 	style="
-		background-color: #0f1117;
+		background-color: var(--color-bg);
 		min-height: 100vh;
 		display: flex;
 		align-items: center;
@@ -19,21 +19,21 @@
 	<!-- Login card -->
 	<div
 		style="
-			background-color: #1e293b;
-			border: 1px solid #334155;
+			background-color: var(--color-surface);
+			border: 1px solid var(--color-border);
 			border-radius: 8px;
-			padding: 32px;
+			padding: var(--space-xl);
 			width: 100%;
 			max-width: 400px;
 		"
 	>
-		<!-- Heading: 20px/600/#e2e8f0, margin-bottom 24px -->
+		<!-- Heading: 20px/600/--color-text-primary, margin-bottom 24px -->
 		<h1
 			style="
-				font-size: 20px;
-				font-weight: 600;
-				color: #e2e8f0;
-				margin: 0 0 24px 0;
+				font-size: var(--font-size-heading);
+				font-weight: var(--font-weight-semibold);
+				color: var(--color-text-primary);
+				margin: 0 0 var(--space-lg) 0;
 				line-height: 1.2;
 			"
 		>
@@ -42,15 +42,15 @@
 
 		<form method="POST">
 			<!-- Username field -->
-			<div style="margin-bottom: 16px;">
+			<div style="margin-bottom: var(--space-md);">
 				<label
 					for="username"
 					style="
 						display: block;
-						font-size: 14px;
-						font-weight: 400;
-						color: #94a3b8;
-						margin-bottom: 8px;
+						font-size: var(--font-size-caption);
+						font-weight: var(--font-weight-regular);
+						color: var(--color-text-secondary);
+						margin-bottom: var(--space-sm);
 					"
 				>
 					Username
@@ -64,12 +64,12 @@
 					style="
 						display: block;
 						width: 100%;
-						background-color: #0f1117;
-						border: 1px solid #334155;
+						background-color: var(--color-bg);
+						border: 1px solid var(--color-border);
 						border-radius: 6px;
-						padding: 8px 12px;
-						font-size: 16px;
-						color: #e2e8f0;
+						padding: var(--space-sm) 12px;
+						font-size: var(--font-size-body);
+						color: var(--color-text-primary);
 						box-sizing: border-box;
 					"
 				/>
@@ -81,10 +81,10 @@
 					for="password"
 					style="
 						display: block;
-						font-size: 14px;
-						font-weight: 400;
-						color: #94a3b8;
-						margin-bottom: 8px;
+						font-size: var(--font-size-caption);
+						font-weight: var(--font-weight-regular);
+						color: var(--color-text-secondary);
+						margin-bottom: var(--space-sm);
 					"
 				>
 					Password
@@ -97,12 +97,12 @@
 					style="
 						display: block;
 						width: 100%;
-						background-color: #0f1117;
-						border: 1px solid #334155;
+						background-color: var(--color-bg);
+						border: 1px solid var(--color-border);
 						border-radius: 6px;
-						padding: 8px 12px;
-						font-size: 16px;
-						color: #e2e8f0;
+						padding: var(--space-sm) 12px;
+						font-size: var(--font-size-body);
+						color: var(--color-text-primary);
 						box-sizing: border-box;
 					"
 				/>
@@ -113,9 +113,9 @@
 				<p
 					role="alert"
 					style="
-						color: #ef4444;
-						font-size: 16px;
-						font-weight: 400;
+						color: var(--color-destructive);
+						font-size: var(--font-size-body);
+						font-weight: var(--font-weight-regular);
 						line-height: 1.5;
 						margin: 12px 0 0 0;
 					"
@@ -130,15 +130,15 @@
 				style="
 					display: block;
 					width: 100%;
-					min-height: 44px;
-					background-color: #1e293b;
-					border: 1px solid #334155;
+					min-height: var(--touch-target);
+					background-color: var(--color-surface);
+					border: 1px solid var(--color-border);
 					border-radius: 6px;
-					font-size: 16px;
-					font-weight: 600;
-					color: #e2e8f0;
+					font-size: var(--font-size-body);
+					font-weight: var(--font-weight-semibold);
+					color: var(--color-text-primary);
 					cursor: pointer;
-					margin-top: 24px;
+					margin-top: var(--space-lg);
 				"
 			>
 				Log in

@@ -106,20 +106,20 @@
 
 	// StatusBadge helper: returns inline style string for a given job status.
 	// Phase 26 gap closure (PLIST-05): isArchived takes precedence, mirroring
-	// RunStatusCard.svelte's already_created override (grey #cbd5e1).
+	// RunStatusCard.svelte's already_created override (grey --color-status-archived).
 	function badgeStyle(status: string, isArchived: boolean = false): string {
 		if (isArchived) {
-			return `border: 1px solid #cbd5e1; border-radius: 4px; padding: 2px 8px; font-size: 14px; font-weight: 400; background-color: #1e293b; color: #cbd5e1; display: inline-block;`;
+			return `border: 1px solid var(--color-status-archived); border-radius: 4px; padding: 2px var(--space-sm); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); background-color: var(--color-surface); color: var(--color-status-archived); display: inline-block;`;
 		}
 		const colors: Record<string, string> = {
-			pending: '#94a3b8',
-			running: '#93c5fd',
-			completed: '#4ade80',
-			paused: '#fbbf24',
-			failed: '#ef4444',
+			pending: 'var(--color-text-secondary)',
+			running: 'var(--color-accent)',
+			completed: 'var(--color-status-published)',
+			paused: 'var(--color-status-warning)',
+			failed: 'var(--color-destructive)',
 		};
-		const color = colors[status] ?? '#94a3b8';
-		return `border: 1px solid ${color}; border-radius: 4px; padding: 2px 8px; font-size: 14px; font-weight: 400; background-color: #1e293b; color: ${color}; display: inline-block;`;
+		const color = colors[status] ?? 'var(--color-text-secondary)';
+		return `border: 1px solid ${color}; border-radius: 4px; padding: 2px var(--space-sm); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); background-color: var(--color-surface); color: ${color}; display: inline-block;`;
 	}
 
 	// Compound badge (D-13/D-15/D-16): combines current_step and status, e.g. "Parse · Running".
@@ -161,7 +161,7 @@
 	}
 
 	function sourceTagStyle(): string {
-		return `border: 1px solid #94a3b8; border-radius: 4px; padding: 2px 8px; font-size: 14px; font-weight: 400; background-color: #0f1117; color: #94a3b8; display: inline-block;`;
+		return `border: 1px solid var(--color-text-secondary); border-radius: 4px; padding: 2px var(--space-sm); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); background-color: var(--color-bg); color: var(--color-text-secondary); display: inline-block;`;
 	}
 
 	// Format ISO date string for display (date only — time detail not needed in history).
@@ -176,20 +176,20 @@
 </script>
 
 <!-- Page layout per 07-UI-SPEC /admin/pipeline Page Layout Contract -->
-<main style="background-color: #0f1117; min-height: 100vh;">
+<main style="background-color: var(--color-bg); min-height: 100vh;">
 	<!-- Page header bar -->
 	<header
 		style="
-			background-color: #1e293b;
-			border-bottom: 1px solid #334155;
-			padding: 16px 24px;
+			background-color: var(--color-surface);
+			border-bottom: 1px solid var(--color-border);
+			padding: var(--space-md) var(--space-lg);
 		"
 	>
 		<h1
 			style="
-				font-size: 20px;
-				font-weight: 600;
-				color: #e2e8f0;
+				font-size: var(--font-size-heading);
+				font-weight: var(--font-weight-semibold);
+				color: var(--color-text-primary);
 				margin: 0;
 				line-height: 1.2;
 			"
@@ -199,23 +199,23 @@
 	</header>
 
 	<!-- Inner content container -->
-	<div style="max-width: 860px; margin: 0 auto; padding: 48px 24px;">
+	<div style="max-width: 860px; margin: 0 auto; padding: var(--space-2xl) var(--space-lg);">
 
 		<!-- New Run card -->
 		<div
 			style="
-				background-color: #1e293b;
-				border: 1px solid #334155;
+				background-color: var(--color-surface);
+				border: 1px solid var(--color-border);
 				border-radius: 8px;
-				padding: 32px;
+				padding: var(--space-xl);
 			"
 		>
 			<h2
 				style="
-					font-size: 20px;
-					font-weight: 600;
-					color: #e2e8f0;
-					margin: 0 0 24px 0;
+					font-size: var(--font-size-heading);
+					font-weight: var(--font-weight-semibold);
+					color: var(--color-text-primary);
+					margin: 0 0 var(--space-lg) 0;
 					line-height: 1.2;
 				"
 			>
@@ -225,12 +225,12 @@
 			<!-- ModeToggle: "Enter URL" / "Upload File" per 07-UI-SPEC Component Inventory -->
 			<div
 				style="
-					background-color: #0f1117;
-					border: 1px solid #334155;
+					background-color: var(--color-bg);
+					border: 1px solid var(--color-border);
 					border-radius: 6px;
-					padding: 4px;
+					padding: var(--space-xs);
 					display: inline-flex;
-					margin-bottom: 24px;
+					margin-bottom: var(--space-lg);
 				"
 			>
 				<button
@@ -238,14 +238,14 @@
 					aria-pressed={mode === 'url'}
 					onclick={() => setMode('url')}
 					style="
-						font-size: 14px;
-						padding: 8px 16px;
+						font-size: var(--font-size-caption);
+						padding: var(--space-sm) var(--space-md);
 						border: none;
 						cursor: pointer;
-						min-height: 36px;
+						min-height: var(--touch-target-dense);
 						border-radius: 4px;
-						background-color: {mode === 'url' ? '#1e293b' : 'transparent'};
-						color: {mode === 'url' ? '#e2e8f0' : '#94a3b8'};
+						background-color: {mode === 'url' ? 'var(--color-surface)' : 'transparent'};
+						color: {mode === 'url' ? 'var(--color-text-primary)' : 'var(--color-text-secondary)'};
 						font-weight: {mode === 'url' ? 600 : 400};
 					"
 				>
@@ -256,14 +256,14 @@
 					aria-pressed={mode === 'upload'}
 					onclick={() => setMode('upload')}
 					style="
-						font-size: 14px;
-						padding: 8px 16px;
+						font-size: var(--font-size-caption);
+						padding: var(--space-sm) var(--space-md);
 						border: none;
 						cursor: pointer;
-						min-height: 36px;
+						min-height: var(--touch-target-dense);
 						border-radius: 4px;
-						background-color: {mode === 'upload' ? '#1e293b' : 'transparent'};
-						color: {mode === 'upload' ? '#e2e8f0' : '#94a3b8'};
+						background-color: {mode === 'upload' ? 'var(--color-surface)' : 'transparent'};
+						color: {mode === 'upload' ? 'var(--color-text-primary)' : 'var(--color-text-secondary)'};
 						font-weight: {mode === 'upload' ? 600 : 400};
 					"
 				>
@@ -285,15 +285,15 @@
 
 				{#if mode === 'url'}
 					<!-- URL input -->
-					<div style="margin-bottom: 16px;">
+					<div style="margin-bottom: var(--space-md);">
 						<label
 							for="pdf_url"
 							style="
 								display: block;
-								font-size: 14px;
-								font-weight: 400;
-								color: #94a3b8;
-								margin-bottom: 8px;
+								font-size: var(--font-size-caption);
+								font-weight: var(--font-weight-regular);
+								color: var(--color-text-secondary);
+								margin-bottom: var(--space-sm);
 							"
 						>
 							Transcript PDF URL
@@ -307,27 +307,27 @@
 							style="
 								display: block;
 								width: 100%;
-								background-color: #0f1117;
-								border: 1px solid #334155;
+								background-color: var(--color-bg);
+								border: 1px solid var(--color-border);
 								border-radius: 6px;
-								padding: 8px 12px;
-								font-size: 16px;
-								color: #e2e8f0;
+								padding: var(--space-sm) 12px;
+								font-size: var(--font-size-body);
+								color: var(--color-text-primary);
 								box-sizing: border-box;
 							"
 						/>
 					</div>
 				{:else}
 					<!-- File input — only rendered in upload mode so inactive field is not submitted -->
-					<div style="margin-bottom: 16px;">
+					<div style="margin-bottom: var(--space-md);">
 						<label
 							for="pdf_file"
 							style="
 								display: block;
-								font-size: 14px;
-								font-weight: 400;
-								color: #94a3b8;
-								margin-bottom: 8px;
+								font-size: var(--font-size-caption);
+								font-weight: var(--font-weight-regular);
+								color: var(--color-text-secondary);
+								margin-bottom: var(--space-sm);
 							"
 						>
 							PDF File
@@ -341,12 +341,12 @@
 							style="
 								display: block;
 								width: 100%;
-								background-color: #0f1117;
-								border: 1px solid #334155;
+								background-color: var(--color-bg);
+								border: 1px solid var(--color-border);
 								border-radius: 6px;
-								padding: 8px 12px;
-								font-size: 16px;
-								color: #e2e8f0;
+								padding: var(--space-sm) 12px;
+								font-size: var(--font-size-body);
+								color: var(--color-text-primary);
 								box-sizing: border-box;
 							"
 						/>
@@ -354,10 +354,10 @@
 				{/if}
 
 				<!-- Docket pill input (PLIST-02, D-05/D-06, UI-SPEC Component 1) — optional; triggers preflight when filled -->
-				<div style="margin-bottom: 16px;">
+				<div style="margin-bottom: var(--space-md);">
 					<label
 						for="primary_docket"
-						style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
+						style="display: block; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin-bottom: var(--space-sm);"
 					>
 						Docket number
 					</label>
@@ -365,10 +365,10 @@
 				</div>
 
 				<!-- Question number free-text field (PLIST-01, D-01/D-02, UI-SPEC Component 1) -->
-				<div style="margin-bottom: 16px;">
+				<div style="margin-bottom: var(--space-md);">
 					<label
 						for="question_number"
-						style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
+						style="display: block; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin-bottom: var(--space-sm);"
 					>
 						Question number
 					</label>
@@ -378,13 +378,13 @@
 						id="question_number"
 						bind:value={questionInput}
 						style="
-							background-color: #0f1117;
-							border: 1px solid #334155;
+							background-color: var(--color-bg);
+							border: 1px solid var(--color-border);
 							border-radius: 6px;
-							padding: 8px 12px;
-							font-size: 16px;
-							color: #e2e8f0;
-							min-height: 44px;
+							padding: var(--space-sm) 12px;
+							font-size: var(--font-size-body);
+							color: var(--color-text-primary);
+							min-height: var(--touch-target);
 							width: 100%;
 							box-sizing: border-box;
 						"
@@ -393,24 +393,24 @@
 
 				<!-- Duplicate warning banner (D-04/D-05/D-06, UI-SPEC Component 3) — shown when preflight finds a match -->
 				{#if duplicateWarning}
-					<div role="alert" style="background-color: #1e293b; border: 1px solid #fbbf24; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
-						<p style="font-size: 16px; font-weight: 600; color: #e2e8f0; margin: 0 0 8px 0;">⚠ Argument already exists</p>
-						<p style="font-size: 14px; color: #94a3b8; margin: 0 0 12px 0;">
+					<div role="alert" style="background-color: var(--color-surface); border: 1px solid var(--color-status-warning); border-radius: 8px; padding: var(--space-md); margin-bottom: var(--space-md);">
+						<p style="font-size: var(--font-size-body); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-sm) 0;">⚠ Argument already exists</p>
+						<p style="font-size: var(--font-size-caption); color: var(--color-text-secondary); margin: 0 0 12px 0;">
 							Docket {duplicateWarning.docket} Q{duplicateWarning.question} already has an argument.
-							<a href="/admin/arguments/{duplicateWarning.argumentId}" style="color: #93c5fd; text-decoration: underline;">View existing argument →</a>
+							<a href="/admin/arguments/{duplicateWarning.argumentId}" style="color: var(--color-accent); text-decoration: underline;">View existing argument →</a>
 						</p>
-						<div style="display: flex; gap: 8px;">
+						<div style="display: flex; gap: var(--space-sm);">
 							<button
 								type="button"
 								onclick={() => { duplicateWarning = null; preflightCleared = false; }}
-								style="font-size: 14px; font-weight: 400; color: #94a3b8; background: transparent; border: 1px solid #334155; border-radius: 6px; padding: 8px 16px; min-height: 36px; cursor: pointer;"
+								style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); background: transparent; border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) var(--space-md); min-height: var(--touch-target-dense); cursor: pointer;"
 							>
 								Cancel
 							</button>
 							<button
 								type="button"
 								onclick={() => { preflightCleared = true; duplicateWarning = null; formEl.requestSubmit(); }}
-								style="font-size: 14px; font-weight: 600; color: #e2e8f0; background: transparent; border: 1px solid #93c5fd; border-radius: 6px; padding: 8px 16px; min-height: 36px; cursor: pointer;"
+								style="font-size: var(--font-size-caption); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); background: transparent; border: 1px solid var(--color-accent); border-radius: 6px; padding: var(--space-sm) var(--space-md); min-height: var(--touch-target-dense); cursor: pointer;"
 							>
 								Start anyway
 							</button>
@@ -423,11 +423,11 @@
 					<p
 						role="alert"
 						style="
-							color: #ef4444;
-							font-size: 16px;
-							font-weight: 400;
+							color: var(--color-destructive);
+							font-size: var(--font-size-body);
+							font-weight: var(--font-weight-regular);
 							line-height: 1.5;
-							margin: 0 0 16px 0;
+							margin: 0 0 var(--space-md) 0;
 						"
 					>
 						{form.error}
@@ -442,15 +442,15 @@
 					style="
 						display: block;
 						width: 100%;
-						min-height: 44px;
-						background-color: #1e293b;
-						border: 1px solid #334155;
+						min-height: var(--touch-target);
+						background-color: var(--color-surface);
+						border: 1px solid var(--color-border);
 						border-radius: 6px;
-						font-size: 16px;
-						font-weight: 600;
-						color: #e2e8f0;
+						font-size: var(--font-size-body);
+						font-weight: var(--font-weight-semibold);
+						color: var(--color-text-primary);
 						cursor: {submitting ? 'not-allowed' : 'pointer'};
-						margin-top: 8px;
+						margin-top: var(--space-sm);
 						opacity: {submitting ? 0.7 : 1};
 					"
 				>
@@ -460,14 +460,14 @@
 		</div>
 
 		<!-- All Runs history section -->
-		<div style="margin-top: 32px;">
+		<div style="margin-top: var(--space-xl);">
 			<!-- Section header row: h2 left, incomplete toggle right (D-13, 13-UI-SPEC §Layout Contract) -->
-			<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+			<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-md);">
 				<h2
 					style="
-						font-size: 20px;
-						font-weight: 600;
-						color: #e2e8f0;
+						font-size: var(--font-size-heading);
+						font-weight: var(--font-weight-semibold);
+						color: var(--color-text-primary);
 						margin: 0;
 						line-height: 1.2;
 					"
@@ -476,7 +476,7 @@
 				</h2>
 
 				<!-- IncompleteToggle (PIPE-20) — mirrors /admin/people pattern exactly -->
-				<div style="display: flex; align-items: center; gap: 8px;">
+				<div style="display: flex; align-items: center; gap: var(--space-sm);">
 					<button
 						role="switch"
 						aria-checked={incomplete}
@@ -486,10 +486,10 @@
 							position: relative;
 							width: 44px;
 							height: 24px;
-							min-height: 44px;
+							min-height: var(--touch-target);
 							border-radius: 12px;
-							border: 1px solid {incomplete ? '#93c5fd' : '#334155'};
-							background-color: {incomplete ? 'rgba(147,197,253,0.2)' : '#0f1117'};
+							border: 1px solid {incomplete ? 'var(--color-accent)' : 'var(--color-border)'};
+							background-color: {incomplete ? 'rgba(147,197,253,0.2)' : 'var(--color-bg)'};
 							cursor: pointer;
 							padding: 0;
 							flex-shrink: 0;
@@ -503,15 +503,15 @@
 								width: 18px;
 								height: 18px;
 								border-radius: 50%;
-								background-color: {incomplete ? '#93c5fd' : '#94a3b8'};
+								background-color: {incomplete ? 'var(--color-accent)' : 'var(--color-text-secondary)'};
 							"
 						></span>
 					</button>
 					<span
 						style="
-							font-size: 14px;
-							font-weight: 400;
-							color: {incomplete ? '#e2e8f0' : '#94a3b8'};
+							font-size: var(--font-size-caption);
+							font-weight: var(--font-weight-regular);
+							color: {incomplete ? 'var(--color-text-primary)' : 'var(--color-text-secondary)'};
 						"
 					>Show incomplete only</span>
 				</div>
@@ -522,10 +522,10 @@
 			     source tag can never render here by construction. -->
 			<p
 				style="
-					font-size: 14px;
-					font-weight: 400;
-					color: #94a3b8;
-					margin: 0 0 16px 0;
+					font-size: var(--font-size-caption);
+					font-weight: var(--font-weight-regular);
+					color: var(--color-text-secondary);
+					margin: 0 0 var(--space-md) 0;
 				"
 			>
 				This screen shows PDF-pipeline jobs only. Corpus arguments are
@@ -536,28 +536,28 @@
 				<!-- Filter-on empty state: no paused/failed jobs (13-UI-SPEC §Component Inventory 3) -->
 				<div
 					style="
-						background-color: #1e293b;
-						border: 1px solid #334155;
+						background-color: var(--color-surface);
+						border: 1px solid var(--color-border);
 						border-radius: 8px;
-						padding: 32px;
+						padding: var(--space-xl);
 						text-align: center;
 					"
 				>
 					<p
 						style="
-							font-size: 16px;
-							font-weight: 600;
-							color: #e2e8f0;
-							margin: 0 0 8px 0;
+							font-size: var(--font-size-body);
+							font-weight: var(--font-weight-semibold);
+							color: var(--color-text-primary);
+							margin: 0 0 var(--space-sm) 0;
 						"
 					>
 						No jobs need attention
 					</p>
 					<p
 						style="
-							font-size: 16px;
-							font-weight: 400;
-							color: #94a3b8;
+							font-size: var(--font-size-body);
+							font-weight: var(--font-weight-regular);
+							color: var(--color-text-secondary);
 							margin: 0;
 						"
 					>
@@ -568,28 +568,28 @@
 				<!-- Default empty state per 07-UI-SPEC Copywriting Contract -->
 				<div
 					style="
-						background-color: #1e293b;
-						border: 1px solid #334155;
+						background-color: var(--color-surface);
+						border: 1px solid var(--color-border);
 						border-radius: 8px;
-						padding: 32px;
+						padding: var(--space-xl);
 						text-align: center;
 					"
 				>
 					<p
 						style="
-							font-size: 16px;
-							font-weight: 600;
-							color: #e2e8f0;
-							margin: 0 0 8px 0;
+							font-size: var(--font-size-body);
+							font-weight: var(--font-weight-semibold);
+							color: var(--color-text-primary);
+							margin: 0 0 var(--space-sm) 0;
 						"
 					>
 						No runs yet
 					</p>
 					<p
 						style="
-							font-size: 16px;
-							font-weight: 400;
-							color: #94a3b8;
+							font-size: var(--font-size-body);
+							font-weight: var(--font-weight-regular);
+							color: var(--color-text-secondary);
 							margin: 0;
 						"
 					>
@@ -611,12 +611,12 @@
 								<th
 									scope="col"
 									style="
-										font-size: 14px;
-										font-weight: 400;
-										color: #94a3b8;
+										font-size: var(--font-size-caption);
+										font-weight: var(--font-weight-regular);
+										color: var(--color-text-secondary);
 										text-align: left;
-										padding: 8px 0;
-										border-bottom: 1px solid #334155;
+										padding: var(--space-sm) 0;
+										border-bottom: 1px solid var(--color-border);
 									"
 								>
 									Status
@@ -624,12 +624,12 @@
 								<th
 									scope="col"
 									style="
-										font-size: 14px;
-										font-weight: 400;
-										color: #94a3b8;
+										font-size: var(--font-size-caption);
+										font-weight: var(--font-weight-regular);
+										color: var(--color-text-secondary);
 										text-align: left;
-										padding: 8px 0;
-										border-bottom: 1px solid #334155;
+										padding: var(--space-sm) 0;
+										border-bottom: 1px solid var(--color-border);
 									"
 								>
 									Source
@@ -637,12 +637,12 @@
 								<th
 									scope="col"
 									style="
-										font-size: 14px;
-										font-weight: 400;
-										color: #94a3b8;
+										font-size: var(--font-size-caption);
+										font-weight: var(--font-weight-regular);
+										color: var(--color-text-secondary);
 										text-align: left;
-										padding: 8px 0;
-										border-bottom: 1px solid #334155;
+										padding: var(--space-sm) 0;
+										border-bottom: 1px solid var(--color-border);
 									"
 								>
 									Created
@@ -650,12 +650,12 @@
 								<th
 									scope="col"
 									style="
-										font-size: 14px;
-										font-weight: 400;
-										color: #94a3b8;
+										font-size: var(--font-size-caption);
+										font-weight: var(--font-weight-regular);
+										color: var(--color-text-secondary);
 										text-align: left;
-										padding: 8px 0;
-										border-bottom: 1px solid #334155;
+										padding: var(--space-sm) 0;
+										border-bottom: 1px solid var(--color-border);
 									"
 								>
 									<!-- intentionally empty — View links are in this column -->
@@ -667,10 +667,10 @@
 								<tr>
 									<td
 										style="
-											font-size: 16px;
-											color: #e2e8f0;
+											font-size: var(--font-size-body);
+											color: var(--color-text-primary);
 											padding: 12px 0;
-											border-bottom: 1px solid #334155;
+											border-bottom: 1px solid var(--color-border);
 										"
 									>
 										<span style={badgeStyle(job.status, job.is_archived)}>
@@ -679,10 +679,10 @@
 									</td>
 									<td
 										style="
-											font-size: 16px;
-											color: #e2e8f0;
+											font-size: var(--font-size-body);
+											color: var(--color-text-primary);
 											padding: 12px 0;
-											border-bottom: 1px solid #334155;
+											border-bottom: 1px solid var(--color-border);
 										"
 									>
 										<span style={sourceTagStyle()}>
@@ -691,19 +691,19 @@
 									</td>
 									<td
 										style="
-											font-size: 14px;
-											color: #94a3b8;
+											font-size: var(--font-size-caption);
+											color: var(--color-text-secondary);
 											padding: 12px 0;
-											border-bottom: 1px solid #334155;
+											border-bottom: 1px solid var(--color-border);
 										"
 									>
 										{formatDate(job.created_at)}
 									</td>
 									<td
 										style="
-											font-size: 14px;
+											font-size: var(--font-size-caption);
 											padding: 12px 0;
-											border-bottom: 1px solid #334155;
+											border-bottom: 1px solid var(--color-border);
 											text-align: right;
 										"
 									>
@@ -711,10 +711,10 @@
 											href="/admin/pipeline/{job.id}"
 											data-sveltekit-reload
 											style="
-												color: #93c5fd;
+												color: var(--color-accent);
 												text-decoration: underline;
-												font-size: 14px;
-												font-weight: 400;
+												font-size: var(--font-size-caption);
+												font-weight: var(--font-weight-regular);
 											"
 										>
 											View

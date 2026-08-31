@@ -321,19 +321,19 @@
 	let deleteSubmitting = $state(false);
 </script>
 
-<main style="background-color: #0f1117; min-height: 100vh;">
-	<header style="background-color: #1e293b; border-bottom: 1px solid #334155; padding: 16px 24px;">
-		<nav aria-label="Breadcrumb" style="font-size: 14px; font-weight: 400; line-height: 1.4;">
-			<a href={'/admin/people?tab=' + backTab} style="color: #93c5fd; text-decoration: none;">People</a>
-			<span style="color: #94a3b8;"> &gt; </span>
-			<span style="color: #94a3b8;">{data.person.full_name}</span>
+<main style="background-color: var(--color-bg); min-height: 100vh;">
+	<header style="background-color: var(--color-surface); border-bottom: 1px solid var(--color-border); padding: var(--space-md) var(--space-lg);">
+		<nav aria-label="Breadcrumb" style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); line-height: 1.4;">
+			<a href={'/admin/people?tab=' + backTab} style="color: var(--color-accent); text-decoration: none;">People</a>
+			<span style="color: var(--color-text-secondary);"> &gt; </span>
+			<span style="color: var(--color-text-secondary);">{data.person.full_name}</span>
 		</nav>
-		<h1 style="font-size: 20px; font-weight: 600; color: #e2e8f0; margin: 4px 0 0 0; line-height: 1.2;">
+		<h1 style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: var(--space-xs) 0 0 0; line-height: 1.2;">
 			{data.person.full_name}
 		</h1>
 	</header>
 
-	<div style="max-width: 640px; margin: 0 auto; padding: 48px 24px;">
+	<div style="max-width: 640px; margin: 0 auto; padding: var(--space-2xl) var(--space-lg);">
 
 		<!-- ══════════════════════════════════════════════════════════════════════
 		     Main save form — covers Identity + Person Type (is_justice/birthdate/
@@ -359,10 +359,10 @@
 		>
 			<!-- ── Identity card (renamed from "Basic Info", D-13 — no Is Justice checkbox) ── -->
 			<div
-				style="background-color: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 24px; margin-bottom: 24px;"
+				style="background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; padding: var(--space-lg); margin-bottom: var(--space-lg);"
 			>
 				<h2
-					style="font-size: 20px; font-weight: 600; color: #e2e8f0; margin: 0 0 16px 0; line-height: 1.2;"
+					style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-md) 0; line-height: 1.2;"
 				>
 					Identity
 				</h2>
@@ -371,12 +371,12 @@
 				     editable input and never submitted as client data; an <output>
 				     is used (not a disabled/readonly input) so it stays a plain
 				     readout programmatically associated with its label/explanation. -->
-				<div style="margin-bottom: 16px;">
-					<div style="display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; flex-wrap: wrap;">
-						<span id="full_name_label" style="font-size: 14px; font-weight: 400; color: #94a3b8;">
+				<div style="margin-bottom: var(--space-md);">
+					<div style="display: flex; align-items: baseline; gap: var(--space-sm); margin-bottom: var(--space-sm); flex-wrap: wrap;">
+						<span id="full_name_label" style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary);">
 							Full Name
 						</span>
-						<span id="full_name_explanation" style="font-size: 14px; font-weight: 400; color: #94a3b8;">
+						<span id="full_name_explanation" style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary);">
 							Generated from name parts.
 						</span>
 					</div>
@@ -384,7 +384,7 @@
 						id="full_name_preview"
 						aria-labelledby="full_name_label full_name_explanation"
 						aria-live="polite"
-						style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; box-sizing: border-box; color: {fullNamePreview === 'N/A' ? '#94a3b8' : '#e2e8f0'}; font-style: {fullNamePreview === 'N/A' ? 'italic' : 'normal'};"
+						style="display: block; width: 100%; background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) 12px; font-size: var(--font-size-body); box-sizing: border-box; color: {fullNamePreview === 'N/A' ? 'var(--color-text-secondary)' : 'var(--color-text-primary)'}; font-style: {fullNamePreview === 'N/A' ? 'italic' : 'normal'};"
 					>{fullNamePreview}</output>
 				</div>
 
@@ -400,14 +400,14 @@
 				     never applied) shows the disabled N/A state with the shared raw/
 				     confidence per the Phase 36 contract. -->
 				<div>
-					<p style="font-size: 14px; font-weight: 400; color: #94a3b8; margin: 0 0 8px 0;">
+					<p style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin: 0 0 var(--space-sm) 0;">
 						{MIN_NAME_ERROR}
 					</p>
-					<div class="name-parts-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr 80px; gap: 16px;">
+					<div class="name-parts-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr 80px; gap: var(--space-md);">
 						<div>
 							<label
 								for="first_name"
-								style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
+								style="display: block; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin-bottom: var(--space-sm);"
 							>
 								First name
 							</label>
@@ -416,10 +416,10 @@
 								name="first_name"
 								type="text"
 								bind:value={firstName}
-								style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
+								style="display: block; width: 100%; background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) 12px; font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box;"
 							/>
 							{#if data.person.provenance_metadata}
-								<div style="margin-top: 8px;">
+								<div style="margin-top: var(--space-sm);">
 									<CopyableExtractedValue
 										value={data.person.first_name}
 										copyLabel="Copy extracted first name"
@@ -432,7 +432,7 @@
 						<div>
 							<label
 								for="middle_name"
-								style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
+								style="display: block; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin-bottom: var(--space-sm);"
 							>
 								Middle name
 							</label>
@@ -441,10 +441,10 @@
 								name="middle_name"
 								type="text"
 								bind:value={middleName}
-								style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
+								style="display: block; width: 100%; background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) 12px; font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box;"
 							/>
 							{#if data.person.provenance_metadata}
-								<div style="margin-top: 8px;">
+								<div style="margin-top: var(--space-sm);">
 									<CopyableExtractedValue
 										value={data.person.middle_name}
 										copyLabel="Copy extracted middle name"
@@ -457,7 +457,7 @@
 						<div>
 							<label
 								for="last_name"
-								style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
+								style="display: block; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin-bottom: var(--space-sm);"
 							>
 								Last name
 							</label>
@@ -466,10 +466,10 @@
 								name="last_name"
 								type="text"
 								bind:value={lastName}
-								style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
+								style="display: block; width: 100%; background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) 12px; font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box;"
 							/>
 							{#if data.person.provenance_metadata}
-								<div style="margin-top: 8px;">
+								<div style="margin-top: var(--space-sm);">
 									<CopyableExtractedValue
 										value={data.person.last_name}
 										copyLabel="Copy extracted last name"
@@ -482,7 +482,7 @@
 						<div>
 							<label
 								for="name_suffix"
-								style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
+								style="display: block; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin-bottom: var(--space-sm);"
 							>
 								Suffix
 							</label>
@@ -491,10 +491,10 @@
 								name="name_suffix"
 								type="text"
 								bind:value={nameSuffix}
-								style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
+								style="display: block; width: 100%; background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) 12px; font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box;"
 							/>
 							{#if data.person.provenance_metadata}
-								<div style="margin-top: 8px;">
+								<div style="margin-top: var(--space-sm);">
 									<CopyableExtractedValue
 										value={data.person.name_suffix}
 										copyLabel="Copy extracted suffix"
@@ -527,26 +527,26 @@
 		>
 			<!-- ── Photo card ── -->
 			<div
-				style="background-color: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 24px; margin-bottom: 24px;"
+				style="background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; padding: var(--space-lg); margin-bottom: var(--space-lg);"
 			>
 				<h2
-					style="font-size: 20px; font-weight: 600; color: #e2e8f0; margin: 0 0 16px 0; line-height: 1.2;"
+					style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-md) 0; line-height: 1.2;"
 				>
 					Photo
 				</h2>
 
 				<!-- Photo preview: 80×80 circle — image or initials fallback -->
-				<div style="margin-bottom: 16px;">
+				<div style="margin-bottom: var(--space-md);">
 					{#if data.person.photo_url_full}
 						<img
 							src={data.person.photo_url_full}
 							alt="{data.person.full_name} profile photo"
-							style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 1px solid #334155;"
+							style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 1px solid var(--color-border);"
 						/>
 					{:else}
 						<div
 							aria-hidden="true"
-							style="width: 80px; height: 80px; border-radius: 50%; background-color: #334155; color: #94a3b8; font-size: 28px; font-weight: 600; display: flex; align-items: center; justify-content: center; user-select: none;"
+							style="width: 80px; height: 80px; border-radius: 50%; background-color: var(--color-border); color: var(--color-text-secondary); font-size: var(--font-size-display); font-weight: var(--font-weight-semibold); display: flex; align-items: center; justify-content: center; user-select: none;"
 						>
 							{(data.person.full_name ?? '').charAt(0).toUpperCase()}
 						</div>
@@ -554,18 +554,18 @@
 				</div>
 
 				<!-- Tab bar -->
-				<div style="display: flex; gap: 0; margin-bottom: 16px; border-bottom: 1px solid #334155;">
+				<div style="display: flex; gap: 0; margin-bottom: var(--space-md); border-bottom: 1px solid var(--color-border);">
 					<button
 						type="button"
 						onclick={() => (photoTab = 'upload')}
-						style="padding: 8px 16px; font-size: 14px; font-weight: 400; background: transparent; border: none; border-bottom: {photoTab === 'upload' ? '2px solid #93c5fd' : '2px solid transparent'}; color: {photoTab === 'upload' ? '#e2e8f0' : '#94a3b8'}; cursor: pointer; margin-bottom: -1px;"
+						style="padding: var(--space-sm) var(--space-md); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); background: transparent; border: none; border-bottom: {photoTab === 'upload' ? '2px solid var(--color-accent)' : '2px solid transparent'}; color: {photoTab === 'upload' ? 'var(--color-text-primary)' : 'var(--color-text-secondary)'}; cursor: pointer; margin-bottom: -1px;"
 					>
 						Upload file
 					</button>
 					<button
 						type="button"
 						onclick={() => (photoTab = 'url')}
-						style="padding: 8px 16px; font-size: 14px; font-weight: 400; background: transparent; border: none; border-bottom: {photoTab === 'url' ? '2px solid #93c5fd' : '2px solid transparent'}; color: {photoTab === 'url' ? '#e2e8f0' : '#94a3b8'}; cursor: pointer; margin-bottom: -1px;"
+						style="padding: var(--space-sm) var(--space-md); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); background: transparent; border: none; border-bottom: {photoTab === 'url' ? '2px solid var(--color-accent)' : '2px solid transparent'}; color: {photoTab === 'url' ? 'var(--color-text-primary)' : 'var(--color-text-secondary)'}; cursor: pointer; margin-bottom: -1px;"
 					>
 						Enter URL
 					</button>
@@ -573,27 +573,27 @@
 
 				<!-- Tab panel -->
 				{#if photoTab === 'upload'}
-					<div style="margin-bottom: 16px;">
+					<div style="margin-bottom: var(--space-md);">
 						<input
 							type="file"
 							name="photo_file"
 							accept="image/*"
-							style="display: block; width: 100%; min-height: 44px; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box; cursor: pointer;"
+							style="display: block; width: 100%; min-height: var(--touch-target); background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) 12px; font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box; cursor: pointer;"
 						/>
 					</div>
 				{:else}
-					<div style="margin-bottom: 16px;">
+					<div style="margin-bottom: var(--space-md);">
 						<input
 							type="text"
 							name="photo_url"
 							placeholder="https://…"
-							style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
+							style="display: block; width: 100%; background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) 12px; font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box;"
 						/>
 					</div>
 				{/if}
 
 				{#if form?.photoError}
-					<p role="alert" style="color: #ef4444; font-size: 14px; margin: 0 0 8px 0;">
+					<p role="alert" style="color: var(--color-destructive); font-size: var(--font-size-caption); margin: 0 0 var(--space-sm) 0;">
 						{form.photoError}
 					</p>
 				{/if}
@@ -601,7 +601,7 @@
 				<button
 					type="submit"
 					disabled={photoSubmitting}
-					style="display: block; width: 100%; min-height: 44px; background: transparent; border: 1px solid #93c5fd; border-radius: 6px; font-size: 16px; font-weight: 600; color: #e2e8f0; cursor: pointer; opacity: {photoSubmitting ? 0.7 : 1};"
+					style="display: block; width: 100%; min-height: var(--touch-target); background: transparent; border: 1px solid var(--color-accent); border-radius: 6px; font-size: var(--font-size-body); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); cursor: pointer; opacity: {photoSubmitting ? 0.7 : 1};"
 				>
 					{photoSubmitting ? 'Uploading…' : 'Upload photo'}
 				</button>
@@ -614,10 +614,10 @@
 		     hidden inputs already use, so the bio saves atomically with the rest of
 		     the person on Save Person, not with the photo upload. ── -->
 		<div
-			style="background-color: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 24px; margin-bottom: 24px;"
+			style="background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; padding: var(--space-lg); margin-bottom: var(--space-lg);"
 		>
 			<h2
-				style="font-size: 20px; font-weight: 600; color: #e2e8f0; margin: 0 0 16px 0; line-height: 1.2;"
+				style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-md) 0; line-height: 1.2;"
 			>
 				Biography
 			</h2>
@@ -625,11 +625,11 @@
 			<div>
 				<label
 					for="bio_text"
-					style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
+					style="display: block; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin-bottom: var(--space-sm);"
 				>
 					Bio
 				</label>
-				<p style="font-size: 13px; font-weight: 400; color: #94a3b8; margin: 0 0 8px 0;">
+				<p style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin: 0 0 var(--space-sm) 0;">
 					Saved with Save Person.
 				</p>
 				<textarea
@@ -638,7 +638,7 @@
 					form="save-form"
 					bind:value={bioText}
 					placeholder="Enter a short biography…"
-					style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box; min-height: 120px; resize: vertical; font-family: inherit;"
+					style="display: block; width: 100%; background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) 12px; font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box; min-height: 120px; resize: vertical; font-family: inherit;"
 				></textarea>
 			</div>
 		</div>
@@ -649,30 +649,30 @@
 		     carried into this card at all. Inputs associate with save-form via the
 		     `form` attribute since this card sits outside that <form> element. ── -->
 		<div
-			style="background-color: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 24px; margin-bottom: 24px;"
+			style="background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; padding: var(--space-lg); margin-bottom: var(--space-lg);"
 		>
 			<h2
-				style="font-size: 20px; font-weight: 600; color: #e2e8f0; margin: 0 0 16px 0; line-height: 1.2;"
+				style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-md) 0; line-height: 1.2;"
 			>
 				Person Type
 			</h2>
 
 			<!-- Bench/Advocate segmented toggle (D-13) — same visual idiom as the list-page tab toggle -->
-			<div style="display: flex; gap: 0; margin-bottom: 16px;">
+			<div style="display: flex; gap: 0; margin-bottom: var(--space-md);">
 				<button
 					type="button"
 					aria-pressed={isJustice}
 					aria-label="Bench"
 					onclick={() => (isJustice = true)}
 					style="
-						min-height: 44px;
-						padding: 8px 16px;
-						border: 1px solid {isJustice ? '#93c5fd' : '#334155'};
+						min-height: var(--touch-target);
+						padding: var(--space-sm) var(--space-md);
+						border: 1px solid {isJustice ? 'var(--color-accent)' : 'var(--color-border)'};
 						border-radius: 6px 0 0 6px;
-						background-color: {isJustice ? '#93c5fd' : '#1e293b'};
-						color: {isJustice ? '#0f1117' : '#e2e8f0'};
-						font-size: 16px;
-						font-weight: 600;
+						background-color: {isJustice ? 'var(--color-accent)' : 'var(--color-surface)'};
+						color: {isJustice ? 'var(--color-bg)' : 'var(--color-text-primary)'};
+						font-size: var(--font-size-body);
+						font-weight: var(--font-weight-semibold);
 						cursor: pointer;
 					"
 				>Bench</button>
@@ -682,15 +682,15 @@
 					aria-label="Advocate"
 					onclick={() => (isJustice = false)}
 					style="
-						min-height: 44px;
-						padding: 8px 16px;
-						border: 1px solid {!isJustice ? '#93c5fd' : '#334155'};
+						min-height: var(--touch-target);
+						padding: var(--space-sm) var(--space-md);
+						border: 1px solid {!isJustice ? 'var(--color-accent)' : 'var(--color-border)'};
 						border-left: none;
 						border-radius: 0 6px 6px 0;
-						background-color: {!isJustice ? '#93c5fd' : '#1e293b'};
-						color: {!isJustice ? '#0f1117' : '#e2e8f0'};
-						font-size: 16px;
-						font-weight: 600;
+						background-color: {!isJustice ? 'var(--color-accent)' : 'var(--color-surface)'};
+						color: {!isJustice ? 'var(--color-bg)' : 'var(--color-text-primary)'};
+						font-size: var(--font-size-body);
+						font-weight: var(--font-weight-semibold);
 						cursor: pointer;
 					"
 				>Advocate</button>
@@ -712,11 +712,11 @@
 			{#if isJustice}
 			<div transition:slide>
 				<!-- Birth Date + Death Date (D-08, D-10) -->
-				<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+				<div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md); margin-bottom: var(--space-md);">
 					<div>
 						<label
 							for="birthdate"
-							style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
+							style="display: block; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin-bottom: var(--space-sm);"
 						>
 							Birth Date
 						</label>
@@ -724,13 +724,13 @@
 							id="birthdate"
 							type="date"
 							bind:value={birthdate}
-							style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
+							style="display: block; width: 100%; background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) 12px; font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box;"
 						/>
 					</div>
 					<div>
 						<label
 							for="death_date"
-							style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
+							style="display: block; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin-bottom: var(--space-sm);"
 						>
 							Death Date
 						</label>
@@ -738,19 +738,19 @@
 							id="death_date"
 							type="date"
 							bind:value={deathDate}
-							style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
+							style="display: block; width: 100%; background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) 12px; font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box;"
 						/>
 					</div>
 				</div>
 
-				<h3 style="font-size: 16px; font-weight: 400; color: #e2e8f0; margin: 0 0 16px 0; line-height: 1.2;">
+				<h3 style="font-size: var(--font-size-body); font-weight: var(--font-weight-regular); color: var(--color-text-primary); margin: 0 0 var(--space-md) 0; line-height: 1.2;">
 					Tenure Periods
 				</h3>
 
 				<!-- Tenure Period sub-cards (D-18): bordered, inset background -->
 				{#each tenureRows as row, i (row._key)}
 					<div
-						style="background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 24px; margin-bottom: 16px;"
+						style="background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-lg); margin-bottom: var(--space-md);"
 					>
 						<!-- office (D-01..D-17, Phase 37) — segmented native-radio control
 						     replacing the free-text seat field. Exactly one of the two
@@ -762,8 +762,8 @@
 						     radiogroup (role="radiogroup" is the only role in this markup
 						     that ARIA permits aria-invalid on — not the fieldset's implicit
 						     "group" role, and not the individual radios' "radio" role). -->
-						<fieldset style="border: none; margin: 0 0 16px 0; padding: 0;">
-							<legend style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px; padding: 0;">Office</legend>
+						<fieldset style="border: none; margin: 0 0 var(--space-md) 0; padding: 0;">
+							<legend style="display: block; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin-bottom: var(--space-sm); padding: 0;">Office</legend>
 							<div
 								role="radiogroup"
 								aria-describedby={row.office === null ? `office-error-${row._key}` : undefined}
@@ -776,18 +776,18 @@
 									style="
 										position: relative;
 										flex: 1;
-										min-height: 44px;
-										padding: 8px 16px;
+										min-height: var(--touch-target);
+										padding: var(--space-sm) var(--space-md);
 										display: flex;
 										align-items: center;
 										justify-content: center;
 										box-sizing: border-box;
-										border: 1px solid {row.office === 'chief' ? '#93c5fd' : '#334155'};
+										border: 1px solid {row.office === 'chief' ? 'var(--color-accent)' : 'var(--color-border)'};
 										border-radius: 6px 0 0 6px;
-										background-color: {row.office === 'chief' ? '#93c5fd' : '#1e293b'};
-										color: {row.office === 'chief' ? '#0f1117' : '#e2e8f0'};
-										font-size: 16px;
-										font-weight: 600;
+										background-color: {row.office === 'chief' ? 'var(--color-accent)' : 'var(--color-surface)'};
+										color: {row.office === 'chief' ? 'var(--color-bg)' : 'var(--color-text-primary)'};
+										font-size: var(--font-size-body);
+										font-weight: var(--font-weight-semibold);
 										cursor: pointer;
 									"
 								>
@@ -808,19 +808,19 @@
 									style="
 										position: relative;
 										flex: 1;
-										min-height: 44px;
-										padding: 8px 16px;
+										min-height: var(--touch-target);
+										padding: var(--space-sm) var(--space-md);
 										display: flex;
 										align-items: center;
 										justify-content: center;
 										box-sizing: border-box;
-										border: 1px solid {row.office === 'associate' ? '#93c5fd' : '#334155'};
+										border: 1px solid {row.office === 'associate' ? 'var(--color-accent)' : 'var(--color-border)'};
 										border-left: none;
 										border-radius: 0 6px 6px 0;
-										background-color: {row.office === 'associate' ? '#93c5fd' : '#1e293b'};
-										color: {row.office === 'associate' ? '#0f1117' : '#e2e8f0'};
-										font-size: 16px;
-										font-weight: 600;
+										background-color: {row.office === 'associate' ? 'var(--color-accent)' : 'var(--color-surface)'};
+										color: {row.office === 'associate' ? 'var(--color-bg)' : 'var(--color-text-primary)'};
+										font-size: var(--font-size-body);
+										font-weight: var(--font-weight-semibold);
 										cursor: pointer;
 									"
 								>
@@ -840,7 +840,7 @@
 								<p
 									id="office-error-{row._key}"
 									role="alert"
-									style="color: #ef4444; font-size: 14px; font-weight: 400; line-height: 1.4; margin: 8px 0 0 0;"
+									style="color: var(--color-destructive); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); line-height: 1.4; margin: var(--space-sm) 0 0 0;"
 								>
 									{#if row.invalidOfficeOriginal === ''}
 										No office was recorded. Select Chief or Associate before saving.
@@ -851,11 +851,11 @@
 							{/if}
 						</fieldset>
 
-						<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+						<div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md); margin-bottom: var(--space-md);">
 							<div>
 								<label
 									for="tenure-start-{row._key}"
-									style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
+									style="display: block; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin-bottom: var(--space-sm);"
 								>
 									Start Date
 								</label>
@@ -863,13 +863,13 @@
 									id="tenure-start-{row._key}"
 									type="date"
 									bind:value={row.start_date}
-									style="display: block; width: 100%; background-color: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
+									style="display: block; width: 100%; background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) 12px; font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box;"
 								/>
 							</div>
 							<div>
 								<label
 									for="tenure-end-{row._key}"
-									style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
+									style="display: block; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin-bottom: var(--space-sm);"
 								>
 									End Date
 								</label>
@@ -877,15 +877,15 @@
 									id="tenure-end-{row._key}"
 									type="date"
 									bind:value={row.end_date}
-									style="display: block; width: 100%; background-color: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
+									style="display: block; width: 100%; background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) 12px; font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box;"
 								/>
 							</div>
 						</div>
 
-						<div style="margin-bottom: 16px;">
+						<div style="margin-bottom: var(--space-md);">
 							<label
 								for="tenure-appointed-{row._key}"
-								style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
+								style="display: block; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin-bottom: var(--space-sm);"
 							>
 								Appointing President
 							</label>
@@ -893,22 +893,22 @@
 								id="tenure-appointed-{row._key}"
 								type="text"
 								bind:value={row.appointed_by}
-								style="display: block; width: 100%; background-color: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
+								style="display: block; width: 100%; background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) 12px; font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box;"
 							/>
 						</div>
 
-						<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+						<div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md); margin-bottom: var(--space-md);">
 							<div>
 								<label
 									for="tenure-party-{row._key}"
-									style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
+									style="display: block; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin-bottom: var(--space-sm);"
 								>
 									President's Party
 								</label>
 								<select
 									id="tenure-party-{row._key}"
 									bind:value={row.appointing_president_party}
-									style="display: block; width: 100%; background-color: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
+									style="display: block; width: 100%; background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) 12px; font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box;"
 								>
 									<option value="">— None —</option>
 									{#each PARTY_OPTIONS as party (party)}
@@ -924,7 +924,7 @@
 							<div>
 								<label
 									for="tenure-reason-{row._key}"
-									style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
+									style="display: block; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin-bottom: var(--space-sm);"
 								>
 									Reason Left
 								</label>
@@ -939,7 +939,7 @@
 								<select
 									id="tenure-reason-{row._key}"
 									bind:value={row.reason_left}
-									style="display: block; width: 100%; background-color: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
+									style="display: block; width: 100%; background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) 12px; font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box;"
 								>
 									<option value="">— None —</option>
 									<option value="retired">Retired</option>
@@ -956,7 +956,7 @@
 							<button
 								type="button"
 								onclick={() => removeTenureRow(i)}
-								style="color: #ef4444; background: transparent; border: 1px solid #ef4444; border-radius: 6px; font-size: 14px; font-weight: 400; min-height: 36px; padding: 4px 16px; cursor: pointer;"
+								style="color: var(--color-destructive); background: transparent; border: 1px solid var(--color-destructive); border-radius: 6px; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); min-height: var(--touch-target-dense); padding: var(--space-xs) var(--space-md); cursor: pointer;"
 							>
 								Remove
 							</button>
@@ -968,7 +968,7 @@
 				<button
 					type="button"
 					onclick={addTenureRow}
-					style="display: inline-block; font-size: 14px; font-weight: 400; color: #93c5fd; background: transparent; border: none; padding: 0; cursor: pointer;"
+					style="display: inline-block; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-accent); background: transparent; border: none; padding: 0; cursor: pointer;"
 				>
 					+ Add Tenure Period
 				</button>
@@ -978,12 +978,12 @@
 
 		<!-- Form-level error (from save action, or client-side office preflight) -->
 		{#if form?.error}
-			<p role="alert" style="color: #ef4444; font-size: 14px; margin: 0 0 8px 0;">
+			<p role="alert" style="color: var(--color-destructive); font-size: var(--font-size-caption); margin: 0 0 var(--space-sm) 0;">
 				{form.error}
 			</p>
 		{/if}
 		{#if officeSaveFormError}
-			<p role="alert" style="color: #ef4444; font-size: 14px; margin: 0 0 8px 0;">
+			<p role="alert" style="color: var(--color-destructive); font-size: var(--font-size-caption); margin: 0 0 var(--space-sm) 0;">
 				{officeSaveFormError}
 			</p>
 		{/if}
@@ -991,10 +991,10 @@
 		<!-- ── Merge (PADM-03/PADM-04) — outside the save form; hidden on the create route (D-07 shared template) ── -->
 		{#if data.person.id}
 		<div
-			style="background-color: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 24px; margin-bottom: 24px;"
+			style="background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; padding: var(--space-lg); margin-bottom: var(--space-lg);"
 		>
 			<h2
-				style="font-size: 20px; font-weight: 600; color: #e2e8f0; margin: 0 0 16px 0; line-height: 1.2;"
+				style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-md) 0; line-height: 1.2;"
 			>
 				Merge into another person
 			</h2>
@@ -1011,10 +1011,10 @@
 				}}
 			>
 				<!-- Target picker -->
-				<div style="margin-bottom: 16px;">
+				<div style="margin-bottom: var(--space-md);">
 					<label
 						for="merge_target_id"
-						style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
+						style="display: block; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin-bottom: var(--space-sm);"
 					>
 						Merge this person into
 					</label>
@@ -1022,7 +1022,7 @@
 						id="merge_target_id"
 						bind:value={mergeTargetId}
 						onchange={(e) => fetchMergePreview((e.target as HTMLSelectElement).value)}
-						style="display: block; width: 100%; background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
+						style="display: block; width: 100%; background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) 12px; font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box;"
 					>
 						<option value="">— Select a person —</option>
 						{#each data.people ?? [] as p (p.id)}
@@ -1038,23 +1038,23 @@
 				<!-- Preview panel — shown when a target is selected -->
 				{#if mergeTargetId}
 					<div
-						style="background-color: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 16px; margin-bottom: 16px;"
+						style="background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-md); margin-bottom: var(--space-md);"
 					>
 						{#if mergeLoading}
-							<p style="font-size: 14px; color: #94a3b8; margin: 0;">Loading…</p>
+							<p style="font-size: var(--font-size-caption); color: var(--color-text-secondary); margin: 0;">Loading…</p>
 						{:else if mergeError}
-							<p role="alert" style="font-size: 14px; color: #ef4444; margin: 0;">{mergeError}</p>
+							<p role="alert" style="font-size: var(--font-size-caption); color: var(--color-destructive); margin: 0;">{mergeError}</p>
 						{:else if mergePreview}
 							{@const targetPerson = (data.people ?? []).find((p: { id: number }) => String(p.id) === mergeTargetId)}
-							<p style="font-size: 14px; color: #94a3b8; margin: 0 0 8px 0;">
-								This will transfer from <strong style="color: #e2e8f0;">{data.person.full_name}</strong> to <strong style="color: #e2e8f0;">{targetPerson?.full_name ?? targetPerson?.last_name ?? 'selected person'}</strong>:
+							<p style="font-size: var(--font-size-caption); color: var(--color-text-secondary); margin: 0 0 var(--space-sm) 0;">
+								This will transfer from <strong style="color: var(--color-text-primary);">{data.person.full_name}</strong> to <strong style="color: var(--color-text-primary);">{targetPerson?.full_name ?? targetPerson?.last_name ?? 'selected person'}</strong>:
 							</p>
 							{#if mergePreview.utterances === 0 && mergePreview.aliases === 0 && mergePreview.appearances === 0 && mergePreview.argument_participants === 0 && mergePreview.tenures === 0}
-								<p style="font-size: 14px; color: #94a3b8; margin: 0;">
+								<p style="font-size: var(--font-size-caption); color: var(--color-text-secondary); margin: 0;">
 									No records to transfer. This person has no associated data.
 								</p>
 							{:else}
-								<p style="font-size: 14px; color: #e2e8f0; margin: 0;">
+								<p style="font-size: var(--font-size-caption); color: var(--color-text-primary); margin: 0;">
 									{mergePreview.utterances} utterance(s) · {mergePreview.aliases} alias(es) · {mergePreview.appearances} appearance(s) · {mergePreview.argument_participants} argument participant(s) · {mergePreview.tenures} tenure(s)
 								</p>
 							{/if}
@@ -1068,14 +1068,14 @@
 					<button
 						type="submit"
 						disabled={mergeSubmitting}
-						style="display: block; width: 100%; min-height: 44px; background: transparent; border: 1px solid #93c5fd; border-radius: 6px; font-size: 16px; font-weight: 600; color: #e2e8f0; cursor: pointer; opacity: {mergeSubmitting ? 0.7 : 1};"
+						style="display: block; width: 100%; min-height: var(--touch-target); background: transparent; border: 1px solid var(--color-accent); border-radius: 6px; font-size: var(--font-size-body); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); cursor: pointer; opacity: {mergeSubmitting ? 0.7 : 1};"
 					>
 						{mergeSubmitting ? 'Merging…' : `Merge ${data.person.full_name} into ${confirmTargetPerson?.full_name ?? confirmTargetPerson?.last_name ?? 'selected person'}`}
 					</button>
 				{/if}
 
 				{#if form?.mergeError}
-					<p role="alert" style="color: #ef4444; font-size: 14px; margin: 8px 0 0 0;">
+					<p role="alert" style="color: var(--color-destructive); font-size: var(--font-size-caption); margin: var(--space-sm) 0 0 0;">
 						{form.mergeError}
 					</p>
 				{/if}
@@ -1086,7 +1086,7 @@
 		<!-- ── Delete (PADM-02) — outside the save form; hidden on the create route (D-07 shared template) ── -->
 		{#if data.person.id}
 		<div
-			style="background-color: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 24px; margin-bottom: 24px;"
+			style="background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; padding: var(--space-lg); margin-bottom: var(--space-lg);"
 		>
 			<form
 				method="POST"
@@ -1103,7 +1103,7 @@
 					<button
 						type="submit"
 						disabled={deleteSubmitting}
-						style="display: block; width: 100%; min-height: 44px; background: transparent; border: 1px solid #ef4444; border-radius: 6px; font-size: 16px; font-weight: 600; color: #ef4444; cursor: pointer; opacity: {deleteSubmitting ? 0.7 : 1};"
+						style="display: block; width: 100%; min-height: var(--touch-target); background: transparent; border: 1px solid var(--color-destructive); border-radius: 6px; font-size: var(--font-size-body); font-weight: var(--font-weight-semibold); color: var(--color-destructive); cursor: pointer; opacity: {deleteSubmitting ? 0.7 : 1};"
 					>
 						{deleteSubmitting ? 'Deleting…' : 'Delete person'}
 					</button>
@@ -1112,20 +1112,20 @@
 						type="submit"
 						disabled
 						aria-describedby="delete-tip"
-						style="display: block; width: 100%; min-height: 44px; background: transparent; border: 1px solid #334155; border-radius: 6px; font-size: 16px; font-weight: 600; color: #94a3b8; cursor: not-allowed; opacity: 0.7;"
+						style="display: block; width: 100%; min-height: var(--touch-target); background: transparent; border: 1px solid var(--color-border); border-radius: 6px; font-size: var(--font-size-body); font-weight: var(--font-weight-semibold); color: var(--color-text-secondary); cursor: not-allowed; opacity: 0.7;"
 					>
 						Delete person
 					</button>
 					<p
 						id="delete-tip"
-						style="font-size: 14px; color: #94a3b8; margin-top: 8px; text-align: center;"
+						style="font-size: var(--font-size-caption); color: var(--color-text-secondary); margin-top: var(--space-sm); text-align: center;"
 					>
 						Cannot delete — this person has associated records and cannot be removed.
 					</p>
 				{/if}
 
 				{#if form?.deleteError}
-					<p role="alert" style="color: #ef4444; font-size: 14px; margin: 8px 0 0 0;">
+					<p role="alert" style="color: var(--color-destructive); font-size: var(--font-size-caption); margin: var(--space-sm) 0 0 0;">
 						{form.deleteError}
 					</p>
 				{/if}
@@ -1134,19 +1134,19 @@
 		{/if}
 
 		<!-- ── Form-level action row: Save Person + Cancel ── -->
-		<div style="display: flex; gap: 8px;">
+		<div style="display: flex; gap: var(--space-sm);">
 			<button
 				type="submit"
 				form="save-form"
 				disabled={saveSubmitting}
 				onclick={handleSaveClick}
-				style="flex: 1; min-height: 44px; background: transparent; border: 1px solid #93c5fd; border-radius: 6px; font-size: 16px; font-weight: 600; color: #e2e8f0; cursor: pointer; opacity: {saveSubmitting ? 0.7 : 1};"
+				style="flex: 1; min-height: var(--touch-target); background: transparent; border: 1px solid var(--color-accent); border-radius: 6px; font-size: var(--font-size-body); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); cursor: pointer; opacity: {saveSubmitting ? 0.7 : 1};"
 			>
 				{saveSubmitting ? 'Saving…' : 'Save Person'}
 			</button>
 			<a
 				href={'/admin/people?tab=' + backTab}
-				style="flex: 1; display: inline-flex; align-items: center; justify-content: center; min-height: 44px; background: transparent; border: 1px solid #334155; border-radius: 6px; font-size: 16px; font-weight: 400; color: #94a3b8; text-decoration: none; box-sizing: border-box;"
+				style="flex: 1; display: inline-flex; align-items: center; justify-content: center; min-height: var(--touch-target); background: transparent; border: 1px solid var(--color-border); border-radius: 6px; font-size: var(--font-size-body); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); text-decoration: none; box-sizing: border-box;"
 			>
 				Cancel
 			</a>
@@ -1178,7 +1178,7 @@
 	}
 
 	.office-segment:has(.office-radio-input:focus-visible) {
-		outline: 2px solid #93c5fd;
+		outline: 2px solid var(--color-accent);
 		outline-offset: 2px;
 	}
 </style>

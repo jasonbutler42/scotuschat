@@ -146,14 +146,14 @@
 		display: inline-flex;
 		align-items: center;
 		flex-wrap: wrap;
-		gap: 4px;
+		gap: var(--space-xs);
 	}
 
 	.copyable-value.stacked {
 		display: inline-flex;
 		flex-direction: column;
 		align-items: flex-start;
-		gap: 4px;
+		gap: var(--space-xs);
 		max-width: 100%;
 	}
 
@@ -161,20 +161,20 @@
 		display: inline-flex;
 		align-items: center;
 		flex-wrap: wrap;
-		gap: 4px;
+		gap: var(--space-xs);
 		max-width: 100%;
 	}
 
 	.prefix {
-		font-size: 14px;
-		font-weight: 400;
-		color: #94a3b8;
+		font-size: var(--font-size-caption);
+		font-weight: var(--font-weight-regular);
+		color: var(--color-text-secondary);
 	}
 
 	.line2 {
-		font-size: 14px;
-		font-weight: 400;
-		color: #94a3b8;
+		font-size: var(--font-size-caption);
+		font-weight: var(--font-weight-regular);
+		color: var(--color-text-secondary);
 		overflow-wrap: anywhere;
 		max-width: 100%;
 	}
@@ -182,10 +182,10 @@
 	button {
 		display: inline-flex;
 		align-items: center;
-		gap: 4px;
-		min-height: 36px;
+		gap: var(--space-xs);
+		min-height: var(--touch-target-dense);
 		max-width: 100%;
-		padding: 0 8px;
+		padding: 0 var(--space-sm);
 		border: 1px solid transparent;
 		border-radius: 4px;
 		background: transparent;
@@ -207,26 +207,26 @@
 	}
 
 	button:hover:not(:disabled) {
-		color: #93c5fd;
+		color: var(--color-accent);
 	}
 
 	.pill button {
-		border-color: #334155;
-		background-color: #0f1117;
-		font-size: 12px;
+		border-color: var(--color-border);
+		background-color: var(--color-bg);
+		font-size: var(--font-size-caption);
 	}
 
 	.pill button:hover:not(:disabled) {
-		border-color: #93c5fd;
+		border-color: var(--color-accent);
 	}
 
 	button:disabled {
-		color: #94a3b8;
+		color: var(--color-text-secondary);
 		cursor: default;
 	}
 
 	button:disabled svg {
-		color: #94a3b8;
+		color: var(--color-text-secondary);
 	}
 
 	.empty {
@@ -234,14 +234,14 @@
 	}
 
 	.success {
-		color: #4ade80;
-		font-size: 14px;
-		font-weight: 400;
+		color: var(--color-status-published);
+		font-size: var(--font-size-caption);
+		font-weight: var(--font-weight-regular);
 	}
 
 	.error {
-		color: #ef4444;
-		font-size: 14px;
-		font-weight: 400;
+		color: var(--color-destructive);
+		font-size: var(--font-size-caption);
+		font-weight: var(--font-weight-regular);
 	}
 </style>

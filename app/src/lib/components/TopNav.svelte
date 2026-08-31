@@ -6,36 +6,36 @@
 	<nav
 		aria-label="Site navigation"
 		style="
-			background-color: #0f1117;
-			border-bottom: 1px solid #334155;
-			padding: 12px 24px;
+			background-color: var(--color-bg);
+			border-bottom: 1px solid var(--color-border);
+			padding: 12px var(--space-lg);
 			display: flex;
 			flex-wrap: wrap;
 			align-items: center;
-			gap: 16px;
+			gap: var(--space-md);
 		"
 	>
 		<!-- Wordmark — plain span in both variants (not a link); matches existing nav pattern -->
-		<span style="font-size: 14px; font-weight: 600; color: #94a3b8; letter-spacing: 0.05em;">
+		<span style="font-size: var(--font-size-caption); font-weight: var(--font-weight-semibold); color: var(--color-text-secondary); letter-spacing: 0.05em;">
 			SCOTUS CHAT
 		</span>
 
 		<!-- Public variant: Arguments link (accent) + Admin link (muted, right-aligned) -->
 		<a
 			href="/arguments"
-			style="font-size: 14px; color: #93c5fd; text-decoration: none;"
+			style="font-size: var(--font-size-caption); color: var(--color-accent); text-decoration: none;"
 		>
 			Arguments
 		</a>
 		<a
 			href="/attributions"
-			style="font-size: 14px; color: #93c5fd; text-decoration: none;"
+			style="font-size: var(--font-size-caption); color: var(--color-accent); text-decoration: none;"
 		>
 			Attributions
 		</a>
 		<a
 			href="/admin"
-			style="font-size: 14px; color: #94a3b8; text-decoration: none; margin-left: auto;"
+			style="font-size: var(--font-size-caption); color: var(--color-text-secondary); text-decoration: none; margin-left: auto;"
 		>
 			Admin
 		</a>

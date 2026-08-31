@@ -86,15 +86,15 @@
 		type="button"
 		{disabled}
 		style="
-			font-size: 14px;
-			font-weight: 400;
-			color: #93c5fd;
+			font-size: var(--font-size-caption);
+			font-weight: var(--font-weight-regular);
+			color: var(--color-accent);
 			background: transparent;
-			border: 1px solid #334155;
+			border: 1px solid var(--color-border);
 			border-radius: 4px;
 			padding: 6px 12px;
 			cursor: {disabled ? 'not-allowed' : 'pointer'};
-			min-height: 36px;
+			min-height: var(--touch-target-dense);
 			opacity: {disabled ? 0.6 : 1};
 		"
 	>
@@ -109,17 +109,17 @@
 			style="
 				z-index: 50;
 				width: min(420px, calc(100vw - 32px));
-				background-color: #1e293b;
-				border: 1px solid #334155;
+				background-color: var(--color-surface);
+				border: 1px solid var(--color-border);
 				border-radius: 8px;
-				padding: 16px;
+				padding: var(--space-md);
 				box-sizing: border-box;
 			"
 		>
-			<h3 style="font-size: 16px; font-weight: 600; color: #e2e8f0; margin: 0 0 4px 0;">
+			<h3 style="font-size: var(--font-size-body); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-xs) 0;">
 				Create person
 			</h3>
-			<p style="font-size: 14px; font-weight: 400; color: #94a3b8; margin: 0 0 16px 0;">
+			<p style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin: 0 0 var(--space-md) 0;">
 				Add the minimum details needed to finish resolve. Complete the profile later in People.
 			</p>
 
@@ -149,11 +149,11 @@
 				<input type="hidden" name="raw_speaker_label" value={rawSpeakerLabel} />
 				<input type="hidden" name="side" value={resolvedSide()} />
 
-				<div style="display: flex; gap: 8px; margin-bottom: 12px;">
+				<div style="display: flex; gap: var(--space-sm); margin-bottom: 12px;">
 					<div style="flex: 1;">
 						<label
 							for="cp-first-{rawSpeakerLabel}"
-							style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 4px;"
+							style="display: block; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin-bottom: var(--space-xs);"
 						>
 							First name
 						</label>
@@ -164,12 +164,12 @@
 							bind:value={firstName}
 							style="
 								width: 100%;
-								background-color: #0f1117;
-								border: 1px solid #334155;
+								background-color: var(--color-bg);
+								border: 1px solid var(--color-border);
 								border-radius: 6px;
-								padding: 8px 12px;
-								font-size: 16px;
-								color: #e2e8f0;
+								padding: var(--space-sm) 12px;
+								font-size: var(--font-size-body);
+								color: var(--color-text-primary);
 								box-sizing: border-box;
 								font-family: inherit;
 							"
@@ -178,7 +178,7 @@
 					<div style="flex: 1;">
 						<label
 							for="cp-last-{rawSpeakerLabel}"
-							style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 4px;"
+							style="display: block; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin-bottom: var(--space-xs);"
 						>
 							Last name
 						</label>
@@ -189,12 +189,12 @@
 							bind:value={lastName}
 							style="
 								width: 100%;
-								background-color: #0f1117;
-								border: 1px solid #334155;
+								background-color: var(--color-bg);
+								border: 1px solid var(--color-border);
 								border-radius: 6px;
-								padding: 8px 12px;
-								font-size: 16px;
-								color: #e2e8f0;
+								padding: var(--space-sm) 12px;
+								font-size: var(--font-size-body);
+								color: var(--color-text-primary);
 								box-sizing: border-box;
 								font-family: inherit;
 							"
@@ -202,11 +202,11 @@
 					</div>
 				</div>
 
-				<div style="margin-bottom: 16px;">
-					<span style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;">
+				<div style="margin-bottom: var(--space-md);">
+					<span style="display: block; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin-bottom: var(--space-sm);">
 						Bench / Advocate
 					</span>
-					<div role="radiogroup" aria-label="Bench or Advocate" style="display: flex; gap: 8px;">
+					<div role="radiogroup" aria-label="Bench or Advocate" style="display: flex; gap: var(--space-sm);">
 						<button
 							type="button"
 							role="radio"
@@ -216,12 +216,12 @@
 							}}
 							style="
 								flex: 1;
-								min-height: 36px;
-								font-size: 14px;
-								font-weight: 400;
-								color: {side === 'BENCH' ? '#e2e8f0' : '#94a3b8'};
+								min-height: var(--touch-target-dense);
+								font-size: var(--font-size-caption);
+								font-weight: var(--font-weight-regular);
+								color: {side === 'BENCH' ? 'var(--color-text-primary)' : 'var(--color-text-secondary)'};
 								background: transparent;
-								border: 1px solid {side === 'BENCH' ? '#93c5fd' : '#334155'};
+								border: 1px solid {side === 'BENCH' ? 'var(--color-accent)' : 'var(--color-border)'};
 								border-radius: 6px;
 								cursor: pointer;
 							"
@@ -237,12 +237,12 @@
 							}}
 							style="
 								flex: 1;
-								min-height: 36px;
-								font-size: 14px;
-								font-weight: 400;
-								color: {side === 'ADVOCATE' ? '#e2e8f0' : '#94a3b8'};
+								min-height: var(--touch-target-dense);
+								font-size: var(--font-size-caption);
+								font-weight: var(--font-weight-regular);
+								color: {side === 'ADVOCATE' ? 'var(--color-text-primary)' : 'var(--color-text-secondary)'};
 								background: transparent;
-								border: 1px solid {side === 'ADVOCATE' ? '#93c5fd' : '#334155'};
+								border: 1px solid {side === 'ADVOCATE' ? 'var(--color-accent)' : 'var(--color-border)'};
 								border-radius: 6px;
 								cursor: pointer;
 							"
@@ -253,23 +253,23 @@
 				</div>
 
 				{#if errorMessage}
-					<p role="alert" style="color: #ef4444; font-size: 14px; margin: 0 0 12px 0;">
+					<p role="alert" style="color: var(--color-destructive); font-size: var(--font-size-caption); margin: 0 0 12px 0;">
 						{errorMessage}
 					</p>
 				{/if}
 
-				<div style="display: flex; gap: 8px;">
+				<div style="display: flex; gap: var(--space-sm);">
 					<button
 						type="submit"
 						disabled={submitting || (!firstName.trim() && !lastName.trim())}
 						style="
 							flex: 1;
-							min-height: 44px;
-							font-size: 14px;
-							font-weight: 600;
-							color: #e2e8f0;
+							min-height: var(--touch-target);
+							font-size: var(--font-size-caption);
+							font-weight: var(--font-weight-semibold);
+							color: var(--color-text-primary);
 							background: transparent;
-							border: 1px solid #93c5fd;
+							border: 1px solid var(--color-accent);
 							border-radius: 6px;
 							cursor: {submitting ? 'not-allowed' : 'pointer'};
 						"
@@ -284,12 +284,12 @@
 						}}
 						style="
 							flex: 1;
-							min-height: 44px;
-							font-size: 14px;
-							font-weight: 400;
-							color: #94a3b8;
+							min-height: var(--touch-target);
+							font-size: var(--font-size-caption);
+							font-weight: var(--font-weight-regular);
+							color: var(--color-text-secondary);
 							background: transparent;
-							border: 1px solid #334155;
+							border: 1px solid var(--color-border);
 							border-radius: 6px;
 							cursor: pointer;
 						"

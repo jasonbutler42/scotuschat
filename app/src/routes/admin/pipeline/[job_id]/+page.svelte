@@ -151,11 +151,11 @@
 	}
 
 	const BADGE_COLOR: Record<string, string> = {
-		pending: '#94a3b8',
-		running: '#93c5fd',
-		completed: '#4ade80',
-		paused: '#fbbf24',
-		failed: '#ef4444',
+		pending: 'var(--color-text-secondary)',
+		running: 'var(--color-accent)',
+		completed: 'var(--color-status-published)',
+		paused: 'var(--color-status-warning)',
+		failed: 'var(--color-destructive)',
 	};
 
 	const BADGE_GLYPH: Record<string, string> = {
@@ -175,9 +175,9 @@
 	};
 
 	function cardBorderStyle(status: string): string {
-		if (status === 'running') return 'border-left: 3px solid #93c5fd;';
-		if (status === 'paused') return 'border-left: 3px solid #fbbf24;';
-		if (status === 'failed') return 'border-left: 3px solid #ef4444;';
+		if (status === 'running') return 'border-left: 3px solid var(--color-accent);';
+		if (status === 'paused') return 'border-left: 3px solid var(--color-status-warning);';
+		if (status === 'failed') return 'border-left: 3px solid var(--color-destructive);';
 		return '';
 	}
 
@@ -205,14 +205,14 @@
 	);
 </script>
 
-<main style="background-color: #0f1117; min-height: 100vh;">
-	<header style="background-color: #1e293b; border-bottom: 1px solid #334155; padding: 16px 24px;">
-		<h1 style="font-size: 20px; font-weight: 600; color: #e2e8f0; margin: 0;">
+<main style="background-color: var(--color-bg); min-height: 100vh;">
+	<header style="background-color: var(--color-surface); border-bottom: 1px solid var(--color-border); padding: var(--space-md) var(--space-lg);">
+		<h1 style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0;">
 			Run #{liveJob.id}
 		</h1>
 	</header>
 
-	<div style="max-width: 860px; margin: 0 auto; padding: 48px 24px;">
+	<div style="max-width: 860px; margin: 0 auto; padding: var(--space-2xl) var(--space-lg);">
 		<!-- Phase 25: Run status card — first workflow card after the page header (D-01 through D-04, D-18,
 		     D-20, D-21, PJOB-01, PJOB-02, PJOB-20). Replaces the old floating Create Argument button and
 		     the old "Ready to publish" / post-approval provenance panels below. -->
@@ -240,7 +240,7 @@
 		<!-- Step cards container — aria-live polite so screen readers announce step changes -->
 		<div
 			aria-live="polite"
-			style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 24px;"
+			style="display: flex; flex-direction: column; gap: var(--space-md); margin-bottom: var(--space-lg);"
 		>
 			{#each STEP_ORDER as step}
 				{@const effectiveJob = (liveJob.status === 'running' && liveJob.current_step === null)
@@ -253,28 +253,28 @@
 				{@const borderOverride = cardBorderStyle(status)}
 
 				<div
-					style="background-color: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 24px; {borderOverride}"
+					style="background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; padding: var(--space-lg); {borderOverride}"
 				>
 					<!-- Step card header row -->
 					<div style="display: flex; align-items: center; justify-content: space-between;">
-						<span style="font-size: 16px; font-weight: 400; color: #e2e8f0;">
+						<span style="font-size: var(--font-size-body); font-weight: var(--font-weight-regular); color: var(--color-text-primary);">
 							{STEP_LABELS[step]}
 						</span>
 
-						<!-- StatusBadge: colored border + text on #1e293b surface, never filled -->
+						<!-- StatusBadge: colored border + text on --color-surface surface, never filled -->
 						<span
 							aria-label={status === 'running' ? 'Running' : undefined}
 							style="
 								border: 1px solid {color};
 								border-radius: 4px;
-								padding: 2px 8px;
-								font-size: 14px;
-								font-weight: 400;
+								padding: 2px var(--space-sm);
+								font-size: var(--font-size-caption);
+								font-weight: var(--font-weight-regular);
 								color: {color};
-								background-color: #1e293b;
+								background-color: var(--color-surface);
 								display: inline-flex;
 								align-items: center;
-								gap: 4px;
+								gap: var(--space-xs);
 							"
 						>
 							{#if status === 'running'}
@@ -296,34 +296,34 @@
 						<div style="margin-top: 12px; display: flex; flex-direction: column;">
 							<!-- Utterances — never N/A (PJOB-11) -->
 							<div style="margin-bottom: 12px;">
-								<span style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 4px;">Utterances</span>
-								<span style="font-size: 16px; color: #e2e8f0;">{ps.utterance_count}</span>
+								<span style="display: block; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin-bottom: var(--space-xs);">Utterances</span>
+								<span style="font-size: var(--font-size-body); color: var(--color-text-primary);">{ps.utterance_count}</span>
 							</div>
 							<!-- Bench speakers (PJOB-10) — N/A when null -->
 							<div style="margin-bottom: 12px;">
-								<span style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 4px;">Bench speakers</span>
+								<span style="display: block; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin-bottom: var(--space-xs);">Bench speakers</span>
 								{#if ps.bench_count != null}
-									<span style="font-size: 16px; color: #e2e8f0;">{ps.bench_count}</span>
+									<span style="font-size: var(--font-size-body); color: var(--color-text-primary);">{ps.bench_count}</span>
 								{:else}
-									<span style="font-size: 16px; color: #94a3b8; font-style: italic;">N/A</span>
+									<span style="font-size: var(--font-size-body); color: var(--color-text-secondary); font-style: italic;">N/A</span>
 								{/if}
 							</div>
 							<!-- Advocate speakers (PJOB-10) — N/A when null -->
 							<div style="margin-bottom: 12px;">
-								<span style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 4px;">Advocate speakers</span>
+								<span style="display: block; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin-bottom: var(--space-xs);">Advocate speakers</span>
 								{#if ps.advocate_count != null}
-									<span style="font-size: 16px; color: #e2e8f0;">{ps.advocate_count}</span>
+									<span style="font-size: var(--font-size-body); color: var(--color-text-primary);">{ps.advocate_count}</span>
 								{:else}
-									<span style="font-size: 16px; color: #94a3b8; font-style: italic;">N/A</span>
+									<span style="font-size: var(--font-size-body); color: var(--color-text-secondary); font-style: italic;">N/A</span>
 								{/if}
 							</div>
 							<!-- Total speakers (PJOB-10) — N/A when null -->
 							<div style="margin-bottom: 12px;">
-								<span style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 4px;">Total speakers</span>
+								<span style="display: block; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin-bottom: var(--space-xs);">Total speakers</span>
 								{#if ps.total_speaker_count != null}
-									<span style="font-size: 16px; color: #e2e8f0;">{ps.total_speaker_count}</span>
+									<span style="font-size: var(--font-size-body); color: var(--color-text-primary);">{ps.total_speaker_count}</span>
 								{:else}
-									<span style="font-size: 16px; color: #94a3b8; font-style: italic;">N/A</span>
+									<span style="font-size: var(--font-size-body); color: var(--color-text-secondary); font-style: italic;">N/A</span>
 								{/if}
 							</div>
 							<!--
@@ -337,22 +337,22 @@
 							-->
 							<!-- Case name from cover_metadata (PJOB-10/12) — NOT data.argument.case_name (Pitfall 7) -->
 							<div style="margin-bottom: 12px;">
-								<span style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 4px;">Case name</span>
+								<span style="display: block; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin-bottom: var(--space-xs);">Case name</span>
 								<CopyableExtractedValue value={ps.case_name} copyLabel="Copy case name" confidence="Medium" raw={ps.case_name} />
 							</div>
 							<!-- Argued date from cover_metadata (PJOB-10/12) — formatted via formatDate; raw is the exact ISO source -->
 							<div style="margin-bottom: 12px;">
-								<span style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 4px;">Argued</span>
+								<span style="display: block; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin-bottom: var(--space-xs);">Argued</span>
 								<CopyableExtractedValue value={ps.argued_date ? formatDate(ps.argued_date) : null} copyLabel="Copy argued date" confidence="Medium" raw={ps.argued_date} />
 							</div>
 							<!-- Docket(s) from cover_metadata (PJOB-10/12) — read-only pill or N/A -->
 							<div style="margin-bottom: 12px;">
-								<span style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 4px;">Docket(s)</span>
+								<span style="display: block; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin-bottom: var(--space-xs);">Docket(s)</span>
 								<CopyableExtractedValue value={ps.primary_docket} copyLabel="Copy docket" variant="pill" confidence="Medium" raw={ps.primary_docket} />
 							</div>
 							<!-- Question number from Argument.question_number (PJOB-10/12) — N/A when null -->
 							<div style="margin-bottom: 12px;">
-								<span style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 4px;">Question number</span>
+								<span style="display: block; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin-bottom: var(--space-xs);">Question number</span>
 								<CopyableExtractedValue value={ps.question_number != null ? String(ps.question_number) : null} copyLabel="Copy question number" confidence="Medium" raw={ps.question_number != null ? String(ps.question_number) : null} />
 							</div>
 						</div>
@@ -365,7 +365,7 @@
 								href="/admin/pipeline/{liveJob.id}/pdf"
 								target="_blank"
 								rel="noopener noreferrer"
-								style="font-size: 14px; color: #93c5fd; text-decoration: none;"
+								style="font-size: var(--font-size-caption); color: var(--color-accent); text-decoration: none;"
 							>View source PDF</a>
 						</div>
 					{/if}
@@ -407,27 +407,27 @@
 		{#if liveJob.status === 'completed' && data.participants.length > 0}
 			<div
 				style="
-					margin-top: 32px;
-					background-color: #1e293b;
-					border: 1px solid #334155;
+					margin-top: var(--space-xl);
+					background-color: var(--color-surface);
+					border: 1px solid var(--color-border);
 					border-radius: 8px;
-					padding: 24px;
-					margin-bottom: 24px;
+					padding: var(--space-lg);
+					margin-bottom: var(--space-lg);
 				"
 			>
-				<h2 style="font-size: 20px; font-weight: 600; color: #e2e8f0; margin: 0 0 16px 0; line-height: 1.2;">
+				<h2 style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-md) 0; line-height: 1.2;">
 					{data.participants.length} resolved participant{data.participants.length === 1 ? '' : 's'}
 				</h2>
 				<a
 					href="/admin/people?tab=bench&missing=name%20review"
 					style="
 						display: inline-block;
-						font-size: 14px;
-						font-weight: 400;
-						color: #93c5fd;
-						border: 1px solid #334155;
+						font-size: var(--font-size-caption);
+						font-weight: var(--font-weight-regular);
+						color: var(--color-accent);
+						border: 1px solid var(--color-border);
 						border-radius: 6px;
-						padding: 8px 16px;
+						padding: var(--space-sm) var(--space-md);
 						text-decoration: none;
 					"
 				>
@@ -438,15 +438,15 @@
 
 		<!-- Danger Zone — pipeline run delete section (ADMIN-02, D-09, D-22) -->
 		<!-- Last card on the page in every state per UI-SPEC Layout Contract. -->
-		<div style="background-color: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 24px; margin-bottom: 24px;">
-			<h2 style="font-size: 20px; font-weight: 600; color: #e2e8f0; margin: 0 0 16px 0; line-height: 1.2;">
+		<div style="background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; padding: var(--space-lg); margin-bottom: var(--space-lg);">
+			<h2 style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-md) 0; line-height: 1.2;">
 				Danger Zone
 			</h2>
 
 			{#if deleteConfirming}
 				<!-- State 2: Two-button row — replaces delete button in-place (D-02) -->
 				<!-- No layout shift; same row height as the initial button. -->
-				<div style="display: flex; gap: 8px;">
+				<div style="display: flex; gap: var(--space-sm);">
 					<form
 						method="POST"
 						action="?/delete"
@@ -462,7 +462,7 @@
 						<button
 							type="submit"
 							disabled={deleteSubmitting}
-							style="display: block; width: 100%; min-height: 44px; background: transparent; border: 1px solid #ef4444; border-radius: 6px; font-size: 16px; font-weight: 600; color: #ef4444; cursor: {deleteSubmitting ? 'not-allowed' : 'pointer'}; opacity: {deleteSubmitting ? 0.7 : 1};"
+							style="display: block; width: 100%; min-height: var(--touch-target); background: transparent; border: 1px solid var(--color-destructive); border-radius: 6px; font-size: var(--font-size-body); font-weight: var(--font-weight-semibold); color: var(--color-destructive); cursor: {deleteSubmitting ? 'not-allowed' : 'pointer'}; opacity: {deleteSubmitting ? 0.7 : 1};"
 						>
 							{deleteSubmitting ? 'Deleting…' : 'Confirm delete'}
 						</button>
@@ -470,7 +470,7 @@
 					<button
 						type="button"
 						onclick={() => { deleteConfirming = false; }}
-						style="flex: 1; min-height: 44px; background: transparent; border: 1px solid #334155; border-radius: 6px; font-size: 16px; font-weight: 400; color: #94a3b8; cursor: pointer;"
+						style="flex: 1; min-height: var(--touch-target); background: transparent; border: 1px solid var(--color-border); border-radius: 6px; font-size: var(--font-size-body); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); cursor: pointer;"
 					>
 						Cancel
 					</button>
@@ -480,7 +480,7 @@
 				<button
 					type="button"
 					onclick={() => { deleteConfirming = true; }}
-					style="display: block; width: 100%; min-height: 44px; background: transparent; border: 1px solid #ef4444; border-radius: 6px; font-size: 16px; font-weight: 600; color: #ef4444; cursor: pointer;"
+					style="display: block; width: 100%; min-height: var(--touch-target); background: transparent; border: 1px solid var(--color-destructive); border-radius: 6px; font-size: var(--font-size-body); font-weight: var(--font-weight-semibold); color: var(--color-destructive); cursor: pointer;"
 				>
 					Delete run
 				</button>
@@ -490,7 +490,7 @@
 			{#if form?.deleteError}
 				<p
 					role="alert"
-					style="color: #ef4444; font-size: 14px; font-weight: 400; margin: 8px 0 0 0;"
+					style="color: var(--color-destructive); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); margin: var(--space-sm) 0 0 0;"
 				>{form.deleteError}</p>
 			{/if}
 		</div>

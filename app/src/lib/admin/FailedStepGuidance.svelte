@@ -27,27 +27,27 @@
 </script>
 
 <div style="margin-top: 12px;">
-	<h3 style="font-size: 16px; font-weight: 600; color: #e2e8f0; margin: 0 0 8px 0;">This run failed</h3>
+	<h3 style="font-size: var(--font-size-body); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-sm) 0;">This run failed</h3>
 	<!-- role="alert" scoped to the immediate failure summary only, not the raw details block -->
-	<p role="alert" style="font-size: 16px; font-weight: 400; color: #e2e8f0; margin: 0 0 12px 0;">
+	<p role="alert" style="font-size: var(--font-size-body); font-weight: var(--font-weight-regular); color: var(--color-text-primary); margin: 0 0 12px 0;">
 		{guidanceText}
 	</p>
 
-	<a href={recoveryHref} style="font-size: 16px; color: #93c5fd; text-decoration: underline;">
+	<a href={recoveryHref} style="font-size: var(--font-size-body); color: var(--color-accent); text-decoration: underline;">
 		Start a new run
 	</a>
 
 	{#if rawError}
-		<details style="margin-top: 16px;">
-			<summary style="font-size: 14px; font-weight: 400; color: #94a3b8; cursor: pointer;">
+		<details style="margin-top: var(--space-md);">
+			<summary style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); cursor: pointer;">
 				Technical details
 			</summary>
 			<p
 				style="
-					margin-top: 8px;
+					margin-top: var(--space-sm);
 					margin-bottom: 0;
-					font-size: 14px;
-					color: #ef4444;
+					font-size: var(--font-size-caption);
+					color: var(--color-destructive);
 					font-family: monospace;
 					white-space: pre-wrap;
 					word-break: break-word;

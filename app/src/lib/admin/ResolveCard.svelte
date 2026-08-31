@@ -771,13 +771,13 @@
 {#snippet rawLabelBadge(label: string)}
 	<span
 		style="
-			background-color: #0f1117;
-			border: 1px solid #334155;
+			background-color: var(--color-bg);
+			border: 1px solid var(--color-border);
 			border-radius: 4px;
-			padding: 4px 10px;
-			font-size: 14px;
-			font-weight: 400;
-			color: #e2e8f0;
+			padding: var(--space-xs) 10px;
+			font-size: var(--font-size-caption);
+			font-weight: var(--font-weight-regular);
+			color: var(--color-text-primary);
 			text-transform: uppercase;
 			letter-spacing: 0.02em;
 			display: inline-block;
@@ -790,7 +790,7 @@
 
 {#snippet descriptorCell(row: MergedRow, side: string, rowEditable: boolean, saving: boolean, sourcePrefix: string)}
 	{#if side === 'BENCH'}
-		<span style="color: #94a3b8;">–</span>
+		<span style="color: var(--color-text-secondary);">–</span>
 	{:else if rowEditable}
 		<input
 			form={rowFormId(row.participant_id)}
@@ -804,13 +804,13 @@
 			placeholder="e.g. Attorney, Location, or Affiliation"
 			disabled={saving}
 			style="
-				background-color: #0f1117;
-				border: 1px solid #334155;
+				background-color: var(--color-bg);
+				border: 1px solid var(--color-border);
 				border-radius: 6px;
-				padding: 8px 12px;
-				font-size: 16px;
-				color: #e2e8f0;
-				min-height: 36px;
+				padding: var(--space-sm) 12px;
+				font-size: var(--font-size-body);
+				color: var(--color-text-primary);
+				min-height: var(--touch-target-dense);
 				width: 100%;
 				box-sizing: border-box;
 				overflow: hidden;
@@ -836,7 +836,7 @@
 	     write-path fix; nothing here clears or blanks the value, it is simply
 	     not rendered while side is BENCH. -->
 	{#if side !== 'BENCH'}
-		<div style="margin-top: 8px;">
+		<div style="margin-top: var(--space-sm);">
 			<CopyableExtractedValue
 				value={row.descriptor_hint}
 				copyLabel="Copy descriptor"
@@ -866,10 +866,10 @@
 		aria-label={`Bench or Advocate for ${row.raw_speaker_label}`}
 		style="
 			display: inline-flex;
-			border: 1px solid #334155;
+			border: 1px solid var(--color-border);
 			border-radius: 6px;
 			overflow: hidden;
-			min-height: 36px;
+			min-height: var(--touch-target-dense);
 		"
 	>
 		<button
@@ -878,13 +878,13 @@
 			disabled={disabled}
 			onclick={() => toggleSide(row, 'BENCH')}
 			style="
-				font-size: 14px;
+				font-size: var(--font-size-caption);
 				padding: 6px 14px;
 				border: none;
-				border-right: 1px solid #334155;
+				border-right: 1px solid var(--color-border);
 				line-height: 1.4;
-				background-color: {benchActive ? '#4ade80' : 'transparent'};
-				color: {benchActive ? '#0f1117' : '#94a3b8'};
+				background-color: {benchActive ? 'var(--color-status-published)' : 'transparent'};
+				color: {benchActive ? 'var(--color-bg)' : 'var(--color-text-secondary)'};
 				font-weight: {benchActive ? 600 : 400};
 				cursor: {disabled ? 'default' : 'pointer'};
 				opacity: {disabled ? 0.6 : 1};
@@ -896,12 +896,12 @@
 			disabled={disabled}
 			onclick={() => toggleSide(row, 'ADVOCATE')}
 			style="
-				font-size: 14px;
+				font-size: var(--font-size-caption);
 				padding: 6px 14px;
 				border: none;
 				line-height: 1.4;
-				background-color: {advocateActive ? '#93c5fd' : 'transparent'};
-				color: {advocateActive ? '#0f1117' : '#94a3b8'};
+				background-color: {advocateActive ? 'var(--color-accent)' : 'transparent'};
+				color: {advocateActive ? 'var(--color-bg)' : 'var(--color-text-secondary)'};
 				font-weight: {advocateActive ? 600 : 400};
 				cursor: {disabled ? 'default' : 'pointer'};
 				opacity: {disabled ? 0.6 : 1};
@@ -927,7 +927,7 @@
 		     because the service reports missing_tenure=false for an unresolved
 		     bench row, which would otherwise fall into the empty locked box. No
 		     bordered box, no lock icon, no en dash, and no hint line beneath. -->
-		<span style="font-size: 14px; color: #94a3b8;">(resolve person first)</span>
+		<span style="font-size: var(--font-size-caption); color: var(--color-text-secondary);">(resolve person first)</span>
 	{:else if benchState === 'calculated'}
 		<!-- RESOLVE-06 lock affordance: a resolved bench row with valid tenure is
 		     never editable here — the role is fully derived from court_tenures. -->
@@ -936,11 +936,11 @@
 				display: inline-flex;
 				align-items: center;
 				gap: 6px;
-				background-color: #1e293b;
-				border: 1px solid #334155;
+				background-color: var(--color-surface);
+				border: 1px solid var(--color-border);
 				border-radius: 6px;
-				padding: 8px 12px;
-				min-height: 36px;
+				padding: var(--space-sm) 12px;
+				min-height: var(--touch-target-dense);
 				box-sizing: border-box;
 			"
 		>
@@ -952,12 +952,12 @@
 				width="14"
 				height="14"
 				aria-hidden="true"
-				style="color: #94a3b8; flex-shrink: 0;"
+				style="color: var(--color-text-secondary); flex-shrink: 0;"
 			>
 				<rect x="5" y="11" width="14" height="9" rx="2"></rect>
 				<path d="M8 11V7a4 4 0 0 1 8 0v4"></path>
 			</svg>
-			<span style="font-size: 16px; color: #e2e8f0;">{row.bench_role ?? previewedBenchRole ?? row.argument_role}</span>
+			<span style="font-size: var(--font-size-body); color: var(--color-text-primary);">{row.bench_role ?? previewedBenchRole ?? row.argument_role}</span>
 			<span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%);">
 				Set from tenure, not editable
 			</span>
@@ -965,18 +965,18 @@
 		<!-- Plan 44-08 (RESOLVE-12): the role was never an ingested value, so this
 		     is not an "Imported:"/"Extracted:" hint — it says what is actually
 		     true about the value. -->
-		<div style="margin-top: 8px;">
-			<span style="font-size: 14px; color: #94a3b8;">Calculated from tenure</span>
+		<div style="margin-top: var(--space-sm);">
+			<span style="font-size: var(--font-size-caption); color: var(--color-text-secondary);">Calculated from tenure</span>
 		</div>
 	{:else if benchState === 'missing-tenure'}
 		<!-- Missing-tenure warning — preserved verbatim (RESOLVE-06): NO lock icon,
 		     NO bordered box, so this state shares no markup with the locked state
 		     above and reads as a real data gap, not a deliberate system value. -->
-		<span style="color: #fbbf24; font-size: 14px;">⚠ Missing tenure</span>
+		<span style="color: var(--color-status-warning); font-size: var(--font-size-caption);">⚠ Missing tenure</span>
 		<!-- Plan 44-08 (RESOLVE-12): a tenure gap must never read as a derived
 		     value, so this shares no wording with the calculated branch above. -->
-		<div style="margin-top: 8px;">
-			<span style="font-size: 14px; color: #94a3b8;">Tenure not found</span>
+		<div style="margin-top: var(--space-sm);">
+			<span style="font-size: var(--font-size-caption); color: var(--color-text-secondary);">Tenure not found</span>
 		</div>
 		{#if row.person_edit_href || previewedPersonId != null}
 			<!-- Plan 44-08 (RESOLVE-11): opens in a new tab so the operator can fix
@@ -997,7 +997,7 @@
 				href={row.person_edit_href ?? `/admin/people/${previewedPersonId}`}
 				target="_blank"
 				rel="noopener"
-				style="margin-left: 8px; font-size: 14px; color: #93c5fd; text-decoration: underline;"
+				style="margin-left: var(--space-sm); font-size: var(--font-size-caption); color: var(--color-accent); text-decoration: underline;"
 			>Edit person<span aria-hidden="true"> ↗</span></a>
 		{/if}
 	{:else if rowEditable}
@@ -1011,13 +1011,13 @@
 			aria-label={`Argument role for ${row.raw_speaker_label}`}
 			onchange={(e) => chooseArgumentRole(row, (e.target as HTMLSelectElement).value)}
 			style="
-				background-color: #0f1117;
-				border: 1px solid #334155;
+				background-color: var(--color-bg);
+				border: 1px solid var(--color-border);
 				border-radius: 6px;
-				padding: 8px 12px;
-				font-size: 16px;
-				color: #e2e8f0;
-				min-height: 36px;
+				padding: var(--space-sm) 12px;
+				font-size: var(--font-size-body);
+				color: var(--color-text-primary);
+				min-height: var(--touch-target-dense);
 				width: 100%;
 				box-sizing: border-box;
 				cursor: pointer;
@@ -1029,7 +1029,7 @@
 			<option value="AMICUS">{SIDE_LABEL.AMICUS}</option>
 		</select>
 	{:else}
-		<span style="font-size: 16px; color: #e2e8f0;">{row.argument_role ?? '—'}</span>
+		<span style="font-size: var(--font-size-body); color: var(--color-text-primary);">{row.argument_role ?? '—'}</span>
 	{/if}
 {/snippet}
 
@@ -1067,12 +1067,12 @@
 				disabled={gated}
 				aria-disabled={gated ? 'true' : 'false'}
 				style="
-					background-color: #0f1117;
-					border: 1px solid #93c5fd;
+					background-color: var(--color-bg);
+					border: 1px solid var(--color-accent);
 					border-radius: 6px;
-					padding: 6px 32px 6px 10px;
-					font-size: 16px;
-					color: #e2e8f0;
+					padding: 6px var(--space-xl) 6px 10px;
+					font-size: var(--font-size-body);
+					color: var(--color-text-primary);
 					width: 100%;
 					box-sizing: border-box;
 					opacity: {gated ? 0.6 : 1};
@@ -1128,7 +1128,7 @@
 					right: 10px;
 					top: 50%;
 					transform: translateY(-50%);
-					color: #94a3b8;
+					color: var(--color-text-secondary);
 					pointer-events: none;
 				"
 			>
@@ -1146,9 +1146,9 @@
 						top: 100%;
 						left: 0;
 						width: 100%;
-						margin: 4px 0 0 0;
-						background-color: #1e293b;
-						border: 1px solid #334155;
+						margin: var(--space-xs) 0 0 0;
+						background-color: var(--color-surface);
+						border: 1px solid var(--color-border);
 						border-radius: 6px;
 						z-index: 10;
 					"
@@ -1157,7 +1157,7 @@
 						id={comboId}
 						role="listbox"
 						style="
-							padding: 4px 0;
+							padding: var(--space-xs) 0;
 							margin: 0;
 							max-height: 240px;
 							overflow-y: auto;
@@ -1169,11 +1169,11 @@
 								role="option"
 								aria-selected={false}
 								style="
-									padding: 8px 12px;
-									font-size: 16px;
-									color: #e2e8f0;
+									padding: var(--space-sm) 12px;
+									font-size: var(--font-size-body);
+									color: var(--color-text-primary);
 									cursor: pointer;
-									background-color: {s!.comboHighlight === idx ? '#334155' : '#1e293b'};
+									background-color: {s!.comboHighlight === idx ? 'var(--color-border)' : 'var(--color-surface)'};
 								"
 								onmouseenter={() => {
 									s!.comboHighlight = idx;
@@ -1184,9 +1184,9 @@
 									s!.comboOpen = false;
 								}}
 							>
-								{candidate.full_name}{#if candidate.role_name}<span style="font-size: 14px; color: #94a3b8; margin-left: 4px;">({candidate.role_name})</span>{/if}
+								{candidate.full_name}{#if candidate.role_name}<span style="font-size: var(--font-size-caption); color: var(--color-text-secondary); margin-left: var(--space-xs);">({candidate.role_name})</span>{/if}
 								{#if row.discrepancy?.auto_match_id === candidate.id}
-									<span style="font-size: 11px; color: #93c5fd; text-transform: uppercase; letter-spacing: 0.04em; margin-left: 6px;">Suggested</span>
+									<span style="font-size: var(--font-size-caption); color: var(--color-accent); text-transform: uppercase; letter-spacing: 0.04em; margin-left: 6px;">Suggested</span>
 								{/if}
 							</li>
 						{/each}
@@ -1196,7 +1196,7 @@
 					     combobox's own popup affordance), not as a standalone element
 					     that was always visible beneath the input regardless of
 					     whether the popup was open. -->
-					<div style="border-top: 1px solid #334155; padding: 8px;">
+					<div style="border-top: 1px solid var(--color-border); padding: var(--space-sm);">
 						<CreatePersonPopover
 							rawSpeakerLabel={label}
 							triggerLabel={side === 'BENCH' ? 'Create new bench person' : 'Create new advocate'}
@@ -1214,18 +1214,18 @@
 
 {#snippet personDisplay(fullName: string | null, photoUrl: string | null, roleLabel: string | null)}
 	{#if fullName}
-		<span style="display: inline-flex; align-items: center; gap: 8px;">
+		<span style="display: inline-flex; align-items: center; gap: var(--space-sm);">
 			<span
 				style="
 					width: 28px;
 					height: 28px;
 					border-radius: 50%;
-					background-color: #334155;
+					background-color: var(--color-border);
 					display: inline-flex;
 					align-items: center;
 					justify-content: center;
-					font-size: 12px;
-					color: #e2e8f0;
+					font-size: var(--font-size-caption);
+					color: var(--color-text-primary);
 					overflow: hidden;
 					flex-shrink: 0;
 				"
@@ -1236,29 +1236,29 @@
 					{getInitials(fullName)}
 				{/if}
 			</span>
-			<span style="font-size: 16px; color: #e2e8f0;">
-				{fullName}{#if roleLabel}<span style="color: #94a3b8; font-size: 14px; margin-left: 4px;">({roleLabel})</span>{/if}
+			<span style="font-size: var(--font-size-body); color: var(--color-text-primary);">
+				{fullName}{#if roleLabel}<span style="color: var(--color-text-secondary); font-size: var(--font-size-caption); margin-left: var(--space-xs);">({roleLabel})</span>{/if}
 			</span>
 		</span>
 	{:else}
-		<span style="color: #94a3b8;">—</span>
+		<span style="color: var(--color-text-secondary);">—</span>
 	{/if}
 {/snippet}
 
 <div
 	style="
-		background-color: #1e293b;
-		border: 1px solid #334155;
+		background-color: var(--color-surface);
+		border: 1px solid var(--color-border);
 		border-radius: 8px;
-		padding: 24px;
-		margin-bottom: 24px;
+		padding: var(--space-lg);
+		margin-bottom: var(--space-lg);
 	"
 >
 	<!-- Task 4 checkpoint remediation (44-09, item 4, confirmed via Figma
 	     node 4207:116): the heading and the progress indicator share one
 	     flex row, heading left, pill right. -->
-	<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px;">
-		<h2 style="font-size: 20px; font-weight: 600; color: #e2e8f0; margin: 0; line-height: 1.2;">
+	<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: var(--space-md);">
+		<h2 style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0; line-height: 1.2;">
 			Resolve
 		</h2>
 
@@ -1275,11 +1275,11 @@
 				style="
 					display: inline-flex;
 					align-items: center;
-					gap: 8px;
-					background-color: #0f1117;
-					border: 1px solid #334155;
+					gap: var(--space-sm);
+					background-color: var(--color-bg);
+					border: 1px solid var(--color-border);
 					border-radius: 12px;
-					padding: 4px 12px 4px 10px;
+					padding: var(--space-xs) 12px var(--space-xs) 10px;
 				"
 			>
 				<span
@@ -1289,10 +1289,10 @@
 						width: 6px;
 						height: 6px;
 						border-radius: 50%;
-						background-color: {reviewProgress.remaining > 0 ? '#fbbf24' : '#4ade80'};
+						background-color: {reviewProgress.remaining > 0 ? 'var(--color-status-warning)' : 'var(--color-status-published)'};
 					"
 				></span>
-				<span style="color: #e2e8f0; font-size: 14px; font-weight: 500;">
+				<span style="color: var(--color-text-primary); font-size: var(--font-size-caption); font-weight: var(--font-weight-semibold);">
 					{reviewProgress.remaining > 0
 						? `${reviewProgress.remaining} of ${reviewProgress.total} speakers still need review`
 						: `All ${reviewProgress.total} speakers reviewed`}
@@ -1302,7 +1302,7 @@
 	</div>
 
 	{#if peopleLoadError}
-		<p role="alert" style="margin-bottom: 12px; font-size: 13px; color: #fbbf24; font-family: monospace;">
+		<p role="alert" style="margin-bottom: 12px; font-size: var(--font-size-caption); color: var(--color-status-warning); font-family: monospace;">
 			Warning: could not load people list — typeahead may be incomplete. ({peopleLoadError})
 		</p>
 	{/if}
@@ -1344,10 +1344,10 @@
 		<table style="width: 100%; border-collapse: collapse; min-width: 720px;">
 			<thead>
 				<tr>
-					<th scope="col" style="font-size: 14px; font-weight: 400; color: #94a3b8; border-bottom: 1px solid #334155; padding: 8px 0; padding-right: 12px; text-align: left; text-transform: uppercase; letter-spacing: 0.04em;">Raw Label</th>
-					<th scope="col" style="font-size: 14px; font-weight: 400; color: #94a3b8; border-bottom: 1px solid #334155; padding: 8px 0; padding-right: 12px; text-align: left; text-transform: uppercase; letter-spacing: 0.04em;">Resolved As</th>
-					<th scope="col" style="font-size: 14px; font-weight: 400; color: #94a3b8; border-bottom: 1px solid #334155; padding: 8px 0; padding-right: 12px; text-align: left; text-transform: uppercase; letter-spacing: 0.04em;">Argument Role</th>
-					<th scope="col" style="font-size: 14px; font-weight: 400; color: #94a3b8; border-bottom: 1px solid #334155; padding: 8px 0; text-align: left; text-transform: uppercase; letter-spacing: 0.04em;">Descriptor</th>
+					<th scope="col" style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); border-bottom: 1px solid var(--color-border); padding: var(--space-sm) 0; padding-right: 12px; text-align: left; text-transform: uppercase; letter-spacing: 0.04em;">Raw Label</th>
+					<th scope="col" style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); border-bottom: 1px solid var(--color-border); padding: var(--space-sm) 0; padding-right: 12px; text-align: left; text-transform: uppercase; letter-spacing: 0.04em;">Resolved As</th>
+					<th scope="col" style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); border-bottom: 1px solid var(--color-border); padding: var(--space-sm) 0; padding-right: 12px; text-align: left; text-transform: uppercase; letter-spacing: 0.04em;">Argument Role</th>
+					<th scope="col" style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); border-bottom: 1px solid var(--color-border); padding: var(--space-sm) 0; text-align: left; text-transform: uppercase; letter-spacing: 0.04em;">Descriptor</th>
 				</tr>
 			</thead>
 			<tbody>
@@ -1371,14 +1371,14 @@
 
 					<tr>
 						<!-- Column 1: Raw Label -->
-						<td style="font-size: 16px; color: #e2e8f0; border-bottom: 1px solid #334155; padding: 12px 0; padding-right: 12px;">
+						<td style="font-size: var(--font-size-body); color: var(--color-text-primary); border-bottom: 1px solid var(--color-border); padding: 12px 0; padding-right: 12px;">
 							{@render rawLabelBadge(row.raw_speaker_label)}
 						</td>
 
 						<!-- Column 2: Resolved As — the Bench/Advocate toggle and the person control
 						     are stacked in this single cell (RESOLVE-07); the person control is a
 						     single always-rendered dropdown, never a click-to-reveal link (RESOLVE-08). -->
-						<td style="font-size: 16px; color: #e2e8f0; border-bottom: 1px solid #334155; padding: 12px 0; padding-right: 12px;">
+						<td style="font-size: var(--font-size-body); color: var(--color-text-primary); border-bottom: 1px solid var(--color-border); padding: 12px 0; padding-right: 12px;">
 							<!-- Task 4 checkpoint remediation (44-09, items 2 and 5, confirmed via
 							     Figma nodes 4183:23/4183:25/4205:81/4205:111): corrected order is
 							     (1) toggle, (2) person control, (3) the tag, (4) one combined hint
@@ -1388,7 +1388,7 @@
 							     one combined hint below. -->
 							{@render sideToggle(row, side, gated, rowEditable, saveState[row.participant_id]?.saving === true)}
 							{#if saveState[row.participant_id]?.error}
-								<p role="alert" style="margin: 8px 0 0 0; font-size: 13px; color: #ef4444;">
+								<p role="alert" style="margin: var(--space-sm) 0 0 0; font-size: var(--font-size-caption); color: var(--color-destructive);">
 									{saveState[row.participant_id]?.error}
 								</p>
 							{/if}
@@ -1398,10 +1398,10 @@
 							<!-- Plan 44-09 (RESOLVE-16): the row cue tag — a pill (border only, no
 							     background fill), per Figma nodes 4183:23/4183:25/4205:111. The
 							     auto-matched state uses the approved Success/Bench-active token
-							     (#4ade80, UI-SPEC "Success (Bench-active)" row) — the prior plain-
-							     text treatment wrongly used the muted token (#94a3b8) for this
+							     (--color-status-published, UI-SPEC "Success (Bench-active)" row) — the prior plain-
+							     text treatment wrongly used the muted token (--color-text-secondary) for this
 							     state; the needs-attention state keeps the warning token
-							     (#fbbf24).
+							     (--color-status-warning).
 							     Third state (Task 4 checkpoint remediation, RESOLVE-16
 							     supersession): the manually-matched tag — a row where the operator
 							     picked the person themselves, as opposed to an untouched machine
@@ -1411,7 +1411,7 @@
 							     the operator determined in testing that provenance ("a human
 							     decided this" vs. "the machine suggested this") is itself worth
 							     disclosing, not
-							     omitting. Uses the muted token (#94a3b8, same token used
+							     omitting. Uses the muted token (--color-text-secondary, same token used
 							     elsewhere for neutral/non-signal text) since this state is neither
 							     a warning nor a success signal — the accent token is reserved for
 							     interactive elements per UI-SPEC. -->
@@ -1419,14 +1419,14 @@
 								<span
 									style="
 										display: inline-block;
-										margin-top: 8px;
-										border: 1px solid {cueTagIsWarning ? '#fbbf24' : cueTagIsAutoMatched ? '#4ade80' : '#94a3b8'};
+										margin-top: var(--space-sm);
+										border: 1px solid {cueTagIsWarning ? 'var(--color-status-warning)' : cueTagIsAutoMatched ? 'var(--color-status-published)' : 'var(--color-text-secondary)'};
 										border-radius: 4px;
-										padding: 2px 8px;
-										font-size: 11px;
-										font-weight: 500;
+										padding: 2px var(--space-sm);
+										font-size: var(--font-size-caption);
+										font-weight: var(--font-weight-semibold);
 										letter-spacing: 0.22px;
-										color: {cueTagIsWarning ? '#fbbf24' : cueTagIsAutoMatched ? '#4ade80' : '#94a3b8'};
+										color: {cueTagIsWarning ? 'var(--color-status-warning)' : cueTagIsAutoMatched ? 'var(--color-status-published)' : 'var(--color-text-secondary)'};
 									"
 								>{cueTag}</span>
 							{/if}
@@ -1435,7 +1435,7 @@
 							     (name) hint are now one combined line —
 							     "{SideLabel} · {NameOrN/A}", or bare "N/A" while the side gate is
 							     still open. -->
-							<div style="margin-top: 8px;">
+							<div style="margin-top: var(--space-sm);">
 								<CopyableExtractedValue
 									value={combinedResolvedAsHintValue(row, side, gated)}
 									copyLabel="Copy resolved as"
@@ -1446,7 +1446,7 @@
 						</td>
 
 						<!-- Column 3: Argument Role — bench lock / Missing tenure, or advocate dropdown -->
-						<td style="font-size: 16px; color: #e2e8f0; border-bottom: 1px solid #334155; padding: 12px 0; padding-right: 12px;">
+						<td style="font-size: var(--font-size-body); color: var(--color-text-primary); border-bottom: 1px solid var(--color-border); padding: 12px 0; padding-right: 12px;">
 							{@render argumentRoleCell(row, side, gated, rowEditable, saveState[row.participant_id]?.saving === true)}
 							<!-- Phase 44 (RESOLVE-05, D-08/D-09): Argument Role hint — state-dependent,
 							     never a flat echo of side; forks on the same side/missing_tenure/gated
@@ -1456,7 +1456,7 @@
 							     to begin with; the three bench states above render their own copy
 							     directly. Advocate rows keep this hint unchanged. -->
 							{#if side !== 'BENCH'}
-								<div style="margin-top: 8px;">
+								<div style="margin-top: var(--space-sm);">
 									<CopyableExtractedValue
 										value={argumentRoleHintValue(row, side, gated)}
 										copyLabel="Copy argument role"
@@ -1468,7 +1468,7 @@
 						</td>
 
 						<!-- Column 4: Descriptor (renamed from Title, Phase 44 RESOLVE-04) — always renders -->
-						<td style="font-size: 16px; color: #e2e8f0; border-bottom: 1px solid #334155; padding: 12px 0;">
+						<td style="font-size: var(--font-size-body); color: var(--color-text-primary); border-bottom: 1px solid var(--color-border); padding: 12px 0;">
 							{@render descriptorCell(row, side, rowEditable, saveState[row.participant_id]?.saving === true, sourcePrefix)}
 						</td>
 					</tr>
@@ -1502,7 +1502,7 @@
 					}
 				};
 			}}
-			style="margin-top: 24px;"
+			style="margin-top: var(--space-lg);"
 		>
 			<input type="hidden" name="matches" value={matchesJson} />
 			<button
@@ -1510,14 +1510,14 @@
 				disabled={!allDispositioned || continueSubmitting}
 				style="
 					width: 100%;
-					min-height: 44px;
-					font-size: 16px;
-					font-weight: 600;
-					color: {(reviewProgress.remaining > 0 || continueSubmitting) ? '#94a3b8' : '#e2e8f0'};
+					min-height: var(--touch-target);
+					font-size: var(--font-size-body);
+					font-weight: var(--font-weight-semibold);
+					color: {(reviewProgress.remaining > 0 || continueSubmitting) ? 'var(--color-text-secondary)' : 'var(--color-text-primary)'};
 					background: transparent;
-					border: 1px solid {(reviewProgress.remaining > 0 || continueSubmitting) ? '#334155' : '#93c5fd'};
+					border: 1px solid {(reviewProgress.remaining > 0 || continueSubmitting) ? 'var(--color-border)' : 'var(--color-accent)'};
 					border-radius: 6px;
-					padding: 12px 24px;
+					padding: 12px var(--space-lg);
 					cursor: {(reviewProgress.remaining > 0 || continueSubmitting) ? 'default' : 'pointer'};
 				"
 			>
@@ -1529,7 +1529,7 @@
 			</button>
 		</form>
 		{#if resolveFormError}
-			<p role="alert" style="margin-top: 8px; color: #ef4444; font-size: 14px;">
+			<p role="alert" style="margin-top: var(--space-sm); color: var(--color-destructive); font-size: var(--font-size-caption);">
 				{resolveFormError}
 			</p>
 		{/if}

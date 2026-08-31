@@ -47,9 +47,9 @@
 	}
 </script>
 
-<main style="background-color: #0f1117; min-height: 100vh;">
+<main style="background-color: var(--color-bg); min-height: 100vh;">
 	<header
-		style="background-color: #1e293b; border-bottom: 1px solid #334155; padding: 16px 24px;"
+		style="background-color: var(--color-surface); border-bottom: 1px solid var(--color-border); padding: var(--space-md) var(--space-lg);"
 	>
 		<div
 			style="
@@ -59,11 +59,11 @@
 				align-items: center;
 				justify-content: space-between;
 				flex-wrap: wrap;
-				gap: 16px;
+				gap: var(--space-md);
 			"
 		>
-			<div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
-				<h1 style="font-size: 20px; font-weight: 600; color: #e2e8f0; margin: 0;">People</h1>
+			<div style="display: flex; align-items: center; gap: var(--space-md); flex-wrap: wrap;">
+				<h1 style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0;">People</h1>
 
 				<!-- Bench/Advocate segmented toggle (D-01, D-02, D-03) -->
 				<div style="display: flex; gap: 0;">
@@ -73,14 +73,14 @@
 						aria-label="Bench tab"
 						onclick={() => switchTab('bench')}
 						style="
-							min-height: 44px;
-							padding: 8px 16px;
-							border: 1px solid {data.tab === 'bench' ? '#93c5fd' : '#334155'};
+							min-height: var(--touch-target);
+							padding: var(--space-sm) var(--space-md);
+							border: 1px solid {data.tab === 'bench' ? 'var(--color-accent)' : 'var(--color-border)'};
 							border-radius: 6px 0 0 6px;
-							background-color: {data.tab === 'bench' ? '#93c5fd' : '#1e293b'};
-							color: {data.tab === 'bench' ? '#0f1117' : '#e2e8f0'};
-							font-size: 16px;
-							font-weight: 600;
+							background-color: {data.tab === 'bench' ? 'var(--color-accent)' : 'var(--color-surface)'};
+							color: {data.tab === 'bench' ? 'var(--color-bg)' : 'var(--color-text-primary)'};
+							font-size: var(--font-size-body);
+							font-weight: var(--font-weight-semibold);
 							cursor: pointer;
 						"
 					>Bench</button>
@@ -90,15 +90,15 @@
 						aria-label="Advocate tab"
 						onclick={() => switchTab('advocate')}
 						style="
-							min-height: 44px;
-							padding: 8px 16px;
-							border: 1px solid {data.tab === 'advocate' ? '#93c5fd' : '#334155'};
+							min-height: var(--touch-target);
+							padding: var(--space-sm) var(--space-md);
+							border: 1px solid {data.tab === 'advocate' ? 'var(--color-accent)' : 'var(--color-border)'};
 							border-left: none;
 							border-radius: 0 6px 6px 0;
-							background-color: {data.tab === 'advocate' ? '#93c5fd' : '#1e293b'};
-							color: {data.tab === 'advocate' ? '#0f1117' : '#e2e8f0'};
-							font-size: 16px;
-							font-weight: 600;
+							background-color: {data.tab === 'advocate' ? 'var(--color-accent)' : 'var(--color-surface)'};
+							color: {data.tab === 'advocate' ? 'var(--color-bg)' : 'var(--color-text-primary)'};
+							font-size: var(--font-size-body);
+							font-weight: var(--font-weight-semibold);
 							cursor: pointer;
 						"
 					>Advocate</button>
@@ -112,14 +112,14 @@
 					display: inline-flex;
 					align-items: center;
 					justify-content: center;
-					min-height: 44px;
-					padding: 8px 16px;
+					min-height: var(--touch-target);
+					padding: var(--space-sm) var(--space-md);
 					background: transparent;
-					border: 1px solid #93c5fd;
+					border: 1px solid var(--color-accent);
 					border-radius: 6px;
-					font-size: 16px;
-					font-weight: 600;
-					color: #e2e8f0;
+					font-size: var(--font-size-body);
+					font-weight: var(--font-weight-semibold);
+					color: var(--color-text-primary);
 					text-decoration: none;
 					box-sizing: border-box;
 				"
@@ -127,12 +127,12 @@
 		</div>
 	</header>
 
-	<div style="max-width: 860px; margin: 0 auto; padding: 48px 24px;">
+	<div style="max-width: 860px; margin: 0 auto; padding: var(--space-2xl) var(--space-lg);">
 
 		<!-- TenureGapsToggle (PDIR-06) — Bench tab only -->
 		{#if data.tab === 'bench'}
-			<div style="display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 16px;">
-				<div style="display: flex; align-items: center; gap: 8px;">
+			<div style="display: flex; flex-wrap: wrap; gap: var(--space-md); margin-bottom: var(--space-md);">
+				<div style="display: flex; align-items: center; gap: var(--space-sm);">
 					<button
 						role="switch"
 						aria-checked={tenureGaps}
@@ -143,8 +143,8 @@
 							width: 44px;
 							height: 24px;
 							border-radius: 12px;
-							border: 1px solid {tenureGaps ? '#93c5fd' : '#334155'};
-							background-color: {tenureGaps ? 'rgba(147,197,253,0.2)' : '#0f1117'};
+							border: 1px solid {tenureGaps ? 'var(--color-accent)' : 'var(--color-border)'};
+							background-color: {tenureGaps ? 'rgba(147,197,253,0.2)' : 'var(--color-bg)'};
 							cursor: pointer;
 							padding: 0;
 							flex-shrink: 0;
@@ -158,18 +158,18 @@
 								width: 18px;
 								height: 18px;
 								border-radius: 50%;
-								background-color: {tenureGaps ? '#93c5fd' : '#94a3b8'};
+								background-color: {tenureGaps ? 'var(--color-accent)' : 'var(--color-text-secondary)'};
 							"
 						></span>
 					</button>
-					<span style="font-size: 14px; font-weight: 400; color: #94a3b8;">Justices with tenure gaps</span>
+					<span style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary);">Justices with tenure gaps</span>
 				</div>
 			</div>
 		{/if}
 
 		<!-- Filtering by / Clear filter (UI-SPEC Interaction Contract) -->
 		{#if data.missing || tenureGaps}
-			<p style="font-size: 14px; font-weight: 400; color: #94a3b8; margin: 0 0 16px 0;">
+			<p style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin: 0 0 var(--space-md) 0;">
 				Filtering by: {data.missing ? pillLabel(data.missing) : 'Justices with tenure gaps'} ·
 				<button
 					type="button"
@@ -180,10 +180,10 @@
 						border: none;
 						padding: 0;
 						margin: 0;
-						color: #93c5fd;
+						color: var(--color-accent);
 						text-decoration: underline;
-						font-size: 14px;
-						font-weight: 400;
+						font-size: var(--font-size-caption);
+						font-weight: var(--font-weight-regular);
 						cursor: pointer;
 					"
 				>Clear filter</button>
@@ -208,11 +208,11 @@
 							style="
 								width: {data.tab === 'bench' ? '30%' : '40%'};
 								text-align: left;
-								font-size: 14px;
-								font-weight: 400;
-								color: #94a3b8;
-								border-bottom: 1px solid #334155;
-								padding: 8px 0;
+								font-size: var(--font-size-caption);
+								font-weight: var(--font-weight-regular);
+								color: var(--color-text-secondary);
+								border-bottom: 1px solid var(--color-border);
+								padding: var(--space-sm) 0;
 							"
 						>Name</th>
 						{#if data.tab === 'bench'}
@@ -221,11 +221,11 @@
 								style="
 									width: 20%;
 									text-align: left;
-									font-size: 14px;
-									font-weight: 400;
-									color: #94a3b8;
-									border-bottom: 1px solid #334155;
-									padding: 8px 8px;
+									font-size: var(--font-size-caption);
+									font-weight: var(--font-weight-regular);
+									color: var(--color-text-secondary);
+									border-bottom: 1px solid var(--color-border);
+									padding: var(--space-sm) var(--space-sm);
 								"
 							>Tenure coverage</th>
 							<th
@@ -233,11 +233,11 @@
 								style="
 									width: 15%;
 									text-align: left;
-									font-size: 14px;
-									font-weight: 400;
-									color: #94a3b8;
-									border-bottom: 1px solid #334155;
-									padding: 8px 8px;
+									font-size: var(--font-size-caption);
+									font-weight: var(--font-weight-regular);
+									color: var(--color-text-secondary);
+									border-bottom: 1px solid var(--color-border);
+									padding: var(--space-sm) var(--space-sm);
 								"
 							>Tenure gap</th>
 						{:else}
@@ -246,11 +246,11 @@
 								style="
 									width: 20%;
 									text-align: right;
-									font-size: 14px;
-									font-weight: 400;
-									color: #94a3b8;
-									border-bottom: 1px solid #334155;
-									padding: 8px 8px;
+									font-size: var(--font-size-caption);
+									font-weight: var(--font-weight-regular);
+									color: var(--color-text-secondary);
+									border-bottom: 1px solid var(--color-border);
+									padding: var(--space-sm) var(--space-sm);
 								"
 							>Argument count</th>
 						{/if}
@@ -259,11 +259,11 @@
 							style="
 								width: {data.tab === 'bench' ? '20%' : '25%'};
 								text-align: left;
-								font-size: 14px;
-								font-weight: 400;
-								color: #94a3b8;
-								border-bottom: 1px solid #334155;
-								padding: 8px 8px;
+								font-size: var(--font-size-caption);
+								font-weight: var(--font-weight-regular);
+								color: var(--color-text-secondary);
+								border-bottom: 1px solid var(--color-border);
+								padding: var(--space-sm) var(--space-sm);
 							"
 						>Missing fields</th>
 						<th
@@ -271,11 +271,11 @@
 							style="
 								width: 15%;
 								text-align: right;
-								font-size: 14px;
-								font-weight: 400;
-								color: #94a3b8;
-								border-bottom: 1px solid #334155;
-								padding: 8px 0;
+								font-size: var(--font-size-caption);
+								font-weight: var(--font-weight-regular);
+								color: var(--color-text-secondary);
+								border-bottom: 1px solid var(--color-border);
+								padding: var(--space-sm) 0;
 							"
 						></th>
 					</tr>
@@ -285,45 +285,45 @@
 						<tr>
 							<td
 								style="
-									font-size: 16px;
-									color: #e2e8f0;
-									border-bottom: 1px solid #334155;
+									font-size: var(--font-size-body);
+									color: var(--color-text-primary);
+									border-bottom: 1px solid var(--color-border);
 									padding: 12px 0;
 								"
-							>{person.full_name}{#if person.is_justice}<span style="display: inline-block; background-color: rgba(147,197,253,0.15); border: 1px solid #93c5fd; color: #93c5fd; border-radius: 4px; padding: 2px 6px; font-size: 14px; font-weight: 400; line-height: 1.4; margin-left: 8px;">Justice</span>{/if}</td>
+							>{person.full_name}{#if person.is_justice}<span style="display: inline-block; background-color: rgba(147,197,253,0.15); border: 1px solid var(--color-accent); color: var(--color-accent); border-radius: 4px; padding: 2px 6px; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); line-height: 1.4; margin-left: var(--space-sm);">Justice</span>{/if}</td>
 							{#if data.tab === 'bench'}
 								<td
 									style="
-										font-size: 16px;
-										color: {person.tenure_coverage ? '#e2e8f0' : '#94a3b8'};
-										border-bottom: 1px solid #334155;
-										padding: 12px 8px;
+										font-size: var(--font-size-body);
+										color: {person.tenure_coverage ? 'var(--color-text-primary)' : 'var(--color-text-secondary)'};
+										border-bottom: 1px solid var(--color-border);
+										padding: 12px var(--space-sm);
 									"
 								>{person.tenure_coverage ?? 'No tenure'}</td>
 								<td
 									style="
-										font-size: 16px;
-										color: {person.has_tenure_gap ? '#fbbf24' : '#94a3b8'};
-										border-bottom: 1px solid #334155;
-										padding: 12px 8px;
+										font-size: var(--font-size-body);
+										color: {person.has_tenure_gap ? 'var(--color-status-warning)' : 'var(--color-text-secondary)'};
+										border-bottom: 1px solid var(--color-border);
+										padding: 12px var(--space-sm);
 									"
 								>{person.has_tenure_gap ? '⚠ Gap' : '—'}</td>
 							{:else}
 								<td
 									style="
-										font-size: 16px;
-										color: #94a3b8;
+										font-size: var(--font-size-body);
+										color: var(--color-text-secondary);
 										text-align: right;
-										border-bottom: 1px solid #334155;
-										padding: 12px 8px;
+										border-bottom: 1px solid var(--color-border);
+										padding: 12px var(--space-sm);
 									"
 								>{person.argument_count ?? 0}</td>
 							{/if}
 							<td
 								style="
-									font-size: 16px;
-									border-bottom: 1px solid #334155;
-									padding: 12px 8px;
+									font-size: var(--font-size-body);
+									border-bottom: 1px solid var(--color-border);
+									padding: 12px var(--space-sm);
 								"
 							>
 								{#if person.missing.length > 0}
@@ -332,7 +332,7 @@
 									     display/accessible text is the locked Title Case "Name review" copy. -->
 									<span
 										aria-label="Missing: {person.missing.map(pillLabel).join(', ')}"
-										style="display: flex; gap: 4px; flex-wrap: wrap;"
+										style="display: flex; gap: var(--space-xs); flex-wrap: wrap;"
 									>
 										{#each person.missing as field}
 											<button
@@ -349,15 +349,15 @@
 							</td>
 							<td
 								style="
-									font-size: 14px;
+									font-size: var(--font-size-caption);
 									text-align: right;
-									border-bottom: 1px solid #334155;
+									border-bottom: 1px solid var(--color-border);
 									padding: 12px 0;
 								"
 							>
 								<a
 									href={'/admin/people/' + person.id}
-									style="color: #93c5fd; text-decoration: underline;"
+									style="color: var(--color-accent); text-decoration: underline;"
 								>Edit person</a>
 							</td>
 						</tr>
@@ -369,46 +369,46 @@
 			<!-- Empty states (UI-SPEC Copywriting Contract) -->
 			<div
 				style="
-					background-color: #1e293b;
-					border: 1px solid #334155;
+					background-color: var(--color-surface);
+					border: 1px solid var(--color-border);
 					border-radius: 8px;
-					padding: 24px;
+					padding: var(--space-lg);
 					text-align: center;
 				"
 			>
 				{#if tenureGaps}
-					<p style="font-size: 14px; font-weight: 400; color: #94a3b8; margin: 0;">
+					<p style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin: 0;">
 						No Justices with tenure gaps found.
 					</p>
 				{:else if data.missing === 'name review'}
 					<!-- Phase 38 (D-12, D-13) — exact locked UI-SPEC empty-state copy for
 					     the Name review filter, distinct from the generic missing-field
 					     empty state below. -->
-					<p style="font-size: 16px; font-weight: 600; color: #e2e8f0; margin: 0 0 8px 0;">
+					<p style="font-size: var(--font-size-body); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-sm) 0;">
 						No people need name review
 					</p>
-					<p style="font-size: 16px; color: #94a3b8; margin: 0;">
+					<p style="font-size: var(--font-size-body); color: var(--color-text-secondary); margin: 0;">
 						Ambiguous legacy names will appear here for review.
 					</p>
 				{:else if data.missing}
-					<p style="font-size: 16px; font-weight: 600; color: #e2e8f0; margin: 0 0 8px 0;">
+					<p style="font-size: var(--font-size-body); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-sm) 0;">
 						No matches for this filter.
 					</p>
-					<p style="font-size: 16px; color: #94a3b8; margin: 0;">
+					<p style="font-size: var(--font-size-body); color: var(--color-text-secondary); margin: 0;">
 						Clear the filter to see everyone on this tab.
 					</p>
 				{:else if data.tab === 'bench'}
-					<p style="font-size: 16px; font-weight: 600; color: #e2e8f0; margin: 0 0 8px 0;">
+					<p style="font-size: var(--font-size-body); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-sm) 0;">
 						No Justices yet.
 					</p>
-					<p style="font-size: 16px; color: #94a3b8; margin: 0;">
+					<p style="font-size: var(--font-size-body); color: var(--color-text-secondary); margin: 0;">
 						Justices are added automatically during pipeline resolve, or you can create one directly.
 					</p>
 				{:else}
-					<p style="font-size: 16px; font-weight: 600; color: #e2e8f0; margin: 0 0 8px 0;">
+					<p style="font-size: var(--font-size-body); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-sm) 0;">
 						No advocates yet.
 					</p>
-					<p style="font-size: 16px; color: #94a3b8; margin: 0;">
+					<p style="font-size: var(--font-size-body); color: var(--color-text-secondary); margin: 0;">
 						Advocates are added automatically during pipeline resolve, or you can create one directly.
 					</p>
 				{/if}
@@ -422,14 +422,14 @@
 	.pill {
 		display: inline-flex;
 		align-items: center;
-		min-height: 36px;
+		min-height: var(--touch-target-dense);
 		background-color: rgba(245, 158, 11, 0.15);
 		border: 1px solid #f59e0b;
 		color: #f59e0b;
 		border-radius: 4px;
-		padding: 4px 8px;
-		font-size: 14px;
-		font-weight: 400;
+		padding: var(--space-xs) var(--space-sm);
+		font-size: var(--font-size-caption);
+		font-weight: var(--font-weight-regular);
 		line-height: 1.4;
 		cursor: pointer;
 	}
@@ -439,7 +439,7 @@
 	}
 	.pill-active {
 		background-color: #f59e0b;
-		color: #0f1117;
-		font-weight: 600;
+		color: var(--color-bg);
+		font-weight: var(--font-weight-semibold);
 	}
 </style>

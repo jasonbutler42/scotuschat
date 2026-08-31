@@ -5,28 +5,28 @@
 <nav
 	aria-label="Admin navigation"
 	style="
-		background-color: #1e293b;
-		border-bottom: 1px solid #334155;
-		padding: 12px 24px;
+		background-color: var(--color-surface);
+		border-bottom: 1px solid var(--color-border);
+		padding: 12px var(--space-lg);
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
-		gap: 16px;
+		gap: var(--space-md);
 	"
 >
-	<a href="/admin/pipeline" style="font-size: 14px; font-weight: 400; color: #94a3b8; text-decoration: none;">
+	<a href="/admin/pipeline" style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); text-decoration: none;">
 		Pipeline Runner
 	</a>
-	<a href="/admin/arguments" style="font-size: 14px; font-weight: 400; color: #94a3b8; text-decoration: none;">
+	<a href="/admin/arguments" style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); text-decoration: none;">
 		Arguments
 	</a>
-	<a href="/admin/review" style="font-size: 14px; font-weight: 400; color: #94a3b8; text-decoration: none;">
+	<a href="/admin/review" style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); text-decoration: none;">
 		Review
 	</a>
-	<a href="/admin/people" style="font-size: 14px; font-weight: 400; color: #94a3b8; text-decoration: none;">
+	<a href="/admin/people" style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); text-decoration: none;">
 		People Editor
 	</a>
-	<a href="/admin/help" style="font-size: 14px; font-weight: 400; color: #94a3b8; text-decoration: none;">
+	<a href="/admin/help" style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); text-decoration: none;">
 		Help
 	</a>
 
@@ -34,25 +34,25 @@
 		<button
 			type="submit"
 			style="
-				min-height: 44px;
-				font-size: 14px;
-				font-weight: 400;
-				color: #94a3b8;
+				min-height: var(--touch-target);
+				font-size: var(--font-size-caption);
+				font-weight: var(--font-weight-regular);
+				color: var(--color-text-secondary);
 				background: transparent;
-				border: 1px solid #334155;
+				border: 1px solid var(--color-border);
 				border-radius: 6px;
-				padding: 8px 16px;
+				padding: var(--space-sm) var(--space-md);
 				cursor: pointer;
 			"
 			onmouseenter={(e) => {
 				const btn = e.currentTarget as HTMLButtonElement;
-				btn.style.color = '#e2e8f0';
-				btn.style.borderColor = '#e2e8f0';
+				btn.style.color = 'var(--color-text-primary)';
+				btn.style.borderColor = 'var(--color-text-primary)';
 			}}
 			onmouseleave={(e) => {
 				const btn = e.currentTarget as HTMLButtonElement;
-				btn.style.color = '#94a3b8';
-				btn.style.borderColor = '#334155';
+				btn.style.color = 'var(--color-text-secondary)';
+				btn.style.borderColor = 'var(--color-border)';
 			}}
 		>
 			Log out

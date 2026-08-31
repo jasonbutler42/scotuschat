@@ -132,8 +132,8 @@
 		style="
 			display: flex;
 			flex-wrap: wrap;
-			gap: 8px;
-			margin-bottom: 8px;
+			gap: var(--space-sm);
+			margin-bottom: var(--space-sm);
 		"
 	>
 		{#each pills as pill}
@@ -147,13 +147,13 @@
 						display: inline-flex;
 						align-items: flex-start;
 						gap: 6px;
-						background-color: #1e293b;
-						border: 1px solid #334155;
+						background-color: var(--color-surface);
+						border: 1px solid var(--color-border);
 						border-radius: 4px;
-						padding: 8px;
-						font-size: 14px;
-						font-weight: 400;
-						color: #e2e8f0;
+						padding: var(--space-sm);
+						font-size: var(--font-size-caption);
+						font-weight: var(--font-weight-regular);
+						color: var(--color-text-primary);
 						max-width: 100%;
 					"
 				>
@@ -178,16 +178,16 @@
 								border: none;
 								padding: 0;
 								cursor: pointer;
-								font-size: 14px;
-								color: #94a3b8;
+								font-size: var(--font-size-caption);
+								color: var(--color-text-secondary);
 								line-height: 1;
 								flex: 0 0 auto;
 							"
 							onmouseenter={(e) => {
-								(e.currentTarget as HTMLButtonElement).style.color = '#ef4444';
+								(e.currentTarget as HTMLButtonElement).style.color = 'var(--color-destructive)';
 							}}
 							onmouseleave={(e) => {
-								(e.currentTarget as HTMLButtonElement).style.color = '#94a3b8';
+								(e.currentTarget as HTMLButtonElement).style.color = 'var(--color-text-secondary)';
 							}}
 						>
 							×
@@ -200,13 +200,13 @@
 						display: inline-flex;
 						align-items: center;
 						gap: 6px;
-						background-color: #1e293b;
-						border: 1px solid #334155;
+						background-color: var(--color-surface);
+						border: 1px solid var(--color-border);
 						border-radius: 4px;
-						padding: 4px 8px;
-						font-size: 14px;
-						font-weight: 400;
-						color: #e2e8f0;
+						padding: var(--space-xs) var(--space-sm);
+						font-size: var(--font-size-caption);
+						font-weight: var(--font-weight-regular);
+						color: var(--color-text-primary);
 					"
 				>
 					{pill}
@@ -225,15 +225,15 @@
 								border: none;
 								padding: 0;
 								cursor: pointer;
-								font-size: 14px;
-								color: #94a3b8;
+								font-size: var(--font-size-caption);
+								color: var(--color-text-secondary);
 								line-height: 1;
 							"
 							onmouseenter={(e) => {
-								(e.currentTarget as HTMLButtonElement).style.color = '#ef4444';
+								(e.currentTarget as HTMLButtonElement).style.color = 'var(--color-destructive)';
 							}}
 							onmouseleave={(e) => {
-								(e.currentTarget as HTMLButtonElement).style.color = '#94a3b8';
+								(e.currentTarget as HTMLButtonElement).style.color = 'var(--color-text-secondary)';
 							}}
 						>
 							×
@@ -254,7 +254,7 @@
      component's own internal shapeError alert (now rendered by Input
      itself instead of a local <p>, same id, same role="alert", same
      var(--color-destructive) styling). -->
-<p style="font-size: 13px; font-weight: 400; color: #64748b; margin: 0 0 4px 0;">
+<p style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: #64748b; margin: 0 0 var(--space-xs) 0;">
 	Type a docket number and press Enter to add it.
 </p>
 <Input

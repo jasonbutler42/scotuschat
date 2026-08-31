@@ -47,7 +47,7 @@
 		max-width: 100%;
 		border: 1px solid {color};
 		border-radius: 4px;
-		padding: 2px 8px;
+		padding: 2px var(--space-sm);
 		font-size: var(--font-size-caption);
 		font-weight: var(--font-weight-semibold);
 		letter-spacing: 0.02em;

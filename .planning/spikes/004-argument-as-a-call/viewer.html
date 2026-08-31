@@ -1,0 +1,503 @@
+<title>SCOTUS Teams</title>
+<style>
+	:root {
+		/* Layer 1 — primitives, copied verbatim from app/src/app.css so the mockup
+		   cannot drift from the product. */
+		--slate-950: #0f1117;
+		--slate-900: #161b26;
+		--slate-800: #1e293b;
+		--slate-700: #334155;
+		--slate-600: #475569;
+		--slate-400: #94a3b8;
+		--slate-300: #e2e8f0;
+
+		/* Layer 2 — semantic roles. */
+		--bg: var(--slate-950);
+		--surface: var(--slate-800);
+		--surface-sunk: var(--slate-900);
+		--border: var(--slate-700);
+		--text: var(--slate-300);
+		--text-dim: var(--slate-400);
+
+		--space-xs: 4px;
+		--space-sm: 8px;
+		--space-md: 12px;
+		--space-lg: 16px;
+		--space-xl: 24px;
+		--space-2xl: 32px;
+
+		--fs-caption: 13px;
+		--fs-body: 15px;
+		--fs-lead: 18px;
+		--lh-lead: 1.6;
+
+		--sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+		--mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+	}
+
+	/* Deliberately single-theme. The product is dark-only, and a mockup that
+	   rendered light would stop being a mockup of it. Every colour is painted
+	   explicitly so the page holds on any host ground. */
+	body {
+		background: var(--bg);
+		color: var(--text);
+		font-family: var(--sans);
+		font-size: var(--fs-body);
+		line-height: 1.5;
+		margin: 0;
+		padding: var(--space-lg) var(--space-lg) var(--space-2xl);
+	}
+
+	*, *::before, *::after { box-sizing: border-box; }
+
+	.wrap { max-width: 940px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--space-lg); }
+
+	h1 {
+		font-size: 22px;
+		font-weight: 600;
+		letter-spacing: -0.01em;
+		margin: 0;
+		text-wrap: balance;
+	}
+	.sub { color: var(--text-dim); font-size: var(--fs-caption); margin: 0; }
+
+	.synthetic {
+		border: 1px solid var(--border);
+		border-left: 3px solid var(--slate-600);
+		border-radius: 4px;
+		padding: var(--space-sm) var(--space-md);
+		font-size: var(--fs-caption);
+		color: var(--text-dim);
+	}
+	.synthetic strong { color: var(--text); font-weight: 600; }
+
+	/* ── Arrangement toggle ─────────────────────────────────────────────────── */
+	.seg { display: flex; gap: var(--space-xs); }
+	.seg button {
+		flex: 1 1 0;
+		text-align: left;
+		cursor: pointer;
+		font-family: inherit;
+		background: var(--surface-sunk);
+		color: var(--text);
+		border: 1px solid var(--border);
+		border-radius: 6px;
+		padding: var(--space-md);
+	}
+	.seg button[aria-pressed='true'] { background: var(--surface); border-color: var(--text-dim); }
+	.seg .t { display: block; font-size: var(--fs-body); font-weight: 600; }
+	.seg .d { display: block; font-size: var(--fs-caption); color: var(--text-dim); margin-top: 2px; }
+
+	/* ── Stage ──────────────────────────────────────────────────────────────── */
+	.stage {
+		background: var(--surface-sunk);
+		border: 1px solid var(--border);
+		border-radius: 8px;
+		padding: var(--space-xl) var(--space-lg);
+		min-height: 300px;
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		gap: var(--space-lg);
+	}
+
+	/* Capped so seven participants land 4+3 rather than 6+1 — a lone trailing
+	   tile reads as an odd one out, which is exactly the impression P-03 says
+	   the layout must not create. */
+	.grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+		gap: var(--space-md);
+		max-width: 660px;
+		margin: 0 auto;
+		width: 100%;
+	}
+
+	.court { display: flex; flex-direction: column; align-items: center; gap: var(--space-md); }
+	.bench { display: flex; justify-content: center; gap: var(--space-md); flex-wrap: wrap; }
+	/* Shallow arc: outer seats sit lower than the centre, so the row reads as a
+	   bench curving away from the lectern rather than as a flat line. */
+	.bench .tile:nth-child(1), .bench .tile:nth-child(5) { transform: translateY(22px); }
+	.bench .tile:nth-child(2), .bench .tile:nth-child(4) { transform: translateY(8px); }
+	.lectern { width: min(320px, 80%); height: 1px; background: var(--border); margin-top: var(--space-xl); }
+	.lectern-label {
+		font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+		color: var(--text-dim); margin-top: calc(var(--space-xs) * -1);
+	}
+	.bar-advocates { display: flex; justify-content: center; gap: var(--space-md); flex-wrap: wrap; }
+
+	/* ── Tile ───────────────────────────────────────────────────────────────── */
+	.tile {
+		background: var(--surface);
+		border: 1px solid var(--border);
+		border-radius: 6px;
+		padding: var(--space-md) var(--space-sm);
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: var(--space-sm);
+		min-width: 108px;
+		transition: transform 140ms ease, border-color 140ms ease, background-color 140ms ease;
+	}
+	.court .tile { width: 118px; }
+	/* Transient only. Every tile is identical in size and weight when nobody is
+	   speaking — the emphasis is a fact about who is speaking now, and it moves. */
+	.tile.speaking { border-color: var(--spk); background: #22304a; transform: scale(1.04); }
+	.court .bench .tile.speaking:nth-child(1), .court .bench .tile.speaking:nth-child(5) { transform: translateY(22px) scale(1.04); }
+	.court .bench .tile.speaking:nth-child(2), .court .bench .tile.speaking:nth-child(4) { transform: translateY(8px) scale(1.04); }
+
+	.avatar {
+		width: 46px; height: 46px; border-radius: 50%;
+		display: flex; align-items: center; justify-content: center;
+		font-size: var(--fs-body); font-weight: 600;
+		color: var(--bg);
+		background: var(--spk);
+		flex-shrink: 0;
+	}
+	.tile .nm { font-size: var(--fs-caption); text-align: center; line-height: 1.3; }
+	.tile .rl {
+		font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase;
+		color: var(--text-dim);
+	}
+
+	/* Only the speaker shows a level meter. Idle bars read as an ellipsis and,
+	   worse, imply a persistent per-tile state that carries no information. */
+	.mic { display: flex; align-items: flex-end; gap: 2px; height: 10px; visibility: hidden; }
+	.tile.speaking .mic { visibility: visible; }
+	/* Staggered at rest so a stopped meter still reads as a level meter. Equal
+	   bars sat as an ellipsis, which said "typing", not "speaking". */
+	.mic span { width: 3px; background: var(--spk); border-radius: 1px; }
+	.mic span:nth-child(1) { height: 4px; }
+	.mic span:nth-child(2) { height: 9px; }
+	.mic span:nth-child(3) { height: 6px; }
+	/* Animate only while the transport is actually running. A CSS animation does
+	   not stop when the JS clock does, so without this gate a paused call went on
+	   showing someone mid-sentence. */
+	.is-playing .tile.speaking .mic span { animation: talk 700ms ease-in-out infinite; }
+	.is-playing .tile.speaking .mic span:nth-child(2) { animation-delay: 120ms; }
+	.is-playing .tile.speaking .mic span:nth-child(3) { animation-delay: 240ms; }
+	@keyframes talk { 0%, 100% { height: 3px; } 50% { height: 10px; } }
+
+	/* ── Caption ────────────────────────────────────────────────────────────── */
+	.caption {
+		background: var(--surface);
+		border: 1px solid var(--border);
+		border-radius: 6px;
+		padding: var(--space-md) var(--space-lg);
+		min-height: 130px;
+	}
+	.caption .who { font-size: var(--fs-caption); font-weight: 600; color: var(--spk); }
+	.caption p {
+		font-size: var(--fs-lead);
+		line-height: var(--lh-lead);
+		margin: var(--space-sm) 0 0;
+		color: var(--text);
+	}
+
+	/* ── Transport ──────────────────────────────────────────────────────────── */
+	.transport { display: flex; align-items: center; gap: var(--space-md); flex-wrap: wrap; }
+	.transport button {
+		font-family: inherit; font-size: var(--fs-body); cursor: pointer;
+		background: var(--surface); color: var(--text);
+		border: 1px solid var(--border); border-radius: 6px;
+		padding: var(--space-sm) var(--space-md); min-width: 76px;
+	}
+	.speeds { display: flex; gap: var(--space-xs); margin-left: auto; }
+	.speeds button { min-width: 44px; padding: var(--space-xs) var(--space-sm); font-size: var(--fs-caption); }
+	.speeds button[aria-pressed='true'] { border-color: var(--text-dim); background: var(--surface-sunk); }
+	.tc { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: var(--fs-caption); color: var(--text-dim); }
+	input[type='range'] { flex: 1 1 180px; accent-color: var(--slate-400); min-width: 140px; }
+
+	details {
+		border: 1px solid var(--border); border-radius: 6px;
+		padding: var(--space-md); background: var(--surface-sunk);
+	}
+	summary { cursor: pointer; font-size: var(--fs-body); font-weight: 600; }
+	details ul { margin: var(--space-md) 0 0; padding-left: 1.1em; display: flex; flex-direction: column; gap: var(--space-sm); }
+	details li { font-size: var(--fs-caption); color: var(--text-dim); }
+	details li strong { color: var(--text); font-weight: 600; }
+
+	:focus-visible { outline: 2px solid var(--slate-400); outline-offset: 2px; }
+
+	@media (prefers-reduced-motion: reduce) {
+		* { animation: none !important; transition: none !important; }
+	}
+	@media (max-width: 520px) {
+		.seg { flex-direction: column; }
+		.court .tile { width: 92px; }
+		.stage { padding: var(--space-lg) var(--space-md); }
+		.tile { min-width: 0; }
+		.avatar { width: 40px; height: 40px; }
+		/* The bench cannot hold five seats in one row at this width, and once it
+		   wraps the nth-child arc offsets land on the wrong tiles. Drop the
+		   curvature and keep the structure: the arrangement under test is
+		   bench-separated-from-lectern, and the arc is a refinement that needs
+		   width it does not have here.
+		   `:nth-child(n)` matches every tile and exists solely to MATCH the
+		   specificity of the arc rules above — a media query adds none of its
+		   own, so a plainer selector would lose the cascade and leave the offsets
+		   applied to wrapped rows. */
+		.bench .tile:nth-child(n) { transform: none; }
+		.court .bench .tile.speaking:nth-child(n) { transform: scale(1.04); }
+		.lectern { margin-top: var(--space-md); }
+	}
+</style>
+
+<div class="wrap">
+	<header>
+		<h1>An argument as a call</h1>
+		<p class="sub">
+			Anderson v. Liberty Lobby, Inc. · No. 84&#8209;1602 · argued December 3, 1985 ·
+			rebuttal, turns 134&#8211;152
+		</p>
+	</header>
+
+	<p class="synthetic">
+		<strong>Timings here are synthetic.</strong> Speech durations are estimated from
+		text length, not taken from Oyez's audio alignment — whether that alignment data
+		can be licensed is the open question this mockup exists to be judged before.
+		Speakers, sides, order and transcript text are the real record.
+	</p>
+
+	<div class="seg" role="group" aria-label="Arrangement">
+		<button type="button" data-arr="grid" aria-pressed="true">
+			<span class="t">Call grid</span>
+			<span class="d">Uniform tiles. The familiar one.</span>
+		</button>
+		<button type="button" data-arr="court" aria-pressed="false">
+			<span class="t">Courtroom</span>
+			<span class="d">Bench facing the lectern. The faithful one.</span>
+		</button>
+	</div>
+
+	<div class="stage" id="stage"></div>
+
+	<div class="transport">
+		<button type="button" id="play">Play</button>
+		<span class="tc" id="tc">0:00 / 0:00</span>
+		<input type="range" id="scrub" min="0" max="1000" value="0" aria-label="Scrub" />
+		<span class="speeds" role="group" aria-label="Speed">
+			<button type="button" data-sp="1" aria-pressed="false">1&times;</button>
+			<button type="button" data-sp="2" aria-pressed="false">2&times;</button>
+			<button type="button" data-sp="4" aria-pressed="true">4&times;</button>
+			<button type="button" data-sp="8" aria-pressed="false">8&times;</button>
+		</span>
+	</div>
+
+	<div class="caption">
+		<span class="who" id="who">&nbsp;</span>
+		<p id="text">Press play.</p>
+	</div>
+
+	<details>
+		<summary>What the rules forced, and what they forbade</summary>
+		<ul>
+			<li>
+				<strong>No speaking-time meter — deliberately.</strong> Watch either
+				arrangement and you will form a clear impression of who dominated this
+				stretch. That impression is the point: the project may never
+				<em>assert</em> it, but a faithful rendering the reader interprets is
+				fair game. What is forbidden is amplifying it — no tile scaled by
+				cumulative talk time, no reordering by participation, no "most active"
+				badge. Render at fidelity; if a design makes the disparity easier to read
+				than it was in the room, it has crossed the line.
+			</li>
+			<li>
+				<strong>Emphasis is transient, never structural.</strong> Every tile is
+				identical in size, weight and treatment when nobody is speaking. The
+				active-speaker highlight is a fact about the present moment and it moves
+				on. Nobody is permanently larger, centred or first.
+			</li>
+			<li>
+				<strong>Initials for everyone, not photographs.</strong> Justices have
+				good portrait coverage and advocates do not. At tile size, a bench of
+				faces opposite a row of blanks would read as a status difference produced
+				by nothing but data coverage.
+			</li>
+			<li>
+				<strong>Tile order is first appearance, not seniority.</strong> The real
+				bench is seated by seniority, and reproducing that would be faithful —
+				but it is not in this data, and inventing a seating chart would be
+				fabrication. The arc here tests the geometry, not the seats.
+			</li>
+			<li>
+				<strong>Colour is per speaker, from the shipped ramp.</strong> Every hue
+				is solved to CIE L* 78, so no justice or advocate reads louder than any
+				other. These are the same seven assignments the live transcript uses.
+			</li>
+			<li>
+				<strong>The question to actually answer.</strong> The grid is more
+				familiar; the courtroom keeps the one thing that has been constant across
+				this whole project — the bench on one side, advocates on the other. A
+				uniform grid erases that. Which matters more is the decision, not the
+				chrome.
+			</li>
+		</ul>
+	</details>
+</div>
+
+<script>
+	const DATA = {"people": [{"name": "Warren E. Burger", "side": "BENCH", "color": "#94c6f9"}, {"name": "Byron R. White", "side": "BENCH", "color": "#7bd1ba"}, {"name": "William H. Rehnquist", "side": "BENCH", "color": "#f4acc7"}, {"name": "Sandra Day O'Connor", "side": "BENCH", "color": "#bdc783"}, {"name": "John Paul Stevens", "side": "BENCH", "color": "#f9aea7"}, {"name": "David J. Branson", "side": "PETITIONER", "color": "#f1b48b"}, {"name": "Mark Lane", "side": "RESPONDENT", "color": "#b6bcfc"}], "turns": [{"seq": 134, "name": "Mark Lane", "side": "RESPONDENT", "text": "--In this particular case, Your Honor, I think that the standard, any standard applied would have prevented the Court from having dismissed on those kind of questions.", "dur": 11.93}, {"seq": 135, "name": "John Paul Stevens", "side": "BENCH", "text": "My question is directed at the argument that there's something special about credibility of witnesses--", "dur": 7.36}, {"seq": 136, "name": "Mark Lane", "side": "RESPONDENT", "text": "Yes.", "dur": 1.5}, {"seq": 137, "name": "John Paul Stevens", "side": "BENCH", "text": "--as a reason for having a different standard of proof on summary judgment, to which an answer is made, well, what difference does it make? You assume that the lawyer... all the witnesses on one side are telling the truth and all the others are lying--", "dur": 18.0}, {"seq": 138, "name": "Mark Lane", "side": "RESPONDENT", "text": "But the Court should--", "dur": 1.57}, {"seq": 139, "name": "John Paul Stevens", "side": "BENCH", "text": "--You then say what's left, is that enough to raise an issue, and I don't understand the cross examination argument.", "dur": 8.29}, {"seq": 140, "name": "Mark Lane", "side": "RESPONDENT", "text": "--If the Court is asking are all the inferences to be taken to favor the nonmoving party, yes, of course, but they were not taken in this case, as I have stated.", "dur": 11.5}, {"seq": 141, "name": "John Paul Stevens", "side": "BENCH", "text": "Right, but you have argued, well, you didn't have an opportunity to cross examine in front of the trier of fact, and I'm saying, well, if you did have that opportunity you could perhaps prove that the witness is a total liar, but don't you assume that on summary judgment? So what is the point of your argument--", "dur": 22.29}, {"seq": 142, "name": "Mark Lane", "side": "RESPONDENT", "text": "Yes.", "dur": 1.5}, {"seq": 143, "name": "John Paul Stevens", "side": "BENCH", "text": "--about needing to cross examine. That's what I--", "dur": 3.5}, {"seq": 144, "name": "Mark Lane", "side": "RESPONDENT", "text": "Well, we are drawing the distinction, for example, between summary judgment and a judgment notwithstanding the verdict which follows, or in the case of Bose, for example, which follows an entire record being made. We say, as you said, Your Honor, that on summary judgment the test should be that all inferences favoring the nonmoving party should be taken. They were not taken in this case. On the other side, if I might say, we hear raised the question of the chilling effect upon the news media if they are forced to go to trial. I must say that I have seen enough of the gigantic conglomerates which are in the business of publishing information about sports, entertainment and some news, enough to see of them that they are not easily chilled, they are often clothed so strongly in their own arrogance that they could, I believe, go through the ice age without having their body temperature lowered. But if one is concerned about that and the chilling effect hat one is concerned about is the massive verdicts, yet, on the other hand, is the First Amendment right of the plaintiff to speak out and the chilling effect upon an unpopular dissenting plaintiff who wishes to speak out and who wishes, if malice is utilized in attacking and destroying his reputation, to at least avail himself of his First Amendment and Second Amendment right to have this question adjudicated before a jury. Now-- Question: What is the plaintiff's First Amendment right to have this issue adjudicated before a jury? No, the First Amendment right is to speak out, offer a dissenting view.", "dur": 112.21}, {"seq": 145, "name": "William H. Rehnquist", "side": "BENCH", "text": "--I thought you said there was a First Amendment right to have it tried and decided by a jury.", "dur": 6.71}, {"seq": 146, "name": "Mark Lane", "side": "RESPONDENT", "text": "If so, I misspoke, Your Honor. what I meant was the First Amendment right to speak out and the Seventh Amendment right to have the case tried, and the chilling effect upon dissenters, in this case the plaintiff, Respondent, is in fact a newspaper, which is an unusual circumstance perhaps, but the chilling effect upon this plaintiff as a publisher or upon any plaintiff is a matter which should also to be of concern, and the way to handle that, I believe--", "dur": 32.71}, {"seq": 147, "name": "William H. Rehnquist", "side": "BENCH", "text": "Well, after reading this record, one might truthfully say a chill on both your houses.", "dur": 6.14}, {"seq": 148, "name": "Mark Lane", "side": "RESPONDENT", "text": "--I believe that the... all of the concerns, the legitimate concerns of the news media having a great deal of room within which to make error, even without adequate investigation, all of those concerns have been addressed by New York Times and all the progeny, including Hutchinson and the most recent case Bose, but I think that those concerns can be addressed by... not by abrogating the ordinary rules regarding summary judgment, but by after trial, after the full record has been made, after the plaintiff has had an opportunity to vindicate himself... money is important to many plaintiffs when they bring actions, but to many of us, to many of those who are not plaintiffs, and even to some plaintiffs, the right to vindicate one's position is of great consequence, in some cases of greater consequence. If the plaintiff can have his position vindicated, if the concern of the chilling effect upon the news media can then be addressed, I suggest by a judgment notwithstanding the verdict, where something can be done about any damages, excessive or otherwise, which have been awarded by the jury; in that fashion the chilling effect can be addressed, if there is one, although I have never seen this apocryphal chilling effect documented over the years, but if it exists, it can be dealt with certainly by that independent review, and at the same time, the First Amendment rights of the plaintiff may be protected by permitting him to speak out and his Seventh Amendment rights protected by permitting him to have a trial before the jury. The case, in conclusions, the case here rests upon the allegation by the petitioners that my client is not entitled to try, to go to a jury, to try a case where part of the case is based exclusively upon allegations which were previously published and found to be defamatory, and then republished. Part of the case which exists is based upon the allegation by the editor of the defendant publication that this publication, this caricature, this cartoon, could be libelous and should not be published, and they published it. And part of it is based upon the look-alike of the St. Amant apocryphal figure come to life with the defendant having stated about him, we don't know if he's reliable, we don't care if he's reliable, it does not matter. That is reckless disregard. And I say it is possible to conjure up another case where a plaintiff in a public figure libel matter can have a case tried if this one is not, but it does require, I believe, a fertile imagination. Thank you.", "dur": 180.43}, {"seq": 149, "name": "Warren E. Burger", "side": "BENCH", "text": "Mr. Branson, you have three minutes remaining.", "dur": 3.29}, {"seq": 150, "name": "David J. Branson", "side": "PETITIONER", "text": "Mr. Chief Justice, and may it please the Court: I would like in my time to respond to two questions, one from Mr. Justice Stevens. He asked, does it make a difference what standard we apply at summary judgment? And the answer is twofold. As the Court said in that Addington v. Texas, we are not engaged in a semantic application of words we are engaged in setting values, First Amendment values and the values of Rule 56. And with regard to this case, we particularly take the Court of Appeals at its word. Had they applied the clear and convincing standard, we believe the Court of Appeals would have found for the defendants and have sustained the judgment of the district court. And therefore I respond next to Mr. Justice White's question who suggested that the proper course, should you apply the clear and convincing standard, is to remand to the circuit court for its determination of the record. I suggest to you that the jurisprudence of this Court demonstrates that you have yourself made those determinations in these cases, with one exception, and that exception was Firestone, and that case was remanded for this reason. The Firestone case had been tried in the courts in Florida on a strict liability theory, and this court held that the negligence theory announced in Gertz had to be applied to that case. Therefore, the plaintiffs had made no record in the trial court on negligence, and it would have been impossible for this Court to assess the record in that case. But in all the other cases where the record has been complete, this Court has made the assessment, and while you could remand it--", "dur": 115.29}, {"seq": 151, "name": "Byron R. White", "side": "BENCH", "text": "Yes, but we have normally had a judgment of a court on the right standard, haven't we?", "dur": 6.14}, {"seq": 152, "name": "David J. Branson", "side": "PETITIONER", "text": "--You normally, Your Honor, have had a record made according to the right standard--", "dur": 6.0}]};
+	const people = DATA.people;
+	const turns = DATA.turns;
+
+	const bench = people.filter((p) => p.side === 'BENCH');
+	const advocates = people.filter((p) => p.side !== 'BENCH');
+	const roleLabel = (s) => (s === 'BENCH' ? 'Bench' : s === 'PETITIONER' ? 'Petitioner' : 'Respondent');
+	const initials = (n) => {
+		const parts = n.trim().split(/\s+/);
+		return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+	};
+
+	// Cumulative timeline. Durations are synthetic but strictly proportional to
+	// text length, so the RATIO between speakers stays honest at every speed.
+	let t = 0;
+	const timeline = turns.map((x) => {
+		const start = t;
+		t += x.dur;
+		return { ...x, start, end: t };
+	});
+	const total = t;
+
+	let arrangement = 'grid';
+	let playing = false;
+	let speed = 4;
+	let clock = 0;
+	let last = null;
+
+	const stage = document.getElementById('stage');
+	const whoEl = document.getElementById('who');
+	const textEl = document.getElementById('text');
+	const tcEl = document.getElementById('tc');
+	const scrub = document.getElementById('scrub');
+	const playBtn = document.getElementById('play');
+
+	function tile(p, speaking) {
+		const el = document.createElement('div');
+		el.className = 'tile' + (speaking ? ' speaking' : '');
+		el.style.setProperty('--spk', p.color);
+		el.innerHTML =
+			'<div class="avatar" aria-hidden="true">' + initials(p.name) + '</div>' +
+			'<div class="nm">' + p.name + '</div>' +
+			'<div class="rl">' + roleLabel(p.side) + '</div>' +
+			'<div class="mic" aria-hidden="true"><span></span><span></span><span></span></div>';
+		return el;
+	}
+
+	function render(activeName) {
+		stage.textContent = '';
+		if (arrangement === 'grid') {
+			const g = document.createElement('div');
+			g.className = 'grid';
+			people.forEach((p) => g.appendChild(tile(p, p.name === activeName)));
+			stage.appendChild(g);
+		} else {
+			const c = document.createElement('div');
+			c.className = 'court';
+			const b = document.createElement('div');
+			b.className = 'bench';
+			bench.forEach((p) => b.appendChild(tile(p, p.name === activeName)));
+			const rule = document.createElement('div');
+			rule.className = 'lectern';
+			const lbl = document.createElement('div');
+			lbl.className = 'lectern-label';
+			lbl.textContent = 'Lectern';
+			const a = document.createElement('div');
+			a.className = 'bar-advocates';
+			advocates.forEach((p) => a.appendChild(tile(p, p.name === activeName)));
+			c.append(b, rule, lbl, a);
+			stage.appendChild(c);
+		}
+	}
+
+	function lastNameOf() {
+		const cur = timeline.find((x) => clock >= x.start && clock < x.end);
+		return cur ? cur.name : null;
+	}
+
+	const fmt = (s) => Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0');
+
+	// Two trackers, not one. Tiles only need re-rendering when the SPEAKER
+	// changes, but the caption must follow every TURN — and a speaker holds the
+	// floor across consecutive turns often enough that keying both on the name
+	// leaves the caption stranded on an earlier turn after a scrub.
+	let lastName = null;
+	let lastSeq = null;
+	function paint() {
+		const cur = timeline.find((x) => clock >= x.start && clock < x.end) || null;
+		const name = cur ? cur.name : null;
+		if (name !== lastName) {
+			lastName = name;
+			render(name);
+		}
+		const seq = cur ? cur.seq : null;
+		if (seq !== lastSeq) {
+			lastSeq = seq;
+			if (cur) {
+				const p = people.find((q) => q.name === cur.name);
+				whoEl.textContent = cur.name;
+				whoEl.style.setProperty('--spk', p.color);
+				textEl.textContent = cur.text;
+			}
+		}
+		tcEl.textContent = fmt(clock) + ' / ' + fmt(total);
+		scrub.value = String(Math.round((clock / total) * 1000));
+	}
+
+	function frame(now) {
+		if (!playing) return;
+		if (last !== null) clock = Math.min(total, clock + ((now - last) / 1000) * speed);
+		last = now;
+		paint();
+		if (clock >= total) {
+			setPlaying(false);
+			playBtn.textContent = 'Replay';
+			return;
+		}
+		requestAnimationFrame(frame);
+	}
+
+	const wrapEl = document.querySelector('.wrap');
+	function setPlaying(v) {
+		playing = v;
+		playBtn.textContent = v ? 'Pause' : 'Play';
+		wrapEl.classList.toggle('is-playing', v);
+	}
+
+	playBtn.addEventListener('click', () => {
+		if (clock >= total) clock = 0;
+		setPlaying(!playing);
+		last = null;
+		if (playing) requestAnimationFrame(frame);
+	});
+
+	scrub.addEventListener('input', () => {
+		clock = (Number(scrub.value) / 1000) * total;
+		last = null;
+		paint();
+	});
+
+	document.querySelectorAll('.seg button').forEach((b) => {
+		b.addEventListener('click', () => {
+			arrangement = b.dataset.arr;
+			document.querySelectorAll('.seg button').forEach((o) =>
+				o.setAttribute('aria-pressed', String(o === b))
+			);
+			lastName = null;
+			render(lastNameOf());
+			paint();
+		});
+	});
+
+	document.querySelectorAll('.speeds button').forEach((b) => {
+		b.addEventListener('click', () => {
+			speed = Number(b.dataset.sp);
+			document.querySelectorAll('.speeds button').forEach((o) =>
+				o.setAttribute('aria-pressed', String(o === b))
+			);
+		});
+	});
+
+	render(null);
+	paint();
+</script>

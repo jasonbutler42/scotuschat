@@ -152,6 +152,11 @@ been careful about. It would need its own decision, not an assumption.
 
 ## What to do first, and it costs nothing
 
+**Done, 2026-08-31 — see [[004-argument-as-a-call]]** (`.planning/spikes/`), which
+mocks both arrangements against the real rebuttal of this argument, playable, with
+synthetic timings so it engages no licensing question. Still unshown to anyone; the
+answer is not in yet.
+
 Do not build it. Mock **one frozen moment** of one argument, two ways — grid and
 courtroom arrangement — and show them to people alongside Oyez's own player. No
 audio, no timings, no licensing question engaged. That tests the actual

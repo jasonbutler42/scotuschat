@@ -5,17 +5,17 @@ milestone_name: Import & Provenance Re-model
 current_phase: 51
 current_phase_name: Design System & Noun Alignment
 status: "Phase 50 COMPLETE and VERIFIED 2026-08-27; debridement pass done 2026-08-27. All 7 plans, all 4 waves, 4/4 success criteria verified in 50-VERIFICATION.md. UAT complete 35/35. Phase-50 verification also closed 50-REVIEW.md CR-01 and CR-02 and the SC-4 ungated-writer gap. One provenance-label defect (trivial-ACCEPT restamp) accepted as known debt under an operator override and logged to deferred-items.md. Next: Phase 51 (Design System & Noun Alignment), the last v1.8 phase."
-stopped_at: Completed 51-08-PLAN.md
-last_updated: "2026-08-28T19:24:49.639Z"
-last_activity: 2026-08-28
-last_activity_desc: Phase 51 Wave 3 plan 51-08 (arguments term index + term detail, D-16 Variant A TermRow, /cases API surface retired) complete
-state_head: c39ac456712362235c0879744643e14b6c05f8cd
+stopped_at: Completed 51-09-PLAN.md (all 3 tasks). Next: 51-10 — the operator-ruling checkpoint, autonomous:false.
+last_updated: "2026-08-31T14:55:00.000Z"
+last_activity: 2026-08-31
+last_activity_desc: Plan 51-09 complete — tokenize-styles script (26 unit tests), 1,566 literals converted across 22 .svelte files, and 51-ADMIN-ARTIFACTS.md written for the 51-10 ruling checkpoint. Zero mapped hex / numeric font-size / numeric font-weight remain; the 29 surviving hexes are the token map's 10 open rows, awaiting operator decisions. Five real-browser tests could not run in this environment (Chromium missing libnspr4).
+state_head: 504171a6c4dcdb96233dd97a5ab2ce045ff06ab1
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 45
-  completed_plans: 43
-  percent: 80
+  completed_plans: 44
+  percent: 82
 ---
 
 # Project State

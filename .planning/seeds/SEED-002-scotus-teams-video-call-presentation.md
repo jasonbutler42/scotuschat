@@ -11,6 +11,8 @@ scope: medium — a second VIEW inside scotuschat, not a separate project
 
 ## The idea, as the operator framed it
 
+*Originated by Alice, relayed by the operator 2026-08-29.*
+
 Oyez already has the audio synchronised to the written transcript. Use that data
 to present an argument as a **video call**: multiple windows, one per
 participant, and whoever is speaking takes centre stage. Oyez's own listening
@@ -94,7 +96,13 @@ sits on one side and advocates on the other, and **a uniform tile grid erases
 exactly that.** The call metaphor may therefore be *less* faithful to the
 proceeding than the chat layout already is.
 
-**The fork worth exploring at mockup time:** lay the tiles out asymmetrically —
+**RESOLVED 2026-08-31 — the courtroom arrangement wins.** Tested via
+[[004-argument-as-a-call]] with the operator and with Alice, who originated the idea and
+reached the same conclusion independently. The uniform grid is kept alongside it, because
+seeing the two together is what makes the bench/lectern separation legible. So: keep the
+call *concept*, drop the uniform-grid *geometry*.
+
+**The fork as it was framed before that test:** lay the tiles out asymmetrically —
 bench in an arc, advocate facing them — and it stops being a Teams call and
 becomes a courtroom arrangement. That keeps the spatial truth and dodges the
 flattening problem, at the cost of the familiarity that motivated the idea in

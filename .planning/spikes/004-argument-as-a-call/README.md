@@ -3,7 +3,7 @@ spike: "004"
 name: argument-as-a-call
 type: design
 validates: "Given one argument rendered as a call in two arrangements — a uniform Teams-style grid and a courtroom layout — then which arrangement readers prefer, and whether either can present speaker prominence without asserting a conclusion the apolitical constraint forbids"
-verdict: OPEN — awaiting user testing
+verdict: RESOLVED — courtroom arrangement chosen 2026-08-31; grid kept as its foil
 related: ["SEED-002-scotus-teams-video-call-presentation"]
 tags: [design, mockup, presentation, seed-002, p-03, apolitical]
 ---
@@ -80,7 +80,21 @@ invented.
   stranded on its own row, which reads as an odd one out — the exact impression the layout
   must not create.
 
-## Findings so far (author's, not tested)
+## Verdict — courtroom, decided 2026-08-31
+
+**Bench on top, advocates at the bottom is the chosen arrangement.** Confirmed by the
+operator and independently by Alice, who originated the idea — she reached the same
+conclusion unprompted, which is the closest thing to a real signal this has had.
+
+**The call grid stays.** Not as a rejected alternative but as the thing that makes the
+courtroom version legible: shown side by side, the grid is what demonstrates how much
+work the bench/lectern separation is doing. Keep both arrangements in any future
+implementation of this view, at least for evaluation.
+
+This settles Pitfall 2 in the seed — the metaphor did fight the material, and the
+resolution is to keep the call *concept* while dropping the uniform grid *geometry*.
+
+## Findings that led there (author's, pre-test)
 
 The courtroom arrangement carries more than expected for one hairline rule and a gap: it
 says what kind of proceeding this is, which the grid does not. Seven equal tiles could be
@@ -90,8 +104,8 @@ The courtroom layout is also the more defensible of the two under the operator's
 fixed positions reflecting where people sat are a fact about the room, whereas any uniform
 grid invites the question of what its order means.
 
-**None of this is the answer.** The spike exists to be shown to people, and the author's
-read is the hypothesis under test, not the result.
+These were written before the spike was shown to anyone. They are recorded as the
+hypothesis, and the verdict above is what actually confirmed it.
 
 ## Notes for whoever picks this up
 

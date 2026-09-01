@@ -807,7 +807,7 @@
 				background-color: var(--color-bg);
 				border: 1px solid var(--color-border);
 				border-radius: 6px;
-				padding: var(--space-sm) 12px;
+				padding: var(--space-sm) var(--space-md);
 				font-size: var(--font-size-body);
 				color: var(--color-text-primary);
 				min-height: var(--touch-target-dense);
@@ -939,7 +939,7 @@
 				background-color: var(--color-surface);
 				border: 1px solid var(--color-border);
 				border-radius: 6px;
-				padding: var(--space-sm) 12px;
+				padding: var(--space-sm) var(--space-md);
 				min-height: var(--touch-target-dense);
 				box-sizing: border-box;
 			"
@@ -1014,7 +1014,7 @@
 				background-color: var(--color-bg);
 				border: 1px solid var(--color-border);
 				border-radius: 6px;
-				padding: var(--space-sm) 12px;
+				padding: var(--space-sm) var(--space-md);
 				font-size: var(--font-size-body);
 				color: var(--color-text-primary);
 				min-height: var(--touch-target-dense);
@@ -1070,7 +1070,7 @@
 					background-color: var(--color-bg);
 					border: 1px solid var(--color-accent);
 					border-radius: 6px;
-					padding: 6px var(--space-xl) 6px 10px;
+					padding: 6px var(--space-2xl) 6px 10px;
 					font-size: var(--font-size-body);
 					color: var(--color-text-primary);
 					width: 100%;
@@ -1169,7 +1169,7 @@
 								role="option"
 								aria-selected={false}
 								style="
-									padding: var(--space-sm) 12px;
+									padding: var(--space-sm) var(--space-md);
 									font-size: var(--font-size-body);
 									color: var(--color-text-primary);
 									cursor: pointer;
@@ -1250,14 +1250,14 @@
 		background-color: var(--color-surface);
 		border: 1px solid var(--color-border);
 		border-radius: 8px;
-		padding: var(--space-lg);
-		margin-bottom: var(--space-lg);
+		padding: var(--space-xl);
+		margin-bottom: var(--space-xl);
 	"
 >
 	<!-- Task 4 checkpoint remediation (44-09, item 4, confirmed via Figma
 	     node 4207:116): the heading and the progress indicator share one
 	     flex row, heading left, pill right. -->
-	<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: var(--space-md);">
+	<div style="display: flex; align-items: center; justify-content: space-between; gap: var(--space-md); margin-bottom: var(--space-lg);">
 		<h2 style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0; line-height: 1.2;">
 			Resolve
 		</h2>
@@ -1279,7 +1279,7 @@
 					background-color: var(--color-bg);
 					border: 1px solid var(--color-border);
 					border-radius: 12px;
-					padding: var(--space-xs) 12px var(--space-xs) 10px;
+					padding: var(--space-xs) var(--space-md) var(--space-xs) 10px;
 				"
 			>
 				<span
@@ -1302,7 +1302,7 @@
 	</div>
 
 	{#if peopleLoadError}
-		<p role="alert" style="margin-bottom: 12px; font-size: var(--font-size-caption); color: var(--color-status-warning); font-family: monospace;">
+		<p role="alert" style="margin-bottom: var(--space-md); font-size: var(--font-size-caption); color: var(--color-status-warning); font-family: monospace;">
 			Warning: could not load people list — typeahead may be incomplete. ({peopleLoadError})
 		</p>
 	{/if}
@@ -1344,9 +1344,9 @@
 		<table style="width: 100%; border-collapse: collapse; min-width: 720px;">
 			<thead>
 				<tr>
-					<th scope="col" style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); border-bottom: 1px solid var(--color-border); padding: var(--space-sm) 0; padding-right: 12px; text-align: left; text-transform: uppercase; letter-spacing: 0.04em;">Raw Label</th>
-					<th scope="col" style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); border-bottom: 1px solid var(--color-border); padding: var(--space-sm) 0; padding-right: 12px; text-align: left; text-transform: uppercase; letter-spacing: 0.04em;">Resolved As</th>
-					<th scope="col" style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); border-bottom: 1px solid var(--color-border); padding: var(--space-sm) 0; padding-right: 12px; text-align: left; text-transform: uppercase; letter-spacing: 0.04em;">Argument Role</th>
+					<th scope="col" style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); border-bottom: 1px solid var(--color-border); padding: var(--space-sm) 0; padding-right: var(--space-md); text-align: left; text-transform: uppercase; letter-spacing: 0.04em;">Raw Label</th>
+					<th scope="col" style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); border-bottom: 1px solid var(--color-border); padding: var(--space-sm) 0; padding-right: var(--space-md); text-align: left; text-transform: uppercase; letter-spacing: 0.04em;">Resolved As</th>
+					<th scope="col" style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); border-bottom: 1px solid var(--color-border); padding: var(--space-sm) 0; padding-right: var(--space-md); text-align: left; text-transform: uppercase; letter-spacing: 0.04em;">Argument Role</th>
 					<th scope="col" style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); border-bottom: 1px solid var(--color-border); padding: var(--space-sm) 0; text-align: left; text-transform: uppercase; letter-spacing: 0.04em;">Descriptor</th>
 				</tr>
 			</thead>
@@ -1371,14 +1371,14 @@
 
 					<tr>
 						<!-- Column 1: Raw Label -->
-						<td style="font-size: var(--font-size-body); color: var(--color-text-primary); border-bottom: 1px solid var(--color-border); padding: 12px 0; padding-right: 12px;">
+						<td style="font-size: var(--font-size-body); color: var(--color-text-primary); border-bottom: 1px solid var(--color-border); padding: var(--space-md) 0; padding-right: var(--space-md);">
 							{@render rawLabelBadge(row.raw_speaker_label)}
 						</td>
 
 						<!-- Column 2: Resolved As — the Bench/Advocate toggle and the person control
 						     are stacked in this single cell (RESOLVE-07); the person control is a
 						     single always-rendered dropdown, never a click-to-reveal link (RESOLVE-08). -->
-						<td style="font-size: var(--font-size-body); color: var(--color-text-primary); border-bottom: 1px solid var(--color-border); padding: 12px 0; padding-right: 12px;">
+						<td style="font-size: var(--font-size-body); color: var(--color-text-primary); border-bottom: 1px solid var(--color-border); padding: var(--space-md) 0; padding-right: var(--space-md);">
 							<!-- Task 4 checkpoint remediation (44-09, items 2 and 5, confirmed via
 							     Figma nodes 4183:23/4183:25/4205:81/4205:111): corrected order is
 							     (1) toggle, (2) person control, (3) the tag, (4) one combined hint
@@ -1392,7 +1392,7 @@
 									{saveState[row.participant_id]?.error}
 								</p>
 							{/if}
-							<div style="margin-top: 12px;">
+							<div style="margin-top: var(--space-md);">
 								{@render personDropdown(row, label, s, gated, side)}
 							</div>
 							<!-- Plan 44-09 (RESOLVE-16): the row cue tag — a pill (border only, no
@@ -1446,7 +1446,7 @@
 						</td>
 
 						<!-- Column 3: Argument Role — bench lock / Missing tenure, or advocate dropdown -->
-						<td style="font-size: var(--font-size-body); color: var(--color-text-primary); border-bottom: 1px solid var(--color-border); padding: 12px 0; padding-right: 12px;">
+						<td style="font-size: var(--font-size-body); color: var(--color-text-primary); border-bottom: 1px solid var(--color-border); padding: var(--space-md) 0; padding-right: var(--space-md);">
 							{@render argumentRoleCell(row, side, gated, rowEditable, saveState[row.participant_id]?.saving === true)}
 							<!-- Phase 44 (RESOLVE-05, D-08/D-09): Argument Role hint — state-dependent,
 							     never a flat echo of side; forks on the same side/missing_tenure/gated
@@ -1468,7 +1468,7 @@
 						</td>
 
 						<!-- Column 4: Descriptor (renamed from Title, Phase 44 RESOLVE-04) — always renders -->
-						<td style="font-size: var(--font-size-body); color: var(--color-text-primary); border-bottom: 1px solid var(--color-border); padding: 12px 0;">
+						<td style="font-size: var(--font-size-body); color: var(--color-text-primary); border-bottom: 1px solid var(--color-border); padding: var(--space-md) 0;">
 							{@render descriptorCell(row, side, rowEditable, saveState[row.participant_id]?.saving === true, sourcePrefix)}
 						</td>
 					</tr>
@@ -1502,7 +1502,7 @@
 					}
 				};
 			}}
-			style="margin-top: var(--space-lg);"
+			style="margin-top: var(--space-xl);"
 		>
 			<input type="hidden" name="matches" value={matchesJson} />
 			<button
@@ -1517,7 +1517,7 @@
 					background: transparent;
 					border: 1px solid {(reviewProgress.remaining > 0 || continueSubmitting) ? 'var(--color-border)' : 'var(--color-accent)'};
 					border-radius: 6px;
-					padding: 12px var(--space-lg);
+					padding: var(--space-md) var(--space-xl);
 					cursor: {(reviewProgress.remaining > 0 || continueSubmitting) ? 'default' : 'pointer'};
 				"
 			>

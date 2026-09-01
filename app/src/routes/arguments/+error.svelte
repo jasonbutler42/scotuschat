@@ -24,7 +24,7 @@
 		style="
 			max-width: 480px;
 			margin: 0 auto;
-			padding: var(--space-2xl) var(--space-lg);
+			padding: var(--space-3xl) var(--space-xl);
 			text-align: center;
 		"
 	>

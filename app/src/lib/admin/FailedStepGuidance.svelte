@@ -26,10 +26,10 @@
 	let rawError = $derived(failedRecovery?.raw_error ?? fallbackErrorMessage ?? null);
 </script>
 
-<div style="margin-top: 12px;">
+<div style="margin-top: var(--space-md);">
 	<h3 style="font-size: var(--font-size-body); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-sm) 0;">This run failed</h3>
 	<!-- role="alert" scoped to the immediate failure summary only, not the raw details block -->
-	<p role="alert" style="font-size: var(--font-size-body); font-weight: var(--font-weight-regular); color: var(--color-text-primary); margin: 0 0 12px 0;">
+	<p role="alert" style="font-size: var(--font-size-body); font-weight: var(--font-weight-regular); color: var(--color-text-primary); margin: 0 0 var(--space-md) 0;">
 		{guidanceText}
 	</p>
 
@@ -38,7 +38,7 @@
 	</a>
 
 	{#if rawError}
-		<details style="margin-top: var(--space-md);">
+		<details style="margin-top: var(--space-lg);">
 			<summary style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); cursor: pointer;">
 				Technical details
 			</summary>

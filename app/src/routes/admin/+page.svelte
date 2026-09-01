@@ -103,7 +103,7 @@
 		style="
 			background-color: var(--color-surface);
 			border-bottom: 1px solid var(--color-border);
-			padding: var(--space-md) var(--space-lg);
+			padding: var(--space-lg) var(--space-xl);
 		"
 	>
 		<h1
@@ -124,7 +124,7 @@
 		style="
 			max-width: 860px;
 			margin: 0 auto;
-			padding: var(--space-2xl) var(--space-lg);
+			padding: var(--space-3xl) var(--space-xl);
 		"
 	>
 		<!-- ═══════════════════════════════════════════════════════════════════
@@ -135,10 +135,10 @@
 				background-color: var(--color-surface);
 				border: 1px solid var(--color-border);
 				border-radius: 8px;
-				padding: var(--space-lg);
+				padding: var(--space-xl);
 			"
 		>
-			<h2 style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-md) 0;">
+			<h2 style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-lg) 0;">
 				Needs Attention
 			</h2>
 
@@ -153,7 +153,7 @@
 				</div>
 			{:else}
 				<!-- People sub-list (combined bench+advocate, D-05 amendment) -->
-				<div style="margin-bottom: var(--space-md);">
+				<div style="margin-bottom: var(--space-lg);">
 					<h3 style="font-size: var(--font-size-caption); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-sm) 0;">
 						People
 					</h3>
@@ -185,7 +185,7 @@
 				</div>
 
 				<!-- Justices sub-list (bench-only tenure gaps, D-06) -->
-				<div style="margin-bottom: var(--space-md);">
+				<div style="margin-bottom: var(--space-lg);">
 					<h3 style="font-size: var(--font-size-caption); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-sm) 0;">
 						Justices
 					</h3>
@@ -275,13 +275,13 @@
 			style="
 				display: grid;
 				grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-				gap: var(--space-xl);
-				margin-top: var(--space-xl);
+				gap: var(--space-2xl);
+				margin-top: var(--space-2xl);
 			"
 		>
 			<StatCard title="Arguments">
 				{#snippet children()}
-					<p style="font-size: var(--font-size-display); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-md) 0; line-height: 1.2;">
+					<p style="font-size: var(--font-size-display); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-lg) 0; line-height: 1.2;">
 						{formatCount(data.argumentStats.total)}
 					</p>
 					<div style="display: flex; flex-direction: column; gap: var(--space-sm);">
@@ -309,7 +309,7 @@
 
 			<StatCard title="People">
 				{#snippet children()}
-					<p style="font-size: var(--font-size-display); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-md) 0; line-height: 1.2;">
+					<p style="font-size: var(--font-size-display); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-lg) 0; line-height: 1.2;">
 						{formatCount(data.peopleStats.total)}
 					</p>
 					<a
@@ -335,7 +335,7 @@
 						{formatCount(data.pipelineStats.recent_count)}
 						<span style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary);">(last 30 days)</span>
 					</p>
-					<p style="font-size: var(--font-size-caption); color: var(--color-text-secondary); margin: 0 0 var(--space-md) 0;">
+					<p style="font-size: var(--font-size-caption); color: var(--color-text-secondary); margin: 0 0 var(--space-lg) 0;">
 						Last activity: {formatDate(data.pipelineStats.last_activity_at)}
 					</p>
 					<a
@@ -354,7 +354,7 @@
 			     link text pluralizes (E8 zero-one-many). -->
 			<StatCard title="Review queue">
 				{#snippet children()}
-					<p style="font-size: var(--font-size-display); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-md) 0; line-height: 1.2;">
+					<p style="font-size: var(--font-size-display); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-lg) 0; line-height: 1.2;">
 						{formatCount(data.reviewStats.total)}
 					</p>
 					{#if data.reviewStats.total === 0}
@@ -383,8 +383,8 @@
 			style="
 				border: 1px dashed var(--color-border);
 				border-radius: 8px;
-				padding: var(--space-lg);
-				margin-top: var(--space-2xl);
+				padding: var(--space-xl);
+				margin-top: var(--space-3xl);
 				opacity: 0.7;
 			"
 		>
@@ -407,11 +407,11 @@
 					background-color: var(--color-surface);
 					border: 1px solid var(--color-border);
 					border-radius: 8px;
-					padding: var(--space-lg);
-					margin-top: var(--space-2xl);
+					padding: var(--space-xl);
+					margin-top: var(--space-3xl);
 				"
 			>
-				<h2 style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-md) 0; line-height: 1.2;">
+				<h2 style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-lg) 0; line-height: 1.2;">
 					Dev Tools
 					<span
 						style="
@@ -433,7 +433,7 @@
 					</span>
 				</h2>
 
-				<p style="font-size: var(--font-size-caption); color: var(--color-text-secondary); margin: 0 0 var(--space-md) 0;">
+				<p style="font-size: var(--font-size-caption); color: var(--color-text-secondary); margin: 0 0 var(--space-lg) 0;">
 					Wipes every argument, utterance, person, court tenure, and participant in this
 					database, then reseeds exactly the four confirmed fixtures (see FIXTURES.md)
 					through the corpus importer.
@@ -549,7 +549,7 @@
 
 				{#if resetResult}
 					<!-- Success state: badge + one line per reseeded fixture, natural wrap. -->
-					<div style="margin-top: var(--space-md);">
+					<div style="margin-top: var(--space-lg);">
 						<span
 							style="
 								display: inline-flex;
@@ -585,7 +585,7 @@
 
 				<!-- Unresolved-speaker seeder (Phase 49, D-33a): additive, single-row, not
 				     destructive — secondary/muted treatment, no two-step confirm. -->
-				<div style="margin-top: var(--space-lg); padding-top: var(--space-md); border-top: 1px solid var(--color-border);">
+				<div style="margin-top: var(--space-xl); padding-top: var(--space-lg); border-top: 1px solid var(--color-border);">
 					<p style="font-size: var(--font-size-caption); color: var(--color-text-secondary); margin: 0 0 var(--space-sm) 0;">
 						Nulls the resolved speaker on one advocate row of the Complexity fixture, so the
 						unresolved-speaker case can be produced on demand.

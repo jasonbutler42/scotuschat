@@ -206,13 +206,13 @@
 </script>
 
 <main style="background-color: var(--color-bg); min-height: 100vh;">
-	<header style="background-color: var(--color-surface); border-bottom: 1px solid var(--color-border); padding: var(--space-md) var(--space-lg);">
+	<header style="background-color: var(--color-surface); border-bottom: 1px solid var(--color-border); padding: var(--space-lg) var(--space-xl);">
 		<h1 style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0;">
 			Run #{liveJob.id}
 		</h1>
 	</header>
 
-	<div style="max-width: 860px; margin: 0 auto; padding: var(--space-2xl) var(--space-lg);">
+	<div style="max-width: 860px; margin: 0 auto; padding: var(--space-3xl) var(--space-xl);">
 		<!-- Phase 25: Run status card — first workflow card after the page header (D-01 through D-04, D-18,
 		     D-20, D-21, PJOB-01, PJOB-02, PJOB-20). Replaces the old floating Create Argument button and
 		     the old "Ready to publish" / post-approval provenance panels below. -->
@@ -240,7 +240,7 @@
 		<!-- Step cards container — aria-live polite so screen readers announce step changes -->
 		<div
 			aria-live="polite"
-			style="display: flex; flex-direction: column; gap: var(--space-md); margin-bottom: var(--space-lg);"
+			style="display: flex; flex-direction: column; gap: var(--space-lg); margin-bottom: var(--space-xl);"
 		>
 			{#each STEP_ORDER as step}
 				{@const effectiveJob = (liveJob.status === 'running' && liveJob.current_step === null)
@@ -253,7 +253,7 @@
 				{@const borderOverride = cardBorderStyle(status)}
 
 				<div
-					style="background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; padding: var(--space-lg); {borderOverride}"
+					style="background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; padding: var(--space-xl); {borderOverride}"
 				>
 					<!-- Step card header row -->
 					<div style="display: flex; align-items: center; justify-content: space-between;">
@@ -293,14 +293,14 @@
 					<!-- Parse stat rows (D-10/PIPE-21, PJOB-10/11/12) — only when parse completed -->
 					{#if step === 'parse' && status === 'completed' && liveJob.parse_stats}
 						{@const ps = liveJob.parse_stats}
-						<div style="margin-top: 12px; display: flex; flex-direction: column;">
+						<div style="margin-top: var(--space-md); display: flex; flex-direction: column;">
 							<!-- Utterances — never N/A (PJOB-11) -->
-							<div style="margin-bottom: 12px;">
+							<div style="margin-bottom: var(--space-md);">
 								<span style="display: block; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin-bottom: var(--space-xs);">Utterances</span>
 								<span style="font-size: var(--font-size-body); color: var(--color-text-primary);">{ps.utterance_count}</span>
 							</div>
 							<!-- Bench speakers (PJOB-10) — N/A when null -->
-							<div style="margin-bottom: 12px;">
+							<div style="margin-bottom: var(--space-md);">
 								<span style="display: block; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin-bottom: var(--space-xs);">Bench speakers</span>
 								{#if ps.bench_count != null}
 									<span style="font-size: var(--font-size-body); color: var(--color-text-primary);">{ps.bench_count}</span>
@@ -309,7 +309,7 @@
 								{/if}
 							</div>
 							<!-- Advocate speakers (PJOB-10) — N/A when null -->
-							<div style="margin-bottom: 12px;">
+							<div style="margin-bottom: var(--space-md);">
 								<span style="display: block; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin-bottom: var(--space-xs);">Advocate speakers</span>
 								{#if ps.advocate_count != null}
 									<span style="font-size: var(--font-size-body); color: var(--color-text-primary);">{ps.advocate_count}</span>
@@ -318,7 +318,7 @@
 								{/if}
 							</div>
 							<!-- Total speakers (PJOB-10) — N/A when null -->
-							<div style="margin-bottom: 12px;">
+							<div style="margin-bottom: var(--space-md);">
 								<span style="display: block; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin-bottom: var(--space-xs);">Total speakers</span>
 								{#if ps.total_speaker_count != null}
 									<span style="font-size: var(--font-size-body); color: var(--color-text-primary);">{ps.total_speaker_count}</span>
@@ -336,22 +336,22 @@
 								interpretation for argued date (raw ISO string vs. formatted date).
 							-->
 							<!-- Case name from cover_metadata (PJOB-10/12) — NOT data.argument.case_name (Pitfall 7) -->
-							<div style="margin-bottom: 12px;">
+							<div style="margin-bottom: var(--space-md);">
 								<span style="display: block; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin-bottom: var(--space-xs);">Case name</span>
 								<CopyableExtractedValue value={ps.case_name} copyLabel="Copy case name" confidence="Medium" raw={ps.case_name} />
 							</div>
 							<!-- Argued date from cover_metadata (PJOB-10/12) — formatted via formatDate; raw is the exact ISO source -->
-							<div style="margin-bottom: 12px;">
+							<div style="margin-bottom: var(--space-md);">
 								<span style="display: block; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin-bottom: var(--space-xs);">Argued</span>
 								<CopyableExtractedValue value={ps.argued_date ? formatDate(ps.argued_date) : null} copyLabel="Copy argued date" confidence="Medium" raw={ps.argued_date} />
 							</div>
 							<!-- Docket(s) from cover_metadata (PJOB-10/12) — read-only pill or N/A -->
-							<div style="margin-bottom: 12px;">
+							<div style="margin-bottom: var(--space-md);">
 								<span style="display: block; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin-bottom: var(--space-xs);">Docket(s)</span>
 								<CopyableExtractedValue value={ps.primary_docket} copyLabel="Copy docket" variant="pill" confidence="Medium" raw={ps.primary_docket} />
 							</div>
 							<!-- Question number from Argument.question_number (PJOB-10/12) — N/A when null -->
-							<div style="margin-bottom: 12px;">
+							<div style="margin-bottom: var(--space-md);">
 								<span style="display: block; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin-bottom: var(--space-xs);">Question number</span>
 								<CopyableExtractedValue value={ps.question_number != null ? String(ps.question_number) : null} copyLabel="Copy question number" confidence="Medium" raw={ps.question_number != null ? String(ps.question_number) : null} />
 							</div>
@@ -360,7 +360,7 @@
 
 					<!-- View source PDF link (PJOB-09): inside Ingest card only -->
 					{#if step === 'ingest' && (liveJob.spaces_key || liveJob.pdf_url || liveJob.original_filename)}
-						<div style="margin-top: 12px;">
+						<div style="margin-top: var(--space-md);">
 							<a
 								href="/admin/pipeline/{liveJob.id}/pdf"
 								target="_blank"
@@ -407,15 +407,15 @@
 		{#if liveJob.status === 'completed' && data.participants.length > 0}
 			<div
 				style="
-					margin-top: var(--space-xl);
+					margin-top: var(--space-2xl);
 					background-color: var(--color-surface);
 					border: 1px solid var(--color-border);
 					border-radius: 8px;
-					padding: var(--space-lg);
-					margin-bottom: var(--space-lg);
+					padding: var(--space-xl);
+					margin-bottom: var(--space-xl);
 				"
 			>
-				<h2 style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-md) 0; line-height: 1.2;">
+				<h2 style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-lg) 0; line-height: 1.2;">
 					{data.participants.length} resolved participant{data.participants.length === 1 ? '' : 's'}
 				</h2>
 				<a
@@ -427,7 +427,7 @@
 						color: var(--color-accent);
 						border: 1px solid var(--color-border);
 						border-radius: 6px;
-						padding: var(--space-sm) var(--space-md);
+						padding: var(--space-sm) var(--space-lg);
 						text-decoration: none;
 					"
 				>
@@ -438,8 +438,8 @@
 
 		<!-- Danger Zone — pipeline run delete section (ADMIN-02, D-09, D-22) -->
 		<!-- Last card on the page in every state per UI-SPEC Layout Contract. -->
-		<div style="background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; padding: var(--space-lg); margin-bottom: var(--space-lg);">
-			<h2 style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-md) 0; line-height: 1.2;">
+		<div style="background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; padding: var(--space-xl); margin-bottom: var(--space-xl);">
+			<h2 style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-lg) 0; line-height: 1.2;">
 				Danger Zone
 			</h2>
 

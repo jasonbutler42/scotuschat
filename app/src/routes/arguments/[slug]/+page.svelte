@@ -267,7 +267,7 @@
 		style="
 			background-color: var(--color-surface);
 			border-bottom: 1px solid var(--color-border);
-			padding: var(--space-md) var(--space-lg);
+			padding: var(--space-lg) var(--space-xl);
 		"
 	>
 		<div style="max-width: 1200px; margin: 0 auto;">
@@ -300,7 +300,7 @@
 			<!-- Both columns use --color-text-secondary for speaker names — apolitical framing
 			     constraint (only the avatar fill differs by side); this note is load-bearing,
 			     not decorative — do not "fix" it into a side-varying name colour. -->
-			<div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md); margin-top: var(--space-md);">
+			<div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-lg); margin-top: var(--space-lg);">
 				<!-- Bench column -->
 				<div>
 					<p
@@ -408,7 +408,7 @@
 		<!-- Chat column: utterance stream, grouped into runs (D-19). No `overflow`
 		     property is set on this element or any ancestor between here and the
 		     document scroll root — see the sticky-avatar ancestor audit below. -->
-		<div style="padding: var(--space-2xl) var(--transcript-pad-x);">
+		<div style="padding: var(--space-3xl) var(--transcript-pad-x);">
 			{#if !data.utterances || data.utterances.length === 0}
 				<!-- Empty state -->
 				<p
@@ -429,7 +429,7 @@
 				     continued speaker's turns). Within a run, the smaller step lives on
 				     the bubble-stack column's own gap, set once below. -->
 				{#each renderItems as item, i (i)}
-					<div style="margin-top: {i === 0 ? '0' : 'var(--space-xl)'};">
+					<div style="margin-top: {i === 0 ? '0' : 'var(--space-2xl)'};">
 						{#if item.kind === 'stage'}
 							<div id={anchorId(item.utterance)}>
 								<StageDirection utterance={item.utterance} />

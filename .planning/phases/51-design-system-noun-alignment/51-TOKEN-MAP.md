@@ -105,11 +105,18 @@ Applicable only inside `padding`, `padding-*`, `margin`, `margin-*`, `gap`, `row
 |---|---|
 | 4px | `var(--space-xs)` |
 | 8px | `var(--space-sm)` |
-| 16px | `var(--space-md)` |
-| 24px | `var(--space-lg)` |
-| 32px | `var(--space-xl)` |
-| 48px | `var(--space-2xl)` |
-| — (0 occurrences today) | `var(--space-3xl)` (64px) — reserved per D-09 for the redesigned public reading surfaces; not required by any existing site. |
+| 12px | `var(--space-md)` |
+| 16px | `var(--space-lg)` |
+| 24px | `var(--space-xl)` |
+| 32px | `var(--space-2xl)` |
+| 48px | `var(--space-3xl)` |
+| — (0 occurrences today) | `var(--space-4xl)` (64px) — reserved per D-09 for the redesigned public reading surfaces; not required by any existing site. |
+
+> **Amended 2026-09-01.** 12px was originally recorded below as a residual to report and
+> never round. The conversion then found it at 153 sites — second only to 8px and ahead
+> of 16px — which is not drift but a step the scale had no name for. It was added, and
+> the names from `md` up shifted one place. The residual table below is left as written
+> so the reasoning that led here is still legible; only the 12px row is now closed.
 
 ### Residuals — not on the scale, unmapped
 
@@ -117,8 +124,8 @@ Applicable only inside `padding`, `padding-*`, `margin`, `margin-*`, `gap`, `row
 |---|---|---|
 | 2px | 25 | Sub-4px fine adjustment (e.g. border widths expressed via padding compensation). Report each site during the sweep; do not round up to `--space-xs`. |
 | 6px | 15 | Between `--space-xs` (4px) and `--space-sm` (8px). Report, do not round. |
-| 12px | 80 | Between `--space-sm` (8px) and `--space-md` (16px) — the single most common residual. Report, do not round. |
-| 20px | 5 | Between `--space-md` (16px) and `--space-lg` (24px). Report, do not round. |
+| ~~12px~~ | 153 | **CLOSED 2026-09-01 — promoted to `--space-md`.** Was: between `--space-sm` and the then-`--space-md` (16px), the single most common residual. |
+| 20px | 5 | Between `--space-lg` (16px) and `--space-xl` (24px) under the amended names. Report, do not round. |
 
 ---
 

@@ -182,7 +182,7 @@
 		style="
 			background-color: var(--color-surface);
 			border-bottom: 1px solid var(--color-border);
-			padding: var(--space-md) var(--space-lg);
+			padding: var(--space-lg) var(--space-xl);
 		"
 	>
 		<h1
@@ -199,7 +199,7 @@
 	</header>
 
 	<!-- Inner content container -->
-	<div style="max-width: 860px; margin: 0 auto; padding: var(--space-2xl) var(--space-lg);">
+	<div style="max-width: 860px; margin: 0 auto; padding: var(--space-3xl) var(--space-xl);">
 
 		<!-- New Run card -->
 		<div
@@ -207,7 +207,7 @@
 				background-color: var(--color-surface);
 				border: 1px solid var(--color-border);
 				border-radius: 8px;
-				padding: var(--space-xl);
+				padding: var(--space-2xl);
 			"
 		>
 			<h2
@@ -215,7 +215,7 @@
 					font-size: var(--font-size-heading);
 					font-weight: var(--font-weight-semibold);
 					color: var(--color-text-primary);
-					margin: 0 0 var(--space-lg) 0;
+					margin: 0 0 var(--space-xl) 0;
 					line-height: 1.2;
 				"
 			>
@@ -230,7 +230,7 @@
 					border-radius: 6px;
 					padding: var(--space-xs);
 					display: inline-flex;
-					margin-bottom: var(--space-lg);
+					margin-bottom: var(--space-xl);
 				"
 			>
 				<button
@@ -239,7 +239,7 @@
 					onclick={() => setMode('url')}
 					style="
 						font-size: var(--font-size-caption);
-						padding: var(--space-sm) var(--space-md);
+						padding: var(--space-sm) var(--space-lg);
 						border: none;
 						cursor: pointer;
 						min-height: var(--touch-target-dense);
@@ -257,7 +257,7 @@
 					onclick={() => setMode('upload')}
 					style="
 						font-size: var(--font-size-caption);
-						padding: var(--space-sm) var(--space-md);
+						padding: var(--space-sm) var(--space-lg);
 						border: none;
 						cursor: pointer;
 						min-height: var(--touch-target-dense);
@@ -285,7 +285,7 @@
 
 				{#if mode === 'url'}
 					<!-- URL input -->
-					<div style="margin-bottom: var(--space-md);">
+					<div style="margin-bottom: var(--space-lg);">
 						<label
 							for="pdf_url"
 							style="
@@ -310,7 +310,7 @@
 								background-color: var(--color-bg);
 								border: 1px solid var(--color-border);
 								border-radius: 6px;
-								padding: var(--space-sm) 12px;
+								padding: var(--space-sm) var(--space-md);
 								font-size: var(--font-size-body);
 								color: var(--color-text-primary);
 								box-sizing: border-box;
@@ -319,7 +319,7 @@
 					</div>
 				{:else}
 					<!-- File input — only rendered in upload mode so inactive field is not submitted -->
-					<div style="margin-bottom: var(--space-md);">
+					<div style="margin-bottom: var(--space-lg);">
 						<label
 							for="pdf_file"
 							style="
@@ -344,7 +344,7 @@
 								background-color: var(--color-bg);
 								border: 1px solid var(--color-border);
 								border-radius: 6px;
-								padding: var(--space-sm) 12px;
+								padding: var(--space-sm) var(--space-md);
 								font-size: var(--font-size-body);
 								color: var(--color-text-primary);
 								box-sizing: border-box;
@@ -354,7 +354,7 @@
 				{/if}
 
 				<!-- Docket pill input (PLIST-02, D-05/D-06, UI-SPEC Component 1) — optional; triggers preflight when filled -->
-				<div style="margin-bottom: var(--space-md);">
+				<div style="margin-bottom: var(--space-lg);">
 					<label
 						for="primary_docket"
 						style="display: block; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin-bottom: var(--space-sm);"
@@ -365,7 +365,7 @@
 				</div>
 
 				<!-- Question number free-text field (PLIST-01, D-01/D-02, UI-SPEC Component 1) -->
-				<div style="margin-bottom: var(--space-md);">
+				<div style="margin-bottom: var(--space-lg);">
 					<label
 						for="question_number"
 						style="display: block; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin-bottom: var(--space-sm);"
@@ -381,7 +381,7 @@
 							background-color: var(--color-bg);
 							border: 1px solid var(--color-border);
 							border-radius: 6px;
-							padding: var(--space-sm) 12px;
+							padding: var(--space-sm) var(--space-md);
 							font-size: var(--font-size-body);
 							color: var(--color-text-primary);
 							min-height: var(--touch-target);
@@ -393,9 +393,9 @@
 
 				<!-- Duplicate warning banner (D-04/D-05/D-06, UI-SPEC Component 3) — shown when preflight finds a match -->
 				{#if duplicateWarning}
-					<div role="alert" style="background-color: var(--color-surface); border: 1px solid var(--color-status-warning); border-radius: 8px; padding: var(--space-md); margin-bottom: var(--space-md);">
+					<div role="alert" style="background-color: var(--color-surface); border: 1px solid var(--color-status-warning); border-radius: 8px; padding: var(--space-lg); margin-bottom: var(--space-lg);">
 						<p style="font-size: var(--font-size-body); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-sm) 0;">⚠ Argument already exists</p>
-						<p style="font-size: var(--font-size-caption); color: var(--color-text-secondary); margin: 0 0 12px 0;">
+						<p style="font-size: var(--font-size-caption); color: var(--color-text-secondary); margin: 0 0 var(--space-md) 0;">
 							Docket {duplicateWarning.docket} Q{duplicateWarning.question} already has an argument.
 							<a href="/admin/arguments/{duplicateWarning.argumentId}" style="color: var(--color-accent); text-decoration: underline;">View existing argument →</a>
 						</p>
@@ -403,14 +403,14 @@
 							<button
 								type="button"
 								onclick={() => { duplicateWarning = null; preflightCleared = false; }}
-								style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); background: transparent; border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) var(--space-md); min-height: var(--touch-target-dense); cursor: pointer;"
+								style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); background: transparent; border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) var(--space-lg); min-height: var(--touch-target-dense); cursor: pointer;"
 							>
 								Cancel
 							</button>
 							<button
 								type="button"
 								onclick={() => { preflightCleared = true; duplicateWarning = null; formEl.requestSubmit(); }}
-								style="font-size: var(--font-size-caption); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); background: transparent; border: 1px solid var(--color-accent); border-radius: 6px; padding: var(--space-sm) var(--space-md); min-height: var(--touch-target-dense); cursor: pointer;"
+								style="font-size: var(--font-size-caption); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); background: transparent; border: 1px solid var(--color-accent); border-radius: 6px; padding: var(--space-sm) var(--space-lg); min-height: var(--touch-target-dense); cursor: pointer;"
 							>
 								Start anyway
 							</button>
@@ -427,7 +427,7 @@
 							font-size: var(--font-size-body);
 							font-weight: var(--font-weight-regular);
 							line-height: 1.5;
-							margin: 0 0 var(--space-md) 0;
+							margin: 0 0 var(--space-lg) 0;
 						"
 					>
 						{form.error}
@@ -460,9 +460,9 @@
 		</div>
 
 		<!-- All Runs history section -->
-		<div style="margin-top: var(--space-xl);">
+		<div style="margin-top: var(--space-2xl);">
 			<!-- Section header row: h2 left, incomplete toggle right (D-13, 13-UI-SPEC §Layout Contract) -->
-			<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-md);">
+			<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-lg);">
 				<h2
 					style="
 						font-size: var(--font-size-heading);
@@ -525,7 +525,7 @@
 					font-size: var(--font-size-caption);
 					font-weight: var(--font-weight-regular);
 					color: var(--color-text-secondary);
-					margin: 0 0 var(--space-md) 0;
+					margin: 0 0 var(--space-lg) 0;
 				"
 			>
 				This screen shows PDF-pipeline jobs only. Corpus arguments are
@@ -539,7 +539,7 @@
 						background-color: var(--color-surface);
 						border: 1px solid var(--color-border);
 						border-radius: 8px;
-						padding: var(--space-xl);
+						padding: var(--space-2xl);
 						text-align: center;
 					"
 				>
@@ -571,7 +571,7 @@
 						background-color: var(--color-surface);
 						border: 1px solid var(--color-border);
 						border-radius: 8px;
-						padding: var(--space-xl);
+						padding: var(--space-2xl);
 						text-align: center;
 					"
 				>
@@ -669,7 +669,7 @@
 										style="
 											font-size: var(--font-size-body);
 											color: var(--color-text-primary);
-											padding: 12px 0;
+											padding: var(--space-md) 0;
 											border-bottom: 1px solid var(--color-border);
 										"
 									>
@@ -681,7 +681,7 @@
 										style="
 											font-size: var(--font-size-body);
 											color: var(--color-text-primary);
-											padding: 12px 0;
+											padding: var(--space-md) 0;
 											border-bottom: 1px solid var(--color-border);
 										"
 									>
@@ -693,7 +693,7 @@
 										style="
 											font-size: var(--font-size-caption);
 											color: var(--color-text-secondary);
-											padding: 12px 0;
+											padding: var(--space-md) 0;
 											border-bottom: 1px solid var(--color-border);
 										"
 									>
@@ -702,7 +702,7 @@
 									<td
 										style="
 											font-size: var(--font-size-caption);
-											padding: 12px 0;
+											padding: var(--space-md) 0;
 											border-bottom: 1px solid var(--color-border);
 											text-align: right;
 										"

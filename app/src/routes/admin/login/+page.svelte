@@ -22,7 +22,7 @@
 			background-color: var(--color-surface);
 			border: 1px solid var(--color-border);
 			border-radius: 8px;
-			padding: var(--space-xl);
+			padding: var(--space-2xl);
 			width: 100%;
 			max-width: 400px;
 		"
@@ -33,7 +33,7 @@
 				font-size: var(--font-size-heading);
 				font-weight: var(--font-weight-semibold);
 				color: var(--color-text-primary);
-				margin: 0 0 var(--space-lg) 0;
+				margin: 0 0 var(--space-xl) 0;
 				line-height: 1.2;
 			"
 		>
@@ -42,7 +42,7 @@
 
 		<form method="POST">
 			<!-- Username field -->
-			<div style="margin-bottom: var(--space-md);">
+			<div style="margin-bottom: var(--space-lg);">
 				<label
 					for="username"
 					style="
@@ -67,7 +67,7 @@
 						background-color: var(--color-bg);
 						border: 1px solid var(--color-border);
 						border-radius: 6px;
-						padding: var(--space-sm) 12px;
+						padding: var(--space-sm) var(--space-md);
 						font-size: var(--font-size-body);
 						color: var(--color-text-primary);
 						box-sizing: border-box;
@@ -100,7 +100,7 @@
 						background-color: var(--color-bg);
 						border: 1px solid var(--color-border);
 						border-radius: 6px;
-						padding: var(--space-sm) 12px;
+						padding: var(--space-sm) var(--space-md);
 						font-size: var(--font-size-body);
 						color: var(--color-text-primary);
 						box-sizing: border-box;
@@ -117,7 +117,7 @@
 						font-size: var(--font-size-body);
 						font-weight: var(--font-weight-regular);
 						line-height: 1.5;
-						margin: 12px 0 0 0;
+						margin: var(--space-md) 0 0 0;
 					"
 				>
 					{form.error}
@@ -138,7 +138,7 @@
 					font-weight: var(--font-weight-semibold);
 					color: var(--color-text-primary);
 					cursor: pointer;
-					margin-top: var(--space-lg);
+					margin-top: var(--space-xl);
 				"
 			>
 				Log in

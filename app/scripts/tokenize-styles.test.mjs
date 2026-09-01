@@ -55,14 +55,15 @@ test('type: font-weight 400/600 map, and 500 maps while being flagged', () => {
 test('spacing: a four-component shorthand is mapped component by component', () => {
 	assert.equal(
 		t('<div style="padding: 4px 8px 16px 24px;"></div>'),
-		'<div style="padding: var(--space-xs) var(--space-sm) var(--space-md) var(--space-lg);"></div>'
+		'<div style="padding: var(--space-xs) var(--space-sm) var(--space-lg) var(--space-xl);"></div>'
 	);
 });
 
 test('spacing: an off-scale value is reported, never rounded', () => {
-	const { out, report } = withReport('<div style="gap: 12px;"></div>');
-	assert.equal(out, '<div style="gap: 12px;"></div>', '12px must survive byte-identical');
-	assert.equal(report.residuals.filter((r) => r.value === '12px').length, 1, 'reported exactly once');
+	// 6px sits between --space-xs (4) and --space-sm (8) and is on no step.
+	const { out, report } = withReport('<div style="gap: 6px;"></div>');
+	assert.equal(out, '<div style="gap: 6px;"></div>', '6px must survive byte-identical');
+	assert.equal(report.residuals.filter((r) => r.value === '6px').length, 1, 'reported exactly once');
 });
 
 test('numerals inside a Svelte expression are JS, not CSS, and are left alone', () => {
@@ -83,13 +84,13 @@ test('a quoted hex inside a Svelte expression still converts — it stays a stri
 });
 
 test('layout: border-radius and grid-template-columns are never touched', () => {
-	const src = '<div style="border-radius: 8px; grid-template-columns: 16px 32px;"></div>';
+	const src = '<div style="border-radius: 12px; grid-template-columns: 16px 32px;"></div>';
 	assert.equal(t(src), src);
 });
 
 test('calc(): everything inside is left byte-identical', () => {
-	const src = '<div style="padding: calc(8px + 16px); margin: 8px;"></div>';
-	assert.equal(t(src), '<div style="padding: calc(8px + 16px); margin: var(--space-sm);"></div>');
+	const src = '<div style="padding: calc(8px + 12px); margin: 8px;"></div>';
+	assert.equal(t(src), '<div style="padding: calc(8px + 12px); margin: var(--space-sm);"></div>');
 });
 
 test('script blocks: a bare-hex string literal IS converted, the code around it is not', () => {
@@ -105,7 +106,7 @@ test('script blocks: a CSS-shaped string literal gets the full declaration treat
 	const src = `<script>const card = 'background-color: #1e293b; padding: 24px; font-size: 16px;';<\/script>`;
 	assert.match(
 		t(src),
-		/'background-color: var\(--color-surface\); padding: var\(--space-lg\); font-size: var\(--font-size-body\);'/
+		/'background-color: var\(--color-surface\); padding: var\(--space-xl\); font-size: var\(--font-size-body\);'/
 	);
 });
 
@@ -185,7 +186,7 @@ test('an unmapped hex is reported and left byte-identical', () => {
 
 test('idempotent: a second pass over converted output changes nothing', () => {
 	const src =
-		'<div style="color: #e2e8f0; font-size: 14px; padding: 8px 12px; min-height: 44px;"></div>';
+		'<div style="color: #e2e8f0; font-size: 14px; padding: 8px 12px 6px; min-height: 44px;"></div>';
 	const once = t(src);
 	const twice = t(once);
 	assert.equal(twice, once);

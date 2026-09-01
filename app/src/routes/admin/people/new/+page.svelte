@@ -62,7 +62,7 @@
 </script>
 
 <main style="background-color: var(--color-bg); min-height: 100vh;">
-	<header style="background-color: var(--color-surface); border-bottom: 1px solid var(--color-border); padding: var(--space-md) var(--space-lg);">
+	<header style="background-color: var(--color-surface); border-bottom: 1px solid var(--color-border); padding: var(--space-lg) var(--space-xl);">
 		<nav aria-label="Breadcrumb" style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); line-height: 1.4;">
 			<a href="/admin/people" style="color: var(--color-accent); text-decoration: none;">People</a>
 			<span style="color: var(--color-text-secondary);"> &gt; </span>
@@ -73,7 +73,7 @@
 		</h1>
 	</header>
 
-	<div style="max-width: 640px; margin: 0 auto; padding: var(--space-2xl) var(--space-lg);">
+	<div style="max-width: 640px; margin: 0 auto; padding: var(--space-3xl) var(--space-xl);">
 
 		<!-- ══════════════════════════════════════════════════════════════════════
 		     Create form — covers Identity + Person Type (is_justice/birthdate/
@@ -96,10 +96,10 @@
 		>
 			<!-- ── Identity card (renamed from "Basic Info", D-13 — no Is Justice checkbox) ── -->
 			<div
-				style="background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; padding: var(--space-lg); margin-bottom: var(--space-lg);"
+				style="background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; padding: var(--space-xl); margin-bottom: var(--space-xl);"
 			>
 				<h2
-					style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-md) 0; line-height: 1.2;"
+					style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-lg) 0; line-height: 1.2;"
 				>
 					Identity
 				</h2>
@@ -108,7 +108,7 @@
 				     editable input and never submitted as client data; an <output>
 				     is used (not a disabled/readonly input) so it stays a plain
 				     readout programmatically associated with its label/explanation. -->
-				<div style="margin-bottom: var(--space-md);">
+				<div style="margin-bottom: var(--space-lg);">
 					<div style="display: flex; align-items: baseline; gap: var(--space-sm); margin-bottom: var(--space-sm); flex-wrap: wrap;">
 						<span id="full_name_label" style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary);">
 							Full Name
@@ -121,7 +121,7 @@
 						id="full_name_preview"
 						aria-labelledby="full_name_label full_name_explanation"
 						aria-live="polite"
-						style="display: block; width: 100%; background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) 12px; font-size: var(--font-size-body); box-sizing: border-box; color: {fullNamePreview === 'N/A' ? 'var(--color-text-secondary)' : 'var(--color-text-primary)'}; font-style: {fullNamePreview === 'N/A' ? 'italic' : 'normal'};"
+						style="display: block; width: 100%; background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) var(--space-md); font-size: var(--font-size-body); box-sizing: border-box; color: {fullNamePreview === 'N/A' ? 'var(--color-text-secondary)' : 'var(--color-text-primary)'}; font-style: {fullNamePreview === 'N/A' ? 'italic' : 'normal'};"
 					>{fullNamePreview}</output>
 				</div>
 
@@ -132,7 +132,7 @@
 					<p style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin: 0 0 var(--space-sm) 0;">
 						{MIN_NAME_ERROR}
 					</p>
-					<div class="name-parts-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr 80px; gap: var(--space-md);">
+					<div class="name-parts-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr 80px; gap: var(--space-lg);">
 						<div>
 							<label
 								for="first_name"
@@ -145,7 +145,7 @@
 								name="first_name"
 								type="text"
 								bind:value={firstName}
-								style="display: block; width: 100%; background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) 12px; font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box;"
+								style="display: block; width: 100%; background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) var(--space-md); font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box;"
 							/>
 						</div>
 						<div>
@@ -160,7 +160,7 @@
 								name="middle_name"
 								type="text"
 								bind:value={middleName}
-								style="display: block; width: 100%; background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) 12px; font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box;"
+								style="display: block; width: 100%; background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) var(--space-md); font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box;"
 							/>
 						</div>
 						<div>
@@ -175,7 +175,7 @@
 								name="last_name"
 								type="text"
 								bind:value={lastName}
-								style="display: block; width: 100%; background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) 12px; font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box;"
+								style="display: block; width: 100%; background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) var(--space-md); font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box;"
 							/>
 						</div>
 						<div>
@@ -190,7 +190,7 @@
 								name="name_suffix"
 								type="text"
 								bind:value={nameSuffix}
-								style="display: block; width: 100%; background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) 12px; font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box;"
+								style="display: block; width: 100%; background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) var(--space-md); font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box;"
 							/>
 						</div>
 					</div>
@@ -216,17 +216,17 @@
 		     not carried into this card at all. Inputs associate with create-form via
 		     the `form` attribute since this card sits outside that <form> element. ── -->
 		<div
-			style="background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; padding: var(--space-lg); margin-bottom: var(--space-lg);"
+			style="background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; padding: var(--space-xl); margin-bottom: var(--space-xl);"
 		>
 			<h2
-				style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-md) 0; line-height: 1.2;"
+				style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-lg) 0; line-height: 1.2;"
 			>
 				Person Type
 			</h2>
 
 			<!-- Bench/Advocate segmented toggle (D-13) — same visual idiom as the list-page tab toggle.
 			     Neither button reads as selected while isJustice is null. -->
-			<div style="display: flex; gap: 0; margin-bottom: var(--space-md);">
+			<div style="display: flex; gap: 0; margin-bottom: var(--space-lg);">
 				<button
 					type="button"
 					aria-pressed={isJustice === true}
@@ -234,7 +234,7 @@
 					onclick={() => (isJustice = true)}
 					style="
 						min-height: var(--touch-target);
-						padding: var(--space-sm) var(--space-md);
+						padding: var(--space-sm) var(--space-lg);
 						border: 1px solid {isJustice === true ? 'var(--color-accent)' : 'var(--color-border)'};
 						border-radius: 6px 0 0 6px;
 						background-color: {isJustice === true ? 'var(--color-accent)' : 'var(--color-surface)'};
@@ -251,7 +251,7 @@
 					onclick={() => (isJustice = false)}
 					style="
 						min-height: var(--touch-target);
-						padding: var(--space-sm) var(--space-md);
+						padding: var(--space-sm) var(--space-lg);
 						border: 1px solid {isJustice === false ? 'var(--color-accent)' : 'var(--color-border)'};
 						border-left: none;
 						border-radius: 0 6px 6px 0;

@@ -183,7 +183,7 @@
 
 <main style="background-color: var(--color-bg); min-height: 100vh;">
 	<header
-		style="background-color: var(--color-surface); border-bottom: 1px solid var(--color-border); padding: var(--space-md) var(--space-lg);"
+		style="background-color: var(--color-surface); border-bottom: 1px solid var(--color-border); padding: var(--space-lg) var(--space-xl);"
 	>
 		<!-- Back navigation per UI-SPEC -->
 		<a
@@ -195,7 +195,7 @@
 		</h1>
 	</header>
 
-	<div style="max-width: 640px; margin: 0 auto; padding: var(--space-2xl) var(--space-lg);">
+	<div style="max-width: 640px; margin: 0 auto; padding: var(--space-3xl) var(--space-xl);">
 
 		<!-- D-35a: whole-argument lock notice (operator, 2026-08-24). Stated ONCE,
 		     at page level, covering the Case card and the Argument Details card
@@ -212,8 +212,8 @@
 					background-color: var(--color-surface);
 					border: 1px solid var(--color-border);
 					border-radius: 8px;
-					padding: var(--space-md);
-					margin: 0 0 var(--space-md) 0;
+					padding: var(--space-lg);
+					margin: 0 0 var(--space-lg) 0;
 				"
 			>
 				This argument is published, so its data is read-only. Unpublish it in the
@@ -227,11 +227,11 @@
 				background-color: var(--color-surface);
 				border: 1px solid var(--color-border);
 				border-radius: 8px;
-				padding: var(--space-lg);
-				margin-bottom: var(--space-lg);
+				padding: var(--space-xl);
+				margin-bottom: var(--space-xl);
 			"
 		>
-			<h2 style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-lg) 0;">
+			<h2 style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-xl) 0;">
 				Case
 			</h2>
 
@@ -251,7 +251,7 @@
 				}}
 			>
 				<!-- Case title field -->
-				<div style="margin-bottom: var(--space-md);">
+				<div style="margin-bottom: var(--space-lg);">
 					<label
 						for="case_name"
 						style="display: block; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin-bottom: var(--space-sm);"
@@ -273,7 +273,7 @@
 							background-color: var(--color-bg);
 							border: 1px solid {caseNameRequired ? 'var(--color-destructive)' : 'var(--color-border)'};
 							border-radius: 6px;
-							padding: var(--space-sm) 12px;
+							padding: var(--space-sm) var(--space-md);
 							font-size: var(--font-size-body);
 							color: var(--color-text-primary);
 							box-sizing: border-box;
@@ -306,7 +306,7 @@
 							background-color: var(--color-bg);
 							border: 1px solid {docketRequired ? 'var(--color-destructive)' : 'var(--color-border)'};
 							border-radius: 6px;
-							padding: var(--space-sm) 12px;
+							padding: var(--space-sm) var(--space-md);
 							font-size: var(--font-size-body);
 							color: var(--color-text-primary);
 							box-sizing: border-box;
@@ -350,7 +350,7 @@
 							font-size: var(--font-size-body);
 							font-weight: var(--font-weight-regular);
 							line-height: 1.5;
-							margin: var(--space-md) 0 0 0;
+							margin: var(--space-lg) 0 0 0;
 						"
 					>
 						{#if caseNameRequired}<span style="display: block;">Case name is required.</span>{/if}
@@ -376,7 +376,7 @@
 						font-weight: var(--font-weight-semibold);
 						color: var(--color-text-primary);
 						cursor: {(speakersLocked || savingState) ? 'not-allowed' : 'pointer'};
-						margin-top: var(--space-lg);
+						margin-top: var(--space-xl);
 						opacity: {(speakersLocked || savingState) ? 0.7 : 1};
 					"
 				>
@@ -415,15 +415,15 @@
 				background-color: var(--color-surface);
 				border: 1px solid var(--color-border);
 				border-radius: 8px;
-				padding: var(--space-lg);
-				margin-bottom: var(--space-md);
+				padding: var(--space-xl);
+				margin-bottom: var(--space-lg);
 			"
 		>
-			<h2 style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-md) 0;">
+			<h2 style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-lg) 0;">
 				Status
 			</h2>
 
-			<div style="margin-bottom: 12px;">
+			<div style="margin-bottom: var(--space-md);">
 				<span style={badgeStyle(data.argument.status ?? 'candidate')}>
 					{badgeLabel(data.argument.status ?? 'candidate')}
 				</span>
@@ -457,7 +457,7 @@
 				</p>
 			{/if}
 
-			<p style="font-size: var(--font-size-caption); color: var(--color-text-secondary); margin: 0 0 var(--space-md) 0;">
+			<p style="font-size: var(--font-size-caption); color: var(--color-text-secondary); margin: 0 0 var(--space-lg) 0;">
 				Slug: {data.argument.slug}
 			</p>
 
@@ -501,8 +501,8 @@
 				{#if form?.publishBlocked}
 					<div
 						style="
-							margin-top: var(--space-md);
-							padding: var(--space-md);
+							margin-top: var(--space-lg);
+							padding: var(--space-lg);
 							border: 1px solid var(--color-status-unpublished);
 							border-radius: 6px;
 							background-color: var(--color-surface);
@@ -524,7 +524,7 @@
 						{/if}
 
 						{#if form.blockers && form.blockers.length > 0}
-							<ul style="margin: 0 0 var(--space-md) 0; padding-left: 20px;">
+							<ul style="margin: 0 0 var(--space-lg) 0; padding-left: 20px;">
 								{#each form.blockers as b}
 									<li style="font-size: var(--font-size-caption); color: var(--color-text-secondary); padding: 2px 0;">
 										{blockerSentence(b.code, b.count)}
@@ -534,7 +534,7 @@
 						{/if}
 
 						{#if form?.overrideReasonRequired}
-							<p role="alert" style="font-size: var(--font-size-caption); font-weight: var(--font-weight-semibold); color: var(--color-destructive); margin: 0 0 12px 0;">
+							<p role="alert" style="font-size: var(--font-size-caption); font-weight: var(--font-weight-semibold); color: var(--color-destructive); margin: 0 0 var(--space-md) 0;">
 								A non-empty reason is required — your submission was blank or only whitespace.
 							</p>
 						{/if}
@@ -571,8 +571,8 @@
 									border-radius: 6px;
 									color: var(--color-text-primary);
 									font-size: var(--font-size-caption);
-									padding: var(--space-sm) 12px;
-									margin-bottom: 12px;
+									padding: var(--space-sm) var(--space-md);
+									margin-bottom: var(--space-md);
 								"
 							></textarea>
 							<button
@@ -654,7 +654,7 @@
 						font-size: var(--font-size-caption);
 						font-weight: var(--font-weight-regular);
 						line-height: 1.5;
-						margin: 12px 0 0 0;
+						margin: var(--space-md) 0 0 0;
 					"
 				>{form.error}</p>
 			{/if}
@@ -666,11 +666,11 @@
 				background-color: var(--color-surface);
 				border: 1px solid var(--color-border);
 				border-radius: 8px;
-				padding: var(--space-lg);
-				margin-bottom: var(--space-md);
+				padding: var(--space-xl);
+				margin-bottom: var(--space-lg);
 			"
 		>
-			<h2 style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-md) 0;">
+			<h2 style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-lg) 0;">
 				Status history
 			</h2>
 
@@ -709,14 +709,14 @@
 				background-color: var(--color-surface);
 				border: 1px solid var(--color-border);
 				border-radius: 8px;
-				padding: var(--space-lg);
-				margin-bottom: var(--space-md);
+				padding: var(--space-xl);
+				margin-bottom: var(--space-lg);
 			"
 		>
 			<h2 style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-sm) 0;">
 				Speakers
 			</h2>
-			<p style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin: 0 0 var(--space-lg) 0;">
+			<p style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin: 0 0 var(--space-xl) 0;">
 				All participants in this argument. Advocates: set the role and descriptor they held here. Changing a role or descriptor here does not affect other arguments.
 			</p>
 
@@ -725,7 +725,7 @@
 				     rows below — no per-class difference in treatment (CLAUDE.md apolitical
 				     constraint). Defence in depth: api/services/admin_arguments.py's
 				     update_participant_side published guard is the authority. -->
-				<p style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-status-warning); margin: 0 0 var(--space-md) 0;">
+				<p style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-status-warning); margin: 0 0 var(--space-lg) 0;">
 					This argument is published, so participant data is read-only. Unpublish it first to edit roles or descriptors.
 				</p>
 			{/if}
@@ -804,7 +804,7 @@
 												background-color: var(--color-bg);
 												border: 1px solid var(--color-border);
 												border-radius: 6px;
-												padding: var(--space-sm) 12px;
+												padding: var(--space-sm) var(--space-md);
 												font-size: var(--font-size-body);
 												font-weight: var(--font-weight-regular);
 												color: var(--color-text-primary);
@@ -865,7 +865,7 @@
 												background-color: var(--color-bg);
 												border: 1px solid var(--color-border);
 												border-radius: 6px;
-												padding: var(--space-sm) 12px;
+												padding: var(--space-sm) var(--space-md);
 												font-size: var(--font-size-body);
 												color: var(--color-text-primary);
 												box-sizing: border-box;
@@ -918,7 +918,7 @@
 													disabled={speakersLocked || savingSpeakerId === speaker.participant_id || speakerSideById[speaker.participant_id] === 'UNKNOWN'}
 													style="
 														min-height: var(--touch-target-dense);
-														padding: var(--space-sm) var(--space-md);
+														padding: var(--space-sm) var(--space-lg);
 														background-color: var(--color-surface);
 														border: 1px solid var(--color-accent);
 														border-radius: 6px;
@@ -937,7 +937,7 @@
 													onclick={() => { sideConfirming[speaker.participant_id] = false; }}
 													style="
 														min-height: var(--touch-target-dense);
-														padding: var(--space-sm) var(--space-md);
+														padding: var(--space-sm) var(--space-lg);
 														background: transparent;
 														border: 1px solid var(--color-border);
 														border-radius: 6px;
@@ -958,7 +958,7 @@
 												onclick={() => { sideConfirming[speaker.participant_id] = true; }}
 												style="
 													min-height: var(--touch-target-dense);
-													padding: var(--space-sm) var(--space-md);
+													padding: var(--space-sm) var(--space-lg);
 													background-color: var(--color-surface);
 													border: 1px solid var(--color-accent);
 													border-radius: 6px;
@@ -980,7 +980,7 @@
 											disabled={speakersLocked || savingSpeakerId === speaker.participant_id || speakerSideById[speaker.participant_id] === 'UNKNOWN'}
 											style="
 												min-height: var(--touch-target-dense);
-												padding: var(--space-sm) var(--space-md);
+												padding: var(--space-sm) var(--space-lg);
 												background-color: var(--color-surface);
 												border: 1px solid var(--color-accent);
 												border-radius: 6px;
@@ -1024,8 +1024,8 @@
 
 		<!-- Danger Zone — argument delete section (ADMIN-01, D-03) -->
 		<!-- Last card on the page per UI-SPEC Layout Contract (delete section position). -->
-		<div style="background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; padding: var(--space-lg); margin-bottom: var(--space-lg); margin-top: var(--space-md);">
-			<h2 style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-md) 0; line-height: 1.2;">
+		<div style="background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; padding: var(--space-xl); margin-bottom: var(--space-xl); margin-top: var(--space-lg);">
+			<h2 style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-lg) 0; line-height: 1.2;">
 				Danger Zone
 			</h2>
 

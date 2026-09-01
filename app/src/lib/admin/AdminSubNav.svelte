@@ -7,11 +7,11 @@
 	style="
 		background-color: var(--color-surface);
 		border-bottom: 1px solid var(--color-border);
-		padding: 12px var(--space-lg);
+		padding: var(--space-md) var(--space-xl);
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
-		gap: var(--space-md);
+		gap: var(--space-lg);
 	"
 >
 	<a href="/admin/pipeline" style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); text-decoration: none;">
@@ -41,7 +41,7 @@
 				background: transparent;
 				border: 1px solid var(--color-border);
 				border-radius: 6px;
-				padding: var(--space-sm) var(--space-md);
+				padding: var(--space-sm) var(--space-lg);
 				cursor: pointer;
 			"
 			onmouseenter={(e) => {

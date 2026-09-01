@@ -14,7 +14,7 @@
 		style="
 			background-color: var(--color-surface);
 			border-bottom: 1px solid var(--color-border);
-			padding: var(--space-md) var(--space-lg);
+			padding: var(--space-lg) var(--space-xl);
 		"
 	>
 		<a
@@ -57,7 +57,7 @@
 		style="
 			max-width: 860px;
 			margin: 0 auto;
-			padding: var(--space-2xl) var(--space-lg);
+			padding: var(--space-3xl) var(--space-xl);
 		"
 	>
 		{#if !data.arguments || data.arguments.length === 0}

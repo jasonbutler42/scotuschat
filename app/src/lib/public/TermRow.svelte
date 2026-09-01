@@ -31,8 +31,8 @@
 		background-color: var(--color-surface);
 		border: 1px solid var(--color-border);
 		border-radius: 6px;
-		padding: var(--space-md);
-		margin-bottom: var(--space-md);
+		padding: var(--space-lg);
+		margin-bottom: var(--space-lg);
 		display: block;
 		text-decoration: none;
 	"

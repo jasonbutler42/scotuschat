@@ -29,7 +29,7 @@
 		background-color: var(--color-surface);
 		border: 1px solid var(--color-border);
 		border-radius: 8px;
-		padding: var(--space-lg);
+		padding: var(--space-xl);
 	"
 >
 	{#if title}
@@ -39,7 +39,7 @@
 				font-weight: var(--font-weight-semibold);
 				line-height: var(--line-height-heading);
 				color: var(--color-text-primary);
-				margin: 0 0 var(--space-md) 0;
+				margin: 0 0 var(--space-lg) 0;
 			"
 		>
 			{title}

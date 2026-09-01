@@ -96,14 +96,21 @@
 	--color-status-warning: var(--amber-400);
 	--color-status-archived: var(--slate-200);
 
-	/* Spacing scale — seven steps, all multiples of 4 */
+	/* Spacing scale — eight steps, all multiples of 4. The 12px step exists
+	   because the admin surfaces used it 153 times, second only to 8px and ahead
+	   of 16px: it was a load-bearing step the scale simply had no name for. The
+	   names shifted up rather than a new name being wedged between `sm` and `md`,
+	   so the t-shirt sequence stays intact. Every reference in the codebase was
+	   remapped in the same commit — changing these values alone would silently
+	   tighten the whole UI by one step with a green build and a green suite. */
 	--space-xs: 4px;
 	--space-sm: 8px;
-	--space-md: 16px;
-	--space-lg: 24px;
-	--space-xl: 32px;
-	--space-2xl: 48px;
-	--space-3xl: 64px;
+	--space-md: 12px;
+	--space-lg: 16px;
+	--space-xl: 24px;
+	--space-2xl: 32px;
+	--space-3xl: 48px;
+	--space-4xl: 64px;
 
 	/* Type scale — five semantic steps, two weights (D-03) */
 	--font-size-caption: 14px;
@@ -141,10 +148,10 @@
 	   achieves ~35 on the same class of device with 17pt type. The gap was
 	   entirely width allocation, so these tighten on mobile and the type size
 	   is left alone. */
-	--transcript-pad-x: var(--space-lg);
+	--transcript-pad-x: var(--space-xl);
 	--transcript-rail-gap: var(--space-sm);
 	--bubble-max-width: 72%;
-	--bubble-pad-x: var(--space-md);
+	--bubble-pad-x: var(--space-lg);
 
 	font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }

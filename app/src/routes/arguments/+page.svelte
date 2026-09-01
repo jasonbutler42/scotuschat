@@ -14,7 +14,7 @@
 		style="
 			background-color: var(--color-surface);
 			border-bottom: 1px solid var(--color-border);
-			padding: var(--space-md) var(--space-lg);
+			padding: var(--space-lg) var(--space-xl);
 		"
 	>
 		<h1
@@ -34,7 +34,7 @@
 		style="
 			max-width: 860px;
 			margin: 0 auto;
-			padding: var(--space-2xl) var(--space-lg);
+			padding: var(--space-3xl) var(--space-xl);
 		"
 	>
 		{#if !data.terms || data.terms.length === 0}
@@ -67,8 +67,8 @@
 						background-color: var(--color-surface);
 						border: 1px solid var(--color-border);
 						border-radius: 6px;
-						padding: var(--space-md);
-						margin-bottom: var(--space-md);
+						padding: var(--space-lg);
+						margin-bottom: var(--space-lg);
 						display: block;
 						text-decoration: none;
 					"

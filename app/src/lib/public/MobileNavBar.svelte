@@ -43,7 +43,7 @@
 			flex-direction: row;
 			overflow-x: auto;
 			gap: var(--space-sm);
-			padding: var(--space-sm) var(--space-md);
+			padding: var(--space-sm) var(--space-lg);
 			min-height: var(--touch-target);
 			align-items: center;
 		"

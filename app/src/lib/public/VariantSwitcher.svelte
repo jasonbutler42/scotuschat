@@ -117,10 +117,10 @@
 			<div
 				id="variant-switcher-panel"
 				style="background-color: var(--color-surface); border: 1px solid var(--color-border);
-				       border-radius: 6px; padding: var(--space-md);
-				       display: flex; flex-direction: column; gap: var(--space-md);
-				       max-width: min(280px, calc(100vw - var(--space-lg)));
-				       max-height: calc(100vh - var(--touch-target) - var(--space-xl));
+				       border-radius: 6px; padding: var(--space-lg);
+				       display: flex; flex-direction: column; gap: var(--space-lg);
+				       max-width: min(280px, calc(100vw - var(--space-xl)));
+				       max-height: calc(100vh - var(--touch-target) - var(--space-2xl));
 				       overflow-y: auto;"
 			>
 				{#each AXES as axis (axis.key)}

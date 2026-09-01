@@ -94,8 +94,8 @@
 		background-color: var(--color-surface);
 		border: 1px solid var(--color-border);
 		border-radius: 8px;
-		padding: var(--space-lg);
-		margin-bottom: var(--space-lg);
+		padding: var(--space-xl);
+		margin-bottom: var(--space-xl);
 	"
 >
 	<h2
@@ -103,7 +103,7 @@
 			font-size: var(--font-size-heading);
 			font-weight: var(--font-weight-semibold);
 			color: var(--color-text-primary);
-			margin: 0 0 var(--space-lg) 0;
+			margin: 0 0 var(--space-xl) 0;
 			line-height: 1.2;
 		"
 	>
@@ -138,7 +138,7 @@
 		}}
 	>
 		<!-- Docket field -->
-		<div style="margin-bottom: var(--space-md);">
+		<div style="margin-bottom: var(--space-lg);">
 			<label
 				for="docket-input"
 				style="display: block; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin-bottom: var(--space-sm);"
@@ -173,7 +173,7 @@
 		</div>
 
 		<!-- Question number field -->
-		<div style="margin-bottom: var(--space-md);">
+		<div style="margin-bottom: var(--space-lg);">
 			<label
 				for="question-number-input"
 				style="display: block; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin-bottom: var(--space-sm);"
@@ -191,7 +191,7 @@
 					background-color: var(--color-bg);
 					border: 1px solid var(--color-border);
 					border-radius: 6px;
-					padding: var(--space-sm) 12px;
+					padding: var(--space-sm) var(--space-md);
 					font-size: var(--font-size-body);
 					color: var(--color-text-primary);
 					box-sizing: border-box;
@@ -206,7 +206,7 @@
 		</div>
 
 		<!-- Argued date field -->
-		<div style="margin-bottom: var(--space-lg);">
+		<div style="margin-bottom: var(--space-xl);">
 			<label
 				for="argued-date-input"
 				style="display: block; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin-bottom: var(--space-sm);"
@@ -225,7 +225,7 @@
 					background-color: var(--color-bg);
 					border: 1px solid var(--color-border);
 					border-radius: 6px;
-					padding: var(--space-sm) 12px;
+					padding: var(--space-sm) var(--space-md);
 					font-size: var(--font-size-body);
 					color: var(--color-text-primary);
 					box-sizing: border-box;
@@ -262,7 +262,7 @@
 				style="
 					font-size: var(--font-size-caption);
 					color: var(--color-status-published);
-					margin-bottom: var(--space-md);
+					margin-bottom: var(--space-lg);
 				"
 			>
 				Saved.
@@ -277,7 +277,7 @@
 				style="
 					font-size: var(--font-size-caption);
 					color: var(--color-destructive);
-					margin-bottom: var(--space-md);
+					margin-bottom: var(--space-lg);
 				"
 			>
 				{#if docketRequired}
@@ -306,7 +306,7 @@
 					background-color: var(--color-surface);
 					border: 1px solid var(--color-accent);
 					border-radius: 6px;
-					padding: var(--space-sm) var(--space-md);
+					padding: var(--space-sm) var(--space-lg);
 					font-size: var(--font-size-body);
 					font-weight: var(--font-weight-semibold);
 					color: var(--color-text-primary);

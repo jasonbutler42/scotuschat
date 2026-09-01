@@ -8,11 +8,11 @@
 		style="
 			background-color: var(--color-bg);
 			border-bottom: 1px solid var(--color-border);
-			padding: 12px var(--space-lg);
+			padding: var(--space-md) var(--space-xl);
 			display: flex;
 			flex-wrap: wrap;
 			align-items: center;
-			gap: var(--space-md);
+			gap: var(--space-lg);
 		"
 	>
 		<!-- Wordmark — plain span in both variants (not a link); matches existing nav pattern -->

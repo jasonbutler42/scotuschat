@@ -101,7 +101,7 @@
 <div class="popover-card" style={paletteVars}>
 	<!-- Header row: avatar + name/pill stack. Stays horizontal at every width —
 	     a 60px avatar never needs to drop below a short name/pill stack. -->
-	<div style="display:flex;flex-direction:row;align-items:flex-start;gap:var(--space-md);">
+	<div style="display:flex;flex-direction:row;align-items:flex-start;gap:var(--space-lg);">
 		{#if speaker.photo_url_full && !showInitials}
 			<img
 				src={speaker.photo_url_full}
@@ -138,13 +138,13 @@
 	<!-- Birth/death line: bench only, full width. Omitted entirely when both
 	     dates are null; each half omitted independently otherwise. -->
 	{#if isBench && (speaker.birthdate || speaker.death_date)}
-		<p style="font-size:var(--font-size-caption);font-weight:var(--font-weight-regular);color:var(--color-text-secondary);line-height:var(--line-height-body);margin-top:var(--space-md);margin-bottom:0;border-top:1px solid var(--color-border);padding-top:var(--space-md);">{#if speaker.birthdate}b. {formatShort(speaker.birthdate)}{/if}{#if speaker.birthdate && speaker.death_date}{@render separator('var(--space-sm)')}{/if}{#if speaker.death_date}d. {formatShort(speaker.death_date)}{/if}</p>
+		<p style="font-size:var(--font-size-caption);font-weight:var(--font-weight-regular);color:var(--color-text-secondary);line-height:var(--line-height-body);margin-top:var(--space-lg);margin-bottom:0;border-top:1px solid var(--color-border);padding-top:var(--space-lg);">{#if speaker.birthdate}b. {formatShort(speaker.birthdate)}{/if}{#if speaker.birthdate && speaker.death_date}{@render separator('var(--space-sm)')}{/if}{#if speaker.death_date}d. {formatShort(speaker.death_date)}{/if}</p>
 	{/if}
 
 	<!-- Advocate descriptor slot (D-16): unconditional placeholder text, no real
 	     per-advocate data exists yet — do not invent plausible-looking data. -->
 	{#if !isBench}
-		<p style="font-size:var(--font-size-caption);font-weight:var(--font-weight-regular);font-style:italic;color:var(--color-text-secondary);margin-top:var(--space-md);margin-bottom:0;border-top:1px solid var(--color-border);padding-top:var(--space-md);">Coming soon</p>
+		<p style="font-size:var(--font-size-caption);font-weight:var(--font-weight-regular);font-style:italic;color:var(--color-text-secondary);margin-top:var(--space-lg);margin-bottom:0;border-top:1px solid var(--color-border);padding-top:var(--space-lg);">Coming soon</p>
 	{/if}
 
 	<!-- Bio paragraph: bench and advocate alike, full width. Omitted entirely
@@ -156,7 +156,7 @@
 	     content. Long bios simply make the popover taller; nothing is ever
 	     hidden. -->
 	{#if speaker.bio_text}
-		<div style="margin-top:var(--space-md);border-top:1px solid var(--color-border);padding-top:var(--space-md);">
+		<div style="margin-top:var(--space-lg);border-top:1px solid var(--color-border);padding-top:var(--space-lg);">
 			<p style="font-size:var(--font-size-caption);font-weight:var(--font-weight-regular);line-height:var(--line-height-body);color:var(--color-text-secondary);margin:0;">{speaker.bio_text}</p>
 		</div>
 	{/if}
@@ -164,7 +164,7 @@
 	<!-- Tenure list: bench only, full width, below the bio. API order preserved
 	     — no client-side re-sort. One block per tenure, up to 3 lines each. -->
 	{#if isBench && speaker.tenure.length > 0}
-		<div style="border-top:1px solid var(--color-border);margin-top:var(--space-md);padding-top:var(--space-md);">
+		<div style="border-top:1px solid var(--color-border);margin-top:var(--space-lg);padding-top:var(--space-lg);">
 			{#each speaker.tenure as t, i}
 				<div style="margin-top:{i === 0 ? '0' : 'var(--space-sm)'};">
 					<!-- Row 1, always rendered: office title (left, semibold, the only
@@ -193,7 +193,7 @@
 
 <style>
 	.popover-card {
-		padding: var(--space-lg);
+		padding: var(--space-xl);
 		display: block;
 	}
 </style>

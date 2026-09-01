@@ -92,7 +92,7 @@
 			background: transparent;
 			border: 1px solid var(--color-border);
 			border-radius: 4px;
-			padding: 6px 12px;
+			padding: 6px var(--space-md);
 			cursor: {disabled ? 'not-allowed' : 'pointer'};
 			min-height: var(--touch-target-dense);
 			opacity: {disabled ? 0.6 : 1};
@@ -112,14 +112,14 @@
 				background-color: var(--color-surface);
 				border: 1px solid var(--color-border);
 				border-radius: 8px;
-				padding: var(--space-md);
+				padding: var(--space-lg);
 				box-sizing: border-box;
 			"
 		>
 			<h3 style="font-size: var(--font-size-body); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-xs) 0;">
 				Create person
 			</h3>
-			<p style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin: 0 0 var(--space-md) 0;">
+			<p style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin: 0 0 var(--space-lg) 0;">
 				Add the minimum details needed to finish resolve. Complete the profile later in People.
 			</p>
 
@@ -149,7 +149,7 @@
 				<input type="hidden" name="raw_speaker_label" value={rawSpeakerLabel} />
 				<input type="hidden" name="side" value={resolvedSide()} />
 
-				<div style="display: flex; gap: var(--space-sm); margin-bottom: 12px;">
+				<div style="display: flex; gap: var(--space-sm); margin-bottom: var(--space-md);">
 					<div style="flex: 1;">
 						<label
 							for="cp-first-{rawSpeakerLabel}"
@@ -167,7 +167,7 @@
 								background-color: var(--color-bg);
 								border: 1px solid var(--color-border);
 								border-radius: 6px;
-								padding: var(--space-sm) 12px;
+								padding: var(--space-sm) var(--space-md);
 								font-size: var(--font-size-body);
 								color: var(--color-text-primary);
 								box-sizing: border-box;
@@ -192,7 +192,7 @@
 								background-color: var(--color-bg);
 								border: 1px solid var(--color-border);
 								border-radius: 6px;
-								padding: var(--space-sm) 12px;
+								padding: var(--space-sm) var(--space-md);
 								font-size: var(--font-size-body);
 								color: var(--color-text-primary);
 								box-sizing: border-box;
@@ -202,7 +202,7 @@
 					</div>
 				</div>
 
-				<div style="margin-bottom: var(--space-md);">
+				<div style="margin-bottom: var(--space-lg);">
 					<span style="display: block; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin-bottom: var(--space-sm);">
 						Bench / Advocate
 					</span>
@@ -253,7 +253,7 @@
 				</div>
 
 				{#if errorMessage}
-					<p role="alert" style="color: var(--color-destructive); font-size: var(--font-size-caption); margin: 0 0 12px 0;">
+					<p role="alert" style="color: var(--color-destructive); font-size: var(--font-size-caption); margin: 0 0 var(--space-md) 0;">
 						{errorMessage}
 					</p>
 				{/if}

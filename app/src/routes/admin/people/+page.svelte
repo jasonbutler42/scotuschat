@@ -49,7 +49,7 @@
 
 <main style="background-color: var(--color-bg); min-height: 100vh;">
 	<header
-		style="background-color: var(--color-surface); border-bottom: 1px solid var(--color-border); padding: var(--space-md) var(--space-lg);"
+		style="background-color: var(--color-surface); border-bottom: 1px solid var(--color-border); padding: var(--space-lg) var(--space-xl);"
 	>
 		<div
 			style="
@@ -59,10 +59,10 @@
 				align-items: center;
 				justify-content: space-between;
 				flex-wrap: wrap;
-				gap: var(--space-md);
+				gap: var(--space-lg);
 			"
 		>
-			<div style="display: flex; align-items: center; gap: var(--space-md); flex-wrap: wrap;">
+			<div style="display: flex; align-items: center; gap: var(--space-lg); flex-wrap: wrap;">
 				<h1 style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0;">People</h1>
 
 				<!-- Bench/Advocate segmented toggle (D-01, D-02, D-03) -->
@@ -74,7 +74,7 @@
 						onclick={() => switchTab('bench')}
 						style="
 							min-height: var(--touch-target);
-							padding: var(--space-sm) var(--space-md);
+							padding: var(--space-sm) var(--space-lg);
 							border: 1px solid {data.tab === 'bench' ? 'var(--color-accent)' : 'var(--color-border)'};
 							border-radius: 6px 0 0 6px;
 							background-color: {data.tab === 'bench' ? 'var(--color-accent)' : 'var(--color-surface)'};
@@ -91,7 +91,7 @@
 						onclick={() => switchTab('advocate')}
 						style="
 							min-height: var(--touch-target);
-							padding: var(--space-sm) var(--space-md);
+							padding: var(--space-sm) var(--space-lg);
 							border: 1px solid {data.tab === 'advocate' ? 'var(--color-accent)' : 'var(--color-border)'};
 							border-left: none;
 							border-radius: 0 6px 6px 0;
@@ -113,7 +113,7 @@
 					align-items: center;
 					justify-content: center;
 					min-height: var(--touch-target);
-					padding: var(--space-sm) var(--space-md);
+					padding: var(--space-sm) var(--space-lg);
 					background: transparent;
 					border: 1px solid var(--color-accent);
 					border-radius: 6px;
@@ -127,11 +127,11 @@
 		</div>
 	</header>
 
-	<div style="max-width: 860px; margin: 0 auto; padding: var(--space-2xl) var(--space-lg);">
+	<div style="max-width: 860px; margin: 0 auto; padding: var(--space-3xl) var(--space-xl);">
 
 		<!-- TenureGapsToggle (PDIR-06) — Bench tab only -->
 		{#if data.tab === 'bench'}
-			<div style="display: flex; flex-wrap: wrap; gap: var(--space-md); margin-bottom: var(--space-md);">
+			<div style="display: flex; flex-wrap: wrap; gap: var(--space-lg); margin-bottom: var(--space-lg);">
 				<div style="display: flex; align-items: center; gap: var(--space-sm);">
 					<button
 						role="switch"
@@ -169,7 +169,7 @@
 
 		<!-- Filtering by / Clear filter (UI-SPEC Interaction Contract) -->
 		{#if data.missing || tenureGaps}
-			<p style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin: 0 0 var(--space-md) 0;">
+			<p style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin: 0 0 var(--space-lg) 0;">
 				Filtering by: {data.missing ? pillLabel(data.missing) : 'Justices with tenure gaps'} ·
 				<button
 					type="button"
@@ -288,7 +288,7 @@
 									font-size: var(--font-size-body);
 									color: var(--color-text-primary);
 									border-bottom: 1px solid var(--color-border);
-									padding: 12px 0;
+									padding: var(--space-md) 0;
 								"
 							>{person.full_name}{#if person.is_justice}<span style="display: inline-block; background-color: rgba(147,197,253,0.15); border: 1px solid var(--color-accent); color: var(--color-accent); border-radius: 4px; padding: 2px 6px; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); line-height: 1.4; margin-left: var(--space-sm);">Justice</span>{/if}</td>
 							{#if data.tab === 'bench'}
@@ -297,7 +297,7 @@
 										font-size: var(--font-size-body);
 										color: {person.tenure_coverage ? 'var(--color-text-primary)' : 'var(--color-text-secondary)'};
 										border-bottom: 1px solid var(--color-border);
-										padding: 12px var(--space-sm);
+										padding: var(--space-md) var(--space-sm);
 									"
 								>{person.tenure_coverage ?? 'No tenure'}</td>
 								<td
@@ -305,7 +305,7 @@
 										font-size: var(--font-size-body);
 										color: {person.has_tenure_gap ? 'var(--color-status-warning)' : 'var(--color-text-secondary)'};
 										border-bottom: 1px solid var(--color-border);
-										padding: 12px var(--space-sm);
+										padding: var(--space-md) var(--space-sm);
 									"
 								>{person.has_tenure_gap ? '⚠ Gap' : '—'}</td>
 							{:else}
@@ -315,7 +315,7 @@
 										color: var(--color-text-secondary);
 										text-align: right;
 										border-bottom: 1px solid var(--color-border);
-										padding: 12px var(--space-sm);
+										padding: var(--space-md) var(--space-sm);
 									"
 								>{person.argument_count ?? 0}</td>
 							{/if}
@@ -323,7 +323,7 @@
 								style="
 									font-size: var(--font-size-body);
 									border-bottom: 1px solid var(--color-border);
-									padding: 12px var(--space-sm);
+									padding: var(--space-md) var(--space-sm);
 								"
 							>
 								{#if person.missing.length > 0}
@@ -352,7 +352,7 @@
 									font-size: var(--font-size-caption);
 									text-align: right;
 									border-bottom: 1px solid var(--color-border);
-									padding: 12px 0;
+									padding: var(--space-md) 0;
 								"
 							>
 								<a
@@ -372,7 +372,7 @@
 					background-color: var(--color-surface);
 					border: 1px solid var(--color-border);
 					border-radius: 8px;
-					padding: var(--space-lg);
+					padding: var(--space-xl);
 					text-align: center;
 				"
 			>

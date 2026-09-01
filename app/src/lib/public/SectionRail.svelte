@@ -30,7 +30,7 @@
 	});
 </script>
 
-<nav aria-label="Argument sections" style="position: sticky; top: 0; padding: var(--space-lg) var(--space-md); align-self: start;">
+<nav aria-label="Argument sections" style="position: sticky; top: 0; padding: var(--space-xl) var(--space-lg); align-self: start;">
 	{#each sections as sec (sec.hint)}
 		<button
 			aria-current={activeSection === sec.hint ? 'true' : undefined}
@@ -44,7 +44,7 @@
 				display: block;
 				width: 100%;
 				text-align: left;
-				padding: var(--space-sm) var(--space-md);
+				padding: var(--space-sm) var(--space-lg);
 				margin-bottom: var(--space-xs);
 				border: none;
 				cursor: pointer;

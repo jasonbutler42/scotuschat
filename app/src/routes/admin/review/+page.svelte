@@ -96,7 +96,7 @@
 	function filterButtonStyle(active: boolean, selectedColor: string): string {
 		return `
 			min-height: var(--touch-target);
-			padding: var(--space-sm) var(--space-md);
+			padding: var(--space-sm) var(--space-lg);
 			font-size: var(--font-size-body);
 			font-weight: var(--font-weight-semibold);
 			cursor: pointer;
@@ -289,8 +289,8 @@
 </svelte:head>
 
 <main style="background-color: var(--color-bg); min-height: 100vh;">
-	<header style="background-color: var(--color-surface); border-bottom: 1px solid var(--color-border); padding: var(--space-md) var(--space-lg);">
-		<div style="max-width: 860px; margin: 0 auto; display: flex; align-items: center; gap: var(--space-md); flex-wrap: wrap;">
+	<header style="background-color: var(--color-surface); border-bottom: 1px solid var(--color-border); padding: var(--space-lg) var(--space-xl);">
+		<div style="max-width: 860px; margin: 0 auto; display: flex; align-items: center; gap: var(--space-lg); flex-wrap: wrap;">
 			<h1 style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-accent); margin: 0;">Review</h1>
 
 			<div style="display: flex; gap: 0;">
@@ -301,7 +301,7 @@
 					onclick={() => switchTab('arguments')}
 					style="
 						min-height: var(--touch-target);
-						padding: var(--space-sm) var(--space-md);
+						padding: var(--space-sm) var(--space-lg);
 						border: 1px solid {data.tab === 'arguments' ? 'var(--color-accent)' : 'var(--color-border)'};
 						border-radius: 6px 0 0 6px;
 						background-color: {data.tab === 'arguments' ? 'var(--color-accent)' : 'var(--color-surface)'};
@@ -318,7 +318,7 @@
 					onclick={() => switchTab('people')}
 					style="
 						min-height: var(--touch-target);
-						padding: var(--space-sm) var(--space-md);
+						padding: var(--space-sm) var(--space-lg);
 						border: 1px solid {data.tab === 'people' ? 'var(--color-accent)' : 'var(--color-border)'};
 						border-left: none;
 						border-radius: 0 6px 6px 0;
@@ -333,15 +333,15 @@
 		</div>
 	</header>
 
-	<div style="max-width: 860px; margin: 0 auto; padding: var(--space-2xl) var(--space-lg);">
+	<div style="max-width: 860px; margin: 0 auto; padding: var(--space-3xl) var(--space-xl);">
 		{#if form?.error}
-			<p role="alert" style="font-size: var(--font-size-caption); font-weight: var(--font-weight-semibold); color: var(--color-destructive); margin: 0 0 var(--space-md) 0;">
+			<p role="alert" style="font-size: var(--font-size-caption); font-weight: var(--font-weight-semibold); color: var(--color-destructive); margin: 0 0 var(--space-lg) 0;">
 				{form.error}
 			</p>
 		{/if}
 
 		<!-- Filter row (E3) -->
-		<div style="display: flex; flex-wrap: wrap; gap: var(--space-md); align-items: center; margin-bottom: var(--space-md);">
+		<div style="display: flex; flex-wrap: wrap; gap: var(--space-lg); align-items: center; margin-bottom: var(--space-lg);">
 			{#if data.tab === 'arguments'}
 				<!-- G-49-5a: the status segment group's ~480px min-content width
 				     (five 44px-min-height, 16px-font buttons with no flex-wrap)
@@ -399,7 +399,7 @@
 					<select
 						value={data.tier ?? ''}
 						onchange={onSelectTier}
-						style="background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) 12px; font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box;"
+						style="background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) var(--space-md); font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box;"
 					>
 						<option value="">All tiers</option>
 						<option value="verified">Verified</option>
@@ -415,7 +415,7 @@
 				<select
 					value={data.review_state ?? ''}
 					onchange={onSelectReviewState}
-					style="background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) 12px; font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box;"
+					style="background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) var(--space-md); font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box;"
 				>
 					<option value="">All review states</option>
 					<option value="unreviewed">Unreviewed</option>
@@ -428,7 +428,7 @@
 
 		<!-- Active-filter indicator (E10) -->
 		{#if activeFilterLabels.length > 0}
-			<p style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin: 0 0 var(--space-md) 0;">
+			<p style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin: 0 0 var(--space-lg) 0;">
 				Showing: {activeFilterLabels.join(', ')} ·
 				<button
 					type="button"
@@ -456,7 +456,7 @@
 					background-color: var(--color-surface);
 					border: 1px solid var(--color-border);
 					border-radius: 8px;
-					padding: var(--space-lg);
+					padding: var(--space-xl);
 					text-align: center;
 				"
 			>
@@ -480,41 +480,41 @@
 			<table style="width: 100%; border-collapse: collapse;">
 				<thead>
 					<tr>
-						<th scope="col" style="text-align: left; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); padding: var(--space-sm) 12px; border-bottom: 1px solid var(--color-border); white-space: nowrap;">Tier / Status</th>
-						<th scope="col" style="text-align: left; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); padding: var(--space-sm) 12px; border-bottom: 1px solid var(--color-border);">Case name</th>
-						<th scope="col" style="text-align: left; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); padding: var(--space-sm) 12px; border-bottom: 1px solid var(--color-border); white-space: nowrap;">Docket</th>
-						<th scope="col" style="text-align: left; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); padding: var(--space-sm) 12px; border-bottom: 1px solid var(--color-border); white-space: nowrap;">Argued date</th>
-						<th scope="col" style="text-align: left; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); padding: var(--space-sm) 12px; border-bottom: 1px solid var(--color-border);">Needs-attention</th>
-						<th scope="col" style="text-align: left; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); padding: var(--space-sm) 12px; border-bottom: 1px solid var(--color-border); white-space: nowrap;">Expand</th>
+						<th scope="col" style="text-align: left; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); padding: var(--space-sm) var(--space-md); border-bottom: 1px solid var(--color-border); white-space: nowrap;">Tier / Status</th>
+						<th scope="col" style="text-align: left; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); padding: var(--space-sm) var(--space-md); border-bottom: 1px solid var(--color-border);">Case name</th>
+						<th scope="col" style="text-align: left; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); padding: var(--space-sm) var(--space-md); border-bottom: 1px solid var(--color-border); white-space: nowrap;">Docket</th>
+						<th scope="col" style="text-align: left; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); padding: var(--space-sm) var(--space-md); border-bottom: 1px solid var(--color-border); white-space: nowrap;">Argued date</th>
+						<th scope="col" style="text-align: left; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); padding: var(--space-sm) var(--space-md); border-bottom: 1px solid var(--color-border);">Needs-attention</th>
+						<th scope="col" style="text-align: left; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); padding: var(--space-sm) var(--space-md); border-bottom: 1px solid var(--color-border); white-space: nowrap;">Expand</th>
 					</tr>
 				</thead>
 				<tbody>
 					{#each data.argumentItems as item (item.id)}
 						<tr>
-							<td style="padding: 12px; border-bottom: 1px solid var(--color-border); vertical-align: top; white-space: nowrap;">
+							<td style="padding: var(--space-md); border-bottom: 1px solid var(--color-border); vertical-align: top; white-space: nowrap;">
 								<span style={tierBadgeStyle(item.trust_tier)}>{tierLabel(item.trust_tier)}</span>
 								<span style="display: inline-block; width: 4px;"></span>
 								<span style={badgeStyle(item.status)}>{badgeLabel(item.status)}</span>
 							</td>
-							<td style="padding: 12px; border-bottom: 1px solid var(--color-border); vertical-align: top; color: var(--color-text-primary); font-size: var(--font-size-body);">
+							<td style="padding: var(--space-md); border-bottom: 1px solid var(--color-border); vertical-align: top; color: var(--color-text-primary); font-size: var(--font-size-body);">
 								{item.case_name}
 								{#if item.argument_discrepancies.length > 0}
 									<span style="display: inline-block; width: 4px;"></span>
 									<span style={discrepancyBadgeStyle()}>Discrepancy</span>
 								{/if}
 							</td>
-							<td style="padding: 12px; border-bottom: 1px solid var(--color-border); vertical-align: top; color: var(--color-text-secondary); font-size: var(--font-size-caption); white-space: nowrap;">
+							<td style="padding: var(--space-md); border-bottom: 1px solid var(--color-border); vertical-align: top; color: var(--color-text-secondary); font-size: var(--font-size-caption); white-space: nowrap;">
 								{item.docket_number}
 							</td>
-							<td style="padding: 12px; border-bottom: 1px solid var(--color-border); vertical-align: top; color: var(--color-text-secondary); font-size: var(--font-size-caption); white-space: nowrap;">
+							<td style="padding: var(--space-md); border-bottom: 1px solid var(--color-border); vertical-align: top; color: var(--color-text-secondary); font-size: var(--font-size-caption); white-space: nowrap;">
 								{formatDate(item.argued_date)}
 							</td>
-							<td style="padding: 12px; border-bottom: 1px solid var(--color-border); vertical-align: top; color: var(--color-text-secondary); font-size: var(--font-size-caption);">
+							<td style="padding: var(--space-md); border-bottom: 1px solid var(--color-border); vertical-align: top; color: var(--color-text-secondary); font-size: var(--font-size-caption);">
 								{#if item.attention_count > 0}
 									{attentionCountText(item.attention_count)}
 								{/if}
 							</td>
-							<td style="padding: 12px; border-bottom: 1px solid var(--color-border); vertical-align: top; white-space: nowrap;">
+							<td style="padding: var(--space-md); border-bottom: 1px solid var(--color-border); vertical-align: top; white-space: nowrap;">
 								<button
 									type="button"
 									aria-expanded={expandedIds.has(item.id)}
@@ -535,9 +535,9 @@
 						</tr>
 						{#if expandedIds.has(item.id)}
 							<tr>
-								<td colspan="6" style="padding: 0 0 var(--space-md) 0; border-bottom: 1px solid var(--color-border);">
+								<td colspan="6" style="padding: 0 0 var(--space-lg) 0; border-bottom: 1px solid var(--color-border);">
 									{#if item.argument_discrepancies.length > 0}
-										<div style="background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-md); margin: var(--space-xs) 12px var(--space-md) 12px;">
+										<div style="background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-lg); margin: var(--space-xs) var(--space-md) var(--space-lg) var(--space-md);">
 											<div style="display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap; margin-bottom: var(--space-sm);">
 												<span style="color: var(--color-text-primary); font-size: var(--font-size-body);">This argument's own values and its lead case's</span>
 												<span style={discrepancyBadgeStyle()}>Discrepancy</span>
@@ -554,9 +554,9 @@
 										</div>
 									{/if}
 									{#if item.constituents.length > 0}
-										<div style="display: flex; flex-direction: column; gap: var(--space-md); padding: var(--space-xs) 12px 0 12px;">
+										<div style="display: flex; flex-direction: column; gap: var(--space-lg); padding: var(--space-xs) var(--space-md) 0 var(--space-md);">
 											{#each item.constituents as constituent (constituent.participant_id)}
-												<div style="background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-md);">
+												<div style="background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-lg);">
 													<div style="display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap; margin-bottom: var(--space-sm);">
 														<span style="color: var(--color-text-primary); font-size: var(--font-size-body);">
 															{constituent.person_id === null ? 'Unresolved speaker' : constituent.display_name}
@@ -569,7 +569,7 @@
 													</div>
 
 													{#if constituent.has_open_discrepancy}
-														<div style="margin-bottom: 12px;">
+														<div style="margin-bottom: var(--space-md);">
 															{#each constituent.discrepancies as d (d.id)}
 																<p style="font-size: var(--font-size-caption); margin: var(--space-xs) 0;">
 																	<span style="color: var(--color-text-secondary);">{d.field}: existing</span>
@@ -588,7 +588,7 @@
 																<input type="hidden" name="id" value={constituent.participant_id} />
 																<button
 																	type="submit"
-																	style="min-height: var(--touch-target-dense); padding: var(--space-xs) 12px; font-size: var(--font-size-caption); font-weight: var(--font-weight-semibold); cursor: pointer; border: 1px solid var(--color-accent); background-color: transparent; color: var(--color-accent); border-radius: 6px;"
+																	style="min-height: var(--touch-target-dense); padding: var(--space-xs) var(--space-md); font-size: var(--font-size-caption); font-weight: var(--font-weight-semibold); cursor: pointer; border: 1px solid var(--color-accent); background-color: transparent; color: var(--color-accent); border-radius: 6px;"
 																>Confirm</button>
 															</form>
 														{/if}
@@ -597,7 +597,7 @@
 																<input type="hidden" name="id" value={constituent.participant_id} />
 																<button
 																	type="submit"
-																	style="min-height: var(--touch-target-dense); padding: var(--space-xs) 12px; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); cursor: pointer; border: 1px solid var(--color-border); background-color: transparent; color: var(--color-text-secondary); border-radius: 6px;"
+																	style="min-height: var(--touch-target-dense); padding: var(--space-xs) var(--space-md); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); cursor: pointer; border: 1px solid var(--color-border); background-color: transparent; color: var(--color-text-secondary); border-radius: 6px;"
 																>Confirm as unattributable</button>
 															</form>
 														{/if}
@@ -619,7 +619,7 @@
 											{/each}
 										</div>
 									{:else}
-										<div style="padding: 12px 12px 0 12px;">
+										<div style="padding: var(--space-md) var(--space-md) 0 var(--space-md);">
 											<p style="font-size: var(--font-size-caption); color: var(--color-text-secondary); margin: 0 0 var(--space-sm) 0;">
 												No flagged participants — this argument is queued because:
 											</p>
@@ -641,12 +641,12 @@
 										     candidate argument queued solely via a degraded-tier or
 										     argument/case-discrepancy leg still needs to be
 										     approvable. Absent for every other status (D-19). -->
-										<div style="display: flex; gap: var(--space-sm); flex-wrap: wrap; padding: 12px 12px 0 12px;">
+										<div style="display: flex; gap: var(--space-sm); flex-wrap: wrap; padding: var(--space-md) var(--space-md) 0 var(--space-md);">
 											<form method="POST" action={actionUrl('approve')} use:enhance>
 												<input type="hidden" name="id" value={item.id} />
 												<button
 													type="submit"
-													style="min-height: var(--touch-target-dense); padding: var(--space-xs) 12px; font-size: var(--font-size-caption); font-weight: var(--font-weight-semibold); cursor: pointer; border: 1px solid var(--color-accent); background-color: transparent; color: var(--color-accent); border-radius: 6px;"
+													style="min-height: var(--touch-target-dense); padding: var(--space-xs) var(--space-md); font-size: var(--font-size-caption); font-weight: var(--font-weight-semibold); cursor: pointer; border: 1px solid var(--color-accent); background-color: transparent; color: var(--color-accent); border-radius: 6px;"
 												>Approve — move to Draft</button>
 											</form>
 										</div>
@@ -665,29 +665,29 @@
 			<table style="width: 100%; border-collapse: collapse;">
 				<thead>
 					<tr>
-						<th scope="col" style="text-align: left; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); padding: var(--space-sm) 12px; border-bottom: 1px solid var(--color-border); white-space: nowrap;">Review state</th>
-						<th scope="col" style="text-align: left; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); padding: var(--space-sm) 12px; border-bottom: 1px solid var(--color-border);">Full name</th>
-						<th scope="col" style="text-align: left; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); padding: var(--space-sm) 12px; border-bottom: 1px solid var(--color-border);">Provenance note</th>
-						<th scope="col" style="text-align: left; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); padding: var(--space-sm) 12px; border-bottom: 1px solid var(--color-border); white-space: nowrap;">Actions</th>
+						<th scope="col" style="text-align: left; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); padding: var(--space-sm) var(--space-md); border-bottom: 1px solid var(--color-border); white-space: nowrap;">Review state</th>
+						<th scope="col" style="text-align: left; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); padding: var(--space-sm) var(--space-md); border-bottom: 1px solid var(--color-border);">Full name</th>
+						<th scope="col" style="text-align: left; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); padding: var(--space-sm) var(--space-md); border-bottom: 1px solid var(--color-border);">Provenance note</th>
+						<th scope="col" style="text-align: left; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); padding: var(--space-sm) var(--space-md); border-bottom: 1px solid var(--color-border); white-space: nowrap;">Actions</th>
 					</tr>
 				</thead>
 				<tbody>
 					{#each data.personItems as person (person.id)}
 						<tr>
-							<td style="padding: 12px; border-bottom: 1px solid var(--color-border); vertical-align: top; white-space: nowrap;">
+							<td style="padding: var(--space-md); border-bottom: 1px solid var(--color-border); vertical-align: top; white-space: nowrap;">
 								<span style={reviewStateBadgeStyle(person.review_state)}>{reviewStateLabel(person.review_state)}</span>
 								{#if person.has_open_discrepancy}
 									<span style="display: inline-block; width: 4px;"></span>
 									<span style={discrepancyBadgeStyle()}>Discrepancy</span>
 								{/if}
 							</td>
-							<td style="padding: 12px; border-bottom: 1px solid var(--color-border); vertical-align: top; color: var(--color-text-primary); font-size: var(--font-size-body);">
+							<td style="padding: var(--space-md); border-bottom: 1px solid var(--color-border); vertical-align: top; color: var(--color-text-primary); font-size: var(--font-size-body);">
 								{person.full_name}
 							</td>
-							<td style="padding: 12px; border-bottom: 1px solid var(--color-border); vertical-align: top; color: var(--color-text-secondary); font-size: var(--font-size-caption);">
+							<td style="padding: var(--space-md); border-bottom: 1px solid var(--color-border); vertical-align: top; color: var(--color-text-secondary); font-size: var(--font-size-caption);">
 								{person.provenance_note}
 							</td>
-							<td style="padding: 12px; border-bottom: 1px solid var(--color-border); vertical-align: top; white-space: nowrap;">
+							<td style="padding: var(--space-md); border-bottom: 1px solid var(--color-border); vertical-align: top; white-space: nowrap;">
 								<div style="display: flex; gap: var(--space-sm); flex-wrap: wrap;">
 									{#if person.review_state === 'needs_review' || person.review_state === 'unreviewed'}
 										<form method="POST" action={actionUrl('confirm')} use:enhance>
@@ -695,7 +695,7 @@
 											<input type="hidden" name="id" value={person.id} />
 											<button
 												type="submit"
-												style="min-height: var(--touch-target-dense); padding: var(--space-xs) 12px; font-size: var(--font-size-caption); font-weight: var(--font-weight-semibold); cursor: pointer; border: 1px solid var(--color-accent); background-color: transparent; color: var(--color-accent); border-radius: 6px;"
+												style="min-height: var(--touch-target-dense); padding: var(--space-xs) var(--space-md); font-size: var(--font-size-caption); font-weight: var(--font-weight-semibold); cursor: pointer; border: 1px solid var(--color-accent); background-color: transparent; color: var(--color-accent); border-radius: 6px;"
 											>Confirm</button>
 										</form>
 									{/if}

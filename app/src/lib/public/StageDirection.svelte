@@ -15,9 +15,9 @@
 		border-bottom: 1px solid var(--color-border);
 		border-left: 3px solid var(--color-stage-accent);
 		border-radius: 4px;
-		padding: var(--space-sm) var(--space-md);
-		margin-top: var(--space-2xl);
-		margin-bottom: var(--space-2xl);
+		padding: var(--space-sm) var(--space-lg);
+		margin-top: var(--space-3xl);
+		margin-bottom: var(--space-3xl);
 		width: 100%;
 	"
 >

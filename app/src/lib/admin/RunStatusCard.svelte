@@ -58,8 +58,8 @@
 		background-color: var(--color-surface);
 		border: 1px solid var(--color-border);
 		border-radius: 8px;
-		padding: var(--space-lg);
-		margin-bottom: var(--space-lg);
+		padding: var(--space-xl);
+		margin-bottom: var(--space-xl);
 	"
 >
 	<div
@@ -67,7 +67,7 @@
 			display: flex;
 			align-items: center;
 			justify-content: space-between;
-			margin-bottom: var(--space-md);
+			margin-bottom: var(--space-lg);
 		"
 	>
 		<h2 style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0; line-height: 1.2;">
@@ -94,7 +94,7 @@
 
 	<!-- Source PDF link — present in every state per UI-SPEC Interaction Contract -->
 	{#if pdfHref}
-		<div style="margin-bottom: var(--space-md);">
+		<div style="margin-bottom: var(--space-lg);">
 			<a
 				href={pdfHref}
 				target="_blank"
@@ -115,7 +115,7 @@
 		<h3 style="font-size: var(--font-size-body); font-weight: var(--font-weight-regular); color: var(--color-text-primary); margin: 0 0 var(--space-xs) 0;">
 			Argument created
 		</h3>
-		<p style="font-size: var(--font-size-body); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin: 0 0 var(--space-md) 0;">
+		<p style="font-size: var(--font-size-body); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin: 0 0 var(--space-lg) 0;">
 			This run is preserved as the source history for the argument.
 		</p>
 		{#if readiness.argument_edit_href}
@@ -130,7 +130,7 @@
 		<h3 style="font-size: var(--font-size-body); font-weight: var(--font-weight-regular); color: var(--color-text-primary); margin: 0 0 var(--space-xs) 0;">
 			Not ready to create argument
 		</h3>
-		<p style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin: 0 0 12px 0;">
+		<p style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin: 0 0 var(--space-md) 0;">
 			Resolve these items before creating the argument.
 		</p>
 		<ul style="margin: 0; padding-left: 20px;">
@@ -139,7 +139,7 @@
 			{/each}
 		</ul>
 	{:else}
-		<h3 style="font-size: var(--font-size-body); font-weight: var(--font-weight-regular); color: var(--color-text-primary); margin: 0 0 var(--space-md) 0;">
+		<h3 style="font-size: var(--font-size-body); font-weight: var(--font-weight-regular); color: var(--color-text-primary); margin: 0 0 var(--space-lg) 0;">
 			Ready to create argument
 		</h3>
 		<form
@@ -169,7 +169,7 @@
 					background-color: var(--color-surface);
 					border: 1px solid var(--color-accent);
 					border-radius: 6px;
-					padding: 12px var(--space-lg);
+					padding: var(--space-md) var(--space-xl);
 					cursor: pointer;
 					{approveSubmitting ? 'opacity: 0.7; cursor: not-allowed;' : ''}
 				"

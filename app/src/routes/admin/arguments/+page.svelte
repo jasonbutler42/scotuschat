@@ -59,7 +59,7 @@
 	function filterButtonStyle(active: boolean, selectedColor: string): string {
 		return `
 			min-height: var(--touch-target);
-			padding: var(--space-sm) var(--space-md);
+			padding: var(--space-sm) var(--space-lg);
 			font-size: var(--font-size-body);
 			font-weight: var(--font-weight-semibold);
 			cursor: pointer;
@@ -165,9 +165,9 @@
 
 <main style="background-color: var(--color-bg); min-height: 100vh;">
 	<header
-		style="background-color: var(--color-surface); border-bottom: 1px solid var(--color-border); padding: var(--space-md) var(--space-lg);"
+		style="background-color: var(--color-surface); border-bottom: 1px solid var(--color-border); padding: var(--space-lg) var(--space-xl);"
 	>
-		<div style="display: flex; align-items: center; gap: var(--space-md); flex-wrap: wrap;">
+		<div style="display: flex; align-items: center; gap: var(--space-lg); flex-wrap: wrap;">
 			<h1 style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0;">Arguments</h1>
 
 			<!-- Status segmented filter control (DASH-02, D-05) -->
@@ -214,10 +214,10 @@
 		</div>
 	</header>
 
-	<div style="max-width: 860px; margin: 0 auto; padding: var(--space-2xl) var(--space-lg);">
+	<div style="max-width: 860px; margin: 0 auto; padding: var(--space-3xl) var(--space-xl);">
 		<!-- Active-filter indicator (D-05) — only for a specific status, never "All" -->
 		{#if data.status === 'draft' || data.status === 'published' || data.status === 'unpublished'}
-			<p style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin: 0 0 var(--space-md) 0;">
+			<p style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin: 0 0 var(--space-lg) 0;">
 				Showing: {statusLabel(data.status)} arguments ·
 				<button
 					type="button"
@@ -245,7 +245,7 @@
 					background-color: var(--color-surface);
 					border: 1px solid var(--color-border);
 					border-radius: 8px;
-					padding: var(--space-lg);
+					padding: var(--space-xl);
 					text-align: center;
 				"
 			>
@@ -345,7 +345,7 @@
 						<tr>
 							<td
 								style="
-									padding: 12px 0;
+									padding: var(--space-md) 0;
 									border-bottom: 1px solid var(--color-border);
 									white-space: nowrap;
 								"
@@ -361,7 +361,7 @@
 								style="
 									font-size: var(--font-size-caption);
 									color: var(--color-text-secondary);
-									padding: 12px var(--space-sm);
+									padding: var(--space-md) var(--space-sm);
 									border-bottom: 1px solid var(--color-border);
 								"
 							>{arg.case_name}</td>
@@ -369,7 +369,7 @@
 								style="
 									font-size: var(--font-size-caption);
 									color: var(--color-text-secondary);
-									padding: 12px var(--space-sm);
+									padding: var(--space-md) var(--space-sm);
 									border-bottom: 1px solid var(--color-border);
 									white-space: nowrap;
 								"
@@ -378,7 +378,7 @@
 								style="
 									font-size: var(--font-size-caption);
 									color: var(--color-text-secondary);
-									padding: 12px var(--space-sm);
+									padding: var(--space-md) var(--space-sm);
 									border-bottom: 1px solid var(--color-border);
 									white-space: nowrap;
 								"
@@ -387,14 +387,14 @@
 								style="
 									font-size: var(--font-size-caption);
 									color: var(--color-text-secondary);
-									padding: 12px var(--space-sm);
+									padding: var(--space-md) var(--space-sm);
 									border-bottom: 1px solid var(--color-border);
 									white-space: nowrap;
 								"
 							>{arg.resolved_at ? formatDate(arg.resolved_at) : '—'}</td>
 							<td
 								style="
-									padding: 12px 0;
+									padding: var(--space-md) 0;
 									border-bottom: 1px solid var(--color-border);
 									text-align: right;
 								"
@@ -428,7 +428,7 @@
 													background: transparent;
 													border: 1px solid var(--color-accent);
 													border-radius: 6px;
-													padding: var(--space-sm) 12px;
+													padding: var(--space-sm) var(--space-md);
 													cursor: {publishingId === arg.id ? 'not-allowed' : 'pointer'};
 													opacity: {publishingId === arg.id ? 0.7 : 1};
 												"
@@ -463,7 +463,7 @@
 													background: transparent;
 													border: 1px solid var(--color-border);
 													border-radius: 6px;
-													padding: var(--space-sm) 12px;
+													padding: var(--space-sm) var(--space-md);
 													cursor: {publishingId === arg.id ? 'not-allowed' : 'pointer'};
 													opacity: {publishingId === arg.id ? 0.7 : 1};
 												"
@@ -491,7 +491,7 @@
 							     had succeeded. -->
 						{#if form?.error && form.argumentId === arg.id && !form.publishBlocked}
 							<tr>
-								<td colspan="6" style="padding: 0 0 12px 0; border-bottom: 1px solid var(--color-border);">
+								<td colspan="6" style="padding: 0 0 var(--space-md) 0; border-bottom: 1px solid var(--color-border);">
 									<p
 										role="alert"
 										style="
@@ -512,11 +512,11 @@
 							     row so it does not distort the table's column layout. -->
 						{#if form?.publishBlocked && form.argumentId === arg.id && form !== dismissedForm}
 							<tr>
-								<td colspan="6" style="padding: 0 0 12px 0; border-bottom: 1px solid var(--color-border);">
+								<td colspan="6" style="padding: 0 0 var(--space-md) 0; border-bottom: 1px solid var(--color-border);">
 									<div
 										style="
 											margin: 0;
-											padding: var(--space-md);
+											padding: var(--space-lg);
 											border: 1px solid var(--color-status-unpublished);
 											border-radius: 6px;
 											background-color: var(--color-surface);
@@ -562,7 +562,7 @@
 										{/if}
 
 										{#if form.blockers && form.blockers.length > 0}
-											<ul style="margin: 0 0 var(--space-md) 0; padding-left: 20px;">
+											<ul style="margin: 0 0 var(--space-lg) 0; padding-left: 20px;">
 												{#each form.blockers as b}
 													<li style="font-size: var(--font-size-caption); color: var(--color-text-secondary); padding: 2px 0;">
 														{blockerSentence(b.code, b.count)}
@@ -572,7 +572,7 @@
 										{/if}
 
 										{#if form?.overrideReasonRequired && form.argumentId === arg.id}
-											<p role="alert" style="font-size: var(--font-size-caption); font-weight: var(--font-weight-semibold); color: var(--color-destructive); margin: 0 0 12px 0;">
+											<p role="alert" style="font-size: var(--font-size-caption); font-weight: var(--font-weight-semibold); color: var(--color-destructive); margin: 0 0 var(--space-md) 0;">
 												A non-empty reason is required — your submission was blank or only whitespace.
 											</p>
 										{/if}
@@ -612,8 +612,8 @@
 													border-radius: 6px;
 													color: var(--color-text-primary);
 													font-size: var(--font-size-caption);
-													padding: var(--space-sm) 12px;
-													margin-bottom: 12px;
+													padding: var(--space-sm) var(--space-md);
+													margin-bottom: var(--space-md);
 												"
 											></textarea>
 											<button
@@ -627,7 +627,7 @@
 													font-size: var(--font-size-caption);
 													font-weight: var(--font-weight-semibold);
 													color: var(--color-text-primary);
-													padding: var(--space-sm) var(--space-md);
+													padding: var(--space-sm) var(--space-lg);
 													cursor: {publishingId === arg.id ? 'not-allowed' : 'pointer'};
 													opacity: {publishingId === arg.id ? 0.7 : 1};
 												"

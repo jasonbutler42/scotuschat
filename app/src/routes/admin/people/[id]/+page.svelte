@@ -322,7 +322,7 @@
 </script>
 
 <main style="background-color: var(--color-bg); min-height: 100vh;">
-	<header style="background-color: var(--color-surface); border-bottom: 1px solid var(--color-border); padding: var(--space-md) var(--space-lg);">
+	<header style="background-color: var(--color-surface); border-bottom: 1px solid var(--color-border); padding: var(--space-lg) var(--space-xl);">
 		<nav aria-label="Breadcrumb" style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); line-height: 1.4;">
 			<a href={'/admin/people?tab=' + backTab} style="color: var(--color-accent); text-decoration: none;">People</a>
 			<span style="color: var(--color-text-secondary);"> &gt; </span>
@@ -333,7 +333,7 @@
 		</h1>
 	</header>
 
-	<div style="max-width: 640px; margin: 0 auto; padding: var(--space-2xl) var(--space-lg);">
+	<div style="max-width: 640px; margin: 0 auto; padding: var(--space-3xl) var(--space-xl);">
 
 		<!-- ══════════════════════════════════════════════════════════════════════
 		     Main save form — covers Identity + Person Type (is_justice/birthdate/
@@ -359,10 +359,10 @@
 		>
 			<!-- ── Identity card (renamed from "Basic Info", D-13 — no Is Justice checkbox) ── -->
 			<div
-				style="background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; padding: var(--space-lg); margin-bottom: var(--space-lg);"
+				style="background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; padding: var(--space-xl); margin-bottom: var(--space-xl);"
 			>
 				<h2
-					style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-md) 0; line-height: 1.2;"
+					style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-lg) 0; line-height: 1.2;"
 				>
 					Identity
 				</h2>
@@ -371,7 +371,7 @@
 				     editable input and never submitted as client data; an <output>
 				     is used (not a disabled/readonly input) so it stays a plain
 				     readout programmatically associated with its label/explanation. -->
-				<div style="margin-bottom: var(--space-md);">
+				<div style="margin-bottom: var(--space-lg);">
 					<div style="display: flex; align-items: baseline; gap: var(--space-sm); margin-bottom: var(--space-sm); flex-wrap: wrap;">
 						<span id="full_name_label" style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary);">
 							Full Name
@@ -384,7 +384,7 @@
 						id="full_name_preview"
 						aria-labelledby="full_name_label full_name_explanation"
 						aria-live="polite"
-						style="display: block; width: 100%; background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) 12px; font-size: var(--font-size-body); box-sizing: border-box; color: {fullNamePreview === 'N/A' ? 'var(--color-text-secondary)' : 'var(--color-text-primary)'}; font-style: {fullNamePreview === 'N/A' ? 'italic' : 'normal'};"
+						style="display: block; width: 100%; background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) var(--space-md); font-size: var(--font-size-body); box-sizing: border-box; color: {fullNamePreview === 'N/A' ? 'var(--color-text-secondary)' : 'var(--color-text-primary)'}; font-style: {fullNamePreview === 'N/A' ? 'italic' : 'normal'};"
 					>{fullNamePreview}</output>
 				</div>
 
@@ -403,7 +403,7 @@
 					<p style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin: 0 0 var(--space-sm) 0;">
 						{MIN_NAME_ERROR}
 					</p>
-					<div class="name-parts-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr 80px; gap: var(--space-md);">
+					<div class="name-parts-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr 80px; gap: var(--space-lg);">
 						<div>
 							<label
 								for="first_name"
@@ -416,7 +416,7 @@
 								name="first_name"
 								type="text"
 								bind:value={firstName}
-								style="display: block; width: 100%; background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) 12px; font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box;"
+								style="display: block; width: 100%; background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) var(--space-md); font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box;"
 							/>
 							{#if data.person.provenance_metadata}
 								<div style="margin-top: var(--space-sm);">
@@ -441,7 +441,7 @@
 								name="middle_name"
 								type="text"
 								bind:value={middleName}
-								style="display: block; width: 100%; background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) 12px; font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box;"
+								style="display: block; width: 100%; background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) var(--space-md); font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box;"
 							/>
 							{#if data.person.provenance_metadata}
 								<div style="margin-top: var(--space-sm);">
@@ -466,7 +466,7 @@
 								name="last_name"
 								type="text"
 								bind:value={lastName}
-								style="display: block; width: 100%; background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) 12px; font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box;"
+								style="display: block; width: 100%; background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) var(--space-md); font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box;"
 							/>
 							{#if data.person.provenance_metadata}
 								<div style="margin-top: var(--space-sm);">
@@ -491,7 +491,7 @@
 								name="name_suffix"
 								type="text"
 								bind:value={nameSuffix}
-								style="display: block; width: 100%; background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) 12px; font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box;"
+								style="display: block; width: 100%; background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) var(--space-md); font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box;"
 							/>
 							{#if data.person.provenance_metadata}
 								<div style="margin-top: var(--space-sm);">
@@ -527,16 +527,16 @@
 		>
 			<!-- ── Photo card ── -->
 			<div
-				style="background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; padding: var(--space-lg); margin-bottom: var(--space-lg);"
+				style="background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; padding: var(--space-xl); margin-bottom: var(--space-xl);"
 			>
 				<h2
-					style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-md) 0; line-height: 1.2;"
+					style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-lg) 0; line-height: 1.2;"
 				>
 					Photo
 				</h2>
 
 				<!-- Photo preview: 80×80 circle — image or initials fallback -->
-				<div style="margin-bottom: var(--space-md);">
+				<div style="margin-bottom: var(--space-lg);">
 					{#if data.person.photo_url_full}
 						<img
 							src={data.person.photo_url_full}
@@ -554,18 +554,18 @@
 				</div>
 
 				<!-- Tab bar -->
-				<div style="display: flex; gap: 0; margin-bottom: var(--space-md); border-bottom: 1px solid var(--color-border);">
+				<div style="display: flex; gap: 0; margin-bottom: var(--space-lg); border-bottom: 1px solid var(--color-border);">
 					<button
 						type="button"
 						onclick={() => (photoTab = 'upload')}
-						style="padding: var(--space-sm) var(--space-md); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); background: transparent; border: none; border-bottom: {photoTab === 'upload' ? '2px solid var(--color-accent)' : '2px solid transparent'}; color: {photoTab === 'upload' ? 'var(--color-text-primary)' : 'var(--color-text-secondary)'}; cursor: pointer; margin-bottom: -1px;"
+						style="padding: var(--space-sm) var(--space-lg); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); background: transparent; border: none; border-bottom: {photoTab === 'upload' ? '2px solid var(--color-accent)' : '2px solid transparent'}; color: {photoTab === 'upload' ? 'var(--color-text-primary)' : 'var(--color-text-secondary)'}; cursor: pointer; margin-bottom: -1px;"
 					>
 						Upload file
 					</button>
 					<button
 						type="button"
 						onclick={() => (photoTab = 'url')}
-						style="padding: var(--space-sm) var(--space-md); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); background: transparent; border: none; border-bottom: {photoTab === 'url' ? '2px solid var(--color-accent)' : '2px solid transparent'}; color: {photoTab === 'url' ? 'var(--color-text-primary)' : 'var(--color-text-secondary)'}; cursor: pointer; margin-bottom: -1px;"
+						style="padding: var(--space-sm) var(--space-lg); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); background: transparent; border: none; border-bottom: {photoTab === 'url' ? '2px solid var(--color-accent)' : '2px solid transparent'}; color: {photoTab === 'url' ? 'var(--color-text-primary)' : 'var(--color-text-secondary)'}; cursor: pointer; margin-bottom: -1px;"
 					>
 						Enter URL
 					</button>
@@ -573,21 +573,21 @@
 
 				<!-- Tab panel -->
 				{#if photoTab === 'upload'}
-					<div style="margin-bottom: var(--space-md);">
+					<div style="margin-bottom: var(--space-lg);">
 						<input
 							type="file"
 							name="photo_file"
 							accept="image/*"
-							style="display: block; width: 100%; min-height: var(--touch-target); background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) 12px; font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box; cursor: pointer;"
+							style="display: block; width: 100%; min-height: var(--touch-target); background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) var(--space-md); font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box; cursor: pointer;"
 						/>
 					</div>
 				{:else}
-					<div style="margin-bottom: var(--space-md);">
+					<div style="margin-bottom: var(--space-lg);">
 						<input
 							type="text"
 							name="photo_url"
 							placeholder="https://…"
-							style="display: block; width: 100%; background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) 12px; font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box;"
+							style="display: block; width: 100%; background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) var(--space-md); font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box;"
 						/>
 					</div>
 				{/if}
@@ -614,10 +614,10 @@
 		     hidden inputs already use, so the bio saves atomically with the rest of
 		     the person on Save Person, not with the photo upload. ── -->
 		<div
-			style="background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; padding: var(--space-lg); margin-bottom: var(--space-lg);"
+			style="background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; padding: var(--space-xl); margin-bottom: var(--space-xl);"
 		>
 			<h2
-				style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-md) 0; line-height: 1.2;"
+				style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-lg) 0; line-height: 1.2;"
 			>
 				Biography
 			</h2>
@@ -638,7 +638,7 @@
 					form="save-form"
 					bind:value={bioText}
 					placeholder="Enter a short biography…"
-					style="display: block; width: 100%; background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) 12px; font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box; min-height: 120px; resize: vertical; font-family: inherit;"
+					style="display: block; width: 100%; background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) var(--space-md); font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box; min-height: 120px; resize: vertical; font-family: inherit;"
 				></textarea>
 			</div>
 		</div>
@@ -649,16 +649,16 @@
 		     carried into this card at all. Inputs associate with save-form via the
 		     `form` attribute since this card sits outside that <form> element. ── -->
 		<div
-			style="background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; padding: var(--space-lg); margin-bottom: var(--space-lg);"
+			style="background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; padding: var(--space-xl); margin-bottom: var(--space-xl);"
 		>
 			<h2
-				style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-md) 0; line-height: 1.2;"
+				style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-lg) 0; line-height: 1.2;"
 			>
 				Person Type
 			</h2>
 
 			<!-- Bench/Advocate segmented toggle (D-13) — same visual idiom as the list-page tab toggle -->
-			<div style="display: flex; gap: 0; margin-bottom: var(--space-md);">
+			<div style="display: flex; gap: 0; margin-bottom: var(--space-lg);">
 				<button
 					type="button"
 					aria-pressed={isJustice}
@@ -666,7 +666,7 @@
 					onclick={() => (isJustice = true)}
 					style="
 						min-height: var(--touch-target);
-						padding: var(--space-sm) var(--space-md);
+						padding: var(--space-sm) var(--space-lg);
 						border: 1px solid {isJustice ? 'var(--color-accent)' : 'var(--color-border)'};
 						border-radius: 6px 0 0 6px;
 						background-color: {isJustice ? 'var(--color-accent)' : 'var(--color-surface)'};
@@ -683,7 +683,7 @@
 					onclick={() => (isJustice = false)}
 					style="
 						min-height: var(--touch-target);
-						padding: var(--space-sm) var(--space-md);
+						padding: var(--space-sm) var(--space-lg);
 						border: 1px solid {!isJustice ? 'var(--color-accent)' : 'var(--color-border)'};
 						border-left: none;
 						border-radius: 0 6px 6px 0;
@@ -712,7 +712,7 @@
 			{#if isJustice}
 			<div transition:slide>
 				<!-- Birth Date + Death Date (D-08, D-10) -->
-				<div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md); margin-bottom: var(--space-md);">
+				<div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-lg); margin-bottom: var(--space-lg);">
 					<div>
 						<label
 							for="birthdate"
@@ -724,7 +724,7 @@
 							id="birthdate"
 							type="date"
 							bind:value={birthdate}
-							style="display: block; width: 100%; background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) 12px; font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box;"
+							style="display: block; width: 100%; background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) var(--space-md); font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box;"
 						/>
 					</div>
 					<div>
@@ -738,19 +738,19 @@
 							id="death_date"
 							type="date"
 							bind:value={deathDate}
-							style="display: block; width: 100%; background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) 12px; font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box;"
+							style="display: block; width: 100%; background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) var(--space-md); font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box;"
 						/>
 					</div>
 				</div>
 
-				<h3 style="font-size: var(--font-size-body); font-weight: var(--font-weight-regular); color: var(--color-text-primary); margin: 0 0 var(--space-md) 0; line-height: 1.2;">
+				<h3 style="font-size: var(--font-size-body); font-weight: var(--font-weight-regular); color: var(--color-text-primary); margin: 0 0 var(--space-lg) 0; line-height: 1.2;">
 					Tenure Periods
 				</h3>
 
 				<!-- Tenure Period sub-cards (D-18): bordered, inset background -->
 				{#each tenureRows as row, i (row._key)}
 					<div
-						style="background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-lg); margin-bottom: var(--space-md);"
+						style="background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-xl); margin-bottom: var(--space-lg);"
 					>
 						<!-- office (D-01..D-17, Phase 37) — segmented native-radio control
 						     replacing the free-text seat field. Exactly one of the two
@@ -762,7 +762,7 @@
 						     radiogroup (role="radiogroup" is the only role in this markup
 						     that ARIA permits aria-invalid on — not the fieldset's implicit
 						     "group" role, and not the individual radios' "radio" role). -->
-						<fieldset style="border: none; margin: 0 0 var(--space-md) 0; padding: 0;">
+						<fieldset style="border: none; margin: 0 0 var(--space-lg) 0; padding: 0;">
 							<legend style="display: block; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin-bottom: var(--space-sm); padding: 0;">Office</legend>
 							<div
 								role="radiogroup"
@@ -777,7 +777,7 @@
 										position: relative;
 										flex: 1;
 										min-height: var(--touch-target);
-										padding: var(--space-sm) var(--space-md);
+										padding: var(--space-sm) var(--space-lg);
 										display: flex;
 										align-items: center;
 										justify-content: center;
@@ -809,7 +809,7 @@
 										position: relative;
 										flex: 1;
 										min-height: var(--touch-target);
-										padding: var(--space-sm) var(--space-md);
+										padding: var(--space-sm) var(--space-lg);
 										display: flex;
 										align-items: center;
 										justify-content: center;
@@ -851,7 +851,7 @@
 							{/if}
 						</fieldset>
 
-						<div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md); margin-bottom: var(--space-md);">
+						<div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-lg); margin-bottom: var(--space-lg);">
 							<div>
 								<label
 									for="tenure-start-{row._key}"
@@ -863,7 +863,7 @@
 									id="tenure-start-{row._key}"
 									type="date"
 									bind:value={row.start_date}
-									style="display: block; width: 100%; background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) 12px; font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box;"
+									style="display: block; width: 100%; background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) var(--space-md); font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box;"
 								/>
 							</div>
 							<div>
@@ -877,12 +877,12 @@
 									id="tenure-end-{row._key}"
 									type="date"
 									bind:value={row.end_date}
-									style="display: block; width: 100%; background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) 12px; font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box;"
+									style="display: block; width: 100%; background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) var(--space-md); font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box;"
 								/>
 							</div>
 						</div>
 
-						<div style="margin-bottom: var(--space-md);">
+						<div style="margin-bottom: var(--space-lg);">
 							<label
 								for="tenure-appointed-{row._key}"
 								style="display: block; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin-bottom: var(--space-sm);"
@@ -893,11 +893,11 @@
 								id="tenure-appointed-{row._key}"
 								type="text"
 								bind:value={row.appointed_by}
-								style="display: block; width: 100%; background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) 12px; font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box;"
+								style="display: block; width: 100%; background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) var(--space-md); font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box;"
 							/>
 						</div>
 
-						<div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md); margin-bottom: var(--space-md);">
+						<div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-lg); margin-bottom: var(--space-lg);">
 							<div>
 								<label
 									for="tenure-party-{row._key}"
@@ -908,7 +908,7 @@
 								<select
 									id="tenure-party-{row._key}"
 									bind:value={row.appointing_president_party}
-									style="display: block; width: 100%; background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) 12px; font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box;"
+									style="display: block; width: 100%; background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) var(--space-md); font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box;"
 								>
 									<option value="">— None —</option>
 									{#each PARTY_OPTIONS as party (party)}
@@ -939,7 +939,7 @@
 								<select
 									id="tenure-reason-{row._key}"
 									bind:value={row.reason_left}
-									style="display: block; width: 100%; background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) 12px; font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box;"
+									style="display: block; width: 100%; background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) var(--space-md); font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box;"
 								>
 									<option value="">— None —</option>
 									<option value="retired">Retired</option>
@@ -956,7 +956,7 @@
 							<button
 								type="button"
 								onclick={() => removeTenureRow(i)}
-								style="color: var(--color-destructive); background: transparent; border: 1px solid var(--color-destructive); border-radius: 6px; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); min-height: var(--touch-target-dense); padding: var(--space-xs) var(--space-md); cursor: pointer;"
+								style="color: var(--color-destructive); background: transparent; border: 1px solid var(--color-destructive); border-radius: 6px; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); min-height: var(--touch-target-dense); padding: var(--space-xs) var(--space-lg); cursor: pointer;"
 							>
 								Remove
 							</button>
@@ -991,10 +991,10 @@
 		<!-- ── Merge (PADM-03/PADM-04) — outside the save form; hidden on the create route (D-07 shared template) ── -->
 		{#if data.person.id}
 		<div
-			style="background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; padding: var(--space-lg); margin-bottom: var(--space-lg);"
+			style="background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; padding: var(--space-xl); margin-bottom: var(--space-xl);"
 		>
 			<h2
-				style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-md) 0; line-height: 1.2;"
+				style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-lg) 0; line-height: 1.2;"
 			>
 				Merge into another person
 			</h2>
@@ -1011,7 +1011,7 @@
 				}}
 			>
 				<!-- Target picker -->
-				<div style="margin-bottom: var(--space-md);">
+				<div style="margin-bottom: var(--space-lg);">
 					<label
 						for="merge_target_id"
 						style="display: block; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin-bottom: var(--space-sm);"
@@ -1022,7 +1022,7 @@
 						id="merge_target_id"
 						bind:value={mergeTargetId}
 						onchange={(e) => fetchMergePreview((e.target as HTMLSelectElement).value)}
-						style="display: block; width: 100%; background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) 12px; font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box;"
+						style="display: block; width: 100%; background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) var(--space-md); font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box;"
 					>
 						<option value="">— Select a person —</option>
 						{#each data.people ?? [] as p (p.id)}
@@ -1038,7 +1038,7 @@
 				<!-- Preview panel — shown when a target is selected -->
 				{#if mergeTargetId}
 					<div
-						style="background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-md); margin-bottom: var(--space-md);"
+						style="background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-lg); margin-bottom: var(--space-lg);"
 					>
 						{#if mergeLoading}
 							<p style="font-size: var(--font-size-caption); color: var(--color-text-secondary); margin: 0;">Loading…</p>
@@ -1086,7 +1086,7 @@
 		<!-- ── Delete (PADM-02) — outside the save form; hidden on the create route (D-07 shared template) ── -->
 		{#if data.person.id}
 		<div
-			style="background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; padding: var(--space-lg); margin-bottom: var(--space-lg);"
+			style="background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; padding: var(--space-xl); margin-bottom: var(--space-xl);"
 		>
 			<form
 				method="POST"

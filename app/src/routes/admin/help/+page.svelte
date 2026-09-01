@@ -97,8 +97,8 @@
 	}
 
 	const cardStyle =
-		'background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; padding: var(--space-lg); margin-bottom: var(--space-md);';
-	const cardHeadingStyle = 'font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-md) 0;';
+		'background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; padding: var(--space-xl); margin-bottom: var(--space-lg);';
+	const cardHeadingStyle = 'font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-lg) 0;';
 	const bodyTextStyle = 'font-size: var(--font-size-body); color: var(--color-status-archived); margin: 0 0 var(--space-sm) 0; line-height: 1.5;';
 </script>
 
@@ -107,12 +107,12 @@
 </svelte:head>
 
 <main style="background-color: var(--color-bg); min-height: 100vh;">
-	<header style="background-color: var(--color-surface); border-bottom: 1px solid var(--color-border); padding: var(--space-md) var(--space-lg);">
+	<header style="background-color: var(--color-surface); border-bottom: 1px solid var(--color-border); padding: var(--space-lg) var(--space-xl);">
 		<h1 style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0;">Help</h1>
 	</header>
 
-	<div style="max-width: 860px; margin: 0 auto; padding: var(--space-2xl) var(--space-lg);">
-		<p style="font-size: var(--font-size-body); color: var(--color-text-secondary); margin: 0 0 var(--space-lg) 0; line-height: 1.5;">
+	<div style="max-width: 860px; margin: 0 auto; padding: var(--space-3xl) var(--space-xl);">
+		<p style="font-size: var(--font-size-body); color: var(--color-text-secondary); margin: 0 0 var(--space-xl) 0; line-height: 1.5;">
 			This page explains the vocabulary the admin UI uses to describe an argument's
 			transcription and attribution state: its lifecycle status, its trust tier, the
 			review state of each speaker it attributes, and the two gates that decide
@@ -131,29 +131,29 @@
 				tier if it was published with an override.
 			</p>
 
-			<div style="display: flex; flex-direction: column; gap: 12px; margin-top: var(--space-md);">
-				<div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;">
+			<div style="display: flex; flex-direction: column; gap: var(--space-md); margin-top: var(--space-lg);">
+				<div style="display: flex; align-items: baseline; gap: var(--space-md); flex-wrap: wrap;">
 					<span style={statusBadgeStyle('candidate')}>{statusBadgeLabel('candidate')}</span>
 					<span style="font-size: var(--font-size-body); color: var(--color-status-archived);">
 						Just resolved from a pipeline run, not yet reviewed by an operator. The born
 						state every newly resolved argument starts in.
 					</span>
 				</div>
-				<div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;">
+				<div style="display: flex; align-items: baseline; gap: var(--space-md); flex-wrap: wrap;">
 					<span style={statusBadgeStyle('draft')}>{statusBadgeLabel('draft')}</span>
 					<span style="font-size: var(--font-size-body); color: var(--color-status-archived);">
 						An operator has started editing the argument (case metadata, participant
 						links, etc.) but has not yet published it.
 					</span>
 				</div>
-				<div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;">
+				<div style="display: flex; align-items: baseline; gap: var(--space-md); flex-wrap: wrap;">
 					<span style={statusBadgeStyle('published')}>{statusBadgeLabel('published')}</span>
 					<span style="font-size: var(--font-size-body); color: var(--color-status-archived);">
 						Publicly visible on the site. An operator moves an argument here by
 						publishing it, subject to the two gates below.
 					</span>
 				</div>
-				<div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;">
+				<div style="display: flex; align-items: baseline; gap: var(--space-md); flex-wrap: wrap;">
 					<span style={statusBadgeStyle('unpublished')}>{statusBadgeLabel('unpublished')}</span>
 					<span style="font-size: var(--font-size-body); color: var(--color-status-archived);">
 						An operator took a previously published argument back down. It keeps its
@@ -162,7 +162,7 @@
 				</div>
 			</div>
 
-			<p style="font-size: var(--font-size-caption); color: #64748b; margin: var(--space-md) 0 0 0; line-height: 1.5;">
+			<p style="font-size: var(--font-size-caption); color: #64748b; margin: var(--space-lg) 0 0 0; line-height: 1.5;">
 				A fifth enum value, <code>pipeline</code>, was retired by migration 0027 and
 				replaced by <code>candidate</code> above. PostgreSQL cannot drop an enum value
 				once minted, so <code>pipeline</code> remains in the database as a dead-but-
@@ -183,29 +183,29 @@
 				not a free pass.
 			</p>
 
-			<div style="display: flex; flex-direction: column; gap: 12px; margin: var(--space-md) 0;">
-				<div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;">
+			<div style="display: flex; flex-direction: column; gap: var(--space-md); margin: var(--space-lg) 0;">
+				<div style="display: flex; align-items: baseline; gap: var(--space-md); flex-wrap: wrap;">
 					<span style={tierBadgeStyle('verified')}>{tierBadgeLabel('verified')}</span>
 					<span style="font-size: var(--font-size-body); color: var(--color-status-archived);">
 						A human has explicitly confirmed or edited this attribution, or it was
 						entered directly by an operator.
 					</span>
 				</div>
-				<div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;">
+				<div style="display: flex; align-items: baseline; gap: var(--space-md); flex-wrap: wrap;">
 					<span style={tierBadgeStyle('trusted')}>{tierBadgeLabel('trusted')}</span>
 					<span style="font-size: var(--font-size-body); color: var(--color-status-archived);">
 						Matched directly against an authoritative identifier from the corpus or a
 						seed dataset — no operator review yet, but a strong automatic match.
 					</span>
 				</div>
-				<div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;">
+				<div style="display: flex; align-items: baseline; gap: var(--space-md); flex-wrap: wrap;">
 					<span style={tierBadgeStyle('provisional')}>{tierBadgeLabel('provisional')}</span>
 					<span style="font-size: var(--font-size-body); color: var(--color-status-archived);">
 						Matched through a normalization or rule-based step — a weaker, heuristic
 						match than a direct identifier lookup.
 					</span>
 				</div>
-				<div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;">
+				<div style="display: flex; align-items: baseline; gap: var(--space-md); flex-wrap: wrap;">
 					<span style={tierBadgeStyle('uncertain')}>{tierBadgeLabel('uncertain')}</span>
 					<span style="font-size: var(--font-size-body); color: var(--color-status-archived);">
 						Flagged for operator attention, unresolved, or matched by a method with no
@@ -215,11 +215,11 @@
 				</div>
 			</div>
 
-			<p style="font-size: var(--font-size-body); color: var(--color-status-archived); margin: var(--space-md) 0 var(--space-sm) 0;">
+			<p style="font-size: var(--font-size-body); color: var(--color-status-archived); margin: var(--space-lg) 0 var(--space-sm) 0;">
 				<code>derive_tier</code> evaluates these seven rules in order — the first one that
 				matches wins:
 			</p>
-			<ol style="font-size: var(--font-size-body); color: var(--color-status-archived); margin: 0; padding-left: var(--space-lg); line-height: 1.6;">
+			<ol style="font-size: var(--font-size-body); color: var(--color-status-archived); margin: 0; padding-left: var(--space-xl); line-height: 1.6;">
 				<li>Review state is Confirmed or Edited &rarr; Verified.</li>
 				<li>Review state is Needs review &rarr; Uncertain.</li>
 				<li>Source is <code>operator</code> and method is <code>manual</code> &rarr; Verified.</li>
@@ -246,14 +246,14 @@
 				a record of human attention, not a score.
 			</p>
 
-			<div style="display: flex; flex-direction: column; gap: 12px; margin: var(--space-md) 0;">
-				<div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;">
+			<div style="display: flex; flex-direction: column; gap: var(--space-md); margin: var(--space-lg) 0;">
+				<div style="display: flex; align-items: baseline; gap: var(--space-md); flex-wrap: wrap;">
 					<span style={reviewBadgeStyle('unreviewed')}>{reviewBadgeLabel('unreviewed')}</span>
 					<span style="font-size: var(--font-size-body); color: var(--color-status-archived);">
 						The default state. No operator has acted on this value yet.
 					</span>
 				</div>
-				<div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;">
+				<div style="display: flex; align-items: baseline; gap: var(--space-md); flex-wrap: wrap;">
 					<span style={reviewBadgeStyle('needs_review')}>{reviewBadgeLabel('needs_review')}</span>
 					<span style="font-size: var(--font-size-body); color: var(--color-status-archived);">
 						Flagged for operator attention — either by an importer that could not
@@ -261,14 +261,14 @@
 						decision.
 					</span>
 				</div>
-				<div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;">
+				<div style="display: flex; align-items: baseline; gap: var(--space-md); flex-wrap: wrap;">
 					<span style={reviewBadgeStyle('operator_confirmed')}>{reviewBadgeLabel('operator_confirmed')}</span>
 					<span style="font-size: var(--font-size-body); color: var(--color-status-archived);">
 						An operator looked at this specific value and confirmed it is correct, with
 						no change needed.
 					</span>
 				</div>
-				<div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;">
+				<div style="display: flex; align-items: baseline; gap: var(--space-md); flex-wrap: wrap;">
 					<span style={reviewBadgeStyle('operator_edited')}>{reviewBadgeLabel('operator_edited')}</span>
 					<span style="font-size: var(--font-size-body); color: var(--color-status-archived);">
 						An operator changed this value directly (for example, correcting a name or
@@ -277,10 +277,10 @@
 				</div>
 			</div>
 
-			<p style="font-size: var(--font-size-body); color: var(--color-status-archived); margin: var(--space-md) 0 var(--space-sm) 0;">
+			<p style="font-size: var(--font-size-body); color: var(--color-status-archived); margin: var(--space-lg) 0 var(--space-sm) 0;">
 				Two transition rules are easy to get wrong:
 			</p>
-			<ul style="font-size: var(--font-size-body); color: var(--color-status-archived); margin: 0; padding-left: var(--space-lg); line-height: 1.6;">
+			<ul style="font-size: var(--font-size-body); color: var(--color-status-archived); margin: 0; padding-left: var(--space-xl); line-height: 1.6;">
 				<li>
 					An operator can push an already-reviewed value back to Needs review — but
 					nothing ever returns a value to Unreviewed. Once a human has touched a value,
@@ -302,7 +302,7 @@
 			<p style={bodyTextStyle}>
 				Publishing an argument checks two gates, always in this order:
 			</p>
-			<ol style="font-size: var(--font-size-body); color: var(--color-status-archived); margin: 0 0 var(--space-md) 0; padding-left: var(--space-lg); line-height: 1.6;">
+			<ol style="font-size: var(--font-size-body); color: var(--color-status-archived); margin: 0 0 var(--space-lg) 0; padding-left: var(--space-xl); line-height: 1.6;">
 				<li>
 					<strong>Resolve-completeness gate</strong> — non-overridable. An argument whose
 					resolve pipeline step never completed cannot be published at all; this is a

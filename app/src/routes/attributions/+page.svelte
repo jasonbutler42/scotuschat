@@ -14,7 +14,7 @@
 		style="
 			background-color: var(--color-surface);
 			border-bottom: 1px solid var(--color-border);
-			padding: var(--space-md) var(--space-lg);
+			padding: var(--space-lg) var(--space-xl);
 		"
 	>
 		<h1
@@ -35,7 +35,7 @@
 		style="
 			max-width: 860px;
 			margin: 0 auto;
-			padding: var(--space-2xl) var(--space-lg) 60px var(--space-lg);
+			padding: var(--space-3xl) var(--space-xl) 60px var(--space-xl);
 		"
 	>
 		<!-- Intro paragraph -->
@@ -45,7 +45,7 @@
 				font-weight: var(--font-weight-regular);
 				color: var(--color-text-primary);
 				line-height: 1.6;
-				margin: 0 0 var(--space-xl) 0;
+				margin: 0 0 var(--space-2xl) 0;
 			"
 		>
 			Some oral arguments on this site come from a historical bulk import
@@ -54,14 +54,14 @@
 		</p>
 
 		<!-- Oyez.org credit block -->
-		<section style="margin-bottom: var(--space-xl);">
+		<section style="margin-bottom: var(--space-2xl);">
 			<p
 				style="
 					font-size: var(--font-size-caption);
 					font-weight: var(--font-weight-regular);
 					color: var(--color-text-primary);
 					line-height: 1.4;
-					margin: 0 0 var(--space-md) 0;
+					margin: 0 0 var(--space-lg) 0;
 				"
 			>
 				Historical oral argument transcripts and audio are sourced from
@@ -75,7 +75,7 @@
 					background-color: var(--color-surface);
 					border: 1px solid var(--color-border);
 					border-radius: 4px;
-					padding: var(--space-md);
+					padding: var(--space-lg);
 				"
 			>
 				<p
@@ -103,7 +103,7 @@
 		</section>
 
 		<!-- Cornell ConvoKit credit block -->
-		<section style="margin-bottom: var(--space-xl);">
+		<section style="margin-bottom: var(--space-2xl);">
 			<p
 				style="
 					font-size: var(--font-size-caption);

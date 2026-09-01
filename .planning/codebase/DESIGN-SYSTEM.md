@@ -18,8 +18,8 @@ the actual source of truth.
 
 **Scope:** Covers both the admin interface (`/admin/*`) and the public site
 (`/arguments/**`). Both surfaces draw from the same token set — public uses the full range
-(caption through display, `--space-3xl`), admin uses the small end (caption/body/heading,
-`space-xs` through `space-2xl`). See `lib/primitives/`, `lib/public/`, `lib/admin/` directory
+(caption through display, `--space-4xl`), admin uses the small end (caption/body/heading,
+`space-xs` through `space-3xl`). See `lib/primitives/`, `lib/public/`, `lib/admin/` directory
 split below.
 
 ---
@@ -153,11 +153,19 @@ Seven steps, all multiples of 4px:
 |---|---|---|
 | `--space-xs` | 4px | Gap between pills/chips/badges; tight inline flex gaps. |
 | `--space-sm` | 8px | Label-to-input gap; gap between inline buttons; table cell horizontal padding. |
-| `--space-md` | 16px | Field-to-field vertical margin within a card; margin between stacked cards. |
-| `--space-lg` | 24px | Card internal padding; heading-to-content margin. |
-| `--space-xl` | 32px | Layout gaps between major page regions. |
-| `--space-2xl` | 48px | Page content top/bottom padding. |
-| `--space-3xl` | 64px | Page-level spacing for the largest public reading surfaces (reserved for the redesigned public listing/transcript vertical rhythm; not required for admin). |
+| `--space-md` | 12px | Dense padding on admin rows, cells and badges. Added 2026-09-01 — the D-04 conversion found this value in use 153 times, second only to 8px and ahead of 16px, so it was a load-bearing step the scale had no name for. |
+| `--space-lg` | 16px | Field-to-field vertical margin within a card; margin between stacked cards. |
+| `--space-xl` | 24px | Card internal padding; heading-to-content margin. |
+| `--space-2xl` | 32px | Layout gaps between major page regions. |
+| `--space-3xl` | 48px | Page content top/bottom padding. |
+| `--space-4xl` | 64px | Page-level spacing for the largest public reading surfaces (reserved for the redesigned public listing/transcript vertical rhythm; not required for admin). |
+
+> **The names shifted up on 2026-09-01 when 12px joined the scale.** Every name from
+> `md` upward now denotes the value one step below what it used to: old `md` (16px) is
+> now `lg`, old `lg` (24px) is now `xl`, and so on. All 695 references in `app/src` were
+> remapped in the same commit, and the change was verified to be a pixel-level no-op —
+> 409 (file, property, resolved-px) buckets before and after, none changed. Any planning
+> document written before that date names the OLD values; read those with care.
 
 **Touch targets:** `--touch-target` (44px, WCAG 2.1 AA) applies to buttons and inputs generally.
 `--touch-target-dense` (36px) is the sole exception, for compact per-row inline buttons inside

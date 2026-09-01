@@ -106,7 +106,7 @@
 		justify-content: center;
 		gap: var(--space-sm);
 		min-height: {dense ? 'var(--touch-target-dense)' : 'var(--touch-target)'};
-		padding: {dense ? 'var(--space-xs) var(--space-sm)' : 'var(--space-sm) var(--space-md)'};
+		padding: {dense ? 'var(--space-xs) var(--space-sm)' : 'var(--space-sm) var(--space-lg)'};
 		background: transparent;
 		border: 1px solid {color};
 		border-radius: 6px;

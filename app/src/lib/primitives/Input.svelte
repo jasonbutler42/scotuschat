@@ -95,7 +95,7 @@
 		background-color: var(--color-bg);
 		border: 1px solid {invalid ? 'var(--color-destructive)' : 'var(--color-border)'};
 		border-radius: 6px;
-		padding: var(--space-sm) var(--space-md);
+		padding: var(--space-sm) var(--space-lg);
 		font-family: inherit;
 		font-size: var(--font-size-body);
 		color: var(--color-text-primary);

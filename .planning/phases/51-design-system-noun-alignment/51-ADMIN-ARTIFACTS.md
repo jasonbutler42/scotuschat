@@ -81,33 +81,35 @@ whichever review-state token the decision above produces.
 
 ---
 
-## B. Spacing values off the 7-step scale (233 sites)
+## B. Spacing values off the scale (233 sites at the time of the pass)
 
 Reported, never rounded — rounding is how a scale acquires decisions nobody made.
 
 | id | value | sites | note |
 |---|---|---|---|
-| B-01 | `12px` | 154 | **The single biggest artifact in the codebase.** Sits between `--space-sm` (8) and `--space-md` (16), and appears in padding, gap, margin, margin-bottom, margin-top and padding-right across 14 files. At this frequency it is not an accident — it is an unnamed step the admin UI actually uses. |
+| ~~B-01~~ | `12px` | 154 | **CLOSED — now `--space-md`.** Was the single biggest artifact in the codebase: 153 of the 154 sites were admin, across padding, gap, margin, margin-bottom, margin-top and padding-right in 14 files. At that frequency it was not drift but an unnamed step the admin UI actually used. |
 | B-02 | `2px` | 26 | Fine adjustment, mostly badge padding. |
-| B-03 | `6px` | 10 | Between `--space-xs` and `--space-sm`. |
-| B-04 | `20px` | 5 | All `padding-left`, between `--space-md` and `--space-lg`. |
+| B-03 | `6px` | 10 | Between `--space-xs` (4) and `--space-sm` (8). |
+| B-04 | `20px` | 5 | All `padding-left`, between `--space-lg` (16) and `--space-xl` (24). |
 | B-05 | `10px` | 3 | |
 | B-06 | `14px` | 2 | |
 | B-07 | `1px` | 3 | Hairline offsets. |
 | B-08 | `60px` | 1 | One-off. |
 
-**Proposed treatment:** B-01 is the only one that looks like a missing scale step rather
-than drift. Three options, and this is a taste call: add a `--space-ms` (12px) step and
-convert all 154; convert them to `--space-md` (16px) and accept a visible loosening across
-the admin UI; or leave them as the deliberate exception the scale does not cover. **Do not
-decide this by grep** — option two changes admin density everywhere and wants your eye.
+> **B-01 RULED AND DONE, 2026-09-01.** The operator chose to add 12px to the scale and
+> shift the names up rather than wedge a new name between `sm` and `md`. All 154 sites
+> now use `var(--space-md)`; the change was verified pixel-identical. B-02…B-08 remain
+> open.
 
-B-02 … B-08 are plausibly genuine exceptions. Recommend `leave as is` unless a sight-check
-says otherwise.
+B-02 … B-08 are plausibly genuine exceptions — all are below or between the small steps,
+at low frequency, and none shows the pattern that made B-01 obviously a missing step.
+Recommend `leave as is` unless a sight-check says otherwise. If any of them is ever
+promoted, note that the scale now has no room between `sm` (8) and `md` (12), so B-03
+(`6px`) would force the same shift-the-names decision a second time.
 
 | ruling |
 |---|
-| B-01: |
+| B-01: **ruled 2026-09-01 — added to the scale as `--space-md`** |
 | B-02…B-08: |
 
 ---

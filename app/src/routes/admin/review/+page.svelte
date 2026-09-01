@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import Badge from '$lib/primitives/Badge.svelte';
+	import type { BadgeTone } from '$lib/primitives/badge-tone';
 	import { goto } from '$app/navigation';
 
 	let { data, form } = $props();
@@ -118,18 +120,11 @@
 	// convention (badgeLabel falls back to 'Candidate', not 'Pipeline'),
 	// per this plan's explicit citation of that file over the arguments
 	// list page's own version.
-	function badgeStyle(status: string): string {
-		let color: string;
-		if (status === 'published') {
-			color = 'var(--color-status-published)';
-		} else if (status === 'draft') {
-			color = 'var(--color-status-draft)';
-		} else if (status === 'unpublished') {
-			color = 'var(--color-status-unpublished)';
-		} else {
-			color = 'var(--color-text-secondary)';
-		}
-		return `border: 1px solid ${color}; border-radius: 4px; padding: var(--space-xs) var(--space-sm); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); background-color: var(--color-surface); color: ${color}; display: inline-block;`;
+	function badgeTone(status: string): BadgeTone {
+		if (status === 'published') return 'published';
+		if (status === 'draft') return 'draft';
+		if (status === 'unpublished') return 'unpublished';
+		return 'neutral';
 	}
 
 	function badgeLabel(status: string): string {
@@ -139,22 +134,14 @@
 		return 'Candidate';
 	}
 
-	// Passive trust-tier badge helpers — copied verbatim from
-	// admin/arguments/+page.svelte.
-	function tierBadgeStyle(tier: string): string {
-		let color: string;
-		if (tier === 'verified') {
-			color = 'var(--color-tier-verified)';
-		} else if (tier === 'trusted') {
-			color = 'var(--color-tier-trusted)';
-		} else if (tier === 'provisional') {
-			color = 'var(--color-tier-provisional)';
-		} else if (tier === 'uncertain') {
-			color = 'var(--color-tier-uncertain)';
-		} else {
-			color = 'var(--color-review-unknown)';
-		}
-		return `border: 1px solid ${color}; border-radius: 4px; padding: var(--space-xs) var(--space-sm); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); background-color: var(--color-bg); color: ${color}; display: inline-block;`;
+	// Trust tier. The shape lives in Badge now — this maps a domain value to a
+	// tone, which is the only part that was ever specific to this screen.
+	function tierTone(tier: string): BadgeTone {
+		if (tier === 'verified') return 'verified';
+		if (tier === 'trusted') return 'trusted';
+		if (tier === 'provisional') return 'provisional';
+		if (tier === 'uncertain') return 'uncertain';
+		return 'unknown';
 	}
 
 	function tierLabel(tier: string): string {
@@ -165,22 +152,12 @@
 		return tier;
 	}
 
-	// review_state / discrepancy badge — the existing tierBadgeStyle
-	// formula verbatim, only the color lookup differs (UI-SPEC § Color).
-	function reviewStateBadgeStyle(state: string): string {
-		let color: string;
-		if (state === 'unreviewed') {
-			color = 'var(--color-review-unreviewed)';
-		} else if (state === 'needs_review') {
-			color = 'var(--color-status-warning)';
-		} else if (state === 'operator_confirmed') {
-			color = 'var(--color-review-confirmed)';
-		} else if (state === 'operator_edited') {
-			color = 'var(--color-review-edited)';
-		} else {
-			color = 'var(--color-review-unknown)';
-		}
-		return `border: 1px solid ${color}; border-radius: 4px; padding: var(--space-xs) var(--space-sm); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); background-color: var(--color-bg); color: ${color}; display: inline-block;`;
+	function reviewStateTone(state: string): BadgeTone {
+		if (state === 'unreviewed') return 'unreviewed';
+		if (state === 'needs_review') return 'needs-review';
+		if (state === 'operator_confirmed') return 'confirmed';
+		if (state === 'operator_edited') return 'edited';
+		return 'unknown';
 	}
 
 	function reviewStateLabel(state: string): string {
@@ -189,11 +166,6 @@
 		if (state === 'operator_confirmed') return 'Confirmed';
 		if (state === 'operator_edited') return 'Edited';
 		return state;
-	}
-
-	function discrepancyBadgeStyle(): string {
-		const color = 'var(--color-review-discrepancy)';
-		return `border: 1px solid ${color}; border-radius: 4px; padding: var(--space-xs) var(--space-sm); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); background-color: var(--color-bg); color: ${color}; display: inline-block;`;
 	}
 
 	// Bench/Advocate side-role hint — the exact formula ResolveCard.svelte
@@ -492,15 +464,15 @@
 					{#each data.argumentItems as item (item.id)}
 						<tr>
 							<td style="padding: var(--space-md); border-bottom: 1px solid var(--color-border); vertical-align: top; white-space: nowrap;">
-								<span style={tierBadgeStyle(item.trust_tier)}>{tierLabel(item.trust_tier)}</span>
+								<Badge tone={tierTone(item.trust_tier)} label={tierLabel(item.trust_tier)} />
 								<span style="display: inline-block; width: 4px;"></span>
-								<span style={badgeStyle(item.status)}>{badgeLabel(item.status)}</span>
+								<Badge tone={badgeTone(item.status)} label={badgeLabel(item.status)} />
 							</td>
 							<td style="padding: var(--space-md); border-bottom: 1px solid var(--color-border); vertical-align: top; color: var(--color-text-primary); font-size: var(--font-size-body);">
 								{item.case_name}
 								{#if item.argument_discrepancies.length > 0}
 									<span style="display: inline-block; width: 4px;"></span>
-									<span style={discrepancyBadgeStyle()}>Discrepancy</span>
+									<Badge tone="discrepancy" label="Discrepancy" />
 								{/if}
 							</td>
 							<td style="padding: var(--space-md); border-bottom: 1px solid var(--color-border); vertical-align: top; color: var(--color-text-secondary); font-size: var(--font-size-caption); white-space: nowrap;">
@@ -540,7 +512,7 @@
 										<div style="background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-lg); margin: var(--space-xs) var(--space-md) var(--space-lg) var(--space-md);">
 											<div style="display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap; margin-bottom: var(--space-sm);">
 												<span style="color: var(--color-text-primary); font-size: var(--font-size-body);">This argument's own values and its lead case's</span>
-												<span style={discrepancyBadgeStyle()}>Discrepancy</span>
+												<Badge tone="discrepancy" label="Discrepancy" />
 											</div>
 											{#each item.argument_discrepancies as d (d.id)}
 												<p style="font-size: var(--font-size-caption); margin: var(--space-xs) 0;">
@@ -562,9 +534,9 @@
 															{constituent.person_id === null ? 'Unresolved speaker' : constituent.display_name}
 														</span>
 														<span style="color: var(--color-text-secondary); font-size: var(--font-size-caption);">({sideRoleHint(constituent.side)})</span>
-														<span style={reviewStateBadgeStyle(constituent.review_state)}>{reviewStateLabel(constituent.review_state)}</span>
+														<Badge tone={reviewStateTone(constituent.review_state)} label={reviewStateLabel(constituent.review_state)} />
 														{#if constituent.has_open_discrepancy}
-															<span style={discrepancyBadgeStyle()}>Discrepancy</span>
+															<Badge tone="discrepancy" label="Discrepancy" />
 														{/if}
 													</div>
 
@@ -675,10 +647,10 @@
 					{#each data.personItems as person (person.id)}
 						<tr>
 							<td style="padding: var(--space-md); border-bottom: 1px solid var(--color-border); vertical-align: top; white-space: nowrap;">
-								<span style={reviewStateBadgeStyle(person.review_state)}>{reviewStateLabel(person.review_state)}</span>
+								<Badge tone={reviewStateTone(person.review_state)} label={reviewStateLabel(person.review_state)} />
 								{#if person.has_open_discrepancy}
 									<span style="display: inline-block; width: 4px;"></span>
-									<span style={discrepancyBadgeStyle()}>Discrepancy</span>
+									<Badge tone="discrepancy" label="Discrepancy" />
 								{/if}
 							</td>
 							<td style="padding: var(--space-md); border-bottom: 1px solid var(--color-border); vertical-align: top; color: var(--color-text-primary); font-size: var(--font-size-body);">

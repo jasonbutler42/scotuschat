@@ -17,7 +17,12 @@
 	// `label` is a REQUIRED prop (no default, no `?`) so constructing a Badge
 	// without one is a TypeScript compile error, not a rendered empty pill
 	// (UI-SPEC E4 "empty" row).
-	type BadgeTone = 'published' | 'draft' | 'unpublished' | 'warning' | 'archived' | 'neutral';
+	// Three admin vocabularies, one shape: an argument's publish lifecycle, a
+	// record's trust tier, and where it sits in the review queue. They were
+	// near-identical helper functions duplicated across five files
+	// (51-ADMIN-ARTIFACTS.md D-01/D-03) until the operator ruled them here. The
+	// union lives in badge-tone.ts so call sites can type their mappings.
+	import type { BadgeTone } from './badge-tone';
 
 	interface BadgeProps {
 		label: string;
@@ -35,7 +40,17 @@
 		unpublished: 'var(--color-status-unpublished)',
 		warning: 'var(--color-status-warning)',
 		archived: 'var(--color-status-archived)',
-		neutral: 'var(--color-text-secondary)'
+		neutral: 'var(--color-text-secondary)',
+		verified: 'var(--color-tier-verified)',
+		trusted: 'var(--color-tier-trusted)',
+		provisional: 'var(--color-tier-provisional)',
+		uncertain: 'var(--color-tier-uncertain)',
+		unreviewed: 'var(--color-review-unreviewed)',
+		'needs-review': 'var(--color-review-needs-review)',
+		confirmed: 'var(--color-review-confirmed)',
+		edited: 'var(--color-review-edited)',
+		discrepancy: 'var(--color-review-discrepancy)',
+		unknown: 'var(--color-review-unknown)'
 	};
 
 	let color = $derived(TONE_COLOR[tone]);

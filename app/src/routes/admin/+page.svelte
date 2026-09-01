@@ -420,7 +420,7 @@
 							gap: var(--space-xs);
 							border: 1px solid var(--color-status-warning);
 							border-radius: 4px;
-							padding: 2px var(--space-sm);
+							padding: var(--space-xs) var(--space-sm);
 							font-size: var(--font-size-caption);
 							font-weight: var(--font-weight-regular);
 							color: var(--color-status-warning);
@@ -558,7 +558,7 @@
 								color: var(--color-status-published);
 								background-color: var(--color-surface);
 								border-radius: 4px;
-								padding: 2px var(--space-sm);
+								padding: var(--space-xs) var(--space-sm);
 								font-size: var(--font-size-caption);
 								font-weight: var(--font-weight-regular);
 							"

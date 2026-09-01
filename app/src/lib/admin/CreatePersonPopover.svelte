@@ -92,7 +92,7 @@
 			background: transparent;
 			border: 1px solid var(--color-border);
 			border-radius: 4px;
-			padding: 6px var(--space-md);
+			padding: var(--space-xs) var(--space-md);
 			cursor: {disabled ? 'not-allowed' : 'pointer'};
 			min-height: var(--touch-target-dense);
 			opacity: {disabled ? 0.6 : 1};

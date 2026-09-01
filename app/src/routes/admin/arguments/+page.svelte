@@ -92,7 +92,7 @@
 		} else {
 			color = 'var(--color-text-secondary)'; // Pipeline — muted (fallback, should not appear in this list)
 		}
-		return `border: 1px solid ${color}; border-radius: 4px; padding: 2px var(--space-sm); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); background-color: var(--color-surface); color: ${color}; display: inline-block;`;
+		return `border: 1px solid ${color}; border-radius: 4px; padding: var(--space-xs) var(--space-sm); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); background-color: var(--color-surface); color: ${color}; display: inline-block;`;
 	}
 
 	function badgeLabel(status: string): string {
@@ -121,7 +121,7 @@
 		} else {
 			color = 'var(--color-review-unknown)';
 		}
-		return `border: 1px solid ${color}; border-radius: 4px; padding: 2px var(--space-sm); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); background-color: var(--color-bg); color: ${color}; display: inline-block;`;
+		return `border: 1px solid ${color}; border-radius: 4px; padding: var(--space-xs) var(--space-sm); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); background-color: var(--color-bg); color: ${color}; display: inline-block;`;
 	}
 
 	function tierLabel(tier: string): string {
@@ -562,9 +562,9 @@
 										{/if}
 
 										{#if form.blockers && form.blockers.length > 0}
-											<ul style="margin: 0 0 var(--space-lg) 0; padding-left: 20px;">
+											<ul style="margin: 0 0 var(--space-lg) 0; padding-left: var(--space-lg);">
 												{#each form.blockers as b}
-													<li style="font-size: var(--font-size-caption); color: var(--color-text-secondary); padding: 2px 0;">
+													<li style="font-size: var(--font-size-caption); color: var(--color-text-secondary); padding: var(--space-xs) 0;">
 														{blockerSentence(b.code, b.count)}
 													</li>
 												{/each}

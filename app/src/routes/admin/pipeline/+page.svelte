@@ -109,7 +109,7 @@
 	// RunStatusCard.svelte's already_created override (grey --color-status-archived).
 	function badgeStyle(status: string, isArchived: boolean = false): string {
 		if (isArchived) {
-			return `border: 1px solid var(--color-status-archived); border-radius: 4px; padding: 2px var(--space-sm); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); background-color: var(--color-surface); color: var(--color-status-archived); display: inline-block;`;
+			return `border: 1px solid var(--color-status-archived); border-radius: 4px; padding: var(--space-xs) var(--space-sm); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); background-color: var(--color-surface); color: var(--color-status-archived); display: inline-block;`;
 		}
 		const colors: Record<string, string> = {
 			pending: 'var(--color-text-secondary)',
@@ -119,7 +119,7 @@
 			failed: 'var(--color-destructive)',
 		};
 		const color = colors[status] ?? 'var(--color-text-secondary)';
-		return `border: 1px solid ${color}; border-radius: 4px; padding: 2px var(--space-sm); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); background-color: var(--color-surface); color: ${color}; display: inline-block;`;
+		return `border: 1px solid ${color}; border-radius: 4px; padding: var(--space-xs) var(--space-sm); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); background-color: var(--color-surface); color: ${color}; display: inline-block;`;
 	}
 
 	// Compound badge (D-13/D-15/D-16): combines current_step and status, e.g. "Parse · Running".
@@ -161,7 +161,7 @@
 	}
 
 	function sourceTagStyle(): string {
-		return `border: 1px solid var(--color-text-secondary); border-radius: 4px; padding: 2px var(--space-sm); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); background-color: var(--color-bg); color: var(--color-text-secondary); display: inline-block;`;
+		return `border: 1px solid var(--color-text-secondary); border-radius: 4px; padding: var(--space-xs) var(--space-sm); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); background-color: var(--color-bg); color: var(--color-text-secondary); display: inline-block;`;
 	}
 
 	// Format ISO date string for display (date only — time detail not needed in history).

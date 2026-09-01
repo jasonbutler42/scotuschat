@@ -78,7 +78,7 @@
 			style="
 				border: 1px solid {badgeColor};
 				border-radius: 4px;
-				padding: 2px var(--space-sm);
+				padding: var(--space-xs) var(--space-sm);
 				font-size: var(--font-size-caption);
 				font-weight: var(--font-weight-regular);
 				color: {badgeColor};
@@ -133,7 +133,7 @@
 		<p style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin: 0 0 var(--space-md) 0;">
 			Resolve these items before creating the argument.
 		</p>
-		<ul style="margin: 0; padding-left: 20px;">
+		<ul style="margin: 0; padding-left: var(--space-lg);">
 			{#each readiness.blockers as blocker (blocker.code)}
 				<li style="font-size: var(--font-size-body); color: var(--color-text-primary); margin-bottom: var(--space-xs);">{blocker.message}</li>
 			{/each}

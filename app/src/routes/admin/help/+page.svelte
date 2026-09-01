@@ -39,7 +39,7 @@
 			// retired `pipeline` value.
 			color = 'var(--color-text-secondary)';
 		}
-		return `border: 1px solid ${color}; border-radius: 4px; padding: 2px var(--space-sm); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); background-color: var(--color-surface); color: ${color}; display: inline-block;`;
+		return `border: 1px solid ${color}; border-radius: 4px; padding: var(--space-xs) var(--space-sm); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); background-color: var(--color-surface); color: ${color}; display: inline-block;`;
 	}
 
 	function statusBadgeLabel(status: string): string {
@@ -62,7 +62,7 @@
 		} else {
 			color = 'var(--color-tier-uncertain)';
 		}
-		return `border: 1px solid ${color}; border-radius: 4px; padding: 2px var(--space-sm); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); background-color: var(--color-bg); color: ${color}; display: inline-block;`;
+		return `border: 1px solid ${color}; border-radius: 4px; padding: var(--space-xs) var(--space-sm); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); background-color: var(--color-bg); color: ${color}; display: inline-block;`;
 	}
 
 	function tierBadgeLabel(tier: string): string {
@@ -86,7 +86,7 @@
 		} else {
 			color = 'var(--color-review-unreviewed)';
 		}
-		return `border: 1px solid ${color}; border-radius: 4px; padding: 2px var(--space-sm); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); background-color: var(--color-surface); color: ${color}; display: inline-block;`;
+		return `border: 1px solid ${color}; border-radius: 4px; padding: var(--space-xs) var(--space-sm); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); background-color: var(--color-surface); color: ${color}; display: inline-block;`;
 	}
 
 	function reviewBadgeLabel(state: string): string {

@@ -35,7 +35,7 @@
 		style="
 			max-width: 860px;
 			margin: 0 auto;
-			padding: var(--space-3xl) var(--space-xl) 60px var(--space-xl);
+			padding: var(--space-3xl) var(--space-xl) var(--space-4xl) var(--space-xl);
 		"
 	>
 		<!-- Intro paragraph -->

@@ -146,7 +146,7 @@
 					style="
 						display: inline-flex;
 						align-items: flex-start;
-						gap: 6px;
+						gap: var(--space-xs);
 						background-color: var(--color-surface);
 						border: 1px solid var(--color-border);
 						border-radius: 4px;
@@ -199,7 +199,7 @@
 					style="
 						display: inline-flex;
 						align-items: center;
-						gap: 6px;
+						gap: var(--space-xs);
 						background-color: var(--color-surface);
 						border: 1px solid var(--color-border);
 						border-radius: 4px;

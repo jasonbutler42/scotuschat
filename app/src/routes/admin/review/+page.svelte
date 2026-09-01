@@ -129,7 +129,7 @@
 		} else {
 			color = 'var(--color-text-secondary)';
 		}
-		return `border: 1px solid ${color}; border-radius: 4px; padding: 2px var(--space-sm); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); background-color: var(--color-surface); color: ${color}; display: inline-block;`;
+		return `border: 1px solid ${color}; border-radius: 4px; padding: var(--space-xs) var(--space-sm); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); background-color: var(--color-surface); color: ${color}; display: inline-block;`;
 	}
 
 	function badgeLabel(status: string): string {
@@ -154,7 +154,7 @@
 		} else {
 			color = 'var(--color-review-unknown)';
 		}
-		return `border: 1px solid ${color}; border-radius: 4px; padding: 2px var(--space-sm); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); background-color: var(--color-bg); color: ${color}; display: inline-block;`;
+		return `border: 1px solid ${color}; border-radius: 4px; padding: var(--space-xs) var(--space-sm); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); background-color: var(--color-bg); color: ${color}; display: inline-block;`;
 	}
 
 	function tierLabel(tier: string): string {
@@ -180,7 +180,7 @@
 		} else {
 			color = 'var(--color-review-unknown)';
 		}
-		return `border: 1px solid ${color}; border-radius: 4px; padding: 2px var(--space-sm); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); background-color: var(--color-bg); color: ${color}; display: inline-block;`;
+		return `border: 1px solid ${color}; border-radius: 4px; padding: var(--space-xs) var(--space-sm); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); background-color: var(--color-bg); color: ${color}; display: inline-block;`;
 	}
 
 	function reviewStateLabel(state: string): string {
@@ -193,7 +193,7 @@
 
 	function discrepancyBadgeStyle(): string {
 		const color = 'var(--color-review-discrepancy)';
-		return `border: 1px solid ${color}; border-radius: 4px; padding: 2px var(--space-sm); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); background-color: var(--color-bg); color: ${color}; display: inline-block;`;
+		return `border: 1px solid ${color}; border-radius: 4px; padding: var(--space-xs) var(--space-sm); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); background-color: var(--color-bg); color: ${color}; display: inline-block;`;
 	}
 
 	// Bench/Advocate side-role hint — the exact formula ResolveCard.svelte
@@ -623,9 +623,9 @@
 											<p style="font-size: var(--font-size-caption); color: var(--color-text-secondary); margin: 0 0 var(--space-sm) 0;">
 												No flagged participants — this argument is queued because:
 											</p>
-											<ul style="margin: 0; padding-left: 20px;">
+											<ul style="margin: 0; padding-left: var(--space-lg);">
 												{#each item.blockers as blocker}
-													<li style="font-size: var(--font-size-caption); color: var(--color-text-secondary); padding: 2px 0;">
+													<li style="font-size: var(--font-size-caption); color: var(--color-text-secondary); padding: var(--space-xs) 0;">
 														{blockerSentence(blocker.code, blocker.count)}
 													</li>
 												{/each}

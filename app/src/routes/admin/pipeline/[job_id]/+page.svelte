@@ -267,7 +267,7 @@
 							style="
 								border: 1px solid {color};
 								border-radius: 4px;
-								padding: 2px var(--space-sm);
+								padding: var(--space-xs) var(--space-sm);
 								font-size: var(--font-size-caption);
 								font-weight: var(--font-weight-regular);
 								color: {color};

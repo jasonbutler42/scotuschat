@@ -75,7 +75,7 @@
 			// retired born state's grey token — Phase 51 owns the palette.
 			color = 'var(--color-text-secondary)';
 		}
-		return `border: 1px solid ${color}; border-radius: 4px; padding: 2px var(--space-sm); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); background-color: var(--color-surface); color: ${color}; display: inline-block;`;
+		return `border: 1px solid ${color}; border-radius: 4px; padding: var(--space-xs) var(--space-sm); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); background-color: var(--color-surface); color: ${color}; display: inline-block;`;
 	}
 
 	function badgeLabel(status: string): string {
@@ -320,9 +320,9 @@
 						<p
 							style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin: 0 0 var(--space-sm) 0;"
 						>Consolidated dockets</p>
-						<ul style="margin: 0; padding-left: 20px;">
+						<ul style="margin: 0; padding-left: var(--space-lg);">
 							{#each data.argument.consolidated_dockets as docket}
-								<li style="font-size: var(--font-size-caption); color: var(--color-text-secondary); padding: 2px 0;">
+								<li style="font-size: var(--font-size-caption); color: var(--color-text-secondary); padding: var(--space-xs) 0;">
 									{docket.docket_number}
 								</li>
 							{/each}
@@ -512,7 +512,7 @@
 							Publish blocked
 							{#if form.trustTier}
 								<span
-									style="border: 1px solid var(--color-text-secondary); border-radius: 4px; padding: 2px var(--space-sm); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); background-color: var(--color-surface); color: var(--color-text-secondary); display: inline-block;"
+									style="border: 1px solid var(--color-text-secondary); border-radius: 4px; padding: var(--space-xs) var(--space-sm); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); background-color: var(--color-surface); color: var(--color-text-secondary); display: inline-block;"
 								>{form.trustTier}</span>
 							{/if}
 						</p>
@@ -524,9 +524,9 @@
 						{/if}
 
 						{#if form.blockers && form.blockers.length > 0}
-							<ul style="margin: 0 0 var(--space-lg) 0; padding-left: 20px;">
+							<ul style="margin: 0 0 var(--space-lg) 0; padding-left: var(--space-lg);">
 								{#each form.blockers as b}
-									<li style="font-size: var(--font-size-caption); color: var(--color-text-secondary); padding: 2px 0;">
+									<li style="font-size: var(--font-size-caption); color: var(--color-text-secondary); padding: var(--space-xs) 0;">
 										{blockerSentence(b.code, b.count)}
 									</li>
 								{/each}

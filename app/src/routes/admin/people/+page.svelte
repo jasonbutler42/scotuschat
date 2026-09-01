@@ -290,7 +290,7 @@
 									border-bottom: 1px solid var(--color-border);
 									padding: var(--space-md) 0;
 								"
-							>{person.full_name}{#if person.is_justice}<span style="display: inline-block; background-color: rgba(147,197,253,0.15); border: 1px solid var(--color-accent); color: var(--color-accent); border-radius: 4px; padding: 2px 6px; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); line-height: 1.4; margin-left: var(--space-sm);">Justice</span>{/if}</td>
+							>{person.full_name}{#if person.is_justice}<span style="display: inline-block; background-color: rgba(147,197,253,0.15); border: 1px solid var(--color-accent); color: var(--color-accent); border-radius: 4px; padding: var(--space-xs) var(--space-xs); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); line-height: 1.4; margin-left: var(--space-sm);">Justice</span>{/if}</td>
 							{#if data.tab === 'bench'}
 								<td
 									style="

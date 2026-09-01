@@ -152,7 +152,7 @@
 									</span>
 									<span
 										style="display: block; font-size: var(--font-size-caption);
-										       color: var(--color-text-secondary); margin-top: 2px;"
+										       color: var(--color-text-secondary); margin-top: var(--space-xs);"
 									>
 										{option.hint}
 									</span>

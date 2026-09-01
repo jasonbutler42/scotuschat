@@ -774,7 +774,7 @@
 			background-color: var(--color-bg);
 			border: 1px solid var(--color-border);
 			border-radius: 4px;
-			padding: var(--space-xs) 10px;
+			padding: var(--space-xs) var(--space-sm);
 			font-size: var(--font-size-caption);
 			font-weight: var(--font-weight-regular);
 			color: var(--color-text-primary);
@@ -879,7 +879,7 @@
 			onclick={() => toggleSide(row, 'BENCH')}
 			style="
 				font-size: var(--font-size-caption);
-				padding: 6px 14px;
+				padding: var(--space-xs) var(--space-md);
 				border: none;
 				border-right: 1px solid var(--color-border);
 				line-height: 1.4;
@@ -897,7 +897,7 @@
 			onclick={() => toggleSide(row, 'ADVOCATE')}
 			style="
 				font-size: var(--font-size-caption);
-				padding: 6px 14px;
+				padding: var(--space-xs) var(--space-md);
 				border: none;
 				line-height: 1.4;
 				background-color: {advocateActive ? 'var(--color-accent)' : 'transparent'};
@@ -935,7 +935,7 @@
 			style="
 				display: inline-flex;
 				align-items: center;
-				gap: 6px;
+				gap: var(--space-xs);
 				background-color: var(--color-surface);
 				border: 1px solid var(--color-border);
 				border-radius: 6px;
@@ -1070,7 +1070,7 @@
 					background-color: var(--color-bg);
 					border: 1px solid var(--color-accent);
 					border-radius: 6px;
-					padding: 6px var(--space-2xl) 6px 10px;
+					padding: var(--space-xs) var(--space-2xl) var(--space-xs) var(--space-sm);
 					font-size: var(--font-size-body);
 					color: var(--color-text-primary);
 					width: 100%;
@@ -1186,7 +1186,7 @@
 							>
 								{candidate.full_name}{#if candidate.role_name}<span style="font-size: var(--font-size-caption); color: var(--color-text-secondary); margin-left: var(--space-xs);">({candidate.role_name})</span>{/if}
 								{#if row.discrepancy?.auto_match_id === candidate.id}
-									<span style="font-size: var(--font-size-caption); color: var(--color-accent); text-transform: uppercase; letter-spacing: 0.04em; margin-left: 6px;">Suggested</span>
+									<span style="font-size: var(--font-size-caption); color: var(--color-accent); text-transform: uppercase; letter-spacing: 0.04em; margin-left: var(--space-xs);">Suggested</span>
 								{/if}
 							</li>
 						{/each}
@@ -1279,7 +1279,7 @@
 					background-color: var(--color-bg);
 					border: 1px solid var(--color-border);
 					border-radius: 12px;
-					padding: var(--space-xs) var(--space-md) var(--space-xs) 10px;
+					padding: var(--space-xs) var(--space-md) var(--space-xs) var(--space-sm);
 				"
 			>
 				<span
@@ -1422,7 +1422,7 @@
 										margin-top: var(--space-sm);
 										border: 1px solid {cueTagIsWarning ? 'var(--color-status-warning)' : cueTagIsAutoMatched ? 'var(--color-status-published)' : 'var(--color-text-secondary)'};
 										border-radius: 4px;
-										padding: 2px var(--space-sm);
+										padding: var(--space-xs) var(--space-sm);
 										font-size: var(--font-size-caption);
 										font-weight: var(--font-weight-semibold);
 										letter-spacing: 0.22px;

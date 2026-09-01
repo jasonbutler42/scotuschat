@@ -254,7 +254,7 @@
      component's own internal shapeError alert (now rendered by Input
      itself instead of a local <p>, same id, same role="alert", same
      var(--color-destructive) styling). -->
-<p style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: #64748b; margin: 0 0 var(--space-xs) 0;">
+<p style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin: 0 0 var(--space-xs) 0;">
 	Type a docket number and press Enter to add it.
 </p>
 <Input

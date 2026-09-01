@@ -111,15 +111,15 @@
 	function tierBadgeStyle(tier: string): string {
 		let color: string;
 		if (tier === 'verified') {
-			color = '#38bdf8';
+			color = 'var(--color-tier-verified)';
 		} else if (tier === 'trusted') {
-			color = '#34d399';
+			color = 'var(--color-tier-trusted)';
 		} else if (tier === 'provisional') {
-			color = '#facc15';
+			color = 'var(--color-tier-provisional)';
 		} else if (tier === 'uncertain') {
-			color = '#f87171';
+			color = 'var(--color-tier-uncertain)';
 		} else {
-			color = '#64748b';
+			color = 'var(--color-review-unknown)';
 		}
 		return `border: 1px solid ${color}; border-radius: 4px; padding: 2px var(--space-sm); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); background-color: var(--color-bg); color: ${color}; display: inline-block;`;
 	}

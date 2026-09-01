@@ -54,13 +54,13 @@
 	function tierBadgeStyle(tier: string): string {
 		let color: string;
 		if (tier === 'verified') {
-			color = '#38bdf8';
+			color = 'var(--color-tier-verified)';
 		} else if (tier === 'trusted') {
-			color = '#34d399';
+			color = 'var(--color-tier-trusted)';
 		} else if (tier === 'provisional') {
-			color = '#facc15';
+			color = 'var(--color-tier-provisional)';
 		} else {
-			color = '#f87171';
+			color = 'var(--color-tier-uncertain)';
 		}
 		return `border: 1px solid ${color}; border-radius: 4px; padding: 2px var(--space-sm); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); background-color: var(--color-bg); color: ${color}; display: inline-block;`;
 	}
@@ -78,13 +78,13 @@
 	function reviewBadgeStyle(state: string): string {
 		let color: string;
 		if (state === 'operator_confirmed') {
-			color = '#2dd4bf';
+			color = 'var(--color-review-confirmed)';
 		} else if (state === 'operator_edited') {
-			color = '#e879f9';
+			color = 'var(--color-review-edited)';
 		} else if (state === 'needs_review') {
 			color = 'var(--color-status-warning)';
 		} else {
-			color = '#475569';
+			color = 'var(--color-review-unreviewed)';
 		}
 		return `border: 1px solid ${color}; border-radius: 4px; padding: 2px var(--space-sm); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); background-color: var(--color-surface); color: ${color}; display: inline-block;`;
 	}
@@ -162,7 +162,7 @@
 				</div>
 			</div>
 
-			<p style="font-size: var(--font-size-caption); color: #64748b; margin: var(--space-lg) 0 0 0; line-height: 1.5;">
+			<p style="font-size: var(--font-size-caption); color: var(--color-text-secondary); margin: var(--space-lg) 0 0 0; line-height: 1.5;">
 				A fifth enum value, <code>pipeline</code>, was retired by migration 0027 and
 				replaced by <code>candidate</code> above. PostgreSQL cannot drop an enum value
 				once minted, so <code>pipeline</code> remains in the database as a dead-but-
@@ -318,7 +318,7 @@
 					reason.
 				</li>
 			</ol>
-			<p style="font-size: var(--font-size-caption); color: #64748b; margin: 0; line-height: 1.5;">
+			<p style="font-size: var(--font-size-caption); color: var(--color-text-secondary); margin: 0; line-height: 1.5;">
 				The trust tier used by the second gate is always recomputed fresh at publish time,
 				so the gate reflects the argument's current participants and utterances rather than a possibly
 				stale stored value.

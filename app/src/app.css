@@ -15,6 +15,20 @@
 	--orange-400: #fb923c;
 	--red-500: #ef4444;
 
+	/* Admin lifecycle primitives. Values carried over verbatim from the badge
+	   helpers they used to be hardcoded in — D-08 is a refactor, not a redesign.
+	   Unlike the speaker ramp these need not sit at one luminance: P-03 governs how
+	   SPEAKERS are treated, and a pipeline state is not a speaker. */
+	--sky-400: #38bdf8;
+	--emerald-400: #34d399;
+	--yellow-400: #facc15;
+	--red-400: #f87171;
+	--teal-400: #2dd4bf;
+	--fuchsia-400: #e879f9;
+	--rose-400: #fb7185;
+	--slate-600: #475569;
+	--slate-500: #64748b;
+
 	/* Per-speaker ramp. EVERY entry is solved to CIE L* 78 at OKLCH chroma 0.09,
 	   so they vary in hue and in nothing else: 8.06-8.15:1 against
 	   --color-surface and 10.40-10.52:1 against --color-bg, i.e. within 1% of
@@ -88,6 +102,24 @@
 
 	--color-stage-accent: var(--amber-600);
 	--color-stage-text: var(--amber-300);
+
+	/* Trust tier and review state — the two admin lifecycle scales the D-04
+	   conversion surfaced (51-ADMIN-ARTIFACTS.md A-01..A-08, ruled 2026-09-01).
+	   Admin-only, same as --color-status-*, and covered by the same P-04 ban on
+	   reaching a public surface. */
+	--color-tier-verified: var(--sky-400);
+	--color-tier-trusted: var(--emerald-400);
+	--color-tier-provisional: var(--yellow-400);
+	--color-tier-uncertain: var(--red-400);
+	--color-review-unreviewed: var(--slate-600);
+	--color-review-needs-review: var(--color-status-warning);
+	--color-review-confirmed: var(--teal-400);
+	--color-review-edited: var(--fuchsia-400);
+	--color-review-discrepancy: var(--rose-400);
+	/* The fallback branch of a review badge — a state the UI does not recognise.
+	   Its own role rather than a reuse of --color-text-secondary, because A-09 was
+	   exactly the artifact of one value doing both jobs. */
+	--color-review-unknown: var(--slate-500);
 
 	/* Admin-only lifecycle status colors — never rendered on the public site */
 	--color-status-published: var(--green-400);

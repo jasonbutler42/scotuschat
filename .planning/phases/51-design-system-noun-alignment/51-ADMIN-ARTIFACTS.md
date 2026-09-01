@@ -3,7 +3,7 @@ phase: 51-design-system-noun-alignment
 plan: 09
 type: artifact-report
 created: 2026-08-31
-status: awaiting operator rulings (blocking checkpoint in plan 51-10)
+status: ruled 2026-09-01 except D-04, which the operator is inspecting; checkpoint stays open until it is ruled
 ---
 
 # Admin artifacts surfaced by the D-04 conversion pass
@@ -13,8 +13,12 @@ silently preserve it or silently change it. Operator's own framing: admin *"need
 refactor but there are also some artifacts that survived through various changes so I
 expect I'll bring those up."*
 
-Nothing in this list has been changed. Every row is a decision, and the conversion
-deliberately stopped at each one.
+Nothing in this list had been changed when it was written. Every row was a decision, and the
+conversion deliberately stopped at each one.
+
+**Ruled 2026-09-01**, all rows but D-04. The rulings are recorded in each section's table
+below; D-04 is the one the operator is inspecting in a browser before deciding, so this
+checkpoint remains open.
 
 **How to rule:** write `fix now`, `defer`, or `leave as is` in the ruling column. A `defer`
 needs a real destination — a todo file or a backlog item — not a note in this file, which
@@ -73,11 +77,11 @@ whichever review-state token the decision above produces.
 > pipeline lifecycle state on an argument, not a property of a Justice or an advocate. Safe
 > to tokenise.
 
-| ruling |
-|---|
-| A-01…A-08: |
-| A-09: |
-| A-10: |
+| row | ruling |
+|---|---|
+| A-01…A-08 | **fix now** — promote both scales into the two-layer architecture as `--color-tier-*` and `--color-review-*`, admin-only. Values are kept exactly as they are: D-08 is a refactor, not a redesign, and P-03's equal-luminance rule governs speaker colour, not admin lifecycle state. |
+| A-09 | **fix now** — split it. The muted-caption use becomes `--color-text-secondary`; the review-badge fallback becomes its own `--color-review-unknown`. One value doing two jobs was the artifact. |
+| A-10 | **fix now** — fold into `--color-status-warning`. `.pill` is the missing-field indicator, which is precisely the "attention-needed inline warning" role the token map already assigns that token. The 15% translucent fill becomes a `color-mix()` of the same token rather than a second literal. |
 
 ---
 
@@ -107,10 +111,10 @@ Recommend `leave as is` unless a sight-check says otherwise. If any of them is e
 promoted, note that the scale now has no room between `sm` (8) and `md` (12), so B-03
 (`6px`) would force the same shift-the-names decision a second time.
 
-| ruling |
-|---|
-| B-01: **ruled 2026-09-01 — added to the scale as `--space-md`** |
-| B-02…B-08: |
+| row | ruling |
+|---|---|
+| B-01 | **fix now — done.** Added to the scale as `--space-md`; names shifted up. |
+| B-02…B-08 | **fix now** — fold every one-off onto the nearest established step. Operator's reason, recorded because it overrides the earlier recommendation to leave them: *"I'd prefer there are as few one-offs as possible, especially for the admin side… I'd prefer the consistency as a driver for design discipline."* This is the first ruling that deliberately changes rendered output; the exact rounding applied is recorded in the summary. |
 
 ---
 
@@ -123,9 +127,9 @@ have been a deliberate mid-weight. They are now converted; the two sites are in
 **This is the one conversion in the whole pass that changes rendered output** — everything
 else was a rename of an identical value. Worth a sight-check on the Resolve card.
 
-| ruling |
-|---|
-| C-01: |
+| row | ruling |
+|---|---|
+| C-01 | **leave as is** — accept the collapse to semibold. Reason: two resolve-row labels render slightly bolder than before, and that is preferable to carrying a third weight in the scale for two sites. |
 
 ---
 
@@ -138,12 +142,12 @@ else was a rename of an identical value. Worth a sight-check on the Resolve card
 | D-03 | admin/pipeline, admin/pipeline/[job_id] | Status colours live in a `BADGE_COLOR` lookup object and a `borderLeft` helper — converted, but the same lifecycle vocabulary is expressed three different ways across the pipeline screens. | Fold into `Badge` alongside D-01. |
 | D-04 | all admin | **Not yet checked.** Long-text behaviour in dense tables (UI-SPEC row E5) was preserved exactly as found, per the plan's instruction not to invent a wrap or truncation rule. Which cells look wrong needs your eye at 375px on real data. | Operator sight-check in 51-10. |
 
-| ruling |
-|---|
-| D-01: |
-| D-02: |
-| D-03: |
-| D-04: |
+| row | ruling |
+|---|---|
+| D-01 | **fix now** — every tier/review/status pill renders through `lib/primitives/Badge.svelte`; the three verbatim copies are deleted. Unblocked by the A-01…A-08 ruling, since a shared primitive needs a token rather than a hex. |
+| D-02 | **fix now** — restructure `admin/help` so it styles the way every other screen does, rather than through page-level style constants built as strings in its script block. |
+| D-03 | **fix now** — folded into D-01. The pipeline `BADGE_COLOR` lookup and `borderLeft` helper go through `Badge` with the rest. |
+| D-04 | **OPEN** — the operator is inspecting dense admin tables at 375px before ruling. This is the row that keeps the 51-10 Task 1 checkpoint open. It also closes UI-SPEC row E5 `long-text` when it lands. |
 
 ---
 

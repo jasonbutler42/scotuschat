@@ -22,6 +22,8 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { after, before, describe, test } from 'node:test';
+import { browserExecutable, NO_BROWSER_MESSAGE } from './helpers/browser-executable.mjs';
+import { APP_DIR, VITE_BIN } from './helpers/paths.mjs';
 
 function listen(server) {
 	return new Promise((resolve, reject) => {
@@ -52,18 +54,6 @@ async function waitFor(url, predicate = (response) => response.ok, timeoutMs = 2
 	throw new Error(`Timed out waiting for ${url}: ${lastError ?? 'condition not met'}`);
 }
 
-function browserExecutable() {
-	const candidates =
-		process.platform === 'win32'
-			? [
-					'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
-					'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
-					'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-					'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe'
-				]
-			: ['/usr/bin/microsoft-edge', '/usr/bin/google-chrome', '/usr/bin/chromium'];
-	return candidates.find((candidate) => existsSync(candidate));
-}
 
 async function terminateTree(child) {
 	if (!child || child.exitCode !== null) return;
@@ -266,12 +256,12 @@ describe('public arguments listing (term index + term detail)', { timeout: 120_0
 		const debugPort = await freePort();
 		profile = await mkdtemp(path.join(tmpdir(), 'scotus-arguments-listing-browser-'));
 		const executable = browserExecutable();
-		assert.ok(executable, 'Microsoft Edge or Google Chrome must be installed for this fail-closed test');
+		assert.ok(executable, NO_BROWSER_MESSAGE);
 
 		vite = spawn(
 			process.execPath,
 			[
-				path.resolve('app/node_modules/vite/bin/vite.js'),
+				VITE_BIN,
 				'--host',
 				'127.0.0.1',
 				'--port',
@@ -279,7 +269,7 @@ describe('public arguments listing (term index + term detail)', { timeout: 120_0
 				'--strictPort'
 			],
 			{
-				cwd: path.resolve('app'),
+				cwd: APP_DIR,
 				env: {
 					...process.env,
 					ADMIN_USERNAME: 'phase51-admin',

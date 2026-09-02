@@ -3,9 +3,10 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
+import { APP_DIR } from './helpers/paths.mjs';
 
-const pagePath = path.resolve('app/src/routes/admin/people/[id]/+page.svelte');
-const serverPath = path.resolve('app/src/routes/admin/people/[id]/+page.server.ts');
+const pagePath = path.join(APP_DIR, 'src/routes/admin/people/[id]/+page.svelte');
+const serverPath = path.join(APP_DIR, 'src/routes/admin/people/[id]/+page.server.ts');
 const page = readFileSync(pagePath, 'utf8');
 const server = readFileSync(serverPath, 'utf8');
 

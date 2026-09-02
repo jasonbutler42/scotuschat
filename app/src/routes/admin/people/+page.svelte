@@ -423,7 +423,7 @@
 		display: inline-flex;
 		align-items: center;
 		min-height: var(--touch-target-dense);
-		background-color: color-mix(in srgb, var(--color-status-warning) 15%, transparent);
+		background-color: color-mix(in srgb, var(--color-status-warning) 14%, transparent);
 		border: 1px solid var(--color-status-warning);
 		color: var(--color-status-warning);
 		border-radius: 4px;

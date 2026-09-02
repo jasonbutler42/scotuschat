@@ -54,6 +54,18 @@
 	};
 
 	let color = $derived(TONE_COLOR[tone]);
+
+	// A tint DERIVED FROM THE TONE, not an opaque colour picked per screen.
+	// The helpers this primitive replaced each hardcoded a background — six sites
+	// chose --color-bg and eleven chose --color-surface — because an opaque fill
+	// forces the badge to know what it is sitting on, and each file guessed
+	// separately. Wrong guess, and the badge reads as a dark well on a card or as
+	// no fill at all on the page. A translucent tint composites correctly over
+	// either, so the badge stops caring. Border and text stay at full strength,
+	// so contrast is unchanged. Where color-mix is unsupported this resolves to
+	// an invalid value and the background falls back to transparent — the
+	// border-only shape this component shipped with.
+	let fill = $derived(`color-mix(in srgb, ${color} 14%, transparent)`);
 </script>
 
 <span
@@ -61,6 +73,7 @@
 		display: inline-block;
 		max-width: 100%;
 		border: 1px solid {color};
+		background-color: {fill};
 		border-radius: 4px;
 		padding: var(--space-xs) var(--space-sm);
 		font-size: var(--font-size-caption);

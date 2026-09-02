@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
+import { dev } from '$app/environment';
 import { SESSION_SECRET } from '$env/static/private';
 
 /** Cookie name for the admin session (D-04). */
@@ -11,7 +12,14 @@ export const SESSION_COOKIE_NAME = 'scotus_admin_session';
 export const sessionCookieOptions = {
 	httpOnly: true,
 	sameSite: 'strict' as const,
-	secure: true,
+	// Secure in every build EXCEPT dev. A browser only accepts a `Secure` cookie
+	// from a secure context, and it treats `localhost` as one even over plain
+	// HTTP — but not a LAN IP. So with this hardcoded true, logging in from
+	// another device on the network silently failed: correct credentials, cookie
+	// discarded by the browser, redirect to /admin with no session, guard bounces
+	// straight back to the login page with no error to explain it. Dev-only, so
+	// production is unchanged and still fails closed.
+	secure: !dev,
 	maxAge: 86400, // D-02: 24 hours (86400 seconds)
 	path: '/'
 };

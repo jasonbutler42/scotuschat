@@ -3,7 +3,7 @@ phase: 51-design-system-noun-alignment
 plan: 09
 type: artifact-report
 created: 2026-08-31
-status: ruled 2026-09-01 except D-04, which the operator is inspecting; checkpoint stays open until it is ruled
+status: fully ruled 2026-09-02 — the 51-10 Task 1 checkpoint is CLOSED
 ---
 
 # Admin artifacts surfaced by the D-04 conversion pass
@@ -16,9 +16,8 @@ expect I'll bring those up."*
 Nothing in this list had been changed when it was written. Every row was a decision, and the
 conversion deliberately stopped at each one.
 
-**Ruled 2026-09-01**, all rows but D-04. The rulings are recorded in each section's table
-below; D-04 is the one the operator is inspecting in a browser before deciding, so this
-checkpoint remains open.
+**Fully ruled**: every row on 2026-09-01, D-04 on 2026-09-02. The rulings sit in each
+section's table below. The 51-10 Task 1 checkpoint is closed.
 
 **How to rule:** write `fix now`, `defer`, or `leave as is` in the ruling column. A `defer`
 needs a real destination — a todo file or a backlog item — not a note in this file, which
@@ -140,14 +139,14 @@ else was a rename of an identical value. Worth a sight-check on the Resolve card
 | D-01 | admin/help, admin/arguments, admin/review | `tierBadgeStyle` is **duplicated verbatim in three files**, with the comment in admin/help openly saying "Copied verbatim from admin/arguments". `reviewBadgeStyle`/`reviewStateBadgeStyle` are a second near-duplicate pair with slightly different fallbacks. | Adopt `lib/primitives/Badge.svelte` at all of these sites and delete the copies. Blocked on A-01…A-08: a shared primitive needs a token, not a hex. |
 | D-02 | admin/help | Three page-level style constants (`cardStyle`, `cardHeadingStyle`, `bodyTextStyle`) are built as strings in the script block rather than as markup or classes. Converted in place, but they are a styling mechanism the rest of the codebase does not use. | Decide whether admin/help should be restructured or left as the odd one out. |
 | D-03 | admin/pipeline, admin/pipeline/[job_id] | Status colours live in a `BADGE_COLOR` lookup object and a `borderLeft` helper — converted, but the same lifecycle vocabulary is expressed three different ways across the pipeline screens. | Fold into `Badge` alongside D-01. |
-| D-04 | all admin | **Not yet checked.** Long-text behaviour in dense tables (UI-SPEC row E5) was preserved exactly as found, per the plan's instruction not to invent a wrap or truncation rule. Which cells look wrong needs your eye at 375px on real data. | Operator sight-check in 51-10. |
+| D-04 | admin/review (both tables) | Long-text handling, **measured rather than eyeballed** — the dev DB holds the 4-fixture set whose longest case name is 50 characters, so it could not stress this at all; the table was rebuilt from source and driven with real case names from 20 to 96 characters. Nothing was ever clipped or truncated. But four of the arguments table's six columns are `white-space: nowrap`, so each claims its full min-content width and the one flexible column holding long text is left the remainder — **125px at any viewport**. A 96-character name became a nine-line, 196px-tall row. | **Done:** `min-width: 22ch` on the case-name column, `18ch` on the people tab's full-name column. Measured: tallest row 196px → **101px**, six lines → four; table 716px → 839px, absorbed by the container's existing horizontal scroll. The provenance-note column keeps no floor on purpose — caption-weight secondary text, where wrapping is acceptable. The other three admin tables need nothing: they have no nowrap columns, so no column is starved. |
 
 | row | ruling |
 |---|---|
 | D-01 | **fix now** — every tier/review/status pill renders through `lib/primitives/Badge.svelte`; the three verbatim copies are deleted. Unblocked by the A-01…A-08 ruling, since a shared primitive needs a token rather than a hex. |
 | D-02 | **fix now** — restructure `admin/help` so it styles the way every other screen does, rather than through page-level style constants built as strings in its script block. |
 | D-03 | **fix now** — folded into D-01. The pipeline `BADGE_COLOR` lookup and `borderLeft` helper go through `Badge` with the rest. |
-| D-04 | **OPEN** — the operator is inspecting dense admin tables at 375px before ruling. This is the row that keeps the 51-10 Task 1 checkpoint open. It also closes UI-SPEC row E5 `long-text` when it lands. |
+| D-04 | **fix now — done.** A `min-width` floor on the starved text column in both review tables. Closes UI-SPEC row E5 `long-text`. |
 
 ---
 

@@ -453,7 +453,7 @@
 				<thead>
 					<tr>
 						<th scope="col" style="text-align: left; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); padding: var(--space-sm) var(--space-md); border-bottom: 1px solid var(--color-border); white-space: nowrap;">Tier / Status</th>
-						<th scope="col" style="text-align: left; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); padding: var(--space-sm) var(--space-md); border-bottom: 1px solid var(--color-border);">Case name</th>
+						<th scope="col" style="text-align: left; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); padding: var(--space-sm) var(--space-md); border-bottom: 1px solid var(--color-border); min-width: 22ch;">Case name</th>
 						<th scope="col" style="text-align: left; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); padding: var(--space-sm) var(--space-md); border-bottom: 1px solid var(--color-border); white-space: nowrap;">Docket</th>
 						<th scope="col" style="text-align: left; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); padding: var(--space-sm) var(--space-md); border-bottom: 1px solid var(--color-border); white-space: nowrap;">Argued date</th>
 						<th scope="col" style="text-align: left; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); padding: var(--space-sm) var(--space-md); border-bottom: 1px solid var(--color-border);">Needs-attention</th>
@@ -468,7 +468,18 @@
 								<span style="display: inline-block; width: 4px;"></span>
 								<Badge tone={badgeTone(item.status)} label={badgeLabel(item.status)} />
 							</td>
-							<td style="padding: var(--space-md); border-bottom: 1px solid var(--color-border); vertical-align: top; color: var(--color-text-primary); font-size: var(--font-size-body);">
+							<!-- D-04 (51-ADMIN-ARTIFACTS.md, ruled 2026-09-02): a floor on the
+							     one column holding long text. Four of this table's six columns
+							     are `white-space: nowrap`, so each claims its full min-content
+							     width and this one — the only flexible column with a long value
+							     in it — got whatever remained: 125px at any viewport. A
+							     96-character case name became a nine-line, 196px row. With the
+							     floor it is four lines and 101px, and the extra table width is
+							     absorbed by the container's existing horizontal scroll
+							     (G-49-5a). Nothing is truncated; 49-UI-SPEC E1/E2 still forbids
+							     that. `ch` rather than px because the floor is about MEASURE —
+							     the same reason the transcript bubble caps at 68ch. -->
+							<td style="padding: var(--space-md); border-bottom: 1px solid var(--color-border); vertical-align: top; color: var(--color-text-primary); font-size: var(--font-size-body); min-width: 22ch;">
 								{item.case_name}
 								{#if item.argument_discrepancies.length > 0}
 									<span style="display: inline-block; width: 4px;"></span>
@@ -638,7 +649,7 @@
 				<thead>
 					<tr>
 						<th scope="col" style="text-align: left; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); padding: var(--space-sm) var(--space-md); border-bottom: 1px solid var(--color-border); white-space: nowrap;">Review state</th>
-						<th scope="col" style="text-align: left; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); padding: var(--space-sm) var(--space-md); border-bottom: 1px solid var(--color-border);">Full name</th>
+						<th scope="col" style="text-align: left; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); padding: var(--space-sm) var(--space-md); border-bottom: 1px solid var(--color-border); min-width: 18ch;">Full name</th>
 						<th scope="col" style="text-align: left; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); padding: var(--space-sm) var(--space-md); border-bottom: 1px solid var(--color-border);">Provenance note</th>
 						<th scope="col" style="text-align: left; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); padding: var(--space-sm) var(--space-md); border-bottom: 1px solid var(--color-border); white-space: nowrap;">Actions</th>
 					</tr>
@@ -653,7 +664,13 @@
 									<Badge tone="discrepancy" label="Discrepancy" />
 								{/if}
 							</td>
-							<td style="padding: var(--space-md); border-bottom: 1px solid var(--color-border); vertical-align: top; color: var(--color-text-primary); font-size: var(--font-size-body);">
+							<!-- Same D-04 floor. Here the identity column is the one worth
+							     protecting: a person's name is how the row is recognised, and
+							     "Harry G. Silleck, Jr." wrapping over three lines is the same
+							     complaint. The provenance note beside it keeps no floor on
+							     purpose — it is caption-weight secondary text, and wrapping is
+							     the acceptable behaviour for it. -->
+							<td style="padding: var(--space-md); border-bottom: 1px solid var(--color-border); vertical-align: top; color: var(--color-text-primary); font-size: var(--font-size-body); min-width: 18ch;">
 								{person.full_name}
 							</td>
 							<td style="padding: var(--space-md); border-bottom: 1px solid var(--color-border); vertical-align: top; color: var(--color-text-secondary); font-size: var(--font-size-caption);">

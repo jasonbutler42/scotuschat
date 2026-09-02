@@ -66,12 +66,33 @@
 	// an invalid value and the background falls back to transparent — the
 	// border-only shape this component shipped with.
 	let fill = $derived(`color-mix(in srgb, ${color} 14%, transparent)`);
+
+	// WHY nowrap, and why no max-width — this cost a real regression on
+	// /admin/review, so it is written down rather than left to be rediscovered.
+	//
+	// This component shipped with `max-width: 100%; white-space: normal;
+	// overflow-wrap: anywhere`, intended as long-text protection. But
+	// `overflow-wrap: anywhere` REDUCES an element's min-content contribution —
+	// that is its defining difference from `break-word` — so a table using
+	// automatic layout sized the badge column as though the label could break at
+	// any character. The cell itself is `white-space: nowrap` (G-49-5a: this
+	// table's no-wrap cells deliberately pin a min-content width wider than the
+	// viewport so the container scrolls rather than the page). Two inline-blocks
+	// that cannot wrap, inside a column sized for a broken one, overflowed 76px
+	// into the next column. The labels were also wrapping mid-word inside the
+	// pill, which is what a 42px-tall badge beside a 26px one looks like.
+	//
+	// A badge label is short, controlled vocabulary — never the unbreakable URL
+	// or identifier `anywhere` exists for. So it does not wrap, and it does not
+	// cap its width; it contributes its true min-content size and lets the
+	// container decide. That is the same contract the surrounding table already
+	// relies on, and it keeps the no-truncation rule (49-UI-SPEC E1/E2) intact:
+	// nothing here is clipped or ellipsised, it scrolls.
 </script>
 
 <span
 	style="
 		display: inline-block;
-		max-width: 100%;
 		border: 1px solid {color};
 		background-color: {fill};
 		border-radius: 4px;
@@ -80,7 +101,6 @@
 		font-weight: var(--font-weight-semibold);
 		letter-spacing: 0.02em;
 		color: {color};
-		white-space: normal;
-		overflow-wrap: anywhere;
+		white-space: nowrap;
 	"
 >{label}</span>

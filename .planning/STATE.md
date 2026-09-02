@@ -5,11 +5,11 @@ milestone_name: Import & Provenance Re-model
 current_phase: 51
 current_phase_name: Design System & Noun Alignment
 status: "Phase 50 COMPLETE and VERIFIED 2026-08-27; debridement pass done 2026-08-27. All 7 plans, all 4 waves, 4/4 success criteria verified in 50-VERIFICATION.md. UAT complete 35/35. Phase-50 verification also closed 50-REVIEW.md CR-01 and CR-02 and the SC-4 ungated-writer gap. One provenance-label defect (trivial-ACCEPT restamp) accepted as known debt under an operator override and logged to deferred-items.md. Next: Phase 51 (Design System & Noun Alignment), the last v1.8 phase."
-stopped_at: Completed 51-09-PLAN.md (all 3 tasks). Next: 51-10 — the operator-ruling checkpoint, autonomous:false.
-last_updated: "2026-08-31T14:55:00.000Z"
+stopped_at: 51-10 IN PROGRESS. Task 1 (blocking-human ruling checkpoint) is CLOSED — every row of 51-ADMIN-ARTIFACTS.md is ruled. Task 2 partially applied; see last_activity_desc for exactly what remains.
+last_updated: "2026-09-02T14:30:00.000Z"
 last_activity: 2026-08-31
-last_activity_desc: Plan 51-09 complete — tokenize-styles script (26 unit tests), 1,566 literals converted across 22 .svelte files, and 51-ADMIN-ARTIFACTS.md written for the 51-10 ruling checkpoint. Zero mapped hex / numeric font-size / numeric font-weight remain; the 29 surviving hexes are the token map's 10 open rows, awaiting operator decisions. Five real-browser tests could not run in this environment (Chromium missing libnspr4).
-state_head: 504171a6c4dcdb96233dd97a5ab2ce045ff06ab1
+last_activity_desc: "Plan 51-10 part-done. APPLIED: A-01..A-10 (admin tier/review scales tokenised — app/src now has ZERO hex literals), B-02..B-08 (47 spacing one-offs folded; three negative -1px border-collapse offsets deliberately not folded), C-01 (leave as is), D-04 (min-width floors on the two /admin/review text columns; tallest row 196px->101px). PART-DONE D-01/D-03: Badge extended to 16 tones with the union in badge-tone.ts, admin/review converted; SIX files still carry their own badge helpers (admin/arguments, admin/arguments/[id], admin/help, admin/pipeline, admin/pipeline/[job_id], lib/admin/RunStatusCard). NOT STARTED: D-02 (restructure admin/help), DESIGN-SYSTEM.md reconciliation, and the phase gate. Also fixed en route: dev-gated the Secure session cookie (login was impossible from any host but localhost) and a Badge regression that overflowed its table cell. OUTSTANDING VERIFICATION: the five real-browser tests cannot run here (Chromium missing libnspr4), and the eleven admin screens still need the operator's eye — the badge weight change (regular->semibold) and the new tinted badge fills are unreviewed."
+state_head: 2c2c6f49d0cac693d16bc8cba07ca3a0b34475cb
 progress:
   total_phases: 5
   completed_phases: 4

@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
+	import Badge from '$lib/primitives/Badge.svelte';
+	import type { BadgeTone } from '$lib/primitives/badge-tone';
 
 	type Blocker = { code: string; count: number };
 
@@ -81,18 +83,12 @@
 
 	// StatusBadge helpers — reads argument.status enum (Phase 15: draft/published).
 	// Pipeline-state arguments are excluded from this list (D-02).
-	function badgeStyle(status: string): string {
-		let color: string;
-		if (status === 'published') {
-			color = 'var(--color-status-published)'; // Published — green
-		} else if (status === 'draft') {
-			color = 'var(--color-status-draft)'; // Draft — violet
-		} else if (status === 'unpublished') {
-			color = 'var(--color-status-unpublished)'; // Unpublished — orange
-		} else {
-			color = 'var(--color-text-secondary)'; // Pipeline — muted (fallback, should not appear in this list)
-		}
-		return `border: 1px solid ${color}; border-radius: 4px; padding: var(--space-xs) var(--space-sm); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); background-color: var(--color-surface); color: ${color}; display: inline-block;`;
+	function badgeTone(status: string): BadgeTone {
+		if (status === 'published') return 'published';
+		if (status === 'draft') return 'draft';
+		if (status === 'unpublished') return 'unpublished';
+		// Pipeline — muted fallback; excluded from this list (D-02).
+		return 'neutral';
 	}
 
 	function badgeLabel(status: string): string {
@@ -108,20 +104,12 @@
 	// alternative). Colors are visually distinct from the status badge's
 	// palette above; this is inline styling only, not a design-system
 	// dependency (Phase 51 owns the palette).
-	function tierBadgeStyle(tier: string): string {
-		let color: string;
-		if (tier === 'verified') {
-			color = 'var(--color-tier-verified)';
-		} else if (tier === 'trusted') {
-			color = 'var(--color-tier-trusted)';
-		} else if (tier === 'provisional') {
-			color = 'var(--color-tier-provisional)';
-		} else if (tier === 'uncertain') {
-			color = 'var(--color-tier-uncertain)';
-		} else {
-			color = 'var(--color-review-unknown)';
-		}
-		return `border: 1px solid ${color}; border-radius: 4px; padding: var(--space-xs) var(--space-sm); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); background-color: var(--color-bg); color: ${color}; display: inline-block;`;
+	function tierTone(tier: string): BadgeTone {
+		if (tier === 'verified') return 'verified';
+		if (tier === 'trusted') return 'trusted';
+		if (tier === 'provisional') return 'provisional';
+		if (tier === 'uncertain') return 'uncertain';
+		return 'unknown';
 	}
 
 	function tierLabel(tier: string): string {
@@ -350,11 +338,12 @@
 									white-space: nowrap;
 								"
 							>
-								<span style={badgeStyle(arg.status ?? 'pipeline')}>
-									{badgeLabel(arg.status ?? 'pipeline')}
-								</span>
-								<span style={tierBadgeStyle(arg.trust_tier)} title="Trust tier">
-									{tierLabel(arg.trust_tier)}
+								<Badge
+									tone={badgeTone(arg.status ?? 'pipeline')}
+									label={badgeLabel(arg.status ?? 'pipeline')}
+								/>
+								<span title="Trust tier">
+									<Badge tone={tierTone(arg.trust_tier)} label={tierLabel(arg.trust_tier)} />
 								</span>
 							</td>
 							<td
@@ -526,7 +515,7 @@
 											<span>
 												Publish blocked
 												{#if form.trustTier}
-													<span style={tierBadgeStyle(form.trustTier)}>{tierLabel(form.trustTier)}</span>
+													<Badge tone={tierTone(form.trustTier)} label={tierLabel(form.trustTier)} />
 												{/if}
 											</span>
 											<!-- Dismisses the WHOLE panel, not just the reason textarea —

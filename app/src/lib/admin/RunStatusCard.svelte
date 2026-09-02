@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import Badge from '$lib/primitives/Badge.svelte';
+	import type { BadgeTone } from '$lib/primitives/badge-tone';
 
 	// Phase 25 — Run status card (D-01 through D-04, D-18, D-20, D-21, PJOB-01, PJOB-02, PJOB-20).
 	// Receives readiness/status data via props; does not fetch its own data.
@@ -25,12 +27,13 @@
 	let { jobStatus, pdfHref, readiness, approveError = null }: RunStatusCardProps = $props();
 
 	// T-25-10: badges include text labels and derive from server-provided status, not color alone.
-	const BADGE_COLOR: Record<string, string> = {
-		pending: 'var(--color-text-secondary)',
-		running: 'var(--color-accent)',
-		completed: 'var(--color-status-published)',
-		paused: 'var(--color-status-warning)',
-		failed: 'var(--color-destructive)',
+	// D-03: was BADGE_COLOR. The tones resolve to the same tokens.
+	const BADGE_TONE: Record<string, BadgeTone> = {
+		pending: 'neutral',
+		running: 'running',
+		completed: 'published',
+		paused: 'warning',
+		failed: 'failed',
 	};
 
 	const BADGE_LABEL: Record<string, string> = {
@@ -43,8 +46,8 @@
 
 	// Archived override: an already-created run is settled/read-only and reads
 	// differently from a still-processing "Completed" badge (folded Phase-25-UAT todo).
-	let badgeColor = $derived(
-		readiness?.state === 'already_created' ? 'var(--color-status-archived)' : BADGE_COLOR[jobStatus] ?? 'var(--color-text-secondary)',
+	let badgeTone = $derived<BadgeTone>(
+		readiness?.state === 'already_created' ? 'archived' : BADGE_TONE[jobStatus] ?? 'neutral',
 	);
 	let badgeLabel = $derived(
 		readiness?.state === 'already_created' ? 'Archived' : BADGE_LABEL[jobStatus] ?? jobStatus,
@@ -73,23 +76,11 @@
 		<h2 style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0; line-height: 1.2;">
 			Run status
 		</h2>
-		<span
-			aria-label={jobStatus === 'running' ? 'Running' : undefined}
-			style="
-				border: 1px solid {badgeColor};
-				border-radius: 4px;
-				padding: var(--space-xs) var(--space-sm);
-				font-size: var(--font-size-caption);
-				font-weight: var(--font-weight-regular);
-				color: {badgeColor};
-				background-color: var(--color-surface);
-				display: inline-flex;
-				align-items: center;
-				gap: var(--space-xs);
-			"
-		>
-			{badgeLabel}
-		</span>
+		<Badge
+			tone={badgeTone}
+			label={badgeLabel}
+			ariaLabel={jobStatus === 'running' ? 'Running' : undefined}
+		/>
 	</div>
 
 	<!-- Source PDF link — present in every state per UI-SPEC Interaction Contract -->

@@ -3,6 +3,8 @@
 	import { tick } from 'svelte';
 	import ArgumentDetailsCard from '$lib/admin/ArgumentDetailsCard.svelte';
 	import CopyableExtractedValue from '$lib/admin/CopyableExtractedValue.svelte';
+	import Badge from '$lib/primitives/Badge.svelte';
+	import type { BadgeTone } from '$lib/primitives/badge-tone';
 	// G-49-3/D-35 (plan 49-10): the bucket rule, the boundary-crossing
 	// predicate, and the operator-visible role labels are shared with
 	// ResolveCard.svelte — both cards import from the single source of
@@ -62,20 +64,13 @@
 	}
 
 	// StatusBadge helpers — reads argument.status enum (Phase 26: pipeline/draft/published/unpublished).
-	function badgeStyle(status: string): string {
-		let color: string;
-		if (status === 'published') {
-			color = 'var(--color-status-published)';
-		} else if (status === 'draft') {
-			color = 'var(--color-status-draft)';
-		} else if (status === 'unpublished') {
-			color = 'var(--color-status-unpublished)';
-		} else {
-			// candidate (Phase 48 D-01) and any unrecognised value share the
-			// retired born state's grey token — Phase 51 owns the palette.
-			color = 'var(--color-text-secondary)';
-		}
-		return `border: 1px solid ${color}; border-radius: 4px; padding: var(--space-xs) var(--space-sm); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); background-color: var(--color-surface); color: ${color}; display: inline-block;`;
+	function badgeTone(status: string): BadgeTone {
+		if (status === 'published') return 'published';
+		if (status === 'draft') return 'draft';
+		if (status === 'unpublished') return 'unpublished';
+		// candidate (Phase 48 D-01) and any unrecognised value share the
+		// retired born state's muted tone.
+		return 'neutral';
 	}
 
 	function badgeLabel(status: string): string {
@@ -424,9 +419,10 @@
 			</h2>
 
 			<div style="margin-bottom: var(--space-md);">
-				<span style={badgeStyle(data.argument.status ?? 'candidate')}>
-					{badgeLabel(data.argument.status ?? 'candidate')}
-				</span>
+				<Badge
+					tone={badgeTone(data.argument.status ?? 'candidate')}
+					label={badgeLabel(data.argument.status ?? 'candidate')}
+				/>
 			</div>
 
 			{#if data.argument.resolved_at}
@@ -678,9 +674,12 @@
 				{#each data.argument.status_log as entry, index}
 					<div style="padding: var(--space-sm) 0;">
 						<div style="display: flex; align-items: center; gap: var(--space-sm);">
-							<span style={badgeStyle(entry.status)}>
-								{index === 0 && entry.status === 'draft' ? 'Created' : badgeLabel(entry.status)}
-							</span>
+							<Badge
+								tone={badgeTone(entry.status)}
+								label={index === 0 && entry.status === 'draft'
+									? 'Created'
+									: badgeLabel(entry.status)}
+							/>
 							<span style="font-size: var(--font-size-caption); color: var(--color-text-secondary);">
 								— {formatDateTime(entry.created_at)}
 							</span>

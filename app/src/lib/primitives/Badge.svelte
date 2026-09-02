@@ -17,41 +17,33 @@
 	// `label` is a REQUIRED prop (no default, no `?`) so constructing a Badge
 	// without one is a TypeScript compile error, not a rendered empty pill
 	// (UI-SPEC E4 "empty" row).
-	// Three admin vocabularies, one shape: an argument's publish lifecycle, a
-	// record's trust tier, and where it sits in the review queue. They were
+	// Four admin vocabularies, one shape: an argument's publish lifecycle, a
+	// record's trust tier, where it sits in the review queue, and a pipeline
+	// job's run state. They were
 	// near-identical helper functions duplicated across five files
 	// (51-ADMIN-ARTIFACTS.md D-01/D-03) until the operator ruled them here. The
 	// union lives in badge-tone.ts so call sites can type their mappings.
-	import type { BadgeTone } from './badge-tone';
+	import type { Snippet } from 'svelte';
+	import { type BadgeTone, TONE_COLOR } from './badge-tone';
 
 	interface BadgeProps {
 		label: string;
 		tone?: BadgeTone;
+		// An optional glyph rendered before the label — the pipeline step card's
+		// spinner (D-03). Present only where a badge carries a live affordance;
+		// without it the badge stays `inline-block`, which the min-content
+		// reasoning at the bottom of this file depends on.
+		leading?: Snippet;
+		// Accessible name for a badge whose visible text is not the whole story
+		// (again the spinner: the glyph is aria-hidden, so the pill needs a name).
+		ariaLabel?: string;
 	}
 
-	let { label, tone = 'neutral' }: BadgeProps = $props();
+	let { label, tone = 'neutral', leading, ariaLabel }: BadgeProps = $props();
 
 	// Neutral reuses --color-text-secondary — the same "muted, non-signal"
 	// token ResolveCard's manually-matched cue tag already uses for a
 	// disclosure that is neither a warning nor a success signal.
-	const TONE_COLOR: Record<BadgeTone, string> = {
-		published: 'var(--color-status-published)',
-		draft: 'var(--color-status-draft)',
-		unpublished: 'var(--color-status-unpublished)',
-		warning: 'var(--color-status-warning)',
-		archived: 'var(--color-status-archived)',
-		neutral: 'var(--color-text-secondary)',
-		verified: 'var(--color-tier-verified)',
-		trusted: 'var(--color-tier-trusted)',
-		provisional: 'var(--color-tier-provisional)',
-		uncertain: 'var(--color-tier-uncertain)',
-		unreviewed: 'var(--color-review-unreviewed)',
-		'needs-review': 'var(--color-review-needs-review)',
-		confirmed: 'var(--color-review-confirmed)',
-		edited: 'var(--color-review-edited)',
-		discrepancy: 'var(--color-review-discrepancy)',
-		unknown: 'var(--color-review-unknown)'
-	};
 
 	let color = $derived(TONE_COLOR[tone]);
 
@@ -91,8 +83,11 @@
 </script>
 
 <span
+	aria-label={ariaLabel}
 	style="
-		display: inline-block;
+		display: {leading ? 'inline-flex' : 'inline-block'};
+		align-items: center;
+		gap: var(--space-xs);
 		border: 1px solid {color};
 		background-color: {fill};
 		border-radius: 4px;
@@ -103,4 +98,4 @@
 		color: {color};
 		white-space: nowrap;
 	"
->{label}</span>
+>{#if leading}{@render leading()}{/if}{label}</span>

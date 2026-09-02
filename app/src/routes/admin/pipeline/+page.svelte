@@ -5,6 +5,8 @@
 <script lang="ts">
 	import { goto, invalidateAll } from '$app/navigation';
 	import DocketPillInput from '$lib/admin/DocketPillInput.svelte';
+	import Badge from '$lib/primitives/Badge.svelte';
+	import type { BadgeTone } from '$lib/primitives/badge-tone';
 
 	let { data, form } = $props();
 
@@ -104,22 +106,19 @@
 		(e.target as HTMLFormElement).requestSubmit();
 	}
 
-	// StatusBadge helper: returns inline style string for a given job status.
-	// Phase 26 gap closure (PLIST-05): isArchived takes precedence, mirroring
-	// RunStatusCard.svelte's already_created override (grey --color-status-archived).
-	function badgeStyle(status: string, isArchived: boolean = false): string {
-		if (isArchived) {
-			return `border: 1px solid var(--color-status-archived); border-radius: 4px; padding: var(--space-xs) var(--space-sm); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); background-color: var(--color-surface); color: var(--color-status-archived); display: inline-block;`;
-		}
-		const colors: Record<string, string> = {
-			pending: 'var(--color-text-secondary)',
-			running: 'var(--color-accent)',
-			completed: 'var(--color-status-published)',
-			paused: 'var(--color-status-warning)',
-			failed: 'var(--color-destructive)',
+	// Job run state -> Badge tone. Phase 26 gap closure (PLIST-05): isArchived
+	// takes precedence, mirroring RunStatusCard.svelte's already_created
+	// override. The retired BADGE_COLOR lookup resolved to these same tokens.
+	function badgeTone(status: string, isArchived: boolean = false): BadgeTone {
+		if (isArchived) return 'archived';
+		const tones: Record<string, BadgeTone> = {
+			pending: 'neutral',
+			running: 'running',
+			completed: 'published',
+			paused: 'warning',
+			failed: 'failed'
 		};
-		const color = colors[status] ?? 'var(--color-text-secondary)';
-		return `border: 1px solid ${color}; border-radius: 4px; padding: var(--space-xs) var(--space-sm); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); background-color: var(--color-surface); color: ${color}; display: inline-block;`;
+		return tones[status] ?? 'neutral';
 	}
 
 	// Compound badge (D-13/D-15/D-16): combines current_step and status, e.g. "Parse · Running".
@@ -154,14 +153,12 @@
 		return stepLabel + ' · ' + statusLabel;
 	}
 
-	// sourceTagStyle/sourceLabel: renders "PDF" or "Corpus" as a quiet, neutral tag
-	// distinct from the semantic-color compound status badge (Phase 30 gap closure).
+	// sourceLabel: renders "PDF" or "Corpus" as a quiet, neutral tag distinct
+	// from the semantic-color compound status badge (Phase 30 gap closure).
+	// The tag's own style builder is gone — `neutral` is that same quiet
+	// treatment, now shared (D-03).
 	function sourceLabel(source: 'pdf' | 'corpus'): string {
 		return source === 'corpus' ? 'Corpus' : 'PDF';
-	}
-
-	function sourceTagStyle(): string {
-		return `border: 1px solid var(--color-text-secondary); border-radius: 4px; padding: var(--space-xs) var(--space-sm); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); background-color: var(--color-bg); color: var(--color-text-secondary); display: inline-block;`;
 	}
 
 	// Format ISO date string for display (date only — time detail not needed in history).
@@ -673,9 +670,10 @@
 											border-bottom: 1px solid var(--color-border);
 										"
 									>
-										<span style={badgeStyle(job.status, job.is_archived)}>
-											{badgeLabel(job.status, job.current_step, job.is_archived)}
-										</span>
+										<Badge
+											tone={badgeTone(job.status, job.is_archived)}
+											label={badgeLabel(job.status, job.current_step, job.is_archived)}
+										/>
 									</td>
 									<td
 										style="
@@ -685,9 +683,7 @@
 											border-bottom: 1px solid var(--color-border);
 										"
 									>
-										<span style={sourceTagStyle()}>
-											{sourceLabel(job.source)}
-										</span>
+										<Badge tone="neutral" label={sourceLabel(job.source)} />
 									</td>
 									<td
 										style="

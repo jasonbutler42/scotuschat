@@ -6,6 +6,8 @@
 	import RunStatusCard from '$lib/admin/RunStatusCard.svelte';
 	import ResolveCard from '$lib/admin/ResolveCard.svelte';
 	import FailedStepGuidance from '$lib/admin/FailedStepGuidance.svelte';
+	import Badge from '$lib/primitives/Badge.svelte';
+	import { type BadgeTone, TONE_COLOR } from '$lib/primitives/badge-tone';
 
 	let { data, form } = $props();
 
@@ -150,12 +152,14 @@
 		return 'pending';
 	}
 
-	const BADGE_COLOR: Record<string, string> = {
-		pending: 'var(--color-text-secondary)',
-		running: 'var(--color-accent)',
-		completed: 'var(--color-status-published)',
-		paused: 'var(--color-status-warning)',
-		failed: 'var(--color-destructive)',
+	// D-03: was BADGE_COLOR, a third copy of the run-state vocabulary. The
+	// tones resolve to the same tokens the lookup hardcoded.
+	const BADGE_TONE: Record<string, BadgeTone> = {
+		pending: 'neutral',
+		running: 'running',
+		completed: 'published',
+		paused: 'warning',
+		failed: 'failed',
 	};
 
 	const BADGE_GLYPH: Record<string, string> = {
@@ -174,11 +178,14 @@
 		failed: 'Failed',
 	};
 
+	// The card's left accent is not a badge, so it cannot render as one — but it
+	// must not carry its own colour list either (D-03). It reads the shared
+	// tone table, so a card and the badge on it can never disagree.
+	const BORDER_ACCENT_STATUSES = ['running', 'paused', 'failed'];
+
 	function cardBorderStyle(status: string): string {
-		if (status === 'running') return 'border-left: 3px solid var(--color-accent);';
-		if (status === 'paused') return 'border-left: 3px solid var(--color-status-warning);';
-		if (status === 'failed') return 'border-left: 3px solid var(--color-destructive);';
-		return '';
+		if (!BORDER_ACCENT_STATUSES.includes(status)) return '';
+		return `border-left: 3px solid ${TONE_COLOR[BADGE_TONE[status]]};`;
 	}
 
 	// ──────────────────────────────────────────────────────────────────────────
@@ -247,7 +254,7 @@
 					? { ...liveJob, current_step: lastKnownStep }
 					: liveJob}
 				{@const status = stepStatus(step, effectiveJob as Job)}
-				{@const color = BADGE_COLOR[status]}
+				{@const tone = BADGE_TONE[status]}
 				{@const glyph = BADGE_GLYPH[status]}
 				{@const label = BADGE_LABEL[status]}
 				{@const borderOverride = cardBorderStyle(status)}
@@ -261,33 +268,25 @@
 							{STEP_LABELS[step]}
 						</span>
 
-						<!-- StatusBadge: colored border + text on --color-surface surface, never filled -->
-						<span
-							aria-label={status === 'running' ? 'Running' : undefined}
-							style="
-								border: 1px solid {color};
-								border-radius: 4px;
-								padding: var(--space-xs) var(--space-sm);
-								font-size: var(--font-size-caption);
-								font-weight: var(--font-weight-regular);
-								color: {color};
-								background-color: var(--color-surface);
-								display: inline-flex;
-								align-items: center;
-								gap: var(--space-xs);
-							"
-						>
-							{#if status === 'running'}
-								<!-- Spinner glyph with aria-label on parent span -->
-								<span
-									aria-hidden="true"
-									style="display: inline-block; animation: spin 1s linear infinite;"
-								>◌</span>
-							{:else}
-								<span aria-hidden="true">{glyph}</span>
-							{/if}
+						<!-- StatusBadge (D-03): the shared primitive, carrying this
+						     screen's step glyph as its leading affordance. -->
+						<Badge
+							{tone}
 							{label}
-						</span>
+							ariaLabel={status === 'running' ? 'Running' : undefined}
+						>
+							{#snippet leading()}
+								{#if status === 'running'}
+									<!-- Spinner glyph; the pill carries the accessible name -->
+									<span
+										aria-hidden="true"
+										style="display: inline-block; animation: spin 1s linear infinite;"
+									>◌</span>
+								{:else}
+									<span aria-hidden="true">{glyph}</span>
+								{/if}
+							{/snippet}
+						</Badge>
 					</div>
 
 					<!-- Parse stat rows (D-10/PIPE-21, PJOB-10/11/12) — only when parse completed -->

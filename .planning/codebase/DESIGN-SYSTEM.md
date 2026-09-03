@@ -59,16 +59,22 @@ contained addition — a second value set aliased through the same semantic name
 semantic name a component references never has to change. Only dark values ship in Phase 51; the
 structure is what carries the light theme later, not a half-built implementation now.
 
-Two semantic-name pairs intentionally share a primitive rather than being collapsed to one name:
-`--color-accent` and `--color-side-advocate` both resolve to `--blue-300`, and
-`--color-side-bench` and `--color-text-secondary` both resolve to `--slate-400`. The overlap is
+One semantic-name pair intentionally shares a primitive rather than being collapsed to one name:
+`--color-accent` and `--color-side-advocate` both resolve to `--blue-300`. The overlap is
 pre-existing in the codebase, not a new decision — keeping the names distinct means a future
 divergence (e.g. giving advocate-side identity its own colour independent of the accent colour)
 is a one-line change, not an archaeology exercise across every call site.
 
+`--color-side-bench` used to be the second such pair, sharing `--slate-400` with
+`--color-text-secondary`. **It no longer does, and the reason is a P-03 fix, not a preference:**
+`--slate-400` (L\* 66.5, 5.71:1) against `--blue-300` (L\* 78.0, 8.11:1) made the advocate side
+measurably brighter than the bench across 164 avatar fills — side encoded as prominence, which
+P-03 forbids. Bench now resolves to `--l78-slate`, on the same L\* 78 as advocate. Any future
+change that returns these two names to a shared value re-introduces that violation.
+
 ## Colors
 
-### Primitive palette (14)
+### Primitive palette — base (14)
 
 | Primitive | Hex |
 |---|---|
@@ -87,6 +93,48 @@ is a one-line change, not an archaeology exercise across every call site.
 | `--orange-400` | `#fb923c` |
 | `--red-500` | `#ef4444` |
 
+### Admin lifecycle primitives (9)
+
+Carried over verbatim from the badge helpers they used to be hardcoded in — D-08 was a refactor,
+not a redesign. Unlike the speaker ramp below these need not sit at one luminance: P-03 governs
+how *speakers* are treated, and a pipeline state is not a speaker.
+
+| Primitive | Hex |
+|---|---|
+| `--sky-400` | `#38bdf8` |
+| `--emerald-400` | `#34d399` |
+| `--yellow-400` | `#facc15` |
+| `--red-400` | `#f87171` |
+| `--teal-400` | `#2dd4bf` |
+| `--fuchsia-400` | `#e879f9` |
+| `--rose-400` | `#fb7185` |
+| `--slate-600` | `#475569` |
+| `--slate-500` | `#64748b` |
+
+### Per-speaker ramp primitives (12)
+
+**Every entry is solved to CIE L\* 78 at OKLCH chroma 0.09, so they vary in hue and in nothing
+else** — 8.06–8.15:1 against `--color-surface` and 10.40–10.52:1 against `--color-bg`, within 1%
+of each other. That equality is not decoration; it is what makes a per-speaker palette legal
+under P-03, because no speaker may read as louder than any other. The L\* is in the name so a
+thirteenth entry cannot be added casually: solve it to 78 or it does not belong here.
+`--l78-blue` is within 0.2 L\* of `--blue-300`, so the advocate side keeps the colour it shipped.
+
+| Primitive | Hex |
+|---|---|
+| `--l78-blue` | `#94c6f9` |
+| `--l78-orange` | `#f1b48b` |
+| `--l78-teal` | `#7bd1ba` |
+| `--l78-pink` | `#f4acc7` |
+| `--l78-yellow-green` | `#bdc783` |
+| `--l78-indigo` | `#b6bcfc` |
+| `--l78-red` | `#f9aea7` |
+| `--l78-cyan` | `#73cede` |
+| `--l78-amber` | `#dcbe7d` |
+| `--l78-violet` | `#d6b4f0` |
+| `--l78-green` | `#99ce9a` |
+| `--l78-slate` | `#b5c3d1` |
+
 ### Semantic roles — the 60/30/10 split
 
 | Role | Token | Usage |
@@ -96,14 +144,14 @@ is a one-line change, not an archaeology exercise across every call site.
 | Accent (10%) | `--color-accent` (`var(--blue-300)`) | Primary CTA buttons/borders (Save, Publish, Create), all inline/nav links, `:focus-visible` outline, active-tab indicator. **Never** status badges, table headers, muted text, or general emphasis — this discipline is pre-existing and must survive every future conversion. |
 | Destructive | `--color-destructive` (`var(--red-500)`) | Delete buttons/borders, error text/messages, delete-confirmation copy — never anything else. |
 
-### Additional semantic roles (16 colour tokens total, outside the 60/30/10 split but required)
+### Additional semantic roles (7) — outside the 60/30/10 split but required
 
 | Token | Value | Usage |
 |---|---|---|
 | `--color-border` | `var(--slate-700)` | Card/input borders, table dividers, header bottom-border. |
 | `--color-text-primary` | `var(--slate-300)` | Headings, body copy, input values. |
 | `--color-text-secondary` | `var(--slate-400)` | Field labels, meta/secondary text, table header text. |
-| `--color-side-bench` | `var(--slate-400)` | Bench/justice avatar fill + side indicator only. |
+| `--color-side-bench` | `var(--l78-slate)` | Bench/justice avatar fill + side indicator only. On the L\* 78 ramp so it cannot read dimmer than the advocate side (P-03) — see the note above. |
 | `--color-side-advocate` | `var(--blue-300)` | Advocate avatar fill + side indicator only. |
 | `--color-stage-accent` | `var(--amber-600)` | Stage-direction bracketed text (e.g. `[Laughter]`) only. |
 | `--color-stage-text` | `var(--amber-300)` | Stage-direction body text only. |
@@ -122,6 +170,66 @@ None of the five status colors, and no trust-tier concept from Phases 48/49, may
 public site. Public shows published-or-not, nothing more — enforced by
 `api/tests/test_trust_public_leak_ban.py`. Status colors are never reused for non-status meaning
 and are never applied to non-admin surfaces.
+
+### Speaker identity slots (12)
+
+Assigned by the speaker's index in an argument's roster — **not** by side, **not** by a hash, and
+**not** randomly (see the route's `speakerColor`). Ordered so consecutive slots sit far apart in
+hue, because consecutive slots go to speakers who alternate on screen.
+
+| Token | Value | Usage |
+|---|---|---|
+| `--color-speaker-1` | `var(--l78-blue)` | Roster slot 1. |
+| `--color-speaker-2` | `var(--l78-orange)` | Roster slot 2. |
+| `--color-speaker-3` | `var(--l78-teal)` | Roster slot 3. |
+| `--color-speaker-4` | `var(--l78-pink)` | Roster slot 4. |
+| `--color-speaker-5` | `var(--l78-yellow-green)` | Roster slot 5. |
+| `--color-speaker-6` | `var(--l78-indigo)` | Roster slot 6. |
+| `--color-speaker-7` | `var(--l78-red)` | Roster slot 7. |
+| `--color-speaker-8` | `var(--l78-cyan)` | Roster slot 8. |
+| `--color-speaker-9` | `var(--l78-amber)` | Roster slot 9. |
+| `--color-speaker-10` | `var(--l78-violet)` | Roster slot 10. |
+| `--color-speaker-11` | `var(--l78-green)` | Roster slot 11. |
+| `--color-speaker-unresolved` | `var(--slate-400)` | A speaker the resolve step could not identify. Its own neutral rather than a slot, because an unidentified speaker is a different *kind* of thing from an identified one. |
+
+### Side-family slots (10)
+
+The alternative palette in which hue still varies per speaker, but the two sides draw from
+opposite arcs of the wheel so side survives in colour. Same L\* 78 ramp, so the P-03 equality
+holds here too. Reachable only through the variant switcher (see *Transcript variant axes*).
+
+| Token | Value | Usage |
+|---|---|---|
+| `--color-bench-1` | `var(--l78-amber)` | Bench family, slot 1. |
+| `--color-bench-2` | `var(--l78-orange)` | Bench family, slot 2. |
+| `--color-bench-3` | `var(--l78-red)` | Bench family, slot 3. |
+| `--color-bench-4` | `var(--l78-pink)` | Bench family, slot 4. |
+| `--color-bench-5` | `var(--l78-violet)` | Bench family, slot 5. |
+| `--color-bench-6` | `var(--l78-yellow-green)` | Bench family, slot 6. |
+| `--color-advocate-1` | `var(--l78-blue)` | Advocate family, slot 1. |
+| `--color-advocate-2` | `var(--l78-teal)` | Advocate family, slot 2. |
+| `--color-advocate-3` | `var(--l78-cyan)` | Advocate family, slot 3. |
+| `--color-advocate-4` | `var(--l78-green)` | Advocate family, slot 4. |
+
+### Trust tier and review state (10) — admin only
+
+The two admin lifecycle scales the D-04 conversion surfaced (`51-ADMIN-ARTIFACTS.md` A-01…A-08,
+ruled 2026-09-01). Admin-only, exactly like `--color-status-*`, and covered by the same P-04 ban
+on reaching a public surface. Consumed through `lib/primitives/Badge.svelte`, whose `BadgeTone`
+union is the typed vocabulary for these values.
+
+| Token | Value | Usage |
+|---|---|---|
+| `--color-tier-verified` | `var(--sky-400)` | Trust tier: verified. |
+| `--color-tier-trusted` | `var(--emerald-400)` | Trust tier: trusted. |
+| `--color-tier-provisional` | `var(--yellow-400)` | Trust tier: provisional. |
+| `--color-tier-uncertain` | `var(--red-400)` | Trust tier: uncertain. |
+| `--color-review-unreviewed` | `var(--slate-600)` | Review state: unreviewed. |
+| `--color-review-needs-review` | `var(--color-status-warning)` | Review state: needs review. Deliberately an alias of the status warning colour — the two mean the same thing to the eye. |
+| `--color-review-confirmed` | `var(--teal-400)` | Review state: operator confirmed. |
+| `--color-review-edited` | `var(--fuchsia-400)` | Review state: operator edited. |
+| `--color-review-discrepancy` | `var(--rose-400)` | Review state: discrepancy. |
+| `--color-review-unknown` | `var(--slate-500)` | The fallback branch of a review badge — a state the UI does not recognise. Its own role rather than a reuse of `--color-text-secondary`, because A-09 was exactly the artifact of one value doing both jobs. |
 
 ## Typography
 
@@ -147,7 +255,7 @@ once in `app/src/app.css` on `:root`, inherited everywhere via `font-family: inh
 
 ## Spacing
 
-Seven steps, all multiples of 4px:
+Eight steps, all multiples of 4px:
 
 | Token | Value | Usage |
 |---|---|---|
@@ -171,6 +279,49 @@ Seven steps, all multiples of 4px:
 `--touch-target-dense` (36px) is the sole exception, for compact per-row inline buttons inside
 dense admin tables. This exception is carried forward unchanged from the pre-token system — no
 future conversion may introduce a touch target below either of these two named values (P-05).
+
+## Layout geometry (5)
+
+Tokens rather than literals because **measure** — characters per line — is what D-09 actually
+cares about, and measure is the product of these four values, not of the type size. At 390px the
+desktop values yielded 17 characters per line; comfortable sustained reading is 45–75, and the
+operator's reference layout achieves ~35 on the same class of device. The gap was entirely width
+allocation, so these tighten on mobile and the type size is left alone.
+
+| Token | Desktop | ≤768px | Usage |
+|---|---|---|---|
+| `--transcript-pad-x` | `var(--space-xl)` (24px) | `var(--space-sm)` (8px) | Transcript reading-layer horizontal padding. |
+| `--transcript-rail-gap` | `var(--space-sm)` (8px) | `var(--space-xs)` (4px) | Gap between the speaker rail and the bubble stack. |
+| `--bubble-max-width` | `72%` | `100%` | Bubble cap. At 100% the bubble edges coincide with the stack edges and the rail's offset becomes visible on both edges — the sides read *further* apart, not closer. |
+| `--bubble-pad-x` | `var(--space-lg)` (16px) | `var(--space-sm)` (8px) | Bubble internal horizontal padding. |
+| `--sticky-bottom-inset` | `var(--space-sm)` (8px) | `calc(var(--touch-target) + var(--space-sm))` (52px) | How far above the viewport bottom a bottom-anchored sticky element must park to stay visible. Below 768px `MobileNavBar` is `position: fixed; bottom: 0` with an **opaque** background, so anything parked at a plain `--space-sm` is painted underneath it and silently disappears — which is not a sticky failure but reads exactly like one. Consumed by the transcript's sticky rail avatar (D-19). |
+
+> The ≤768px column is a single `@media (max-width: 768px)` block that redefines these five on
+> `:root`. Keep that breakpoint in step with `MobileNavBar.svelte`'s own `@media` rule — if the
+> bar's visibility threshold or height changes, this must follow.
+
+## Transcript variant axes
+
+An operator-facing switcher (`VariantSwitcher.svelte`) applies data attributes to `<html>`.
+Deliberately plain attribute selectors on `:root`, so every axis is independent and composable,
+and so **a variant is provably nothing but a redefinition of tokens** — if a variant ever needed
+a component change, it would not belong here.
+
+| Attribute | Values | Effect |
+|---|---|---|
+| `data-colour` | *(unset)* / `family` / `side` | Chooses which of three per-row candidate colours paints. |
+| `data-width` | *(unset)* / `88` / `94` / `100` | Redefines `--bubble-max-width`. Applied at every viewport, not just mobile, so the control always does something visible. |
+
+Each speaker-bearing row declares three candidate colours as custom properties — `--speaker-color`
+(per speaker, side-blind), `--family-color` (per speaker, opposite hue arcs per side) and
+`--side-color` (two colours by side) — and the active variant decides which one paints, through
+the `.speaker-fill` / `.speaker-ink` / `.speaker-stroke` classes.
+
+**That decision has to be a rule, not a custom-property indirection.** A declaration like
+`--fill: var(--speaker-color)` at `:root` is substituted where it is *declared*, not where it is
+*used*, so it resolves against a `--speaker-color` that does not exist at `:root` and inherits
+down as invalid. The class rules also mean the painted elements must **not** carry an inline
+`background-color` or `color`, which would outrank them.
 
 ## Component directory split (D-17)
 
@@ -197,6 +348,27 @@ attribute on the element — is unchanged.
 ---
 
 *This is a living snapshot, not a locked spec — update it if a future phase changes the token
-set. As of 2026-08-28 it documents the state after Phase 51 plan 51-03 (token authoring); the
-conversion sweep that drives every remaining inline-style literal onto these tokens is plan
-51-09's scope, tracked in `51-TOKEN-MAP.md`.*
+set. Reconciled against `app/src/app.css` on 2026-09-03 (plan 51-10): **35 primitives and 75
+semantic tokens**, every one of them documented above, and no token named here that the CSS does
+not declare.*
+
+**How to re-check this document.** The contract is bidirectional and mechanical — every token
+name in `app/src/app.css` appears here, and every token named here exists in the CSS. Extract the
+custom-property declarations from the CSS (the primitive layer above the "Layer 2" comment, the
+semantic layer below it) and the custom-property mentions from this file, then diff the two sets.
+Check values as well as names — a name-only diff passed this document while one row carried a
+superseded value. Four strings here are prose rather than references and are expected in that
+diff: `var(--token)` and `var(--primitive)` in the token-architecture section, the wildcard
+`--color-status-*`, the hypothetical `--fill:` in the variant-axes explanation, and the sentence
+stating that no `--font-weight-500` token exists. The three per-row custom properties `--speaker-color`,
+`--family-color` and `--side-color` are declared on transcript rows rather than at `:root`, so
+they are documented here but will not appear in a `:root` extraction.
+
+*Drift found and closed on 2026-09-03: 37 semantic tokens and 21 primitives were in the CSS with
+no entry here — the whole per-speaker ramp, the side families, both admin lifecycle scales, and
+the transcript reading-layer geometry. The Spacing section also said "seven steps" while listing
+eight, `--space-md` having joined the scale on 2026-09-01. One documented **value** was wrong
+where the name was right: `--color-side-bench` was recorded as `var(--slate-400)` in both the
+role table and the two-layer prose, but it resolves to `var(--l78-slate)` — moved there because
+the old value made the advocate side measurably brighter than the bench, a P-03 violation. No
+token named here is absent from the CSS.*

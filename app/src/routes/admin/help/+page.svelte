@@ -78,11 +78,6 @@
 		if (state === 'needs_review') return 'Needs review';
 		return 'Unreviewed';
 	}
-
-	const cardStyle =
-		'background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; padding: var(--space-xl); margin-bottom: var(--space-lg);';
-	const cardHeadingStyle = 'font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-lg) 0;';
-	const bodyTextStyle = 'font-size: var(--font-size-body); color: var(--color-status-archived); margin: 0 0 var(--space-sm) 0; line-height: 1.5;';
 </script>
 
 <svelte:head>
@@ -105,9 +100,17 @@
 		</p>
 
 		<!-- Card 1: Lifecycle statuses -->
-		<div style={cardStyle}>
-			<h2 style={cardHeadingStyle}>Lifecycle statuses</h2>
-			<p style={bodyTextStyle}>
+		<div
+			style="
+				background-color: var(--color-surface);
+				border: 1px solid var(--color-border);
+				border-radius: 8px;
+				padding: var(--space-xl);
+				margin-bottom: var(--space-lg);
+			"
+		>
+			<h2 style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-lg) 0;">Lifecycle statuses</h2>
+			<p style="font-size: var(--font-size-body); color: var(--color-status-archived); margin: 0 0 var(--space-sm) 0; line-height: 1.5;">
 				An argument's <code>status</code> tracks where it sits in the pipeline-to-public
 				lifecycle. It is a separate axis from trust tier and review state below — a
 				<code>published</code> argument can still carry an <code>uncertain</code> trust
@@ -154,9 +157,17 @@
 		</div>
 
 		<!-- Card 2: Trust tiers -->
-		<div style={cardStyle}>
-			<h2 style={cardHeadingStyle}>Trust tiers</h2>
-			<p style={bodyTextStyle}>
+		<div
+			style="
+				background-color: var(--color-surface);
+				border: 1px solid var(--color-border);
+				border-radius: 8px;
+				padding: var(--space-xl);
+				margin-bottom: var(--space-lg);
+			"
+		>
+			<h2 style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-lg) 0;">Trust tiers</h2>
+			<p style="font-size: var(--font-size-body); color: var(--color-status-archived); margin: 0 0 var(--space-sm) 0; line-height: 1.5;">
 				A trust tier is <strong>derived</strong>, never typed in by hand. It is computed
 				from each speaker attribution's <code>(source, method, review_state)</code> — where
 				the data came from, how it was matched, and whether an operator has looked at it —
@@ -220,9 +231,17 @@
 		</div>
 
 		<!-- Card 3: Review states -->
-		<div style={cardStyle}>
-			<h2 style={cardHeadingStyle}>Review states</h2>
-			<p style={bodyTextStyle}>
+		<div
+			style="
+				background-color: var(--color-surface);
+				border: 1px solid var(--color-border);
+				border-radius: 8px;
+				padding: var(--space-xl);
+				margin-bottom: var(--space-lg);
+			"
+		>
+			<h2 style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-lg) 0;">Review states</h2>
+			<p style="font-size: var(--font-size-body); color: var(--color-status-archived); margin: 0 0 var(--space-sm) 0; line-height: 1.5;">
 				A <code>review_state</code> records whether, and how, an operator has looked at a
 				single attributed value — a speaker link on an argument, or a person's name. It is
 				one of the three inputs to trust-tier derivation above, but it is its own fact:
@@ -280,9 +299,17 @@
 		</div>
 
 		<!-- Card 4: Publish gates -->
-		<div style={cardStyle}>
-			<h2 style={cardHeadingStyle}>Publish gates</h2>
-			<p style={bodyTextStyle}>
+		<div
+			style="
+				background-color: var(--color-surface);
+				border: 1px solid var(--color-border);
+				border-radius: 8px;
+				padding: var(--space-xl);
+				margin-bottom: var(--space-lg);
+			"
+		>
+			<h2 style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-lg) 0;">Publish gates</h2>
+			<p style="font-size: var(--font-size-body); color: var(--color-status-archived); margin: 0 0 var(--space-sm) 0; line-height: 1.5;">
 				Publishing an argument checks two gates, always in this order:
 			</p>
 			<ol style="font-size: var(--font-size-body); color: var(--color-status-archived); margin: 0 0 var(--space-lg) 0; padding-left: var(--space-xl); line-height: 1.6;">

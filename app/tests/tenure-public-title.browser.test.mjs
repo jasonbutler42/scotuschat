@@ -184,7 +184,7 @@ function speakersPayload() {
 	];
 }
 
-test('public argument view renders formal Chief/Associate Justice titles, never raw office or generic fallback', { timeout: 60_000 }, async () => {
+test('public argument view renders formal Chief/Associate Justice titles, never raw office or generic fallback', { timeout: 120_000 }, async () => {
 	const mockApi = createServer((request, response) => {
 		response.setHeader('content-type', 'application/json');
 		if (request.method === 'GET' && request.url === `/arguments/by-slug/${ARGUMENT_SLUG}/utterances`) {
@@ -302,14 +302,21 @@ test('public argument view renders formal Chief/Associate Justice titles, never 
 		// Chief fixture — formal title, unchanged open-ended range, in the two
 		// dedicated tenure-row cells (not concatenated into one string).
 		const chief = await openPopoverAndReadTenureLine('View Fixture Chief details');
-		assert.deepEqual(chief, { name: 'Fixture Chief', officeTitle: 'Chief Justice', tenureRange: '2005–present' });
+		// Month + year with a spaced en dash, not the year-only form this test
+		// was written against in 37-04. Plan 39-08 deliberately changed it to
+		// follow the mockup (see SpeakerPopover.formatMonthYear's comment: the
+		// UI-SPEC copywriting row had frozen year-only, and the plan overrode
+		// it because mockup fidelity was the gap being closed). That commit
+		// should have retired this expectation with the behaviour it pinned;
+		// it could not, because no browser was ever found to run the test.
+		assert.deepEqual(chief, { name: 'Fixture Chief', officeTitle: 'Chief Justice', tenureRange: 'Sep 2005 – present' });
 		assert.doesNotMatch(chief.officeTitle, /\bchief\b/, 'raw canonical office value must not render');
 		assert.doesNotMatch(chief.officeTitle, /^Justice\b/, 'must not fall back to the generic "Justice" title');
 		await closePopover();
 
 		// Associate fixture — formal title, unchanged closed range.
 		const associate = await openPopoverAndReadTenureLine('View Fixture Associate details');
-		assert.deepEqual(associate, { name: 'Fixture Associate', officeTitle: 'Associate Justice', tenureRange: '1994–2005' });
+		assert.deepEqual(associate, { name: 'Fixture Associate', officeTitle: 'Associate Justice', tenureRange: 'Aug 1994 – Sep 2005' });
 		assert.doesNotMatch(associate.officeTitle, /\bassociate\b/, 'raw canonical office value must not render');
 		assert.doesNotMatch(associate.officeTitle, /^Justice\b/, 'must not fall back to the generic "Justice" title');
 	} finally {

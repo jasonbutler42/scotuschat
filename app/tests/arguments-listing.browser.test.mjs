@@ -119,9 +119,22 @@ async function waitForExpression(cdp, expression, timeoutMs = 15_000) {
 
 // Fixture data ---------------------------------------------------------------
 
-const TERM_2019_ARGUMENT_COUNT = 2;
+const TERM_2019_ARGUMENT_COUNT = 3;
 const TERM_2018_ARGUMENT_COUNT = 1;
 const ARGUMENT_SLUG = 'fixture-v-example';
+
+// A case name at the length real consolidated cases reach. Synthetic, but sized
+// from the corpus: the longest real title is 194 characters and the longest
+// published one is 164, while the D-04 measurement pass only ever reached 96.
+// The fixture and every assertion below read this same constant, so the test
+// cannot silently drift from the data it is asserting against.
+const LONG_CASE_NAME =
+  'Fixture Amalgamated Association of Street, Electric Railway and Motor Coach ' +
+  'Employees of America, Division 1287 v. Second Fixture Holding Company of the ' +
+  'Eastern District';
+const LONG_CASE_SLUG = 'fixture-amalgamated-v-second-holding';
+const LONG_CASE_DOCKET = '24-1287';
+const PHONE = { width: 375, height: 812 };
 
 function termsPayload() {
 	return {
@@ -153,6 +166,15 @@ function termArgumentsPayload(termYear) {
 					docket_number: '24-200',
 					term_year: 2019,
 					argued_date: '2019-11-05',
+					question_number: 1
+				},
+				{
+					argument_id: 4,
+					slug: LONG_CASE_SLUG,
+					case_name: LONG_CASE_NAME,
+					docket_number: LONG_CASE_DOCKET,
+					term_year: 2019,
+					argued_date: '2019-11-06',
 					question_number: 1
 				}
 			]
@@ -321,7 +343,7 @@ describe('public arguments listing (term index + term detail)', { timeout: 120_0
 	test('1. term index renders a term row and its published-argument count', async () => {
 		const indexText = await cdp.evaluate('document.body.innerText');
 		assert.match(indexText, /October Term 2019/);
-		assert.match(indexText, /2 arguments/);
+		assert.match(indexText, new RegExp(`${TERM_2019_ARGUMENT_COUNT} arguments`));
 	});
 
 	test('2. term index renders singular and plural count forms correctly', async () => {
@@ -367,5 +389,71 @@ describe('public arguments listing (term index + term detail)', { timeout: 120_0
 	test('6. an out-of-range year 404s', async () => {
 		const response = await fetch(`http://127.0.0.1:${appPort}/arguments/term/99999`);
 		assert.equal(response.status, 404);
+	});
+
+	// P-06 says no shipped surface may visually truncate, clip or ellipsise
+	// content. Until now that was checked by eye, because no fixture carried a
+	// name long enough to stress it — the operator's 51-10 walkthrough is where
+	// it was first looked at, on a 164-character corpus case. This pins it.
+	//
+	// Asserting the rendered geometry rather than the markup is the point: a
+	// source-text check would pass against a row whose name is clipped, which is
+	// the failure mode the Testing Policy exists to prevent.
+	test('7. a very long case name wraps intact at 375px, docket still fully visible', async () => {
+		await cdp.call('Emulation.setDeviceMetricsOverride', {
+			width: PHONE.width, height: PHONE.height, deviceScaleFactor: 1, mobile: true
+		});
+		try {
+			await cdp.evaluate(`(() => { location.href = '/arguments/term/2019'; })()`);
+			await waitForExpression(
+				cdp,
+				`location.pathname === '/arguments/term/2019' && !!document.querySelector('a[href="/arguments/${LONG_CASE_SLUG}"]')`
+			);
+
+			const seen = await cdp.evaluate(`(() => {
+				const row = document.querySelector('a[href="/arguments/${LONG_CASE_SLUG}"]');
+				const inner = row.innerText;
+				// The element actually holding the name: the deepest one whose text
+				// is the whole name, so we measure the name's own box, not the row's.
+				const nameEl = [...row.querySelectorAll('*')]
+					.filter((el) => el.textContent.trim() === ${JSON.stringify(LONG_CASE_NAME)})
+					.pop() || row;
+				const docketText = 'No. ' + ${JSON.stringify(LONG_CASE_DOCKET)};
+				const docketEl = [...row.querySelectorAll('*')]
+					.filter((el) => el.textContent.includes(docketText))
+					.pop();
+				const box = (el) => { const r = el.getBoundingClientRect();
+					return { l: r.left, r: r.right, w: r.width, h: r.height }; };
+				const rowRect = box(row);
+				return {
+					fullNamePresent: inner.includes(${JSON.stringify(LONG_CASE_NAME)}),
+					docketPresent: inner.includes(docketText),
+					nameOverflows: nameEl.scrollWidth > nameEl.clientWidth + 1,
+					nameEllipsised: getComputedStyle(nameEl).textOverflow === 'ellipsis',
+					nameWrapped: box(nameEl).h > parseFloat(getComputedStyle(nameEl).lineHeight || '0') * 1.5,
+					docketWithinRow: docketEl
+						? box(docketEl).r <= rowRect.r + 1 && box(docketEl).l >= rowRect.l - 1
+						: false,
+					docketClipped: docketEl ? docketEl.scrollWidth > docketEl.clientWidth + 1 : true,
+					bodyScrollsSideways: document.documentElement.scrollWidth > window.innerWidth + 1
+				};
+			})()`);
+
+			// The name survives in full — not shortened, not ellipsised, not clipped.
+			assert.equal(seen.fullNamePresent, true, 'the whole case name should be in the rendered text');
+			assert.equal(seen.nameEllipsised, false, 'the case name must not be ellipsised (P-06)');
+			assert.equal(seen.nameOverflows, false, 'the case name must not overflow its own box (P-06)');
+			assert.equal(seen.nameWrapped, true, 'a 164-character name at 375px should wrap to several lines');
+
+			// The docket is the value D-04 found being starved by a long neighbour.
+			assert.equal(seen.docketPresent, true, 'the docket number should be rendered');
+			assert.equal(seen.docketWithinRow, true, 'the docket number must stay inside its row');
+			assert.equal(seen.docketClipped, false, 'the docket number must not be clipped');
+
+			// A long name must not push the page itself sideways.
+			assert.equal(seen.bodyScrollsSideways, false, 'the page body must not scroll horizontally');
+		} finally {
+			await cdp.call('Emulation.clearDeviceMetricsOverride');
+		}
 	});
 });

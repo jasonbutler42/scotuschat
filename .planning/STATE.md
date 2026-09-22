@@ -3,16 +3,15 @@ gsd_state_version: "1.0"
 milestone: v1.8
 milestone_name: Import & Provenance Re-model
 current_phase: 51
-current_phase_name: Design System & Noun Alignment
-status: "Phase 50 COMPLETE and VERIFIED 2026-08-27; debridement pass done 2026-08-27. All 7 plans, all 4 waves, 4/4 success criteria verified in 50-VERIFICATION.md. UAT complete 35/35. Phase-50 verification also closed 50-REVIEW.md CR-01 and CR-02 and the SC-4 ungated-writer gap. One provenance-label defect (trivial-ACCEPT restamp) accepted as known debt under an operator override and logged to deferred-items.md. Next: Phase 51 (Design System & Noun Alignment), the last v1.8 phase."
-stopped_at: 51-10 IN PROGRESS. Task 1 (blocking-human ruling checkpoint) is CLOSED — every row of 51-ADMIN-ARTIFACTS.md is ruled. Task 2 partially applied; see last_activity_desc for exactly what remains.
-last_updated: "2026-09-22T20:34:23.842Z"
+status: "Phase 51 COMPLETE and VERIFIED 2026-09-22 — the last v1.8 phase, so milestone v1.8 (Import & Provenance Re-model, phases 47-51) is now fully executed: 45/45 plans, 5/5 phases. Phase 51: all 10 plans, all 6 waves, 4/4 success criteria verified in 51-VERIFICATION.md; UAT complete 53/53 with zero gaps. A code review (51-REVIEW.md) filed 3 findings after UAT and all 3 were fixed and committed: CR-01 stale prop-capture in SpeakerPopover (c791b2c27), WR-01 slugless arguments reaching the public listings (10a3287af), IN-01 misleading admin auth docstrings (05549c7b3). 51-UI-REVIEW.md scored 21/24; its priority fix 1 (four numeric font-weights) tokenised in 5fe115f7c. Full suite 1349 passed / 5 xfailed / 0 failed; svelte-check 0 errors; production build green. KNOWN OPEN, not blocking: 32 svelte-check state_referenced_locally warnings across 9 admin files (the same prop-capture class as CR-01, none on public surfaces). Next: v1.8 milestone is ready to close."
+stopped_at: Phase 51 complete — all phases complete
+last_updated: "2026-09-22T21:55:12.091Z"
 last_activity: 2026-09-22
-last_activity_desc: Phase 51 execution started
-state_head: e077c8e0524dad8f3c54fce19670af6a04a83f94
+last_activity_desc: Phase 51 complete
+state_head: cd0aabf07f6017f4398cfe2d07466dde8b7ad087
 progress:
   total_phases: 5
-  completed_phases: 50
+  completed_phases: 5
   total_plans: 45
   completed_plans: 45
   percent: 100
@@ -25,7 +24,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-18 — Phase 47 complete; corpus-first / PDF-deferred scope decision recorded)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
-**Current focus:** Phase 51 — Design System & Noun Alignment
+**Current focus:** v1.8 complete (phases 47-51) — ready to close the milestone
 
 **Phase 50 scope resolved 2026-08-25** (at `/gsd-plan-phase 50` time, by the operator): the phase's 2026-08-18 scope flag is closed **corpus-only**. Its PDF half — old success criterion 2, IMPORT-02, "the PDF pipeline path reads and writes `import_run` as one strategy among peers" — **split out to Phase 999.11 (BACKLOG)**, on the deferred PDF route. Phase 50 now carries 4 requirements (IMPORT-01, IMPORT-03, IMPORT-04, IMPORT-05) and 4 success criteria, renumbered. IMPORT-05's authority ordering stays here **in full** (all four rungs, one total ordering function); its `operator`/`corpus` rungs get live corpus proof, its `pdf/rule_based`/`pdf/llm_corrective` rungs get real-writer-test proof — the same verification split Phase 47 established. Recorded in ROADMAP.md (Phase 50 section + v1.8 bullet + Backlog 999.11), REQUIREMENTS.md (IMPORT-02 remapped, coverage note), and PROJECT.md Key Decisions. Discuss and plan are both DONE: `50-CONTEXT.md` (30 locked decisions), `50-RESEARCH.md`, `50-PATTERNS.md`, `50-VALIDATION.md` and 7 PLAN.md files are on disk.
 
@@ -77,8 +76,8 @@ weight is two `is_corpus` subquery branches already commented as retained for
 
 ## Current Position
 
-Phase: 51 (Design System & Noun Alignment) — EXECUTING
-Last activity: 2026-09-22 — Phase 51 execution started
+Phase: 51
+Last activity: 2026-09-22 — Phase 51 complete
 (design tokens, D-01/D-02/D-03) and `51-04` (term-grouped public API, D-14/D-15/D-16)
 complete. Tailwind removed (0 packages added, 69
 removed); full two-layer token set (14 primitives + 37 semantic names) authored in
@@ -344,7 +343,7 @@ Phase 48 close-out notes (2026-08-21):
 - Test suite: **1209 passed, 5 xfailed, 0 failed, 0 skipped** (baseline at Phase 48 start was 1049;
   the 5 xfailed are the never-implemented Phase 31 stubs, tracked below, unchanged).
 
-Progress: [██████████] 100% (4 of 5 v1.8 phases complete)
+Progress: [█████████░] 96% (4 of 5 v1.8 phases complete)
 
 ## Deferred Items
 
@@ -617,7 +616,7 @@ at close.
 ## Session Continuity
 
 Last session: 2026-08-28T19:24:49.154Z
-Stopped at: Completed 51-08-PLAN.md
+Stopped at: Phase 51 complete — all phases complete
 Resume file: None
 
 ## Operator Next Steps

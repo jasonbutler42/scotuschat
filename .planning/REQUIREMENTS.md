@@ -44,10 +44,10 @@ Requirements for milestone v1.8. Each maps to exactly one roadmap phase.
 
 ### Design System & Noun Alignment (DS)
 
-- [ ] **DS-01**: Public route/noun aligned to "arguments" (`/cases` → arguments) — flat, slug-based URLs (`/arguments`, `/arguments/term/{year}`, `/arguments/{slug}`); the `/cases` route tree is deleted with no redirect layer *(amended 2026-08-27 per Phase 51 CONTEXT.md D-10/D-11: DEPLOY-01 is unchecked, no deploy configuration exists in the repository, and the app has never been deployed, so the URLs the original clause promised to preserve exist only on localhost)*
-- [ ] **DS-02**: Shared component library extracted for reused UI (absorbs backlog 999.4)
-- [ ] **DS-03**: Design tokens (color / type / spacing) established as the visual foundation (absorbs backlog 999.8)
-- [ ] **DS-04**: Arguments listing style decided and implemented (absorbs backlog 999.6)
+- [x] **DS-01**: Public route/noun aligned to "arguments" (`/cases` → arguments) — flat, slug-based URLs (`/arguments`, `/arguments/term/{year}`, `/arguments/{slug}`); the `/cases` route tree is deleted with no redirect layer *(amended 2026-08-27 per Phase 51 CONTEXT.md D-10/D-11: DEPLOY-01 is unchecked, no deploy configuration exists in the repository, and the app has never been deployed, so the URLs the original clause promised to preserve exist only on localhost)*
+- [x] **DS-02**: Shared component library extracted for reused UI (absorbs backlog 999.4)
+- [x] **DS-03**: Design tokens (color / type / spacing) established as the visual foundation (absorbs backlog 999.8)
+- [x] **DS-04**: Arguments listing style decided and implemented (absorbs backlog 999.6)
 
 ## v2 / Future Requirements
 
@@ -90,10 +90,10 @@ Mappings confirmed by the v1.8 roadmap (`.planning/ROADMAP.md`), created 2026-08
 | IMPORT-03 | Phase 50 | Complete |
 | IMPORT-04 | Phase 50 | Complete |
 | IMPORT-05 | Phase 50 | Complete |
-| DS-01 | Phase 51 | Pending |
-| DS-02 | Phase 51 | Pending |
-| DS-03 | Phase 51 | Pending |
-| DS-04 | Phase 51 | Pending |
+| DS-01 | Phase 51 | Complete |
+| DS-02 | Phase 51 | Complete |
+| DS-03 | Phase 51 | Complete |
+| DS-04 | Phase 51 | Complete |
 
 **Coverage:**
 

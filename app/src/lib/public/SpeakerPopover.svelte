@@ -37,7 +37,12 @@
 		paletteVars?: string;
 	}>();
 
-	const isBench = speaker.is_bench;
+	// $derived, NOT const — same rule ChatBubble.svelte states at its own prop
+	// block. This component is a single long-lived instance: the route holds one
+	// <SpeakerPopover> inside a page-level Popover.Root and reassigns `speaker`
+	// when a different avatar is picked, so a plain `const` off the prop keeps
+	// the FIRST speaker's value and misclassifies every later one.
+	const isBench = $derived(speaker.is_bench);
 
 	// No side-colour computation here any more (this is where IN-02's collapsed
 	// avatarBg/sideColor pair used to live). The avatar and the role pill paint
@@ -47,14 +52,23 @@
 	// duplicate cannot reappear because there is no local colour value left to
 	// copy.
 
-	const initials = (() => {
+	// $derived for the same reason as isBench above: a const IIFE would keep the
+	// first speaker's initials on the fallback avatar after the prop changes.
+	const initials = $derived.by(() => {
 		const parts = speaker.full_name.trim().split(/\s+/).filter(Boolean);
 		if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 		if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
 		return '?';
-	})();
+	});
 
+	// Per-photo state, so it must reset when the photo does. Without the $effect
+	// a failed load on speaker A leaves showInitials true, and speaker B renders
+	// initials even though B's photo is fine.
 	let showInitials = $state(false);
+	$effect(() => {
+		speaker.photo_url_full;
+		showInitials = false;
+	});
 
 	// Compact date formatting for the popover's birth/death line — deliberately
 	// distinct from the argument page's full-month formatDate() helper; the

@@ -25,8 +25,15 @@ Endpoints:
 
 Auth:
   All routes are protected via the router-level verify_admin_token dependency
-  (injected at APIRouter construction, not per-route). Phase 6 replaces
-  verify_admin_token with HMAC session-cookie auth in a single location.
+  (injected at APIRouter construction, not per-route).
+
+  This X-Admin-Token check is LIVE and load-bearing — do not remove it. The
+  swap to HMAC session-cookie auth that earlier comments anticipated never
+  happened at this layer; instead the SvelteKit server added its own HMAC
+  session cookie IN FRONT of this router (app/src/lib/server/session.ts), so
+  the two are layers, not alternatives. The browser never reaches this router
+  directly: +page.server.ts holds the token server-side and the cookie gates
+  the SvelteKit route.
 
 Prefix:
   /api/admin — full prefix (not bare /admin) to avoid collision with
@@ -105,10 +112,17 @@ from api.services.trust import TrustGateBlocked
 
 async def verify_admin_token(x_admin_token: str = Header(...)) -> None:
     """
-    Throwaway token check — Phase 6 replaces this with HMAC session cookie auth.
+    Static shared-token check — the inner of two live auth layers, not dead code.
 
-    The dependency is injected at the router level so Phase 6 can swap it
-    without touching individual route signatures.
+    Earlier comments described this as throwaway pending an HMAC session-cookie
+    swap. That swap landed one layer out, in the SvelteKit server
+    (app/src/lib/server/session.ts), and did NOT replace this check: the cookie
+    gates the SvelteKit admin routes, and those routes call this API
+    server-side with the token. Removing this dependency would leave the API
+    open to anything that can reach it directly.
+
+    The dependency is injected at the router level so it can be swapped in one
+    place without touching individual route signatures.
 
     Security notes:
     - The inbound token value must never be logged or echoed in a response.

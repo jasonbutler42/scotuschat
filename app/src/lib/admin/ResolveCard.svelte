@@ -885,7 +885,7 @@
 				line-height: 1.4;
 				background-color: {benchActive ? 'var(--color-status-published)' : 'transparent'};
 				color: {benchActive ? 'var(--color-bg)' : 'var(--color-text-secondary)'};
-				font-weight: {benchActive ? 600 : 400};
+				font-weight: {benchActive ? 'var(--font-weight-semibold)' : 'var(--font-weight-regular)'};
 				cursor: {disabled ? 'default' : 'pointer'};
 				opacity: {disabled ? 0.6 : 1};
 			"
@@ -902,7 +902,7 @@
 				line-height: 1.4;
 				background-color: {advocateActive ? 'var(--color-accent)' : 'transparent'};
 				color: {advocateActive ? 'var(--color-bg)' : 'var(--color-text-secondary)'};
-				font-weight: {advocateActive ? 600 : 400};
+				font-weight: {advocateActive ? 'var(--font-weight-semibold)' : 'var(--font-weight-regular)'};
 				cursor: {disabled ? 'default' : 'pointer'};
 				opacity: {disabled ? 0.6 : 1};
 			"

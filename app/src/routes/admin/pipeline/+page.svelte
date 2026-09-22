@@ -243,7 +243,7 @@
 						border-radius: 4px;
 						background-color: {mode === 'url' ? 'var(--color-surface)' : 'transparent'};
 						color: {mode === 'url' ? 'var(--color-text-primary)' : 'var(--color-text-secondary)'};
-						font-weight: {mode === 'url' ? 600 : 400};
+						font-weight: {mode === 'url' ? 'var(--font-weight-semibold)' : 'var(--font-weight-regular)'};
 					"
 				>
 					Enter URL
@@ -261,7 +261,7 @@
 						border-radius: 4px;
 						background-color: {mode === 'upload' ? 'var(--color-surface)' : 'transparent'};
 						color: {mode === 'upload' ? 'var(--color-text-primary)' : 'var(--color-text-secondary)'};
-						font-weight: {mode === 'upload' ? 600 : 400};
+						font-weight: {mode === 'upload' ? 'var(--font-weight-semibold)' : 'var(--font-weight-regular)'};
 					"
 				>
 					Upload File

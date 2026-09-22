@@ -1,21 +1,21 @@
 ---
-gsd_state_version: 1.0
+gsd_state_version: "1.0"
 milestone: v1.8
 milestone_name: Import & Provenance Re-model
 current_phase: 51
 current_phase_name: Design System & Noun Alignment
 status: "Phase 50 COMPLETE and VERIFIED 2026-08-27; debridement pass done 2026-08-27. All 7 plans, all 4 waves, 4/4 success criteria verified in 50-VERIFICATION.md. UAT complete 35/35. Phase-50 verification also closed 50-REVIEW.md CR-01 and CR-02 and the SC-4 ungated-writer gap. One provenance-label defect (trivial-ACCEPT restamp) accepted as known debt under an operator override and logged to deferred-items.md. Next: Phase 51 (Design System & Noun Alignment), the last v1.8 phase."
 stopped_at: 51-10 IN PROGRESS. Task 1 (blocking-human ruling checkpoint) is CLOSED — every row of 51-ADMIN-ARTIFACTS.md is ruled. Task 2 partially applied; see last_activity_desc for exactly what remains.
-last_updated: "2026-09-02T14:30:00.000Z"
-last_activity: 2026-08-31
-last_activity_desc: "Plan 51-10 part-done. APPLIED: A-01..A-10 (admin tier/review scales tokenised — app/src now has ZERO hex literals), B-02..B-08 (47 spacing one-offs folded; three negative -1px border-collapse offsets deliberately not folded), C-01 (leave as is), D-04 (min-width floors on the two /admin/review text columns; tallest row 196px->101px). PART-DONE D-01/D-03: Badge extended to 16 tones with the union in badge-tone.ts, admin/review converted; SIX files still carry their own badge helpers (admin/arguments, admin/arguments/[id], admin/help, admin/pipeline, admin/pipeline/[job_id], lib/admin/RunStatusCard). NOT STARTED: D-02 (restructure admin/help), DESIGN-SYSTEM.md reconciliation, and the phase gate. Also fixed en route: dev-gated the Secure session cookie (login was impossible from any host but localhost) and a Badge regression that overflowed its table cell. OUTSTANDING VERIFICATION: the five real-browser tests cannot run here (Chromium missing libnspr4), and the eleven admin screens still need the operator's eye — the badge weight change (regular->semibold) and the new tinted badge fills are unreviewed."
-state_head: 2c2c6f49d0cac693d16bc8cba07ca3a0b34475cb
+last_updated: "2026-09-22T20:34:23.842Z"
+last_activity: 2026-09-22
+last_activity_desc: Phase 51 execution started
+state_head: e077c8e0524dad8f3c54fce19670af6a04a83f94
 progress:
   total_phases: 5
-  completed_phases: 4
+  completed_phases: 50
   total_plans: 45
-  completed_plans: 44
-  percent: 82
+  completed_plans: 45
+  percent: 100
 ---
 
 # Project State
@@ -78,7 +78,7 @@ weight is two `is_corpus` subquery branches already commented as retained for
 ## Current Position
 
 Phase: 51 (Design System & Noun Alignment) — EXECUTING
-Last activity: 2026-08-28 — Wave 1 complete (plans 51-01, 51-02). Wave 2 plans `51-03`
+Last activity: 2026-09-22 — Phase 51 execution started
 (design tokens, D-01/D-02/D-03) and `51-04` (term-grouped public API, D-14/D-15/D-16)
 complete. Tailwind removed (0 packages added, 69
 removed); full two-layer token set (14 primitives + 37 semantic names) authored in
@@ -344,7 +344,7 @@ Phase 48 close-out notes (2026-08-21):
 - Test suite: **1209 passed, 5 xfailed, 0 failed, 0 skipped** (baseline at Phase 48 start was 1049;
   the 5 xfailed are the never-implemented Phase 31 stubs, tracked below, unchanged).
 
-Progress: [████████░░] 80% (4 of 5 v1.8 phases complete)
+Progress: [██████████] 100% (4 of 5 v1.8 phases complete)
 
 ## Deferred Items
 

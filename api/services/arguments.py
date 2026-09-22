@@ -65,6 +65,13 @@ async def list_terms(db: AsyncSession) -> list[dict]:
         .where(CaseArgument.is_lead == True)  # noqa: E712 — SQLAlchemy requires == True
         .where(Argument.published_at.isnot(None))  # hide unpublished arguments
         .where(Argument.status == ArgumentStatusEnum.PUBLISHED)
+        # An argument with no slug has no reachable public URL (TermRow builds
+        # href="/arguments/{slug}" unconditionally), so it must not be counted
+        # here either — otherwise the term index advertises a count the detail
+        # page cannot produce links for. Both production write paths mint a slug;
+        # this is the fail-closed guard for a pre-0031 row that was never
+        # reseeded. Migration 0031 deliberately backfills nothing.
+        .where(Argument.slug.isnot(None))
         .group_by(Case.term_year)
         .order_by(Case.term_year.desc())
     )
@@ -98,6 +105,10 @@ async def list_arguments_for_term(db: AsyncSession, term_year: int) -> list[dict
         .where(Case.term_year == term_year)
         .where(Argument.published_at.isnot(None))  # hide unpublished arguments
         .where(Argument.status == ArgumentStatusEnum.PUBLISHED)
+        # Same fail-closed guard as list_terms(): a NULL slug would render as
+        # href="/arguments/null" in TermRow rather than being omitted. Kept in
+        # both queries so the term index count and this list agree.
+        .where(Argument.slug.isnot(None))
         .order_by(Argument.argued_date.desc(), Argument.id.desc())
     )
     rows = result.all()

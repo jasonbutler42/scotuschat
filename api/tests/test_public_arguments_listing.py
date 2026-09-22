@@ -113,7 +113,16 @@ class _SeededFixture:
                 published_at=published_at,
                 argued_date=argued_date,
                 question_number=question_number,
-                slug=slug,
+                # Default to a minted slug, not None: BOTH production write
+                # paths (import_convokit._import_argument, ingest) derive a
+                # slug at insert, so a slugless Argument is not a state
+                # production can reach. The public listing filters
+                # `slug IS NOT NULL` (an argument with no slug has no
+                # reachable /arguments/{slug} URL), so a None default here
+                # made every fixture invisible to the very endpoints these
+                # tests exercise. Callers that care about the slug still
+                # pass one explicitly.
+                slug=slug if slug is not None else f"test-fixture-argument-{suffix}",
             )
             db.add(arg)
             await db.flush()
@@ -554,6 +563,10 @@ async def test_unpublished_argument_is_absent_from_all_public_read_paths(
         arg = Argument(
             status=ArgumentStatusEnum.DRAFT,
             resolved_at=datetime.datetime.now(datetime.timezone.utc),
+            # See add_argument(): production always mints a slug, and the
+            # public listing filters on it, so this fixture must too or the
+            # published half of this test can never see the row.
+            slug=f"synthetic-unpublish-visibility-{suffix}",
         )
         db.add(arg)
         await db.flush()
@@ -670,3 +683,44 @@ async def test_unpublished_argument_is_absent_from_all_public_read_paths(
             if arg_row is not None:
                 await db.delete(arg_row)
             await db.commit()
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="No test database configured")
+async def test_published_argument_without_slug_is_absent_from_public_listing(seeded):
+    """
+    A published argument whose `slug` is NULL must not appear in either public
+    listing, because `TermRow` builds `href="/arguments/{slug}"` unconditionally
+    and a NULL there renders as the dead link `/arguments/null`.
+
+    Not a state production can reach — both write paths mint a slug at insert,
+    and migration 0031 deliberately backfills nothing (reseed, don't migrate).
+    This pins the fail-closed guard so a future query edit cannot reintroduce
+    the dead link for a pre-0031 row that was never reseeded.
+    """
+    # Imported in-function, never at module scope — see this file's header.
+    from api.core.database import AsyncSessionLocal
+    from api.services.arguments import list_arguments_for_term, list_terms
+
+    year = 1970 + (uuid.uuid4().int % 100)
+
+    # add_argument now mints a slug by default (production's shape), so null it
+    # out explicitly to build the state under test.
+    arg_id = await seeded.add_argument(term_year=year)
+    async with AsyncSessionLocal() as db:
+        arg = await db.get(Argument, arg_id)
+        arg.slug = None
+        await db.commit()
+
+    async with AsyncSessionLocal() as db:
+        terms = await list_terms(db)
+        assert not any(t["term_year"] == year for t in terms), (
+            "a published argument with no slug has no reachable URL and must "
+            "not be counted in the term index"
+        )
+
+        rows = await list_arguments_for_term(db, year)
+        assert rows == [], (
+            "a published argument with no slug must not appear in the term "
+            "detail listing"
+        )

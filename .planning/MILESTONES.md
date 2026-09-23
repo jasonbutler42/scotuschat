@@ -1,5 +1,30 @@
 # Milestones
 
+## v1.8 Import & Provenance Re-model (Shipped: 2026-09-23)
+
+**Phases completed:** 5 phases (47–51), 45 plans, 120 tasks
+**Timeline:** 2026-08-17 → 2026-09-23 (37 days)
+**Commits:** 368 (v1.7 → v1.8) | **Files changed:** 418 (207 code) | **Net lines:** +85,516 / -10,392 (code only: +35,904 / -10,169)
+**Codebase at close:** 41,988 production LOC / 60,438 test LOC (1.44:1) | Alembic through 0031
+
+**Key accomplishments:**
+
+- Provenance made first-class — `import_run` replaces `pipeline_run` as the lineage backbone, carrying a declared `(source, method)` enum pair plus `external_id` lineage, stamped at row-creation time by every writer rather than inferred. The `strategy == "convokit_import"` string-equality hack and the `PipelineRun` model are both retired; PDF-only columns go nullable so the corpus path stops fabricating them. Delivered as a clean rebuild against a disposable, fixture-reseedable DB rather than an in-migration backfill (Phase 47, PROV-01–06)
+- Trust and lifecycle — one documented `derive_tier` function, a materialized `arguments.trust_tier` column recomputed inside every writer's own transaction, a born-`candidate` status, and a single `published_at` promotion gate hard-blocked while any UNCERTAIN element remains, overridable only by a per-attempt operator acknowledgment with a required non-blank reason logged to `argument_status_log` and never sticky across republish. Ships with an offline `pipeline recompute-trust` drift-repair CLI and a zero-drift proof run twice. Trust is operator-facing only, enforced by a structural test that derives the public surface live from the routers (Phase 48, TRUST-01–05)
+- Unified review model — a four-state `review_state` absorbing `name_needs_review`/`name_extraction_metadata` with an AST-based sweep proving no parallel mechanism survives, re-import recording a discrepancy instead of overwriting equal-or-higher authority, the `/admin/review` operator queue filterable by trust tier × review state × status, and a pure matrix-tested authority ladder (`api/domain/authority.py`) gating every write to participants and people through one function (Phase 49, REVIEW-01–05)
+- Published arguments locked against data edits — all six argument-data writers now share one predicate and one error clause, applied after a complete dispositioned inventory of every write path that can reach an `Argument`, `Case`, `ArgumentParticipant`, `Utterance` or `Person`. Review-state-only writes and lifecycle transitions stay deliberately unlocked; no Person-level lock, since a `Person` is shared and one published argument would freeze a sitting Justice's record permanently (Phase 49, D-35a / D-23)
+- Unified import path — corpus import writes `import_run` directly with no fabricated PDF artifacts, `admin_job` references an existing run rather than inventing one, the corpus CLI batch needs no `admin_job` at all, re-import is idempotent through the writer (one conversation imported twice, byte-identical second pass across all eight affected tables), and the authority ordering governs every gated-column write — closed with an 8-test real-writer behavioral gate module and a hand-verified falsifiability demonstration rather than a source-text grep (Phase 50, IMPORT-01/03/04/05)
+- Public noun aligned and a design system landed — flat slug-based `/arguments`, `/arguments/term/{year}`, `/arguments/{slug}` with the `/cases` route tree, router, service and schema deleted and no redirect layer; Tailwind removed entirely for a two-layer CSS custom-property token set (35 primitives + 75 semantic, 5 type steps, 2 weights, 8 spacing steps) with zero raw hex and zero numeric font-size or font-weight surviving in `app/src`; a `lib/primitives` component library; and a term-grouped listing replacing the unbounded flat one (Phase 51, DS-01–04)
+- Two standing policies adopted mid-milestone (2026-08-27 debridement pass, operator direction): a **Defect Policy** drawing the line at "is the correct behavior already determined, or does it need the operator's taste", and a **Testing Policy** retiring static source-text contract tests for frontend behavior after 28 green tests shipped a fully broken button. 16 test files (6,319 LOC) deleted; test:code ratio moved 2.44:1 → 2.04:1, and closed the milestone at 1.44:1
+
+**Known gaps:**
+
+- **IMPORT-02** — "PDF pipeline path adapts to `import_run` as one strategy among peers" is the one v1.8 requirement not delivered. Split out of Phase 50 on 2026-08-25 to **Phase 999.11 (BACKLOG)** under the corpus-first / PDF-deferred scope decision, not dropped. 24 of 25 v1 requirements validated.
+
+**Known verification overrides:** 22 newly acknowledged, 0 carried forward from a prior close (see STATE.md Deferred Items). All 5 phases carry a passing VERIFICATION.md; Phase 51's verification digest was flagged stale by a planning-doc-only commit made after the report landed, and the close was recorded as verified on that evidence.
+
+---
+
 ## v1.7 Corpus Fidelity & Resolve Rework (Shipped: 2026-08-15)
 
 **Phases completed:** 6 phases, 29 plans, 69 tasks

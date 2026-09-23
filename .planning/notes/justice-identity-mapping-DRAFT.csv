@@ -1,0 +1,115 @@
+oyez_speaker_id,corpus_display_name,csv_full_name,confidence
+j__abe_fortas,Abe Fortas,Abe Fortas,exact
+j__alfred_moore,Alfred Moore,Alfred Moore,exact
+j__anthony_m_kennedy,Anthony M. Kennedy,Anthony M. Kennedy,exact
+j__antonin_scalia,Antonin Scalia,Antonin Scalia,exact
+j__arthur_j_goldberg,Arthur J. Goldberg,Arthur Joseph Goldberg,derived
+j__benjamin_n_cardozo,Benjamin N. Cardozo,Benjamin Nathan Cardozo,derived
+j__benjamin_r_curtis,Benjamin R. Curtis,Benjamin Robbins Curtis,derived
+j__brett_m_kavanaugh,Brett M. Kavanaugh,Brett M. Kavanaugh,exact
+j__bushrod_washington,Bushrod Washington,Bushrod Washington,exact
+j__byron_r_white,Byron R. White,Byron Raymond White,derived
+j__charles_e_hughes,Charles E. Hughes,Charles Evans Hughes,derived
+j__charles_e_whittaker,Charles E. Whittaker,Charles Evans Whittaker,derived
+j__clarence_thomas,Clarence Thomas,Clarence Thomas,exact
+j__david_davis,David Davis,David Davis,exact
+j__david_h_souter,David H. Souter,David H. Souter,exact
+j__david_j_brewer,David J. Brewer,David Josiah Brewer,derived
+j__earl_warren,Earl Warren,Earl Warren,exact
+j__edward_d_white,Edward D. White,Edward Douglass White,derived
+j__edward_t_sanford,Edward T. Sanford,Edward Terry Sanford,derived
+j__elena_kagan,Elena Kagan,Elena Kagan,exact
+j__felix_frankfurter,Felix Frankfurter,Felix Frankfurter,exact
+j__frank_murphy,Frank Murphy,Frank Murphy,exact
+j__fred_m_vinson,Fred M. Vinson,Fred Moore Vinson,derived
+j__gabriel_duvall,Gabriel Duvall,Gabriel Duvall,exact
+j__george_shiras_jr,"George Shiras, Jr.","George Shiras, Jr.",exact
+j__george_sutherland,George Sutherland,George Sutherland,exact
+j__harlan_fiske_stone,Harlan Fiske Stone,Harlan Fiske Stone,exact
+j__harold_burton,Harold Burton,Harold Hitz Burton,derived
+j__harry_a_blackmun,Harry A. Blackmun,Harry A. Blackmun,exact
+j__henry_b_brown,Henry B. Brown,Henry Billings Brown,derived
+j__henry_baldwin,Henry Baldwin,Henry Baldwin,exact
+j__brockholst_livingston,Henry Brockholst Livingston,,UNRESOLVED — needs operator
+j__horace_gray,Horace Gray,Horace Gray,exact
+j__horace_h_lurton,Horace H. Lurton,Horace Harmon Lurton,derived
+j__howell_e_jackson,Howell E. Jackson,Howell Edmunds Jackson,derived
+j__hugo_l_black,Hugo L. Black,Hugo Lafayette Black,derived
+j__james_c_mcreynolds,James C. McReynolds,James Clark McReynolds,derived
+j__james_f_byrnes,James F. Byrnes,James Francis Byrnes,derived
+j__james_iredell,James Iredell,James Iredell,exact
+j__james_m_wayne,James M. Wayne,James Moore Wayne,derived
+j__james_wilson,James Wilson,James Wilson,exact
+j__john_a_campbell,John A. Campbell,John Archibald Campbell,derived
+j__john_blair,"John Blair, Jr.","John Blair, Jr.",exact
+j__john_catron,John Catron,John Catron,exact
+j__john_g_roberts_jr,"John G. Roberts, Jr.","John G. Roberts, Jr.",exact
+j__john_h_clarke,John H. Clarke,John Hessin Clarke,derived
+j__john_jay,John Jay,John Jay,exact
+j__john_m_harlan,John M. Harlan,"John Marshall Harlan | John Marshall Harlan, II",AMBIGUOUS — needs operator
+j__john_m_harlan2,John M. Harlan II,"John Marshall Harlan | John Marshall Harlan, II",AMBIGUOUS — needs operator
+j__john_marshall,John Marshall,John Marshall,exact
+j__john_mckinley,John McKinley,John McKinley,exact
+j__john_mclean,John McLean,John McLean,exact
+j__john_paul_stevens,John Paul Stevens,John Paul Stevens,exact
+j__john_rutledge,John Rutledge,John Rutledge,exact
+j__joseph_mckenna,Joseph McKenna,Joseph McKenna,exact
+j__joseph_p_bradley,Joseph P. Bradley,Joseph P. Bradley,exact
+j__joseph_r_lamar,Joseph R. Lamar,Joseph Rucker Lamar,derived
+j__joseph_story,Joseph Story,Joseph Story,exact
+j__levi_woodbury,Levi Woodbury,Levi Woodbury,exact
+j__lewis_f_powell_jr,"Lewis F. Powell, Jr.","Lewis F. Powell, Jr.",exact
+j__louis_d_brandeis,Louis D. Brandeis,Louis Dembitz Brandeis,derived
+j__lucius_qc_lamar,Lucius Q.C. Lamar,Lucius Quintus C. Lamar,derived
+j__mahlon_pitney,Mahlon Pitney,Mahlon Pitney,exact
+j__melville_w_fuller,Melville W. Fuller,Melville Weston Fuller,derived
+j__morrison_r_waite,Morrison R. Waite,Morrison Remick Waite,derived
+j__nathan_clifford,Nathan Clifford,Nathan Clifford,exact
+j__neil_gorsuch,Neil Gorsuch,Neil M. Gorsuch,derived
+j__noah_swayne,Noah Swayne,Noah Haynes Swayne,derived
+j__oliver_ellsworth,Oliver Ellsworth,Oliver Ellsworth,exact
+j__oliver_w_holmes_jr,"Oliver W. Holmes, Jr.",Oliver Wendell Holmes,derived
+j__owen_j_roberts,Owen J. Roberts,Owen Josephus Roberts,derived
+j__peter_v_daniel,Peter V. Daniel,Peter Vivian Daniel,derived
+j__philip_p_barbour,Philip P. Barbour,Philip Pendleton Barbour,derived
+j__pierce_butler,Pierce Butler,Pierce Butler,exact
+j__potter_stewart,Potter Stewart,Potter Stewart,exact
+j__robert_c_grier,Robert C. Grier,Robert Cooper Grier,derived
+j__robert_h_jackson,Robert H. Jackson,Robert Houghwout Jackson,derived
+j__robert_trimble,Robert Trimble,Robert Trimble,exact
+j__roger_b_taney,Roger B. Taney,Roger Brooke Taney,derived
+j__rufus_peckham,Rufus Peckham,Rufus Wheeler Peckham,derived
+j__ruth_bader_ginsburg,Ruth Bader Ginsburg,Ruth Bader Ginsburg,exact
+j__salmon_p_chase,Salmon P. Chase,Salmon Portland Chase | Samuel Chase,AMBIGUOUS — needs operator
+j__samuel_a_alito_jr,"Samuel A. Alito, Jr.","Samuel A. Alito, Jr.",exact
+j__samuel_blatchford,Samuel Blatchford,Samuel Blatchford,exact
+j__samuel_chase,Samuel Chase,Samuel Chase,exact
+j__samuel_f_miller,Samuel F. Miller,Samuel Freeman Miller,derived
+j__samuel_nelson,Samuel Nelson,Samuel Nelson,exact
+j__sandra_day_oconnor,Sandra Day O'Connor,Sandra Day O'Connor,exact
+j__sherman_minton,Sherman Minton,Sherman Minton,exact
+j__smith_thompson,Smith Thompson,Smith Thompson,exact
+j__sonia_sotomayor,Sonia Sotomayor,Sonia Sotomayor,exact
+j__stanley_matthews,Stanley Matthews,Stanley Matthews,exact
+j__stanley_reed,Stanley Reed,Stanley Forman Reed,derived
+j__stephen_g_breyer,Stephen G. Breyer,Stephen G. Breyer,exact
+j__stephen_j_field,Stephen J. Field,Stephen Johnson Field,derived
+j__thomas_johnson,Thomas Johnson,Thomas Johnson,exact
+j__thomas_todd,Thomas Todd,Thomas Todd,exact
+j__thurgood_marshall,Thurgood Marshall,Thurgood Marshall,exact
+j__tom_c_clark,Tom C. Clark,Tom Campbell Clark,derived
+j__ward_hunt,Ward Hunt,Ward Hunt,exact
+j__warren_e_burger,Warren E. Burger,Warren Earl Burger,derived
+j__wiley_b_rutledge,Wiley B. Rutledge,Wiley Blount Rutledge,derived
+j__william_b_woods,William B. Woods,William Burnham Woods,derived
+j__william_cushing,William Cushing,William Cushing,exact
+j__william_h_moody,William H. Moody,William Henry Moody,derived
+j__william_h_rehnquist,William H. Rehnquist,William H. Rehnquist,exact
+j__william_howard_taft,William Howard Taft,William Howard Taft,exact
+j__william_j_brennan_jr,"William J. Brennan, Jr.","William J. Brennan, Jr.",exact
+j__william_johnson,William Johnson,William Johnson,exact
+j__william_o_douglas,William O. Douglas,William Orville Douglas,derived
+j__william_paterson,William Paterson,William Paterson,exact
+j__william_r_day,William R. Day,William Rufus Day,derived
+j__william_strong,William Strong,William Strong,exact
+j__willis_van_devanter,Willis Van Devanter,Willis Van Devanter,exact

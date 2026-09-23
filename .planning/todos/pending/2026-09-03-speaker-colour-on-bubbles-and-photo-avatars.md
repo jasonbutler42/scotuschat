@@ -4,6 +4,9 @@ kind: idea
 source: operator, Phase 51 plan 51-10 Task 3 walkthrough (stop 03)
 resolves_phase: null
 priority: medium
+audit_acknowledged:
+  milestone: v1.8
+  at: 2026-09-23
 ---
 
 # Extend speaker colour to the bubbles, and decide what photo avatars do to identity

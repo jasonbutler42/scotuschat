@@ -4,6 +4,9 @@ kind: investigation
 source: operator, while specifying the reading-layer variant switcher
 resolves_phase: null
 priority: low
+audit_acknowledged:
+  milestone: v1.8
+  at: 2026-09-23
 ---
 
 # Investigate bionic reading as a reading-layer option
@@ -42,6 +45,7 @@ directly, on real transcripts, without any licensing commitment.
 
 **2. What does it actually cost, and is a licence even required?** Two separable
 things get conflated:
+
 - **"Bionic Reading"** is a trademarked product from a Swiss company with a
   commercial API/SDK and paid licensing. Verify current terms and the
   non-profit/educational arrangement at the source — my information on their
@@ -55,6 +59,7 @@ things get conflated:
   "Bionic Reading". Worth a real answer before assuming the free route is safe.
 
 **3. What would it cost us to build?** Low, and lower than it looks:
+
 - It is a pure render-time transform on `utterance.text` — split into words,
   wrap a prefix of each in `<b>`. Nothing is stored, so **raw PDFs and derived
   rows are untouched** and the transform is regenerable/reversible by definition.

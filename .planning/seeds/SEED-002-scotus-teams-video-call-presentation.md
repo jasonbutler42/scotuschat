@@ -5,6 +5,10 @@ planted: 2026-08-29
 planted_during: 51-design-system-noun-alignment
 trigger_when: next milestone planning (/gsd-new-milestone scan)
 scope: medium — a second VIEW inside scotuschat, not a separate project
+audit_acknowledged:
+  milestone: v1.8
+  at: 2026-09-23
+  status: dormant
 ---
 
 # SEED-002: "SCOTUS Teams" — an argument presented as a video call

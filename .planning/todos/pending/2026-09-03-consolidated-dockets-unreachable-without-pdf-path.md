@@ -4,6 +4,9 @@ kind: note
 source: Phase 51 plan 51-10 Task 3 walkthrough — operator asked how to test consolidated dockets
 resolves_phase: null
 priority: low
+audit_acknowledged:
+  milestone: v1.8
+  at: 2026-09-23
 ---
 
 # Consolidated dockets cannot be created on a corpus-only project

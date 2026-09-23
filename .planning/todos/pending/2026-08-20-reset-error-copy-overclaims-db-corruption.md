@@ -4,8 +4,13 @@ title: Reset error copy asserts possible DB corruption in cases where the code k
 area: ui
 severity: minor
 files:
+
   - app/src/routes/admin/+page.server.ts (RESET_MID_ERROR, resetToFixture action, ~lines 190-266)
   - .planning/milestones/v1.7-phases/43-dev-only-reset-to-fixture/ (the locked two-copy UI-SPEC)
+
+audit_acknowledged:
+  milestone: v1.8
+  at: 2026-09-23
 ---
 
 ## Problem

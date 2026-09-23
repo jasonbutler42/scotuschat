@@ -29,7 +29,8 @@ here for a future fix.
 - **Suggested fix:** Add a `delete(ArgumentStatusLog).where(ArgumentStatusLog.argument_id == argument_id)`
   step to `delete_argument`'s cascade, ordered anywhere before the final
   `Argument` delete (no other FK depends on `argument_status_log`).
-- **Status:** Not reproduced against a live admin-created DRAFT argument in
+- **Status:** acknowledged
+  Not reproduced against a live admin-created DRAFT argument in
   this session (would require exercising `create_person_for_job`/`approve_job`
   end-to-end); flagged from static FK/migration analysis. Recommend a
   regression test (`test_admin_arguments_service.py`) asserting delete
@@ -137,6 +138,7 @@ Whichever plan actually owns these two files should re-check this
 before assuming it's already fixed.
 
 ### `pipeline/tests/test_pipeline_run.py`::`test_state_machine` /
+
 ### `test_rerun_creates_new_rows` — root cause was `pytest.ini`, not the test files
 
 Both failed with `RuntimeError: Event loop is closed` /

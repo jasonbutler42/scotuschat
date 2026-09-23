@@ -5,6 +5,10 @@ planted: 2026-07-07
 planted_during: 25-pipeline-job-detail-page
 trigger_when: next milestone planning (/gsd-new-milestone scan)
 scope: small
+audit_acknowledged:
+  milestone: v1.8
+  at: 2026-09-23
+  status: dormant
 ---
 
 # SEED-001: Rework the Resolve card/table beyond what Phase 25 delivered

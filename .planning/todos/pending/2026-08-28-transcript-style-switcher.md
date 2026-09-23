@@ -4,6 +4,9 @@ kind: idea
 source: operator, during Phase 51 Wave 2 transcript-style exploration
 resolves_phase: null
 priority: low
+audit_acknowledged:
+  milestone: v1.8
+  at: 2026-09-23
 ---
 
 # Reader-selectable transcript style ("switcher")

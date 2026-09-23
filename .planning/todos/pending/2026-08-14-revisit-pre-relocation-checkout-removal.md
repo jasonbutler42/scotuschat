@@ -4,7 +4,12 @@ title: Revisit removal of the retired pre-relocation checkout after a period of 
 area: dev-environment
 priority: low
 files:
+
   - .planning/phases/46-dev-environment-reliability/46-RELOCATION.md
+
+audit_acknowledged:
+  milestone: v1.8
+  at: 2026-09-23
 ---
 
 ## Problem

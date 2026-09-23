@@ -4,7 +4,12 @@ title: reset_to_fixture writes stale created_at values because it reuses one tra
 area: api
 severity: minor
 files:
+
   - api/services/admin_dev.py (reset_to_fixture — shared session across the fixture loop and state realization)
+
+audit_acknowledged:
+  milestone: v1.8
+  at: 2026-09-23
 ---
 
 ## Problem

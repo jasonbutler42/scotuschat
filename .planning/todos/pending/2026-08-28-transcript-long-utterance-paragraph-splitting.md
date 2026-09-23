@@ -4,6 +4,9 @@ kind: improvement
 source: operator, during Phase 51 Wave 2 transcript-style exploration
 resolves_phase: null
 priority: medium
+audit_acknowledged:
+  milestone: v1.8
+  at: 2026-09-23
 ---
 
 # Split long utterances into paragraphs using the source PDF's own breaks

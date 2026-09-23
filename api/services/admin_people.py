@@ -2,15 +2,15 @@
 Business logic for admin people management.
 
 Responsibilities:
-  - Directory listing with missing-fields derivation (PEOPLE-01, PEOPLE-02, D-04, D-06)
-  - Person detail query with tenure rows (PEOPLE-03, D-07, D-08)
+  - Directory listing with missing-fields derivation
+  - Person detail query with tenure rows
   - Person update with delete-and-reinsert tenure strategy (D-09, Pattern 5)
-  - Inline role find-or-create (D-10)
-  - Resolved participants list for a completed job (PEOPLE-04, D-02)
-  - Photo upload with dual-path storage (PADM-01)
-  - Merge preview count query (PADM-04)
-  - Atomic multi-table merge (PADM-03, D-10)
-  - Orphan-only delete (PADM-02)
+  - Inline role find-or-create
+  - Resolved participants list for a completed job
+  - Photo upload with dual-path storage
+  - Merge preview count query
+  - Atomic multi-table merge
+  - Orphan-only delete
 
 Critical guards (project-wide pattern from admin_jobs.py):
   - EVERY update() / delete() statement includes .execution_options(synchronize_session=False)
@@ -56,9 +56,9 @@ from api.services.speakers import ADVOCATE_LABEL_MAP
 
 
 def _missing_fields(person: Person, tenure_count: int) -> list[str]:
-    """Return list of missing field labels, branched by is_justice (D-05, D-06).
+    """Return list of missing field labels, branched by is_justice.
 
-    Person-level Role is no longer checked (D-10) — role now lives on
+    Person-level Role is no longer checked — role now lives on
     argument_participants, not on Person.
 
     Advocate rows (is_justice is False, D-05): "first name"/"last name"/
@@ -82,7 +82,7 @@ def _missing_fields(person: Person, tenure_count: int) -> list[str]:
 
     Label vocabulary (lowercased, space-separated) is shared with the
     `missing` query-param filter in list_people so pill labels and filter
-    values agree on one vocabulary (T-27-03).
+    values agree on one vocabulary.
     """
     missing: list[str] = []
     if person.first_name is None:
@@ -104,7 +104,7 @@ def _missing_fields(person: Person, tenure_count: int) -> list[str]:
 
 
 def _tenure_coverage(tenures: list[CourtTenure]) -> str | None:
-    """Return a display string summarizing a person's tenure date range (PDIR-03).
+    """Return a display string summarizing a person's tenure date range.
 
     Earliest tenure start year through latest tenure end year, e.g.
     "1972–2005". An open-ended tenure (end_date IS NULL — currently
@@ -133,10 +133,10 @@ async def _replace_tenures(
     already requires a canonical office (Literal["chief", "associate"]), so a
     caller that wants zero tenures submits an empty list; that is a
     deliberate "no tenures" state, not something this function infers from a
-    row's other fields (D-03, D-04).
+    row's other fields.
 
     All rows' office values are validated up front, before the delete
-    executes (T-37-06/T-37-05) — this is defense-in-depth alongside the
+    executes — this is defense-in-depth alongside the
     TenureWrite Pydantic schema and the DB CHECK constraint
     (ck_court_tenures_office): no row is deleted or inserted until every
     row in the list is confirmed canonical.
@@ -197,21 +197,21 @@ async def list_people(
     ordered by full_name as a fallback rather than being pushed to the bottom
     of the directory (which NULLS LAST on last_name alone would cause).
 
-    is_justice filters by tab (D-01/D-02): True = Bench, False = Advocate,
+    is_justice filters by tab: True = Bench, False = Advocate,
     None = no tab filter (defensive only — the frontend always passes a tab,
     defaulting to Bench per D-03).
 
     missing is a single field-label filter driven by the click-to-filter
-    pills (D-04) — one of "first name"/"last name"/"photo"/"bio"/"birthdate"/
+    pills — one of "first name"/"last name"/"photo"/"bio"/"birthdate"/
     "no tenures" (the exact vocabulary _missing_fields produces, T-27-03).
     Any other value (or None) applies no filter — never interpolated into SQL.
 
     tenure_gaps=True restricts to bench speakers who have at least one
     argument appearance where argued_date falls outside all their CourtTenure
-    windows (D-15, Phase 15, PDIR-06) — Bench-tab-only; the frontend only
+    windows — Bench-tab-only; the frontend only
     sends this on the Bench tab.
 
-    Person-level Role is no longer joined or returned (D-10) — role now
+    Person-level Role is no longer joined or returned — role now
     lives on argument_participants.
 
     Returns a list of dicts with keys: id, full_name, missing, is_justice,
@@ -221,7 +221,7 @@ async def list_people(
       Advocate rows, None for Bench rows.
     - tenure_coverage is a display string ("1972–2005"/"1972–present")
       derived from the person's tenure rows, or None when they have zero
-      tenures (PDIR-03).
+      tenures.
     - has_tenure_gap mirrors the tenure_gaps filter logic per person (True
       only for Justices with an argued_date not covered by any tenure).
     All three are computed from a single tenure prefetch per call (no
@@ -242,18 +242,18 @@ async def list_people(
         "bio": Person.bio_text.is_(None),
         "birthdate": Person.birthdate.is_(None),
         "no tenures": not_(exists().where(CourtTenure.person_id == Person.id)),
-        # Phase 49 (D-08, D-11) — fixed, non-interpolated predicate for the
+        # Fixed, non-interpolated predicate for the
         # "Name review" filter pill, re-pointed from the Phase 38 boolean
         # to the unified review_state enum; applies to either tab (unlike
         # "birthdate"/"no tenures", which are bench-only in practice via
         # _missing_fields). The dictionary key and operator-visible label
-        # stay the literal string "name review" — unchanged (D-08).
+        # stay the literal string "name review" — unchanged.
         "name review": Person.review_state == ReviewState.NEEDS_REVIEW,
     }
     if missing in missing_filters:
         q = q.where(missing_filters[missing])
 
-    # Gap-detection subquery (D-15, PDIR-06): people who have at least one
+    # Gap-detection subquery: people who have at least one
     # BENCH appearance in an argument where no CourtTenure covers the
     # argued_date (Pattern 7). Reused both as the tenure_gaps filter below
     # and to compute has_tenure_gap on every row further down.
@@ -275,7 +275,7 @@ async def list_people(
         .where(
             ArgumentParticipant.side == SideEnum.BENCH,
             ArgumentParticipant.person_id.isnot(None),
-            # WR-01: argued_date is nullable (job-driven ingest leaves NULL
+            # Argued_date is nullable (job-driven ingest leaves NULL
             # instead of a synthetic date). Any comparison against NULL is
             # NULL in SQL, so covering_tenure can never match for a dateless
             # argument and not_(covering_tenure) would always be true —
@@ -343,7 +343,7 @@ async def list_people(
                 ),
                 "tenure_coverage": _tenure_coverage(person_tenures),
                 "has_tenure_gap": person.id in gap_person_ids,
-                # Phase 49 addition — migration 0029 (D-08, D-11)
+                # Phase 49 addition
                 "review_state": person.review_state.value,
             }
         )
@@ -351,7 +351,7 @@ async def list_people(
 
 
 async def get_people_stats(db: AsyncSession) -> dict:
-    """Aggregate counts for the People stat card (DASH-01) — total + incomplete.
+    """Aggregate counts for the People stat card — total + incomplete.
 
     Reuses list_people(db) unfiltered (both tabs) and counts/filters in Python
     (D-05 — this must NOT add a new SQL "any missing field" filter mode to
@@ -367,9 +367,9 @@ async def get_people_stats(db: AsyncSession) -> dict:
 async def get_incomplete_people(db: AsyncSession, limit: int = 5) -> list[dict]:
     """Top-``limit`` incomplete people across both tabs (DASH-03 Needs Attention).
 
-    One combined People sub-list spanning both Bench and Advocate tabs (D-02) —
+    One combined People sub-list spanning both Bench and Advocate tabs —
     reuses list_people(db) unfiltered and slices in Python; no new SQL filter
-    mode is added (D-05).
+    mode is added.
     """
     rows = await list_people(db)
     return [r for r in rows if r["missing"]][:limit]
@@ -390,7 +390,7 @@ async def get_person_detail(db: AsyncSession, person_id: int) -> dict | None:
     """Return full person data for the edit form, including all tenure rows.
 
     Returns None if the person does not exist.
-    Tenure rows are ordered by start_date ascending (nulls first) (D-08).
+    Tenure rows are ordered by start_date ascending (nulls first).
     """
     result = await db.execute(select(Person).where(Person.id == person_id))
     person = result.scalar_one_or_none()
@@ -427,14 +427,14 @@ async def get_person_detail(db: AsyncSession, person_id: int) -> dict | None:
         "last_name": person.last_name,
         "middle_name": person.middle_name,
         "name_suffix": person.name_suffix,
-        # Phase 22 — migration 0013: appointment columns removed from Person (PEDIT-10)
+        # Appointment columns removed from Person
         # Phase 18 addition — must be explicit to avoid silent default on reload (Pitfall 2)
         "is_justice": person.is_justice,
-        # Phase 27 addition — migration 0016 (PEDIT-02); the person-level Role
-        # foreign key and its display name have been dropped entirely (D-10) —
+        # Phase 27 addition — migration 0016; the person-level Role
+        # foreign key and its display name have been dropped entirely —
         # role now lives on argument_participants, not on Person.
         "birthdate": person.birthdate.isoformat() if person.birthdate else None,
-        # Phase 49 additions — migration 0029 (D-08, D-11, D-12): must be
+        # Phase 49 additions — migration 0029: must be
         # explicit so PersonDetail(**p) in the router does not silently
         # default them on reload (same Pitfall 2 discipline as the fields
         # above). provenance_metadata is returned as-is (already a plain
@@ -442,7 +442,7 @@ async def get_person_detail(db: AsyncSession, person_id: int) -> dict | None:
         # field validates/coerces it at the response boundary.
         "review_state": person.review_state.value,
         "provenance_metadata": person.provenance_metadata,
-        # Phase 39 addition — migration 0023 (PUB-04): must be explicit, same
+        # Phase 39 addition — migration 0023: must be explicit, same
         # Pitfall 2 discipline as birthdate above.
         "death_date": person.death_date.isoformat() if person.death_date else None,
     }
@@ -456,7 +456,7 @@ async def update_person(
     Returns None if the person does not exist (router → 404 IDOR guard T-08-IDOR).
     Normalizes empty-string bio_text/photo_url to None (Pitfall 5) so the
     incomplete filter IS NULL check remains accurate.
-    If body.tenures is not None, replaces all tenure rows atomically (D-09).
+    If body.tenures is not None, replaces all tenure rows atomically.
     Returns the refreshed person detail dict after committing.
 
     Raises ValueError (including api.domain.person_names.PersonNameError) on
@@ -464,8 +464,8 @@ async def update_person(
     that would leave the person with neither first_name nor last_name — the
     router catches this and returns 422 before any DB write completes.
 
-    Phase 38 name-authority contract (D-01, D-03, D-04, D-09, D-12): there is
-    no writable `full_name` field on PersonUpdate at all (T-38-07) — the
+    Phase 38 name-authority contract: there is
+    no writable `full_name` field on PersonUpdate at all — the
     client can never author it directly. Whenever a name-part field
     (first_name/middle_name/last_name/name_suffix) is present in the request
     body — omitted vs. explicitly cleared distinguished via
@@ -491,10 +491,10 @@ async def update_person(
     if person is None:
         return None
 
-    # Phase 27 (D-10): the person-level Role foreign key write has been
+    # The person-level Role foreign key write has been
     # dropped entirely — role now lives on argument_participants, not on
     # Person.
-    # CR-01 fix: only write a field when the request explicitly included it.
+    # Only write a field when the request explicitly included it.
     # These fields are split across two separate frontend forms (Identity+Person
     # Type via `save`, Bio+Photo via `photo`); each submits only its own subset
     # of PersonUpdate, leaving the rest at the Optional default of None. Writing
@@ -503,7 +503,7 @@ async def update_person(
     # the frontend represents "operator cleared this input" as an explicit
     # `null`/`""` in the JSON body, indistinguishable from "omitted" once it
     # becomes a plain None attribute; only model_fields_set still knows the key
-    # was present. Mirrors the original guard for these exact fields (CR-02),
+    # was present. Mirrors the original guard for these exact fields,
     # which a later, unrelated commit accidentally reverted.
     fields_set = body.model_fields_set
     if "bio_text" in fields_set:
@@ -511,7 +511,7 @@ async def update_person(
     if "photo_url" in fields_set:
         person.photo_url = body.photo_url or None
 
-    # Phase 38 (D-01, D-03, D-04, D-09, D-12): merge omitted-vs-cleared name
+    # Merge omitted-vs-cleared name
     # parts against stored state, then re-derive first/middle/last/suffix +
     # full_name atomically through the one shared helper. Only touches the
     # Person row when at least one name-part field was present in the
@@ -542,7 +542,7 @@ async def update_person(
         prepared = prepare_person_name(
             merged_first, merged_middle, merged_last, merged_suffix
         )
-        # Phase 49 (D-31/D-31a): each structured name-part column routes
+        # Each structured name-part column routes
         # through the ONE authority-gated writer — no second, ungated write
         # path to these columns survives. incoming_source/incoming_method
         # are "operator"/"manual": this is an operator-facing edit path.
@@ -588,14 +588,14 @@ async def update_person(
             final_parts["last_name"],
             final_parts["name_suffix"],
         )
-        # An authoritative edit always means *edited* (D-11) — no
+        # An authoritative edit always means *edited* — no
         # value-diffing, no normalization guesswork — but never touches
         # provenance_metadata, which stays as an independent, durable audit
         # trail (D-12, carrying Phase 38 D-15 forward unchanged).
         person.review_state = ReviewState.OPERATOR_EDITED
 
-    # Phase 22 — migration 0013: appointment writes removed from Person (PEDIT-10)
-    # Phase 27 addition — migration 0016 (PEDIT-02): normalize empty string to
+    # Appointment writes removed from Person
+    # Phase 27 addition — migration 0016: normalize empty string to
     # None (Pitfall 5) so the "birthdate" missing-field check stays accurate.
     # ValueError from a malformed date string propagates to the router → 422
     # (Pitfall 6), before any DB write completes.
@@ -604,7 +604,7 @@ async def update_person(
             datetime.date.fromisoformat(body.birthdate) if body.birthdate else None
         )
 
-    # Phase 39 addition — migration 0023 (PUB-04): identical model_fields_set
+    # Phase 39 addition — migration 0023: identical model_fields_set
     # guard as birthdate above, NOT the older `is not None` guard style used
     # below for is_justice. death_date is submitted only by the save-form
     # (Identity+Person Type); the separate photo/bio form never includes it
@@ -617,9 +617,9 @@ async def update_person(
             datetime.date.fromisoformat(body.death_date) if body.death_date else None
         )
 
-    # Phase 18: write is_justice only when body supplies a non-None value (D-08)
+    # Write is_justice only when body supplies a non-None value
     # None = "leave unchanged" — consistent with other Optional fields on PersonUpdate.
-    # Does NOT delete tenure rows when is_justice is False (D-06, D-07).
+    # Does NOT delete tenure rows when is_justice is False.
     if body.is_justice is not None:
         person.is_justice = body.is_justice
 
@@ -633,20 +633,20 @@ async def update_person(
 
 
 async def create_person(db: AsyncSession, body: PersonCreateRequest) -> dict:
-    """Create a standalone Person from the minimum required fields (D-08, D-09).
+    """Create a standalone Person from the minimum required fields.
 
     This is a general, unscoped create used by the People directory's
     "Create person" flow — no pipeline-run lookup, no status-paused guard,
     and no raw_speaker_label / participant-row linkage of any kind.
 
-    Phase 38 (D-01, D-03, D-09): there is no client-supplied `full_name` on
+    There is no client-supplied `full_name` on
     PersonCreateRequest at all — it is always derived from the submitted
     structured parts through the same shared
     `api.domain.person_names.prepare_person_name` helper `update_person`
     uses. `prepare_person_name` normalizes each part and raises
     PersonNameError (a ValueError, translated to 422 by the router) when
     neither first_name nor last_name is present after normalization — the
-    minimum-data invariant (D-09) — so a blank/whitespace-only submission is
+    minimum-data invariant — so a blank/whitespace-only submission is
     rejected the same deterministic way a bad PATCH is, not via a bespoke
     `full_name`-blank check. is_justice is a required bool on
     PersonCreateRequest, so no additional server-side guard is needed for it.
@@ -656,7 +656,7 @@ async def create_person(db: AsyncSession, body: PersonCreateRequest) -> dict:
     to NULL (column defaults), matching every other never-migrated row.
     bio_text, photo_url, and birthdate remain unset at create (column
     defaults / None), and no tenure rows are created — those are filled in
-    later via the existing PATCH /people/{id} update flow (D-08).
+    later via the existing PATCH /people/{id} update flow.
 
     Returns the full person detail dict via get_person_detail, matching the
     detail-refetch-after-mutation idiom every other mutation in this module
@@ -679,12 +679,12 @@ async def create_person(db: AsyncSession, body: PersonCreateRequest) -> dict:
     return await get_person_detail(db, person.id)
 
 
-# TODO(D-10): orphaned by Phase 27 — person-level roles removed; safe to
+# TODO: orphaned by Phase 27 — person-level roles removed; safe to
 # delete once confirmed. Plan 27-05 deletes this function's only caller (the
 # createRole form action); flagged here rather than deleted to avoid
 # breaking imports mid-phase.
 async def create_role(db: AsyncSession, name: str) -> dict:
-    """Find-or-create a Role by name (D-10).
+    """Find-or-create a Role by name.
 
     If a role with the given name already exists, returns its dict.
     Otherwise creates a new Role, flushes, commits, and returns {id, name}.
@@ -707,7 +707,7 @@ async def get_merge_preview(db: AsyncSession, source_id: int) -> dict | None:
 
     Returns None if source person does not exist.
     Returns dict with keys: utterances, aliases, appearances, argument_participants, tenures.
-    target_id is not required for counts — the source's rows are what transfer (D-09, PADM-04).
+    target_id is not required for counts — the source's rows are what transfer.
     """
     result = await db.execute(select(Person).where(Person.id == source_id))
     person = result.scalar_one_or_none()
@@ -811,7 +811,7 @@ async def delete_person_if_orphan(db: AsyncSession, person_id: int) -> bool | No
             select(sqlfunc.count()).select_from(model).where(col == person_id)
         )).scalar_one()
         if count > 0:
-            return False  # Not orphaned — caller returns 409 (D-06)
+            return False  # Not orphaned — caller returns 409
 
     await db.execute(
         delete(Person)
@@ -847,7 +847,7 @@ async def upload_photo(
 ) -> dict | None:
     """Store image bytes via Spaces (if configured) or local disk, then update photo_url.
 
-    Dual-path storage (D-01):
+    Dual-path storage:
     - If settings.do_spaces_bucket is set: upload to Spaces via run_in_executor,
       set photo_url to the full public URL.
     - Else (local fallback): write to data/uploads/people/{person_id}.{ext},
@@ -888,7 +888,7 @@ async def upload_photo(
 async def list_participants_for_job(
     db: AsyncSession, job_id: int
 ) -> list[dict] | None:
-    """Return resolved participants for the argument linked to a job (D-02, PEOPLE-04).
+    """Return resolved participants for the argument linked to a job.
 
     Returns None if the job is not found or has no argument_id (no argument linked yet).
     Only includes ArgumentParticipant rows where person_id IS NOT NULL (resolved).
@@ -929,7 +929,7 @@ async def list_participants_for_job(
 
 
 # ---------------------------------------------------------------------------
-# Phase 25: Resolve card row shape (D-10 through D-19, PJOB-14/15/16/18/19/21)
+# Resolve card row shape (D-10 through D-19, PJOB-14/15/16/18/19/21)
 # ---------------------------------------------------------------------------
 
 
@@ -937,12 +937,12 @@ def _bench_role_and_missing_tenure(
     tenures: list[CourtTenure],
     argued_date: Optional[datetime.date],
 ) -> tuple[Optional[str], bool]:
-    """Return (bench_role, missing_tenure) for a BENCH participant (D-15, D-16, PJOB-16).
+    """Return (bench_role, missing_tenure) for a BENCH participant.
 
     Unlike speakers._tenure_role_name (which falls back to the most-recent
     tenure per D-14 for the public speaker popover), the Resolve card must show
     an EXPLICIT "Missing tenure" state when no tenure covers argued_date — no
-    fallback is applied here (D-15). This intentionally diverges from the
+    fallback is applied here. This intentionally diverges from the
     speaker-popover helper's behavior; do not reuse it for this purpose.
 
     bench_role is the formal office title (office_title(t.office) — "Chief

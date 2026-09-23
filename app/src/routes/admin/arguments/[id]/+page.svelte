@@ -1,8 +1,10 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { tick } from 'svelte';
-	import ArgumentDetailsCard from '$lib/components/ArgumentDetailsCard.svelte';
-	import CopyableExtractedValue from '$lib/components/CopyableExtractedValue.svelte';
+	import ArgumentDetailsCard from '$lib/admin/ArgumentDetailsCard.svelte';
+	import CopyableExtractedValue from '$lib/admin/CopyableExtractedValue.svelte';
+	import Badge from '$lib/primitives/Badge.svelte';
+	import type { BadgeTone } from '$lib/primitives/badge-tone';
 	// G-49-3/D-35 (plan 49-10): the bucket rule, the boundary-crossing
 	// predicate, and the operator-visible role labels are shared with
 	// ResolveCard.svelte — both cards import from the single source of
@@ -62,20 +64,13 @@
 	}
 
 	// StatusBadge helpers — reads argument.status enum (Phase 26: pipeline/draft/published/unpublished).
-	function badgeStyle(status: string): string {
-		let color: string;
-		if (status === 'published') {
-			color = '#4ade80';
-		} else if (status === 'draft') {
-			color = '#a78bfa';
-		} else if (status === 'unpublished') {
-			color = '#fb923c';
-		} else {
-			// candidate (Phase 48 D-01) and any unrecognised value share the
-			// retired born state's grey token — Phase 51 owns the palette.
-			color = '#94a3b8';
-		}
-		return `border: 1px solid ${color}; border-radius: 4px; padding: 2px 8px; font-size: 14px; font-weight: 400; background-color: #1e293b; color: ${color}; display: inline-block;`;
+	function badgeTone(status: string): BadgeTone {
+		if (status === 'published') return 'published';
+		if (status === 'draft') return 'draft';
+		if (status === 'unpublished') return 'unpublished';
+		// candidate (Phase 48 D-01) and any unrecognised value share the
+		// retired born state's muted tone.
+		return 'neutral';
 	}
 
 	function badgeLabel(status: string): string {
@@ -181,21 +176,21 @@
 	<title>{data.argument.case_name} — SCOTUS Chat Admin</title>
 </svelte:head>
 
-<main style="background-color: #0f1117; min-height: 100vh;">
+<main style="background-color: var(--color-bg); min-height: 100vh;">
 	<header
-		style="background-color: #1e293b; border-bottom: 1px solid #334155; padding: 16px 24px;"
+		style="background-color: var(--color-surface); border-bottom: 1px solid var(--color-border); padding: var(--space-lg) var(--space-xl);"
 	>
 		<!-- Back navigation per UI-SPEC -->
 		<a
 			href="/admin/arguments"
-			style="font-size: 14px; font-weight: 400; color: #94a3b8; text-decoration: none; display: block; margin-bottom: 8px;"
+			style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); text-decoration: none; display: block; margin-bottom: var(--space-sm);"
 		>← Arguments</a>
-		<h1 style="font-size: 20px; font-weight: 600; color: #e2e8f0; margin: 0;">
+		<h1 style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0;">
 			{data.argument.case_name}
 		</h1>
 	</header>
 
-	<div style="max-width: 640px; margin: 0 auto; padding: 48px 24px;">
+	<div style="max-width: 640px; margin: 0 auto; padding: var(--space-3xl) var(--space-xl);">
 
 		<!-- D-35a: whole-argument lock notice (operator, 2026-08-24). Stated ONCE,
 		     at page level, covering the Case card and the Argument Details card
@@ -206,14 +201,14 @@
 			<p
 				role="status"
 				style="
-					font-size: 14px;
-					font-weight: 400;
-					color: #94a3b8;
-					background-color: #1e293b;
-					border: 1px solid #334155;
+					font-size: var(--font-size-caption);
+					font-weight: var(--font-weight-regular);
+					color: var(--color-text-secondary);
+					background-color: var(--color-surface);
+					border: 1px solid var(--color-border);
 					border-radius: 8px;
-					padding: 16px;
-					margin: 0 0 16px 0;
+					padding: var(--space-lg);
+					margin: 0 0 var(--space-lg) 0;
 				"
 			>
 				This argument is published, so its data is read-only. Unpublish it in the
@@ -224,14 +219,14 @@
 		<!-- Card 1: Case — case title + Case docket number + consolidated dockets (D-03) -->
 		<div
 			style="
-				background-color: #1e293b;
-				border: 1px solid #334155;
+				background-color: var(--color-surface);
+				border: 1px solid var(--color-border);
 				border-radius: 8px;
-				padding: 24px;
-				margin-bottom: 24px;
+				padding: var(--space-xl);
+				margin-bottom: var(--space-xl);
 			"
 		>
-			<h2 style="font-size: 20px; font-weight: 600; color: #e2e8f0; margin: 0 0 24px 0;">
+			<h2 style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-xl) 0;">
 				Case
 			</h2>
 
@@ -251,10 +246,10 @@
 				}}
 			>
 				<!-- Case title field -->
-				<div style="margin-bottom: 16px;">
+				<div style="margin-bottom: var(--space-lg);">
 					<label
 						for="case_name"
-						style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
+						style="display: block; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin-bottom: var(--space-sm);"
 					>Case title</label>
 					<input
 						bind:this={caseNameInput}
@@ -270,12 +265,12 @@
 						style="
 							display: block;
 							width: 100%;
-							background-color: #0f1117;
-							border: 1px solid {caseNameRequired ? '#ef4444' : '#334155'};
+							background-color: var(--color-bg);
+							border: 1px solid {caseNameRequired ? 'var(--color-destructive)' : 'var(--color-border)'};
 							border-radius: 6px;
-							padding: 8px 12px;
-							font-size: 16px;
-							color: #e2e8f0;
+							padding: var(--space-sm) var(--space-md);
+							font-size: var(--font-size-body);
+							color: var(--color-text-primary);
 							box-sizing: border-box;
 						"
 					/>
@@ -287,7 +282,7 @@
 				<div style="margin-bottom: {data.argument.consolidated_dockets.length > 0 ? '16px' : '0'};">
 					<label
 						for="docket_number"
-						style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
+						style="display: block; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin-bottom: var(--space-sm);"
 					>Case docket number</label>
 					<input
 						bind:this={docketNumberInput}
@@ -303,12 +298,12 @@
 						style="
 							display: block;
 							width: 100%;
-							background-color: #0f1117;
-							border: 1px solid {docketRequired ? '#ef4444' : '#334155'};
+							background-color: var(--color-bg);
+							border: 1px solid {docketRequired ? 'var(--color-destructive)' : 'var(--color-border)'};
 							border-radius: 6px;
-							padding: 8px 12px;
-							font-size: 16px;
-							color: #e2e8f0;
+							padding: var(--space-sm) var(--space-md);
+							font-size: var(--font-size-body);
+							color: var(--color-text-primary);
 							box-sizing: border-box;
 						"
 					/>
@@ -318,11 +313,11 @@
 				{#if data.argument.consolidated_dockets.length > 0}
 					<div style="margin-bottom: 0;">
 						<p
-							style="font-size: 14px; font-weight: 400; color: #94a3b8; margin: 0 0 8px 0;"
+							style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin: 0 0 var(--space-sm) 0;"
 						>Consolidated dockets</p>
-						<ul style="margin: 0; padding-left: 20px;">
+						<ul style="margin: 0; padding-left: var(--space-lg);">
 							{#each data.argument.consolidated_dockets as docket}
-								<li style="font-size: 14px; color: #94a3b8; padding: 2px 0;">
+								<li style="font-size: var(--font-size-caption); color: var(--color-text-secondary); padding: var(--space-xs) 0;">
 									{docket.docket_number}
 								</li>
 							{/each}
@@ -346,11 +341,11 @@
 						id="case-form-alert"
 						role="alert"
 						style="
-							color: #ef4444;
-							font-size: 16px;
-							font-weight: 400;
+							color: var(--color-destructive);
+							font-size: var(--font-size-body);
+							font-weight: var(--font-weight-regular);
 							line-height: 1.5;
-							margin: 16px 0 0 0;
+							margin: var(--space-lg) 0 0 0;
 						"
 					>
 						{#if caseNameRequired}<span style="display: block;">Case name is required.</span>{/if}
@@ -368,15 +363,15 @@
 					style="
 						display: block;
 						width: 100%;
-						min-height: 44px;
-						background-color: #1e293b;
-						border: 1px solid #93c5fd;
+						min-height: var(--touch-target);
+						background-color: var(--color-surface);
+						border: 1px solid var(--color-accent);
 						border-radius: 6px;
-						font-size: 16px;
-						font-weight: 600;
-						color: #e2e8f0;
+						font-size: var(--font-size-body);
+						font-weight: var(--font-weight-semibold);
+						color: var(--color-text-primary);
 						cursor: {(speakersLocked || savingState) ? 'not-allowed' : 'pointer'};
-						margin-top: 24px;
+						margin-top: var(--space-xl);
 						opacity: {(speakersLocked || savingState) ? 0.7 : 1};
 					"
 				>
@@ -412,25 +407,26 @@
 		<!-- Card 2: Status — current badge + resolved/published dates + slug preview -->
 		<div
 			style="
-				background-color: #1e293b;
-				border: 1px solid #334155;
+				background-color: var(--color-surface);
+				border: 1px solid var(--color-border);
 				border-radius: 8px;
-				padding: 24px;
-				margin-bottom: 16px;
+				padding: var(--space-xl);
+				margin-bottom: var(--space-lg);
 			"
 		>
-			<h2 style="font-size: 20px; font-weight: 600; color: #e2e8f0; margin: 0 0 16px 0;">
+			<h2 style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-lg) 0;">
 				Status
 			</h2>
 
-			<div style="margin-bottom: 12px;">
-				<span style={badgeStyle(data.argument.status ?? 'candidate')}>
-					{badgeLabel(data.argument.status ?? 'candidate')}
-				</span>
+			<div style="margin-bottom: var(--space-md);">
+				<Badge
+					tone={badgeTone(data.argument.status ?? 'candidate')}
+					label={badgeLabel(data.argument.status ?? 'candidate')}
+				/>
 			</div>
 
 			{#if data.argument.resolved_at}
-				<p style="font-size: 14px; color: #94a3b8; margin: 0 0 8px 0;">
+				<p style="font-size: var(--font-size-caption); color: var(--color-text-secondary); margin: 0 0 var(--space-sm) 0;">
 					<!-- formatDateTime (not formatDate) — matches the Status History
 					     list further down this same card, which already shows times.
 					     Label: `Argument` has no creation-timestamp column (see
@@ -447,7 +443,7 @@
 			{/if}
 
 			{#if data.argument.published_at}
-				<p style="font-size: 14px; color: #94a3b8; margin: 0 0 8px 0;">
+				<p style="font-size: var(--font-size-caption); color: var(--color-text-secondary); margin: 0 0 var(--space-sm) 0;">
 					<!-- D-02 retains published_at after unpublish for the audit trail;
 					     once status stopped being the sole visibility authority (48-10),
 					     the bare "Published" label became misleading for an argument
@@ -457,7 +453,7 @@
 				</p>
 			{/if}
 
-			<p style="font-size: 14px; color: #94a3b8; margin: 0 0 16px 0;">
+			<p style="font-size: var(--font-size-caption); color: var(--color-text-secondary); margin: 0 0 var(--space-lg) 0;">
 				Slug: {data.argument.slug}
 			</p>
 
@@ -480,13 +476,13 @@
 						style="
 							display: block;
 							width: 100%;
-							min-height: 44px;
-							background-color: #1e293b;
-							border: 1px solid #93c5fd;
+							min-height: var(--touch-target);
+							background-color: var(--color-surface);
+							border: 1px solid var(--color-accent);
 							border-radius: 6px;
-							font-size: 16px;
-							font-weight: 600;
-							color: #e2e8f0;
+							font-size: var(--font-size-body);
+							font-weight: var(--font-weight-semibold);
+							color: var(--color-text-primary);
 							cursor: {publishingState ? 'not-allowed' : 'pointer'};
 							opacity: {publishingState ? 0.7 : 1};
 						"
@@ -501,32 +497,32 @@
 				{#if form?.publishBlocked}
 					<div
 						style="
-							margin-top: 16px;
-							padding: 16px;
-							border: 1px solid #fb923c;
+							margin-top: var(--space-lg);
+							padding: var(--space-lg);
+							border: 1px solid var(--color-status-unpublished);
 							border-radius: 6px;
-							background-color: #1e293b;
+							background-color: var(--color-surface);
 						"
 					>
-						<p style="font-size: 16px; font-weight: 600; color: #fb923c; margin: 0 0 8px 0;">
+						<p style="font-size: var(--font-size-body); font-weight: var(--font-weight-semibold); color: var(--color-status-unpublished); margin: 0 0 var(--space-sm) 0;">
 							Publish blocked
 							{#if form.trustTier}
 								<span
-									style="border: 1px solid #94a3b8; border-radius: 4px; padding: 2px 8px; font-size: 14px; font-weight: 400; background-color: #1e293b; color: #94a3b8; display: inline-block;"
+									style="border: 1px solid var(--color-text-secondary); border-radius: 4px; padding: var(--space-xs) var(--space-sm); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); background-color: var(--color-surface); color: var(--color-text-secondary); display: inline-block;"
 								>{form.trustTier}</span>
 							{/if}
 						</p>
 
 						{#if form.blockMessage}
-							<p style="font-size: 14px; color: #e2e8f0; margin: 0 0 8px 0;">
+							<p style="font-size: var(--font-size-caption); color: var(--color-text-primary); margin: 0 0 var(--space-sm) 0;">
 								{form.blockMessage}
 							</p>
 						{/if}
 
 						{#if form.blockers && form.blockers.length > 0}
-							<ul style="margin: 0 0 16px 0; padding-left: 20px;">
+							<ul style="margin: 0 0 var(--space-lg) 0; padding-left: var(--space-lg);">
 								{#each form.blockers as b}
-									<li style="font-size: 14px; color: #94a3b8; padding: 2px 0;">
+									<li style="font-size: var(--font-size-caption); color: var(--color-text-secondary); padding: var(--space-xs) 0;">
 										{blockerSentence(b.code, b.count)}
 									</li>
 								{/each}
@@ -534,7 +530,7 @@
 						{/if}
 
 						{#if form?.overrideReasonRequired}
-							<p role="alert" style="font-size: 14px; font-weight: 600; color: #ef4444; margin: 0 0 12px 0;">
+							<p role="alert" style="font-size: var(--font-size-caption); font-weight: var(--font-weight-semibold); color: var(--color-destructive); margin: 0 0 var(--space-md) 0;">
 								A non-empty reason is required — your submission was blank or only whitespace.
 							</p>
 						{/if}
@@ -552,7 +548,7 @@
 						>
 							<label
 								for="override_reason"
-								style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
+								style="display: block; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin-bottom: var(--space-sm);"
 							>Reason for publishing anyway</label>
 							<!-- `required` is defense-in-depth only (D-17) — the server's own
 							     .strip() check on override_reason is the single authority;
@@ -566,13 +562,13 @@
 									display: block;
 									width: 100%;
 									box-sizing: border-box;
-									background-color: #0f1117;
-									border: 1px solid #334155;
+									background-color: var(--color-bg);
+									border: 1px solid var(--color-border);
 									border-radius: 6px;
-									color: #e2e8f0;
-									font-size: 14px;
-									padding: 8px 12px;
-									margin-bottom: 12px;
+									color: var(--color-text-primary);
+									font-size: var(--font-size-caption);
+									padding: var(--space-sm) var(--space-md);
+									margin-bottom: var(--space-md);
 								"
 							></textarea>
 							<button
@@ -581,13 +577,13 @@
 								style="
 									display: block;
 									width: 100%;
-									min-height: 44px;
-									background-color: #1e293b;
-									border: 1px solid #fb923c;
+									min-height: var(--touch-target);
+									background-color: var(--color-surface);
+									border: 1px solid var(--color-status-unpublished);
 									border-radius: 6px;
-									font-size: 16px;
-									font-weight: 600;
-									color: #e2e8f0;
+									font-size: var(--font-size-body);
+									font-weight: var(--font-weight-semibold);
+									color: var(--color-text-primary);
 									cursor: {publishingState ? 'not-allowed' : 'pointer'};
 									opacity: {publishingState ? 0.7 : 1};
 								"
@@ -615,13 +611,13 @@
 						style="
 							display: block;
 							width: 100%;
-							min-height: 44px;
-							background-color: #1e293b;
-							border: 1px solid #334155;
+							min-height: var(--touch-target);
+							background-color: var(--color-surface);
+							border: 1px solid var(--color-border);
 							border-radius: 6px;
-							font-size: 16px;
-							font-weight: 600;
-							color: #e2e8f0;
+							font-size: var(--font-size-body);
+							font-weight: var(--font-weight-semibold);
+							color: var(--color-text-primary);
 							cursor: {unpublishingState ? 'not-allowed' : 'pointer'};
 							opacity: {unpublishingState ? 0.7 : 1};
 						"
@@ -650,11 +646,11 @@
 				<p
 					role="alert"
 					style="
-						color: #ef4444;
-						font-size: 14px;
-						font-weight: 400;
+						color: var(--color-destructive);
+						font-size: var(--font-size-caption);
+						font-weight: var(--font-weight-regular);
 						line-height: 1.5;
-						margin: 12px 0 0 0;
+						margin: var(--space-md) 0 0 0;
 					"
 				>{form.error}</p>
 			{/if}
@@ -663,31 +659,34 @@
 		<!-- Card 2b: Status history — full timestamped log, oldest first (AEDIT-02) -->
 		<div
 			style="
-				background-color: #1e293b;
-				border: 1px solid #334155;
+				background-color: var(--color-surface);
+				border: 1px solid var(--color-border);
 				border-radius: 8px;
-				padding: 24px;
-				margin-bottom: 16px;
+				padding: var(--space-xl);
+				margin-bottom: var(--space-lg);
 			"
 		>
-			<h2 style="font-size: 20px; font-weight: 600; color: #e2e8f0; margin: 0 0 16px 0;">
+			<h2 style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-lg) 0;">
 				Status history
 			</h2>
 
 			{#if data.argument.status_log && data.argument.status_log.length > 0}
 				{#each data.argument.status_log as entry, index}
-					<div style="padding: 8px 0;">
-						<div style="display: flex; align-items: center; gap: 8px;">
-							<span style={badgeStyle(entry.status)}>
-								{index === 0 && entry.status === 'draft' ? 'Created' : badgeLabel(entry.status)}
-							</span>
-							<span style="font-size: 14px; color: #94a3b8;">
+					<div style="padding: var(--space-sm) 0;">
+						<div style="display: flex; align-items: center; gap: var(--space-sm);">
+							<Badge
+								tone={badgeTone(entry.status)}
+								label={index === 0 && entry.status === 'draft'
+									? 'Created'
+									: badgeLabel(entry.status)}
+							/>
+							<span style="font-size: var(--font-size-caption); color: var(--color-text-secondary);">
 								— {formatDateTime(entry.created_at)}
 							</span>
 						</div>
 						<!-- A logged override nobody can read is not an audit trail (Phase 48 D-15). -->
 						{#if entry.override_reason}
-							<p style="font-size: 14px; color: #e2e8f0; margin: 4px 0 0 0;">
+							<p style="font-size: var(--font-size-caption); color: var(--color-text-primary); margin: var(--space-xs) 0 0 0;">
 								Override reason: "{entry.override_reason}"
 								{#if entry.trust_tier_at_transition}
 									(tier at the time: {entry.trust_tier_at_transition})
@@ -697,7 +696,7 @@
 					</div>
 				{/each}
 			{:else}
-				<p style="font-size: 14px; color: #94a3b8; font-style: italic; margin: 0;">
+				<p style="font-size: var(--font-size-caption); color: var(--color-text-secondary); font-style: italic; margin: 0;">
 					Status history is unavailable.
 				</p>
 			{/if}
@@ -706,17 +705,17 @@
 		<!-- Card 3: Speakers — unified bench+advocate rows (D-05, D-07, AEDIT-05/06/07) -->
 		<div
 			style="
-				background-color: #1e293b;
-				border: 1px solid #334155;
+				background-color: var(--color-surface);
+				border: 1px solid var(--color-border);
 				border-radius: 8px;
-				padding: 24px;
-				margin-bottom: 16px;
+				padding: var(--space-xl);
+				margin-bottom: var(--space-lg);
 			"
 		>
-			<h2 style="font-size: 20px; font-weight: 600; color: #e2e8f0; margin: 0 0 8px 0;">
+			<h2 style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-sm) 0;">
 				Speakers
 			</h2>
-			<p style="font-size: 14px; font-weight: 400; color: #94a3b8; margin: 0 0 24px 0;">
+			<p style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin: 0 0 var(--space-xl) 0;">
 				All participants in this argument. Advocates: set the role and descriptor they held here. Changing a role or descriptor here does not affect other arguments.
 			</p>
 
@@ -725,7 +724,7 @@
 				     rows below — no per-class difference in treatment (CLAUDE.md apolitical
 				     constraint). Defence in depth: api/services/admin_arguments.py's
 				     update_participant_side published guard is the authority. -->
-				<p style="font-size: 14px; font-weight: 400; color: #fbbf24; margin: 0 0 16px 0;">
+				<p style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-status-warning); margin: 0 0 var(--space-lg) 0;">
 					This argument is published, so participant data is read-only. Unpublish it first to edit roles or descriptors.
 				</p>
 			{/if}
@@ -741,18 +740,18 @@
 				<div style="overflow-x: auto;">
 					<table style="width: 100%; border-collapse: collapse;">
 					<thead>
-						<tr style="border-bottom: 1px solid #334155;">
-							<th style="text-align: left; font-size: 14px; font-weight: 400; color: #94a3b8; padding: 8px; white-space: nowrap;">Name</th>
-							<th style="text-align: left; font-size: 14px; font-weight: 400; color: #94a3b8; padding: 8px;">Role</th>
-							<th style="text-align: left; font-size: 14px; font-weight: 400; color: #94a3b8; padding: 8px;">Title</th>
-							<th style="text-align: left; font-size: 14px; font-weight: 400; color: #94a3b8; padding: 8px; white-space: nowrap;">Utterances</th>
-							<th style="text-align: left; font-size: 14px; font-weight: 400; color: #94a3b8; padding: 8px;">Action</th>
+						<tr style="border-bottom: 1px solid var(--color-border);">
+							<th style="text-align: left; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); padding: var(--space-sm); white-space: nowrap;">Name</th>
+							<th style="text-align: left; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); padding: var(--space-sm);">Role</th>
+							<th style="text-align: left; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); padding: var(--space-sm);">Title</th>
+							<th style="text-align: left; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); padding: var(--space-sm); white-space: nowrap;">Utterances</th>
+							<th style="text-align: left; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); padding: var(--space-sm);">Action</th>
 						</tr>
 					</thead>
 					<tbody>
 						{#each data.argument.speakers as speaker}
-							<tr style="border-bottom: 1px solid #334155;">
-								<td style="padding: 8px; font-size: 14px; color: #e2e8f0; vertical-align: top;">
+							<tr style="border-bottom: 1px solid var(--color-border);">
+								<td style="padding: var(--space-sm); font-size: var(--font-size-caption); color: var(--color-text-primary); vertical-align: top;">
 									{speaker.full_name ?? '—'}
 									<!-- G-49-14 (operator, 2026-08-25, 49-UAT test 52): the row fills all FIVE columns
 									     its header declares. Previously one <td colspan="3"> merged Role/Title/Utterances
@@ -791,7 +790,7 @@
 								     Bench is picked rather than only after save. The confirm gate is the purpose-port
 								     of ResolveCard's side gate — not a copy of its mechanism, because this surface has
 								     no person picker to gate and each row is its own POST. -->
-								<td style="padding: 8px; vertical-align: top;">
+								<td style="padding: var(--space-sm); vertical-align: top;">
 									<div style="flex: 1; min-width: 160px;">
 										<select
 											form="speaker-side-{speaker.participant_id}"
@@ -801,14 +800,14 @@
 											onchange={() => { sideConfirming[speaker.participant_id] = false; }}
 											style="
 												width: 100%;
-												background-color: #0f1117;
-												border: 1px solid #334155;
+												background-color: var(--color-bg);
+												border: 1px solid var(--color-border);
 												border-radius: 6px;
-												padding: 8px 12px;
-												font-size: 16px;
-												font-weight: 400;
-												color: #e2e8f0;
-												min-height: 36px;
+												padding: var(--space-sm) var(--space-md);
+												font-size: var(--font-size-body);
+												font-weight: var(--font-weight-regular);
+												color: var(--color-text-primary);
+												min-height: var(--touch-target-dense);
 												cursor: {speakersLocked ? 'not-allowed' : 'auto'};
 												opacity: {speakersLocked ? 0.7 : 1};
 											"
@@ -827,25 +826,25 @@
 											     bench row rendered a bare em-dash with no warning and no link;
 											     that one-way trap becomes reachable by operator action once a
 											     row can be moved into Bench, so it is closed here. -->
-											<div style="margin: 4px 0 0 0; font-size: 14px;">
+											<div style="margin: var(--space-xs) 0 0 0; font-size: var(--font-size-caption);">
 												{#if speaker.person_id == null}
-													<span style="color: #94a3b8;">No person linked</span>
+													<span style="color: var(--color-text-secondary);">No person linked</span>
 												{:else if speaker.missing_tenure}
-													<span style="color: #fbbf24;">Missing tenure</span>
+													<span style="color: var(--color-status-warning);">Missing tenure</span>
 													{#if speaker.person_edit_href}
 														<a
 															href={speaker.person_edit_href}
-															style="color: #93c5fd; text-decoration: underline; margin-left: 4px;"
+															style="color: var(--color-accent); text-decoration: underline; margin-left: var(--space-xs);"
 														>Edit person</a>
 													{/if}
 												{:else}
-													<span style="color: #e2e8f0;">{speaker.bench_role ?? '—'}</span>
+													<span style="color: var(--color-text-primary);">{speaker.bench_role ?? '—'}</span>
 												{/if}
 											</div>
 										{/if}
 									</div>
 								</td>
-								<td style="padding: 8px; vertical-align: top;">
+								<td style="padding: var(--space-sm); vertical-align: top;">
 									<div style="flex: 1; min-width: 160px;">
 										<!-- Descriptor stays MOUNTED (never wrapped in a bench-only {#if}) and
 										     is only DISABLED while the selected side is Bench — unmounting it
@@ -862,21 +861,21 @@
 											style="
 												display: block;
 												width: 100%;
-												background-color: #0f1117;
-												border: 1px solid #334155;
+												background-color: var(--color-bg);
+												border: 1px solid var(--color-border);
 												border-radius: 6px;
-												padding: 8px 12px;
-												font-size: 16px;
-												color: #e2e8f0;
+												padding: var(--space-sm) var(--space-md);
+												font-size: var(--font-size-body);
+												color: var(--color-text-primary);
 												box-sizing: border-box;
-												min-height: 36px;
+												min-height: var(--touch-target-dense);
 												cursor: {speakersLocked || speakerSideById[speaker.participant_id] === 'BENCH' ? 'not-allowed' : 'auto'};
 												opacity: {speakersLocked || speakerSideById[speaker.participant_id] === 'BENCH' ? 0.7 : 1};
 											"
 										/>
 										<div
 											style="
-												margin: 4px 0 0 0;
+												margin: var(--space-xs) 0 0 0;
 											"
 										>
 											<!-- Phase 38 (D-19/D-20): descriptor_hint has no independently stored
@@ -894,10 +893,10 @@
 										</div>
 									</div>
 								</td>
-								<td style="padding: 8px; font-size: 14px; color: #94a3b8; vertical-align: top; white-space: nowrap;">
+								<td style="padding: var(--space-sm); font-size: var(--font-size-caption); color: var(--color-text-secondary); vertical-align: top; white-space: nowrap;">
 									{speaker.utterance_count}
 								</td>
-								<td style="padding: 8px; vertical-align: top;">
+								<td style="padding: var(--space-sm); vertical-align: top;">
 									<!-- D-35a follow-up (operator, 2026-08-25, 49-UAT test 51): a published
 									     argument's Speakers card renders NO save affordance at all, rather than a
 									     disabled one. A Save button on a card that cannot be saved is meaningless —
@@ -911,20 +910,20 @@
 									{#if !speakersLocked}
 									{#if crossesSideBoundary(sideBucket(speaker.side), speakerSideById[speaker.participant_id])}
 										{#if sideConfirming[speaker.participant_id]}
-											<div style="display: flex; gap: 8px;">
+											<div style="display: flex; gap: var(--space-sm);">
 												<button
 													form="speaker-side-{speaker.participant_id}"
 													type="submit"
 													disabled={speakersLocked || savingSpeakerId === speaker.participant_id || speakerSideById[speaker.participant_id] === 'UNKNOWN'}
 													style="
-														min-height: 36px;
-														padding: 8px 16px;
-														background-color: #1e293b;
-														border: 1px solid #93c5fd;
+														min-height: var(--touch-target-dense);
+														padding: var(--space-sm) var(--space-lg);
+														background-color: var(--color-surface);
+														border: 1px solid var(--color-accent);
 														border-radius: 6px;
-														font-size: 14px;
-														font-weight: 400;
-														color: #e2e8f0;
+														font-size: var(--font-size-caption);
+														font-weight: var(--font-weight-regular);
+														color: var(--color-text-primary);
 														cursor: {speakersLocked || savingSpeakerId === speaker.participant_id || speakerSideById[speaker.participant_id] === 'UNKNOWN' ? 'not-allowed' : 'pointer'};
 														opacity: {speakersLocked || savingSpeakerId === speaker.participant_id || speakerSideById[speaker.participant_id] === 'UNKNOWN' ? 0.7 : 1};
 														white-space: nowrap;
@@ -936,14 +935,14 @@
 													type="button"
 													onclick={() => { sideConfirming[speaker.participant_id] = false; }}
 													style="
-														min-height: 36px;
-														padding: 8px 16px;
+														min-height: var(--touch-target-dense);
+														padding: var(--space-sm) var(--space-lg);
 														background: transparent;
-														border: 1px solid #334155;
+														border: 1px solid var(--color-border);
 														border-radius: 6px;
-														font-size: 14px;
-														font-weight: 400;
-														color: #94a3b8;
+														font-size: var(--font-size-caption);
+														font-weight: var(--font-weight-regular);
+														color: var(--color-text-secondary);
 														cursor: pointer;
 														white-space: nowrap;
 													"
@@ -957,14 +956,14 @@
 												disabled={speakersLocked}
 												onclick={() => { sideConfirming[speaker.participant_id] = true; }}
 												style="
-													min-height: 36px;
-													padding: 8px 16px;
-													background-color: #1e293b;
-													border: 1px solid #93c5fd;
+													min-height: var(--touch-target-dense);
+													padding: var(--space-sm) var(--space-lg);
+													background-color: var(--color-surface);
+													border: 1px solid var(--color-accent);
 													border-radius: 6px;
-													font-size: 14px;
-													font-weight: 400;
-													color: #e2e8f0;
+													font-size: var(--font-size-caption);
+													font-weight: var(--font-weight-regular);
+													color: var(--color-text-primary);
 													cursor: {speakersLocked ? 'not-allowed' : 'pointer'};
 													opacity: {speakersLocked ? 0.7 : 1};
 													white-space: nowrap;
@@ -979,14 +978,14 @@
 											type="submit"
 											disabled={speakersLocked || savingSpeakerId === speaker.participant_id || speakerSideById[speaker.participant_id] === 'UNKNOWN'}
 											style="
-												min-height: 36px;
-												padding: 8px 16px;
-												background-color: #1e293b;
-												border: 1px solid #93c5fd;
+												min-height: var(--touch-target-dense);
+												padding: var(--space-sm) var(--space-lg);
+												background-color: var(--color-surface);
+												border: 1px solid var(--color-accent);
 												border-radius: 6px;
-												font-size: 14px;
-												font-weight: 400;
-												color: #e2e8f0;
+												font-size: var(--font-size-caption);
+												font-weight: var(--font-weight-regular);
+												color: var(--color-text-primary);
 												cursor: {speakersLocked || savingSpeakerId === speaker.participant_id || speakerSideById[speaker.participant_id] === 'UNKNOWN' ? 'not-allowed' : 'pointer'};
 												opacity: {speakersLocked || savingSpeakerId === speaker.participant_id || speakerSideById[speaker.participant_id] === 'UNKNOWN' ? 0.7 : 1};
 												white-space: nowrap;
@@ -1008,15 +1007,15 @@
 					<p
 						role="alert"
 						style="
-							color: #ef4444;
-							font-size: 14px;
-							font-weight: 400;
-							margin: 8px 0 0 0;
+							color: var(--color-destructive);
+							font-size: var(--font-size-caption);
+							font-weight: var(--font-weight-regular);
+							margin: var(--space-sm) 0 0 0;
 						"
 					>{form.roleError}</p>
 				{/if}
 			{:else}
-				<p style="font-size: 14px; color: #94a3b8; margin: 0;">
+				<p style="font-size: var(--font-size-caption); color: var(--color-text-secondary); margin: 0;">
 					No speakers recorded for this argument.
 				</p>
 			{/if}
@@ -1024,8 +1023,8 @@
 
 		<!-- Danger Zone — argument delete section (ADMIN-01, D-03) -->
 		<!-- Last card on the page per UI-SPEC Layout Contract (delete section position). -->
-		<div style="background-color: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 24px; margin-bottom: 24px; margin-top: 16px;">
-			<h2 style="font-size: 20px; font-weight: 600; color: #e2e8f0; margin: 0 0 16px 0; line-height: 1.2;">
+		<div style="background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; padding: var(--space-xl); margin-bottom: var(--space-xl); margin-top: var(--space-lg);">
+			<h2 style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-lg) 0; line-height: 1.2;">
 				Danger Zone
 			</h2>
 
@@ -1033,7 +1032,7 @@
 				{#if deleteConfirming}
 					<!-- State 2: Two-button row — replaces delete button in-place (D-02) -->
 					<!-- No layout shift; same row height as the initial button. -->
-					<div style="display: flex; gap: 8px;">
+					<div style="display: flex; gap: var(--space-sm);">
 						<form
 							method="POST"
 							action="?/delete"
@@ -1049,7 +1048,7 @@
 							<button
 								type="submit"
 								disabled={deleteSubmitting}
-								style="display: block; width: 100%; min-height: 44px; background: transparent; border: 1px solid #ef4444; border-radius: 6px; font-size: 16px; font-weight: 600; color: #ef4444; cursor: {deleteSubmitting ? 'not-allowed' : 'pointer'}; opacity: {deleteSubmitting ? 0.7 : 1};"
+								style="display: block; width: 100%; min-height: var(--touch-target); background: transparent; border: 1px solid var(--color-destructive); border-radius: 6px; font-size: var(--font-size-body); font-weight: var(--font-weight-semibold); color: var(--color-destructive); cursor: {deleteSubmitting ? 'not-allowed' : 'pointer'}; opacity: {deleteSubmitting ? 0.7 : 1};"
 							>
 								{deleteSubmitting ? 'Deleting…' : 'Confirm delete'}
 							</button>
@@ -1057,7 +1056,7 @@
 						<button
 							type="button"
 							onclick={() => { deleteConfirming = false; }}
-							style="flex: 1; min-height: 44px; background: transparent; border: 1px solid #334155; border-radius: 6px; font-size: 16px; font-weight: 400; color: #94a3b8; cursor: pointer;"
+							style="flex: 1; min-height: var(--touch-target); background: transparent; border: 1px solid var(--color-border); border-radius: 6px; font-size: var(--font-size-body); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); cursor: pointer;"
 						>
 							Cancel
 						</button>
@@ -1067,7 +1066,7 @@
 					<button
 						type="button"
 						onclick={() => { deleteConfirming = true; }}
-						style="display: block; width: 100%; min-height: 44px; background: transparent; border: 1px solid #ef4444; border-radius: 6px; font-size: 16px; font-weight: 600; color: #ef4444; cursor: pointer;"
+						style="display: block; width: 100%; min-height: var(--touch-target); background: transparent; border: 1px solid var(--color-destructive); border-radius: 6px; font-size: var(--font-size-body); font-weight: var(--font-weight-semibold); color: var(--color-destructive); cursor: pointer;"
 					>
 						Delete argument
 					</button>
@@ -1077,7 +1076,7 @@
 				{#if form?.deleteError}
 					<p
 						role="alert"
-						style="color: #ef4444; font-size: 14px; font-weight: 400; margin: 8px 0 0 0;"
+						style="color: var(--color-destructive); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); margin: var(--space-sm) 0 0 0;"
 					>{form.deleteError}</p>
 				{/if}
 			{:else}
@@ -1085,15 +1084,15 @@
 				<button
 					disabled
 					aria-describedby="delete-tip"
-					style="display: block; width: 100%; min-height: 44px; background: transparent; border: 1px solid #334155; border-radius: 6px; font-size: 16px; font-weight: 600; color: #94a3b8; cursor: not-allowed; opacity: 0.7;"
+					style="display: block; width: 100%; min-height: var(--touch-target); background: transparent; border: 1px solid var(--color-border); border-radius: 6px; font-size: var(--font-size-body); font-weight: var(--font-weight-semibold); color: var(--color-text-secondary); cursor: not-allowed; opacity: 0.7;"
 				>
 					Delete argument
 				</button>
 				<p
 					id="delete-tip"
-					style="font-size: 14px; color: #94a3b8; margin-top: 8px; text-align: center;"
+					style="font-size: var(--font-size-caption); color: var(--color-text-secondary); margin-top: var(--space-sm); text-align: center;"
 				>
-					Published and unpublished arguments cannot be deleted. Only drafts can be removed.
+					Published arguments cannot be deleted.
 				</p>
 			{/if}
 		</div>

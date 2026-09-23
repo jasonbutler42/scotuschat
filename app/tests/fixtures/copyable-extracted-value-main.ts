@@ -1,5 +1,5 @@
 import { createClassComponent } from 'svelte/legacy';
-import CopyableExtractedValue from '../../src/lib/components/CopyableExtractedValue.svelte';
+import CopyableExtractedValue from '../../src/lib/admin/CopyableExtractedValue.svelte';
 
 type Deferred = { resolve: () => void; reject: (reason?: unknown) => void };
 const writes: Deferred[] = [];

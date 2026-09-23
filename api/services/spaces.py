@@ -4,8 +4,8 @@ DO Spaces upload service.
 Provides a boto3 S3 client configured for DigitalOcean Spaces and helpers
 for uploading PDF bytes and image bytes to a Spaces bucket.
 
-Used by the Plan 02 file upload route (PIPE-13) and the Phase 12 photo upload
-endpoint (PADM-01). Credentials come from api/core/config.py settings fields
+Used by the Plan 02 file upload route and the Phase 12 photo upload
+endpoint. Credentials come from api/core/config.py settings fields
 (DO Spaces block) — FastAPI service only, never the SvelteKit service.
 """
 

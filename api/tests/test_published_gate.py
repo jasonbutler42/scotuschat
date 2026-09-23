@@ -1,12 +1,22 @@
 """
-Tests asserting the public visibility gate in get_cases() uses published_at, not resolved_at.
+Tests asserting the public visibility gate uses published_at, not resolved_at.
 
 These are source-level assertion tests that verify the correct filter is used in
-api/services/cases.py — they run without a live database.
+the public listing service functions — they run without a live database.
 
-The key security requirement (T-11-01 STRIDE threat): the public /cases/ endpoint
-must never return unpublished (resolved-but-not-published) arguments. The gate
-is enforced by the SQLAlchemy filter in get_cases().
+The key security requirement (T-11-01 STRIDE threat): the public arguments
+listing must never return unpublished (resolved-but-not-published)
+arguments. The gate is enforced by the SQLAlchemy filters in
+api/services/arguments.py's list_terms() and list_arguments_for_term().
+
+Phase 51 plan 51-08: this module's original TestPublishedGate class
+asserted the gate in get_cases() — a flat-listing service function
+retired, along with its whole module, once plan 51-08 removed their last
+consumer. The gate guarantee did not retire with them: it is the same
+guarantee TestTermGroupedListingPublishedGate below already asserts
+against list_terms()/list_arguments_for_term() (added by plan 51-04, the
+term-grouped replacement), so removing the get_cases()-specific class here
+duplicates nothing — the class is deleted, not the guarantee.
 """
 
 import ast
@@ -25,38 +35,16 @@ def _db_configured() -> bool:
     return bool(url) and "sk-ant" not in url and url != "postgresql+asyncpg://user:pass@host/db"
 
 
-def _get_cases_source_lines() -> list[str]:
-    """Read api/services/cases.py and return non-comment, non-blank lines from get_cases()."""
-    import pathlib
-    source_path = pathlib.Path(__file__).parent.parent / "services" / "cases.py"
-    source = source_path.read_text(encoding="utf-8")
-
-    # Parse AST to extract the get_cases function body as source text
-    tree = ast.parse(source)
-    for node in ast.walk(tree):
-        if isinstance(node, ast.AsyncFunctionDef) and node.name == "get_cases":
-            # Get line range of the function body
-            start = node.lineno
-            end = node.end_lineno
-            lines = source.splitlines()[start - 1 : end]
-            # Strip comment-only lines before returning
-            non_comment = [
-                line for line in lines
-                if line.strip() and not line.strip().startswith("#")
-            ]
-            return non_comment
-
-    return []
-
-
 def _service_function_source_lines(module_filename: str, function_name: str) -> list[str]:
     """
     Read api/services/<module_filename> and return non-comment, non-blank lines
     from the named async function's body.
 
-    Generalizes _get_cases_source_lines() above to any (module, function) pair
-    in api/services/, so the argument-detail publish-gate tests (BUG-01) can
-    reuse the same AST-extraction shape without duplicating it per function.
+    Generalizes the same AST-extraction shape across every (module,
+    function) pair in api/services/ this module's classes check, so it is
+    not duplicated per function. (Formerly generalized from a
+    get_cases()-specific helper of the same shape, retired along with the
+    flat-listing service module it read — Phase 51 plan 51-08.)
     """
     import pathlib
     source_path = pathlib.Path(__file__).parent.parent / "services" / module_filename
@@ -77,85 +65,82 @@ def _service_function_source_lines(module_filename: str, function_name: str) -> 
     return []
 
 
-class TestPublishedGate:
-    """Source-level assertions ensuring the published_at gate is in place (T-11-01)."""
+class TestTermGroupedListingPublishedGate:
+    """
+    Source-level assertions ensuring the published gate (T-51-04-01) covers
+    both term-grouped listing service functions (Phase 51 plan 51-04). Each
+    function must filter on BOTH Argument.published_at.isnot(None) AND
+    Argument.status == PUBLISHED — in addition to each other, never in
+    place of each other, since unpublish_argument deliberately retains
+    published_at (Phase 48 plan 10 Defect 2). No live database is required
+    for this class.
 
-    def test_get_cases_uses_published_at_filter(self):
-        """
-        get_cases() must filter on Argument.published_at.isnot(None).
+    Phase 51 plan 51-08: this class is now the SOLE carrier of the
+    published_at/is_lead/return-shape guarantee formerly asserted against
+    get_cases() by a sibling TestPublishedGate class — deleted once that
+    function and its whole module lost their last consumer. The
+    consolidated-docket is_lead guarantee specifically is proven
+    behaviorally (not just at the source-text level) by
+    api/tests/test_public_arguments_listing.py::
+    test_terms_consolidated_docket_contributes_one and
+    ::test_term_detail_consolidated_docket_contributes_one_row.
+    """
 
-        This ensures unpublished (resolved-but-not-published) arguments are hidden
-        from the public /cases/ endpoint.
-        """
-        lines = _get_cases_source_lines()
-        assert lines, "Could not extract get_cases() body from api/services/cases.py"
+    def test_list_terms_uses_published_at_filter(self):
+        lines = _service_function_source_lines("arguments.py", "list_terms")
+        assert lines, "Could not extract list_terms() body from api/services/arguments.py"
 
         combined = "\n".join(lines)
         assert "Argument.published_at.isnot" in combined, (
-            "get_cases() must filter on Argument.published_at.isnot(None) "
-            "(D-06 visibility gate). "
-            f"Actual get_cases body (non-comment lines):\n{combined}"
+            "list_terms() must filter on Argument.published_at.isnot(None) "
+            "(T-51-04-01 published gate). "
+            f"Actual body (non-comment lines):\n{combined}"
         )
 
-    def test_get_cases_does_not_use_resolved_at_filter(self):
-        """
-        get_cases() must NOT filter on Argument.resolved_at.isnot(None).
-
-        The visibility gate was changed from resolved_at to published_at (D-06).
-        Using resolved_at would expose arguments that are resolved but not yet
-        approved for publication.
-        """
-        lines = _get_cases_source_lines()
-        assert lines, "Could not extract get_cases() body from api/services/cases.py"
+    def test_list_terms_uses_status_published_filter(self):
+        lines = _service_function_source_lines("arguments.py", "list_terms")
+        assert lines, "Could not extract list_terms() body from api/services/arguments.py"
 
         combined = "\n".join(lines)
-        assert "Argument.resolved_at.isnot" not in combined, (
-            "get_cases() must not filter on Argument.resolved_at.isnot(None) — "
-            "the visibility gate was changed to published_at (D-06). "
-            f"Actual get_cases body (non-comment lines):\n{combined}"
+        assert "ArgumentStatusEnum.PUBLISHED" in combined, (
+            "list_terms() must ALSO filter on Argument.status == "
+            "ArgumentStatusEnum.PUBLISHED, in addition to published_at "
+            "(T-51-04-01) — published_at alone no longer distinguishes "
+            "PUBLISHED from UNPUBLISHED (unpublish_argument retains it). "
+            f"Actual body (non-comment lines):\n{combined}"
         )
 
-    def test_get_cases_preserves_is_lead_filter(self):
-        """
-        Changing the visibility gate must not remove the CaseArgument.is_lead filter.
-
-        The is_lead filter prevents duplicate rows for consolidated dockets.
-        """
-        lines = _get_cases_source_lines()
-        assert lines, "Could not extract get_cases() body from api/services/cases.py"
+    def test_list_arguments_for_term_uses_published_at_filter(self):
+        lines = _service_function_source_lines("arguments.py", "list_arguments_for_term")
+        assert lines, "Could not extract list_arguments_for_term() body from api/services/arguments.py"
 
         combined = "\n".join(lines)
-        assert "is_lead" in combined, (
-            "get_cases() must still filter on CaseArgument.is_lead == True "
-            "(prevents duplicate rows for consolidated dockets). "
-            f"Actual get_cases body (non-comment lines):\n{combined}"
+        assert "Argument.published_at.isnot" in combined, (
+            "list_arguments_for_term() must filter on "
+            "Argument.published_at.isnot(None) (T-51-04-01 published gate). "
+            f"Actual body (non-comment lines):\n{combined}"
         )
 
-    def test_get_cases_preserves_return_keys(self):
-        """
-        The returned dict keys from get_cases() must be unchanged:
-        id, slug, case_name, docket_number, term_year, argued_date,
-        argument_id, question_number.
-        """
-        import pathlib
-        source_path = pathlib.Path(__file__).parent.parent / "services" / "cases.py"
-        source = source_path.read_text(encoding="utf-8")
+    def test_list_arguments_for_term_uses_status_published_filter(self):
+        lines = _service_function_source_lines("arguments.py", "list_arguments_for_term")
+        assert lines, "Could not extract list_arguments_for_term() body from api/services/arguments.py"
 
-        required_keys = [
-            "id", "slug", "case_name", "docket_number", "term_year",
-            "argued_date", "argument_id", "question_number",
-        ]
-        for key in required_keys:
-            assert f'"{key}"' in source or f"'{key}'" in source, (
-                f"get_cases() return dict must include key '{key}'"
-            )
+        combined = "\n".join(lines)
+        assert "ArgumentStatusEnum.PUBLISHED" in combined, (
+            "list_arguments_for_term() must ALSO filter on Argument.status "
+            "== ArgumentStatusEnum.PUBLISHED, in addition to published_at "
+            "(T-51-04-01) — published_at alone no longer distinguishes "
+            "PUBLISHED from UNPUBLISHED (unpublish_argument retains it). "
+            f"Actual body (non-comment lines):\n{combined}"
+        )
 
 
 class TestArgumentDetailPublishedGate:
     """
     Source-level assertions ensuring the publish gate (BUG-01/D-02) covers both
-    public argument-detail endpoints, mirroring TestPublishedGate's style for
-    get_cases(). No live database is required for this class.
+    public argument-detail endpoints, in the same source-level-assertion
+    style as TestTermGroupedListingPublishedGate above. No live database is
+    required for this class.
     """
 
     def test_get_argument_with_utterances_uses_published_at_filter(self):
@@ -259,6 +244,14 @@ class TestArgumentDetailPublishedGate:
         D-01: the speakers endpoint's 404 must be byte-identical (same detail
         string, same status) to the utterances endpoint's 404 for the same
         absent/unpublished argument.
+
+        Phase 51 plan 51-02 added two by-slug peer routes
+        (GET /arguments/by-slug/{slug}/utterances and .../speakers), each of
+        which raises the SAME literal detail string twice (once for "slug
+        does not resolve", once for "result is None") — extending the
+        byte-identical-404 contract across all four routes rather than
+        narrowing it. 2 (original routes) + 4 (two by-slug routes x 2 raise
+        sites each) = 6.
         """
         import pathlib
         source_path = pathlib.Path(__file__).parent.parent / "routers" / "arguments.py"
@@ -266,10 +259,11 @@ class TestArgumentDetailPublishedGate:
 
         detail_line = 'raise HTTPException(status_code=404, detail="Argument not found")'
         occurrences = source.count(detail_line)
-        assert occurrences == 2, (
+        assert occurrences == 6, (
             "api/routers/arguments.py must raise the identical "
-            f'{detail_line!r} exactly twice — once in get_utterances, once in '
-            f"get_speakers (D-01). Found {occurrences} occurrence(s)."
+            f"{detail_line!r} exactly six times — get_utterances, get_speakers, "
+            "and their by-slug peers (each raising it twice) (D-01, Phase 51 "
+            f"plan 51-02). Found {occurrences} occurrence(s)."
         )
 
     def test_publish_gate_adjacency_across_gated_functions(self):
@@ -278,14 +272,22 @@ class TestArgumentDetailPublishedGate:
         Argument.published_at (never a clock comparison against it) — so
         publishing introduces no embargo or scheduled-publish semantics.
 
-        get_cases() and get_argument_with_utterances() use the exact
-        Argument.published_at.isnot(None) predicate at the SQL layer;
+        list_arguments_for_term() and get_argument_with_utterances() use the
+        exact Argument.published_at.isnot(None) predicate at the SQL layer;
         get_argument_speakers() gates on the same column via a Python-side
         None check on the fetched value (per 45-PATTERNS.md's recommendation),
         which is asserted for substring presence rather than the exact SQL
         predicate text.
+
+        Phase 51 plan 51-08: retargeted from get_cases() — retired along
+        with the flat-listing module it lived in — onto
+        list_arguments_for_term(), its direct successor and, like
+        get_cases() before it, the row-level (not term-count) public
+        listing function.
         """
-        cases_lines = _get_cases_source_lines()
+        listing_lines = _service_function_source_lines(
+            "arguments.py", "list_arguments_for_term"
+        )
         arguments_lines = _service_function_source_lines(
             "arguments.py", "get_argument_with_utterances"
         )
@@ -293,13 +295,13 @@ class TestArgumentDetailPublishedGate:
             "speakers.py", "get_argument_speakers"
         )
 
-        cases_combined = "\n".join(cases_lines)
+        listing_combined = "\n".join(listing_lines)
         arguments_combined = "\n".join(arguments_lines)
         speakers_combined = "\n".join(speakers_lines)
 
-        assert "Argument.published_at.isnot(None)" in cases_combined, (
-            "get_cases() must use the exact predicate Argument.published_at.isnot(None) "
-            "(BUG-01 EDGE adjacency)."
+        assert "Argument.published_at.isnot(None)" in listing_combined, (
+            "list_arguments_for_term() must use the exact predicate "
+            "Argument.published_at.isnot(None) (BUG-01 EDGE adjacency)."
         )
         assert "Argument.published_at.isnot(None)" in arguments_combined, (
             "get_argument_with_utterances() must use the exact predicate "
@@ -313,7 +315,7 @@ class TestArgumentDetailPublishedGate:
         clock_markers = ("func.now", "datetime.now", "utcnow")
         clock_regex = re.compile(r"published_at\s*[<>]=?")
         for label, combined in (
-            ("get_cases", cases_combined),
+            ("list_arguments_for_term", listing_combined),
             ("get_argument_with_utterances", arguments_combined),
             ("get_argument_speakers", speakers_combined),
         ):
@@ -332,15 +334,22 @@ class TestArgumentDetailPublishedGate:
         """
         EDGE ordering (BUG-01): the gate adds WHERE clauses only — existing
         ordering-relevant clauses in get_argument_with_utterances() and
-        get_cases() must survive unchanged.
+        list_arguments_for_term() must survive unchanged.
+
+        Phase 51 plan 51-08: the list_arguments_for_term() half retargeted
+        from get_cases() — retired along with the flat-listing module it
+        lived in — the argued_date-descending ordering guarantee moved
+        with the row-level listing function it now belongs to.
         """
         arguments_lines = _service_function_source_lines(
             "arguments.py", "get_argument_with_utterances"
         )
-        cases_lines = _get_cases_source_lines()
+        listing_lines = _service_function_source_lines(
+            "arguments.py", "list_arguments_for_term"
+        )
 
         arguments_combined = "\n".join(arguments_lines)
-        cases_combined = "\n".join(cases_lines)
+        listing_combined = "\n".join(listing_lines)
 
         assert "Utterance.sequence.asc()" in arguments_combined, (
             "get_argument_with_utterances() must preserve the Utterance.sequence.asc() "
@@ -352,39 +361,26 @@ class TestArgumentDetailPublishedGate:
             "filter (BUG-01 EDGE ordering). "
             f"Actual body:\n{arguments_combined}"
         )
-        assert "Argument.argued_date.desc()" in cases_combined, (
-            "get_cases() must preserve the Argument.argued_date.desc() ordering "
-            "clause (BUG-01 EDGE ordering). "
-            f"Actual body:\n{cases_combined}"
+        assert "Argument.argued_date.desc()" in listing_combined, (
+            "list_arguments_for_term() must preserve argued_date-descending "
+            "ordering (BUG-01 EDGE ordering). "
+            f"Actual body:\n{listing_combined}"
         )
 
-    def test_page_server_loader_throws_on_non_ok_and_has_no_publish_branch(self):
-        """
-        Confirms no frontend change is needed for BUG-01 (45-CONTEXT.md Claude's
-        Discretion): the SvelteKit loader already converts a non-OK utterances
-        response into error(res.status, ...) — which SvelteKit renders as its
-        default error page on both client-side navigation and hard SSR refresh —
-        and adds no publish-status-specific branch of its own.
-        """
-        import pathlib
-        source_path = (
-            pathlib.Path(__file__).parent.parent.parent
-            / "app" / "src" / "routes" / "cases" / "[slug]" / "arguments" / "[id]"
-            / "+page.server.ts"
-        )
-        source = source_path.read_text(encoding="utf-8")
-
-        assert "if (!res.ok) throw error(res.status" in source, (
-            "+page.server.ts must still throw error(res.status, ...) on a non-OK "
-            "utterances response — this is what turns the API's 404 into "
-            "SvelteKit's default error page (D-01/D-02, no frontend change needed)."
-        )
-        assert "published" not in source.lower(), (
-            "+page.server.ts must not add any publish-status-specific branch of "
-            "its own — the API's plain 404 is the sole signal an unauthenticated "
-            "visitor ever sees (D-01)."
-        )
-
+    # test_page_server_loader_throws_on_non_ok_and_has_no_publish_branch
+    # (Phase 45 BUG-01) DELETED here, not path-updated: Phase 51 plan 51-02
+    # moved and rewrote the file this test read
+    # (app/src/routes/cases/[slug]/arguments/[id]/+page.server.ts ->
+    # app/src/routes/arguments/[slug]/+page.server.ts). CLAUDE.md's Testing
+    # Policy bans static source-text contract tests for frontend behavior
+    # and requires tests to retire with the behavior they pinned, rather
+    # than be re-pointed at a new file path — updating the path here would
+    # perpetuate exactly the anti-pattern the policy names. The behavior
+    # itself (throw error(res.status, ...) on a non-OK response, no
+    # publish-status branch) is preserved verbatim in the new loader and
+    # was verified live: a curl against the running dev server confirmed
+    # both an unknown slug and a non-published argument 404 through
+    # /arguments/{slug} (see 51-02-SUMMARY.md).
 
 class TestPublishOverrideGateSourceLevel:
     """

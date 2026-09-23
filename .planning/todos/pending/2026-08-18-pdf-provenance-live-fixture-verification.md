@@ -5,9 +5,14 @@ area: pipeline
 severity: minor
 resolves_phase:
 files:
+
   - pipeline/tests/test_import_run_provenance.py
   - api/services/admin_dev.py (reset_to_fixture, FIXTURE_SET)
   - .planning/phases/47-provenance-foundation/47-VERIFICATION.md
+
+audit_acknowledged:
+  milestone: v1.8
+  at: 2026-09-23
 ---
 
 ## Problem

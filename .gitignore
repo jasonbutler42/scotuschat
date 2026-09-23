@@ -60,3 +60,19 @@ Thumbs.db
 
 # Playwright MCP run artifacts (snapshots, console logs, screenshots)
 .playwright-mcp/
+
+# Local tool/machine state — per-developer, never shared
+.claude/
+.codex/
+.gsd/
+.planning/milestone.lock
+.planning/.workstreams-backup-*/
+
+# Operator-uploaded PDFs — same immutability rule as data/pdfs/
+data/uploads/
+
+# Pipeline dry-run output — regenerable, never a source of truth
+data/*_dry_run.json
+
+# Working screenshots kept at repo root (design reference, not source)
+/*.png

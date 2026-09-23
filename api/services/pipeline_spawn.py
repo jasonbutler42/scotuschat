@@ -3,13 +3,13 @@ Fire-and-forget pipeline subprocess spawn utility.
 
 Launches a pipeline step as a detached OS process using the current venv
 interpreter. stdout/stderr are discarded (DEVNULL) — all meaningful state
-goes to the DB via the pipeline step's own DB writes (D-02, D-03).
+goes to the DB via the pipeline step's own DB writes.
 
 Never await subprocess completion — that would block the FastAPI event loop
-and defeat the fire-and-poll pattern (D-01). Use Popen and return immediately.
+and defeat the fire-and-poll pattern. Use Popen and return immediately.
 
 Security: shell=False (default) — args are typed (int job_id, validated str
-url/key) and never interpolated into a shell string (T-07-02).
+url/key) and never interpolated into a shell string.
 """
 
 import subprocess

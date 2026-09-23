@@ -1,4 +1,4 @@
-"""Admin operator review-queue routes (Phase 49).
+"""Admin operator review-queue routes.
 
 Modeled on `api/routers/admin_dev.py`'s small standalone-router shape:
 prefix + router-level `verify_admin_token` dependency (imported from
@@ -44,11 +44,11 @@ async def get_review_queue_arguments(
     review_state: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
 ):
-    """Return every argument needing operator attention (D-05).
+    """Return every argument needing operator attention.
 
     Returns an empty list (never 404) when nothing currently needs review.
 
-    ``status``/``tier``/``review_state`` (D-07) are optional filters
+    ``status``/``tier``/``review_state`` are optional filters
     passed straight through to the service — validation is the service's
     own allow-list (an unrecognised value applies no filter), matching
     ``list_arguments``'s established router shape.
@@ -63,7 +63,7 @@ async def get_review_queue_people(
     review_state: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
 ):
-    """Return every Person needing operator attention (D-02).
+    """Return every Person needing operator attention.
 
     Returns an empty list (never 404) when nothing currently needs review.
     """
@@ -72,7 +72,7 @@ async def get_review_queue_people(
 
 @router.get("/stats", response_model=ReviewQueueStats)
 async def get_review_queue_stats(db: AsyncSession = Depends(get_db)):
-    """Dedicated COUNT-based summary for the dashboard StatCard (D-30)."""
+    """Dedicated COUNT-based summary for the dashboard StatCard."""
     return await admin_review_service.get_review_queue_stats(db)
 
 

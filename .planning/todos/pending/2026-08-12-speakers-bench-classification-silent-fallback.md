@@ -4,7 +4,12 @@ title: Bench/advocate classification has a silent wrong-label fallback if Argume
 area: api
 priority: low
 files:
+
   - api/services/speakers.py
+
+audit_acknowledged:
+  milestone: v1.8
+  at: 2026-09-23
 ---
 
 ## Problem

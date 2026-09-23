@@ -1,21 +1,21 @@
 """
 Pipeline import-justices command.
 
-Step Zero (D-01) of Phase 29's historical corpus import: loads the historical
+Step Zero of Phase 29's historical corpus import: loads the historical
 Supreme Court justices tenure CSV and seeds the full bench roster.
 
 - Upgrades the 13 existing `pipeline/commands/seed_aliases.py` Person rows in
   place (`is_justice=True` + `court_tenures` backfill) rather than creating
-  duplicates (D-02/D-03). `role_id` and `speaker_alias` rows tied to those
+  duplicates. `role_id` and `speaker_alias` rows tied to those
   13 people are never touched.
 - Creates the remaining historical justices with tenure + appointment data.
 - Justices appearing in both the CSV's Chief and Associate Justice sections
-  (Rehnquist, Rutledge) get both `court_tenures` rows auto-created (D-04).
+  (Rehnquist, Rutledge) get both `court_tenures` rows auto-created.
 - Idempotent — safe to re-run without creating duplicate people or tenures.
 
-Dedup key: exact `Person.full_name` string match (D-02) — same precedent as
+Dedup key: exact `Person.full_name` string match — same precedent as
 `seed_aliases.py`. `Person.oyez_speaker_id` is left NULL here; the later
-corpus importer (Plan 05/06) backfills it (D-11).
+corpus importer (Plan 05/06) backfills it.
 
 Usage:
     python -m pipeline import-justices
@@ -28,20 +28,24 @@ from pathlib import Path
 from dateutil import parser as dateutil_parser
 from sqlalchemy import select
 
+from api.domain.authority import WriteDecision
 from api.domain.person_names import prepare_name_provenance, prepare_person_name
 from api.models.models import (
     CourtTenure,
+    ImportMethod,
+    ImportSource,
     OFFICE_ASSOCIATE,
     OFFICE_CHIEF,
     Person,
     ReviewState,
 )
+from api.services.admin_review import apply_person_value_change
 from pipeline.db import get_session
 
 # Phase 39 (D-01 through D-07): CSV "Reason Left" raw cell value -> canonical
 # court_tenures.reason_left value (or None for an open tenure / unrecognised
 # vocabulary). Verified per-value counts against the real
-# data/corpus/supreme_court_justices_sections.csv during planning (39-02-PLAN.md
+# data/corpus/supreme_court_justices_sections.csv during planning (39
 # <verified_csv_facts>, re-censused with this file's own _iter_csv_rows()
 # section/header logic, not a naive line-based scan):
 #
@@ -76,7 +80,7 @@ _EXTRACTION_SOURCE = "import_justices_csv"
 # Defaults
 # ---------------------------------------------------------------------------
 
-# Matches the data/corpus/ scaffolding created in Plan 01 (D-20/D-21) — the
+# Matches the data/corpus/ scaffolding created in Plan 01 — the
 # operator copies the source CSV here locally; it is gitignored, not tracked.
 DEFAULT_CSV_PATH = Path("data/corpus/supreme_court_justices_sections.csv")
 
@@ -111,7 +115,7 @@ def reconstruct_full_name(first: str, middle: str, last: str, suffix: str) -> st
     """
     Reconstruct a Person.full_name string from CSV-shaped name parts.
 
-    Phase 38 (D-03/D-05): delegates to the shared
+    Delegates to the shared
     `api.domain.person_names.prepare_person_name` derivation rule instead of
     an independent local join — "{first} {middle} {last}" (middle omitted
     entirely, no extra space, when blank), followed by ", {suffix}" only
@@ -137,7 +141,7 @@ def reconstruct_full_name(first: str, middle: str, last: str, suffix: str) -> st
 def _build_extraction_metadata(full_name: str) -> dict:
     """
     Build a `Person.provenance_metadata` envelope for a CSV-derived
-    justice row (D-14, D-18), matching the exact shape
+    justice row, matching the exact shape
     alembic/versions/0022_person_name_authority.py's legacy backfill already
     persists — {source, raw, confidence, reason, auto_applied} — so both the
     migration and this import path write one consistent, mergeable audit
@@ -204,9 +208,9 @@ async def run_import_justices_csv(args) -> None:
     Upgrades the 13 existing seed_aliases.py Person rows in place
     (is_justice=True + court_tenures backfill, D-03), creates the remaining
     justices with tenure + appointment data, and auto-creates both
-    court_tenures rows for justices elevated from Associate to Chief (D-04).
+    court_tenures rows for justices elevated from Associate to Chief.
 
-    Idempotent — dedups people by exact Person.full_name (D-02) and tenures
+    Idempotent — dedups people by exact Person.full_name and tenures
     by (person_id, office, start_date); safe to re-run any number of times.
 
     Args:
@@ -239,7 +243,7 @@ async def run_import_justices_csv(args) -> None:
                 continue
 
             full_name = reconstruct_full_name(first, middle, last, suffix)
-            # Phase 38 (D-03): the row's structured parts, normalized through
+            # The row's structured parts, normalized through
             # the same shared helper `reconstruct_full_name` now delegates
             # to — used below for both the brand-new-row assignment and the
             # existing-row blank-only prefill.
@@ -248,7 +252,7 @@ async def run_import_justices_csv(args) -> None:
             )
             extraction_metadata = _build_extraction_metadata(full_name)
 
-            # Phase 39 (D-04/D-05): read here, per-row, before the person
+            # Read here, per-row, before the person
             # branch runs — birthdate is consumed by both the upgrade and
             # create branches below.
             birthdate = _parse_optional_date(row.get("Birthdate", ""))
@@ -271,26 +275,85 @@ async def run_import_justices_csv(args) -> None:
             person = result.scalar_one_or_none()
 
             if person is not None:
-                # D-03: upgrade in place — is_justice + tenures only. Never
+                # Upgrade in place — is_justice + tenures only. Never
                 # touch role_id, aliases, or speaker_alias rows.
                 if not person.is_justice:
                     person.is_justice = True
                     people_upgraded += 1
-                # Phase 38 (D-16/T-38-11): blank-only prefill — never
-                # overwrite a part an operator has already saved. Each part
-                # is checked independently so a partially-completed row
-                # (e.g. an operator-added middle initial) still gets its
-                # remaining blank parts filled from this authoritative CSV
-                # row.
-                if person.first_name is None and prepared.first_name is not None:
-                    person.first_name = prepared.first_name
-                if person.middle_name is None and prepared.middle_name is not None:
-                    person.middle_name = prepared.middle_name
-                if person.last_name is None and prepared.last_name is not None:
-                    person.last_name = prepared.last_name
-                if person.name_suffix is None and prepared.name_suffix is not None:
-                    person.name_suffix = prepared.name_suffix
-                # Phase 39 (D-06): blank-only prefill for birthdate/death_date,
+                # Phase 50 (Task 3, D-21/D-22): each part now routes
+                # through the ONE authority gate (apply_person_value_change)
+                # instead of a raw blank-only Python assignment.
+                # incoming_source="seed" ranks with "corpus" in the ladder
+                # (authority_rank rule 3) — the correct rung for this tool.
+                # PD-13's gap-fill pre-check means the common case (a
+                # currently-blank part) is unchanged in effect: write, no
+                # discrepancy recorded. Only a part an operator has
+                # genuinely reviewed/edited (review_state carries that, not
+                # a bare non-None column value — D-22) newly refuses a
+                # disagreeing CSV value instead of relying on "the column
+                # happens to be non-None" as an implicit authority signal.
+                # A blank incoming part (CSV cell empty) is skipped
+                # entirely, same as the former `prepared.X is not None`
+                # guard — apply_person_value_change has no D-03 "no
+                # opinion" pre-check of its own, so a blank incoming value
+                # against a populated existing one must never reach it.
+                # Every gate call issues its own execution_options(
+                # synchronize_session=False) UPDATE, so the in-memory
+                # attribute is synced via a plain assignment on any
+                # accepted decision (mirrors import_convokit.py's
+                # _apply_extracted_name_provenance) -- a later reader of
+                # `person` in this same transaction must see the fresh
+                # value, not a stale pre-write one. Four explicit calls
+                # (not a loop) so each is independently visible in source.
+                if prepared.first_name is not None:
+                    decision = await apply_person_value_change(
+                        session,
+                        person=person,
+                        field="first_name",
+                        incoming_value=prepared.first_name,
+                        incoming_source=ImportSource.SEED.value,
+                        incoming_method=ImportMethod.DIRECT.value,
+                        import_run_id=None,
+                    )
+                    if decision in (WriteDecision.ACCEPT, WriteDecision.ACCEPT_AND_RECORD):
+                        setattr(person, "first_name", prepared.first_name)
+                if prepared.middle_name is not None:
+                    decision = await apply_person_value_change(
+                        session,
+                        person=person,
+                        field="middle_name",
+                        incoming_value=prepared.middle_name,
+                        incoming_source=ImportSource.SEED.value,
+                        incoming_method=ImportMethod.DIRECT.value,
+                        import_run_id=None,
+                    )
+                    if decision in (WriteDecision.ACCEPT, WriteDecision.ACCEPT_AND_RECORD):
+                        setattr(person, "middle_name", prepared.middle_name)
+                if prepared.last_name is not None:
+                    decision = await apply_person_value_change(
+                        session,
+                        person=person,
+                        field="last_name",
+                        incoming_value=prepared.last_name,
+                        incoming_source=ImportSource.SEED.value,
+                        incoming_method=ImportMethod.DIRECT.value,
+                        import_run_id=None,
+                    )
+                    if decision in (WriteDecision.ACCEPT, WriteDecision.ACCEPT_AND_RECORD):
+                        setattr(person, "last_name", prepared.last_name)
+                if prepared.name_suffix is not None:
+                    decision = await apply_person_value_change(
+                        session,
+                        person=person,
+                        field="name_suffix",
+                        incoming_value=prepared.name_suffix,
+                        incoming_source=ImportSource.SEED.value,
+                        incoming_method=ImportMethod.DIRECT.value,
+                        import_run_id=None,
+                    )
+                    if decision in (WriteDecision.ACCEPT, WriteDecision.ACCEPT_AND_RECORD):
+                        setattr(person, "name_suffix", prepared.name_suffix)
+                # Blank-only prefill for birthdate/death_date,
                 # same shape as the name-part prefills above — never overwrite
                 # a non-None operator-set value.
                 if person.birthdate is None and birthdate is not None:
@@ -299,17 +362,17 @@ async def run_import_justices_csv(args) -> None:
                 if person.death_date is None and death_date is not None:
                     person.death_date = death_date
                     people_death_dates_backfilled += 1
-                # Phase 38 (D-17), carried forward unchanged: every rerun
+                # Phase 38, carried forward unchanged: every rerun
                 # refreshes the extraction provenance envelope, regardless
                 # of whether any part was actually blank this time — the
                 # reference metadata always reflects the latest extraction
                 # pass.
                 person.provenance_metadata = extraction_metadata
                 # This row is now backed by confident, structured CSV data.
-                # Phase 49 (D-08, D-11, D-24): this is UNREVIEWED, not a
+                # This is UNREVIEWED, not a
                 # human-only operator review state — only a human action
                 # ever produces one; an importer must never mint one.
-                # CR-03 fix (49-REVIEW.md): an importer must also never
+                # An importer must also never
                 # ERASE a human-only review state. Every other field this
                 # branch touches is a blank-only prefill (never overwrite a
                 # part an operator has already saved) — mirroring
@@ -327,6 +390,9 @@ async def run_import_justices_csv(args) -> None:
                 ):
                     person.review_state = ReviewState.UNREVIEWED
             else:
+                # A CREATE, not an overwrite — there
+                # is no stored value to arbitrate, so this stays deliberately
+                # ungated (matching parse.py's participant seeding).
                 person = Person(
                     full_name=full_name,
                     first_name=prepared.first_name,
@@ -339,7 +405,7 @@ async def run_import_justices_csv(args) -> None:
                     provenance_metadata=extraction_metadata,
                     review_state=ReviewState.UNREVIEWED,
                     # oyez_speaker_id intentionally left NULL — the corpus
-                    # importer backfills it later (D-11).
+                    # importer backfills it later.
                 )
                 session.add(person)
                 await session.flush()
@@ -373,7 +439,7 @@ async def run_import_justices_csv(args) -> None:
                 await session.flush()
                 tenures_created += 1
             else:
-                # Phase 39 (D-06): the existing-tenure case previously
+                # The existing-tenure case previously
                 # silently no-op'd on every field. This is the one write it
                 # now performs, blank-only: fill reason_left only when the
                 # stored value is currently None and the resolved CSV value

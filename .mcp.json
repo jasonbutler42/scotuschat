@@ -1,0 +1,22 @@
+{
+  "mcpServers": {
+    "playwright": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@playwright/mcp@latest",
+        "--browser",
+        "chromium",
+        "--executable-path",
+        "/home/jason/.cache/ms-playwright/chromium-1228/chrome-linux64/chrome",
+        "--user-data-dir",
+        "/home/jason/scotuschat/project/.playwright-profile"
+      ],
+      "env": {
+        "LD_LIBRARY_PATH": "/home/jason/.local/lib/playwright-deps/usr/lib/x86_64-linux-gnu",
+        "PATH": "/home/jason/.nvm/versions/node/v24.18.0/bin:/usr/local/bin:/usr/bin:/bin"
+      }
+    }
+  }
+}

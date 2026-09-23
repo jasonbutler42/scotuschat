@@ -517,15 +517,39 @@ async def test_rerun_preserves_operator_edited_parts_blank_only_prefill(
     """
     Phase 38 (D-16/T-38-11): a rerun of this import must never overwrite a
     part an operator has already saved on the matched row — even though the
-    CSV row's own reconstructed full_name string is what located the row —
-    but any part still blank on that row gets prefilled from the CSV.
+    CSV row's own reconstructed full_name string is what located the row.
+
+    Phase 50 (Task 3, D-22) deviation note — fixture updated, one
+    assertion's semantics changed: this fixture's `first_name` now ALSO
+    carries `review_state=OPERATOR_EDITED`, and `middle_name`/`last_name`
+    are now pre-populated to match the CSV row rather than left blank.
+    Under the pre-Phase-50 blank-only-prefill writer, ANY non-None column
+    value was implicitly protected regardless of provenance, and
+    protection/prefill were decided per-field. Now that the write routes
+    through `apply_person_value_change`, protection is carried by
+    `review_state` (D-22: "operator authority is carried entirely by
+    review_state") — but `review_state` is a single PERSON-level column,
+    not per-field, so once ANY part on a row is operator-edited, ALL FOUR
+    parts on that row read as OPERATOR authority to the gate, including a
+    genuinely-blank part (PD-13's gap-fill guard explicitly excludes
+    OPERATOR-authority rows, by design — see 50-02-SUMMARY.md's own
+    deviation). A blank middle_name/last_name on an operator-edited row
+    would therefore ALSO refuse the CSV's fill, which is a real, disclosed
+    limitation of the model's row-level (not field-level) authority
+    granularity — not something this plan's narrower delegation scope
+    fixes. This fixture is adjusted so the scenario it tests (an
+    already-reviewed row's values surviving a re-import) no longer
+    conflates with a still-blank field's independent gap-fill behavior,
+    which `test_rerun_upgrade_fills_all_blank_name_parts` below covers on
+    its own, genuinely-unreviewed fixture.
     """
     existing = Person(
         full_name="Testcase Q. Preserve",
         is_justice=False,
         first_name="OperatorEdited",  # deliberately differs from CSV's "Testcase"
-        # middle_name/last_name/name_suffix intentionally left blank —
-        # eligible for CSV blank-only prefill.
+        middle_name="Q.",  # matches the CSV row — no-op path, not gap-fill
+        last_name="Preserve",  # matches the CSV row — no-op path, not gap-fill
+        review_state=ReviewState.OPERATOR_EDITED,
     )
     isolated_session.add(existing)
     await isolated_session.flush()
@@ -565,13 +589,212 @@ async def test_rerun_preserves_operator_edited_parts_blank_only_prefill(
 
     # Operator-edited first_name is preserved byte-for-byte, never overwritten.
     assert person.first_name == "OperatorEdited"
-    # middle_name/last_name were blank — prefilled from the CSV row.
+    # middle_name/last_name already matched the CSV row — unchanged (no-op).
     assert person.middle_name == "Q."
     assert person.last_name == "Preserve"
     assert person.is_justice is True
     # Provenance still refreshed even though no CSV-authoritative part won.
     assert person.provenance_metadata["source"] == "import_justices_csv"
-    assert person.review_state == ReviewState.UNREVIEWED
+    # The pre-existing operator-authored review_state survives byte-for-byte
+    # (CR-03 fix precedent) — never reset to UNREVIEWED.
+    assert person.review_state == ReviewState.OPERATOR_EDITED
+
+
+@pytest.mark.asyncio
+async def test_rerun_upgrade_fills_all_blank_name_parts(isolated_session, tmp_path):
+    """
+    Phase 50 (Task 3): seeding over an existing (genuinely UNREVIEWED,
+    never-touched) justice whose parts are ALL blank fills them from the
+    CSV and creates zero discrepancy rows (PD-13 gap-fill, unaffected by
+    the row-level review_state limitation documented on the sibling test
+    above — this fixture carries no operator authority at all).
+    """
+    from sqlalchemy import select as sa_select
+
+    from api.models.models import ValueDiscrepancy
+
+    existing = Person(
+        full_name="Testcase B. Blank",
+        is_justice=False,
+        # first_name/middle_name/last_name/name_suffix all left None —
+        # genuinely blank, review_state defaults to UNREVIEWED.
+    )
+    isolated_session.add(existing)
+    await isolated_session.flush()
+    existing_id = existing.id
+
+    csv_path = _write_justices_csv(
+        tmp_path,
+        chief_rows=[],
+        associate_rows=[
+            [
+                "Testcase",
+                "B.",
+                "Blank",
+                "",
+                "Fictional President",
+                "Republican",
+                "1980-01-01",
+                "",
+                "Still in Office",
+                "1930-01-01",
+                "",
+            ],
+        ],
+    )
+    args = argparse.Namespace(csv=str(csv_path))
+
+    with patch(
+        "pipeline.commands.import_justices_csv.get_session",
+        new=_make_session_cm(isolated_session),
+    ):
+        await run_import_justices_csv(args)
+
+    result = await isolated_session.execute(
+        sa_select(Person).where(Person.id == existing_id)
+    )
+    person = result.scalar_one()
+
+    assert person.first_name == "Testcase"
+    assert person.middle_name == "B."
+    assert person.last_name == "Blank"
+
+    discrepancies = (
+        await isolated_session.execute(
+            sa_select(ValueDiscrepancy).where(
+                ValueDiscrepancy.target_type == "person",
+                ValueDiscrepancy.target_id == existing_id,
+            )
+        )
+    ).scalars().all()
+    assert discrepancies == []
+
+
+@pytest.mark.asyncio
+async def test_rerun_last_name_operator_edited_to_different_value_survives(
+    isolated_session, tmp_path
+):
+    """
+    Phase 50 (Task 3): seeding over an existing justice whose last_name an
+    operator edited to a DIFFERENT value than the CSV's does NOT overwrite
+    it, and creates exactly one discrepancy row.
+    """
+    from sqlalchemy import select as sa_select
+
+    from api.models.models import ValueDiscrepancy
+
+    existing = Person(
+        full_name="Testcase C. Conflict",
+        is_justice=False,
+        first_name="Testcase",
+        middle_name="C.",
+        last_name="OperatorLastName",  # differs from CSV's "Conflict"
+        review_state=ReviewState.OPERATOR_EDITED,
+    )
+    isolated_session.add(existing)
+    await isolated_session.flush()
+    existing_id = existing.id
+
+    csv_path = _write_justices_csv(
+        tmp_path,
+        chief_rows=[],
+        associate_rows=[
+            [
+                "Testcase",
+                "C.",
+                "Conflict",
+                "",
+                "Fictional President",
+                "Republican",
+                "1980-01-01",
+                "",
+                "Still in Office",
+                "1930-01-01",
+                "",
+            ],
+        ],
+    )
+    args = argparse.Namespace(csv=str(csv_path))
+
+    with patch(
+        "pipeline.commands.import_justices_csv.get_session",
+        new=_make_session_cm(isolated_session),
+    ):
+        await run_import_justices_csv(args)
+
+    result = await isolated_session.execute(
+        sa_select(Person).where(Person.id == existing_id)
+    )
+    person = result.scalar_one()
+    assert person.last_name == "OperatorLastName"
+
+    discrepancies = (
+        await isolated_session.execute(
+            sa_select(ValueDiscrepancy).where(
+                ValueDiscrepancy.target_type == "person",
+                ValueDiscrepancy.target_id == existing_id,
+                ValueDiscrepancy.field == "last_name",
+            )
+        )
+    ).scalars().all()
+    assert len(discrepancies) == 1
+
+
+@pytest.mark.asyncio
+async def test_seed_idempotent_second_run_creates_no_new_discrepancies(
+    isolated_session, tmp_path
+):
+    """
+    Phase 50 (Task 3): seeding is still idempotent — a second identical
+    seed run creates no new rows and no new discrepancy rows.
+    """
+    from sqlalchemy import select as sa_select
+
+    from api.models.models import ValueDiscrepancy
+
+    csv_path = _write_justices_csv(
+        tmp_path,
+        chief_rows=[],
+        associate_rows=[
+            [
+                "Testcase",
+                "D.",
+                "Duplicate",
+                "",
+                "Fictional President",
+                "Republican",
+                "1980-01-01",
+                "",
+                "Still in Office",
+                "1930-01-01",
+                "",
+            ],
+        ],
+    )
+    args = argparse.Namespace(csv=str(csv_path))
+    session_cm = _make_session_cm(isolated_session)
+
+    for _ in range(2):
+        with patch(
+            "pipeline.commands.import_justices_csv.get_session", new=session_cm
+        ):
+            await run_import_justices_csv(args)
+
+    result = await isolated_session.execute(
+        sa_select(Person).where(Person.full_name == "Testcase D. Duplicate")
+    )
+    people = result.scalars().all()
+    assert len(people) == 1
+
+    discrepancies = (
+        await isolated_session.execute(
+            sa_select(ValueDiscrepancy).where(
+                ValueDiscrepancy.target_type == "person",
+                ValueDiscrepancy.target_id == people[0].id,
+            )
+        )
+    ).scalars().all()
+    assert discrepancies == []
 
 
 @pytest.mark.asyncio

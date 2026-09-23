@@ -23,7 +23,7 @@ JOB-AWARE MODE (--job-id set):
       - COMPLETED on success (with argument_id set)
       - FAILED on any exception (with error_message)
     FastAPI is a reader only for pipeline progress — the pipeline writes
-    its own status directly to PostgreSQL per D-02.
+    its own status directly to PostgreSQL.
 
     Required args are relaxed when --job-id is set: --url or --spaces-key
     provide the PDF source; --primary-docket, --case-name, --argued-date
@@ -68,7 +68,7 @@ from pipeline.db import get_session
 def _validate_docket_value(docket: str, context: str) -> None:
     """
     Validate that a docket value is safe to use as a single filesystem path
-    component and as an appended `Case.slug` segment (G-38-6).
+    component and as an appended `Case.slug` segment.
 
     This is the SECOND, independent enforcement point for the canonical
     docket-value rule — mirrors the existing two-layer SSRF pattern in this
@@ -169,7 +169,7 @@ def _derive_slug(case_name: str) -> str:
     slug = slug.replace("/", "-")       # slashes: create phantom path segments
     slug = slug.replace("(", "").replace(")", "")  # parentheses
     slug = slug.replace(" ", "-").replace(".", "").replace(",", "")
-    slug = re.sub(r"-{2,}", "-", slug)  # WR-03: collapse consecutive dashes
+    slug = re.sub(r"-{2,}", "-", slug)  # Collapse consecutive dashes
     return slug.strip("-")
 
 
@@ -332,14 +332,14 @@ async def _run_ingest_inner(args) -> None:
         argued_date = args.argued_date
     else:
         # Job-driven path — use operator-supplied args as-is; may be None.
-        # D-03/D-08: synthetic placeholder behavior removed for job-driven ingest.
-        # Null fields are left NULL; parse step auto-populates from cover extractor (D-09).
+        # Synthetic placeholder behavior removed for job-driven ingest.
+        # Null fields are left NULL; parse step auto-populates from cover extractor.
         primary_docket = args.primary_docket  # may be None
         case_name = args.case_name            # may be None
         argued_date = args.argued_date        # may be None
 
     # ------------------------------------------------------------------
-    # Step 2: URL validation — MUST be before any httpx call (T-03-01)
+    # Step 2: URL validation — MUST be before any httpx call
     # ------------------------------------------------------------------
     spaces_key = getattr(args, "spaces_key", None)
     if args.url:
@@ -347,7 +347,7 @@ async def _run_ingest_inner(args) -> None:
 
     # ------------------------------------------------------------------
     # Step 3: Derive slug and local PDF path
-    # Fallbacks when operator did not supply docket/case_name/argued_date (D-08):
+    # Fallbacks when operator did not supply docket/case_name/argued_date:
     #   - pdf_filename uses job_id when primary_docket is None (avoids "None-q1.pdf")
     #   - base_slug uses job_id when case_name is None
     #   - term_year uses today's year when argued_date is None (Case requires term_year)
@@ -423,12 +423,12 @@ async def _run_ingest_inner(args) -> None:
         + list(args.dockets or [])
     )
 
-    # CR-03: Guarantee at least one Case row exists for the argument.
+    # Guarantee at least one Case row exists for the argument.
     # get_argument_detail requires a CaseArgument row with is_lead=True to
     # resolve the lead case; without it the service returns None → router 404.
     # When the operator didn't supply a docket, create a synthetic placeholder
     # docket (job-{id}) that they can edit after the parse step fills in the
-    # cover metadata (D-08). This restores the Case-creation guarantee that
+    # cover metadata. This restores the Case-creation guarantee that
     # was lost when _derive_metadata_from_key was removed.
     if not all_dockets and args.job_id is not None:
         synthetic_docket = f"job-{args.job_id}"
@@ -444,16 +444,16 @@ async def _run_ingest_inner(args) -> None:
 
     async with get_session() as session:
         # ---- a. Case records (idempotent) ----
-        # CR-02: when case_name is None (operator did not supply it), use a placeholder
+        # When case_name is None (operator did not supply it), use a placeholder
         # that satisfies Case.case_name NOT NULL constraint; operator can edit it later.
         effective_case_name = case_name or f"Pending review (job {args.job_id})"
-        # CR-02: designate lead docket — first in all_dockets when primary_docket is None,
+        # Designate lead docket — first in all_dockets when primary_docket is None,
         # so at least one CaseArgument row has is_lead=True (required by get_argument_detail).
         lead_docket = primary_docket if primary_docket is not None else (all_dockets[0] if all_dockets else None)
 
         cases: list[Case] = []
         for docket in all_dockets:
-            # G-38-6: Case.slug becomes a public URL segment and _derive_slug
+            # Case.slug becomes a public URL segment and _derive_slug
             # sanitizes only case_name, never an appended consolidated
             # docket — validate every docket (primary and consolidated)
             # before it can reach case_slug construction below. The
@@ -481,7 +481,7 @@ async def _run_ingest_inner(args) -> None:
                 new_case = Case(
                     docket_number=docket,
                     docket_number_norm=docket.replace("-", ""),
-                    case_name=effective_case_name,  # CR-02: never None
+                    case_name=effective_case_name,  # Never None
                     term_year=term_year,
                     slug=case_slug,
                 )
@@ -497,11 +497,34 @@ async def _run_ingest_inner(args) -> None:
         # primary/first docket — the canonical dedup key used by the UNIQUE
         # constraint (source_docket, question_number). Dedup logic is unchanged;
         # it still keys off source_docket alone, never source_dockets.
+        parsed_argued_date = date.fromisoformat(argued_date) if argued_date else None  # Nullable
+
+        # D-12/D-13 (Phase 51 plan 51-02): mint this argument's public slug
+        # once, here, at first import — the PDF-path peer of
+        # import_convokit.py's identical write-time stamp. Deferred import
+        # (not module-level) because api.domain.argument_slug imports
+        # _derive_slug FROM this module, which would otherwise be a
+        # circular import.
+        from api.domain.argument_slug import derive_argument_slug
+
+        argument_slug_base = _derive_slug(effective_case_name) or "argument"
+        taken_slugs_result = await session.execute(
+            select(Argument.slug).where(Argument.slug.like(f"{argument_slug_base}%"))
+        )
+        taken_slugs = {row[0] for row in taken_slugs_result.all() if row[0] is not None}
+        argument_slug = derive_argument_slug(
+            effective_case_name,
+            question_number=args.question,
+            argued_date=parsed_argued_date,
+            taken=taken_slugs,
+        )
+
         argument = Argument(
-            argued_date=date.fromisoformat(argued_date) if argued_date else None,  # D-08: nullable
+            argued_date=parsed_argued_date,
             question_number=args.question,
             source_docket=primary_docket or (all_dockets[0] if all_dockets else None),
             source_dockets=all_dockets or None,
+            slug=argument_slug,
             # No explicit status= kwarg here, deliberately (48-RESEARCH.md
             # Anti-Patterns): this write relies on the model default, which
             # Phase 48 D-01 changed to ArgumentStatusEnum.CANDIDATE. Adding
@@ -518,7 +541,7 @@ async def _run_ingest_inner(args) -> None:
                 ) from None
             raise
 
-        # D-03: log the born-state transition. Genuinely new write site --
+        # Log the born-state transition. Genuinely new write site --
         # this file has never written an ArgumentStatusLog row before.
         session.add(
             ArgumentStatusLog(
@@ -538,12 +561,12 @@ async def _run_ingest_inner(args) -> None:
                 link = CaseArgument(
                     case_id=case.id,
                     argument_id=argument.id,
-                    is_lead=(case.docket_number == lead_docket),  # CR-02: use lead_docket (not primary_docket which may be None)
+                    is_lead=(case.docket_number == lead_docket),  # Use lead_docket (not primary_docket which may be None)
                 )
                 session.add(link)
 
         # ---- d. ImportRun record ----
-        # Phase 47 (PROV-01/PROV-06): ingest's work here — normalize_docket_value,
+        # Ingest's work here — normalize_docket_value,
         # docket_number_norm, _derive_slug — is a deterministic transform, which
         # is the closed vocabulary's own definition of `normalized` (RESEARCH.md
         # Pattern 2). pdf_path/pdf_url are populated on every pdf_pipeline row.
@@ -563,7 +586,7 @@ async def _run_ingest_inner(args) -> None:
         run_id = run.id
         argument_id = argument.id
 
-        # D-07/writer #2 (48-RESEARCH.md), Pitfall 2: recompute inside this
+        # D-07/writer #2, Pitfall 2: recompute inside this
         # same get_session() block so the tier commits atomically with the
         # birth write above -- no explicit commit call is added here, the
         # context manager owns that. At ingest time this argument has zero

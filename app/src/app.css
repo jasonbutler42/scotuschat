@@ -1,21 +1,291 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
 :root {
-	--color-bg: #0f1117;
-	--color-surface: #1e293b;
-	--color-border: #334155;
-	--color-text-primary: #e2e8f0;
-	--color-text-secondary: #94a3b8;
-	--color-text-advocate: #93c5fd;
---color-stage-accent: #d97706;
-	--color-stage-text: #fcd34d;
+	/* ── Layer 1: primitive palette (raw hex, referenced only by layer 2 below) ── */
+	--slate-950: #0f1117;
+	--slate-800: #1e293b;
+	--slate-700: #334155;
+	--slate-400: #94a3b8;
+	--slate-300: #e2e8f0;
+	--slate-200: #cbd5e1;
+	--blue-300: #93c5fd;
+	--amber-600: #d97706;
+	--amber-400: #fbbf24;
+	--amber-300: #fcd34d;
+	--green-400: #4ade80;
+	--violet-400: #a78bfa;
+	--orange-400: #fb923c;
+	--red-500: #ef4444;
+
+	/* Admin lifecycle primitives. Values carried over verbatim from the badge
+	   helpers they used to be hardcoded in — D-08 is a refactor, not a redesign.
+	   Unlike the speaker ramp these need not sit at one luminance: P-03 governs how
+	   SPEAKERS are treated, and a pipeline state is not a speaker. */
+	--sky-400: #38bdf8;
+	--emerald-400: #34d399;
+	--yellow-400: #facc15;
+	--red-400: #f87171;
+	--teal-400: #2dd4bf;
+	--fuchsia-400: #e879f9;
+	--rose-400: #fb7185;
+	--slate-600: #475569;
+	--slate-500: #64748b;
+
+	/* Per-speaker ramp. EVERY entry is solved to CIE L* 78 at OKLCH chroma 0.09,
+	   so they vary in hue and in nothing else: 8.06-8.15:1 against
+	   --color-surface and 10.40-10.52:1 against --color-bg, i.e. within 1% of
+	   each other. That equality is not decoration, it is what makes a
+	   per-speaker palette legal under P-03 — no speaker may read as louder than
+	   any other. The L* is in the name so a twelfth entry cannot be added
+	   casually: solve it to 78 or it does not belong here.
+	   --l78-blue is within 0.2 L* of --blue-300, so the advocate side keeps the
+	   colour it already shipped. */
+	--l78-blue: #94c6f9;
+	--l78-orange: #f1b48b;
+	--l78-teal: #7bd1ba;
+	--l78-pink: #f4acc7;
+	--l78-yellow-green: #bdc783;
+	--l78-indigo: #b6bcfc;
+	--l78-red: #f9aea7;
+	--l78-cyan: #73cede;
+	--l78-amber: #dcbe7d;
+	--l78-violet: #d6b4f0;
+	--l78-green: #99ce9a;
+	--l78-slate: #b5c3d1;
+
+	/* ── Layer 2: semantic roles — component code references only these ── */
+	--color-bg: var(--slate-950);
+	--color-surface: var(--slate-800);
+	--color-accent: var(--blue-300);
+	--color-destructive: var(--red-500);
+	--color-border: var(--slate-700);
+	--color-text-primary: var(--slate-300);
+	--color-text-secondary: var(--slate-400);
+	/* --slate-400 (L* 66.5, 5.71:1) against --blue-300 (L* 78.0, 8.11:1) made the
+	   advocate side measurably brighter than the bench across 164 avatar fills —
+	   side encoded as prominence, which P-03 forbids. Bench now sits on the same
+	   L* 78 as advocate. */
+	--color-side-bench: var(--l78-slate);
+	--color-side-advocate: var(--blue-300);
+
+	/* Speaker identity slots (D-19 / P-03). Assigned by the speaker's index in an
+	   argument's roster, NOT by side, NOT by a hash, and NOT randomly — see the
+	   route's `speakerColor`. Ordered so consecutive slots are far apart in hue,
+	   because consecutive slots go to speakers who alternate on screen. */
+	--color-speaker-1: var(--l78-blue);
+	--color-speaker-2: var(--l78-orange);
+	--color-speaker-3: var(--l78-teal);
+	--color-speaker-4: var(--l78-pink);
+	--color-speaker-5: var(--l78-yellow-green);
+	--color-speaker-6: var(--l78-indigo);
+	--color-speaker-7: var(--l78-red);
+	--color-speaker-8: var(--l78-cyan);
+	--color-speaker-9: var(--l78-amber);
+	--color-speaker-10: var(--l78-violet);
+	--color-speaker-11: var(--l78-green);
+	/* A speaker the resolve step could not identify is a different KIND of thing
+	   from an identified one, so it gets its own neutral rather than a slot. */
+	--color-speaker-unresolved: var(--slate-400);
+
+	/* Side-family slots — the alternative palette in which hue still varies per
+	   speaker but the two sides draw from opposite arcs of the wheel, so side
+	   survives in colour. Same L* 78 ramp, so the P-03 equality holds here too.
+	   Only reachable through the variant switcher; see --avatar-fill below. */
+	--color-bench-1: var(--l78-amber);
+	--color-bench-2: var(--l78-orange);
+	--color-bench-3: var(--l78-red);
+	--color-bench-4: var(--l78-pink);
+	--color-bench-5: var(--l78-violet);
+	--color-bench-6: var(--l78-yellow-green);
+	--color-advocate-1: var(--l78-blue);
+	--color-advocate-2: var(--l78-teal);
+	--color-advocate-3: var(--l78-cyan);
+	--color-advocate-4: var(--l78-green);
+
+	--color-stage-accent: var(--amber-600);
+	--color-stage-text: var(--amber-300);
+
+	/* Trust tier and review state — the two admin lifecycle scales the D-04
+	   conversion surfaced (51-ADMIN-ARTIFACTS.md A-01..A-08, ruled 2026-09-01).
+	   Admin-only, same as --color-status-*, and covered by the same P-04 ban on
+	   reaching a public surface. */
+	--color-tier-verified: var(--sky-400);
+	--color-tier-trusted: var(--emerald-400);
+	--color-tier-provisional: var(--yellow-400);
+	--color-tier-uncertain: var(--red-400);
+	--color-review-unreviewed: var(--slate-600);
+	--color-review-needs-review: var(--color-status-warning);
+	--color-review-confirmed: var(--teal-400);
+	--color-review-edited: var(--fuchsia-400);
+	--color-review-discrepancy: var(--rose-400);
+	/* The fallback branch of a review badge — a state the UI does not recognise.
+	   Its own role rather than a reuse of --color-text-secondary, because A-09 was
+	   exactly the artifact of one value doing both jobs. */
+	--color-review-unknown: var(--slate-500);
+
+	/* Admin-only lifecycle status colors — never rendered on the public site */
+	--color-status-published: var(--green-400);
+	--color-status-draft: var(--violet-400);
+	--color-status-unpublished: var(--orange-400);
+	--color-status-warning: var(--amber-400);
+	--color-status-archived: var(--slate-200);
+
+	/* Spacing scale — eight steps, all multiples of 4. The 12px step exists
+	   because the admin surfaces used it 153 times, second only to 8px and ahead
+	   of 16px: it was a load-bearing step the scale simply had no name for. The
+	   names shifted up rather than a new name being wedged between `sm` and `md`,
+	   so the t-shirt sequence stays intact. Every reference in the codebase was
+	   remapped in the same commit — changing these values alone would silently
+	   tighten the whole UI by one step with a green build and a green suite. */
+	--space-xs: 4px;
+	--space-sm: 8px;
+	--space-md: 12px;
+	--space-lg: 16px;
+	--space-xl: 24px;
+	--space-2xl: 32px;
+	--space-3xl: 48px;
+	--space-4xl: 64px;
+
+	/* Type scale — five semantic steps, two weights (D-03) */
+	--font-size-caption: 14px;
+	--line-height-caption: 1.4;
+	--font-size-body: 16px;
+	--line-height-body: 1.5;
+	--font-size-lead: 18px;
+	--line-height-lead: 1.6;
+	--font-size-heading: 20px;
+	--line-height-heading: 1.2;
+	--font-size-display: 32px;
+	--line-height-display: 1.2;
+	--font-weight-regular: 400;
+	--font-weight-semibold: 600;
+
+	/* Touch targets — WCAG 2.1 AA default plus the dense in-table admin exception */
+	--touch-target: 44px;
+	--touch-target-dense: 36px;
+
+	/* How far above the viewport bottom a bottom-anchored sticky element must
+	   park to stay visible. Desktop has nothing in the way, so it is just the
+	   normal gap. Below 768px `MobileNavBar` is `position: fixed; bottom: 0`
+	   with an OPAQUE --color-surface background and `min-height: var(--touch-target)`,
+	   so anything parked at a plain --space-sm is painted underneath it and
+	   silently disappears. That is not a sticky failure and reads exactly like
+	   one: the element is positioned correctly and simply cannot be seen.
+	   Consumed by the transcript's sticky rail avatar (D-19). */
+	--sticky-bottom-inset: var(--space-sm);
+
+	/* Transcript reading-layer geometry. Broken out as tokens because MEASURE
+	   (characters per line) is the thing D-09 actually cares about, and measure
+	   is the product of all four of these — not of the type size. At 390px the
+	   desktop values yielded 17 characters per line; comfortable sustained
+	   reading is 45-75, and Telegram (the operator's reference for this layout)
+	   achieves ~35 on the same class of device with 17pt type. The gap was
+	   entirely width allocation, so these tighten on mobile and the type size
+	   is left alone. */
+	--transcript-pad-x: var(--space-xl);
+	--transcript-rail-gap: var(--space-sm);
+	--bubble-max-width: 72%;
+	--bubble-pad-x: var(--space-lg);
+
 	font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
+/* Keep this breakpoint in step with MobileNavBar.svelte's own @media rule —
+   if that bar's visibility threshold or height changes, this must follow. */
+/* ── Transcript variant axes (operator-facing switcher, VariantSwitcher.svelte) ──
+   Applied as data attributes on <html>. Deliberately plain attribute selectors
+   on :root so every axis is independent and composable, and so a variant is
+   provably nothing but a redefinition of tokens — if a variant ever needed a
+   component change it would not belong here. */
+/* The transcript declares THREE candidate colours as custom properties on each
+   speaker-bearing row — --speaker-color (per speaker, side-blind),
+   --family-color (per speaker, opposite hue arcs per side) and --side-color
+   (two colours by side) — and the active variant decides which one paints.
+
+   That decision has to be a RULE, not a custom-property indirection. A
+   declaration like `--fill: var(--speaker-color)` at :root is substituted where
+   it is DECLARED, not where it is used, so it resolves against a
+   --speaker-color that does not exist at :root and inherits down as invalid.
+   Class rules also mean the painted elements must NOT carry an inline
+   background-color/color, which would outrank them. */
+.speaker-fill { background-color: var(--speaker-color, var(--color-speaker-unresolved)); }
+.speaker-ink { color: var(--speaker-color, var(--color-speaker-unresolved)); }
+.speaker-stroke { border-color: var(--speaker-color, var(--color-speaker-unresolved)); }
+
+:root[data-colour='family'] .speaker-fill { background-color: var(--family-color); }
+:root[data-colour='family'] .speaker-ink { color: var(--family-color); }
+:root[data-colour='family'] .speaker-stroke { border-color: var(--family-color); }
+
+:root[data-colour='side'] .speaker-fill { background-color: var(--side-color); }
+:root[data-colour='side'] .speaker-ink { color: var(--side-color); }
+:root[data-colour='side'] .speaker-stroke { border-color: var(--side-color); }
+
+/* Applied at every viewport, not just mobile, so the control always does
+   something visible. On desktop the bubble's own min(…, 68ch) still binds. */
+:root[data-width='88'] { --bubble-max-width: 88%; }
+:root[data-width='94'] { --bubble-max-width: 94%; }
+:root[data-width='100'] { --bubble-max-width: 100%; }
+
+@media (max-width: 768px) {
+	:root {
+		--sticky-bottom-inset: calc(var(--touch-target) + var(--space-sm));
+
+		/* Every one of these buys characters per line. The cap in particular is
+		   inherited from v1.0, where the avatar sat INSIDE the bubble and no rail
+		   existed — so it compounded with the rail's 40px and narrowed the text
+		   twice, which nobody intended. Measured at 390px: at 88% a bench bubble
+		   and an advocate bubble sat 6.2px apart, so the cap bought no
+		   side separation at all while costing 6 characters per line. At 100%
+		   the bubble edges coincide with the stack edges and the rail's 44px
+		   offset becomes visible on BOTH edges — the sides read further apart,
+		   not closer. */
+		--transcript-pad-x: var(--space-sm);
+		--transcript-rail-gap: var(--space-xs);
+		--bubble-max-width: 100%;
+		--bubble-pad-x: var(--space-sm);
+	}
+}
+
+/* Explicit base reset (Phase 51 D-01) — replaces Tailwind preflight, which this
+   codebase relied on for margin zeroing and form-control normalization even
+   though no Tailwind utility class is used anywhere in app/src. Every rule
+   below was checked against a real load-bearing dependency in the codebase
+   before being added, not carried over speculatively. */
+
 *, *::before, *::after {
 	box-sizing: border-box;
+}
+
+h1, h2, h3, h4, h5, h6, p, figure, blockquote, dl, dd {
+	margin: 0;
+}
+
+button, input, optgroup, select, textarea {
+	font-family: inherit;
+	font-size: 100%;
+	font-weight: inherit;
+	line-height: inherit;
+	color: inherit;
+	margin: 0;
+	padding: 0;
+}
+
+button, [type='button'], [type='submit'] {
+	background-color: transparent;
+	background-image: none;
+}
+
+a {
+	color: inherit;
+	text-decoration: inherit;
+}
+
+img, svg, video, canvas {
+	display: block;
+	vertical-align: middle;
+}
+
+img, video {
+	max-width: 100%;
+	height: auto;
 }
 
 body {
@@ -26,7 +296,7 @@ body {
 }
 
 *:focus-visible {
-	outline: 2px solid #93c5fd;
+	outline: 2px solid var(--color-accent);
 	outline-offset: 3px;
 	border-radius: 4px;
 }

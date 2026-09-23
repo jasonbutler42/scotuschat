@@ -323,6 +323,17 @@ async def test_unpublish_argument_wrong_token_returns_401(client_no_db: AsyncCli
 
 
 @pytest.mark.asyncio
+async def test_approve_argument_wrong_token_returns_401(client_no_db: AsyncClient) -> None:
+    """POST /api/admin/arguments/{id}/approve with wrong X-Admin-Token must
+    return 401 (Phase 50 plan 50-03, T-50-03) — proves auth is inherited
+    from the router-level dependency, not re-declared on this route."""
+    response = await client_no_db.post(
+        "/api/admin/arguments/1/approve", headers=_WRONG_TOKEN_HEADERS
+    )
+    assert response.status_code == 401
+
+
+@pytest.mark.asyncio
 async def test_list_arguments_status_param_route_resolution_returns_401_not_422(
     client_no_db: AsyncClient,
 ) -> None:
@@ -396,6 +407,189 @@ async def test_unpublish_argument_404_for_unknown_id(client: AsyncClient) -> Non
     assert response.status_code == 404
 
 
+# ---------------------------------------------------------------------------
+# POST /arguments/{id}/approve — the argument-scoped approve route (D-14,
+# Phase 50 plan 50-03)
+# ---------------------------------------------------------------------------
+
+
+async def _seed_candidate_argument_with_lead_case_no_job() -> dict:
+    """Seed one CANDIDATE argument + lead Case with NO AdminJob row — the
+    exact jobless-corpus-argument shape D-14 exists for."""
+    import uuid
+
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import Argument, ArgumentStatusEnum, Case, CaseArgument
+
+    suffix = uuid.uuid4().hex[:8]
+    async with AsyncSessionLocal() as db:
+        arg = Argument(status=ArgumentStatusEnum.CANDIDATE, resolved_at=None)
+        db.add(arg)
+        await db.flush()
+
+        case = Case(
+            docket_number=f"RT-APV-{suffix}",
+            docket_number_norm=f"rt-apv-{suffix}",
+            case_name="Route Approve Fixture v. Test Harness",
+            term_year=2026,
+            slug=f"route-approve-fixture-{suffix}",
+        )
+        db.add(case)
+        await db.flush()
+        db.add(CaseArgument(case_id=case.id, argument_id=arg.id, is_lead=True))
+        await db.commit()
+        return {"argument_id": arg.id, "case_id": case.id}
+
+
+async def _teardown_candidate_argument_with_lead_case(ids: dict) -> None:
+    from sqlalchemy import delete as sa_delete
+
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import Argument, ArgumentStatusLog, Case, CaseArgument
+
+    async with AsyncSessionLocal() as db:
+        await db.execute(sa_delete(ArgumentStatusLog).where(ArgumentStatusLog.argument_id == ids["argument_id"]))
+        await db.execute(sa_delete(CaseArgument).where(CaseArgument.argument_id == ids["argument_id"]))
+        await db.execute(sa_delete(Case).where(Case.id == ids["case_id"]))
+        await db.execute(sa_delete(Argument).where(Argument.id == ids["argument_id"]))
+        await db.commit()
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_approve_argument_404_for_unknown_id(client: AsyncClient) -> None:
+    """POST /api/admin/arguments/99999/approve with valid token should
+    return 404 (T-11-IDOR precedent — the id is never trusted without a
+    matching row)."""
+    response = await client.post(
+        "/api/admin/arguments/99999/approve", headers=_admin_headers()
+    )
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_approve_argument_candidate_returns_200_and_stamps_resolved_at(client: AsyncClient) -> None:
+    """POST /api/admin/arguments/{id}/approve on a CANDIDATE argument
+    returns 200 and afterwards status == 'draft' with a non-NULL
+    resolved_at (D-14)."""
+    ids = await _seed_candidate_argument_with_lead_case_no_job()
+    try:
+        response = await client.post(
+            f"/api/admin/arguments/{ids['argument_id']}/approve", headers=_admin_headers()
+        )
+        assert response.status_code == 200
+        body = response.json()
+        assert body["status"] == "draft"
+        assert body["resolved_at"] is not None
+    finally:
+        await _teardown_candidate_argument_with_lead_case(ids)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_approve_argument_draft_returns_422(client: AsyncClient) -> None:
+    """POST /api/admin/arguments/{id}/approve on a DRAFT argument returns
+    422 (the double-approve guard)."""
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import Argument, ArgumentStatusEnum
+
+    async with AsyncSessionLocal() as db:
+        arg = Argument(status=ArgumentStatusEnum.DRAFT, resolved_at=None)
+        db.add(arg)
+        await db.commit()
+        arg_id = arg.id
+
+    try:
+        response = await client.post(
+            f"/api/admin/arguments/{arg_id}/approve", headers=_admin_headers()
+        )
+        assert response.status_code == 422
+    finally:
+        async with AsyncSessionLocal() as db:
+            arg = await db.get(Argument, arg_id)
+            if arg is not None:
+                await db.delete(arg)
+                await db.commit()
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_approve_argument_published_returns_422(client: AsyncClient) -> None:
+    """POST /api/admin/arguments/{id}/approve on a PUBLISHED argument
+    returns 422 — approve is CANDIDATE -> DRAFT only; a published
+    argument's lifecycle can never be moved by this route."""
+    import datetime
+
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import Argument, ArgumentStatusEnum
+
+    async with AsyncSessionLocal() as db:
+        arg = Argument(
+            status=ArgumentStatusEnum.PUBLISHED,
+            resolved_at=datetime.datetime.now(datetime.timezone.utc),
+        )
+        db.add(arg)
+        await db.commit()
+        arg_id = arg.id
+
+    try:
+        response = await client.post(
+            f"/api/admin/arguments/{arg_id}/approve", headers=_admin_headers()
+        )
+        assert response.status_code == 422
+    finally:
+        async with AsyncSessionLocal() as db:
+            arg = await db.get(Argument, arg_id)
+            if arg is not None:
+                await db.delete(arg)
+                await db.commit()
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_approve_then_publish_jobless_candidate_argument_returns_200_from_both(
+    client: AsyncClient,
+) -> None:
+    """End-to-end (D-14's load-bearing claim): a CANDIDATE argument with no
+    admin_job is approved then published over the authenticated admin API,
+    both returning 200 — a jobless corpus argument is publishable end to
+    end. admin_jobs row count is unchanged across the whole sequence."""
+    from sqlalchemy import func as sa_func
+    from sqlalchemy import select as sa_select
+
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import AdminJob
+
+    ids = await _seed_candidate_argument_with_lead_case_no_job()
+    try:
+        async with AsyncSessionLocal() as db:
+            before_count = (
+                await db.execute(sa_select(sa_func.count()).select_from(AdminJob))
+            ).scalar_one()
+
+        approve_response = await client.post(
+            f"/api/admin/arguments/{ids['argument_id']}/approve", headers=_admin_headers()
+        )
+        assert approve_response.status_code == 200
+
+        publish_response = await client.post(
+            f"/api/admin/arguments/{ids['argument_id']}/publish",
+            json={"override_reason": "operator override for approve+publish route test"},
+            headers=_admin_headers(),
+        )
+        assert publish_response.status_code == 200
+        assert publish_response.json()["status"] == "published"
+
+        async with AsyncSessionLocal() as db:
+            after_count = (
+                await db.execute(sa_select(sa_func.count()).select_from(AdminJob))
+            ).scalar_one()
+        assert after_count == before_count
+    finally:
+        await _teardown_candidate_argument_with_lead_case(ids)
+
+
 @pytest.mark.asyncio
 @pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
 async def test_list_arguments_returns_list(client: AsyncClient) -> None:
@@ -413,21 +607,27 @@ async def test_list_arguments_returns_list(client: AsyncClient) -> None:
 
 
 # ---------------------------------------------------------------------------
-# DELETE /arguments/{id} — 409 for UNPUBLISHED (Phase 26 Plan 01, D-03/AEDIT-09)
+# DELETE /arguments/{id} — 409 for PUBLISHED only (D-25/PD-11, Phase 50 plan
+# 50-03 — the gate was inverted from DRAFT-only to published-only)
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
 @pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
-async def test_delete_argument_returns_409_for_unpublished(client: AsyncClient) -> None:
-    """DELETE /api/admin/arguments/{id} on an UNPUBLISHED argument must return 409
-    with the updated copy ("Only drafts can be removed.").
+async def test_delete_argument_returns_409_for_published(client: AsyncClient) -> None:
+    """DELETE /api/admin/arguments/{id} on a PUBLISHED argument must return
+    409 with the updated copy ("Published arguments cannot be deleted.").
     """
+    import datetime
+
     from api.core.database import AsyncSessionLocal
     from api.models.models import Argument, ArgumentStatusEnum
 
     async with AsyncSessionLocal() as db:
-        arg = Argument(status=ArgumentStatusEnum.UNPUBLISHED, resolved_at=None)
+        arg = Argument(
+            status=ArgumentStatusEnum.PUBLISHED,
+            resolved_at=datetime.datetime.now(datetime.timezone.utc),
+        )
         db.add(arg)
         await db.commit()
         arg_id = arg.id
@@ -438,7 +638,7 @@ async def test_delete_argument_returns_409_for_unpublished(client: AsyncClient) 
         )
         assert response.status_code == 409
         body = response.json()
-        assert "Only drafts can be removed." in body["detail"]
+        assert "Published arguments cannot be deleted." in body["detail"]
     finally:
         async with AsyncSessionLocal() as db:
             arg = await db.get(Argument, arg_id)
@@ -449,33 +649,28 @@ async def test_delete_argument_returns_409_for_unpublished(client: AsyncClient) 
 
 @pytest.mark.asyncio
 @pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
-async def test_delete_argument_returns_409_for_pipeline(client: AsyncClient) -> None:
-    """DELETE /api/admin/arguments/{id} on a PIPELINE-status argument must
-    return 409 (T-26-13) — the server-side gate blocks a direct API call from
-    stranding an active AdminJob mid-pipeline.
-    """
+async def test_delete_argument_returns_200_for_unpublished_and_candidate(client: AsyncClient) -> None:
+    """DELETE /api/admin/arguments/{id} on an UNPUBLISHED or CANDIDATE
+    argument now succeeds (D-25/PD-11, Phase 50) — the prior gate blocked
+    both; only PUBLISHED is refused now."""
     from api.core.database import AsyncSessionLocal
     from api.models.models import Argument, ArgumentStatusEnum
 
-    async with AsyncSessionLocal() as db:
-        arg = Argument(status=ArgumentStatusEnum.PIPELINE, resolved_at=None)
-        db.add(arg)
-        await db.commit()
-        arg_id = arg.id
+    for status in (ArgumentStatusEnum.UNPUBLISHED, ArgumentStatusEnum.CANDIDATE):
+        async with AsyncSessionLocal() as db:
+            arg = Argument(status=status, resolved_at=None)
+            db.add(arg)
+            await db.commit()
+            arg_id = arg.id
 
-    try:
         response = await client.delete(
             f"/api/admin/arguments/{arg_id}", headers=_admin_headers()
         )
-        assert response.status_code == 409
-        body = response.json()
-        assert "Only drafts can be removed." in body["detail"]
-    finally:
+        assert response.status_code == 200, f"expected 200 for status={status.value}"
+        assert response.json() == {"deleted": True}
+
         async with AsyncSessionLocal() as db:
-            arg = await db.get(Argument, arg_id)
-            if arg is not None:
-                await db.delete(arg)
-                await db.commit()
+            assert await db.get(Argument, arg_id) is None
 
 
 # ---------------------------------------------------------------------------

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import StatCard from '$lib/components/StatCard.svelte';
+	import StatCard from '$lib/admin/StatCard.svelte';
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 
@@ -15,7 +15,10 @@
 		role: string;
 		argument_id: number;
 		argument_status: string;
-		admin_job_status: string;
+		// Phase 50 (D-14/D-19, PD-05) — mirrors api/schemas/admin_dev.py's
+		// ResetFixtureItem.latest_import_run_step; there is no AdminJob for a
+		// corpus fixture anymore.
+		latest_import_run_step: string;
 	}
 
 	// Phase 49 (D-33a) — mirrors api/schemas/admin_dev.py::SeedUnresolvedSpeakerResponse.
@@ -93,21 +96,21 @@
 	<title>Admin — SCOTUS Chat</title>
 </svelte:head>
 
-<!-- Page background (#0f1117) — matches existing page pattern -->
-<main style="background-color: #0f1117; min-height: 100vh;">
-	<!-- Header bar: #1e293b bg, border-bottom #334155 -->
+<!-- Page background (--color-bg) — matches existing page pattern -->
+<main style="background-color: var(--color-bg); min-height: 100vh;">
+	<!-- Header bar: --color-surface bg, border-bottom --color-border -->
 	<header
 		style="
-			background-color: #1e293b;
-			border-bottom: 1px solid #334155;
-			padding: 16px 24px;
+			background-color: var(--color-surface);
+			border-bottom: 1px solid var(--color-border);
+			padding: var(--space-lg) var(--space-xl);
 		"
 	>
 		<h1
 			style="
-				font-size: 20px;
-				font-weight: 600;
-				color: #e2e8f0;
+				font-size: var(--font-size-heading);
+				font-weight: var(--font-weight-semibold);
+				color: var(--color-text-primary);
 				margin: 0;
 				line-height: 1.2;
 			"
@@ -121,7 +124,7 @@
 		style="
 			max-width: 860px;
 			margin: 0 auto;
-			padding: 48px 24px;
+			padding: var(--space-3xl) var(--space-xl);
 		"
 	>
 		<!-- ═══════════════════════════════════════════════════════════════════
@@ -129,40 +132,40 @@
 		     ═══════════════════════════════════════════════════════════════════ -->
 		<section
 			style="
-				background-color: #1e293b;
-				border: 1px solid #334155;
+				background-color: var(--color-surface);
+				border: 1px solid var(--color-border);
 				border-radius: 8px;
-				padding: 24px;
+				padding: var(--space-xl);
 			"
 		>
-			<h2 style="font-size: 20px; font-weight: 600; color: #e2e8f0; margin: 0 0 16px 0;">
+			<h2 style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-lg) 0;">
 				Needs Attention
 			</h2>
 
 			{#if allCaughtUp}
 				<div>
-					<p style="font-size: 16px; font-weight: 600; color: #e2e8f0; margin: 0 0 8px 0;">
+					<p style="font-size: var(--font-size-body); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-sm) 0;">
 						All caught up
 					</p>
-					<p style="font-size: 16px; color: #94a3b8; margin: 0;">
+					<p style="font-size: var(--font-size-body); color: var(--color-text-secondary); margin: 0;">
 						Nothing needs your attention right now.
 					</p>
 				</div>
 			{:else}
 				<!-- People sub-list (combined bench+advocate, D-05 amendment) -->
-				<div style="margin-bottom: 16px;">
-					<h3 style="font-size: 14px; font-weight: 600; color: #e2e8f0; margin: 0 0 8px 0;">
+				<div style="margin-bottom: var(--space-lg);">
+					<h3 style="font-size: var(--font-size-caption); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-sm) 0;">
 						People
 					</h3>
 					{#if data.incompletePeople.length === 0}
-						<p style="font-size: 14px; color: #94a3b8; margin: 0;">
+						<p style="font-size: var(--font-size-caption); color: var(--color-text-secondary); margin: 0;">
 							No people currently have missing fields.
 						</p>
 					{:else}
 						{#each data.incompletePeople as person (person.id)}
-							<div style="display: flex; justify-content: space-between; align-items: baseline; margin: 0 0 8px 0;">
-								<span style="font-size: 16px; color: #e2e8f0;">{person.full_name}</span>
-								<span style="font-size: 14px; color: #94a3b8;">{missingFieldsLabel(person.missing)}</span>
+							<div style="display: flex; justify-content: space-between; align-items: baseline; margin: 0 0 var(--space-sm) 0;">
+								<span style="font-size: var(--font-size-body); color: var(--color-text-primary);">{person.full_name}</span>
+								<span style="font-size: var(--font-size-caption); color: var(--color-text-secondary);">{missingFieldsLabel(person.missing)}</span>
 							</div>
 						{/each}
 					{/if}
@@ -171,9 +174,9 @@
 						style="
 							display: inline-flex;
 							align-items: center;
-							min-height: 44px;
-							font-size: 14px;
-							color: #93c5fd;
+							min-height: var(--touch-target);
+							font-size: var(--font-size-caption);
+							color: var(--color-accent);
 							text-decoration: none;
 						"
 					>
@@ -182,19 +185,19 @@
 				</div>
 
 				<!-- Justices sub-list (bench-only tenure gaps, D-06) -->
-				<div style="margin-bottom: 16px;">
-					<h3 style="font-size: 14px; font-weight: 600; color: #e2e8f0; margin: 0 0 8px 0;">
+				<div style="margin-bottom: var(--space-lg);">
+					<h3 style="font-size: var(--font-size-caption); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-sm) 0;">
 						Justices
 					</h3>
 					{#if data.tenureGapJustices.length === 0}
-						<p style="font-size: 14px; color: #94a3b8; margin: 0;">
+						<p style="font-size: var(--font-size-caption); color: var(--color-text-secondary); margin: 0;">
 							No tenure gaps found.
 						</p>
 					{:else}
 						{#each data.tenureGapJustices as justice (justice.id)}
-							<div style="display: flex; justify-content: space-between; align-items: baseline; margin: 0 0 8px 0;">
-								<span style="font-size: 16px; color: #e2e8f0;">{justice.full_name}</span>
-								<span style="font-size: 14px; color: #fbbf24;">Missing tenure</span>
+							<div style="display: flex; justify-content: space-between; align-items: baseline; margin: 0 0 var(--space-sm) 0;">
+								<span style="font-size: var(--font-size-body); color: var(--color-text-primary);">{justice.full_name}</span>
+								<span style="font-size: var(--font-size-caption); color: var(--color-status-warning);">Missing tenure</span>
 							</div>
 						{/each}
 					{/if}
@@ -203,9 +206,9 @@
 						style="
 							display: inline-flex;
 							align-items: center;
-							min-height: 44px;
-							font-size: 14px;
-							color: #93c5fd;
+							min-height: var(--touch-target);
+							font-size: var(--font-size-caption);
+							color: var(--color-accent);
 							text-decoration: none;
 						"
 					>
@@ -215,18 +218,18 @@
 
 				<!-- Drafts sub-list (all drafts, no age threshold, D-03) -->
 				<div>
-					<h3 style="font-size: 14px; font-weight: 600; color: #e2e8f0; margin: 0 0 8px 0;">
+					<h3 style="font-size: var(--font-size-caption); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-sm) 0;">
 						Drafts
 					</h3>
 					{#if data.draftsList.length === 0}
-						<p style="font-size: 14px; color: #94a3b8; margin: 0;">
+						<p style="font-size: var(--font-size-caption); color: var(--color-text-secondary); margin: 0;">
 							No draft arguments.
 						</p>
 					{:else}
 						{#each data.draftsList as draft (draft.id)}
-							<div style="display: flex; justify-content: space-between; align-items: baseline; margin: 0 0 8px 0;">
-								<span style="font-size: 16px; color: #e2e8f0;">{draft.case_name}</span>
-								<span style="font-size: 14px; color: #94a3b8;">{draft.docket_number}</span>
+							<div style="display: flex; justify-content: space-between; align-items: baseline; margin: 0 0 var(--space-sm) 0;">
+								<span style="font-size: var(--font-size-body); color: var(--color-text-primary);">{draft.case_name}</span>
+								<span style="font-size: var(--font-size-caption); color: var(--color-text-secondary);">{draft.docket_number}</span>
 							</div>
 						{/each}
 					{/if}
@@ -235,9 +238,9 @@
 						style="
 							display: inline-flex;
 							align-items: center;
-							min-height: 44px;
-							font-size: 14px;
-							color: #93c5fd;
+							min-height: var(--touch-target);
+							font-size: var(--font-size-caption);
+							color: var(--color-accent);
 							text-decoration: none;
 						"
 					>
@@ -272,31 +275,31 @@
 			style="
 				display: grid;
 				grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-				gap: 32px;
-				margin-top: 32px;
+				gap: var(--space-2xl);
+				margin-top: var(--space-2xl);
 			"
 		>
 			<StatCard title="Arguments">
 				{#snippet children()}
-					<p style="font-size: 32px; font-weight: 600; color: #e2e8f0; margin: 0 0 16px 0; line-height: 1.2;">
+					<p style="font-size: var(--font-size-display); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-lg) 0; line-height: 1.2;">
 						{formatCount(data.argumentStats.total)}
 					</p>
-					<div style="display: flex; flex-direction: column; gap: 8px;">
+					<div style="display: flex; flex-direction: column; gap: var(--space-sm);">
 						<a
 							href="/admin/arguments?status=published"
-							style="display: inline-flex; align-items: center; min-height: 44px; font-size: 16px; color: #4ade80; text-decoration: none;"
+							style="display: inline-flex; align-items: center; min-height: var(--touch-target); font-size: var(--font-size-body); color: var(--color-status-published); text-decoration: none;"
 						>
 							{formatCount(data.argumentStats.published)} Published
 						</a>
 						<a
 							href="/admin/arguments?status=draft"
-							style="display: inline-flex; align-items: center; min-height: 44px; font-size: 16px; color: #a78bfa; text-decoration: none;"
+							style="display: inline-flex; align-items: center; min-height: var(--touch-target); font-size: var(--font-size-body); color: var(--color-status-draft); text-decoration: none;"
 						>
 							{formatCount(data.argumentStats.draft)} Draft
 						</a>
 						<a
 							href="/admin/arguments?status=unpublished"
-							style="display: inline-flex; align-items: center; min-height: 44px; font-size: 16px; color: #fb923c; text-decoration: none;"
+							style="display: inline-flex; align-items: center; min-height: var(--touch-target); font-size: var(--font-size-body); color: var(--color-status-unpublished); text-decoration: none;"
 						>
 							{formatCount(data.argumentStats.unpublished)} Unpublished
 						</a>
@@ -306,12 +309,12 @@
 
 			<StatCard title="People">
 				{#snippet children()}
-					<p style="font-size: 32px; font-weight: 600; color: #e2e8f0; margin: 0 0 16px 0; line-height: 1.2;">
+					<p style="font-size: var(--font-size-display); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-lg) 0; line-height: 1.2;">
 						{formatCount(data.peopleStats.total)}
 					</p>
 					<a
 						href="/admin/people"
-						style="display: inline-flex; align-items: center; min-height: 44px; font-size: 16px; color: #93c5fd; text-decoration: none;"
+						style="display: inline-flex; align-items: center; min-height: var(--touch-target); font-size: var(--font-size-body); color: var(--color-accent); text-decoration: none;"
 					>
 						{formatCount(data.peopleStats.incomplete)} missing fields → Review
 					</a>
@@ -320,7 +323,7 @@
 
 			<StatCard title="Utterances">
 				{#snippet children()}
-					<p style="font-size: 32px; font-weight: 600; color: #e2e8f0; margin: 0; line-height: 1.2;">
+					<p style="font-size: var(--font-size-display); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0; line-height: 1.2;">
 						{formatCount(data.utteranceCount.total)}
 					</p>
 				{/snippet}
@@ -328,16 +331,16 @@
 
 			<StatCard title="Pipeline runs">
 				{#snippet children()}
-					<p style="font-size: 32px; font-weight: 600; color: #e2e8f0; margin: 0 0 4px 0; line-height: 1.2;">
+					<p style="font-size: var(--font-size-display); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-xs) 0; line-height: 1.2;">
 						{formatCount(data.pipelineStats.recent_count)}
-						<span style="font-size: 14px; font-weight: 400; color: #94a3b8;">(last 30 days)</span>
+						<span style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary);">(last 30 days)</span>
 					</p>
-					<p style="font-size: 14px; color: #94a3b8; margin: 0 0 16px 0;">
+					<p style="font-size: var(--font-size-caption); color: var(--color-text-secondary); margin: 0 0 var(--space-lg) 0;">
 						Last activity: {formatDate(data.pipelineStats.last_activity_at)}
 					</p>
 					<a
 						href="/admin/pipeline"
-						style="display: inline-flex; align-items: center; min-height: 44px; font-size: 16px; color: #93c5fd; text-decoration: none;"
+						style="display: inline-flex; align-items: center; min-height: var(--touch-target); font-size: var(--font-size-body); color: var(--color-accent); text-decoration: none;"
 					>
 						View all runs →
 					</a>
@@ -351,17 +354,17 @@
 			     link text pluralizes (E8 zero-one-many). -->
 			<StatCard title="Review queue">
 				{#snippet children()}
-					<p style="font-size: 32px; font-weight: 600; color: #e2e8f0; margin: 0 0 16px 0; line-height: 1.2;">
+					<p style="font-size: var(--font-size-display); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-lg) 0; line-height: 1.2;">
 						{formatCount(data.reviewStats.total)}
 					</p>
 					{#if data.reviewStats.total === 0}
-						<p style="font-size: 16px; color: #94a3b8; margin: 0;">
+						<p style="font-size: var(--font-size-body); color: var(--color-text-secondary); margin: 0;">
 							No items need review
 						</p>
 					{:else}
 						<a
 							href="/admin/review"
-							style="display: inline-flex; align-items: center; min-height: 44px; font-size: 16px; color: #93c5fd; text-decoration: none;"
+							style="display: inline-flex; align-items: center; min-height: var(--touch-target); font-size: var(--font-size-body); color: var(--color-accent); text-decoration: none;"
 						>
 							{data.reviewStats.total === 1
 								? '1 item needs review'
@@ -378,17 +381,17 @@
 		     ═══════════════════════════════════════════════════════════════════ -->
 		<div
 			style="
-				border: 1px dashed #334155;
+				border: 1px dashed var(--color-border);
 				border-radius: 8px;
-				padding: 24px;
-				margin-top: 48px;
+				padding: var(--space-xl);
+				margin-top: var(--space-3xl);
 				opacity: 0.7;
 			"
 		>
-			<h2 style="font-size: 20px; font-weight: 600; color: #e2e8f0; margin: 0 0 8px 0;">
+			<h2 style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-sm) 0;">
 				Web Traffic
 			</h2>
-			<p style="font-size: 14px; color: #94a3b8; margin: 0;">Coming soon</p>
+			<p style="font-size: var(--font-size-caption); color: var(--color-text-secondary); margin: 0;">Coming soon</p>
 		</div>
 
 		<!-- ═══════════════════════════════════════════════════════════════════
@@ -401,28 +404,28 @@
 		{#if data.isDevelopment}
 			<section
 				style="
-					background-color: #1e293b;
-					border: 1px solid #334155;
+					background-color: var(--color-surface);
+					border: 1px solid var(--color-border);
 					border-radius: 8px;
-					padding: 24px;
-					margin-top: 48px;
+					padding: var(--space-xl);
+					margin-top: var(--space-3xl);
 				"
 			>
-				<h2 style="font-size: 20px; font-weight: 600; color: #e2e8f0; margin: 0 0 16px 0; line-height: 1.2;">
+				<h2 style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-lg) 0; line-height: 1.2;">
 					Dev Tools
 					<span
 						style="
 							display: inline-flex;
 							align-items: center;
-							gap: 4px;
-							border: 1px solid #fbbf24;
+							gap: var(--space-xs);
+							border: 1px solid var(--color-status-warning);
 							border-radius: 4px;
-							padding: 2px 8px;
-							font-size: 14px;
-							font-weight: 400;
-							color: #fbbf24;
-							background-color: #1e293b;
-							margin-left: 8px;
+							padding: var(--space-xs) var(--space-sm);
+							font-size: var(--font-size-caption);
+							font-weight: var(--font-weight-regular);
+							color: var(--color-status-warning);
+							background-color: var(--color-surface);
+							margin-left: var(--space-sm);
 							vertical-align: middle;
 						"
 					>
@@ -430,7 +433,7 @@
 					</span>
 				</h2>
 
-				<p style="font-size: 14px; color: #94a3b8; margin: 0 0 16px 0;">
+				<p style="font-size: var(--font-size-caption); color: var(--color-text-secondary); margin: 0 0 var(--space-lg) 0;">
 					Wipes every argument, utterance, person, court tenure, and participant in this
 					database, then reseeds exactly the four confirmed fixtures (see FIXTURES.md)
 					through the corpus importer.
@@ -438,21 +441,21 @@
 
 				{#if resetRunning}
 					<!-- Running state: replaces the button/confirm row in place. -->
-					<div style="display: flex; align-items: center; gap: 8px; min-height: 44px;">
+					<div style="display: flex; align-items: center; gap: var(--space-sm); min-height: var(--touch-target);">
 						<span
 							aria-hidden="true"
 							style="display: inline-block; animation: spin 1s linear infinite;"
 						>◌</span>
-						<span style="font-size: 16px; color: #94a3b8;">Resetting to fixture…</span>
+						<span style="font-size: var(--font-size-body); color: var(--color-text-secondary);">Resetting to fixture…</span>
 					</div>
 				{:else if resetConfirming}
 					<!-- Confirming state: two-step Yes/No, no type-to-confirm input (D-05). -->
-					<p style="font-size: 16px; color: #e2e8f0; margin: 0 0 8px 0;">
-						This will permanently delete <span style="font-weight: 600;">every</span> argument,
+					<p style="font-size: var(--font-size-body); color: var(--color-text-primary); margin: 0 0 var(--space-sm) 0;">
+						This will permanently delete <span style="font-weight: var(--font-weight-semibold);">every</span> argument,
 						utterance, person, court tenure, and participant record — not just the fixtures.
 						It cannot be undone.
 					</p>
-					<div style="display: flex; gap: 8px;">
+					<div style="display: flex; gap: var(--space-sm);">
 						<form
 							method="POST"
 							action="?/resetToFixture"
@@ -486,13 +489,13 @@
 								style="
 									display: block;
 									width: 100%;
-									min-height: 44px;
+									min-height: var(--touch-target);
 									background: transparent;
-									border: 1px solid #ef4444;
+									border: 1px solid var(--color-destructive);
 									border-radius: 6px;
-									font-size: 16px;
-									font-weight: 600;
-									color: #ef4444;
+									font-size: var(--font-size-body);
+									font-weight: var(--font-weight-semibold);
+									color: var(--color-destructive);
 									cursor: pointer;
 								"
 							>
@@ -507,13 +510,13 @@
 							}}
 							style="
 								flex: 1;
-								min-height: 44px;
+								min-height: var(--touch-target);
 								background: transparent;
-								border: 1px solid #334155;
+								border: 1px solid var(--color-border);
 								border-radius: 6px;
-								font-size: 16px;
-								font-weight: 400;
-								color: #94a3b8;
+								font-size: var(--font-size-body);
+								font-weight: var(--font-weight-regular);
+								color: var(--color-text-secondary);
 								cursor: pointer;
 							"
 						>
@@ -530,13 +533,13 @@
 						style="
 							display: block;
 							width: 100%;
-							min-height: 44px;
+							min-height: var(--touch-target);
 							background: transparent;
-							border: 1px solid #ef4444;
+							border: 1px solid var(--color-destructive);
 							border-radius: 6px;
-							font-size: 16px;
-							font-weight: 600;
-							color: #ef4444;
+							font-size: var(--font-size-body);
+							font-weight: var(--font-weight-semibold);
+							color: var(--color-destructive);
 							cursor: pointer;
 						"
 					>
@@ -546,25 +549,25 @@
 
 				{#if resetResult}
 					<!-- Success state: badge + one line per reseeded fixture, natural wrap. -->
-					<div style="margin-top: 16px;">
+					<div style="margin-top: var(--space-lg);">
 						<span
 							style="
 								display: inline-flex;
 								align-items: center;
-								border: 1px solid #4ade80;
-								color: #4ade80;
-								background-color: #1e293b;
+								border: 1px solid var(--color-status-published);
+								color: var(--color-status-published);
+								background-color: var(--color-surface);
 								border-radius: 4px;
-								padding: 2px 8px;
-								font-size: 14px;
-								font-weight: 400;
+								padding: var(--space-xs) var(--space-sm);
+								font-size: var(--font-size-caption);
+								font-weight: var(--font-weight-regular);
 							"
 						>
 							✓ Reset complete
 						</span>
-						<div style="margin-top: 8px;">
+						<div style="margin-top: var(--space-sm);">
 							{#each resetResult as fixture (fixture.conversation_id)}
-								<p style="font-size: 16px; color: #e2e8f0; margin: 0 0 4px 0;">
+								<p style="font-size: var(--font-size-body); color: var(--color-text-primary); margin: 0 0 var(--space-xs) 0;">
 									{fixture.case_name} — {fixture.role}
 								</p>
 							{/each}
@@ -576,14 +579,14 @@
 				{#if form?.resetError}
 					<p
 						role="alert"
-						style="color: #ef4444; font-size: 14px; font-weight: 400; margin: 8px 0 0 0;"
+						style="color: var(--color-destructive); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); margin: var(--space-sm) 0 0 0;"
 					>{form.resetError}</p>
 				{/if}
 
 				<!-- Unresolved-speaker seeder (Phase 49, D-33a): additive, single-row, not
 				     destructive — secondary/muted treatment, no two-step confirm. -->
-				<div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #334155;">
-					<p style="font-size: 14px; color: #94a3b8; margin: 0 0 8px 0;">
+				<div style="margin-top: var(--space-xl); padding-top: var(--space-lg); border-top: 1px solid var(--color-border);">
+					<p style="font-size: var(--font-size-caption); color: var(--color-text-secondary); margin: 0 0 var(--space-sm) 0;">
 						Nulls the resolved speaker on one advocate row of the Complexity fixture, so the
 						unresolved-speaker case can be produced on demand.
 					</p>
@@ -615,13 +618,13 @@
 							style="
 								display: block;
 								width: 100%;
-								min-height: 44px;
+								min-height: var(--touch-target);
 								background: transparent;
-								border: 1px solid #334155;
+								border: 1px solid var(--color-border);
 								border-radius: 6px;
-								font-size: 16px;
-								font-weight: 600;
-								color: #94a3b8;
+								font-size: var(--font-size-body);
+								font-weight: var(--font-weight-semibold);
+								color: var(--color-text-secondary);
 								cursor: pointer;
 							"
 						>
@@ -630,7 +633,7 @@
 					</form>
 
 					{#if seedResult}
-						<p style="font-size: 16px; color: #e2e8f0; margin: 8px 0 0 0;">
+						<p style="font-size: var(--font-size-body); color: var(--color-text-primary); margin: var(--space-sm) 0 0 0;">
 							Argument #{seedResult.argument_id} — "{seedResult.raw_speaker_label}" — trust tier:
 							{seedResult.trust_tier}{seedResult.already_seeded ? ' (already seeded)' : ''}
 						</p>
@@ -639,7 +642,7 @@
 					{#if form?.seedError}
 						<p
 							role="alert"
-							style="color: #ef4444; font-size: 14px; font-weight: 400; margin: 8px 0 0 0;"
+							style="color: var(--color-destructive); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); margin: var(--space-sm) 0 0 0;"
 						>{form.seedError}</p>
 					{/if}
 				</div>

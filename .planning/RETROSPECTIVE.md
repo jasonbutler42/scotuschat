@@ -351,6 +351,58 @@
 - Sessions: multiple across the 17-day window, plus one dedicated verify-work/execute-phase/milestone-close session that discovered and corrected the wrong-checkout mistake
 - Notable: the wrong-checkout mistake cost one stray commit (cleanly reset, no data lost) and some session time diagnosing it — cheap relative to what it would have cost if the mistake had gone unnoticed and diverged further from the live repository's history
 
+## Milestone: v1.8 — Import & Provenance Re-model
+
+**Shipped:** 2026-09-23
+**Phases:** 5 (47–51) | **Plans:** 45 | **Tasks:** 120 | **Timeline:** 37 days (2026-08-17 → 2026-09-23)
+**Files changed:** 418 (207 code: +35,904 / -10,169 lines) | **Commits:** 368
+**Codebase at close:** 41,988 production LOC / 60,438 test LOC (1.44:1)
+
+### What Was Built
+
+- Provenance made first-class (47): `import_run` replaced `pipeline_run` as the lineage backbone with a declared `(source, method)` enum pair stamped at row-creation time, retiring both the `PipelineRun` model and the `strategy == "convokit_import"` string-equality hack. Delivered as a clean rebuild against a disposable, fixture-reseedable DB rather than an in-migration backfill
+- Trust and lifecycle (48): one `derive_tier` function, a materialized `trust_tier` recomputed inside every writer's own transaction, a born-`candidate` status, and a publish gate hard-blocked on UNCERTAIN with a logged, never-sticky operator override — plus an offline `recompute-trust` drift-repair CLI and a zero-drift proof run twice
+- Unified review model (49): a four-state `review_state` absorbing the `name_needs_review` parallel mechanism, a matrix-tested authority ladder gating every write to participants and people, the `/admin/review` queue, and a published-write lock across all six argument-data writers
+- Unified import path (50): corpus import writing `import_run` directly with no fabricated PDF artifacts, idempotent re-import proved through the writer (byte-identical second pass across all eight affected tables), and the authority ordering governing every gated-column write
+- Public noun alignment and the design system (51): flat slug-based `/arguments` URLs with `/cases` deleted and no redirect layer, Tailwind removed for a two-layer CSS custom-property token set, a `lib/primitives` component library, and a term-grouped listing
+
+### What Worked
+
+- **The dependency-ordered sequencing was load-bearing and it held.** Provenance (47) was the keystone, then trust (48), then review (49), then the import path (50), with the design system (51) deliberately last so the UI reflected the corrected domain language. No phase had to be reworked because an earlier one turned out wrong — the one thing that did move (IMPORT-02) moved *out* of the milestone, not backwards through it.
+- **Behavioral proof replaced source-text proof, and every time it did, it found something.** Phase 50 closed SC-4 with an 8-test real-writer gate module *including a hand-verified falsifiability demonstration* rather than a grep. Phase 48's public-leak ban derives the public surface live from the routers, so a newly added public field fails the build instead of passing a stale hardcoded list. Phase 51's long-case-name test was verified to fail when `text-overflow: ellipsis` was introduced. This is the direct answer to v1.7's lesson about verification stages validating different properties.
+- **The mid-milestone debridement pass (2026-08-27) wrote two standing policies into CLAUDE.md rather than into a phase document.** The Defect Policy draws the line at "is the correct behavior already determined, or does it need the operator's taste"; the Testing Policy retired static source-text contract tests for frontend behavior after 28 green tests had shipped a fully broken button in v1.7. 16 test files (6,319 LOC) were deleted in the same pass. Because they live in CLAUDE.md they governed phases 49–51 without being re-litigated, and the test:code ratio moved 2.44:1 → 2.04:1 → 1.44:1 by close.
+- **The IMPORT-02 scope split was executed honestly and in one motion.** When Phase 50's planning resolved corpus-only, the PDF half was moved to Phase 999.11 with ROADMAP.md, REQUIREMENTS.md, PROJECT.md and STATE.md all updated in the same decision — rather than half-landing inside Phase 50 or silently failing that phase's requirements-coverage gate. The milestone shipped 24 of 25 requirements with the 25th traceable to a named backlog phase, which is a materially different thing from shipping 24 of 25 with one unexplained.
+- **Before locking published writes, Phase 49 produced a complete dispositioned inventory** of every path that can reach an `Argument`, `Case`, `ArgumentParticipant`, `Utterance` or `Person` — and every "not locked" row carries its reason. The unlocked writers are therefore decisions on the record, not omissions nobody noticed.
+
+### What Was Inefficient
+
+- **"Close tracking artifacts when the fix lands" recurred for a FIFTH time, in a fifth artifact type — and this time the stale artifact was created and invalidated inside the same milestone.** The Phase 31 deferred-items entry for `delete_argument`'s missing `argument_status_log` FK cascade was still marked open at the v1.8 close, months after **Phase 48 plan 48-02 fixed it in this very milestone** with a failing-then-passing regression test. It was surfaced to the operator at close time as an open item requiring a decision. Prior variants: debug sessions (v1.1, v1.5), verification files (v1.6), todo files (v1.7). v1.7's retrospective explicitly called for one structural fix covering all types; that fix was never built, and this is what it cost.
+- **43% of the milestone-close audit's "37 items requiring decisions" were tooling artifacts, not project state.** 14 were GFM table rows from a single closed section in one `deferred-items.md`, which the scanner explodes into one pseudo-item per row and which gsd-core's own acknowledge writer documents in source as *"permanently un-acknowledgeable via the CLI writer — a known, deliberate limitation."* Two more were real entries the writer could not anchor: one because its span embedded a table, one because its status line was written `**Status: open ...**` instead of `**Status:** open ...`. The close could not deliver what the operator chose ("acknowledge all") until the file was restructured.
+- **The acknowledge writer truncates multi-line status values in place, silently discarding the sentence it overwrites.** Three occurrences in this one close (phases 31, 49 ×2), each leaving orphaned continuation prose mid-sentence. Detected only by diffing every changed line against HEAD.
+- **Phase 51's verification listed `STATE.md`, `ROADMAP.md` and `REQUIREMENTS.md` in its own `covered_files`,** so the very next commit — the one recording "phase 51 complete" in those files — invalidated the verification digest. The phase showed as `verification_status: stale` at close despite nothing in the product having changed, and the close needed an operator decision to resolve a discrepancy that was purely self-inflicted bookkeeping.
+- **Phase 49's live-browser human checks were blocked all milestone on sandbox `.env` credential access, consolidated into `49-EVIDENCE.md` §9, and are still unrun** — even though browser tooling became available later in the same milestone. Nothing re-triggered the deferred list once its blocker lifted.
+
+### Patterns Established
+
+- **A falsifiability demonstration ships with the test.** Prove the test fails when the behavior is broken, in the same commit that adds it — Phase 50's gate module and Phase 51's ellipsis check both did this. A green test that was never shown to be capable of going red is not yet evidence.
+- **Structural bans derive their surface live from the code, not from a hardcoded list.** `test_trust_public_leak_ban.py` enumerates the public routers at runtime, so the apolitical constraint fails a build rather than relying on someone remembering it when adding a field.
+- **Dispositioned inventories over spot fixes.** When closing a class of defect, sweep every member of the class and give each an explicit disposition with a reason — including the ones deliberately left alone (D-35a, D-24's 24-row writer inventory).
+- **Fixing one trigger of a defect class does not close the class.** Recorded explicitly in the Trivial-ACCEPT write-up: G-50-2b closed a provenance restamp driven by a *rejected sibling* field; the same class driven by an *accept that wrote nothing* stayed open.
+- **Policy belongs in CLAUDE.md, not in a phase document.** A decision that should govern all later work needs to live where all later work will read it.
+
+### Key Lessons
+
+1. **Five occurrences across five artifact types makes "stale tracking artifacts" a proven systemic gap, not a recurring oversight — and the cost is now concrete.** A defect fixed in Phase 48 was presented to the operator as an open decision at the Phase 51 close. The structural fix v1.7 asked for (a commit-time check for tracking artifacts referencing files the commit touches) would have caught every one of the five variants. Build it, or stop writing the lesson.
+2. **A planning-artifact convention that automated tooling parses is a schema, and needs schema treatment.** `deferred-items.md` is written by hand "with no mandated shape," and that produced 14 phantom close-blocking items and 2 unacknowledgeable real ones. Either the writer validates the shape it can anchor, or the convention gets a documented shape and a linter — a format that is load-bearing for tooling cannot stay informal.
+3. **A verifier must not include, in its covered-file set, the bookkeeping files its own phase completion writes to.** Self-invalidating verification wastes an operator decision at every close and trains people to wave staleness through, which is exactly when a real staleness signal will get missed.
+4. **Deferred work needs a re-trigger tied to its blocker, not just a record.** Phase 49's live-browser checks were correctly recorded and correctly blocked; nothing revisited them when the block lifted mid-milestone, so they are still open a milestone later.
+
+### Cost Observations
+
+- Model mix: not recorded per-phase this milestone; Sonnet remained the primary executor/planner model with Opus used for the milestone-close session and the verification pass
+- Sessions: multiple across the 37-day window — the longest milestone to date by elapsed time, though not by plan count
+- Notable: the milestone's real cost concentration was Phase 49 (12 plans, 37 tasks), which absorbed the review model, the authority ladder, the published-write lock, and four separate rounds of mobile-overflow fixes. Phase 49 alone carried more plans than the entire v1.3 milestone
+
 ---
 
 ## Cross-Milestone Trends
@@ -367,6 +419,7 @@
 | v1.5 Admin Screens Cleanup | 10 (incl. inserted 30.1) | 55 | Largest milestone yet; absorbed an unplanned 7,800-argument bulk corpus import mid-milestone; inserted gap-closure phase pattern for milestone-audit findings; recurring "close debug sessions at fix time" lesson |
 | v1.6 Backlog Cleanup | 11 (incl. inserted 40.1) | 51 | A stale debug session caused a duplicate security-fix phase to be inserted and discussed before the planner's own source audit caught it pre-implementation; "close debug sessions at fix time" recurred for a third time and is now flagged for a structural fix, not another reminder |
 | v1.7 Corpus Fidelity & Resolve Rework | 6 (incl. inserted 46) | 29 | Mid-milestone phase insertion (46) driven by a real environmental constraint lifting (Windows admin access); all three post-implementation gates (goal verification, code review, security audit) each independently caught a different real issue on the same phase; "close tracking artifacts at fix time" recurred a fourth time in a new variant (todo files, not just debug sessions/verification files) |
+| v1.8 Import & Provenance Re-model | 5 | 45 | Longest milestone by elapsed time (37 days); two standing policies (Defect, Testing) written into CLAUDE.md mid-milestone and 16 test files deleted, moving test:code from 2.44:1 to 1.44:1; behavioral/falsifiable proof replaced source-text proof as the default; a requirement (IMPORT-02) was cleanly split out to a named backlog phase rather than half-landing; "close tracking artifacts at fix time" recurred a **fifth** time, in deferred-items entries, with the stale record created and invalidated inside the same milestone |
 
 ### Cumulative Quality
 
@@ -383,3 +436,6 @@
 4. A planner's (or any agent's) "this is already done" conclusion should be independently re-verified against primary sources before being accepted, especially when the alternative is writing or skipping security-relevant code (v1.6)
 5. Verification passing, code review passing, and a code review's own fixes being safe are three separate properties — each needs its own check, and a fix cycle should get its own adversarial re-examination rather than inheriting the original review's clean bill of health (v1.7)
 6. When a workflow resolves "where do I work" for a project that has relocated its repository, check for a retirement/relocation marker at the resolved path before the first write — don't rely on an agent or operator noticing it organically (v1.7)
+7. A green test that has never been shown capable of going red is not yet evidence — ship a falsifiability demonstration alongside any test standing in for a real guarantee, and prefer a real-writer behavioral test over a source-text grep (v1.8, and the direct consequence of v1.7's broken-button-with-28-green-tests)
+8. A planning-artifact convention that tooling parses is a schema; leaving it informal cost 43% of the v1.8 close's "decisions required" as pure tooling noise (v1.8)
+9. A verifier's covered-file set must exclude the bookkeeping files its own phase completion writes to, or the verification invalidates itself the moment the phase is marked complete (v1.8)

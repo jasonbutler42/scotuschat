@@ -4,10 +4,10 @@ Business logic for admin job orchestration.
 Responsibilities:
   - CRUD for AdminJob rows (create, get, list)
   - Atomic step-advance guards (rowcount check, no RETURNING)
-  - Run-id lookup for resumable re-spawn (PIPE-17)
+  - Run-id lookup for resumable re-spawn
   - Resolve job: validate person_ids, upsert SpeakerAlias, UPDATE utterances +
     argument_participants, complete job
-  - Inline person/role creation (D-13)
+  - Inline person/role creation
 
 Critical guards (mirroring pipeline/commands/resolve.py):
   - EVERY update() call includes .execution_options(synchronize_session=False)
@@ -76,7 +76,7 @@ async def create_job(
 
     original_filename: browser-supplied filename for upload-mode jobs (Pitfall 3:
     may be None for malformed uploads — stored as-is without assertion).
-    URL-mode jobs pass None (D-03).
+    URL-mode jobs pass None.
 
     source_dockets: full ordered docket list submitted at run creation (D-07
     supersession, Phase 24 Plan 04). Stored here because Argument does not exist
@@ -134,7 +134,7 @@ async def get_job(db: AsyncSession, job_id: int) -> AdminJob | None:
       - No parse ImportRun exists for this argument
 
     Reuses get_run_id_for_step(db, job_id, "parse") which orders by created_at
-    DESC LIMIT 1 — correctly reflects the latest run when re-runs occurred (D-09).
+    DESC LIMIT 1 — correctly reflects the latest run when re-runs occurred.
     """
     result = await db.execute(
         select(AdminJob).where(AdminJob.id == job_id)
@@ -143,14 +143,14 @@ async def get_job(db: AsyncSession, job_id: int) -> AdminJob | None:
     if job is None:
         return None
 
-    # Phase 26 gap closure (PLIST-05): default is_archived to False on the
+    # Phase 26 gap closure: default is_archived to False on the
     # detail path. The detail page derives its archived signal from the
     # readiness endpoint (RunReadiness.state == 'already_created'), not from
     # this field, so a default of False here is correct and intentional —
     # this only guards AdminJobResponse serialization from AttributeError.
     job.__dict__.setdefault("is_archived", False)
 
-    # Phase 30 (PJOB-01): derive source ("pdf" vs "corpus") for parity with
+    # Derive source ("pdf" vs "corpus") for parity with
     # list_jobs() — unlike is_archived, this is the real per-job value, not a
     # default, since the detail page's schema should also report provenance
     # even though 30-03's Source tag only renders on the list page. Correlated
@@ -158,6 +158,15 @@ async def get_job(db: AsyncSession, job_id: int) -> AdminJob | None:
     # rather than AdminJob.argument_id, since a single-row exists() has no
     # need to join back to AdminJob — argument_id being None (ingest not yet
     # finished) correctly yields no ImportRun match (NOT NULL column) → "pdf".
+    #
+    # This corpus branch is unreachable BY CONSTRUCTION as
+    # of this phase — the corpus importer stopped minting an AdminJob at
+    # all, so no ImportRun with source=CORPUS can ever be
+    # correlated to a real job.argument_id here, and this subquery always
+    # evaluates false. The derivation is deliberately RETAINED rather than
+    # removed: Phase 999.11 may reintroduce a corpus-linked job when it
+    # reworks the PDF route (D-17's deferred ADMIN_JOB.import_run_id), at
+    # which point this correlation becomes live again with no further edit.
     is_corpus_result = await db.execute(
         select(
             exists().where(
@@ -182,7 +191,7 @@ async def get_job(db: AsyncSession, job_id: int) -> AdminJob | None:
         utterance_count = utt_result.scalar_one()
 
         # Scope distinct speaker count to the current parse run so re-parsed jobs
-        # do not accumulate stale labels from earlier runs (WR-02).
+        # do not accumulate stale labels from earlier runs.
         spk_result = await db.execute(
             select(func.count(Utterance.raw_speaker_label.distinct()))
             .where(Utterance.import_run_id == parse_run_id)
@@ -190,7 +199,7 @@ async def get_job(db: AsyncSession, job_id: int) -> AdminJob | None:
         )
         speaker_count = spk_result.scalar_one()
 
-        # Phase 23 (PJOB-10): bench/advocate counts scoped to this argument.
+        # Bench/advocate counts scoped to this argument.
         # COUNT queries always return a row — use scalar_one(), never scalar_one_or_none().
         # Only resolved participants (person_id IS NOT NULL) are counted.
         bench_result = await db.execute(
@@ -213,7 +222,7 @@ async def get_job(db: AsyncSession, job_id: int) -> AdminJob | None:
 
         total_speaker_count = bench_count + advocate_count
 
-        # Phase 23 (PJOB-12): cover_metadata + question_number from Argument row.
+        # Cover_metadata + question_number from Argument row.
         # cover_metadata is nullable JSONB — read defensively with (cover_metadata or {}).
         # CRITICAL: question_number comes from Argument.question_number column,
         # NOT from cover_metadata (which has no question_number key).
@@ -250,20 +259,27 @@ async def list_jobs(
 
     Args:
         db: Async database session.
-        incomplete: When True, filter to only PAUSED and FAILED jobs (D-10 / PIPE-20).
+        incomplete: When True, filter to only PAUSED and FAILED jobs.
                     When False (default), return all jobs regardless of status.
 
-    Phase 26 gap closure (PLIST-05): LEFT OUTER JOINs Argument so each row's
+    Phase 26 gap closure: LEFT OUTER JOINs Argument so each row's
     linked argument status (if any) is available to derive is_archived —
     true only when a linked argument exists and its status is no longer
     CANDIDATE, mirroring RunReadiness's already_created state used by the
     detail page's RunStatusCard.
 
-    Phase 30 (PJOB-01): also derives source ("pdf" vs "corpus") via an
+    Also derives source ("pdf" vs "corpus") via an
     exists() subquery on ImportRun.source == ImportSource.CORPUS — exists()
     rather than a second outerjoin because Argument -> ImportRun is 1:many
     (an argument accumulates multiple ImportRun rows over reruns/step-
     advances); a naive join would risk duplicate AdminJob rows in the result.
+
+    This corpus branch is unreachable BY CONSTRUCTION as
+    of this phase — a fresh corpus import mints no AdminJob at all (plan
+    50-01), so `is_corpus_subq` always evaluates false for every row this
+    query can return. Retained rather than removed/simplified: Phase
+    999.11 may reintroduce a corpus-linked job when it reworks the PDF
+    route, at which point this derivation becomes live again unchanged.
     """
     is_corpus_subq = exists(
         select(ImportRun.id).where(
@@ -288,7 +304,7 @@ async def list_jobs(
         )
         job.__dict__["source"] = "corpus" if is_corpus else "pdf"
         # Inject parse_stats=None so Pydantic's from_attributes mode can serialize the
-        # field without raising AttributeError (WR-03). get_job injects the real value;
+        # field without raising AttributeError. get_job injects the real value;
         # list_jobs only needs a safe default since the list view does not display parse_stats.
         job.__dict__.setdefault("parse_stats", None)
         jobs.append(job)
@@ -464,7 +480,7 @@ async def resolve_job(
             "resolve can only be applied to a paused job."
         )
 
-    # Step 1a.i: Published guard (D-35a) — load the owning Argument by the
+    # Step 1a.i: Published guard — load the owning Argument by the
     # job's argument_id and refuse if it is PUBLISHED. A missing/unlinked
     # argument (job.argument_id is None, or the row is gone) falls into the
     # same "Argument not found for this job" message update_resolve_row_for_job
@@ -495,7 +511,7 @@ async def resolve_job(
             )
 
     # Step 1c: Derive the parse run-id so we can scope the Utterance UPDATE.
-    # WR-05: treat a missing parse_run_id as an error — a None would broaden the
+    # Treat a missing parse_run_id as an error — a None would broaden the
     # Utterance UPDATE to all parse runs for the argument, corrupting prior runs.
     parse_run_id = await get_run_id_for_step(db, job_id, "parse")
     if parse_run_id is None:
@@ -631,7 +647,7 @@ async def resolve_job(
             .values(resolved_at=func.now())
             .execution_options(synchronize_session=False)
         )
-        # D-07/D-11: this writer directly fills NULL person_id on Utterance
+        # This writer directly fills NULL person_id on Utterance
         # and ArgumentParticipant rows — a direct floor input — so the
         # recompute is load-bearing, not consistency-only. Called exactly
         # once for the whole batch (not once per match) so the floor is
@@ -646,12 +662,12 @@ async def resolve_job(
 
 
 # ---------------------------------------------------------------------------
-# Phase 15: Approve pipeline transition (D-09)
+# Approve pipeline transition
 # ---------------------------------------------------------------------------
 
 
 async def approve_job(db: AsyncSession, job_id: int) -> AdminJob:
-    """Transition argument from candidate to draft state (D-09).
+    """Transition argument from candidate to draft state.
 
     Sets argument.status = 'draft' and argument.resolved_at = now().
     Sets admin_job.status = COMPLETED.
@@ -663,7 +679,7 @@ async def approve_job(db: AsyncSession, job_id: int) -> AdminJob:
       - Argument is not in CANDIDATE state (double-approve guard, Pitfall 6)
 
     Writes one ArgumentStatusLog row (status=DRAFT) — the "Created" transition
-    record (D-08) — in the same transaction as the Argument update.
+    record — in the same transaction as the Argument update.
 
     Recomputes and stores arguments.trust_tier in the same transaction,
     before this function's own commit (D-07, 48-RESEARCH.md Pitfall 2).
@@ -704,12 +720,12 @@ async def approve_job(db: AsyncSession, job_id: int) -> AdminJob:
         .values(status=AdminJobStatus.COMPLETED)
         .execution_options(synchronize_session=False)
     )
-    # D-07: not itself a constituent change, but every writer recomputes
+    # Not itself a constituent change, but every writer recomputes
     # (48-RESEARCH.md writer #4) — one bounded per-argument query guarantees
     # the tier is truthful the moment the argument becomes operator-visible.
     await recompute_argument_tier(db, job.argument_id)
     await db.commit()
-    # Phase 31 fix: the bulk update() above uses synchronize_session=False, so
+    # The bulk update() above uses synchronize_session=False, so
     # the `job` object already loaded into this session's identity map (via
     # get_job() at the top of this function) is never synced to the new
     # status. get_job()'s re-select for the same job_id would otherwise
@@ -725,7 +741,7 @@ async def approve_job(db: AsyncSession, job_id: int) -> AdminJob:
 
 
 # ---------------------------------------------------------------------------
-# Phase 25: Run readiness and failed-step recovery (D-01 through D-08, D-18, D-20)
+# Run readiness and failed-step recovery (D-01 through D-08, D-18, D-20)
 # ---------------------------------------------------------------------------
 
 
@@ -751,9 +767,9 @@ def derive_failed_step_recovery(
 
     Guidance is returned separately from raw_error so the UI can show human
     guidance first and put the raw technical error in an expandable details
-    block (T-25-03). href always points at the pipeline list page — this
+    block. href always points at the pipeline list page — this
     function directs the operator to ordinary new-run creation as the primary
-    recovery action (D-05); 25-UI-SPEC.md supersedes the older PJOB-22 wording.
+    recovery action; 25-UI-SPEC.md supersedes the older PJOB-22 wording.
     """
     guidance = (
         _FAILED_STEP_GUIDANCE.get(current_step, _DEFAULT_FAILED_GUIDANCE)
@@ -785,10 +801,10 @@ async def get_job_readiness(db: AsyncSession, job_id: int) -> RunReadiness:
     already_created short-circuits every other check: once the linked argument's
     status is no longer CANDIDATE, the run is reported already_created regardless
     of any other blocker state — the argument already exists and the page
-    becomes read-only provenance (D-18, D-20). argument_edit_href points at the
-    argument editor, never at a pipeline recovery action (D-04).
+    becomes read-only provenance. argument_edit_href points at the
+    argument editor, never at a pipeline recovery action.
 
-    Otherwise, strict blockers are derived (D-02):
+    Otherwise, strict blockers are derived:
       - linked argument exists
       - at least one docket is present (source_docket or source_dockets)
       - question_number is present
@@ -797,7 +813,7 @@ async def get_job_readiness(db: AsyncSession, job_id: int) -> RunReadiness:
         (person_id IS NOT NULL)
       - the job is not currently FAILED or RUNNING
 
-    state is "ready" only when no blockers remain (D-03); otherwise "not_ready".
+    state is "ready" only when no blockers remain; otherwise "not_ready".
     Raises ValueError if the job does not exist.
     """
     job = await get_job(db, job_id)
@@ -871,7 +887,7 @@ async def get_job_readiness(db: AsyncSession, job_id: int) -> RunReadiness:
 
 
 # ---------------------------------------------------------------------------
-# Phase 25: Job-scoped resolve-row mutation (D-14, D-18, PJOB-14, PJOB-18)
+# Job-scoped resolve-row mutation
 # ---------------------------------------------------------------------------
 
 
@@ -892,7 +908,7 @@ async def update_resolve_row_for_job(
     argument id directly), and each calls the same authority-gated writer
     (api/services/admin_review.py::apply_participant_value_change) independently.
 
-    Guards, in order (T-25-14, T-25-15):
+    Guards, in order:
       1. AdminJob must exist and have a linked argument.
       2. The linked argument.status must not be PUBLISHED — resolve rows are
          editable across every unpublished lifecycle state (CANDIDATE, DRAFT,
@@ -946,7 +962,7 @@ async def update_resolve_row_for_job(
             f"AdminJob {job_id}'s linked argument"
         )
 
-    # Phase 49 (D-31/D-31a): side/descriptor route through the ONE
+    # Side/descriptor route through the ONE
     # authority-gated writer (api.services.admin_review) — no second,
     # ungated write path to this table survives. incoming_source/
     # incoming_method are "operator"/"manual": an admin resolving a row via
@@ -959,7 +975,7 @@ async def update_resolve_row_for_job(
         incoming_source="operator",
         incoming_method="manual",
     )
-    # RESOLVE-13: the descriptor gate is applied ONLY when the side is not
+    # The descriptor gate is applied ONLY when the side is not
     # BENCH, so a BENCH write never touches that column at all — the
     # stored value is preserved, not overwritten with null, and a
     # client-supplied bench descriptor is ignored rather than written.
@@ -973,10 +989,10 @@ async def update_resolve_row_for_job(
             incoming_method="manual",
         )
 
-    # CR-01 fix (49-REVIEW.md): this is an operator edit through the same
+    # This is an operator edit through the same
     # authority gate as update_participant_side's sibling path — advance
     # review_state to OPERATOR_EDITED and close this participant's open
-    # discrepancies in the SAME transaction (D-15), exactly as
+    # discrepancies in the SAME transaction, exactly as
     # update_participant_side (api/services/admin_arguments.py) does. Without
     # this, an ordinary first-time side resolution (UNKNOWN -> a real side)
     # records a value_discrepancy via apply_participant_value_change above
@@ -1017,7 +1033,7 @@ async def update_resolve_row_for_job(
                 participant.source = parse_run_row.source
                 participant.method = parse_run_row.method
 
-    # D-07: side/descriptor don't currently feed derive_tier (48-RESEARCH.md
+    # Side/descriptor don't currently feed derive_tier (48-RESEARCH.md
     # Open Question 1), but recompute is called anyway per "every writer
     # calls recompute" — the cost is one bounded per-argument query, and
     # Phase 49 adds review_state/method to this exact row, which makes this
@@ -1030,7 +1046,7 @@ async def update_resolve_row_for_job(
 
 
 # ---------------------------------------------------------------------------
-# Inline person/role creation (D-13)
+# Inline person/role creation
 # ---------------------------------------------------------------------------
 
 
@@ -1044,10 +1060,10 @@ async def create_person_for_job(
     If body.role_name is set and body.role_id is None, find-or-create a Role
     by name first, then use its id for the new Person.
 
-    WR-02: validates that the AdminJob exists and is PAUSED before creating
+    Validates that the AdminJob exists and is PAUSED before creating
     the Person — prevents phantom person rows from spurious or wrong-state POSTs.
 
-    Phase 25 mini create-person popover (D-12, D-13, PJOB-19): when
+    Phase 25 mini create-person popover: when
     body.raw_speaker_label is set, this is a job-scoped resolve mutation, not a
     bare person insert:
       - The target ArgumentParticipant is looked up scoped to
@@ -1067,13 +1083,13 @@ async def create_person_for_job(
     update), so this is also rejected with ValueError before any row is
     created.
 
-    Phase 38 (D-01, D-03, D-09, T-38-07): body carries structured name parts,
+    Body carries structured name parts,
     never a client-owned full_name (there is no such field on PersonCreate
     at all). The submitted parts are normalized and validated through the
     same shared `api.domain.person_names.prepare_person_name` helper the
     standalone people-directory create/update paths use — raising
     PersonNameError (a ValueError, translated to 422 by the router) when
-    neither first_name nor last_name is present (D-09) — BEFORE the job
+    neither first_name nor last_name is present — BEFORE the job
     state/participant checks below, so an invalid name never even reaches
     the participant-scoping IDOR guard. full_name is always derived from
     the validated parts, never trusted from the request.
@@ -1085,11 +1101,11 @@ async def create_person_for_job(
     this path fills in a NULL person_id, a direct D-11 floor input, so the
     recompute is load-bearing, not consistency-only.
 
-    Published guard (D-35, D-35a, operator, 2026-08-24): raises ValueError
+    Published guard: raises ValueError
     when the job's linked argument is PUBLISHED. This closes the second of
     the two job-scoped participant writers D-35's first half (plan 49-09,
     update_participant_side) never reached — same reachability caveat as
-    resolve_job's own published guard (defence in depth; see 49-11-PLAN.md
+    resolve_job's own published guard (defence in depth
     `<planner_decisions>`). Runs inside this function's existing
     validate-before-mutate discipline, immediately after the PAUSED check
     and before the participant lookup below, so a refusal happens before
@@ -1099,7 +1115,7 @@ async def create_person_for_job(
     out of D-35a's scope (see the prohibitions in 49-11-PLAN.md) — so this
     guard only fires when the job resolves to an actual PUBLISHED Argument.
     """
-    # Phase 38 (D-09): validate/derive the name FIRST — cheapest possible
+    # Validate/derive the name FIRST — cheapest possible
     # rejection, before any job/participant lookup or Person row exists.
     prepared = prepare_person_name(
         body.first_name, body.middle_name, body.last_name, body.name_suffix
@@ -1155,7 +1171,7 @@ async def create_person_for_job(
             )
 
     role_id = body.role_id
-    # WR-01/WR-03: PersonResponse.role_name has no backing attribute on
+    # PersonResponse.role_name has no backing attribute on
     # Person (no column, no hybrid property) — from_attributes=True
     # serialization would otherwise either raise AttributeError or (once
     # merely defaulted) always report None instead of the resolved Role's
@@ -1195,7 +1211,7 @@ async def create_person_for_job(
     await db.flush()
 
     if participant is not None and body.side is not None:
-        # CR-02 fix (49-REVIEW.md): person_id AND side are both
+        # Person_id AND side are both
         # D-31/D-31a-protected value columns on ArgumentParticipant — route
         # both through the ONE authority gate (apply_participant_value_change)
         # instead of a raw ungated UPDATE, so a write that would silently
@@ -1218,12 +1234,12 @@ async def create_person_for_job(
             incoming_method="manual",
         )
 
-        # Gap fix (49-VERIFICATION.md): creating a person and assigning it
+        # Gap fix: creating a person and assigning it
         # to this participant IS an operator edit — same D-11 rule
         # update_participant_side (api/services/admin_arguments.py) and
         # update_resolve_row_for_job (this module, above) already apply.
         # Advance review_state to OPERATOR_EDITED and close this
-        # participant's open discrepancies in the SAME transaction (D-15),
+        # participant's open discrepancies in the SAME transaction,
         # exactly as those two reference implementations do. Without this,
         # the two apply_participant_value_change calls above each open a
         # value_discrepancy row (first-time fill is ACCEPT_AND_RECORD) that
@@ -1242,7 +1258,7 @@ async def create_person_for_job(
             db, target_type="argument_participant", target_id=participant.id
         )
 
-        # D-07/D-11: this fills a NULL ArgumentParticipant.person_id — a
+        # This fills a NULL ArgumentParticipant.person_id — a
         # direct floor input — so the recompute is load-bearing, not
         # consistency-only. Called before this function's own commit
         # (Pitfall 2).
@@ -1250,7 +1266,7 @@ async def create_person_for_job(
 
     await db.commit()
     await db.refresh(person)
-    # WR-01/WR-03: PersonResponse declares role_name, which Person has no
+    # PersonResponse declares role_name, which Person has no
     # matching attribute for — inject it explicitly (never left unset) so
     # from_attributes=True serialization neither raises AttributeError nor
     # silently reports None when a role was actually resolved above.

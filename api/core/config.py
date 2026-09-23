@@ -13,7 +13,7 @@ class Settings(BaseSettings):
 
     database_url: str  # postgresql+asyncpg://user:pass@host/db
 
-    # Test-DB isolation (Phase 31, D-01): read directly via os.environ by
+    # Test-DB isolation: read directly via os.environ by
     # tests/conftest.py (which redirects DATABASE_URL to this value before any
     # module import) and by pipeline/tests/conftest.py's test_db_url fixture.
     # Declared here — not used by the running API — solely so Settings() does
@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     # False in production; enables SQLAlchemy SQL echo when True
     debug: bool = False
 
-    # Required — set via ADMIN_TOKEN env var (D-13).
+    # Required — set via ADMIN_TOKEN env var.
     # No default value: app refuses to start without this set (fail-fast, T-05-02).
     # Do NOT log or expose this value in any endpoint response.
     admin_token: str
@@ -46,7 +46,7 @@ class Settings(BaseSettings):
 
     # ---------------------------------------------------------------------------
     # DO Spaces — required only for PIPE-13 file upload (operator uploads a local PDF).
-    # URL-mode (PIPE-12) works without these credentials — they default to "".
+    # URL-mode works without these credentials — they default to "".
     #
     # DEPLOYMENT TIER NOTE: These credentials must be configured on the FastAPI service
     # in the DO App Platform environment, NOT the SvelteKit service. boto3 runs inside

@@ -37,6 +37,11 @@ type ReviewQueueArgumentItem = {
 	admin_job_id: number | null;
 	constituents: ReviewQueueConstituent[];
 	blockers: TierBlocker[];
+	// Phase 50 plan 50-02 (PD-09): open value_discrepancy rows recorded
+	// directly against this argument's own value columns or its lead
+	// case's columns — distinct from constituents[].discrepancies, which
+	// covers only argument_participant-level rows. Rendered by 50-04.
+	argument_discrepancies: DiscrepancyDetail[];
 };
 
 type ReviewQueuePersonItem = {
@@ -123,6 +128,33 @@ export const load: PageServerLoad = async ({ fetch, url }) => {
 };
 
 /**
+ * Post-action redirect target, preserving the operator's tab and filters
+ * (G-50-4a).
+ *
+ * `url.pathname + url.search` was NOT enough on its own. Inside a form
+ * action `url` is the ACTION url, so its search is whatever the form's
+ * `action` attribute put there — with the bare `action="?/approve"` these
+ * forms used to declare, that was literally `?/approve` and every filter
+ * was dropped, landing the operator back on the unfiltered top of the
+ * queue after each action. The forms now carry the live filter query
+ * (see `actionUrl` in +page.svelte); this helper drops SvelteKit's own
+ * action key — the one param whose name starts with `/` — so the redirect
+ * target is a clean, linkable filter URL rather than one that still
+ * carries `&/approve`.
+ *
+ * Found by the D-09/50-04 live walkthrough, 2026-08-26; the previous
+ * behaviour contradicted these actions' own docstrings.
+ */
+function filterRedirect(url: URL): string {
+	const params = new URLSearchParams(url.search);
+	for (const key of [...params.keys()]) {
+		if (key.startsWith('/')) params.delete(key);
+	}
+	const queryString = params.toString();
+	return queryString ? `${url.pathname}?${queryString}` : url.pathname;
+}
+
+/**
  * Shared PATCH helper for the three resolve-action form actions below —
  * each POSTs the corresponding fixed action verb the server chose (never
  * a client-supplied field name/value, T-49-massassign) to
@@ -163,6 +195,40 @@ async function patchReviewAction(
 	return null;
 }
 
+/**
+ * POST helper for the argument-scoped Approve action (D-14/50-03) —
+ * `POST /api/admin/arguments/{id}/approve`. No request body: approve
+ * carries no operator-supplied data. Mirrors patchReviewAction's
+ * error-handling shape (auth header, non-OK -> operator-readable message,
+ * caller decides the redirect) so a non-OK response can never be swallowed
+ * into a silent no-op (Phase 48's list-page 422 swallow is the precedent
+ * this avoids, T-50-17).
+ */
+async function approveArgument(fetchFn: typeof fetch, id: string): Promise<{ error: string } | null> {
+	let res: Response;
+	try {
+		res = await fetchFn(`${FASTAPI_BASE_URL}/api/admin/arguments/${id}/approve`, {
+			method: 'POST',
+			headers: {
+				'X-Admin-Token': ADMIN_TOKEN,
+			},
+		});
+	} catch {
+		return { error: 'Could not approve this argument. Try again.' };
+	}
+
+	if (!res.ok) {
+		const payload: unknown = await res.json().catch(() => null);
+		const detail = (payload as { detail?: unknown } | null)?.detail;
+		if (typeof detail === 'string' && detail.length > 0) {
+			return { error: detail };
+		}
+		return { error: 'Could not approve this argument. Try again.' };
+	}
+
+	return null;
+}
+
 export const actions: Actions = {
 	confirm: async ({ request, fetch, url }) => {
 		const formData = await request.formData();
@@ -172,7 +238,7 @@ export const actions: Actions = {
 		const failure = await patchReviewAction(fetch, kind, id, 'confirm');
 		if (failure) return fail(502, failure);
 
-		throw redirect(303, url.pathname + url.search);
+		throw redirect(303, filterRedirect(url));
 	},
 
 	/**
@@ -187,7 +253,7 @@ export const actions: Actions = {
 		const failure = await patchReviewAction(fetch, 'participants', id, 'confirm_unattributable');
 		if (failure) return fail(422, failure);
 
-		throw redirect(303, url.pathname + url.search);
+		throw redirect(303, filterRedirect(url));
 	},
 
 	reflag: async ({ request, fetch, url }) => {
@@ -198,6 +264,22 @@ export const actions: Actions = {
 		const failure = await patchReviewAction(fetch, kind, id, 'reflag');
 		if (failure) return fail(422, failure);
 
-		throw redirect(303, url.pathname + url.search);
+		throw redirect(303, filterRedirect(url));
+	},
+
+	/**
+	 * approve — argument-scoped only (PD-12); no analogous action exists on
+	 * the People tab. Preserves the current filter/tab query string on the
+	 * post-action redirect, same as the three actions above, so approving
+	 * does not silently drop the operator's tab and filter selection.
+	 */
+	approve: async ({ request, fetch, url }) => {
+		const formData = await request.formData();
+		const id = formData.get('id') as string;
+
+		const failure = await approveArgument(fetch, id);
+		if (failure) return fail(422, failure);
+
+		throw redirect(303, filterRedirect(url));
 	},
 };

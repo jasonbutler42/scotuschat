@@ -1,31 +1,29 @@
 {
-  "name": "scotuschat",
-  "version": "0.0.1",
-  "private": true,
-  "scripts": {
-    "dev": "vite dev",
-    "build": "vite build",
-    "preview": "vite preview",
-    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
-    "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
-    "audit:viewport": "node scripts/narrow-viewport-audit.mjs"
-  },
-  "devDependencies": {
-    "@sveltejs/adapter-node": "^5.2.0",
-    "@sveltejs/kit": "^2.21.0",
-    "@sveltejs/vite-plugin-svelte": "^5.0.0",
-    "@tailwindcss/typography": "^0.5.0",
-    "@types/node": "^25.9.3",
-    "autoprefixer": "^10.4.0",
-    "postcss": "^8.5.0",
-    "svelte": "^5.30.0",
-    "svelte-check": "^4.2.0",
-    "tailwindcss": "^3.4.0",
-    "typescript": "^5.7.0",
-    "vite": "^6.3.0"
-  },
-  "type": "module",
-  "dependencies": {
-    "bits-ui": "^2.18.1"
-  }
+	"name": "scotuschat",
+	"version": "0.0.1",
+	"private": true,
+	"scripts": {
+		"dev": "vite dev",
+		"build": "vite build",
+		"preview": "vite preview",
+		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+		"audit:viewport": "node scripts/narrow-viewport-audit.mjs",
+		"tokens:convert": "node scripts/tokenize-styles.mjs"
+	},
+	"devDependencies": {
+		"@sveltejs/adapter-node": "^5.2.0",
+		"@sveltejs/kit": "^2.21.0",
+		"@sveltejs/vite-plugin-svelte": "^5.0.0",
+		"@types/node": "^25.9.3",
+		"svelte": "^5.30.0",
+		"svelte-check": "^4.2.0",
+		"typescript": "^5.7.0",
+		"vite": "^6.3.0"
+	},
+	"type": "module",
+	"dependencies": {
+		"@lucide/svelte": "^1.35.0",
+		"bits-ui": "^2.18.1"
+	}
 }

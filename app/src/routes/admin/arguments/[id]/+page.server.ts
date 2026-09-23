@@ -122,9 +122,9 @@ export const load: PageServerLoad = async ({ fetch, params }) => {
 
 	// can_delete: server-side gate — derived from already-loaded argument data (D-05).
 	// No extra API call needed; argument.status is in the ArgumentDetail response.
-	// Only Draft arguments can be deleted (D-03 / AEDIT-09) — Published and Unpublished
-	// are both blocked (T-21-01-PUB, T-26-11, Pitfall 4).
-	const can_delete = argument.status === 'draft';
+	// Deletable in every state except published (D-25/PD-11, Phase 50) — delete is
+	// the strongest edit there is, so this mirrors D-35a's published-only doctrine.
+	const can_delete = argument.status !== 'published';
 
 	// Construct savedValues and hints for the second ArgumentDetailsCard consumer
 	// (AEDIT-04, mirroring the pipeline job detail page's Plan 23-03 derivation,
@@ -521,7 +521,7 @@ export const actions: Actions = {
 
 	/**
 	 * delete — DELETE /api/admin/arguments/{id}.
-	 * Server-side: only unpublished arguments can be deleted (T-21-01-PUB).
+	 * Server-side: deletable in every state except published (D-25/PD-11, Phase 50).
 	 * On 409 (published): return fail with error copy (server already blocks; copy is fine).
 	 * On success: redirect to /admin/arguments (D-06).
 	 * Auth: X-Admin-Token header passed server-side; never exposed to client (CLAUDE.md).
@@ -540,8 +540,7 @@ export const actions: Actions = {
 		if (!res.ok) {
 			if (res.status === 409) {
 				return fail(409, {
-					deleteError:
-						'Published and unpublished arguments cannot be deleted. Only drafts can be removed.',
+					deleteError: 'Published arguments cannot be deleted.',
 				});
 			}
 			return fail(502, { deleteError: 'Could not delete argument. Try again.' });

@@ -12,6 +12,11 @@ Subcommands:
               shared api.services.trust.recompute_argument_tier() service
               and report how many rows changed (Phase 48 D-09 drift-repair
               tool and falsifiable verification vehicle).
+    prune-runs — Deliberately and offline reclaim superseded ImportRun/
+              Utterance rows an import intentionally never deletes
+              (Phase 50 D-12). Never removes the run the public read path
+              currently serves, and never removes a run carrying an open
+              value_discrepancy row.
 
 Usage examples:
     python -m pipeline ingest \\
@@ -42,6 +47,7 @@ from pipeline.commands.import_convokit import (
     run_import_convokit,
 )
 from pipeline.commands.parse import run_parse
+from pipeline.commands.prune_runs import run_prune_runs
 from pipeline.commands.recompute_trust import run_recompute_trust
 from pipeline.commands.resolve import run_resolve
 from pipeline.commands.seed_aliases import run_seed_aliases
@@ -52,7 +58,7 @@ def _scrape_job_id(argv: list[str]) -> int | None:
     """
     Extract the integer following --job-id in argv, or None if absent/unparseable.
 
-    T-24-10: only the integer job-id is trusted/used from argv here — no other
+    Only the integer job-id is trusted/used from argv here — no other
     operator-supplied token is echoed anywhere, so there is no log-injection
     surface from a rejected/malformed docket value.
     """
@@ -78,7 +84,7 @@ def _write_early_failure(job_id: int | None, message: str) -> None:
     """
     if job_id is None:
         return
-    # T-24-10: bound the message before it reaches the DB — an argparse usage/
+    # Bound the message before it reaches the DB — an argparse usage/
     # error string must never bloat the error_message Text column unbounded.
     bounded_message = message[:500]
 
@@ -108,7 +114,7 @@ def main() -> None:
     # imports _scrape_job_id/_write_early_failure without invoking main() —
     # does not mutate the process-wide asyncio event loop policy. That
     # import-time mutation previously leaked into every test that ran later
-    # in the same pytest session (Phase 31, T-31-18): it silently changed the
+    # in the same pytest session: it silently changed the
     # behavior of unrelated asyncio.run() calls (e.g.
     # pipeline/commands/resolve.py's KeyboardInterrupt handling). A real CLI
     # invocation (`python -m pipeline ...`) still sets __name__ == "__main__"
@@ -284,7 +290,7 @@ def main() -> None:
     )
 
     # -----------------------------------------------------------------------
-    # import-convokit subcommand (Phase 29, D-07)
+    # import-convokit subcommand
     # -----------------------------------------------------------------------
     import_convokit_p = sub.add_parser(
         "import-convokit",
@@ -295,9 +301,10 @@ def main() -> None:
             "corpus dataset, bypassing PDF/LLM parsing. Scaffolds Case/"
             "Argument/CaseArgument/ImportRun rows and resolves bench/"
             "advocate speakers into Person/ArgumentParticipant rows. "
-            "Arguments land at status=candidate, paired with a paused "
-            "resolve admin job. Idempotent -- safe to re-run any term or "
-            "conversation."
+            "Arguments land at status=candidate, with no admin job -- "
+            "approve via the argument-scoped approve action instead "
+            "(Phase 50). Idempotent -- safe to re-run any term or "
+            "conversation; a repeat run reconciles rather than skipping."
         ),
     )
     import_convokit_term_group = import_convokit_p.add_mutually_exclusive_group(
@@ -329,9 +336,18 @@ def main() -> None:
             f"(default: {DEFAULT_CORPUS_DIR})"
         ),
     )
+    import_convokit_p.add_argument(
+        "--dry-run",
+        action="store_true",
+        help=(
+            "Report what a reconcile pass would accept, reject, record, "
+            "and replace without touching a single row (D-28). Every "
+            "printed summary block is labeled DRY RUN."
+        ),
+    )
 
     # -----------------------------------------------------------------------
-    # recompute-trust subcommand (Phase 48, D-09)
+    # recompute-trust subcommand
     # -----------------------------------------------------------------------
     recompute_trust_p = sub.add_parser(
         "recompute-trust",
@@ -366,10 +382,56 @@ def main() -> None:
         help="Report what would change without writing anything",
     )
 
+    # -----------------------------------------------------------------------
+    # prune-runs subcommand
+    # -----------------------------------------------------------------------
+    prune_runs_p = sub.add_parser(
+        "prune-runs",
+        help="Deliberately and offline reclaim superseded ImportRun/Utterance rows",
+        description=(
+            "Reclaims superseded ImportRun rows (and their Utterance rows) "
+            "that a re-import intentionally never deletes -- D-12's "
+            "counterpart to the always-reconcile-and-retain promise. "
+            "Never removes the run api/services/arguments.py's read path "
+            "currently serves for an argument, and never removes a run "
+            "carrying an OPEN value_discrepancy row, under any flag "
+            "combination. Deletion is a deliberate, separately-invoked "
+            "operator action -- never a side effect of an import."
+        ),
+    )
+    prune_runs_group = prune_runs_p.add_mutually_exclusive_group(required=True)
+    prune_runs_group.add_argument(
+        "--all",
+        action="store_true",
+        help="Scan and prune every argument",
+    )
+    prune_runs_group.add_argument(
+        "--argument-id",
+        type=int,
+        default=None,
+        help="Scan and prune exactly one argument by id",
+    )
+    prune_runs_p.add_argument(
+        "--dry-run",
+        action="store_true",
+        help=(
+            "Report what would be removed without deleting a single row"
+        ),
+    )
+    prune_runs_p.add_argument(
+        "--include-resolved-discrepancies",
+        action="store_true",
+        help=(
+            "Also delete RESOLVED value_discrepancy rows attached to a "
+            "prunable run before removing it. An OPEN row is never "
+            "deleted by this command under any flag."
+        ),
+    )
+
     try:
         args = parser.parse_args()
     except SystemExit as exc:
-        # T-24-09: argparse raises SystemExit before any command logic runs
+        # Argparse raises SystemExit before any command logic runs
         # (e.g. a flag-like docket value rejected as an unrecognized option).
         # Because pipeline_spawn.py launches this subprocess with stdout/stderr
         # DEVNULL, this failure would otherwise be completely invisible — the
@@ -403,6 +465,8 @@ def main() -> None:
         asyncio.run(run_import_convokit(args))
     elif args.command == "recompute-trust":
         asyncio.run(run_recompute_trust(args))
+    elif args.command == "prune-runs":
+        asyncio.run(run_prune_runs(args))
 
 
 if __name__ == "__main__":

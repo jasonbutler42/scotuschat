@@ -59,3 +59,4 @@ of this checkpoint) is unaffected by their presence. See
 scanner's search-dir scope (exclude `*/tests/` subdirectories from the
 production-source sweep) and to investigate the `SideEnum` coercion behavior
 in `api/schemas/admin_jobs.py::ResolveRowUpdate`.
+  status: acknowledged

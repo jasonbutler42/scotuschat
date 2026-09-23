@@ -1,7 +1,8 @@
 /**
  * Phase 37 Plan 04 — public read-only tenure title regression (D-15/D-17).
+ * Retargeted to /arguments/{slug} (Phase 51 plan 51-02, D-10/D-12).
  *
- * Exercises the real public argument view (/cases/[slug]/arguments/[id]) end to
+ * Exercises the real public argument view (/arguments/[slug]) end to
  * end against a mock FASTAPI backend: clicks a bench speaker's avatar to open
  * SpeakerPopover.svelte and asserts the rendered tenure line is the formal
  * "Chief Justice"/"Associate Justice" title immediately preceding the unchanged
@@ -18,6 +19,8 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import test from 'node:test';
+import { browserExecutable, NO_BROWSER_MESSAGE } from './helpers/browser-executable.mjs';
+import { APP_DIR, VITE_BIN } from './helpers/paths.mjs';
 
 function listen(server) {
 	return new Promise((resolve, reject) => {
@@ -48,17 +51,6 @@ async function waitFor(url, predicate = (response) => response.ok, timeoutMs = 2
 	throw new Error(`Timed out waiting for ${url}: ${lastError ?? 'condition not met'}`);
 }
 
-function browserExecutable() {
-	const candidates = process.platform === 'win32'
-		? [
-			'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
-			'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
-			'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-			'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
-		]
-		: ['/usr/bin/microsoft-edge', '/usr/bin/google-chrome', '/usr/bin/chromium'];
-	return candidates.find((candidate) => existsSync(candidate));
-}
 
 async function terminateTree(child) {
 	if (!child || child.exitCode !== null) return;
@@ -125,6 +117,7 @@ async function waitForExpression(cdp, expression, timeoutMs = 15_000) {
 // Fixture data ---------------------------------------------------------------
 
 const ARGUMENT_ID = 7;
+const ARGUMENT_SLUG = 'fixture-v-example';
 
 function argumentPayload() {
 	return {
@@ -155,6 +148,7 @@ function argumentPayload() {
 			},
 		],
 		argument: {
+			argument_id: ARGUMENT_ID,
 			case_name: 'Fixture v. Example',
 			docket_number: '24-100',
 			argued_date: '2024-10-01',
@@ -190,14 +184,14 @@ function speakersPayload() {
 	];
 }
 
-test('public argument view renders formal Chief/Associate Justice titles, never raw office or generic fallback', { timeout: 60_000 }, async () => {
+test('public argument view renders formal Chief/Associate Justice titles, never raw office or generic fallback', { timeout: 120_000 }, async () => {
 	const mockApi = createServer((request, response) => {
 		response.setHeader('content-type', 'application/json');
-		if (request.method === 'GET' && request.url === `/arguments/${ARGUMENT_ID}/utterances`) {
+		if (request.method === 'GET' && request.url === `/arguments/by-slug/${ARGUMENT_SLUG}/utterances`) {
 			response.end(JSON.stringify(argumentPayload()));
 			return;
 		}
-		if (request.method === 'GET' && request.url === `/arguments/${ARGUMENT_ID}/speakers`) {
+		if (request.method === 'GET' && request.url === `/arguments/by-slug/${ARGUMENT_SLUG}/speakers`) {
 			response.end(JSON.stringify(speakersPayload()));
 			return;
 		}
@@ -215,13 +209,13 @@ test('public argument view renders formal Chief/Associate Justice titles, never 
 		const debugPort = await freePort();
 		profile = await mkdtemp(path.join(tmpdir(), 'scotus-tenure-title-browser-'));
 		const executable = browserExecutable();
-		assert.ok(executable, 'Microsoft Edge or Google Chrome must be installed for this fail-closed test');
+		assert.ok(executable, NO_BROWSER_MESSAGE);
 
 		vite = spawn(process.execPath, [
-			path.resolve('app/node_modules/vite/bin/vite.js'),
+			VITE_BIN,
 			'--host', '127.0.0.1', '--port', String(appPort), '--strictPort',
 		], {
-			cwd: path.resolve('app'),
+			cwd: APP_DIR,
 			env: {
 				...process.env,
 				ADMIN_USERNAME: 'phase37-admin',
@@ -233,7 +227,7 @@ test('public argument view renders formal Chief/Associate Justice titles, never 
 			stdio: 'ignore',
 			windowsHide: true,
 		});
-		const casePath = `/cases/fixture-v-example/arguments/${ARGUMENT_ID}`;
+		const casePath = `/arguments/${ARGUMENT_SLUG}`;
 		await waitFor(`http://127.0.0.1:${appPort}${casePath}`);
 
 		browser = spawn(executable, [
@@ -284,9 +278,19 @@ test('public argument view renders formal Chief/Associate Justice titles, never 
 				await delay(150);
 			}
 			assert.ok(opened, `popover never opened for ${ariaLabel} after retried clicks`);
+			// The name renders as the popover's one <p>; the tenure office title
+			// and its date range render as two side-by-side <span> elements in a
+			// flex row (SpeakerPopover.svelte's tenure-list block), not as a
+			// single combined <p> — querying `.popover-card p` alone (as this
+			// test originally did) silently misses the tenure line entirely,
+			// stale since whichever pass split the tenure row into a two-column
+			// flex layout. This fixture has no role pill, no birth/death line,
+			// and no appointed_by/reason_left second row, so exactly one <p> and
+			// exactly two <span>s render — deterministic, not a loosened match.
 			return cdp.evaluate(`(() => {
-				const paragraphs = [...document.querySelectorAll('.popover-card p')];
-				return paragraphs.map((p) => p.textContent.trim());
+				const name = document.querySelector('.popover-card p')?.textContent.trim() ?? null;
+				const spans = [...document.querySelectorAll('.popover-card span')].map((s) => s.textContent.trim());
+				return { name, officeTitle: spans[0] ?? null, tenureRange: spans[1] ?? null };
 			})()`);
 		}
 
@@ -295,18 +299,26 @@ test('public argument view renders formal Chief/Associate Justice titles, never 
 			await waitForExpression(cdp, `!document.querySelector('.popover-card')`);
 		}
 
-		// Chief fixture — formal title precedes the unchanged open-ended range.
-		const chiefParagraphs = await openPopoverAndReadTenureLine('View Fixture Chief details');
-		assert.deepEqual(chiefParagraphs, ['Fixture Chief', 'Chief Justice — 2005–present']);
-		assert.doesNotMatch(chiefParagraphs[1], /\bchief\b/, 'raw canonical office value must not render');
-		assert.doesNotMatch(chiefParagraphs[1], /^Justice\b/, 'must not fall back to the generic "Justice" title');
+		// Chief fixture — formal title, unchanged open-ended range, in the two
+		// dedicated tenure-row cells (not concatenated into one string).
+		const chief = await openPopoverAndReadTenureLine('View Fixture Chief details');
+		// Month + year with a spaced en dash, not the year-only form this test
+		// was written against in 37-04. Plan 39-08 deliberately changed it to
+		// follow the mockup (see SpeakerPopover.formatMonthYear's comment: the
+		// UI-SPEC copywriting row had frozen year-only, and the plan overrode
+		// it because mockup fidelity was the gap being closed). That commit
+		// should have retired this expectation with the behaviour it pinned;
+		// it could not, because no browser was ever found to run the test.
+		assert.deepEqual(chief, { name: 'Fixture Chief', officeTitle: 'Chief Justice', tenureRange: 'Sep 2005 – present' });
+		assert.doesNotMatch(chief.officeTitle, /\bchief\b/, 'raw canonical office value must not render');
+		assert.doesNotMatch(chief.officeTitle, /^Justice\b/, 'must not fall back to the generic "Justice" title');
 		await closePopover();
 
-		// Associate fixture — formal title precedes the unchanged closed range.
-		const associateParagraphs = await openPopoverAndReadTenureLine('View Fixture Associate details');
-		assert.deepEqual(associateParagraphs, ['Fixture Associate', 'Associate Justice — 1994–2005']);
-		assert.doesNotMatch(associateParagraphs[1], /\bassociate\b/, 'raw canonical office value must not render');
-		assert.doesNotMatch(associateParagraphs[1], /^Justice\b/, 'must not fall back to the generic "Justice" title');
+		// Associate fixture — formal title, unchanged closed range.
+		const associate = await openPopoverAndReadTenureLine('View Fixture Associate details');
+		assert.deepEqual(associate, { name: 'Fixture Associate', officeTitle: 'Associate Justice', tenureRange: 'Aug 1994 – Sep 2005' });
+		assert.doesNotMatch(associate.officeTitle, /\bassociate\b/, 'raw canonical office value must not render');
+		assert.doesNotMatch(associate.officeTitle, /^Justice\b/, 'must not fall back to the generic "Justice" title');
 	} finally {
 		cdp?.close();
 		await terminateTree(browser);

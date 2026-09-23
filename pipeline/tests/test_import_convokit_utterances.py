@@ -537,7 +537,11 @@ async def test_summary_prints_term_year_and_core_counts(
     captured = capsys.readouterr()
     assert "Term 9999" in captured.out
     assert "arguments created" in captured.out
-    assert "arguments skipped" in captured.out
+    # Phase 50 (D-01/PD-03): "arguments skipped" is retired -- a repeat
+    # import now reconciles instead of skipping, replaced by
+    # arguments_reconciled/arguments_unchanged.
+    assert "arguments reconciled" in captured.out
+    assert "arguments unchanged" in captured.out
     assert "utterances created" in captured.out
     assert "stage-direction utterances created" in captured.out
     assert "people created" in captured.out

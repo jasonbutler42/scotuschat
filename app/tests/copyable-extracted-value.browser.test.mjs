@@ -7,18 +7,19 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import test from 'node:test';
+import { browserExecutable, NO_BROWSER_MESSAGE } from './helpers/browser-executable.mjs';
+import { APP_DIR, TESTS_DIR, VITE_BIN } from './helpers/paths.mjs';
 
 async function freePort() { const server = createServer(); await new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); }); const port = server.address().port; await new Promise((resolve) => server.close(resolve)); return port; }
 async function waitFor(url, predicate = (response) => response.ok, timeoutMs = 20_000) { const deadline = Date.now() + timeoutMs; while (Date.now() < deadline) { try { const response = await fetch(url); if (await predicate(response)) return response; } catch {} await delay(100); } throw new Error(`Timed out waiting for ${url}`); }
-function browserExecutable() { return (process.platform === 'win32' ? ['C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe','C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe','C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'] : ['/usr/bin/microsoft-edge','/usr/bin/google-chrome','/usr/bin/chromium']).find(existsSync); }
 async function terminate(child) { if (!child || child.exitCode !== null) return; child.kill('SIGTERM'); await Promise.race([new Promise((resolve) => child.once('exit', resolve)), delay(5_000)]); }
 class Cdp { constructor(url) { this.socket = new WebSocket(url); this.id = 0; this.pending = new Map(); } async open() { await new Promise((resolve, reject) => { this.socket.addEventListener('open', resolve, { once: true }); this.socket.addEventListener('error', reject, { once: true }); }); this.socket.addEventListener('message', ({ data }) => { const message = JSON.parse(data); const waiter = this.pending.get(message.id); if (!waiter) return; this.pending.delete(message.id); message.error ? waiter.reject(new Error(message.error.message)) : waiter.resolve(message.result); }); } call(method, params = {}) { const id = ++this.id; return new Promise((resolve, reject) => { this.pending.set(id, { resolve, reject }); this.socket.send(JSON.stringify({ id, method, params })); }); } async eval(expression) { const result = await this.call('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true }); if (result.exceptionDetails) throw new Error(result.exceptionDetails.text); return result.result.value; } close() { this.socket.close(); } }
 
 test('copy feedback belongs only to the latest payload and activation', { timeout: 60_000 }, async () => {
 	let vite, browser, cdp, profile;
 	try {
-		const appPort = await freePort(), debugPort = await freePort(); profile = await mkdtemp(path.join(tmpdir(), 'scotus-copy-browser-')); const executable = browserExecutable(); assert.ok(executable, 'Microsoft Edge or Google Chrome must be installed for this fail-closed test');
-		vite = spawn(process.execPath, [path.resolve('node_modules/vite/bin/vite.js'), '--config', path.resolve('tests/fixtures/copyable-extracted-value-vite.config.mjs'), '--host','127.0.0.1','--port',String(appPort),'--strictPort'], { cwd: path.resolve('.'), stdio: 'ignore', windowsHide: true });
+		const appPort = await freePort(), debugPort = await freePort(); profile = await mkdtemp(path.join(tmpdir(), 'scotus-copy-browser-')); const executable = browserExecutable(); assert.ok(executable, NO_BROWSER_MESSAGE);
+		vite = spawn(process.execPath, [VITE_BIN, '--config', path.join(TESTS_DIR,'fixtures','copyable-extracted-value-vite.config.mjs'), '--host','127.0.0.1','--port',String(appPort),'--strictPort'], { cwd: APP_DIR, stdio: 'ignore', windowsHide: true });
 		await waitFor(`http://127.0.0.1:${appPort}/copyable-extracted-value.html`);
 		browser = spawn(executable, ['--headless=new','--disable-gpu','--no-first-run','--remote-allow-origins=*',`--remote-debugging-port=${debugPort}`,`--user-data-dir=${profile}`,`http://127.0.0.1:${appPort}/copyable-extracted-value.html`], { stdio: 'ignore', windowsHide: true });
 		const response = await waitFor(`http://127.0.0.1:${debugPort}/json/list`, async (r) => (await r.clone().json()).some((x) => x.type === 'page')); const targets = await response.json(); cdp = new Cdp(targets.find((x) => x.type === 'page').webSocketDebuggerUrl); await cdp.open(); await cdp.call('Runtime.enable'); await delay(500);

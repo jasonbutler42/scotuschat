@@ -1,0 +1,23 @@
+{
+  "questions": [
+    {
+      "kind": "docs",
+      "library": "sqlalchemy",
+      "version": "2.0",
+      "text": "How does SQLAlchemy 2.x expose a PostgreSQL unique-constraint name through IntegrityError and what transaction recovery is required before further AsyncSession queries?"
+    },
+    {
+      "kind": "docs",
+      "library": "postgresql",
+      "version": "current",
+      "text": "What are PostgreSQL unique-constraint NULL semantics for a two-column unique constraint?"
+    }
+  ],
+  "ecosystem": "pypi",
+  "config": {
+    "exa_search": false,
+    "brave_search": false,
+    "tavily_search": false,
+    "firecrawl": false
+  }
+}

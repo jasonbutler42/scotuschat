@@ -7,6 +7,8 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import test from 'node:test';
+import { browserExecutable, NO_BROWSER_MESSAGE } from './helpers/browser-executable.mjs';
+import { APP_DIR, VITE_BIN } from './helpers/paths.mjs';
 
 const TEST_USER = 'phase34-admin';
 const TEST_PASSWORD = 'phase34-password';
@@ -40,17 +42,6 @@ async function waitFor(url, predicate = (response) => response.ok, timeoutMs = 2
 	throw new Error(`Timed out waiting for ${url}: ${lastError ?? 'condition not met'}`);
 }
 
-function browserExecutable() {
-	const candidates = process.platform === 'win32'
-		? [
-			'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
-			'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
-			'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-			'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
-		]
-		: ['/usr/bin/microsoft-edge', '/usr/bin/google-chrome', '/usr/bin/chromium'];
-	return candidates.find((candidate) => existsSync(candidate));
-}
 
 async function terminateTree(child) {
 	if (!child || child.exitCode !== null) return;
@@ -114,6 +105,24 @@ async function waitForExpression(cdp, expression, timeoutMs = 15_000) {
 	throw new Error(`Timed out waiting for browser expression: ${expression}`);
 }
 
+/**
+ * Clears both required fields and submits, repeating until the enhanced
+ * alert renders — i.e. until Svelte's oninvalid handler is actually attached.
+ * See the call site for why a fixed delay cannot replace this.
+ */
+async function submitClearedUntilEnhanced(cdp, timeoutMs = 30_000) {
+	const deadline = Date.now() + timeoutMs;
+	while (Date.now() < deadline) {
+		await cdp.evaluate(`(() => {
+			for (const id of ['case_name', 'docket_number']) { const input = document.getElementById(id); input.value = ''; input.dispatchEvent(new Event('input', { bubbles: true })); }
+			document.getElementById('case_name').closest('form').requestSubmit();
+		})()`);
+		await delay(250);
+		if (await cdp.evaluate(`document.querySelectorAll('#case-form-alert span').length === 2`)) return;
+	}
+	throw new Error('Timed out waiting for the enhanced required-field alert to render');
+}
+
 function argumentDetail() {
 	return {
 		id: 7,
@@ -136,7 +145,7 @@ function argumentDetail() {
 	};
 }
 
-test('native required state clears before later enhanced failures', { timeout: 60_000 }, async () => {
+test('native required state clears before later enhanced failures', { timeout: 120_000 }, async () => {
 	let responseMode = 'required';
 	let patchCount = 0;
 	const mockApi = createServer((request, response) => {
@@ -175,13 +184,13 @@ test('native required state clears before later enhanced failures', { timeout: 6
 		const debugPort = await freePort();
 		profile = await mkdtemp(path.join(tmpdir(), 'scotus-phase34-browser-'));
 		const executable = browserExecutable();
-		assert.ok(executable, 'Microsoft Edge or Google Chrome must be installed for this fail-closed test');
+		assert.ok(executable, NO_BROWSER_MESSAGE);
 
 		vite = spawn(process.execPath, [
-			path.resolve('app/node_modules/vite/bin/vite.js'),
+			VITE_BIN,
 			'--host', '127.0.0.1', '--port', String(appPort), '--strictPort',
 		], {
-			cwd: path.resolve('app'),
+			cwd: APP_DIR,
 			env: {
 				...process.env,
 				ADMIN_USERNAME: TEST_USER,
@@ -218,14 +227,20 @@ test('native required state clears before later enhanced failures', { timeout: 6
 		await waitForExpression(cdp, `location.pathname === '/admin'`);
 		await cdp.call('Page.navigate', { url: `http://127.0.0.1:${appPort}/admin/arguments/7` });
 		await waitForExpression(cdp, `location.pathname === '/admin/arguments/7' && !!document.querySelector('#case_name')`);
-		// The selector is present in SSR HTML before Svelte attaches invalid/enhance handlers.
-		await delay(500);
-
-		await cdp.evaluate(`(() => {
-			for (const id of ['case_name', 'docket_number']) { const input = document.getElementById(id); input.value = ''; input.dispatchEvent(new Event('input', { bubbles: true })); }
-			document.getElementById('case_name').closest('form').requestSubmit();
-		})()`);
-		await waitForExpression(cdp, `document.querySelectorAll('#case-form-alert span').length === 2`);
+		// The selector is present in SSR HTML before Svelte attaches the
+		// invalid/enhance handlers, so the submit below has to wait for
+		// hydration. A fixed sleep cannot do that: `invalid` fires once, and if
+		// it fires before the handler is attached nothing re-fires it, so the
+		// enhanced alert never renders and the wait below burns its full
+		// deadline against a page that is working correctly. That is exactly
+		// how this test failed — for 500ms on a cold vite dev server, where
+		// hydration lands well past a second.
+		//
+		// Re-submitting until the alert renders removes the race at any machine
+		// speed. It is safe to repeat: native validation blocks the request, so
+		// no PATCH is issued — `patchCount === 0` is asserted immediately below
+		// and would catch it if that ever stopped being true.
+		await submitClearedUntilEnhanced(cdp);
 		const invalid = await cdp.evaluate(`(() => ({
 			messages: [...document.querySelectorAll('#case-form-alert span')].map((node) => node.textContent.trim()),
 			aria: ['case_name', 'docket_number'].map((id) => document.getElementById(id).getAttribute('aria-invalid')),

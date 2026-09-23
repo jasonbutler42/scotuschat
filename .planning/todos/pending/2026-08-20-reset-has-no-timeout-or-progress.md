@@ -4,8 +4,13 @@ title: Reset-to-fixture is a multi-minute destructive operation with no timeout,
 area: ui
 severity: minor
 files:
+
   - app/src/routes/admin/+page.server.ts (resetToFixture action fetch, ~line 237)
   - api/services/admin_dev.py (reset_to_fixture)
+
+audit_acknowledged:
+  milestone: v1.8
+  at: 2026-09-23
 ---
 
 ## Problem

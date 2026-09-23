@@ -373,27 +373,25 @@ async def test_utterances_have_speaker_name_after_resolve(
 #
 # The structural half of the ban (every public Pydantic response model,
 # derived from the live public routers) lives in
-# api/tests/test_trust_public_leak_ban.py. These three tests are the LIVE
-# half — they hit the real endpoints against a seeded row and walk the
-# actual decoded JSON body recursively via assert_no_key_anywhere, so a
-# leak introduced by a service layer bypassing its own schema (e.g. an
-# ORM-row spread instead of the declared allow-list) is also caught, not
-# just a leak visible from the Pydantic model definition alone.
+# api/tests/test_trust_public_leak_ban.py. The two tests below are the LIVE
+# half remaining in THIS module — they hit the real endpoints against a
+# seeded row and walk the actual decoded JSON body recursively via
+# assert_no_key_anywhere, so a leak introduced by a service layer bypassing
+# its own schema (e.g. an ORM-row spread instead of the declared allow-list)
+# is also caught, not just a leak visible from the Pydantic model
+# definition alone.
+#
+# Phase 51 plan 51-08: a third test formerly lived here,
+# test_cases_list_never_leaks_trust_tier (GET /cases). GET /cases and its
+# whole router module were retired once plan 51-08 removed their last
+# consumer. That live-leak guarantee did not retire with them —
+# it moved to api/tests/test_public_arguments_listing.py, which plan 51-04
+# already gave three live decoded-JSON leak assertions over the term-grouped
+# replacement endpoints (GET /arguments/terms, GET /arguments/term/
+# {term_year}) and the by-slug transcript route (GET /arguments/by-slug/
+# {slug}/utterances) — confirmed to run (not skip) before this module's
+# GET /cases test was deleted.
 # ---------------------------------------------------------------------------
-
-
-@pytest.mark.asyncio
-@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL with parsed data")
-async def test_cases_list_never_leaks_trust_tier(client: AsyncClient) -> None:
-    """
-    GET /cases must never expose trust_tier, on any case item or the
-    response envelope, at any nesting depth (D-23, T-48-LEAK).
-    """
-    response = await client.get("/cases")
-    assert response.status_code == 200
-
-    body = response.json()
-    assert_no_key_anywhere(body, "trust_tier", "GET /cases response")
 
 
 @pytest.mark.asyncio

@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import Badge from '$lib/primitives/Badge.svelte';
+	import type { BadgeTone } from '$lib/primitives/badge-tone';
 	import { goto } from '$app/navigation';
 
 	let { data, form } = $props();
@@ -45,6 +47,32 @@
 		goto('/admin/review?tab=' + tab);
 	}
 
+	// ── Form-action URLs (G-50-4a).
+	//
+	// A bare action="?/name" REPLACES the page's query string, so the server
+	// action saw url.search === "?/name" and redirect(303, ...) dropped the
+	// operator's tab and filters — after every approve/confirm/reflag they
+	// landed back on the unfiltered top of the queue. Carrying the live
+	// filter query in the action URL is what lets filterRedirect() in
+	// +page.server.ts send them back where they were.
+	//
+	// $derived, NOT a plain const off `data`: each action redirects and the
+	// load re-runs, replacing `data`. A captured const would freeze these
+	// action URLs at their first-render values — the stale-prop-capture
+	// class this codebase has been bitten by before.
+	const filterQuery = $derived.by(() => {
+		const params = new URLSearchParams();
+		params.set('tab', data.tab);
+		if (data.status) params.set('status', data.status);
+		if (data.tier) params.set('tier', data.tier);
+		if (data.review_state) params.set('review_state', data.review_state);
+		return params.toString();
+	});
+
+	function actionUrl(name: string) {
+		return `?${filterQuery}&/${name}`;
+	}
+
 	function selectStatus(value: string) {
 		gotoWithParams({ status: value === 'all' ? null : value });
 	}
@@ -69,14 +97,14 @@
 	// admin/arguments/+page.svelte's filterButtonStyle).
 	function filterButtonStyle(active: boolean, selectedColor: string): string {
 		return `
-			min-height: 44px;
-			padding: 8px 16px;
-			font-size: 16px;
-			font-weight: 600;
+			min-height: var(--touch-target);
+			padding: var(--space-sm) var(--space-lg);
+			font-size: var(--font-size-body);
+			font-weight: var(--font-weight-semibold);
 			cursor: pointer;
-			border: 1px solid ${active ? selectedColor : '#334155'};
-			background-color: ${active ? selectedColor : '#1e293b'};
-			color: ${active ? '#0f1117' : '#e2e8f0'};
+			border: 1px solid ${active ? selectedColor : 'var(--color-border)'};
+			background-color: ${active ? selectedColor : 'var(--color-surface)'};
+			color: ${active ? 'var(--color-bg)' : 'var(--color-text-primary)'};
 		`;
 	}
 
@@ -92,18 +120,11 @@
 	// convention (badgeLabel falls back to 'Candidate', not 'Pipeline'),
 	// per this plan's explicit citation of that file over the arguments
 	// list page's own version.
-	function badgeStyle(status: string): string {
-		let color: string;
-		if (status === 'published') {
-			color = '#4ade80';
-		} else if (status === 'draft') {
-			color = '#a78bfa';
-		} else if (status === 'unpublished') {
-			color = '#fb923c';
-		} else {
-			color = '#94a3b8';
-		}
-		return `border: 1px solid ${color}; border-radius: 4px; padding: 2px 8px; font-size: 14px; font-weight: 400; background-color: #1e293b; color: ${color}; display: inline-block;`;
+	function badgeTone(status: string): BadgeTone {
+		if (status === 'published') return 'published';
+		if (status === 'draft') return 'draft';
+		if (status === 'unpublished') return 'unpublished';
+		return 'neutral';
 	}
 
 	function badgeLabel(status: string): string {
@@ -113,22 +134,14 @@
 		return 'Candidate';
 	}
 
-	// Passive trust-tier badge helpers — copied verbatim from
-	// admin/arguments/+page.svelte.
-	function tierBadgeStyle(tier: string): string {
-		let color: string;
-		if (tier === 'verified') {
-			color = '#38bdf8';
-		} else if (tier === 'trusted') {
-			color = '#34d399';
-		} else if (tier === 'provisional') {
-			color = '#facc15';
-		} else if (tier === 'uncertain') {
-			color = '#f87171';
-		} else {
-			color = '#64748b';
-		}
-		return `border: 1px solid ${color}; border-radius: 4px; padding: 2px 8px; font-size: 12px; font-weight: 400; background-color: #0f1117; color: ${color}; display: inline-block;`;
+	// Trust tier. The shape lives in Badge now — this maps a domain value to a
+	// tone, which is the only part that was ever specific to this screen.
+	function tierTone(tier: string): BadgeTone {
+		if (tier === 'verified') return 'verified';
+		if (tier === 'trusted') return 'trusted';
+		if (tier === 'provisional') return 'provisional';
+		if (tier === 'uncertain') return 'uncertain';
+		return 'unknown';
 	}
 
 	function tierLabel(tier: string): string {
@@ -139,22 +152,12 @@
 		return tier;
 	}
 
-	// review_state / discrepancy badge — the existing tierBadgeStyle
-	// formula verbatim, only the color lookup differs (UI-SPEC § Color).
-	function reviewStateBadgeStyle(state: string): string {
-		let color: string;
-		if (state === 'unreviewed') {
-			color = '#475569';
-		} else if (state === 'needs_review') {
-			color = '#fbbf24';
-		} else if (state === 'operator_confirmed') {
-			color = '#2dd4bf';
-		} else if (state === 'operator_edited') {
-			color = '#e879f9';
-		} else {
-			color = '#64748b';
-		}
-		return `border: 1px solid ${color}; border-radius: 4px; padding: 2px 8px; font-size: 12px; font-weight: 400; background-color: #0f1117; color: ${color}; display: inline-block;`;
+	function reviewStateTone(state: string): BadgeTone {
+		if (state === 'unreviewed') return 'unreviewed';
+		if (state === 'needs_review') return 'needs-review';
+		if (state === 'operator_confirmed') return 'confirmed';
+		if (state === 'operator_edited') return 'edited';
+		return 'unknown';
 	}
 
 	function reviewStateLabel(state: string): string {
@@ -163,11 +166,6 @@
 		if (state === 'operator_confirmed') return 'Confirmed';
 		if (state === 'operator_edited') return 'Edited';
 		return state;
-	}
-
-	function discrepancyBadgeStyle(): string {
-		const color = '#fb7185';
-		return `border: 1px solid ${color}; border-radius: 4px; padding: 2px 8px; font-size: 12px; font-weight: 400; background-color: #0f1117; color: ${color}; display: inline-block;`;
 	}
 
 	// Bench/Advocate side-role hint — the exact formula ResolveCard.svelte
@@ -262,10 +260,10 @@
 	<title>Review — SCOTUS Chat Admin</title>
 </svelte:head>
 
-<main style="background-color: #0f1117; min-height: 100vh;">
-	<header style="background-color: #1e293b; border-bottom: 1px solid #334155; padding: 16px 24px;">
-		<div style="max-width: 860px; margin: 0 auto; display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
-			<h1 style="font-size: 20px; font-weight: 600; color: #93c5fd; margin: 0;">Review</h1>
+<main style="background-color: var(--color-bg); min-height: 100vh;">
+	<header style="background-color: var(--color-surface); border-bottom: 1px solid var(--color-border); padding: var(--space-lg) var(--space-xl);">
+		<div style="max-width: 860px; margin: 0 auto; display: flex; align-items: center; gap: var(--space-lg); flex-wrap: wrap;">
+			<h1 style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-accent); margin: 0;">Review</h1>
 
 			<div style="display: flex; gap: 0;">
 				<button
@@ -274,14 +272,14 @@
 					aria-label="Arguments tab"
 					onclick={() => switchTab('arguments')}
 					style="
-						min-height: 44px;
-						padding: 8px 16px;
-						border: 1px solid {data.tab === 'arguments' ? '#93c5fd' : '#334155'};
+						min-height: var(--touch-target);
+						padding: var(--space-sm) var(--space-lg);
+						border: 1px solid {data.tab === 'arguments' ? 'var(--color-accent)' : 'var(--color-border)'};
 						border-radius: 6px 0 0 6px;
-						background-color: {data.tab === 'arguments' ? '#93c5fd' : '#1e293b'};
-						color: {data.tab === 'arguments' ? '#0f1117' : '#e2e8f0'};
-						font-size: 16px;
-						font-weight: 600;
+						background-color: {data.tab === 'arguments' ? 'var(--color-accent)' : 'var(--color-surface)'};
+						color: {data.tab === 'arguments' ? 'var(--color-bg)' : 'var(--color-text-primary)'};
+						font-size: var(--font-size-body);
+						font-weight: var(--font-weight-semibold);
 						cursor: pointer;
 					"
 				>Arguments</button>
@@ -291,15 +289,15 @@
 					aria-label="People tab"
 					onclick={() => switchTab('people')}
 					style="
-						min-height: 44px;
-						padding: 8px 16px;
-						border: 1px solid {data.tab === 'people' ? '#93c5fd' : '#334155'};
+						min-height: var(--touch-target);
+						padding: var(--space-sm) var(--space-lg);
+						border: 1px solid {data.tab === 'people' ? 'var(--color-accent)' : 'var(--color-border)'};
 						border-left: none;
 						border-radius: 0 6px 6px 0;
-						background-color: {data.tab === 'people' ? '#93c5fd' : '#1e293b'};
-						color: {data.tab === 'people' ? '#0f1117' : '#e2e8f0'};
-						font-size: 16px;
-						font-weight: 600;
+						background-color: {data.tab === 'people' ? 'var(--color-accent)' : 'var(--color-surface)'};
+						color: {data.tab === 'people' ? 'var(--color-bg)' : 'var(--color-text-primary)'};
+						font-size: var(--font-size-body);
+						font-weight: var(--font-weight-semibold);
 						cursor: pointer;
 					"
 				>People</button>
@@ -307,15 +305,15 @@
 		</div>
 	</header>
 
-	<div style="max-width: 860px; margin: 0 auto; padding: 48px 24px;">
+	<div style="max-width: 860px; margin: 0 auto; padding: var(--space-3xl) var(--space-xl);">
 		{#if form?.error}
-			<p role="alert" style="font-size: 14px; font-weight: 600; color: #ef4444; margin: 0 0 16px 0;">
+			<p role="alert" style="font-size: var(--font-size-caption); font-weight: var(--font-weight-semibold); color: var(--color-destructive); margin: 0 0 var(--space-lg) 0;">
 				{form.error}
 			</p>
 		{/if}
 
 		<!-- Filter row (E3) -->
-		<div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: center; margin-bottom: 16px;">
+		<div style="display: flex; flex-wrap: wrap; gap: var(--space-lg); align-items: center; margin-bottom: var(--space-lg);">
 			{#if data.tab === 'arguments'}
 				<!-- G-49-5a: the status segment group's ~480px min-content width
 				     (five 44px-min-height, 16px-font buttons with no flex-wrap)
@@ -335,45 +333,45 @@
 						aria-pressed={!data.status}
 						aria-label="All statuses"
 						onclick={() => selectStatus('all')}
-						style="{filterButtonStyle(!data.status, '#93c5fd')} border-radius: 6px 0 0 6px;"
+						style="{filterButtonStyle(!data.status, 'var(--color-accent)')} border-radius: 6px 0 0 6px;"
 					>All</button>
 					<button
 						type="button"
 						aria-pressed={data.status === 'candidate'}
 						aria-label="Candidate arguments"
 						onclick={() => selectStatus('candidate')}
-						style="{filterButtonStyle(data.status === 'candidate', '#94a3b8')} border-left: none;"
+						style="{filterButtonStyle(data.status === 'candidate', 'var(--color-text-secondary)')} border-left: none;"
 					>Candidate</button>
 					<button
 						type="button"
 						aria-pressed={data.status === 'draft'}
 						aria-label="Draft arguments"
 						onclick={() => selectStatus('draft')}
-						style="{filterButtonStyle(data.status === 'draft', '#a78bfa')} border-left: none;"
+						style="{filterButtonStyle(data.status === 'draft', 'var(--color-status-draft)')} border-left: none;"
 					>Draft</button>
 					<button
 						type="button"
 						aria-pressed={data.status === 'published'}
 						aria-label="Published arguments"
 						onclick={() => selectStatus('published')}
-						style="{filterButtonStyle(data.status === 'published', '#4ade80')} border-left: none;"
+						style="{filterButtonStyle(data.status === 'published', 'var(--color-status-published)')} border-left: none;"
 					>Published</button>
 					<button
 						type="button"
 						aria-pressed={data.status === 'unpublished'}
 						aria-label="Unpublished arguments"
 						onclick={() => selectStatus('unpublished')}
-						style="{filterButtonStyle(data.status === 'unpublished', '#fb923c')} border-left: none; border-radius: 0 6px 6px 0;"
+						style="{filterButtonStyle(data.status === 'unpublished', 'var(--color-status-unpublished)')} border-left: none; border-radius: 0 6px 6px 0;"
 					>Unpublished</button>
 				</div>
 				</div>
 
-				<label style="display: flex; align-items: center; gap: 8px; font-size: 14px; color: #94a3b8;">
+				<label style="display: flex; align-items: center; gap: var(--space-sm); font-size: var(--font-size-caption); color: var(--color-text-secondary);">
 					Trust tier
 					<select
 						value={data.tier ?? ''}
 						onchange={onSelectTier}
-						style="background-color: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
+						style="background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) var(--space-md); font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box;"
 					>
 						<option value="">All tiers</option>
 						<option value="verified">Verified</option>
@@ -384,12 +382,12 @@
 				</label>
 			{/if}
 
-			<label style="display: flex; align-items: center; gap: 8px; font-size: 14px; color: #94a3b8;">
+			<label style="display: flex; align-items: center; gap: var(--space-sm); font-size: var(--font-size-caption); color: var(--color-text-secondary);">
 				Review state
 				<select
 					value={data.review_state ?? ''}
 					onchange={onSelectReviewState}
-					style="background-color: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 16px; color: #e2e8f0; box-sizing: border-box;"
+					style="background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) var(--space-md); font-size: var(--font-size-body); color: var(--color-text-primary); box-sizing: border-box;"
 				>
 					<option value="">All review states</option>
 					<option value="unreviewed">Unreviewed</option>
@@ -402,7 +400,7 @@
 
 		<!-- Active-filter indicator (E10) -->
 		{#if activeFilterLabels.length > 0}
-			<p style="font-size: 14px; font-weight: 400; color: #94a3b8; margin: 0 0 16px 0;">
+			<p style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin: 0 0 var(--space-lg) 0;">
 				Showing: {activeFilterLabels.join(', ')} ·
 				<button
 					type="button"
@@ -413,10 +411,10 @@
 						border: none;
 						padding: 0;
 						margin: 0;
-						color: #93c5fd;
+						color: var(--color-accent);
 						text-decoration: underline;
-						font-size: 14px;
-						font-weight: 400;
+						font-size: var(--font-size-caption);
+						font-weight: var(--font-weight-regular);
 						cursor: pointer;
 					"
 				>Clear filter</button>
@@ -427,17 +425,17 @@
 			<!-- Empty state (E1/E2/E9) — filtered-empty reuses the same copy -->
 			<div
 				style="
-					background-color: #1e293b;
-					border: 1px solid #334155;
+					background-color: var(--color-surface);
+					border: 1px solid var(--color-border);
 					border-radius: 8px;
-					padding: 24px;
+					padding: var(--space-xl);
 					text-align: center;
 				"
 			>
-				<p style="font-size: 16px; font-weight: 600; color: #e2e8f0; margin: 0 0 4px 0;">
+				<p style="font-size: var(--font-size-body); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-xs) 0;">
 					All caught up
 				</p>
-				<p style="font-size: 16px; color: #94a3b8; margin: 0;">
+				<p style="font-size: var(--font-size-body); color: var(--color-text-secondary); margin: 0;">
 					{data.tab === 'arguments'
 						? 'No arguments currently need review.'
 						: 'No people currently need review.'}
@@ -454,37 +452,52 @@
 			<table style="width: 100%; border-collapse: collapse;">
 				<thead>
 					<tr>
-						<th scope="col" style="text-align: left; font-size: 14px; font-weight: 400; color: #94a3b8; padding: 8px 12px; border-bottom: 1px solid #334155; white-space: nowrap;">Tier / Status</th>
-						<th scope="col" style="text-align: left; font-size: 14px; font-weight: 400; color: #94a3b8; padding: 8px 12px; border-bottom: 1px solid #334155;">Case name</th>
-						<th scope="col" style="text-align: left; font-size: 14px; font-weight: 400; color: #94a3b8; padding: 8px 12px; border-bottom: 1px solid #334155; white-space: nowrap;">Docket</th>
-						<th scope="col" style="text-align: left; font-size: 14px; font-weight: 400; color: #94a3b8; padding: 8px 12px; border-bottom: 1px solid #334155; white-space: nowrap;">Argued date</th>
-						<th scope="col" style="text-align: left; font-size: 14px; font-weight: 400; color: #94a3b8; padding: 8px 12px; border-bottom: 1px solid #334155;">Needs-attention</th>
-						<th scope="col" style="text-align: left; font-size: 14px; font-weight: 400; color: #94a3b8; padding: 8px 12px; border-bottom: 1px solid #334155; white-space: nowrap;">Expand</th>
+						<th scope="col" style="text-align: left; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); padding: var(--space-sm) var(--space-md); border-bottom: 1px solid var(--color-border); white-space: nowrap;">Tier / Status</th>
+						<th scope="col" style="text-align: left; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); padding: var(--space-sm) var(--space-md); border-bottom: 1px solid var(--color-border); min-width: 22ch;">Case name</th>
+						<th scope="col" style="text-align: left; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); padding: var(--space-sm) var(--space-md); border-bottom: 1px solid var(--color-border); white-space: nowrap;">Docket</th>
+						<th scope="col" style="text-align: left; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); padding: var(--space-sm) var(--space-md); border-bottom: 1px solid var(--color-border); white-space: nowrap;">Argued date</th>
+						<th scope="col" style="text-align: left; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); padding: var(--space-sm) var(--space-md); border-bottom: 1px solid var(--color-border);">Needs-attention</th>
+						<th scope="col" style="text-align: left; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); padding: var(--space-sm) var(--space-md); border-bottom: 1px solid var(--color-border); white-space: nowrap;">Expand</th>
 					</tr>
 				</thead>
 				<tbody>
 					{#each data.argumentItems as item (item.id)}
 						<tr>
-							<td style="padding: 12px; border-bottom: 1px solid #334155; vertical-align: top; white-space: nowrap;">
-								<span style={tierBadgeStyle(item.trust_tier)}>{tierLabel(item.trust_tier)}</span>
+							<td style="padding: var(--space-md); border-bottom: 1px solid var(--color-border); vertical-align: top; white-space: nowrap;">
+								<Badge tone={tierTone(item.trust_tier)} label={tierLabel(item.trust_tier)} />
 								<span style="display: inline-block; width: 4px;"></span>
-								<span style={badgeStyle(item.status)}>{badgeLabel(item.status)}</span>
+								<Badge tone={badgeTone(item.status)} label={badgeLabel(item.status)} />
 							</td>
-							<td style="padding: 12px; border-bottom: 1px solid #334155; vertical-align: top; color: #e2e8f0; font-size: 16px;">
+							<!-- D-04 (51-ADMIN-ARTIFACTS.md, ruled 2026-09-02): a floor on the
+							     one column holding long text. Four of this table's six columns
+							     are `white-space: nowrap`, so each claims its full min-content
+							     width and this one — the only flexible column with a long value
+							     in it — got whatever remained: 125px at any viewport. A
+							     96-character case name became a nine-line, 196px row. With the
+							     floor it is four lines and 101px, and the extra table width is
+							     absorbed by the container's existing horizontal scroll
+							     (G-49-5a). Nothing is truncated; 49-UI-SPEC E1/E2 still forbids
+							     that. `ch` rather than px because the floor is about MEASURE —
+							     the same reason the transcript bubble caps at 68ch. -->
+							<td style="padding: var(--space-md); border-bottom: 1px solid var(--color-border); vertical-align: top; color: var(--color-text-primary); font-size: var(--font-size-body); min-width: 22ch;">
 								{item.case_name}
+								{#if item.argument_discrepancies.length > 0}
+									<span style="display: inline-block; width: 4px;"></span>
+									<Badge tone="discrepancy" label="Discrepancy" />
+								{/if}
 							</td>
-							<td style="padding: 12px; border-bottom: 1px solid #334155; vertical-align: top; color: #94a3b8; font-size: 14px; white-space: nowrap;">
+							<td style="padding: var(--space-md); border-bottom: 1px solid var(--color-border); vertical-align: top; color: var(--color-text-secondary); font-size: var(--font-size-caption); white-space: nowrap;">
 								{item.docket_number}
 							</td>
-							<td style="padding: 12px; border-bottom: 1px solid #334155; vertical-align: top; color: #94a3b8; font-size: 14px; white-space: nowrap;">
+							<td style="padding: var(--space-md); border-bottom: 1px solid var(--color-border); vertical-align: top; color: var(--color-text-secondary); font-size: var(--font-size-caption); white-space: nowrap;">
 								{formatDate(item.argued_date)}
 							</td>
-							<td style="padding: 12px; border-bottom: 1px solid #334155; vertical-align: top; color: #94a3b8; font-size: 14px;">
+							<td style="padding: var(--space-md); border-bottom: 1px solid var(--color-border); vertical-align: top; color: var(--color-text-secondary); font-size: var(--font-size-caption);">
 								{#if item.attention_count > 0}
 									{attentionCountText(item.attention_count)}
 								{/if}
 							</td>
-							<td style="padding: 12px; border-bottom: 1px solid #334155; vertical-align: top; white-space: nowrap;">
+							<td style="padding: var(--space-md); border-bottom: 1px solid var(--color-border); vertical-align: top; white-space: nowrap;">
 								<button
 									type="button"
 									aria-expanded={expandedIds.has(item.id)}
@@ -494,9 +507,9 @@
 										border: none;
 										padding: 0;
 										margin: 0;
-										color: #93c5fd;
-										font-size: 14px;
-										font-weight: 400;
+										color: var(--color-accent);
+										font-size: var(--font-size-caption);
+										font-weight: var(--font-weight-regular);
 										cursor: pointer;
 										text-decoration: underline;
 									"
@@ -505,65 +518,82 @@
 						</tr>
 						{#if expandedIds.has(item.id)}
 							<tr>
-								<td colspan="6" style="padding: 0 0 16px 0; border-bottom: 1px solid #334155;">
+								<td colspan="6" style="padding: 0 0 var(--space-lg) 0; border-bottom: 1px solid var(--color-border);">
+									{#if item.argument_discrepancies.length > 0}
+										<div style="background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-lg); margin: var(--space-xs) var(--space-md) var(--space-lg) var(--space-md);">
+											<div style="display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap; margin-bottom: var(--space-sm);">
+												<span style="color: var(--color-text-primary); font-size: var(--font-size-body);">This argument's own values and its lead case's</span>
+												<Badge tone="discrepancy" label="Discrepancy" />
+											</div>
+											{#each item.argument_discrepancies as d (d.id)}
+												<p style="font-size: var(--font-size-caption); margin: var(--space-xs) 0;">
+													<span style="color: var(--color-text-secondary);">{d.field}: existing</span>
+													<span style="color: var(--color-text-primary);"> {discrepancyValueDisplay(d.existing_value)}</span>
+													<span style="color: var(--color-text-secondary);"> ({d.existing_source ?? '—'}/{d.existing_method ?? '—'}) — incoming</span>
+													<span style="color: var(--color-text-primary);"> {discrepancyValueDisplay(d.incoming_value)}</span>
+													<span style="color: var(--color-text-secondary);"> ({d.incoming_source ?? '—'}/{d.incoming_method ?? '—'})</span>
+												</p>
+											{/each}
+										</div>
+									{/if}
 									{#if item.constituents.length > 0}
-										<div style="display: flex; flex-direction: column; gap: 16px; padding: 4px 12px 0 12px;">
+										<div style="display: flex; flex-direction: column; gap: var(--space-lg); padding: var(--space-xs) var(--space-md) 0 var(--space-md);">
 											{#each item.constituents as constituent (constituent.participant_id)}
-												<div style="background-color: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 16px;">
-													<div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px;">
-														<span style="color: #e2e8f0; font-size: 16px;">
+												<div style="background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-lg);">
+													<div style="display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap; margin-bottom: var(--space-sm);">
+														<span style="color: var(--color-text-primary); font-size: var(--font-size-body);">
 															{constituent.person_id === null ? 'Unresolved speaker' : constituent.display_name}
 														</span>
-														<span style="color: #94a3b8; font-size: 14px;">({sideRoleHint(constituent.side)})</span>
-														<span style={reviewStateBadgeStyle(constituent.review_state)}>{reviewStateLabel(constituent.review_state)}</span>
+														<span style="color: var(--color-text-secondary); font-size: var(--font-size-caption);">({sideRoleHint(constituent.side)})</span>
+														<Badge tone={reviewStateTone(constituent.review_state)} label={reviewStateLabel(constituent.review_state)} />
 														{#if constituent.has_open_discrepancy}
-															<span style={discrepancyBadgeStyle()}>Discrepancy</span>
+															<Badge tone="discrepancy" label="Discrepancy" />
 														{/if}
 													</div>
 
 													{#if constituent.has_open_discrepancy}
-														<div style="margin-bottom: 12px;">
+														<div style="margin-bottom: var(--space-md);">
 															{#each constituent.discrepancies as d (d.id)}
-																<p style="font-size: 14px; margin: 4px 0;">
-																	<span style="color: #94a3b8;">{d.field}: existing</span>
-																	<span style="color: #e2e8f0;"> {discrepancyValueDisplay(d.existing_value)}</span>
-																	<span style="color: #94a3b8;"> ({d.existing_source ?? '—'}/{d.existing_method ?? '—'}) — incoming</span>
-																	<span style="color: #e2e8f0;"> {discrepancyValueDisplay(d.incoming_value)}</span>
-																	<span style="color: #94a3b8;"> ({d.incoming_source ?? '—'}/{d.incoming_method ?? '—'})</span>
+																<p style="font-size: var(--font-size-caption); margin: var(--space-xs) 0;">
+																	<span style="color: var(--color-text-secondary);">{d.field}: existing</span>
+																	<span style="color: var(--color-text-primary);"> {discrepancyValueDisplay(d.existing_value)}</span>
+																	<span style="color: var(--color-text-secondary);"> ({d.existing_source ?? '—'}/{d.existing_method ?? '—'}) — incoming</span>
+																	<span style="color: var(--color-text-primary);"> {discrepancyValueDisplay(d.incoming_value)}</span>
+																	<span style="color: var(--color-text-secondary);"> ({d.incoming_source ?? '—'}/{d.incoming_method ?? '—'})</span>
 																</p>
 															{/each}
 														</div>
 													{/if}
 
-													<div style="display: flex; gap: 8px; flex-wrap: wrap;">
+													<div style="display: flex; gap: var(--space-sm); flex-wrap: wrap;">
 														{#if constituent.person_id !== null && constituent.review_state === 'needs_review'}
-															<form method="POST" action="?/confirm" use:enhance>
+															<form method="POST" action={actionUrl('confirm')} use:enhance>
 																<input type="hidden" name="id" value={constituent.participant_id} />
 																<button
 																	type="submit"
-																	style="min-height: 36px; padding: 4px 12px; font-size: 14px; font-weight: 600; cursor: pointer; border: 1px solid #93c5fd; background-color: transparent; color: #93c5fd; border-radius: 6px;"
+																	style="min-height: var(--touch-target-dense); padding: var(--space-xs) var(--space-md); font-size: var(--font-size-caption); font-weight: var(--font-weight-semibold); cursor: pointer; border: 1px solid var(--color-accent); background-color: transparent; color: var(--color-accent); border-radius: 6px;"
 																>Confirm</button>
 															</form>
 														{/if}
 														{#if constituent.person_id === null}
-															<form method="POST" action="?/confirmUnattributable" use:enhance>
+															<form method="POST" action={actionUrl('confirmUnattributable')} use:enhance>
 																<input type="hidden" name="id" value={constituent.participant_id} />
 																<button
 																	type="submit"
-																	style="min-height: 36px; padding: 4px 12px; font-size: 14px; font-weight: 400; cursor: pointer; border: 1px solid #334155; background-color: transparent; color: #94a3b8; border-radius: 6px;"
+																	style="min-height: var(--touch-target-dense); padding: var(--space-xs) var(--space-md); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); cursor: pointer; border: 1px solid var(--color-border); background-color: transparent; color: var(--color-text-secondary); border-radius: 6px;"
 																>Confirm as unattributable</button>
 															</form>
 														{/if}
 														<a
 															href={argumentEditHref(item)}
-															style="display: inline-flex; align-items: center; font-size: 14px; color: #93c5fd; text-decoration: underline;"
+															style="display: inline-flex; align-items: center; font-size: var(--font-size-caption); color: var(--color-accent); text-decoration: underline;"
 														>{argumentEditLabel(item)}</a>
 														{#if constituent.review_state === 'operator_confirmed' || constituent.review_state === 'operator_edited'}
-															<form method="POST" action="?/reflag" use:enhance>
+															<form method="POST" action={actionUrl('reflag')} use:enhance>
 																<input type="hidden" name="id" value={constituent.participant_id} />
 																<button
 																	type="submit"
-																	style="background: none; border: none; padding: 0; margin: 0; display: inline-flex; align-items: center; color: #94a3b8; font-size: 14px; font-weight: 400; cursor: pointer; text-decoration: underline;"
+																	style="background: none; border: none; padding: 0; margin: 0; display: inline-flex; align-items: center; color: var(--color-text-secondary); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); cursor: pointer; text-decoration: underline;"
 																>Re-flag for review</button>
 															</form>
 														{/if}
@@ -572,17 +602,36 @@
 											{/each}
 										</div>
 									{:else}
-										<div style="padding: 12px 12px 0 12px;">
-											<p style="font-size: 14px; color: #94a3b8; margin: 0 0 8px 0;">
+										<div style="padding: var(--space-md) var(--space-md) 0 var(--space-md);">
+											<p style="font-size: var(--font-size-caption); color: var(--color-text-secondary); margin: 0 0 var(--space-sm) 0;">
 												No flagged participants — this argument is queued because:
 											</p>
-											<ul style="margin: 0; padding-left: 20px;">
+											<ul style="margin: 0; padding-left: var(--space-lg);">
 												{#each item.blockers as blocker}
-													<li style="font-size: 14px; color: #94a3b8; padding: 2px 0;">
+													<li style="font-size: var(--font-size-caption); color: var(--color-text-secondary); padding: var(--space-xs) 0;">
 														{blockerSentence(blocker.code, blocker.count)}
 													</li>
 												{/each}
 											</ul>
+										</div>
+									{/if}
+									{#if item.status === 'candidate'}
+										<!-- Argument-scoped Approve (D-14/D-19/PD-12) — the only new
+										     per-argument action on this screen; deliberately rendered
+										     once per argument OUTSIDE the each-block/blockers-fallback
+										     pair above so it always appears for a CANDIDATE argument
+										     regardless of whether any flagged participant exists — a
+										     candidate argument queued solely via a degraded-tier or
+										     argument/case-discrepancy leg still needs to be
+										     approvable. Absent for every other status (D-19). -->
+										<div style="display: flex; gap: var(--space-sm); flex-wrap: wrap; padding: var(--space-md) var(--space-md) 0 var(--space-md);">
+											<form method="POST" action={actionUrl('approve')} use:enhance>
+												<input type="hidden" name="id" value={item.id} />
+												<button
+													type="submit"
+													style="min-height: var(--touch-target-dense); padding: var(--space-xs) var(--space-md); font-size: var(--font-size-caption); font-weight: var(--font-weight-semibold); cursor: pointer; border: 1px solid var(--color-accent); background-color: transparent; color: var(--color-accent); border-radius: 6px;"
+												>Approve — move to Draft</button>
+											</form>
 										</div>
 									{/if}
 								</td>
@@ -599,51 +648,57 @@
 			<table style="width: 100%; border-collapse: collapse;">
 				<thead>
 					<tr>
-						<th scope="col" style="text-align: left; font-size: 14px; font-weight: 400; color: #94a3b8; padding: 8px 12px; border-bottom: 1px solid #334155; white-space: nowrap;">Review state</th>
-						<th scope="col" style="text-align: left; font-size: 14px; font-weight: 400; color: #94a3b8; padding: 8px 12px; border-bottom: 1px solid #334155;">Full name</th>
-						<th scope="col" style="text-align: left; font-size: 14px; font-weight: 400; color: #94a3b8; padding: 8px 12px; border-bottom: 1px solid #334155;">Provenance note</th>
-						<th scope="col" style="text-align: left; font-size: 14px; font-weight: 400; color: #94a3b8; padding: 8px 12px; border-bottom: 1px solid #334155; white-space: nowrap;">Actions</th>
+						<th scope="col" style="text-align: left; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); padding: var(--space-sm) var(--space-md); border-bottom: 1px solid var(--color-border); white-space: nowrap;">Review state</th>
+						<th scope="col" style="text-align: left; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); padding: var(--space-sm) var(--space-md); border-bottom: 1px solid var(--color-border); min-width: 18ch;">Full name</th>
+						<th scope="col" style="text-align: left; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); padding: var(--space-sm) var(--space-md); border-bottom: 1px solid var(--color-border);">Provenance note</th>
+						<th scope="col" style="text-align: left; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); padding: var(--space-sm) var(--space-md); border-bottom: 1px solid var(--color-border); white-space: nowrap;">Actions</th>
 					</tr>
 				</thead>
 				<tbody>
 					{#each data.personItems as person (person.id)}
 						<tr>
-							<td style="padding: 12px; border-bottom: 1px solid #334155; vertical-align: top; white-space: nowrap;">
-								<span style={reviewStateBadgeStyle(person.review_state)}>{reviewStateLabel(person.review_state)}</span>
+							<td style="padding: var(--space-md); border-bottom: 1px solid var(--color-border); vertical-align: top; white-space: nowrap;">
+								<Badge tone={reviewStateTone(person.review_state)} label={reviewStateLabel(person.review_state)} />
 								{#if person.has_open_discrepancy}
 									<span style="display: inline-block; width: 4px;"></span>
-									<span style={discrepancyBadgeStyle()}>Discrepancy</span>
+									<Badge tone="discrepancy" label="Discrepancy" />
 								{/if}
 							</td>
-							<td style="padding: 12px; border-bottom: 1px solid #334155; vertical-align: top; color: #e2e8f0; font-size: 16px;">
+							<!-- Same D-04 floor. Here the identity column is the one worth
+							     protecting: a person's name is how the row is recognised, and
+							     "Harry G. Silleck, Jr." wrapping over three lines is the same
+							     complaint. The provenance note beside it keeps no floor on
+							     purpose — it is caption-weight secondary text, and wrapping is
+							     the acceptable behaviour for it. -->
+							<td style="padding: var(--space-md); border-bottom: 1px solid var(--color-border); vertical-align: top; color: var(--color-text-primary); font-size: var(--font-size-body); min-width: 18ch;">
 								{person.full_name}
 							</td>
-							<td style="padding: 12px; border-bottom: 1px solid #334155; vertical-align: top; color: #94a3b8; font-size: 14px;">
+							<td style="padding: var(--space-md); border-bottom: 1px solid var(--color-border); vertical-align: top; color: var(--color-text-secondary); font-size: var(--font-size-caption);">
 								{person.provenance_note}
 							</td>
-							<td style="padding: 12px; border-bottom: 1px solid #334155; vertical-align: top; white-space: nowrap;">
-								<div style="display: flex; gap: 8px; flex-wrap: wrap;">
+							<td style="padding: var(--space-md); border-bottom: 1px solid var(--color-border); vertical-align: top; white-space: nowrap;">
+								<div style="display: flex; gap: var(--space-sm); flex-wrap: wrap;">
 									{#if person.review_state === 'needs_review' || person.review_state === 'unreviewed'}
-										<form method="POST" action="?/confirm" use:enhance>
+										<form method="POST" action={actionUrl('confirm')} use:enhance>
 											<input type="hidden" name="kind" value="person" />
 											<input type="hidden" name="id" value={person.id} />
 											<button
 												type="submit"
-												style="min-height: 36px; padding: 4px 12px; font-size: 14px; font-weight: 600; cursor: pointer; border: 1px solid #93c5fd; background-color: transparent; color: #93c5fd; border-radius: 6px;"
+												style="min-height: var(--touch-target-dense); padding: var(--space-xs) var(--space-md); font-size: var(--font-size-caption); font-weight: var(--font-weight-semibold); cursor: pointer; border: 1px solid var(--color-accent); background-color: transparent; color: var(--color-accent); border-radius: 6px;"
 											>Confirm</button>
 										</form>
 									{/if}
 									<a
 										href={`/admin/people/${person.id}`}
-										style="display: inline-flex; align-items: center; font-size: 14px; color: #93c5fd; text-decoration: underline;"
+										style="display: inline-flex; align-items: center; font-size: var(--font-size-caption); color: var(--color-accent); text-decoration: underline;"
 									>Edit</a>
 									{#if person.review_state === 'operator_confirmed' || person.review_state === 'operator_edited'}
-										<form method="POST" action="?/reflag" use:enhance>
+										<form method="POST" action={actionUrl('reflag')} use:enhance>
 											<input type="hidden" name="kind" value="person" />
 											<input type="hidden" name="id" value={person.id} />
 											<button
 												type="submit"
-												style="background: none; border: none; padding: 0; margin: 0; display: inline-flex; align-items: center; color: #94a3b8; font-size: 14px; font-weight: 400; cursor: pointer; text-decoration: underline;"
+												style="background: none; border: none; padding: 0; margin: 0; display: inline-flex; align-items: center; color: var(--color-text-secondary); font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); cursor: pointer; text-decoration: underline;"
 											>Re-flag for review</button>
 										</form>
 									{/if}

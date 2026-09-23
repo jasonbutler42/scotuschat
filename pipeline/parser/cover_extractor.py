@@ -6,7 +6,7 @@ extract_pages skips) and extracts:
   - argued_date: the date the argument was heard
   - case_name: the lead petitioner name from the case caption
 
-Both public functions are fail-safe per D-05 / D-09: any exception returns
+Both public functions are fail-safe
 an empty dict; the parse step continues normally and leaves existing DB
 values unchanged.
 
@@ -46,7 +46,7 @@ HERITAGE_DATE_RE = re.compile(
 )
 
 # Case caption separator line — Alderson uses soft hyphens (\xad), Heritage uses dashes.
-# WR-04: The trailing 'x' in Alderson separators is always preceded by whitespace;
+# The trailing 'x' in Alderson separators is always preceded by whitespace;
 # anchor it as an optional suffix rather than a free class member so a petitioner
 # name line consisting solely of 'X' is not silently dropped as a separator.
 CAPTION_SEP_RE = re.compile(r'^[\xad\-\s–—\*]+(?:\s+[xX])?$')
@@ -70,7 +70,7 @@ TOC_SIDE_RE = re.compile(
 TOC_AMICUS_RE = re.compile(r'amicus\s+curiae', re.IGNORECASE)
 
 # Docket number on cover page — Alderson: 'No. 14-556'.
-# Heritage format may differ — partial match is the acceptable fallback per D-10, A1.
+# Heritage format may differ — partial match is the acceptable fallback, A1.
 DOCKET_RE = re.compile(r'No\.\s+(\d{1,2}-\d+)', re.IGNORECASE)
 
 # Month name → integer mapping (first 3 lowercase letters)
@@ -243,7 +243,7 @@ def extract_cover_metadata(pdf_path: Path) -> dict:
       - 'argued_date' → datetime.date
       - 'case_name'   → str
 
-    Never raises — returns {} (or a partial result) on any failure (D-05).
+    Never raises — returns {} (or a partial result) on any failure.
     The parse step continues normally if extraction fails; existing DB values
     remain unchanged.
     """
@@ -270,7 +270,7 @@ def extract_cover_metadata(pdf_path: Path) -> dict:
             if len(result) == 3:
                 break
     except Exception:
-        pass  # D-05: never raise; caller receives partial result or {}
+        pass  # Never raise; caller receives partial result or {}
     return result
 
 
@@ -284,7 +284,7 @@ def _parse_toc_titles(lines: list[str]) -> "dict[str, str]":
 
     Returns {last_name_upper: subtitle_string} mapping. If a name line is
     immediately followed by a side/amicus line (no subtitle between them),
-    no entry is recorded for that advocate (D-10).
+    no entry is recorded for that advocate.
 
     Returns {} when lines contain no recognizable advocate name lines.
     Same last-name-collision behavior as _parse_toc_sides (second mapping
@@ -301,7 +301,7 @@ def _parse_toc_titles(lines: list[str]) -> "dict[str, str]":
 
         if pending_name:
             if TOC_AMICUS_RE.search(line) or TOC_SIDE_RE.search(line):
-                # Side/amicus line follows name directly — no subtitle captured (D-10)
+                # Side/amicus line follows name directly — no subtitle captured
                 pending_name = None
             else:
                 # This line is the subtitle (e.g. "Solicitor General")
@@ -316,7 +316,7 @@ def extract_advocate_sides(pdf_path: Path) -> "dict[str, str]":
     Build a last_name_upper → SideEnum_value mapping from the TOC page.
 
     Scans pages 0–3 for the page containing 'C O N T E N T S', then parses
-    ESQ. name + 'On behalf of' line pairs. Returns {} on any failure (D-09).
+    ESQ. name + 'On behalf of' line pairs. Returns {} on any failure.
 
     The parse step continues normally if side extraction fails; all
     argument_participants rows stay UNKNOWN and the operator assigns via
@@ -332,19 +332,19 @@ def extract_advocate_sides(pdf_path: Path) -> "dict[str, str]":
                 if "C O N T E N T S" in raw:
                     return _parse_toc_sides(_clean_lines(raw))
     except Exception:
-        pass  # D-09: never raise
+        pass  # Never raise
     return {}
 
 
 def extract_toc_data(pdf_path: Path) -> dict:
     """
-    Extract both advocate sides and titles from the TOC page in a single PDF open (D-12).
+    Extract both advocate sides and titles from the TOC page in a single PDF open.
 
     Scans pages 0–3 for 'C O N T E N T S', computes _clean_lines once, and
     returns both parsers' output:
       {"sides": {last_name_upper: SideEnum_value}, "titles": {last_name_upper: subtitle_str}}
 
-    Returns {"sides": {}, "titles": {}} on any failure (D-11). Never raises.
+    Returns {"sides": {}, "titles": {}} on any failure. Never raises.
     """
     try:
         with pdfplumber.open(pdf_path) as pdf:
@@ -357,5 +357,5 @@ def extract_toc_data(pdf_path: Path) -> dict:
                         "titles": _parse_toc_titles(lines),
                     }
     except Exception:
-        pass  # D-11: never raise
+        pass  # Never raise
     return {"sides": {}, "titles": {}}

@@ -185,18 +185,30 @@ def test_main_py_mounts_admin_router():
 
 def test_main_py_still_registers_all_existing_routers():
     """
-    api/main.py must still register arguments_router, cases_router, and people_router.
+    api/main.py must still register arguments_router and people_router.
 
     Regression guard (D-14): Phase 5 adds the admin router without touching existing
     v1.0 router registrations.
+
+    Phase 51 plan 51-08: cases_router dropped from the required set — its
+    whole router module was retired once its last consumer (the
+    transitional flat /arguments listing plan 51-02 shipped) was replaced
+    by the term-grouped listing (plan 51-04/51-08). This is a deliberate,
+    intentional deletion, not a regression the guard should still flag.
     """
     main_py = _project_root() / "api" / "main.py"
     content = main_py.read_text(encoding="utf-8")
-    for router_name in ("arguments_router", "cases_router", "people_router"):
+    for router_name in ("arguments_router", "people_router"):
         assert router_name in content, (
             f"Expected '{router_name}' in api/main.py — "
             f"existing router registration was removed (regression — D-14)"
         )
+    assert "cases_router" not in content, (
+        "Expected 'cases_router' to be ABSENT from api/main.py — its "
+        "router module was retired in Phase 51 plan 51-08 once its last "
+        "consumer was removed; a reappearing reference would mean the "
+        "retired module was reintroduced."
+    )
 
 
 def test_api_main_imports_without_error():

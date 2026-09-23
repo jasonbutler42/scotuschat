@@ -1,7 +1,7 @@
 """
 LLM corrective pass for SCOTUS transcript parsing.
 
-Uses instructor + tenacity two-layer retry strategy (PIPE-03, PIPE-06):
+Uses instructor + tenacity two-layer retry strategy:
   - Inner layer: instructor max_retries=2 (Pydantic schema validation failures)
   - Outer layer: tenacity exponential backoff (transient API errors)
 
@@ -10,7 +10,7 @@ Pitfall 4 prevention:
   the Anthropic SDK's built-in retry (default 2) would cause triple-retrying
   on 429/503 errors if not disabled.
 
-Failure classification (PIPE-06):
+Failure classification:
   - anthropic.RateLimitError (HTTP 429)         → transient → outer tenacity retry
   - anthropic.APIConnectionError (network)       → transient → outer tenacity retry
   - instructor.InstructorRetryException          → structural → caller must catch,
@@ -18,9 +18,9 @@ Failure classification (PIPE-06):
   - anthropic.BadRequestError (HTTP 400)         → structural → fail immediately;
       reraise; caller sets failure_reason
 
-D-14: Use instructor.Mode.TOOLS — Anthropic's native tool-calling API.
-D-04: Target model: claude-haiku-4-5-20251001 (Haiku for parse step).
-D-05: Full transcript as single LLM call (no chunking needed for SCOTUS Q1
+Use instructor.Mode.TOOLS — Anthropic's native tool-calling API.
+Target model: claude-haiku-4-5-20251001 (Haiku for parse step).
+Full transcript as single LLM call (no chunking needed for SCOTUS Q1
       at ~40-50k tokens).
 """
 
@@ -91,7 +91,7 @@ async def call_llm_parse(pages_text: str) -> ParseResponse:
     max_retries=2 times by instructor. If schema mismatch persists beyond
     that, InstructorRetryException is raised and must be caught by the
     caller (parse command) — it indicates a structural failure, not a
-    transient one (PIPE-06).
+    transient one.
 
     Args:
         pages_text: Full transcript text to parse.

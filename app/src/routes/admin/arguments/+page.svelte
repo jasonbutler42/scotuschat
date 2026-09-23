@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
+	import Badge from '$lib/primitives/Badge.svelte';
+	import type { BadgeTone } from '$lib/primitives/badge-tone';
 
 	type Blocker = { code: string; count: number };
 
@@ -58,14 +60,14 @@
 	// Selected-state fill per UI-SPEC — each option uses its own semantic color.
 	function filterButtonStyle(active: boolean, selectedColor: string): string {
 		return `
-			min-height: 44px;
-			padding: 8px 16px;
-			font-size: 16px;
-			font-weight: 600;
+			min-height: var(--touch-target);
+			padding: var(--space-sm) var(--space-lg);
+			font-size: var(--font-size-body);
+			font-weight: var(--font-weight-semibold);
 			cursor: pointer;
-			border: 1px solid ${active ? selectedColor : '#334155'};
-			background-color: ${active ? selectedColor : '#1e293b'};
-			color: ${active ? '#0f1117' : '#e2e8f0'};
+			border: 1px solid ${active ? selectedColor : 'var(--color-border)'};
+			background-color: ${active ? selectedColor : 'var(--color-surface)'};
+			color: ${active ? 'var(--color-bg)' : 'var(--color-text-primary)'};
 		`;
 	}
 
@@ -81,18 +83,12 @@
 
 	// StatusBadge helpers — reads argument.status enum (Phase 15: draft/published).
 	// Pipeline-state arguments are excluded from this list (D-02).
-	function badgeStyle(status: string): string {
-		let color: string;
-		if (status === 'published') {
-			color = '#4ade80'; // Published — green
-		} else if (status === 'draft') {
-			color = '#a78bfa'; // Draft — violet
-		} else if (status === 'unpublished') {
-			color = '#fb923c'; // Unpublished — orange
-		} else {
-			color = '#94a3b8'; // Pipeline — muted (fallback, should not appear in this list)
-		}
-		return `border: 1px solid ${color}; border-radius: 4px; padding: 2px 8px; font-size: 14px; font-weight: 400; background-color: #1e293b; color: ${color}; display: inline-block;`;
+	function badgeTone(status: string): BadgeTone {
+		if (status === 'published') return 'published';
+		if (status === 'draft') return 'draft';
+		if (status === 'unpublished') return 'unpublished';
+		// Pipeline — muted fallback; excluded from this list (D-02).
+		return 'neutral';
 	}
 
 	function badgeLabel(status: string): string {
@@ -108,20 +104,12 @@
 	// alternative). Colors are visually distinct from the status badge's
 	// palette above; this is inline styling only, not a design-system
 	// dependency (Phase 51 owns the palette).
-	function tierBadgeStyle(tier: string): string {
-		let color: string;
-		if (tier === 'verified') {
-			color = '#38bdf8';
-		} else if (tier === 'trusted') {
-			color = '#34d399';
-		} else if (tier === 'provisional') {
-			color = '#facc15';
-		} else if (tier === 'uncertain') {
-			color = '#f87171';
-		} else {
-			color = '#64748b';
-		}
-		return `border: 1px solid ${color}; border-radius: 4px; padding: 2px 8px; font-size: 12px; font-weight: 400; background-color: #0f1117; color: ${color}; display: inline-block;`;
+	function tierTone(tier: string): BadgeTone {
+		if (tier === 'verified') return 'verified';
+		if (tier === 'trusted') return 'trusted';
+		if (tier === 'provisional') return 'provisional';
+		if (tier === 'uncertain') return 'uncertain';
+		return 'unknown';
 	}
 
 	function tierLabel(tier: string): string {
@@ -163,12 +151,12 @@
 	<title>Arguments — SCOTUS Chat Admin</title>
 </svelte:head>
 
-<main style="background-color: #0f1117; min-height: 100vh;">
+<main style="background-color: var(--color-bg); min-height: 100vh;">
 	<header
-		style="background-color: #1e293b; border-bottom: 1px solid #334155; padding: 16px 24px;"
+		style="background-color: var(--color-surface); border-bottom: 1px solid var(--color-border); padding: var(--space-lg) var(--space-xl);"
 	>
-		<div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
-			<h1 style="font-size: 20px; font-weight: 600; color: #e2e8f0; margin: 0;">Arguments</h1>
+		<div style="display: flex; align-items: center; gap: var(--space-lg); flex-wrap: wrap;">
+			<h1 style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0;">Arguments</h1>
 
 			<!-- Status segmented filter control (DASH-02, D-05) -->
 			<!-- G-49-18 (operator, 2026-08-25, 49-UAT test 49): SECOND, independent overflow cause on
@@ -186,38 +174,38 @@
 					aria-pressed={!data.status}
 					aria-label="All arguments"
 					onclick={() => selectStatus('all')}
-					style="{filterButtonStyle(!data.status, '#93c5fd')} border-radius: 6px 0 0 6px;"
+					style="{filterButtonStyle(!data.status, 'var(--color-accent)')} border-radius: 6px 0 0 6px;"
 				>All</button>
 				<button
 					type="button"
 					aria-pressed={data.status === 'draft'}
 					aria-label="Draft arguments"
 					onclick={() => selectStatus('draft')}
-					style="{filterButtonStyle(data.status === 'draft', '#a78bfa')} border-left: none;"
+					style="{filterButtonStyle(data.status === 'draft', 'var(--color-status-draft)')} border-left: none;"
 				>Draft</button>
 				<button
 					type="button"
 					aria-pressed={data.status === 'published'}
 					aria-label="Published arguments"
 					onclick={() => selectStatus('published')}
-					style="{filterButtonStyle(data.status === 'published', '#4ade80')} border-left: none;"
+					style="{filterButtonStyle(data.status === 'published', 'var(--color-status-published)')} border-left: none;"
 				>Published</button>
 				<button
 					type="button"
 					aria-pressed={data.status === 'unpublished'}
 					aria-label="Unpublished arguments"
 					onclick={() => selectStatus('unpublished')}
-					style="{filterButtonStyle(data.status === 'unpublished', '#fb923c')} border-left: none; border-radius: 0 6px 6px 0;"
+					style="{filterButtonStyle(data.status === 'unpublished', 'var(--color-status-unpublished)')} border-left: none; border-radius: 0 6px 6px 0;"
 				>Unpublished</button>
 			</div>
 			</div>
 		</div>
 	</header>
 
-	<div style="max-width: 860px; margin: 0 auto; padding: 48px 24px;">
+	<div style="max-width: 860px; margin: 0 auto; padding: var(--space-3xl) var(--space-xl);">
 		<!-- Active-filter indicator (D-05) — only for a specific status, never "All" -->
 		{#if data.status === 'draft' || data.status === 'published' || data.status === 'unpublished'}
-			<p style="font-size: 14px; font-weight: 400; color: #94a3b8; margin: 0 0 16px 0;">
+			<p style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin: 0 0 var(--space-lg) 0;">
 				Showing: {statusLabel(data.status)} arguments ·
 				<button
 					type="button"
@@ -228,10 +216,10 @@
 						border: none;
 						padding: 0;
 						margin: 0;
-						color: #93c5fd;
+						color: var(--color-accent);
 						text-decoration: underline;
-						font-size: 14px;
-						font-weight: 400;
+						font-size: var(--font-size-caption);
+						font-weight: var(--font-weight-regular);
 						cursor: pointer;
 					"
 				>Clear filter</button>
@@ -242,19 +230,19 @@
 			<!-- Empty state per UI-SPEC Copywriting Contract -->
 			<div
 				style="
-					background-color: #1e293b;
-					border: 1px solid #334155;
+					background-color: var(--color-surface);
+					border: 1px solid var(--color-border);
 					border-radius: 8px;
-					padding: 24px;
+					padding: var(--space-xl);
 					text-align: center;
 				"
 			>
 				{#if data.status === 'draft' || data.status === 'published' || data.status === 'unpublished'}
-					<p style="font-size: 16px; color: #94a3b8; margin: 0;">
+					<p style="font-size: var(--font-size-body); color: var(--color-text-secondary); margin: 0;">
 						No {statusLabel(data.status)} arguments.
 					</p>
 				{:else}
-					<p style="font-size: 16px; color: #94a3b8; margin: 0;">
+					<p style="font-size: var(--font-size-body); color: var(--color-text-secondary); margin: 0;">
 						No arguments yet. Start a pipeline run to ingest a transcript.
 					</p>
 				{/if}
@@ -276,66 +264,66 @@
 							scope="col"
 							style="
 								text-align: left;
-								font-size: 14px;
-								font-weight: 400;
-								color: #94a3b8;
-								border-bottom: 1px solid #334155;
-								padding: 8px 0;
+								font-size: var(--font-size-caption);
+								font-weight: var(--font-weight-regular);
+								color: var(--color-text-secondary);
+								border-bottom: 1px solid var(--color-border);
+								padding: var(--space-sm) 0;
 							"
 						>Status</th>
 						<th
 							scope="col"
 							style="
 								text-align: left;
-								font-size: 14px;
-								font-weight: 400;
-								color: #94a3b8;
-								border-bottom: 1px solid #334155;
-								padding: 8px 8px;
+								font-size: var(--font-size-caption);
+								font-weight: var(--font-weight-regular);
+								color: var(--color-text-secondary);
+								border-bottom: 1px solid var(--color-border);
+								padding: var(--space-sm) var(--space-sm);
 							"
 						>Case Title</th>
 						<th
 							scope="col"
 							style="
 								text-align: left;
-								font-size: 14px;
-								font-weight: 400;
-								color: #94a3b8;
-								border-bottom: 1px solid #334155;
-								padding: 8px 8px;
+								font-size: var(--font-size-caption);
+								font-weight: var(--font-weight-regular);
+								color: var(--color-text-secondary);
+								border-bottom: 1px solid var(--color-border);
+								padding: var(--space-sm) var(--space-sm);
 							"
 						>Docket</th>
 						<th
 							scope="col"
 							style="
 								text-align: left;
-								font-size: 14px;
-								font-weight: 400;
-								color: #94a3b8;
-								border-bottom: 1px solid #334155;
-								padding: 8px 8px;
+								font-size: var(--font-size-caption);
+								font-weight: var(--font-weight-regular);
+								color: var(--color-text-secondary);
+								border-bottom: 1px solid var(--color-border);
+								padding: var(--space-sm) var(--space-sm);
 							"
 						>Argued</th>
 						<th
 							scope="col"
 							style="
 								text-align: left;
-								font-size: 14px;
-								font-weight: 400;
-								color: #94a3b8;
-								border-bottom: 1px solid #334155;
-								padding: 8px 8px;
+								font-size: var(--font-size-caption);
+								font-weight: var(--font-weight-regular);
+								color: var(--color-text-secondary);
+								border-bottom: 1px solid var(--color-border);
+								padding: var(--space-sm) var(--space-sm);
 							"
 						>Created</th>
 						<th
 							scope="col"
 							style="
 								text-align: right;
-								font-size: 14px;
-								font-weight: 400;
-								color: #94a3b8;
-								border-bottom: 1px solid #334155;
-								padding: 8px 0;
+								font-size: var(--font-size-caption);
+								font-weight: var(--font-weight-regular);
+								color: var(--color-text-secondary);
+								border-bottom: 1px solid var(--color-border);
+								padding: var(--space-sm) 0;
 							"
 						>Publish</th>
 					</tr>
@@ -345,61 +333,62 @@
 						<tr>
 							<td
 								style="
-									padding: 12px 0;
-									border-bottom: 1px solid #334155;
+									padding: var(--space-md) 0;
+									border-bottom: 1px solid var(--color-border);
 									white-space: nowrap;
 								"
 							>
-								<span style={badgeStyle(arg.status ?? 'pipeline')}>
-									{badgeLabel(arg.status ?? 'pipeline')}
-								</span>
-								<span style={tierBadgeStyle(arg.trust_tier)} title="Trust tier">
-									{tierLabel(arg.trust_tier)}
+								<Badge
+									tone={badgeTone(arg.status ?? 'pipeline')}
+									label={badgeLabel(arg.status ?? 'pipeline')}
+								/>
+								<span title="Trust tier">
+									<Badge tone={tierTone(arg.trust_tier)} label={tierLabel(arg.trust_tier)} />
 								</span>
 							</td>
 							<td
 								style="
-									font-size: 14px;
-									color: #94a3b8;
-									padding: 12px 8px;
-									border-bottom: 1px solid #334155;
+									font-size: var(--font-size-caption);
+									color: var(--color-text-secondary);
+									padding: var(--space-md) var(--space-sm);
+									border-bottom: 1px solid var(--color-border);
 								"
 							>{arg.case_name}</td>
 							<td
 								style="
-									font-size: 14px;
-									color: #94a3b8;
-									padding: 12px 8px;
-									border-bottom: 1px solid #334155;
+									font-size: var(--font-size-caption);
+									color: var(--color-text-secondary);
+									padding: var(--space-md) var(--space-sm);
+									border-bottom: 1px solid var(--color-border);
 									white-space: nowrap;
 								"
 							>{arg.docket_number}</td>
 							<td
 								style="
-									font-size: 14px;
-									color: #94a3b8;
-									padding: 12px 8px;
-									border-bottom: 1px solid #334155;
+									font-size: var(--font-size-caption);
+									color: var(--color-text-secondary);
+									padding: var(--space-md) var(--space-sm);
+									border-bottom: 1px solid var(--color-border);
 									white-space: nowrap;
 								"
 							>{arg.argued_date ? formatDate(arg.argued_date) : '—'}</td>
 							<td
 								style="
-									font-size: 14px;
-									color: #94a3b8;
-									padding: 12px 8px;
-									border-bottom: 1px solid #334155;
+									font-size: var(--font-size-caption);
+									color: var(--color-text-secondary);
+									padding: var(--space-md) var(--space-sm);
+									border-bottom: 1px solid var(--color-border);
 									white-space: nowrap;
 								"
 							>{arg.resolved_at ? formatDate(arg.resolved_at) : '—'}</td>
 							<td
 								style="
-									padding: 12px 0;
-									border-bottom: 1px solid #334155;
+									padding: var(--space-md) 0;
+									border-bottom: 1px solid var(--color-border);
 									text-align: right;
 								"
 							>
-								<div style="display: flex; gap: 8px; justify-content: flex-end; align-items: center;">
+								<div style="display: flex; gap: var(--space-sm); justify-content: flex-end; align-items: center;">
 									{#if arg.status === 'draft' || arg.status === 'unpublished'}
 										<!-- Publish toggle — Draft or Unpublished both go to Published.
 										     The button is NEVER disabled based on trust tier or block
@@ -421,14 +410,14 @@
 												type="submit"
 												disabled={publishingId === arg.id}
 												style="
-													min-height: 44px;
-													font-size: 14px;
-													font-weight: 400;
-													color: #93c5fd;
+													min-height: var(--touch-target);
+													font-size: var(--font-size-caption);
+													font-weight: var(--font-weight-regular);
+													color: var(--color-accent);
 													background: transparent;
-													border: 1px solid #93c5fd;
+													border: 1px solid var(--color-accent);
 													border-radius: 6px;
-													padding: 8px 12px;
+													padding: var(--space-sm) var(--space-md);
 													cursor: {publishingId === arg.id ? 'not-allowed' : 'pointer'};
 													opacity: {publishingId === arg.id ? 0.7 : 1};
 												"
@@ -456,14 +445,14 @@
 												type="submit"
 												disabled={publishingId === arg.id}
 												style="
-													min-height: 44px;
-													font-size: 14px;
-													font-weight: 400;
-													color: #94a3b8;
+													min-height: var(--touch-target);
+													font-size: var(--font-size-caption);
+													font-weight: var(--font-weight-regular);
+													color: var(--color-text-secondary);
 													background: transparent;
-													border: 1px solid #334155;
+													border: 1px solid var(--color-border);
 													border-radius: 6px;
-													padding: 8px 12px;
+													padding: var(--space-sm) var(--space-md);
 													cursor: {publishingId === arg.id ? 'not-allowed' : 'pointer'};
 													opacity: {publishingId === arg.id ? 0.7 : 1};
 												"
@@ -473,7 +462,7 @@
 									<!-- Edit link per row -->
 									<a
 										href={'/admin/arguments/' + arg.id}
-										style="font-size: 14px; color: #93c5fd; text-decoration: underline;"
+										style="font-size: var(--font-size-caption); color: var(--color-accent); text-decoration: underline;"
 									>Edit</a>
 								</div>
 							</td>
@@ -491,15 +480,15 @@
 							     had succeeded. -->
 						{#if form?.error && form.argumentId === arg.id && !form.publishBlocked}
 							<tr>
-								<td colspan="6" style="padding: 0 0 12px 0; border-bottom: 1px solid #334155;">
+								<td colspan="6" style="padding: 0 0 var(--space-md) 0; border-bottom: 1px solid var(--color-border);">
 									<p
 										role="alert"
 										style="
 											margin: 0;
-											padding: 8px 0;
-											color: #ef4444;
-											font-size: 14px;
-											font-weight: 400;
+											padding: var(--space-sm) 0;
+											color: var(--color-destructive);
+											font-size: var(--font-size-caption);
+											font-weight: var(--font-weight-regular);
 										"
 									>{form.error}</p>
 								</td>
@@ -512,21 +501,21 @@
 							     row so it does not distort the table's column layout. -->
 						{#if form?.publishBlocked && form.argumentId === arg.id && form !== dismissedForm}
 							<tr>
-								<td colspan="6" style="padding: 0 0 12px 0; border-bottom: 1px solid #334155;">
+								<td colspan="6" style="padding: 0 0 var(--space-md) 0; border-bottom: 1px solid var(--color-border);">
 									<div
 										style="
 											margin: 0;
-											padding: 16px;
-											border: 1px solid #fb923c;
+											padding: var(--space-lg);
+											border: 1px solid var(--color-status-unpublished);
 											border-radius: 6px;
-											background-color: #1e293b;
+											background-color: var(--color-surface);
 										"
 									>
-										<p style="font-size: 16px; font-weight: 600; color: #fb923c; margin: 0 0 8px 0; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+										<p style="font-size: var(--font-size-body); font-weight: var(--font-weight-semibold); color: var(--color-status-unpublished); margin: 0 0 var(--space-sm) 0; display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm);">
 											<span>
 												Publish blocked
 												{#if form.trustTier}
-													<span style={tierBadgeStyle(form.trustTier)}>{tierLabel(form.trustTier)}</span>
+													<Badge tone={tierTone(form.trustTier)} label={tierLabel(form.trustTier)} />
 												{/if}
 											</span>
 											<!-- Dismisses the WHOLE panel, not just the reason textarea —
@@ -543,11 +532,11 @@
 												style="
 													background: none;
 													border: none;
-													padding: 4px 8px;
+													padding: var(--space-xs) var(--space-sm);
 													margin: 0;
-													color: #94a3b8;
-													font-size: 14px;
-													font-weight: 400;
+													color: var(--color-text-secondary);
+													font-size: var(--font-size-caption);
+													font-weight: var(--font-weight-regular);
 													text-decoration: underline;
 													cursor: pointer;
 													flex-shrink: 0;
@@ -556,15 +545,15 @@
 										</p>
 
 										{#if form.blockMessage}
-											<p style="font-size: 14px; color: #e2e8f0; margin: 0 0 8px 0;">
+											<p style="font-size: var(--font-size-caption); color: var(--color-text-primary); margin: 0 0 var(--space-sm) 0;">
 												{form.blockMessage}
 											</p>
 										{/if}
 
 										{#if form.blockers && form.blockers.length > 0}
-											<ul style="margin: 0 0 16px 0; padding-left: 20px;">
+											<ul style="margin: 0 0 var(--space-lg) 0; padding-left: var(--space-lg);">
 												{#each form.blockers as b}
-													<li style="font-size: 14px; color: #94a3b8; padding: 2px 0;">
+													<li style="font-size: var(--font-size-caption); color: var(--color-text-secondary); padding: var(--space-xs) 0;">
 														{blockerSentence(b.code, b.count)}
 													</li>
 												{/each}
@@ -572,7 +561,7 @@
 										{/if}
 
 										{#if form?.overrideReasonRequired && form.argumentId === arg.id}
-											<p role="alert" style="font-size: 14px; font-weight: 600; color: #ef4444; margin: 0 0 12px 0;">
+											<p role="alert" style="font-size: var(--font-size-caption); font-weight: var(--font-weight-semibold); color: var(--color-destructive); margin: 0 0 var(--space-md) 0;">
 												A non-empty reason is required — your submission was blank or only whitespace.
 											</p>
 										{/if}
@@ -591,7 +580,7 @@
 											<input type="hidden" name="argument_id" value={arg.id} />
 											<label
 												for={'override_reason_' + arg.id}
-												style="display: block; font-size: 14px; font-weight: 400; color: #94a3b8; margin-bottom: 8px;"
+												style="display: block; font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin-bottom: var(--space-sm);"
 											>Reason for publishing anyway</label>
 											<!-- `required` is defense-in-depth only (D-17) — the server's
 											     own .strip() check on override_reason is the single
@@ -607,27 +596,27 @@
 													width: 100%;
 													max-width: 480px;
 													box-sizing: border-box;
-													background-color: #0f1117;
-													border: 1px solid #334155;
+													background-color: var(--color-bg);
+													border: 1px solid var(--color-border);
 													border-radius: 6px;
-													color: #e2e8f0;
-													font-size: 14px;
-													padding: 8px 12px;
-													margin-bottom: 12px;
+													color: var(--color-text-primary);
+													font-size: var(--font-size-caption);
+													padding: var(--space-sm) var(--space-md);
+													margin-bottom: var(--space-md);
 												"
 											></textarea>
 											<button
 												type="submit"
 												disabled={publishingId === arg.id}
 												style="
-													min-height: 44px;
-													background-color: #1e293b;
-													border: 1px solid #fb923c;
+													min-height: var(--touch-target);
+													background-color: var(--color-surface);
+													border: 1px solid var(--color-status-unpublished);
 													border-radius: 6px;
-													font-size: 14px;
-													font-weight: 600;
-													color: #e2e8f0;
-													padding: 8px 16px;
+													font-size: var(--font-size-caption);
+													font-weight: var(--font-weight-semibold);
+													color: var(--color-text-primary);
+													padding: var(--space-sm) var(--space-lg);
 													cursor: {publishingId === arg.id ? 'not-allowed' : 'pointer'};
 													opacity: {publishingId === arg.id ? 0.7 : 1};
 												"

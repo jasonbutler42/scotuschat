@@ -144,6 +144,7 @@ async def test_metadata_array_writes_normalized_list_and_canonical_first_value()
         MagicMock(scalar_one_or_none=lambda: argument),
         MagicMock(scalar_one_or_none=lambda: None),
         MagicMock(),
+        MagicMock(),  # Phase 50 plan 50-03: _stamp_operator_provenance's own update(Argument)
     ]
     body = MetadataUpdate(
         source_docket="ignored",
@@ -151,7 +152,10 @@ async def test_metadata_array_writes_normalized_list_and_canonical_first_value()
     )
 
     assert await update_argument_metadata(db, 7, body) is True
-    update_stmt = db.execute.await_args_list[-1].args[0]
+    # -2, not -1: the LAST call is now _stamp_operator_provenance's own
+    # update(Argument) (source_docket is in values_to_set, so Phase 50
+    # plan 50-03's provenance stamp fires after this write).
+    update_stmt = db.execute.await_args_list[-2].args[0]
     params = update_stmt.compile().params
     assert params["source_dockets"] == ["24-2", "24-1"]
     assert params["source_docket"] == "24-2"
@@ -396,10 +400,11 @@ def test_delete_argument_all_deletes_have_synchronize_session_false() -> None:
     )
 
 
-def test_delete_argument_gate_keys_on_draft() -> None:
+def test_delete_argument_gate_keys_on_published() -> None:
     """delete_argument's status gate must be a single positive condition keyed
-    on ArgumentStatusEnum.DRAFT — any non-DRAFT status (PIPELINE included)
-    returns False (T-26-13, D-03/AEDIT-09).
+    on ArgumentStatusEnum.PUBLISHED — every OTHER status (CANDIDATE, DRAFT,
+    UNPUBLISHED, and the retired PIPELINE value) returns True/deletes
+    (D-25/PD-11, Phase 50).
     """
     import inspect
 
@@ -413,26 +418,27 @@ def test_delete_argument_gate_keys_on_draft() -> None:
         next_func = source.find("\ndef ", func_start + 1)
     func_body = source[func_start:next_func] if next_func != -1 else source[func_start:]
 
-    # The gate must key positively on DRAFT (not enumerate PUBLISHED/UNPUBLISHED).
-    assert "ArgumentStatusEnum.DRAFT" in func_body, (
-        "delete_argument's gate must reference ArgumentStatusEnum.DRAFT"
+    # The gate must key positively on PUBLISHED (not enumerate the other
+    # three statuses, and not key on DRAFT the old way).
+    assert "ArgumentStatusEnum.PUBLISHED" in func_body, (
+        "delete_argument's gate must reference ArgumentStatusEnum.PUBLISHED"
     )
     gate_start = func_body.find("if argument.status")
     assert gate_start != -1, "delete_argument must have a status gate"
     gate_line_end = func_body.find("\n", gate_start)
     gate_line = func_body[gate_start:gate_line_end]
-    assert "ArgumentStatusEnum.DRAFT" in gate_line, (
-        f"Expected the status gate condition to key on DRAFT, found: {gate_line!r}"
+    assert "ArgumentStatusEnum.PUBLISHED" in gate_line, (
+        f"Expected the status gate condition to key on PUBLISHED, found: {gate_line!r}"
     )
-    # Must NOT be the old enumerated PUBLISHED/UNPUBLISHED-only tuple check.
-    assert "PUBLISHED, ArgumentStatusEnum.UNPUBLISHED" not in gate_line, (
-        "delete_argument's gate must not enumerate PUBLISHED/UNPUBLISHED only "
-        "— it must reject any non-DRAFT status, including PIPELINE"
+    assert "ArgumentStatusEnum.DRAFT" not in gate_line, (
+        "delete_argument's gate must not key on DRAFT anymore — D-25/PD-11 "
+        f"inverted it to a single published-only refusal, found: {gate_line!r}"
     )
 
 
 # ---------------------------------------------------------------------------
-# DB-guarded delete_argument behavioral tests (Phase 21 Plan 01)
+# DB-guarded delete_argument behavioral tests (Phase 21 Plan 01; gate
+# inverted to published-only by D-25/PD-11, Phase 50)
 # ---------------------------------------------------------------------------
 
 
@@ -450,8 +456,10 @@ async def test_delete_argument_returns_none_for_missing() -> None:
 
 @pytest.mark.asyncio
 @pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
-async def test_delete_argument_returns_false_for_unpublished() -> None:
-    """delete_argument() must return False for an UNPUBLISHED argument (D-03/AEDIT-09)."""
+async def test_delete_argument_returns_true_for_unpublished() -> None:
+    """delete_argument() must return True for an UNPUBLISHED argument and
+    actually remove it (D-25/PD-11, Phase 50) — the prior gate refused
+    UNPUBLISHED; it is now deletable like every non-published state."""
     from api.core.database import AsyncSessionLocal
     from api.models.models import Argument, ArgumentStatusEnum
     from api.services.admin_arguments import delete_argument
@@ -464,26 +472,22 @@ async def test_delete_argument_returns_false_for_unpublished() -> None:
 
     async with AsyncSessionLocal() as db:
         result = await delete_argument(db, arg_id)
-    assert result is False
+    assert result is True
 
     async with AsyncSessionLocal() as db:
-        arg = await db.get(Argument, arg_id)
-        await db.delete(arg)
-        await db.commit()
+        assert await db.get(Argument, arg_id) is None
 
 
 @pytest.mark.asyncio
 @pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
-async def test_delete_argument_returns_false_for_pipeline() -> None:
-    """delete_argument() must return False for a PIPELINE-status argument
-    (T-26-13) — a mid-pipeline argument an active AdminJob may still
-    reference cannot be stranded via a direct API call.
+async def test_delete_argument_returns_true_for_pipeline_legacy_status() -> None:
+    """delete_argument() must return True for a PIPELINE-status argument and
+    actually remove it (D-25/PD-11, Phase 50).
 
     PIPELINE is the retired (Phase 48 D-01) born-state enum value — dead but
     still valid because PostgreSQL cannot drop an enum value. This case is
-    kept as the dead-value regression fixture; the born state going forward
-    is CANDIDATE, locked separately by
-    test_delete_argument_still_refuses_candidate below.
+    kept as the dead-value regression fixture — the published-only gate
+    treats it like any other non-published status.
     """
     from api.core.database import AsyncSessionLocal
     from api.models.models import Argument, ArgumentStatusEnum
@@ -497,12 +501,44 @@ async def test_delete_argument_returns_false_for_pipeline() -> None:
 
     async with AsyncSessionLocal() as db:
         result = await delete_argument(db, arg_id)
-    assert result is False
+    assert result is True
 
     async with AsyncSessionLocal() as db:
-        arg = await db.get(Argument, arg_id)
-        await db.delete(arg)
+        assert await db.get(Argument, arg_id) is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_delete_argument_returns_false_for_published() -> None:
+    """delete_argument() must return False for a PUBLISHED argument (D-25)
+    — the only refused status — and leave the row untouched."""
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import Argument, ArgumentStatusEnum
+
+    async with AsyncSessionLocal() as db:
+        arg = Argument(
+            status=ArgumentStatusEnum.PUBLISHED,
+            resolved_at=__import__("datetime").datetime.now(__import__("datetime").timezone.utc),
+        )
+        db.add(arg)
         await db.commit()
+        arg_id = arg.id
+
+    try:
+        async with AsyncSessionLocal() as db:
+            from api.services.admin_arguments import delete_argument
+
+            result = await delete_argument(db, arg_id)
+        assert result is False
+
+        async with AsyncSessionLocal() as db:
+            assert await db.get(Argument, arg_id) is not None
+    finally:
+        async with AsyncSessionLocal() as db:
+            arg = await db.get(Argument, arg_id)
+            if arg is not None:
+                await db.delete(arg)
+                await db.commit()
 
 
 # ---------------------------------------------------------------------------
@@ -642,11 +678,12 @@ async def test_delete_argument_cascades_multiple_status_log_rows() -> None:
 
 @pytest.mark.asyncio
 @pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
-async def test_delete_argument_still_refuses_candidate() -> None:
-    """delete_argument() must still return False for a CANDIDATE-status
-    argument (D-05: this phase does not widen the DRAFT-only delete gate),
-    and both the argument and its status-log row must survive the refused
-    call untouched.
+async def test_delete_argument_returns_true_for_candidate() -> None:
+    """delete_argument() must return True for a CANDIDATE-status argument
+    and actually remove it, including its status-log row (D-25/PD-11,
+    Phase 50) — the prior gate refused CANDIDATE on the theory that an
+    active AdminJob might still reference it; corpus arguments carry no
+    AdminJob at all as of this phase, so that reasoning no longer applies.
     """
     from sqlalchemy import delete as sa_delete
     from sqlalchemy import func, select
@@ -668,22 +705,515 @@ async def test_delete_argument_still_refuses_candidate() -> None:
     try:
         async with AsyncSessionLocal() as db:
             result = await delete_argument(db, arg_id)
-        assert result is False
+        assert result is True
 
         async with AsyncSessionLocal() as db:
-            assert await db.get(Argument, arg_id) is not None
+            assert await db.get(Argument, arg_id) is None
             remaining = await db.execute(
                 select(func.count())
                 .select_from(ArgumentStatusLog)
                 .where(ArgumentStatusLog.argument_id == arg_id)
             )
-            assert remaining.scalar_one() == 1
+            assert remaining.scalar_one() == 0
+        arg_id = None
     finally:
+        if arg_id is not None:
+            async with AsyncSessionLocal() as db:
+                await db.execute(
+                    sa_delete(ArgumentStatusLog).where(ArgumentStatusLog.argument_id == arg_id)
+                )
+                await db.execute(sa_delete(Argument).where(Argument.id == arg_id))
+                await db.commit()
+
+
+# ---------------------------------------------------------------------------
+# D-26 (Phase 50 plan 50-03): delete_argument -> value_discrepancy cascade
+#
+# value_discrepancy.import_run_id is a hard FK to import_run.id (migration
+# 0028), and delete_argument's cascade never touched value_discrepancy at
+# all — so deleting an argument carrying any open discrepancy raised
+# ForeignKeyViolation. Latent until now because almost nothing created
+# discrepancies; D-01's always-reconcile (plan 50-05) makes it routine and
+# D-25 makes candidates newly deletable. Each test below builds real
+# value_discrepancy rows attributed to a real import_run row, so the
+# ForeignKeyViolation this defect used to raise cannot be silently
+# swallowed by a mock.
+# ---------------------------------------------------------------------------
+
+
+async def _seed_argument_with_lead_case_and_participant(*, status):
+    """Seed one argument (given status) + lead Case + a real ImportRun +
+    one ArgumentParticipant, returning every id a discrepancy test needs.
+    Shared by the D-26 tests below — not exported, local to this module."""
+    import uuid
+
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import (
+        Argument,
+        ArgumentParticipant,
+        Case,
+        CaseArgument,
+        ImportRun,
+        SideEnum,
+    )
+
+    suffix = uuid.uuid4().hex[:8]
+    async with AsyncSessionLocal() as db:
+        arg = Argument(status=status, resolved_at=None)
+        db.add(arg)
+        await db.flush()
+
+        case = Case(
+            docket_number=f"D26-{suffix}",
+            docket_number_norm=f"d26-{suffix}",
+            case_name="D-26 Discrepancy Fixture v. Test Harness",
+            term_year=2026,
+            slug=f"d26-discrepancy-fixture-{suffix}",
+        )
+        db.add(case)
+        await db.flush()
+        db.add(CaseArgument(case_id=case.id, argument_id=arg.id, is_lead=True))
+
+        run = ImportRun(argument_id=arg.id, step="parse", source="corpus", method="direct")
+        db.add(run)
+        await db.flush()
+
+        participant = ArgumentParticipant(
+            argument_id=arg.id,
+            raw_speaker_label="MR. D26 SPEAKER",
+            side=SideEnum.PETITIONER,
+        )
+        db.add(participant)
+        await db.flush()
+
+        await db.commit()
+        return {
+            "argument_id": arg.id,
+            "case_id": case.id,
+            "import_run_id": run.id,
+            "participant_id": participant.id,
+        }
+
+
+async def _teardown_argument_with_lead_case(ids: dict) -> None:
+    from sqlalchemy import delete as sa_delete
+
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import (
+        Argument,
+        ArgumentParticipant,
+        ArgumentStatusLog,
+        Case,
+        CaseArgument,
+        ImportRun,
+        ValueDiscrepancy,
+    )
+
+    async with AsyncSessionLocal() as db:
+        await db.execute(
+            sa_delete(ValueDiscrepancy).where(
+                ValueDiscrepancy.import_run_id == ids["import_run_id"]
+            )
+        )
+        await db.execute(
+            sa_delete(ArgumentStatusLog).where(ArgumentStatusLog.argument_id == ids["argument_id"])
+        )
+        await db.execute(
+            sa_delete(ArgumentParticipant).where(ArgumentParticipant.argument_id == ids["argument_id"])
+        )
+        await db.execute(sa_delete(ImportRun).where(ImportRun.id == ids["import_run_id"]))
+        await db.execute(sa_delete(CaseArgument).where(CaseArgument.argument_id == ids["argument_id"]))
+        await db.execute(sa_delete(Case).where(Case.id == ids["case_id"]))
+        await db.execute(sa_delete(Argument).where(Argument.id == ids["argument_id"]))
+        await db.commit()
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_delete_argument_with_argument_scoped_discrepancy_succeeds_and_leaves_zero_rows() -> None:
+    """Deleting an argument carrying an open value_discrepancy row with
+    target_type="argument" targeting its own id succeeds (no
+    ForeignKeyViolation) and leaves zero rows for that id (D-26)."""
+    from sqlalchemy import func, select
+
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import ArgumentStatusEnum, ValueDiscrepancy
+    from api.services.admin_arguments import delete_argument
+
+    ids = await _seed_argument_with_lead_case_and_participant(status=ArgumentStatusEnum.CANDIDATE)
+    async with AsyncSessionLocal() as db:
+        db.add(
+            ValueDiscrepancy(
+                target_type="argument",
+                target_id=ids["argument_id"],
+                field="argued_date",
+                import_run_id=ids["import_run_id"],
+                incoming_value="2020-01-01",
+                existing_value="2020-01-02",
+            )
+        )
+        await db.commit()
+
+    try:
+        async with AsyncSessionLocal() as db:
+            result = await delete_argument(db, ids["argument_id"])
+        assert result is True
+
+        async with AsyncSessionLocal() as db:
+            remaining = await db.execute(
+                select(func.count())
+                .select_from(ValueDiscrepancy)
+                .where(
+                    ValueDiscrepancy.target_type == "argument",
+                    ValueDiscrepancy.target_id == ids["argument_id"],
+                )
+            )
+            assert remaining.scalar_one() == 0
+    finally:
+        await _teardown_argument_with_lead_case(ids)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_delete_argument_with_participant_scoped_discrepancy_succeeds_and_leaves_zero_rows() -> None:
+    """Deleting an argument carrying an open value_discrepancy row with
+    target_type="argument_participant" targeting its own participant
+    succeeds and leaves zero rows for that id (D-26) — target_id is a SOFT
+    reference with no FK, so this proves the participant leg is captured
+    before step 4 deletes the participant row."""
+    from sqlalchemy import func, select
+
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import ArgumentStatusEnum, ValueDiscrepancy
+    from api.services.admin_arguments import delete_argument
+
+    ids = await _seed_argument_with_lead_case_and_participant(status=ArgumentStatusEnum.DRAFT)
+    async with AsyncSessionLocal() as db:
+        db.add(
+            ValueDiscrepancy(
+                target_type="argument_participant",
+                target_id=ids["participant_id"],
+                field="person_id",
+                import_run_id=ids["import_run_id"],
+                incoming_value="42",
+                existing_value=None,
+            )
+        )
+        await db.commit()
+
+    try:
+        async with AsyncSessionLocal() as db:
+            result = await delete_argument(db, ids["argument_id"])
+        assert result is True
+
+        async with AsyncSessionLocal() as db:
+            remaining = await db.execute(
+                select(func.count())
+                .select_from(ValueDiscrepancy)
+                .where(
+                    ValueDiscrepancy.target_type == "argument_participant",
+                    ValueDiscrepancy.target_id == ids["participant_id"],
+                )
+            )
+            assert remaining.scalar_one() == 0
+    finally:
+        await _teardown_argument_with_lead_case(ids)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_delete_argument_with_import_run_referencing_discrepancy_raises_no_fk_violation() -> None:
+    """Deleting an argument that has value_discrepancy rows referencing its
+    own import_run rows raises no ForeignKeyViolation (D-26's central
+    claim — the pre-fix defect this whole test module documents)."""
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import ArgumentStatusEnum, ValueDiscrepancy
+    from api.services.admin_arguments import delete_argument
+
+    ids = await _seed_argument_with_lead_case_and_participant(status=ArgumentStatusEnum.UNPUBLISHED)
+    async with AsyncSessionLocal() as db:
+        db.add(
+            ValueDiscrepancy(
+                target_type="argument",
+                target_id=ids["argument_id"],
+                field="question_number",
+                import_run_id=ids["import_run_id"],
+                incoming_value="2",
+                existing_value="1",
+            )
+        )
+        await db.commit()
+
+    try:
+        async with AsyncSessionLocal() as db:
+            # No try/except here on purpose — an un-caught ForeignKeyViolation
+            # (wrapped in IntegrityError by SQLAlchemy) is exactly the pre-fix
+            # failure this test must NOT reproduce.
+            result = await delete_argument(db, ids["argument_id"])
+        assert result is True
+    finally:
+        await _teardown_argument_with_lead_case(ids)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_delete_argument_carrying_all_three_discrepancy_scopes_at_once_succeeds() -> None:
+    """Deleting a CANDIDATE argument carrying argument-scoped, case-scoped
+    (this argument the case's exclusive lead), and participant-scoped open
+    discrepancies all at once — every one attributed to a real import_run
+    row — succeeds with no ForeignKeyViolation and leaves zero
+    value_discrepancy rows for any of the three targets (D-26's central
+    multi-scope proof)."""
+    from sqlalchemy import func, select
+
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import ArgumentStatusEnum, ValueDiscrepancy
+    from api.services.admin_arguments import delete_argument
+
+    ids = await _seed_argument_with_lead_case_and_participant(status=ArgumentStatusEnum.CANDIDATE)
+    async with AsyncSessionLocal() as db:
+        db.add(
+            ValueDiscrepancy(
+                target_type="argument",
+                target_id=ids["argument_id"],
+                field="argued_date",
+                import_run_id=ids["import_run_id"],
+                incoming_value="2020-01-01",
+                existing_value="2020-01-02",
+            )
+        )
+        db.add(
+            ValueDiscrepancy(
+                target_type="case",
+                target_id=ids["case_id"],
+                field="case_name",
+                import_run_id=ids["import_run_id"],
+                incoming_value="Renamed",
+                existing_value="Original",
+            )
+        )
+        db.add(
+            ValueDiscrepancy(
+                target_type="argument_participant",
+                target_id=ids["participant_id"],
+                field="person_id",
+                import_run_id=ids["import_run_id"],
+                incoming_value="42",
+                existing_value=None,
+            )
+        )
+        await db.commit()
+
+    try:
+        async with AsyncSessionLocal() as db:
+            result = await delete_argument(db, ids["argument_id"])
+        assert result is True
+
+        async with AsyncSessionLocal() as db:
+            for target_type, target_id in (
+                ("argument", ids["argument_id"]),
+                ("case", ids["case_id"]),
+                ("argument_participant", ids["participant_id"]),
+            ):
+                remaining = await db.execute(
+                    select(func.count())
+                    .select_from(ValueDiscrepancy)
+                    .where(
+                        ValueDiscrepancy.target_type == target_type,
+                        ValueDiscrepancy.target_id == target_id,
+                    )
+                )
+                assert remaining.scalar_one() == 0, f"{target_type} discrepancy row must be gone"
+    finally:
+        await _teardown_argument_with_lead_case(ids)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_delete_argument_does_not_delete_other_arguments_participant_or_person_discrepancies() -> None:
+    """Deleting an argument does NOT delete a value_discrepancy row
+    belonging to a DIFFERENT argument's participant, nor one whose
+    target_type is "person" (D-26) — both must survive untouched."""
+    from sqlalchemy import func, select
+
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import ArgumentStatusEnum, Person, ValueDiscrepancy
+    from api.services.admin_arguments import delete_argument
+
+    ids = await _seed_argument_with_lead_case_and_participant(status=ArgumentStatusEnum.CANDIDATE)
+    other_ids = await _seed_argument_with_lead_case_and_participant(status=ArgumentStatusEnum.CANDIDATE)
+
+    async with AsyncSessionLocal() as db:
+        person = Person(full_name="D-26 Survives Person")
+        db.add(person)
+        await db.flush()
+        person_id = person.id
+
+        db.add(
+            ValueDiscrepancy(
+                target_type="argument_participant",
+                target_id=other_ids["participant_id"],
+                field="person_id",
+                import_run_id=other_ids["import_run_id"],
+                incoming_value="7",
+                existing_value=None,
+            )
+        )
+        db.add(
+            ValueDiscrepancy(
+                target_type="person",
+                target_id=person_id,
+                field="first_name",
+                import_run_id=ids["import_run_id"],
+                incoming_value="Jane",
+                existing_value="Jan",
+            )
+        )
+        await db.commit()
+
+    try:
+        async with AsyncSessionLocal() as db:
+            result = await delete_argument(db, ids["argument_id"])
+        assert result is True
+
+        async with AsyncSessionLocal() as db:
+            other_remaining = await db.execute(
+                select(func.count())
+                .select_from(ValueDiscrepancy)
+                .where(
+                    ValueDiscrepancy.target_type == "argument_participant",
+                    ValueDiscrepancy.target_id == other_ids["participant_id"],
+                )
+            )
+            assert other_remaining.scalar_one() == 1
+
+            person_remaining = await db.execute(
+                select(func.count())
+                .select_from(ValueDiscrepancy)
+                .where(
+                    ValueDiscrepancy.target_type == "person",
+                    ValueDiscrepancy.target_id == person_id,
+                )
+            )
+            assert person_remaining.scalar_one() == 1
+    finally:
+        from sqlalchemy import delete as sa_delete_stmt
+
         async with AsyncSessionLocal() as db:
             await db.execute(
-                sa_delete(ArgumentStatusLog).where(ArgumentStatusLog.argument_id == arg_id)
+                sa_delete_stmt(ValueDiscrepancy).where(
+                    ValueDiscrepancy.target_type == "argument_participant",
+                    ValueDiscrepancy.target_id == other_ids["participant_id"],
+                )
             )
-            await db.execute(sa_delete(Argument).where(Argument.id == arg_id))
+            await db.execute(
+                sa_delete_stmt(ValueDiscrepancy).where(
+                    ValueDiscrepancy.target_type == "person",
+                    ValueDiscrepancy.target_id == person_id,
+                )
+            )
+            await db.execute(sa_delete_stmt(Person).where(Person.id == person_id))
+            await db.commit()
+        await _teardown_argument_with_lead_case(other_ids)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_delete_argument_does_not_delete_shared_lead_case_discrepancy_of_another_argument() -> None:
+    """Deleting an argument whose lead Case is ALSO lead for another
+    argument does not delete that other argument's case-scoped
+    discrepancy rows (D-26's NOT-EXISTS-equivalent scope guard) — Case is
+    shared, so its discrepancy rows are not this argument's to delete
+    unless this argument is the case's ONLY lead."""
+    from sqlalchemy import func, select
+
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import (
+        Argument,
+        ArgumentStatusEnum,
+        CaseArgument,
+        ImportRun,
+        ValueDiscrepancy,
+    )
+    from api.services.admin_arguments import delete_argument
+
+    ids = await _seed_argument_with_lead_case_and_participant(status=ArgumentStatusEnum.CANDIDATE)
+
+    # A second argument that ALSO leads the same Case (shared lead case —
+    # a real re-argument scenario, e.g. Obergefell Q1/Q2). The surviving
+    # case-scoped discrepancy is attributed to THIS second argument's own
+    # ImportRun, not the first argument's — the first argument's own
+    # ImportRun is deleted as part of its own cascade (step 3), so a
+    # discrepancy row that must SURVIVE cannot depend on it.
+    async with AsyncSessionLocal() as db:
+        second_arg = Argument(status=ArgumentStatusEnum.CANDIDATE, resolved_at=None)
+        db.add(second_arg)
+        await db.flush()
+        db.add(CaseArgument(case_id=ids["case_id"], argument_id=second_arg.id, is_lead=True))
+        second_run = ImportRun(
+            argument_id=second_arg.id, step="parse", source="corpus", method="direct"
+        )
+        db.add(second_run)
+        await db.flush()
+        db.add(
+            ValueDiscrepancy(
+                target_type="case",
+                target_id=ids["case_id"],
+                field="case_name",
+                import_run_id=second_run.id,
+                incoming_value="Renamed",
+                existing_value="Original",
+            )
+        )
+        await db.commit()
+        second_arg_id = second_arg.id
+        second_run_id = second_run.id
+
+    try:
+        async with AsyncSessionLocal() as db:
+            result = await delete_argument(db, ids["argument_id"])
+        assert result is True
+
+        async with AsyncSessionLocal() as db:
+            remaining = await db.execute(
+                select(func.count())
+                .select_from(ValueDiscrepancy)
+                .where(
+                    ValueDiscrepancy.target_type == "case",
+                    ValueDiscrepancy.target_id == ids["case_id"],
+                )
+            )
+            assert remaining.scalar_one() == 1, (
+                "the case-scoped discrepancy must survive — the second "
+                "argument still leads this Case"
+            )
+    finally:
+        from sqlalchemy import delete as sa_delete_stmt
+
+        async with AsyncSessionLocal() as db:
+            await db.execute(
+                sa_delete_stmt(ValueDiscrepancy).where(
+                    ValueDiscrepancy.target_type == "case",
+                    ValueDiscrepancy.target_id == ids["case_id"],
+                )
+            )
+            await db.execute(
+                sa_delete_stmt(CaseArgument).where(CaseArgument.argument_id == second_arg_id)
+            )
+            await db.execute(sa_delete_stmt(ImportRun).where(ImportRun.id == second_run_id))
+            await db.execute(sa_delete_stmt(Argument).where(Argument.id == second_arg_id))
+            await db.commit()
+        # ids["argument_id"] was already deleted by delete_argument above;
+        # its lead case row was NOT deleted by delete_argument (only
+        # discrepancies/participants/import_run/status_log/CaseArgument for
+        # THIS argument's own row are — the Case itself is never touched by
+        # delete_argument), and it is still referenced by second_arg above,
+        # so tear it down only after second_arg's own CaseArgument row is gone.
+        async with AsyncSessionLocal() as db:
+            from api.models.models import Case, ImportRun
+
+            await db.execute(sa_delete_stmt(ImportRun).where(ImportRun.id == ids["import_run_id"]))
+            await db.execute(sa_delete_stmt(Case).where(Case.id == ids["case_id"]))
             await db.commit()
 
 
@@ -1059,6 +1589,235 @@ async def test_update_argument_slug_frozen_for_unpublished() -> None:
         arg = await db.get(Argument, arg_id)
         await db.delete(arg)
         await db.commit()
+
+
+# ---------------------------------------------------------------------------
+# PD-08 (Phase 50 plan 50-03): operator provenance stamping on the five
+# Argument/Case compare-set columns via _stamp_operator_provenance, called
+# from update_argument and update_argument_metadata.
+# ---------------------------------------------------------------------------
+
+
+async def _seed_draft_argument_with_lead_case_for_stamping():
+    """Seed one DRAFT argument + lead Case with source/method left NULL
+    (unstamped), returning the ids a stamping test needs."""
+    import uuid
+
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import Argument, ArgumentStatusEnum, Case, CaseArgument
+
+    suffix = uuid.uuid4().hex[:8]
+    async with AsyncSessionLocal() as db:
+        arg = Argument(status=ArgumentStatusEnum.DRAFT, resolved_at=None)
+        db.add(arg)
+        await db.flush()
+
+        case = Case(
+            docket_number=f"STAMP-{suffix}",
+            docket_number_norm=f"stamp-{suffix}",
+            case_name="Provenance Stamp Fixture v. Test Harness",
+            term_year=2026,
+            slug=f"provenance-stamp-fixture-{suffix}",
+        )
+        db.add(case)
+        await db.flush()
+        db.add(CaseArgument(case_id=case.id, argument_id=arg.id, is_lead=True))
+        await db.commit()
+        return {"argument_id": arg.id, "case_id": case.id}
+
+
+async def _teardown_draft_argument_with_lead_case(ids: dict) -> None:
+    from sqlalchemy import delete as sa_delete
+
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import Argument, Case, CaseArgument
+
+    async with AsyncSessionLocal() as db:
+        await db.execute(sa_delete(CaseArgument).where(CaseArgument.argument_id == ids["argument_id"]))
+        await db.execute(sa_delete(Case).where(Case.id == ids["case_id"]))
+        await db.execute(sa_delete(Argument).where(Argument.id == ids["argument_id"]))
+        await db.commit()
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_update_argument_stamps_operator_provenance_on_argued_date_write() -> None:
+    """After update_argument() writes argued_date, the argument row has
+    source=OPERATOR and method=MANUAL (PD-08)."""
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import Argument, ImportMethod, ImportSource
+    from api.schemas.admin_arguments import ArgumentUpdate
+    from api.services.admin_arguments import update_argument
+
+    ids = await _seed_draft_argument_with_lead_case_for_stamping()
+    try:
+        async with AsyncSessionLocal() as db:
+            result = await update_argument(
+                db, ids["argument_id"], ArgumentUpdate(argued_date="2021-06-01")
+            )
+        assert result is not None
+
+        async with AsyncSessionLocal() as db:
+            arg = await db.get(Argument, ids["argument_id"])
+            assert arg.source == ImportSource.OPERATOR
+            assert arg.method == ImportMethod.MANUAL
+    finally:
+        await _teardown_draft_argument_with_lead_case(ids)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_update_argument_stamps_case_provenance_only_on_case_name_write() -> None:
+    """After update_argument() writes the lead case's case_name, the lead
+    Case row has source=OPERATOR/method=MANUAL, and the argument row's OWN
+    provenance is untouched by a case-only edit (PD-08)."""
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import Argument, Case, ImportMethod, ImportSource
+    from api.schemas.admin_arguments import ArgumentUpdate
+    from api.services.admin_arguments import update_argument
+
+    ids = await _seed_draft_argument_with_lead_case_for_stamping()
+    try:
+        async with AsyncSessionLocal() as db:
+            result = await update_argument(
+                db, ids["argument_id"], ArgumentUpdate(case_name="Renamed Stamp Fixture")
+            )
+        assert result is not None
+
+        async with AsyncSessionLocal() as db:
+            case = await db.get(Case, ids["case_id"])
+            assert case.source == ImportSource.OPERATOR
+            assert case.method == ImportMethod.MANUAL
+
+            arg = await db.get(Argument, ids["argument_id"])
+            assert arg.source is None, "a case-only edit must not stamp the argument row"
+            assert arg.method is None
+    finally:
+        await _teardown_draft_argument_with_lead_case(ids)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_update_argument_metadata_stamps_operator_provenance_on_question_number_write() -> None:
+    """After update_argument_metadata() writes question_number, the
+    argument row has source=OPERATOR and method=MANUAL (PD-08)."""
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import Argument, ImportMethod, ImportSource
+    from api.schemas.admin_arguments import MetadataUpdate
+    from api.services.admin_arguments import update_argument_metadata
+
+    ids = await _seed_draft_argument_with_lead_case_for_stamping()
+    try:
+        async with AsyncSessionLocal() as db:
+            ok = await update_argument_metadata(
+                db, ids["argument_id"], MetadataUpdate(question_number="3")
+            )
+        assert ok is True
+
+        async with AsyncSessionLocal() as db:
+            arg = await db.get(Argument, ids["argument_id"])
+            assert arg.source == ImportSource.OPERATOR
+            assert arg.method == ImportMethod.MANUAL
+    finally:
+        await _teardown_draft_argument_with_lead_case(ids)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_update_argument_metadata_stamps_operator_provenance_on_source_docket_write() -> None:
+    """After update_argument_metadata() writes source_docket, the argument
+    row has source=OPERATOR and method=MANUAL (PD-08)."""
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import Argument, ImportMethod, ImportSource
+    from api.schemas.admin_arguments import MetadataUpdate
+    from api.services.admin_arguments import update_argument_metadata
+
+    ids = await _seed_draft_argument_with_lead_case_for_stamping()
+    try:
+        async with AsyncSessionLocal() as db:
+            ok = await update_argument_metadata(
+                db, ids["argument_id"], MetadataUpdate(source_docket="26-STAMP-1")
+            )
+        assert ok is True
+
+        async with AsyncSessionLocal() as db:
+            arg = await db.get(Argument, ids["argument_id"])
+            assert arg.source == ImportSource.OPERATOR
+            assert arg.method == ImportMethod.MANUAL
+    finally:
+        await _teardown_draft_argument_with_lead_case(ids)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_update_argument_call_with_no_fields_leaves_provenance_unchanged() -> None:
+    """A call that writes no field leaves both the argument's and the lead
+    case's provenance unchanged (PD-08 <behavior>)."""
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import Argument, Case
+    from api.schemas.admin_arguments import ArgumentUpdate
+    from api.services.admin_arguments import update_argument
+
+    ids = await _seed_draft_argument_with_lead_case_for_stamping()
+    try:
+        async with AsyncSessionLocal() as db:
+            result = await update_argument(db, ids["argument_id"], ArgumentUpdate())
+        assert result is not None
+
+        async with AsyncSessionLocal() as db:
+            arg = await db.get(Argument, ids["argument_id"])
+            case = await db.get(Case, ids["case_id"])
+            assert arg.source is None
+            assert arg.method is None
+            assert case.source is None
+            assert case.method is None
+    finally:
+        await _teardown_draft_argument_with_lead_case(ids)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_operator_stamped_argument_value_rejects_disagreeing_corpus_write() -> None:
+    """The round trip that proves the stamp is load-bearing, not decorative
+    (PD-08 <behavior>): once update_argument() stamps an argument row's
+    argued_date as OPERATOR-authored, a corpus apply_argument_value_change
+    call with a DIFFERING incoming value returns REJECT_AND_RECORD and the
+    stored value is byte-identical afterward."""
+    from api.core.database import AsyncSessionLocal
+    from api.domain.authority import WriteDecision
+    from api.models.models import Argument
+    from api.schemas.admin_arguments import ArgumentUpdate
+    from api.services.admin_arguments import update_argument
+    from api.services.admin_review import apply_argument_value_change
+
+    ids = await _seed_draft_argument_with_lead_case_for_stamping()
+    try:
+        async with AsyncSessionLocal() as db:
+            result = await update_argument(
+                db, ids["argument_id"], ArgumentUpdate(argued_date="2021-06-01")
+            )
+        assert result is not None
+
+        async with AsyncSessionLocal() as db:
+            arg = await db.get(Argument, ids["argument_id"])
+            decision = await apply_argument_value_change(
+                db,
+                argument=arg,
+                field="argued_date",
+                incoming_value=__import__("datetime").date(2022, 1, 1),
+                incoming_source="corpus",
+                incoming_method="direct",
+            )
+            await db.commit()
+        assert decision == WriteDecision.REJECT_AND_RECORD
+
+        async with AsyncSessionLocal() as db:
+            arg = await db.get(Argument, ids["argument_id"])
+            assert arg.argued_date == __import__("datetime").date(2021, 6, 1), (
+                "the operator-stamped value must survive the corpus write byte-identical"
+            )
+    finally:
+        await _teardown_draft_argument_with_lead_case(ids)
 
 
 # ---------------------------------------------------------------------------
@@ -1710,3 +2469,169 @@ async def test_update_participant_side_rejects_unresolved_side() -> None:
 
     with pytest.raises(ValueError):
         await update_participant_side(sentinel_session, 1, 1, SideEnum.ADVOCATE)
+
+
+# ---------------------------------------------------------------------------
+# G-50-2a: update_argument_metadata and update_argument are both
+# operator-facing routes onto the SAME lead-Case column (case_name), so both
+# must reach the same rung of the authority ladder. update_argument_metadata
+# wrote the column without stamping, leaving the edit at CORPUS authority --
+# found by the D-09 live walkthrough, 2026-08-26, not by these tests'
+# predecessors (each route was only ever tested against itself).
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_update_argument_metadata_stamps_case_provenance_on_case_name_write() -> None:
+    """The G-50-2a regression: after update_argument_metadata() writes the
+    lead case's case_name, the lead Case row must reach OPERATOR authority.
+
+    Case has no `review_state`, so `source` is the only carrier of the
+    ladder's operator rung (api.domain.authority.authority_rank rule 2) --
+    an unstamped edit is indistinguishable from a corpus value.
+    """
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import Argument, Case, ImportMethod, ImportSource
+    from api.schemas.admin_arguments import MetadataUpdate
+    from api.services.admin_arguments import update_argument_metadata
+
+    ids = await _seed_draft_argument_with_lead_case_for_stamping()
+    try:
+        async with AsyncSessionLocal() as db:
+            ok = await update_argument_metadata(
+                db, ids["argument_id"], MetadataUpdate(case_name="Metadata Renamed Fixture")
+            )
+        assert ok is True
+
+        async with AsyncSessionLocal() as db:
+            case = await db.get(Case, ids["case_id"])
+            assert case.case_name == "Metadata Renamed Fixture"
+            assert case.source == ImportSource.OPERATOR
+            assert case.method == ImportMethod.MANUAL
+
+            # A case-only edit must not stamp the argument row -- the same
+            # scoping update_argument observes (PD-08).
+            arg = await db.get(Argument, ids["argument_id"])
+            assert arg.source is None, "a case-only edit must not stamp the argument row"
+            assert arg.method is None
+    finally:
+        await _teardown_draft_argument_with_lead_case(ids)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_both_operator_routes_onto_case_name_agree_on_authority() -> None:
+    """Parity guard (G-50-2a): whichever operator route writes case_name,
+    the lead Case must land on the same rung. This is the assertion whose
+    absence let the two routes drift apart."""
+    from api.core.database import AsyncSessionLocal
+    from api.domain.authority import AuthorityRank, authority_rank
+    from api.models.models import Case
+    from api.schemas.admin_arguments import ArgumentUpdate, MetadataUpdate
+    from api.services.admin_arguments import update_argument, update_argument_metadata
+
+    ranks = {}
+    for label, apply in (
+        ("update_argument", "argument"),
+        ("update_argument_metadata", "metadata"),
+    ):
+        ids = await _seed_draft_argument_with_lead_case_for_stamping()
+        try:
+            async with AsyncSessionLocal() as db:
+                if apply == "argument":
+                    await update_argument(
+                        db, ids["argument_id"], ArgumentUpdate(case_name=f"Renamed via {label}")
+                    )
+                else:
+                    await update_argument_metadata(
+                        db, ids["argument_id"], MetadataUpdate(case_name=f"Renamed via {label}")
+                    )
+
+            async with AsyncSessionLocal() as db:
+                case = await db.get(Case, ids["case_id"])
+                ranks[label] = authority_rank(
+                    case.source.value if case.source else "",
+                    case.method.value if case.method else "",
+                    "",  # Case has no review_state
+                )
+        finally:
+            await _teardown_draft_argument_with_lead_case(ids)
+
+    assert ranks["update_argument"] == AuthorityRank.OPERATOR
+    assert ranks["update_argument_metadata"] == AuthorityRank.OPERATOR
+    assert ranks["update_argument"] == ranks["update_argument_metadata"], (
+        f"the two operator routes onto case_name disagree on authority: {ranks}"
+    )
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_update_argument_metadata_stamps_operator_provenance_on_argued_date_write() -> None:
+    """The second half of 50-REVIEW.md CR-02 / G-50-2a.
+
+    argued_date was explicitly scoped out of this function's stamp
+    condition, leaving it disagreeing with update_argument -- which does
+    stamp the argument row on its own argued_date write. Same
+    two-routes-onto-one-column divergence as the case_name half.
+    """
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import Argument, ImportMethod, ImportSource
+    from api.schemas.admin_arguments import MetadataUpdate
+    from api.services.admin_arguments import update_argument_metadata
+
+    ids = await _seed_draft_argument_with_lead_case_for_stamping()
+    try:
+        async with AsyncSessionLocal() as db:
+            ok = await update_argument_metadata(
+                db, ids["argument_id"], MetadataUpdate(argued_date="1955-11-15")
+            )
+        assert ok is True
+
+        async with AsyncSessionLocal() as db:
+            arg = await db.get(Argument, ids["argument_id"])
+            assert arg.argued_date is not None
+            assert arg.source == ImportSource.OPERATOR
+            assert arg.method == ImportMethod.MANUAL
+    finally:
+        await _teardown_draft_argument_with_lead_case(ids)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_both_operator_routes_onto_argued_date_agree_on_authority() -> None:
+    """Parity guard for argued_date, matching the case_name one above."""
+    from api.core.database import AsyncSessionLocal
+    from api.domain.authority import AuthorityRank, authority_rank
+    from api.models.models import Argument
+    from api.schemas.admin_arguments import ArgumentUpdate, MetadataUpdate
+    from api.services.admin_arguments import update_argument, update_argument_metadata
+
+    ranks = {}
+    for label in ("update_argument", "update_argument_metadata"):
+        ids = await _seed_draft_argument_with_lead_case_for_stamping()
+        try:
+            async with AsyncSessionLocal() as db:
+                if label == "update_argument":
+                    await update_argument(
+                        db, ids["argument_id"], ArgumentUpdate(argued_date="1955-11-15")
+                    )
+                else:
+                    await update_argument_metadata(
+                        db, ids["argument_id"], MetadataUpdate(argued_date="1955-11-15")
+                    )
+            async with AsyncSessionLocal() as db:
+                arg = await db.get(Argument, ids["argument_id"])
+                ranks[label] = authority_rank(
+                    arg.source.value if arg.source else "",
+                    arg.method.value if arg.method else "",
+                    "",  # Argument has no review_state
+                )
+        finally:
+            await _teardown_draft_argument_with_lead_case(ids)
+
+    assert ranks["update_argument"] == AuthorityRank.OPERATOR
+    assert ranks["update_argument_metadata"] == AuthorityRank.OPERATOR
+    assert ranks["update_argument"] == ranks["update_argument_metadata"], (
+        f"the two operator routes onto argued_date disagree on authority: {ranks}"
+    )

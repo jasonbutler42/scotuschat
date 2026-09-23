@@ -33,7 +33,7 @@ _ROLES = [
     "Respondent's Counsel",
 ]
 
-# Phase 38 (D-03/D-04): each justice is now authored as explicit structured
+# Each justice is now authored as explicit structured
 # parts (first, middle, last, suffix) rather than a hand-typed full_name
 # literal -- full_name is derived at seed time through the same shared
 # api.domain.person_names.prepare_person_name helper every other
@@ -190,7 +190,7 @@ async def run_seed_aliases(args) -> None:
         person_map: dict[str, Person] = {}
 
         for first, middle, last, suffix, role_name, _labels in _JUSTICES:
-            # Phase 38 (D-03/D-04): full_name is always derived from the
+            # Full_name is always derived from the
             # authored structured parts through the one shared helper --
             # never an independent local formatter.
             prepared = prepare_person_name(

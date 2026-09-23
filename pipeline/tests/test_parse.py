@@ -15,11 +15,17 @@ Regression tests:
   - test_on_behalf_of_not_appended_to_prior_speaker: F04 regression (ON BEHALF OF fix)
 """
 
+import argparse
+import datetime
 import inspect
+import os
+import tempfile
+from contextlib import asynccontextmanager
 
 import pytest
 
-from pipeline.commands.parse import _run_parse_inner
+from api.models.models import Argument
+from pipeline.commands.parse import _run_parse_inner, run_parse
 
 
 def test_parse_docket_fill_uses_pair_precheck_and_named_race_classification():
@@ -327,6 +333,340 @@ async def test_parse_preserves_operator_docket_when_extracted_pair_conflicts(
         await run_parse(argparse.Namespace(run_id=source_run.id, dry_run=False, job_id=None))
         await async_session.refresh(target)
         assert target.source_docket == "OPERATOR-DOCKET"
+    finally:
+        try:
+            os.unlink(pdf_path)
+        except OSError:
+            pass
+
+
+# ---------------------------------------------------------------------------
+# Phase 50 plan 50-06, Task 2: cover-metadata writes route through the
+# Argument/Case authority gates (D-21/D-22). Real-writer integration tests.
+# ---------------------------------------------------------------------------
+
+
+async def _seed_parse_gate_fixture(
+    async_session,
+    *,
+    argued_date=None,
+    source_docket="EXISTING-DOCKET",
+    case_name="Pet v. Resp",
+    case_source=None,
+    case_method=None,
+):
+    import datetime
+
+    from api.models.models import Case, CaseArgument, ImportMethod, ImportRun, ImportRunStatus, ImportSource
+
+    case = Case(
+        docket_number=source_docket,
+        docket_number_norm=source_docket.replace("-", ""),
+        case_name=case_name,
+        term_year=2024,
+        slug=f"slug-{source_docket}".lower(),
+        source=case_source,
+        method=case_method,
+    )
+    async_session.add(case)
+    await async_session.flush()
+
+    argument = Argument(
+        argued_date=argued_date,
+        source_docket=source_docket,
+        question_number=1,
+    )
+    async_session.add(argument)
+    await async_session.flush()
+
+    async_session.add(CaseArgument(case_id=case.id, argument_id=argument.id, is_lead=True))
+    await async_session.flush()
+
+    with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as pdf:
+        pdf_path = pdf.name
+
+    source_run = ImportRun(
+        argument_id=argument.id,
+        step="ingest",
+        status=ImportRunStatus.COMPLETED,
+        source=ImportSource.PDF_PIPELINE,
+        method=ImportMethod.NORMALIZED,
+        pdf_path=pdf_path,
+    )
+    async_session.add(source_run)
+    await async_session.flush()
+
+    return argument, case, source_run, pdf_path
+
+
+def _patch_parse_environment(monkeypatch, async_session, *, cover_meta, llm_mode):
+    """
+    llm_mode: "rule_based" (LLM raises, falls back) or "llm_corrective"
+    (LLM returns a real ParseResponse).
+    """
+
+    @asynccontextmanager
+    async def mock_get_session():
+        yield async_session
+
+    monkeypatch.setattr("pipeline.commands.parse.get_session", mock_get_session)
+    monkeypatch.setattr(
+        "pipeline.commands.parse.extract_cover_metadata", lambda _path: cover_meta
+    )
+    monkeypatch.setattr(
+        "pipeline.commands.parse.extract_toc_data",
+        lambda _path: {"sides": {}, "titles": {}},
+    )
+    monkeypatch.setattr(
+        "pipeline.commands.parse.extract_pages",
+        lambda _path: ["CHIEF JUSTICE ROBERTS: We will hear argument now."],
+    )
+
+    if llm_mode == "rule_based":
+        async def mock_parse_with_llm(_pages_text):
+            raise RuntimeError("LLM not available in unit tests")
+    else:
+        from pipeline.parser.llm_pass import ParsedUtterance, ParseResponse
+
+        async def mock_parse_with_llm(_pages_text):
+            return ParseResponse(
+                utterances=[
+                    ParsedUtterance(
+                        sequence=1,
+                        raw_speaker_label="CHIEF JUSTICE ROBERTS",
+                        text="We will hear argument now.",
+                        is_stage_direction=False,
+                        section_hint=None,
+                    )
+                ]
+            )
+
+    monkeypatch.setattr("pipeline.commands.parse.parse_with_llm", mock_parse_with_llm)
+
+
+@pytest.mark.asyncio
+async def test_argued_date_gap_fill_writes_no_discrepancy(async_session, monkeypatch):
+    """
+    A rule-based parse run writing argued_date into a NULL column writes
+    it and creates no value_discrepancy row (PD-13 gap-fill).
+    """
+    from sqlalchemy import select
+
+    from api.models.models import ValueDiscrepancy
+
+    argument, case, source_run, pdf_path = await _seed_parse_gate_fixture(
+        async_session, argued_date=None
+    )
+    incoming_date = datetime.date(2021, 2, 2)
+    _patch_parse_environment(
+        monkeypatch,
+        async_session,
+        cover_meta={"argued_date": incoming_date},
+        llm_mode="rule_based",
+    )
+
+    try:
+        await run_parse(argparse.Namespace(run_id=source_run.id, dry_run=False, job_id=None))
+        await async_session.refresh(argument)
+        assert argument.argued_date == incoming_date
+
+        discrepancies = (
+            await async_session.execute(
+                select(ValueDiscrepancy).where(
+                    ValueDiscrepancy.target_type == "argument",
+                    ValueDiscrepancy.target_id == argument.id,
+                    ValueDiscrepancy.field == "argued_date",
+                )
+            )
+        ).scalars().all()
+        assert discrepancies == []
+    finally:
+        try:
+            os.unlink(pdf_path)
+        except OSError:
+            pass
+
+
+@pytest.mark.asyncio
+async def test_argued_date_disagreement_rejected_and_recorded_rule_based(
+    async_session, monkeypatch
+):
+    """
+    A rule-based parse run writing argued_date that disagrees with an
+    existing (operator-stamped, unstamped-provenance) value does NOT
+    overwrite it and creates one discrepancy row whose incoming_source is
+    pdf_pipeline and incoming_method is rule_based.
+    """
+    from sqlalchemy import select
+
+    from api.models.models import ImportMethod, ImportSource, ValueDiscrepancy
+
+    existing_date = datetime.date(2020, 1, 1)
+    argument, case, source_run, pdf_path = await _seed_parse_gate_fixture(
+        async_session, argued_date=existing_date
+    )
+    incoming_date = datetime.date(2021, 2, 2)
+    _patch_parse_environment(
+        monkeypatch,
+        async_session,
+        cover_meta={"argued_date": incoming_date},
+        llm_mode="rule_based",
+    )
+
+    try:
+        await run_parse(argparse.Namespace(run_id=source_run.id, dry_run=False, job_id=None))
+        await async_session.refresh(argument)
+        assert argument.argued_date == existing_date, "disagreeing write must not overwrite"
+
+        discrepancies = (
+            await async_session.execute(
+                select(ValueDiscrepancy).where(
+                    ValueDiscrepancy.target_type == "argument",
+                    ValueDiscrepancy.target_id == argument.id,
+                    ValueDiscrepancy.field == "argued_date",
+                )
+            )
+        ).scalars().all()
+        assert len(discrepancies) == 1
+        assert discrepancies[0].incoming_source == ImportSource.PDF_PIPELINE
+        assert discrepancies[0].incoming_method == ImportMethod.RULE_BASED
+    finally:
+        try:
+            os.unlink(pdf_path)
+        except OSError:
+            pass
+
+
+@pytest.mark.asyncio
+async def test_argued_date_disagreement_records_llm_corrective_method(
+    async_session, monkeypatch
+):
+    """
+    An LLM-corrective parse run's disagreeing write records incoming_method
+    llm_corrective, and is likewise rejected against an existing value.
+    """
+    from sqlalchemy import select
+
+    from api.models.models import ImportMethod, ValueDiscrepancy
+
+    existing_date = datetime.date(2020, 1, 1)
+    argument, case, source_run, pdf_path = await _seed_parse_gate_fixture(
+        async_session, argued_date=existing_date
+    )
+    incoming_date = datetime.date(2021, 2, 2)
+    _patch_parse_environment(
+        monkeypatch,
+        async_session,
+        cover_meta={"argued_date": incoming_date},
+        llm_mode="llm_corrective",
+    )
+
+    try:
+        await run_parse(argparse.Namespace(run_id=source_run.id, dry_run=False, job_id=None))
+        await async_session.refresh(argument)
+        assert argument.argued_date == existing_date
+
+        discrepancies = (
+            await async_session.execute(
+                select(ValueDiscrepancy).where(
+                    ValueDiscrepancy.target_type == "argument",
+                    ValueDiscrepancy.target_id == argument.id,
+                    ValueDiscrepancy.field == "argued_date",
+                )
+            )
+        ).scalars().all()
+        assert len(discrepancies) == 1
+        assert discrepancies[0].incoming_method == ImportMethod.LLM_CORRECTIVE
+    finally:
+        try:
+            os.unlink(pdf_path)
+        except OSError:
+            pass
+
+
+@pytest.mark.asyncio
+async def test_case_name_disagreement_no_longer_overwrites_corpus_value(
+    async_session, monkeypatch
+):
+    """
+    A parse run's case_name write that disagrees with a corpus-stamped
+    lead Case.case_name is rejected and recorded — the previously
+    unconditional overwrite no longer clobbers (T-50-20).
+    """
+    from sqlalchemy import select
+
+    from api.models.models import ImportMethod, ImportSource, ValueDiscrepancy
+
+    argument, case, source_run, pdf_path = await _seed_parse_gate_fixture(
+        async_session,
+        case_name="Corpus-Authored Case Name",
+        case_source=ImportSource.CORPUS,
+        case_method=ImportMethod.DIRECT,
+    )
+    _patch_parse_environment(
+        monkeypatch,
+        async_session,
+        cover_meta={"case_name": "Extracted PDF Cover Name"},
+        llm_mode="rule_based",
+    )
+
+    try:
+        await run_parse(argparse.Namespace(run_id=source_run.id, dry_run=False, job_id=None))
+        await async_session.refresh(case)
+        assert case.case_name == "Corpus-Authored Case Name", (
+            "a disagreeing PDF cover extraction must not clobber a "
+            "corpus-stamped case name"
+        )
+
+        discrepancies = (
+            await async_session.execute(
+                select(ValueDiscrepancy).where(
+                    ValueDiscrepancy.target_type == "case",
+                    ValueDiscrepancy.target_id == case.id,
+                    ValueDiscrepancy.field == "case_name",
+                )
+            )
+        ).scalars().all()
+        assert len(discrepancies) == 1
+    finally:
+        try:
+            os.unlink(pdf_path)
+        except OSError:
+            pass
+
+
+@pytest.mark.asyncio
+async def test_seeded_participant_carries_pdf_pipeline_source_and_method(
+    async_session, monkeypatch
+):
+    """
+    A newly seeded ArgumentParticipant carries source=pdf_pipeline and the
+    run's method (PD-20) — a seeded participant with NULL provenance
+    floors the whole argument to UNCERTAIN through derive_tier.
+    """
+    from sqlalchemy import select
+
+    from api.models.models import ArgumentParticipant, ImportMethod, ImportSource
+
+    argument, case, source_run, pdf_path = await _seed_parse_gate_fixture(async_session)
+    _patch_parse_environment(
+        monkeypatch, async_session, cover_meta={}, llm_mode="rule_based"
+    )
+
+    try:
+        await run_parse(argparse.Namespace(run_id=source_run.id, dry_run=False, job_id=None))
+
+        participants = (
+            await async_session.execute(
+                select(ArgumentParticipant).where(
+                    ArgumentParticipant.argument_id == argument.id
+                )
+            )
+        ).scalars().all()
+        assert len(participants) >= 1
+        for p in participants:
+            assert p.source == ImportSource.PDF_PIPELINE
+            assert p.method == ImportMethod.RULE_BASED
     finally:
         try:
             os.unlink(pdf_path)

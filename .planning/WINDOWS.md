@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 21
+open_count: 23
 waived_count: 0
-fixed_count: 7
-total_count: 28
-last_updated: 2026-08-25T11:18:44.159Z
+fixed_count: 8
+total_count: 31
+last_updated: 2026-08-26T16:33:01.918Z
 ---
 
 # Broken Windows Ledger
@@ -43,6 +43,9 @@ last_updated: 2026-08-25T11:18:44.159Z
 | 26 | 49 | deviation | app/src/routes/admin/arguments/+page.svelte |  | New finding during 49-12 (G-49-5c) live measurement: /admin/arguments overflows at 375px (scrollWidth 680 vs clientWidth 375) via an unwrapped <table> with no overflow-x container -- separate, pre-existing cause independent of AdminSubNav; out of scope for 49-12 (files_modified did not include this page). Not fixed. | open |  | 2026-08-25T10:54:02.125Z |  |
 | 27 | 49 | deviation | app/src/routes/admin/people/+page.svelte |  | New finding during 49-12 (G-49-5c) live measurement: /admin/people overflows at 375px (scrollWidth 403 vs clientWidth 375) via an unwrapped <table> with no overflow-x container -- separate, pre-existing cause independent of AdminSubNav. Was previously masked by AdminSubNav's larger 423px overflow (both pegged the page at the same scrollWidth); only became independently visible after 49-12 fixed the sub-nav. Out of scope for 49-12 (files_modified did not include this page). Not fixed. | open |  | 2026-08-25T10:54:09.338Z |  |
 | 28 | 49 | unrun-verify | app/src/routes/admin/arguments/[id]/+page.svelte |  | Task 3 browser human-check (5 items) not observed — no browser tool available to the executor; see 49-11-SUMMARY.md Human-Check Items section | open |  | 2026-08-25T11:18:44.159Z |  |
+| 29 | 50 | deviation | pipeline/commands/import_convokit.py | 636 | _reconcile_conversation's compare-and-write body is deferred to plan 50-05 by design (50-01-PLAN.md Task 3 scope); it currently only establishes the digest-compare branch and writes nothing on a real content mismatch. | fixed |  | 2026-08-26T13:51:01.301Z | 2026-08-26T16:32:56.051Z |
+| 30 | 50-unified-import-path | unrun-verify | app/src/routes/admin/review/+page.svelte |  | 50-04 Task 2 human-check walkthrough not performed: Approve on a candidate corpus argument, tab/filter survival on redirect, Approve button absence post-transition, publish-after-approve, and no-truncation of a discrepancy value at 1280px and narrow viewports — no browser tool / .env admin credential access available to this executor (same constraint as 49-01/49-03/49-05/49-06). | open |  | 2026-08-26T15:35:23.632Z |  |
+| 31 | 50-unified-import-path | unrun-verify | pipeline/commands/import_convokit.py |  | D-09's live double-import byte-identical diff plus an operator-edit-survival walkthrough (this plan's own <verification> block names it as a phase gate, not this plan's own verify) was not run -- the automated half (byte-identical re-import proof, operator-value-survives-a-disagreeing-re-import) is proven by pipeline/tests/test_import_convokit_reconcile.py and test_import_convokit_reimport_tracer.py; the live reset_to_fixture -> import -> snapshot -> re-import -> diff -> edit-as-operator -> re-import -> prove-survival walkthrough is outside a single-plan executor's reach, mirroring 50-01-SUMMARY.md's D4 rationale. | open |  | 2026-08-26T16:33:01.918Z |  |
 
 ````json
 [
@@ -52,7 +55,7 @@ last_updated: 2026-08-25T11:18:44.159Z
     "phase": "39",
     "file": "app/src/lib/components/SpeakerPopover.svelte",
     "line": null,
-    "description": "Advocate descriptor slot renders literal 'Coming soon' — intentional per D-16/39-UI-SPEC.md; no per-advocate descriptor extraction pipeline exists yet, deferred to a future phase",
+    "description": "Advocate descriptor slot renders literal 'Coming soon' \u2014 intentional per D-16/39-UI-SPEC.md; no per-advocate descriptor extraction pipeline exists yet, deferred to a future phase",
     "status": "open",
     "reason": "",
     "recorded_at": "2026-07-28T16:34:59.919Z",
@@ -64,7 +67,7 @@ last_updated: 2026-08-25T11:18:44.159Z
     "phase": "44",
     "file": "app/src/lib/components/ResolveCard.svelte",
     "line": null,
-    "description": "Visual check against resolve-speakers-panel.png (Raw Label badge wrap on a synthetic long label, pre-filled combobox visibility, always-present Descriptor cell) deferred to Plan 44-04's checkpoint per 44-02-PLAN.md verification item 5 — structural/grep-based contract tests pass now, but no visual render has been eyeballed yet.",
+    "description": "Visual check against resolve-speakers-panel.png (Raw Label badge wrap on a synthetic long label, pre-filled combobox visibility, always-present Descriptor cell) deferred to Plan 44-04's checkpoint per 44-02-PLAN.md verification item 5 \u2014 structural/grep-based contract tests pass now, but no visual render has been eyeballed yet.",
     "status": "open",
     "reason": "",
     "recorded_at": "2026-08-01T18:19:47.948Z",
@@ -172,7 +175,7 @@ last_updated: 2026-08-25T11:18:44.159Z
     "phase": "49",
     "file": "api/services/admin_jobs.py",
     "line": null,
-    "description": "resolve_job/update_resolve_row_for_job never stamp ArgumentParticipant.source/method; 49-01's D-18 change now floors these to UNCERTAIN. 2 test failures in api/tests/test_admin_jobs_service.py, out of 49-02 scope — see .planning/phases/49-review-model/deferred-items.md",
+    "description": "resolve_job/update_resolve_row_for_job never stamp ArgumentParticipant.source/method; 49-01's D-18 change now floors these to UNCERTAIN. 2 test failures in api/tests/test_admin_jobs_service.py, out of 49-02 scope \u2014 see .planning/phases/49-review-model/deferred-items.md",
     "status": "fixed",
     "reason": "",
     "recorded_at": "2026-08-23T12:43:33.463Z",
@@ -304,7 +307,7 @@ last_updated: 2026-08-25T11:18:44.159Z
     "phase": "49",
     "file": "app/src/lib/components/CreatePersonPopover.svelte",
     "line": null,
-    "description": "WR-01 browser walkthrough (49-09 Task 1 human-check) NOT OBSERVED — sandbox denied .env access for ADMIN_USERNAME/ADMIN_PASSWORD/SESSION_SECRET",
+    "description": "WR-01 browser walkthrough (49-09 Task 1 human-check) NOT OBSERVED \u2014 sandbox denied .env access for ADMIN_USERNAME/ADMIN_PASSWORD/SESSION_SECRET",
     "status": "open",
     "reason": "",
     "recorded_at": "2026-08-24T20:00:45.872Z",
@@ -316,7 +319,7 @@ last_updated: 2026-08-25T11:18:44.159Z
     "phase": "49",
     "file": "app/src/routes/admin/arguments/[id]/+page.svelte",
     "line": null,
-    "description": "Speakers-card published-lock visual verification (49-09 Task 3 human-check) NOT OBSERVED — sandbox denied .env access for ADMIN_USERNAME/ADMIN_PASSWORD/SESSION_SECRET",
+    "description": "Speakers-card published-lock visual verification (49-09 Task 3 human-check) NOT OBSERVED \u2014 sandbox denied .env access for ADMIN_USERNAME/ADMIN_PASSWORD/SESSION_SECRET",
     "status": "open",
     "reason": "",
     "recorded_at": "2026-08-24T20:00:46.273Z",
@@ -328,7 +331,7 @@ last_updated: 2026-08-25T11:18:44.159Z
     "phase": "49",
     "file": "api/tests/test_phase49_participant_side_contract.py",
     "line": null,
-    "description": "Task 1 human-check (Resolve-card regression walk: toggle behavior, person-clear on real boundary crossing, unchanged labels) not observed in this session — browser tooling unavailable to executor",
+    "description": "Task 1 human-check (Resolve-card regression walk: toggle behavior, person-clear on real boundary crossing, unchanged labels) not observed in this session \u2014 browser tooling unavailable to executor",
     "status": "open",
     "reason": "",
     "recorded_at": "2026-08-24T22:49:21.712Z",
@@ -340,7 +343,7 @@ last_updated: 2026-08-25T11:18:44.159Z
     "phase": "49",
     "file": "app/src/routes/admin/arguments/[id]/+page.svelte",
     "line": null,
-    "description": "Task 3 six-item Speakers-card convergence human-check walk not observed in this session — browser tooling unavailable to executor",
+    "description": "Task 3 six-item Speakers-card convergence human-check walk not observed in this session \u2014 browser tooling unavailable to executor",
     "status": "open",
     "reason": "",
     "recorded_at": "2026-08-24T22:49:22.058Z",
@@ -376,11 +379,47 @@ last_updated: 2026-08-25T11:18:44.159Z
     "phase": "49",
     "file": "app/src/routes/admin/arguments/[id]/+page.svelte",
     "line": null,
-    "description": "Task 3 browser human-check (5 items) not observed — no browser tool available to the executor; see 49-11-SUMMARY.md Human-Check Items section",
+    "description": "Task 3 browser human-check (5 items) not observed \u2014 no browser tool available to the executor; see 49-11-SUMMARY.md Human-Check Items section",
     "status": "open",
     "reason": "",
     "recorded_at": "2026-08-25T11:18:44.159Z",
     "resolved_at": null
+  },
+  {
+    "id": 29,
+    "kind": "deviation",
+    "phase": "50",
+    "file": "pipeline/commands/import_convokit.py",
+    "line": 636,
+    "description": "_reconcile_conversation's compare-and-write body is deferred to plan 50-05 by design (50-01-PLAN.md Task 3 scope); it currently only establishes the digest-compare branch and writes nothing on a real content mismatch.",
+    "status": "fixed",
+    "reason": "",
+    "recorded_at": "2026-08-26T13:51:01.301Z",
+    "resolved_at": "2026-08-26T16:32:56.051Z"
+  },
+  {
+    "id": 30,
+    "kind": "unrun-verify",
+    "phase": "50-unified-import-path",
+    "file": "app/src/routes/admin/review/+page.svelte",
+    "line": null,
+    "description": "50-04 Task 2 human-check walkthrough not performed: Approve on a candidate corpus argument, tab/filter survival on redirect, Approve button absence post-transition, publish-after-approve, and no-truncation of a discrepancy value at 1280px and narrow viewports \u2014 no browser tool / .env admin credential access available to this executor (same constraint as 49-01/49-03/49-05/49-06).",
+    "status": "fixed",
+    "reason": "Walkthrough RUN 2026-08-26 with Playwright MCP + .env admin credentials. Approve on a candidate corpus argument, Approve-absence post-transition, publish-after-approve, and no-truncation at 1280px and 390px all VERIFIED PASS. The tab/filter-survival leg FAILED and is now tracked as UAT gap G-50-4a (50-UAT.md) rather than as an unrun check.",
+    "recorded_at": "2026-08-26T15:35:23.632Z",
+    "resolved_at": "2026-08-27T03:09:12Z"
+  },
+  {
+    "id": 31,
+    "kind": "unrun-verify",
+    "phase": "50-unified-import-path",
+    "file": "pipeline/commands/import_convokit.py",
+    "line": null,
+    "description": "D-09's live double-import byte-identical diff plus an operator-edit-survival walkthrough (this plan's own <verification> block names it as a phase gate, not this plan's own verify) was not run -- the automated half (byte-identical re-import proof, operator-value-survives-a-disagreeing-re-import) is proven by pipeline/tests/test_import_convokit_reconcile.py and test_import_convokit_reimport_tracer.py; the live reset_to_fixture -> import -> snapshot -> re-import -> diff -> edit-as-operator -> re-import -> prove-survival walkthrough is outside a single-plan executor's reach, mirroring 50-01-SUMMARY.md's D4 rationale.",
+    "status": "fixed",
+    "reason": "Walkthrough RUN 2026-08-26 against the live dev DB. reset_to_fixture -> import -> snapshot -> re-import -> diff was byte-identical across all eight tables. The operator-edit-survival half found two real provenance defects, now tracked as UAT gaps G-50-2a and G-50-2b (50-UAT.md) rather than as an unrun check.",
+    "recorded_at": "2026-08-26T16:33:01.918Z",
+    "resolved_at": "2026-08-27T03:09:12Z"
   }
 ]
 ````

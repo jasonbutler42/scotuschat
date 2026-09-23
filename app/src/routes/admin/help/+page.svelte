@@ -1,4 +1,7 @@
 <script lang="ts">
+	import Badge from '$lib/primitives/Badge.svelte';
+	import type { BadgeTone } from '$lib/primitives/badge-tone';
+
 	// Phase 49 Plan 03 — Admin Help page (REVIEW-01's vocabulary settled by
 	// migration 0029's fold, plus the trust-tier and publish-gate vocabulary
 	// from Phase 48). Deliberately scheduled after 49-02 so this page
@@ -6,40 +9,33 @@
 	// state) rather than a pre-fold shape that would need a revision pass
 	// immediately.
 	//
-	// Static, server-data-free operator reference (D-29: no component
-	// library, no new abstraction). Every badge formula below is copied
-	// verbatim from its source of truth rather than re-invented:
-	//   - status badge (14px): app/src/routes/admin/arguments/[id]/+page.svelte
-	//     badgeStyle/badgeLabel — the version that already handles `candidate`
-	//     (Phase 48 D-01), not the list page's stale fallback.
-	//   - trust-tier badge (12px): app/src/routes/admin/arguments/+page.svelte
-	//     tierBadgeStyle/tierLabel, byte-identical.
-	//   - review-state badge: colors and labels from
-	//     .planning/phases/49-review-model/49-UI-SPEC.md § Color (the queue
-	//     screen that will render these for real is plan 49-05's scope, not
-	//     this one's — the formula here is this page's own presentational
-	//     choice, sized like the status badge since review_state is a primary
-	//     row-state axis, not a passive info badge like trust tier).
+	// Static, server-data-free operator reference. This page shows the
+	// operator what each badge looks like, so it MUST render the same
+	// component the real screens render — since 51-10 (D-01/D-03) that is
+	// the shared `Badge` primitive, not a formula copied per screen. The
+	// three copied style-builders this file used to carry are gone; what
+	// remains below is only the domain->tone mapping, which is the sole part
+	// that was ever specific to a vocabulary:
+	//   - status: matches admin/arguments/[id]'s `candidate`-aware version
+	//     (Phase 48 D-01), not the list page's stale `Pipeline` fallback.
+	//   - trust tier: the Phase 48 plan-10 vocabulary (D-19/D-20).
+	//   - review state: the vocabulary in
+	//     .planning/phases/49-review-model/49-UI-SPEC.md § Color.
+	// Badge owns shape, size and weight now, so this page can no longer drift
+	// from the screens it documents — which is the whole reason it exists.
 	//
 	// Apolitical hard constraint (CLAUDE.md): this page describes
 	// transcription/attribution states, identically for every speaker role.
 	// It contains no ranking, scoring, or comparison between Justices and
 	// advocates, and no example below names a real Justice or advocate.
 
-	function statusBadgeStyle(status: string): string {
-		let color: string;
-		if (status === 'published') {
-			color = '#4ade80';
-		} else if (status === 'draft') {
-			color = '#a78bfa';
-		} else if (status === 'unpublished') {
-			color = '#fb923c';
-		} else {
-			// candidate (Phase 48 D-01) — the born state that replaced the
-			// retired `pipeline` value.
-			color = '#94a3b8';
-		}
-		return `border: 1px solid ${color}; border-radius: 4px; padding: 2px 8px; font-size: 14px; font-weight: 400; background-color: #1e293b; color: ${color}; display: inline-block;`;
+	function statusBadgeTone(status: string): BadgeTone {
+		if (status === 'published') return 'published';
+		if (status === 'draft') return 'draft';
+		if (status === 'unpublished') return 'unpublished';
+		// candidate (Phase 48 D-01) — the born state that replaced the
+		// retired `pipeline` value.
+		return 'neutral';
 	}
 
 	function statusBadgeLabel(status: string): string {
@@ -49,20 +45,12 @@
 		return 'Candidate';
 	}
 
-	// Copied verbatim from admin/arguments/+page.svelte's tierBadgeStyle/
-	// tierLabel (Phase 48 plan 10, D-19/D-20) — passive/informational sizing.
-	function tierBadgeStyle(tier: string): string {
-		let color: string;
-		if (tier === 'verified') {
-			color = '#38bdf8';
-		} else if (tier === 'trusted') {
-			color = '#34d399';
-		} else if (tier === 'provisional') {
-			color = '#facc15';
-		} else {
-			color = '#f87171';
-		}
-		return `border: 1px solid ${color}; border-radius: 4px; padding: 2px 8px; font-size: 12px; font-weight: 400; background-color: #0f1117; color: ${color}; display: inline-block;`;
+	// Trust-tier vocabulary (Phase 48 plan 10, D-19/D-20).
+	function tierBadgeTone(tier: string): BadgeTone {
+		if (tier === 'verified') return 'verified';
+		if (tier === 'trusted') return 'trusted';
+		if (tier === 'provisional') return 'provisional';
+		return 'uncertain';
 	}
 
 	function tierBadgeLabel(tier: string): string {
@@ -75,18 +63,13 @@
 	// review_state badge colors/labels — .planning/phases/49-review-model/
 	// 49-UI-SPEC.md § Color. Sized like the 14px status badge (this is a
 	// primary row-state axis an operator acts on, not a passive info badge).
-	function reviewBadgeStyle(state: string): string {
-		let color: string;
-		if (state === 'operator_confirmed') {
-			color = '#2dd4bf';
-		} else if (state === 'operator_edited') {
-			color = '#e879f9';
-		} else if (state === 'needs_review') {
-			color = '#fbbf24';
-		} else {
-			color = '#475569';
-		}
-		return `border: 1px solid ${color}; border-radius: 4px; padding: 2px 8px; font-size: 14px; font-weight: 400; background-color: #1e293b; color: ${color}; display: inline-block;`;
+	function reviewBadgeTone(state: string): BadgeTone {
+		if (state === 'operator_confirmed') return 'confirmed';
+		if (state === 'operator_edited') return 'edited';
+		// --color-review-needs-review is defined as var(--color-status-warning),
+		// so this is the same colour the retired local formula produced.
+		if (state === 'needs_review') return 'needs-review';
+		return 'unreviewed';
 	}
 
 	function reviewBadgeLabel(state: string): string {
@@ -95,24 +78,19 @@
 		if (state === 'needs_review') return 'Needs review';
 		return 'Unreviewed';
 	}
-
-	const cardStyle =
-		'background-color: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 24px; margin-bottom: 16px;';
-	const cardHeadingStyle = 'font-size: 20px; font-weight: 600; color: #e2e8f0; margin: 0 0 16px 0;';
-	const bodyTextStyle = 'font-size: 16px; color: #cbd5e1; margin: 0 0 8px 0; line-height: 1.5;';
 </script>
 
 <svelte:head>
 	<title>Help — SCOTUS Chat Admin</title>
 </svelte:head>
 
-<main style="background-color: #0f1117; min-height: 100vh;">
-	<header style="background-color: #1e293b; border-bottom: 1px solid #334155; padding: 16px 24px;">
-		<h1 style="font-size: 20px; font-weight: 600; color: #e2e8f0; margin: 0;">Help</h1>
+<main style="background-color: var(--color-bg); min-height: 100vh;">
+	<header style="background-color: var(--color-surface); border-bottom: 1px solid var(--color-border); padding: var(--space-lg) var(--space-xl);">
+		<h1 style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0;">Help</h1>
 	</header>
 
-	<div style="max-width: 860px; margin: 0 auto; padding: 48px 24px;">
-		<p style="font-size: 16px; color: #94a3b8; margin: 0 0 24px 0; line-height: 1.5;">
+	<div style="max-width: 860px; margin: 0 auto; padding: var(--space-3xl) var(--space-xl);">
+		<p style="font-size: var(--font-size-body); color: var(--color-text-secondary); margin: 0 0 var(--space-xl) 0; line-height: 1.5;">
 			This page explains the vocabulary the admin UI uses to describe an argument's
 			transcription and attribution state: its lifecycle status, its trust tier, the
 			review state of each speaker it attributes, and the two gates that decide
@@ -122,47 +100,55 @@
 		</p>
 
 		<!-- Card 1: Lifecycle statuses -->
-		<div style={cardStyle}>
-			<h2 style={cardHeadingStyle}>Lifecycle statuses</h2>
-			<p style={bodyTextStyle}>
+		<div
+			style="
+				background-color: var(--color-surface);
+				border: 1px solid var(--color-border);
+				border-radius: 8px;
+				padding: var(--space-xl);
+				margin-bottom: var(--space-lg);
+			"
+		>
+			<h2 style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-lg) 0;">Lifecycle statuses</h2>
+			<p style="font-size: var(--font-size-body); color: var(--color-status-archived); margin: 0 0 var(--space-sm) 0; line-height: 1.5;">
 				An argument's <code>status</code> tracks where it sits in the pipeline-to-public
 				lifecycle. It is a separate axis from trust tier and review state below — a
 				<code>published</code> argument can still carry an <code>uncertain</code> trust
 				tier if it was published with an override.
 			</p>
 
-			<div style="display: flex; flex-direction: column; gap: 12px; margin-top: 16px;">
-				<div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;">
-					<span style={statusBadgeStyle('candidate')}>{statusBadgeLabel('candidate')}</span>
-					<span style="font-size: 16px; color: #cbd5e1;">
+			<div style="display: flex; flex-direction: column; gap: var(--space-md); margin-top: var(--space-lg);">
+				<div style="display: flex; align-items: baseline; gap: var(--space-md); flex-wrap: wrap;">
+					<Badge tone={statusBadgeTone('candidate')} label={statusBadgeLabel('candidate')} />
+					<span style="font-size: var(--font-size-body); color: var(--color-status-archived);">
 						Just resolved from a pipeline run, not yet reviewed by an operator. The born
 						state every newly resolved argument starts in.
 					</span>
 				</div>
-				<div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;">
-					<span style={statusBadgeStyle('draft')}>{statusBadgeLabel('draft')}</span>
-					<span style="font-size: 16px; color: #cbd5e1;">
+				<div style="display: flex; align-items: baseline; gap: var(--space-md); flex-wrap: wrap;">
+					<Badge tone={statusBadgeTone('draft')} label={statusBadgeLabel('draft')} />
+					<span style="font-size: var(--font-size-body); color: var(--color-status-archived);">
 						An operator has started editing the argument (case metadata, participant
 						links, etc.) but has not yet published it.
 					</span>
 				</div>
-				<div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;">
-					<span style={statusBadgeStyle('published')}>{statusBadgeLabel('published')}</span>
-					<span style="font-size: 16px; color: #cbd5e1;">
+				<div style="display: flex; align-items: baseline; gap: var(--space-md); flex-wrap: wrap;">
+					<Badge tone={statusBadgeTone('published')} label={statusBadgeLabel('published')} />
+					<span style="font-size: var(--font-size-body); color: var(--color-status-archived);">
 						Publicly visible on the site. An operator moves an argument here by
 						publishing it, subject to the two gates below.
 					</span>
 				</div>
-				<div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;">
-					<span style={statusBadgeStyle('unpublished')}>{statusBadgeLabel('unpublished')}</span>
-					<span style="font-size: 16px; color: #cbd5e1;">
+				<div style="display: flex; align-items: baseline; gap: var(--space-md); flex-wrap: wrap;">
+					<Badge tone={statusBadgeTone('unpublished')} label={statusBadgeLabel('unpublished')} />
+					<span style="font-size: var(--font-size-body); color: var(--color-status-archived);">
 						An operator took a previously published argument back down. It keeps its
 						publish history for the audit trail and can be republished later.
 					</span>
 				</div>
 			</div>
 
-			<p style="font-size: 14px; color: #64748b; margin: 16px 0 0 0; line-height: 1.5;">
+			<p style="font-size: var(--font-size-caption); color: var(--color-text-secondary); margin: var(--space-lg) 0 0 0; line-height: 1.5;">
 				A fifth enum value, <code>pipeline</code>, was retired by migration 0027 and
 				replaced by <code>candidate</code> above. PostgreSQL cannot drop an enum value
 				once minted, so <code>pipeline</code> remains in the database as a dead-but-
@@ -171,9 +157,17 @@
 		</div>
 
 		<!-- Card 2: Trust tiers -->
-		<div style={cardStyle}>
-			<h2 style={cardHeadingStyle}>Trust tiers</h2>
-			<p style={bodyTextStyle}>
+		<div
+			style="
+				background-color: var(--color-surface);
+				border: 1px solid var(--color-border);
+				border-radius: 8px;
+				padding: var(--space-xl);
+				margin-bottom: var(--space-lg);
+			"
+		>
+			<h2 style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-lg) 0;">Trust tiers</h2>
+			<p style="font-size: var(--font-size-body); color: var(--color-status-archived); margin: 0 0 var(--space-sm) 0; line-height: 1.5;">
 				A trust tier is <strong>derived</strong>, never typed in by hand. It is computed
 				from each speaker attribution's <code>(source, method, review_state)</code> — where
 				the data came from, how it was matched, and whether an operator has looked at it —
@@ -183,31 +177,31 @@
 				not a free pass.
 			</p>
 
-			<div style="display: flex; flex-direction: column; gap: 12px; margin: 16px 0;">
-				<div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;">
-					<span style={tierBadgeStyle('verified')}>{tierBadgeLabel('verified')}</span>
-					<span style="font-size: 16px; color: #cbd5e1;">
+			<div style="display: flex; flex-direction: column; gap: var(--space-md); margin: var(--space-lg) 0;">
+				<div style="display: flex; align-items: baseline; gap: var(--space-md); flex-wrap: wrap;">
+					<Badge tone={tierBadgeTone('verified')} label={tierBadgeLabel('verified')} />
+					<span style="font-size: var(--font-size-body); color: var(--color-status-archived);">
 						A human has explicitly confirmed or edited this attribution, or it was
 						entered directly by an operator.
 					</span>
 				</div>
-				<div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;">
-					<span style={tierBadgeStyle('trusted')}>{tierBadgeLabel('trusted')}</span>
-					<span style="font-size: 16px; color: #cbd5e1;">
+				<div style="display: flex; align-items: baseline; gap: var(--space-md); flex-wrap: wrap;">
+					<Badge tone={tierBadgeTone('trusted')} label={tierBadgeLabel('trusted')} />
+					<span style="font-size: var(--font-size-body); color: var(--color-status-archived);">
 						Matched directly against an authoritative identifier from the corpus or a
 						seed dataset — no operator review yet, but a strong automatic match.
 					</span>
 				</div>
-				<div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;">
-					<span style={tierBadgeStyle('provisional')}>{tierBadgeLabel('provisional')}</span>
-					<span style="font-size: 16px; color: #cbd5e1;">
+				<div style="display: flex; align-items: baseline; gap: var(--space-md); flex-wrap: wrap;">
+					<Badge tone={tierBadgeTone('provisional')} label={tierBadgeLabel('provisional')} />
+					<span style="font-size: var(--font-size-body); color: var(--color-status-archived);">
 						Matched through a normalization or rule-based step — a weaker, heuristic
 						match than a direct identifier lookup.
 					</span>
 				</div>
-				<div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;">
-					<span style={tierBadgeStyle('uncertain')}>{tierBadgeLabel('uncertain')}</span>
-					<span style="font-size: 16px; color: #cbd5e1;">
+				<div style="display: flex; align-items: baseline; gap: var(--space-md); flex-wrap: wrap;">
+					<Badge tone={tierBadgeTone('uncertain')} label={tierBadgeLabel('uncertain')} />
+					<span style="font-size: var(--font-size-body); color: var(--color-status-archived);">
 						Flagged for operator attention, unresolved, or matched by a method with no
 						stronger tier rule — the fail-closed default for anything not otherwise
 						accounted for.
@@ -215,11 +209,11 @@
 				</div>
 			</div>
 
-			<p style="font-size: 16px; color: #cbd5e1; margin: 16px 0 8px 0;">
+			<p style="font-size: var(--font-size-body); color: var(--color-status-archived); margin: var(--space-lg) 0 var(--space-sm) 0;">
 				<code>derive_tier</code> evaluates these seven rules in order — the first one that
 				matches wins:
 			</p>
-			<ol style="font-size: 16px; color: #cbd5e1; margin: 0; padding-left: 24px; line-height: 1.6;">
+			<ol style="font-size: var(--font-size-body); color: var(--color-status-archived); margin: 0; padding-left: var(--space-xl); line-height: 1.6;">
 				<li>Review state is Confirmed or Edited &rarr; Verified.</li>
 				<li>Review state is Needs review &rarr; Uncertain.</li>
 				<li>Source is <code>operator</code> and method is <code>manual</code> &rarr; Verified.</li>
@@ -237,50 +231,58 @@
 		</div>
 
 		<!-- Card 3: Review states -->
-		<div style={cardStyle}>
-			<h2 style={cardHeadingStyle}>Review states</h2>
-			<p style={bodyTextStyle}>
+		<div
+			style="
+				background-color: var(--color-surface);
+				border: 1px solid var(--color-border);
+				border-radius: 8px;
+				padding: var(--space-xl);
+				margin-bottom: var(--space-lg);
+			"
+		>
+			<h2 style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-lg) 0;">Review states</h2>
+			<p style="font-size: var(--font-size-body); color: var(--color-status-archived); margin: 0 0 var(--space-sm) 0; line-height: 1.5;">
 				A <code>review_state</code> records whether, and how, an operator has looked at a
 				single attributed value — a speaker link on an argument, or a person's name. It is
 				one of the three inputs to trust-tier derivation above, but it is its own fact:
 				a record of human attention, not a score.
 			</p>
 
-			<div style="display: flex; flex-direction: column; gap: 12px; margin: 16px 0;">
-				<div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;">
-					<span style={reviewBadgeStyle('unreviewed')}>{reviewBadgeLabel('unreviewed')}</span>
-					<span style="font-size: 16px; color: #cbd5e1;">
+			<div style="display: flex; flex-direction: column; gap: var(--space-md); margin: var(--space-lg) 0;">
+				<div style="display: flex; align-items: baseline; gap: var(--space-md); flex-wrap: wrap;">
+					<Badge tone={reviewBadgeTone('unreviewed')} label={reviewBadgeLabel('unreviewed')} />
+					<span style="font-size: var(--font-size-body); color: var(--color-status-archived);">
 						The default state. No operator has acted on this value yet.
 					</span>
 				</div>
-				<div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;">
-					<span style={reviewBadgeStyle('needs_review')}>{reviewBadgeLabel('needs_review')}</span>
-					<span style="font-size: 16px; color: #cbd5e1;">
+				<div style="display: flex; align-items: baseline; gap: var(--space-md); flex-wrap: wrap;">
+					<Badge tone={reviewBadgeTone('needs_review')} label={reviewBadgeLabel('needs_review')} />
+					<span style="font-size: var(--font-size-body); color: var(--color-status-archived);">
 						Flagged for operator attention — either by an importer that could not
 						confidently resolve the value, or by an operator re-flagging a previous
 						decision.
 					</span>
 				</div>
-				<div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;">
-					<span style={reviewBadgeStyle('operator_confirmed')}>{reviewBadgeLabel('operator_confirmed')}</span>
-					<span style="font-size: 16px; color: #cbd5e1;">
+				<div style="display: flex; align-items: baseline; gap: var(--space-md); flex-wrap: wrap;">
+					<Badge tone={reviewBadgeTone('operator_confirmed')} label={reviewBadgeLabel('operator_confirmed')} />
+					<span style="font-size: var(--font-size-body); color: var(--color-status-archived);">
 						An operator looked at this specific value and confirmed it is correct, with
 						no change needed.
 					</span>
 				</div>
-				<div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;">
-					<span style={reviewBadgeStyle('operator_edited')}>{reviewBadgeLabel('operator_edited')}</span>
-					<span style="font-size: 16px; color: #cbd5e1;">
+				<div style="display: flex; align-items: baseline; gap: var(--space-md); flex-wrap: wrap;">
+					<Badge tone={reviewBadgeTone('operator_edited')} label={reviewBadgeLabel('operator_edited')} />
+					<span style="font-size: var(--font-size-body); color: var(--color-status-archived);">
 						An operator changed this value directly (for example, correcting a name or
 						re-linking a speaker).
 					</span>
 				</div>
 			</div>
 
-			<p style="font-size: 16px; color: #cbd5e1; margin: 16px 0 8px 0;">
+			<p style="font-size: var(--font-size-body); color: var(--color-status-archived); margin: var(--space-lg) 0 var(--space-sm) 0;">
 				Two transition rules are easy to get wrong:
 			</p>
-			<ul style="font-size: 16px; color: #cbd5e1; margin: 0; padding-left: 24px; line-height: 1.6;">
+			<ul style="font-size: var(--font-size-body); color: var(--color-status-archived); margin: 0; padding-left: var(--space-xl); line-height: 1.6;">
 				<li>
 					An operator can push an already-reviewed value back to Needs review — but
 					nothing ever returns a value to Unreviewed. Once a human has touched a value,
@@ -297,12 +299,20 @@
 		</div>
 
 		<!-- Card 4: Publish gates -->
-		<div style={cardStyle}>
-			<h2 style={cardHeadingStyle}>Publish gates</h2>
-			<p style={bodyTextStyle}>
+		<div
+			style="
+				background-color: var(--color-surface);
+				border: 1px solid var(--color-border);
+				border-radius: 8px;
+				padding: var(--space-xl);
+				margin-bottom: var(--space-lg);
+			"
+		>
+			<h2 style="font-size: var(--font-size-heading); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin: 0 0 var(--space-lg) 0;">Publish gates</h2>
+			<p style="font-size: var(--font-size-body); color: var(--color-status-archived); margin: 0 0 var(--space-sm) 0; line-height: 1.5;">
 				Publishing an argument checks two gates, always in this order:
 			</p>
-			<ol style="font-size: 16px; color: #cbd5e1; margin: 0 0 16px 0; padding-left: 24px; line-height: 1.6;">
+			<ol style="font-size: var(--font-size-body); color: var(--color-status-archived); margin: 0 0 var(--space-lg) 0; padding-left: var(--space-xl); line-height: 1.6;">
 				<li>
 					<strong>Resolve-completeness gate</strong> — non-overridable. An argument whose
 					resolve pipeline step never completed cannot be published at all; this is a
@@ -318,7 +328,7 @@
 					reason.
 				</li>
 			</ol>
-			<p style="font-size: 14px; color: #64748b; margin: 0; line-height: 1.5;">
+			<p style="font-size: var(--font-size-caption); color: var(--color-text-secondary); margin: 0; line-height: 1.5;">
 				The trust tier used by the second gate is always recomputed fresh at publish time,
 				so the gate reflects the argument's current participants and utterances rather than a possibly
 				stale stored value.

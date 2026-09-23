@@ -1,5 +1,5 @@
 """
-Dev-only destructive reset service (Phase 43, DEVTOOL-01/DEVTOOL-02).
+Dev-only destructive reset service.
 
 D-07 keeps this module's router (api/routers/admin_dev.py) unmounted outside
 development — settings.environment must equal "development" for
@@ -13,10 +13,11 @@ committing units, not one transaction —
     2. each `run_import_convokit` call opens and commits its own session via
        pipeline.db.get_session() — a SEPARATE engine/pool from FastAPI's
        AsyncSessionLocal, pointed at the same DATABASE_URL;
-    3. the state-realization block below (Plan 43-02) commits via the real
-       admin_jobs.approve_job / admin_arguments.publish_argument service
-       calls (each on this module's own `db` session) plus one direct
-       AdminJob.status bulk update/commit for the Mid-pipeline fixture.
+    3. the state-realization block below (Plan 43-02, reworked Phase 50
+       D-14) commits via the real admin_arguments.approve_argument /
+       admin_arguments.publish_argument service calls (each on this
+       module's own `db` session) plus one directly-seeded step="reconcile"
+       ImportRun for the Mid-pipeline fixture (_seed_reconcile_run_fixture).
 Do NOT attempt to wrap the whole thing in one `async with db.begin():` —
 that session boundary never extends into pipeline's own engine. On any
 failure, the correct recovery is to re-run the whole reset: the TRUNCATE is
@@ -40,16 +41,17 @@ from sqlalchemy import select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.models.models import (
-    AdminJob,
-    AdminJobStatus,
     Argument,
     ArgumentParticipant,
+    ImportMethod,
+    ImportRun,
+    ImportRunStatus,
+    ImportSource,
     ReviewState,
     SideEnum,
     Utterance,
 )
 from api.services import admin_arguments as arguments_service
-from api.services import admin_jobs as jobs_service
 from api.services.trust import recompute_argument_tier
 from pipeline.commands.import_convokit import DEFAULT_CORPUS_DIR, run_import_convokit
 from pipeline.corpus.loader import (
@@ -69,14 +71,17 @@ class CorpusUnavailableError(Exception):
 
 class ResetIncompleteError(Exception):
     """Raised when a fixture's Argument row does not exist after
-    run_import_convokit returns, when run_import_convokit itself raises for
-    a fixture (e.g. an unresolvable/missing conversation id — RESEARCH.md
-    Open Question 2), or when a fixture landed without its required paired
-    AdminJob row. run_import_convokit catches and counts per-conversation
-    exceptions internally rather than always raising, so success is never
-    inferred from the mere absence of an exception — this module always
-    verifies both rows exist for every fixture before ever returning a
-    success response. A short `fixtures` list is never a valid 200."""
+    run_import_convokit returns, or when run_import_convokit itself raises
+    for a fixture (e.g. an unresolvable/missing conversation id —
+    RESEARCH.md Open Question 2). run_import_convokit catches and counts
+    per-conversation exceptions internally rather than always raising, so
+    success is never inferred from the mere absence of an exception — this
+    module always verifies the Argument row exists for every fixture before
+    ever returning a success response. A short `fixtures` list is never a
+    valid 200.
+
+    No longer also raised for a missing AdminJob row
+    — the corpus importer no longer creates one at all."""
 
 
 class FixtureNotSeededError(Exception):
@@ -164,6 +169,47 @@ def _require_corpus_files(corpus_dir: Path) -> None:
             raise CorpusUnavailableError(f"Required corpus file not found: {required}")
 
 
+async def _seed_reconcile_run_fixture(
+    db: AsyncSession, argument_id: int, *, conversation_id: str
+) -> None:
+    """
+    Seed ONE `step="reconcile"` ImportRun for the
+    Mid-pipeline dev fixture, replacing the pre-Phase-50 `AdminJob.status =
+    RUNNING` flip (there is no AdminJob to flip anymore, D-14/D-19).
+
+    D-06 mints reconcile runs lazily in real reconcile passes; a dev-only
+    fixture forcing one into existence is acceptable and intended (OQ-2,
+    operator-confirmed 2026-08-25) — it re-realizes the "Mid-pipeline"
+    reference state without inventing a parallel mechanism.
+
+    `content_digest` stays NULL — a `step="reconcile"` run carries no
+    comparison digest (OQ-3; only `step="parse"` runs do).
+
+    Structurally INVISIBLE to `api/services/arguments.py`'s
+    `MAX(ImportRun.id) WHERE step='parse' AND status=completed` read path
+    (the blank-page hazard, `api/services/arguments.py:100-108`) — a
+    `step="reconcile"` row can never make this argument's public chat page
+    render empty, because that read path only ever considers `step="parse"`
+    rows, and this fixture's own `step="parse"` run (from the initial
+    import) is untouched and still the one that path serves.
+
+    No commit here — the caller (`reset_to_fixture`) commits once after all
+    four fixtures' state realization, matching its existing per-fixture
+    write pattern.
+    """
+    db.add(
+        ImportRun(
+            argument_id=argument_id,
+            step="reconcile",
+            status=ImportRunStatus.COMPLETED,
+            source=ImportSource.CORPUS,
+            method=ImportMethod.DIRECT,
+            external_id=conversation_id,
+            content_digest=None,
+        )
+    )
+
+
 async def reset_to_fixture(db: AsyncSession, corpus_dir: str | Path | None = None) -> dict:
     """
     Wipe the full D-01 table set, reseed exactly FIXTURE_SET's conversations
@@ -183,15 +229,16 @@ async def reset_to_fixture(db: AsyncSession, corpus_dir: str | Path | None = Non
     resolved_corpus_dir = Path(corpus_dir) if corpus_dir else DEFAULT_CORPUS_DIR
     _require_corpus_files(resolved_corpus_dir)
 
-    # 2. TRUNCATE — one statement, one transaction, per D-01.
+    # 2. TRUNCATE — one statement, one transaction.
     await db.execute(text(TRUNCATE_SQL))
     await db.commit()
 
-    # 3-4. Reseed each fixture through the real importer, then verify both
-    # its Argument row and its paired AdminJob row landed. Collect
-    # (entry, argument_id, admin_job_id) triples in FIXTURE_SET declaration
-    # order for the state-realization step below.
-    fixture_rows: list[tuple[dict, int, int]] = []
+    # 3-4. Reseed each fixture through the real importer, then verify its
+    # Argument row landed. Collect (entry, argument_id) pairs in
+    # FIXTURE_SET declaration order for the state-realization step below.
+    # No paired AdminJob check anymore — the corpus
+    # importer no longer creates one at all.
+    fixture_rows: list[tuple[dict, int]] = []
     for entry in FIXTURE_SET:
         conversation_id = entry["conversation_id"]
 
@@ -227,98 +274,73 @@ async def reset_to_fixture(db: AsyncSession, corpus_dir: str | Path | None = Non
                 "after run_import_convokit — reset is incomplete."
             )
 
-        admin_job = (
-            await db.execute(
-                select(AdminJob).where(AdminJob.argument_id == argument.id)
-            )
-        ).scalar_one_or_none()
-        if admin_job is None:
-            # Phase 30 invariant: every corpus-imported argument must land
-            # paired with exactly one AdminJob, or it is unpublishable. A
-            # fixture missing its AdminJob is exactly as incomplete as a
-            # fixture missing its Argument row.
-            raise ResetIncompleteError(
-                f"Conversation {conversation_id!r} landed an Argument row but "
-                "no paired AdminJob — reset is incomplete."
-            )
+        fixture_rows.append((entry, argument.id))
 
-        fixture_rows.append((entry, argument.id, admin_job.id))
-
-    # 5. State realization (D-03, D-04) — runs strictly AFTER every fixture
-    # has landed and passed its existence checks above, so every Argument
-    # and AdminJob row referenced below is guaranteed to exist before any
-    # transition is attempted. Looked up by id collected during the reseed
-    # loop, never assumed.
+    # 5. State realization — runs strictly AFTER every fixture
+    # has landed and passed its existence check above, so every Argument
+    # row referenced below is guaranteed to exist before any transition is
+    # attempted. Looked up by id collected during the reseed loop, never
+    # assumed.
     ids_by_conversation = {
-        entry["conversation_id"]: (argument_id, admin_job_id)
-        for entry, argument_id, admin_job_id in fixture_rows
+        entry["conversation_id"]: argument_id for entry, argument_id in fixture_rows
     }
 
     # Fixture 15169 (Complexity): no action. It stays exactly as the
-    # importer left it — status=CANDIDATE with a PAUSED/RESOLVE AdminJob.
-    # This is deliberate: it is the reference "freshly imported" state and
-    # the Phase 30 invariant's canonical shape.
+    # importer left it — status=CANDIDATE, no AdminJob, latest ImportRun at
+    # step="parse". This is deliberate: it is the reference "freshly
+    # imported" state.
 
-    # Fixture 13015 (Draft target): CANDIDATE -> DRAFT via the real service
-    # function (D-03). approve_job stamps resolved_at, marks the AdminJob
-    # COMPLETED, and writes the ArgumentStatusLog row — this module performs
-    # none of those writes itself.
-    _draft_argument_id, draft_job_id = ids_by_conversation["13015"]
-    await jobs_service.approve_job(db, draft_job_id)
+    # Fixture 13015 (Draft target): CANDIDATE -> DRAFT via the real
+    # argument-scoped service function. approve_argument
+    # stamps resolved_at and writes the ArgumentStatusLog row — this module
+    # performs none of those writes itself.
+    draft_argument_id = ids_by_conversation["13015"]
+    await arguments_service.approve_argument(db, draft_argument_id)
 
     # Fixture 18897 (Published target): TWO calls, in this order, and the
-    # order is NOT optional. approve_job must run first to reach DRAFT and
-    # stamp resolved_at — publish_argument raises ValueError("Cannot
+    # order is NOT optional. approve_argument must run first to reach DRAFT
+    # and stamp resolved_at — publish_argument raises ValueError("Cannot
     # publish: resolve step not yet complete") when resolved_at is still
     # null, which is exactly the state a freshly-imported CANDIDATE argument
     # is in. Do not "simplify" these two calls into one.
-    published_argument_id, published_job_id = ids_by_conversation["18897"]
-    await jobs_service.approve_job(db, published_job_id)
+    published_argument_id = ids_by_conversation["18897"]
+    await arguments_service.approve_argument(db, published_argument_id)
     await arguments_service.publish_argument(db, published_argument_id)
 
-    # Fixture 22372 (Mid-pipeline target, D-04): the ONE direct column
-    # write in this service, and it is deliberately NOT a D-03 violation —
-    # D-03 is scoped to Argument.status transitions, not to AdminJob.status.
-    # There is no ArgumentStatusLog-style audit table for AdminJob.status,
-    # and no existing service function performs a PAUSED -> RUNNING flip:
-    # the real step-advance guards try_advance_ingest_to_parse and
-    # try_advance_parse_to_resolve handle different step pairs entirely and
-    # must not be repurposed here (RESEARCH.md Pitfall 3). The simple flip
-    # (rather than partially resolving some ArgumentParticipant rows) is
-    # taken because (a) the Complexity fixture already gives Phase 44's
-    # Resolve Table Rework a fully editable CANDIDATE argument with a
-    # PAUSED/RESOLVE job, so partially resolving participants here would add
-    # implementation cost without unlocking anything Phase 44 lacks, and
-    # (b) resolve-card editability keys on Argument.status staying CANDIDATE,
-    # which this flip preserves (Argument.resolved_at stays null, unchanged).
-    _mid_argument_id, mid_job_id = ids_by_conversation["22372"]
-    await db.execute(
-        update(AdminJob)
-        .where(AdminJob.id == mid_job_id)
-        .values(status=AdminJobStatus.RUNNING)
-        .execution_options(synchronize_session=False)
-    )
+    # Fixture 22372 (Mid-pipeline target, D-04, OQ-2): seeds a
+    # step="reconcile" ImportRun rather than flipping an AdminJob's status
+    # (there is no AdminJob to flip, D-14/D-19). Argument.status stays
+    # CANDIDATE, Argument.resolved_at stays null, unchanged — mirrors the
+    # pre-Phase-50 fixture's "still mid-pipeline" semantics exactly.
+    mid_argument_id = ids_by_conversation["22372"]
+    await _seed_reconcile_run_fixture(db, mid_argument_id, conversation_id="22372")
     await db.commit()
 
     # 6. Build the response strictly from values re-read from the database
     # after every transition above has committed — never from FIXTURE_SET
     # and never from the values this function intended to write.
-    # publish_argument already calls db.refresh() on its own argument after
-    # its bulk update, but the other rows above were changed via
-    # synchronize_session=False updates on this same session too, so expire
-    # the whole identity map before this final read rather than trusting any
-    # object loaded earlier in this call (Phase 31 refresh-after-bulk-update
-    # precedent).
+    # publish_argument/approve_argument already call db.refresh() on their
+    # own argument after their bulk updates, but expire the whole identity
+    # map before this final read rather than trusting any object loaded
+    # earlier in this call (Phase 31 refresh-after-bulk-update precedent).
     db.expire_all()
 
     fixtures: list[dict] = []
-    for entry, argument_id, _admin_job_id in fixture_rows:
+    for entry, argument_id in fixture_rows:
         argument = (
             await db.execute(select(Argument).where(Argument.id == argument_id))
         ).scalar_one()
-        admin_job = (
+        # The highest-id ImportRun for this argument reports its
+        # step, which together with argument_status keeps all four
+        # reference states distinguishable: Complexity = candidate/parse,
+        # Draft = draft/parse, Published = published/parse, Mid-pipeline =
+        # candidate/reconcile.
+        latest_run_step = (
             await db.execute(
-                select(AdminJob).where(AdminJob.argument_id == argument_id)
+                select(ImportRun.step)
+                .where(ImportRun.argument_id == argument_id)
+                .order_by(ImportRun.id.desc())
+                .limit(1)
             )
         ).scalar_one_or_none()
         fixtures.append(
@@ -328,7 +350,7 @@ async def reset_to_fixture(db: AsyncSession, corpus_dir: str | Path | None = Non
                 "role": entry["role"],
                 "argument_id": argument.id,
                 "argument_status": argument.status.value,
-                "admin_job_status": admin_job.status.value if admin_job else "",
+                "latest_import_run_step": latest_run_step or "",
             }
         )
 
@@ -346,7 +368,7 @@ async def seed_unresolved_speaker_fixture(
     conversation_id: str = DEFAULT_UNRESOLVED_SPEAKER_CONVERSATION_ID,
 ) -> dict:
     """
-    Dev-only mechanism (D-33a) that nulls the person_id of one advocate-side
+    Dev-only mechanism that nulls the person_id of one advocate-side
     ArgumentParticipant on a fixture argument (the Complexity fixture,
     conversation 15169, by default) and sets its review_state to
     needs_review, so the unresolved-speaker case -- the main thing the
@@ -381,7 +403,7 @@ async def seed_unresolved_speaker_fixture(
     PDF-pipeline MISS would, so the fixture stays representative rather
     than invented.
 
-    Dev-only for the same reason reset_to_fixture is (D-07): the router
+    Dev-only for the same reason reset_to_fixture is: the router
     this is mounted on (api/routers/admin_dev.py) is only ever registered
     on the FastAPI app when settings.environment == "development" -- see
     api/main.py's guarded include_router call. There is no handler-level
@@ -437,7 +459,7 @@ async def seed_unresolved_speaker_fixture(
         }
 
     # Deterministic — the same row every time — never a random/first-scan
-    # pick. "Non-BENCH" per D-33a's action text: BENCH participants are
+    # pick. "Non-BENCH"
     # justices, not the advocate-side speaker this fixture is meant to
     # represent.
     #

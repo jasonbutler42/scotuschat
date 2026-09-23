@@ -128,33 +128,71 @@ both covered.
 
 **Operator: "in a case where the entire utterance is inaudible but we know the speaker, we
 should NOT treat those as stage direction. It should still be treated as *this person spoke
-but we don't know what they said*."**
+but we don't know what they said*."** And, on display: **"if a Justice's words are inaudible
+then I would expect the bubble to say that. Same for any participant."**
 
-Today `pipeline/corpus/stage_directions.py` classifies a whole-turn `(Inaudible)` as a stage
-direction, and the importer writes stage directions with `raw_speaker_label=None,
-person_id=None` — so when a named Justice's words are lost, the attribution the source gave us
-is discarded and the turn renders as an anonymous room event. Roughly **11,034 turns** have a
-known speaker thrown away this way (15,816 parenthetical-only turns minus the 4,782 whose
-speaker is also a sentinel).
+So: an ordinary attributed bubble, speaker name intact, whose body is the transcript's own
+marker. No special component, no annotation.
 
-**The fix is to split the curated vocabulary into two classes:**
+Today `pipeline/corpus/stage_directions.py` classifies these as stage directions, and the
+importer writes stage directions with `raw_speaker_label=None, person_id=None` — discarding
+the attribution the source gave us.
+
+**Corrected counts.** An earlier pass in this note undercounted by matching only `(...)` and
+missing the square-bracket forms. The real figures:
+
+| | whole turns | of which the speaker IS known |
+|---|---|---|
+| Inaudible family | ~19,081 | **~13,221** |
+| Voice Overlap family | ~719 | ~652 |
+
+**Vocabulary split:**
 
 | Class | Markers | Treatment |
 |---|---|---|
-| **Room event** | Laughter, Laughs, Laugh, Recess, Luncheon Recess, Cross Talk | stage direction, unattributed — unchanged, correct today |
-| **Transcription failure** | Inaudible | NOT a stage direction; keep the speaker, render the text verbatim |
+| **Room event** | Laughter, Laughs, Laugh, Recess, Luncheon Recess, Cross Talk, **Voice Overlap** | stage direction, unattributed — unchanged, correct today |
+| **Transcription failure** | Inaudible | NOT a stage direction; keep the speaker, bubble shows the marker |
 
-- **Voice Overlap (705 whole-turn occurrences) is unclassified and needs an operator call.**
-  It is both a room event (people talked over each other) and a transcription failure (the
-  words were lost). It could go either way.
-- A turn with a sentinel speaker AND `(Inaudible)` text (4,782) is the double-unknown: Treatment
-  D handles the speaker, verbatim text handles the content.
+**Voice Overlap is a stage direction** (operator, 2026-09-23) — it describes something that
+happened in the room, even though words were lost with it.
+
+- A turn with a sentinel speaker AND an inaudible marker (~5,860) is the double-unknown:
+  Treatment D handles the speaker, the marker is the body text.
 - Laughter inside a speaker's turn (e.g. Warren's `"It's on now.\n(Laughter)"`) still splits
-  correctly into speech + room event. That behaviour is right and must not regress.
+  correctly into speech + room event. **That behaviour is right and must not regress** — it is
+  easy to break by reaching for the simpler "stop splitting parentheticals" fix.
 - **No trust consequence:** these turns gain a real `person_id`, so they derive
-  `corpus/direct` -> TRUSTED rather than being skipped.
-- **Display question, not yet eyeballed:** a bubble from a named Justice whose entire body
-  reads `(Inaudible)`. Faithful, but nobody has looked at it on screen.
+  `corpus/direct` -> TRUSTED rather than being skipped from the tier.
+
+### OPEN — the marker is not written consistently in the source
+
+There are **31 distinct verbatim forms** across these turns:
+
+| form | count |
+|---|---|
+| `(Inaudible)` | 14,995 |
+| `[Inaudible]` | 3,911 |
+| `(Voice Overlap)` | 672 |
+| `(Inaudible).` | 95 |
+| `[inaudible]` | 39 |
+| `[Inaudible].` | 33 |
+| `(Voice overlap)` | 22 |
+| ...24 more, incl. `( Voice Overlap)`, `(Inaudible.)`, `(inaudible)` | |
+
+Rendered verbatim, a reader sees round brackets on one turn and square on the next, with
+stray trailing periods. Faithful, and visibly inconsistent.
+
+This sits between the operator's two stated principles — *"whatever is in the utterance, is in
+the utterance"* versus a bubble that reads cleanly — and needs a call:
+
+- **Render raw.** Maximum fidelity. 31 forms appear on the page.
+- **Canonicalise the marker to one form.** There is precedent: `detect_stage_direction`
+  already normalises these to a canonical label (`"Inaudible"`) for the stage-direction path,
+  so the mechanism exists and is already trusted elsewhere. The argument for it is that a
+  transcription marker is the *transcriber's* annotation, not something anyone said — so
+  normalising it is not the same act as correcting a speaker's words.
+
+Undecided as of 2026-09-23.
 
 ## Design-system additions — APPROVED 2026-09-23
 

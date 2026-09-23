@@ -104,17 +104,78 @@ Deferred. Tracked but not in this roadmap.
 
 ## Traceability
 
-Populated during roadmap creation.
+Populated during roadmap creation (2026-09-23). Every v1 requirement maps to exactly one phase.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (pending roadmap) | | |
+| JUSTICE-01 | Phase 52 | Pending |
+| JUSTICE-02 | Phase 52 | Pending |
+| JUSTICE-03 | Phase 52 | Pending |
+| JUSTICE-04 | Phase 52 | Pending |
+| JUSTICE-05 | Phase 52 | Pending |
+| JUSTICE-06 | Phase 52 | Pending |
+| SPEAKER-01 | Phase 53 | Pending |
+| SPEAKER-02 | Phase 53 | Pending |
+| SPEAKER-03 | Phase 53 | Pending |
+| SPEAKER-04 | Phase 53 | Pending |
+| SPEAKER-05 | Phase 53 | Pending |
+| SPEAKER-06 | Phase 53 | Pending |
+| SPEAKER-07 | Phase 53 | Pending |
+| SPEAKER-08 | Phase 53 | Pending |
+| PUBLISH-01 | Phase 54 | Pending |
+| PUBLISH-02 | Phase 54 | Pending |
+| PUBLISH-03 | Phase 54 | Pending |
+| PUBLISH-04 | Phase 54 | Pending |
+| PUBLISH-05 | Phase 54 | Pending |
+| VERIFY-01 | Phase 54 | Pending |
+| VERIFY-02 | Phase 54 | Pending |
+| SITE-03 | Phase 55 | Pending |
+| SITE-04 | Phase 55 | Pending |
+| SITE-05 | Phase 55 | Pending |
+| SITE-06 | Phase 55 | Pending |
+| PLUMBING-07 | Phase 55 | Pending |
+| SITE-01 | Phase 56 | Pending |
+| SITE-02 | Phase 56 | Pending |
+| SITE-07 | Phase 56 | Pending |
+| PLUMBING-01 | Phase 57 | Pending |
+| PLUMBING-02 | Phase 57 | Pending |
+| PLUMBING-03 | Phase 57 | Pending |
+| PLUMBING-04 | Phase 57 | Pending |
+| PLUMBING-05 | Phase 57 | Pending |
+| PLUMBING-06 | Phase 57 | Pending |
+| ANALYTICS-01 | Phase 58 | Pending |
+| ANALYTICS-02 | Phase 58 | Pending |
+| ANALYTICS-03 | Phase 58 | Pending |
+| ANALYTICS-04 | Phase 58 | Pending |
+| ANALYTICS-05 | Phase 58 | Pending |
 
 **Coverage:**
 
-- v1 requirements: 33 total
-- Mapped to phases: 0 ⚠️ (roadmap pending)
-- Unmapped: 33 ⚠️
+- v1 requirements: 40 total
+- Mapped to phases: 40 ✓
+- Unmapped: 0 ✓
+
+**Count correction (2026-09-23, roadmap creation):** this section previously recorded 33 total v1
+requirements. The actual count in the sections above is **40** — JUSTICE 6, SPEAKER 8, PUBLISH 5,
+SITE 7, PLUMBING 7, ANALYTICS 5, VERIFY 2. No requirement was added or removed; the earlier figure
+was an arithmetic error in the summary block only. All 40 are mapped.
+
+**Phase distribution:**
+
+| Phase | Requirements | Count |
+|-------|--------------|-------|
+| 52 — Justice Identity | JUSTICE-01–06 | 6 |
+| 53 — Undetermined Speakers & Marker Normalisation | SPEAKER-01–08 | 8 |
+| 54 — Publishing at Scale & Verification Debt | PUBLISH-01–05, VERIFY-01, VERIFY-02 | 7 |
+| 55 — Search | SITE-03, SITE-04, SITE-05, SITE-06, PLUMBING-07 | 5 |
+| 56 — Landing Page, About & Oyez Source Links | SITE-01, SITE-02, SITE-07 | 3 |
+| 57 — Surface Plumbing | PLUMBING-01–06 | 6 |
+| 58 — Analytics & Privacy | ANALYTICS-01–05 | 5 |
+
+**PLUMBING-07 is owned by Phase 55** (the first phase adding a new public route), but the obligation
+it encodes is cross-cutting: Phases 53, 55, 56, 57 and 58 each add a public route, schema module or
+frontend path and must register it in `test_trust_public_leak_ban.py`'s coverage lists in the same
+phase. The test does not auto-discover.
 
 ---
-*Requirements defined: 2026-09-23*
+*Requirements defined: 2026-09-23 — traceability populated 2026-09-23*

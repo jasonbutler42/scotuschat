@@ -8,21 +8,24 @@ A website that displays Supreme Court oral arguments as a chat-style interface �
 
 Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
 
-## Current Milestone
+## Current Milestone: v1.9 The Site Becomes Complete
 
-**None active.** v1.8 Import & Provenance Re-model shipped 2026-09-23. The next milestone
-has not been defined — run `/gsd-new-milestone` to scope it.
+**Goal:** Make everything true that has to be true before the site can go live — correct data, the full corpus published, and a finished public surface — so that v2.0 is purely the deployment.
 
-**Standing candidates for the next milestone**, in no committed order:
+**Target features:**
+- **Justice identity** — a verified `oyez_speaker_id` mapping joining the CSV tenure data to the corpus, a `display_name` column (full form on the bio card, corpus form on utterances), justices seeded through `reset_to_fixture`, and a unique index so duplicates cannot silently return. Closes the Person-dedup item carried since v1.7 Phase 42.
+- **Undetermined speakers** — Treatment D (narrower bubble centred between two reserved-but-empty rails, "undetermined speaker" label, question-mark avatars on hover, explanation card), a source-sentinel speaker mapping to PROVISIONAL rather than UNCERTAIN, a >50%-undetermined publish gate, whole-turn marker normalisation, and an inaudible turn with a known speaker keeping its attribution.
+- **Publishing at scale** — bulk publish tooling, the corpus actually published (~7,811 arguments), and every surface verified at real volume rather than against four fixtures.
+- **Landing page** — format-first, no coverage claim anywhere, with a quiet note that the archive is incomplete and being extended. Built against `.planning/positioning/`.
+- **Search** — cases, dockets, speakers and terms, plus an empty-results state that explains the OT 1955–2019 range (the one place a reader needs that fact to interpret what they are seeing).
+- **About page and Oyez source links** — the explanatory surface the positioning docs assume, and a link from every argument back to its source.
+- **Surface plumbing** — robots.txt, sitemap, page metadata, favicon, error pages, and removal of the Admin link from the public nav.
+- **Analytics** — tooling, consent obligations and a privacy policy page. Researched before scoping: the consent trigger is device storage rather than analytics itself, so cookieless tooling may mean no consent UI at all in this milestone.
+- **Verification debt** — the three never-observed UAT behaviours and Phase 49's unrun browser checks.
 
-- **Deployment (DEPLOY-01, DEPLOY-03)** — carried forward since v1.4. Nothing has ever been
-  deployed; there is no deploy configuration in the repository.
-- **Phase 999.11** — the PDF pipeline path adapting to `import_run` as a peer strategy
-  (IMPORT-02), the one v1.8 requirement deliberately not delivered.
-- **Person-dedup across the justice-import tools** (White/Black/Clark/Douglas) — carried
-  since v1.7 Phase 42.
-- **The remaining backlog phases** — 999.2, 999.3, 999.5, 999.7, 999.9, 999.10.
+**Explicitly out of this milestone:** deployment and DNS (v2.0 is the deploy), the Phase 04 accessibility audit, theme and user preferences, and recent terms via the deferred PDF route (Phase 999.11).
 
+**Design and analysis already on disk** (do not re-derive): `.planning/notes/justice-identity-and-seeding.md`, `undetermined-speaker-display.md`, `transcript-rendering-decision-tree.md`, `launch-readiness.md`, and `.planning/positioning/` (seven documents plus a README indexing the Figma homepage concepts).
 
 ## Current State
 
@@ -133,7 +136,14 @@ has not been defined — run `/gsd-new-milestone` to scope it.
 
 ### Active
 
-**No active milestone.** Run `/gsd-new-milestone` to define the next requirement set.
+**v1.9 — The Site Becomes Complete**
+
+- [ ] Justice identity joined to the corpus by a verified stable key, deduplicated, and persisting through fixture resets (JUSTICE)
+- [ ] Undetermined speakers displayed honestly and publishable, with markers normalised (SPEAKER)
+- [ ] The corpus published at scale and every surface verified at real volume (PUBLISH)
+- [ ] A landing page, About page, search, and source links back to Oyez (SITE)
+- [ ] Surface plumbing: robots, sitemap, metadata, favicon, error pages (PLUMBING)
+- [ ] Analytics with whatever consent and privacy-policy surface the law actually requires (ANALYTICS)
 
 **Carried forward (never yet scheduled)**
 
@@ -275,4 +285,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-09-23 after the v1.8 Import & Provenance Re-model milestone — all 5 phases (47–51) verified, 24 of 25 requirements validated, IMPORT-02 deliberately split to Phase 999.11.*
+*Last updated: 2026-09-23 — v1.9 The Site Becomes Complete opened. v1.8 shipped with all 5 phases verified and 24 of 25 requirements validated; IMPORT-02 deliberately split to Phase 999.11.*

@@ -1,19 +1,16 @@
 ---
 gsd_state_version: "1.0"
-milestone: v1.8
-milestone_name: Import & Provenance Re-model
-status: Awaiting next milestone
-stopped_at: Milestone v1.8 closed and archived
-last_updated: "2026-09-23T12:30:00.000Z"
+milestone: v1.9
+milestone_name: The Site Becomes Complete
+status: planning
+last_updated: "2026-09-23T19:23:44.569Z"
 last_activity: 2026-09-23
-last_activity_desc: Milestone v1.8 completed and archived
 progress:
-  total_phases: 5
-  completed_phases: 5
-  total_plans: 45
-  completed_plans: 45
-  percent: 100
-current_phase: 51
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -33,10 +30,10 @@ phase-numbered test modules, ~2:1 test:code as a guideline. Both govern all late
 
 ## Current Position
 
-Phase: Milestone v1.8 complete and archived
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-09-23 — Milestone v1.8 completed and archived
+Status: Defining requirements
+Last activity: 2026-09-23 — Milestone v1.9 started
 
 ## Performance Metrics
 

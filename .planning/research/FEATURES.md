@@ -1,217 +1,197 @@
 # Feature Research
 
-**Domain:** Admin tooling + public content site — SCOTUS oral argument viewer (v1.2 polish)
-**Researched:** 2026-06-18
-**Confidence:** HIGH
+**Domain:** Public read-only legal-transcript / document archive (non-editorial)
+**Researched:** 2026-09-23
+**Confidence:** MEDIUM (patterns cross-checked across 8 named comparable archives; no direct usability testing)
 
-## Context
+**Scope of this file:** the five new v1.9 capabilities — search, landing page, about page, source-linking to Oyez, and public-archive analytics. The chat-format transcript view, term-grouped index, attributions/licensing page, and admin area already exist and are out of scope here.
 
-This is a subsequent milestone. v1.0 shipped the public chat view; v1.1 shipped the admin pipeline runner and people editor. v1.2 adds six feature clusters to complete the admin tooling and enrich the public experience before deployment. The features below are analyzed in terms of expected behaviors, UX patterns, and data considerations for this specific codebase — not greenfield design.
-
----
+**Comparable sites examined:** CourtListener / Free Law Project, Oyez.org, HUDOC (European Court of Human Rights case-law database), Old Bailey Proceedings Online, the National Archives Catalog (catalog.archives.gov), Chronicling America (Library of Congress), HathiTrust Digital Library, Digital Public Library of America (DPLA). These span the two closest genres to SCOTUS Chat: verbatim-transcript legal archives (CourtListener, HUDOC, Old Bailey) and large-scale public document/library archives (National Archives, Chronicling America, HathiTrust, DPLA).
 
 ## Feature Landscape
 
-### Table Stakes (Users Expect These)
-
-Features the operator expects to work correctly. Missing or broken = the admin panel feels unfinished.
+### Table Stakes (Readers Expect These)
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| Unified top navigation | Every admin tool has a single consistent nav; toggling between admin and public by URL feels broken without it | LOW | SvelteKit root `+layout.svelte` already exists. Pattern: root layout renders nav that reads `page.url.pathname` to conditionally show admin vs. public links. Auth state check via `$page.data.user` or `locals.user`. No new routes. |
-| Argument metadata editing (pre-resolve) | Pipeline produces a title from the PDF filename; operators must correct it before the argument goes public | MEDIUM | Gate is `resolved_at IS NULL` — form must be disabled once resolved. Fields: `case_name` on `cases` table, `docket_number`, `argued_date` on `arguments`. Multi-case (consolidated dockets) complicates: editing the lead case name may not propagate to joined dockets. Scope: edit only the primary case row's name and the argument date/docket for now. |
-| Ingestion flow polish (progress, typeahead, incomplete toggle) | Fire-and-poll status display already exists but has known gaps in progress indicators | MEDIUM | Three sub-items: (1) fix step progress indicators to reflect actual polling state accurately, (2) typeahead for URL input (autocomplete from past supremecourt.gov URLs stored in admin_jobs), (3) "incomplete" toggle in jobs list to filter to paused/failed/needs_review jobs. All within existing `/admin/pipeline` route. |
-| Structured name fields | Legal names have suffix (Jr., III) and middle names; a single `full_name` field makes display logic fragile and prevents proper sorting | MEDIUM | Alembic migration required. New columns on `people`: `first_name`, `last_name`, `middle_name` (nullable), `name_suffix` (nullable). Keep `full_name` as the stored display name — do not make it computed/generated in the DB, derive it in the service layer on save. Existing data migration: parse existing `full_name` strings via simple heuristic (split on space, last token = last name). Flag records that fail the heuristic for manual review. |
-| Appointing president + party field | Factual data point on Justice records; required by the speaker popover feature | LOW | Two new columns on `people`: `appointing_president` (VARCHAR), `appointing_party` (VARCHAR — "Republican"/"Democrat"). Not computed; operator-entered. Aligns with apolitical constraint: factual attribution, not commentary. Only meaningful for Justices but schema stores on all people (nullable). Alembic migration required alongside structured name columns. |
-| People delete (orphaned records) | Resolve step creates stub person records that may never be linked; no delete path exists today | LOW | Must guard: block delete if any `utterances.person_id` or `argument_participants.person_id` references the row. Show referencing count before confirming. Hard delete only when counts = 0. Cascade: also delete `court_tenures`, `case_appearances`, `speaker_alias` rows for that person. |
+| Metadata search (case name, docket, speaker, term) | Every comparable — CourtListener, HUDOC, National Archives Catalog, Chronicling America — lets a reader search by the identifiers they already have, not just browse. HOMEPAGE-BRIEF.md already commits to this exact field set. | LOW–MEDIUM | Postgres `ILIKE`/trigram (`pg_trgm`) or `tsvector` over `case_name`, `source_docket`, `person.display_name`, `term` is sufficient at ~7,800 rows — no external search service needed. |
+| Result rows carry disambiguating metadata, not just a title | CourtListener shows case name + citation + docket + court + date on every row; National Archives Catalog shows title + date + level of description; HUDOC shows case name + date + respondent state. A bare case-name list is not enough once multiple arguments share a similar name (reargued cases, consolidated dockets). | LOW | Row needs: case name, docket number(s), term/argued date, and (if the row is a speaker match) which argument the speaker appears in. This project's existing consolidated-docket and reargument schema already carries what's needed — no new data model. |
+| Explicit, worded zero-result state (not a blank page) | Chronicling America, HathiTrust, and National Archives Catalog all pair "no results" with a reason or a next step ("check spelling," "try Advanced Search," "browse by X" ) rather than just an empty list. | LOW | See dedicated zero-result section below — this is the one place the OT 1955–2019 boundary has to be said out loud. |
+| A visible route into the archive without searching (browse) | Every comparable pairs search with a non-search entry point — DPLA's "Browse by Topic," National Archives' collection browsing, this project's own existing term-grouped `/arguments/term/{year}` listing. | Already shipped | The landing page's job is to surface this existing browse path, not build a new one. |
+| Per-item link back to the canonical/upstream source | CourtListener links every opinion to the underlying court document; Old Bailey cites the physical Old Bailey Sessions Papers it digitized; Oyez itself supplies a formatted citation block on every case page. Readers of a *re-presentation* expect a way to reach the thing being re-presented. | LOW (data already captured) | See Source-Linking section — `import_run.external_id` already carries Oyez lineage from Phase 47 (PROV-01–06), so this is populating a link template, not new data collection. |
+| A plain About/methodology page | Old Bailey Online's "About This Project" page (methodology, transcription accuracy, known limitations of the source material) and HathiTrust's help/about pages are the norm for any archive presenting digitized/reformatted primary sources — readers of primary-source archives specifically look for "how was this made and how faithful is it." | LOW | Content-only; VOICE.md's "About Copy" and "What This Is / Is Not" blocks are already drafted and just need a page. |
+| Basic aggregate traffic measurement | Every comparable institutional archive (National Archives, Library of Congress, HathiTrust) runs some form of aggregate analytics for capacity planning and funder/stakeholder reporting — this is baseline web operations, not a differentiator. | LOW | Cookieless, aggregate-only (Plausible/Fathom/self-hosted Umami-without-tracking-cookie class of tool) fits a public-interest archive; the milestone's own ANALYTICS research thread is resolving the specific consent-law question — this file only confirms the feature class is standard, not exceptional. |
 
-### Differentiators (Competitive Advantage)
-
-Features that make the public viewer meaningfully better than reading raw PDFs.
+### Differentiators (Not Expected, But Valuable Here)
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| Speaker popover card (bench only) | Clicking a Justice's avatar reveals who they are, when they served, and who appointed them — zero friction for non-legal readers | MEDIUM | Trigger: click on avatar in `ChatBubble`. Scope: bench side only (`side === 'BENCH'`). Content: photo (if available), full name, role, tenure dates, appointing president + party. Pattern: `@floating-ui/dom` for positioning — autoPlacement middleware handles viewport edges. Dismiss: click outside, Escape key, or second click on same avatar. No hover — touch devices need click. A11y: `popover` role or `dialog` role, focus trap on open, return focus on close. Data gap: `GET /people/{id}` currently returns only `id`, `full_name`, `role_name`; needs tenure + appointing fields added. |
-| Image upload to DO Spaces | Operators currently paste URLs; uploading actual photos keeps them in the admin without leaving the page | MEDIUM | Recommended pattern: server-side relay via SvelteKit form action — receives multipart, streams to Spaces via boto3 (simpler than presigned URLs for internal admin; `api/services/spaces.py` already exists). UX: file input + image preview via `URL.createObjectURL` on file select, accept=".jpg,.jpeg,.png,.webp", max 5MB client-side validation, upload executes on form submit (not on file select — avoids orphaned Spaces objects from abandoned edits). `BODY_SIZE_LIMIT=10M` env var required on DO App Platform (already a known deployment requirement). Store resulting Spaces public URL in `photo_url`. |
-| People merge (utterance transfer) | Resolve step may create duplicate person records under slightly different labels; merge transfers all utterances then deletes the source | HIGH | Highest-complexity feature in the milestone. Data transfer scope: `utterances.person_id`, `argument_participants.person_id`, `case_appearances.person_id`, `speaker_alias.person_id` — all UPDATE from source_id to target_id in a single DB transaction. Then DELETE source person row. Alias conflict: if both source and target have an alias for the same `normalized_label`, drop the source's conflicting alias before transferring the rest. UX pattern: (1) select source person (the duplicate), (2) select target person (canonical), (3) preview screen shows transfer counts, (4) confirm with irreversibility warning, (5) redirect to target record after success. New endpoint: `POST /api/admin/people/{source_id}/merge-into/{target_id}`. |
+| Search-result snippet showing *which* speaker matched | HUDOC and CourtListener both show *why* a row matched (a highlighted snippet). For a speaker-name search here, showing "Justice Scalia — 41 arguments" or similar on the *search* surface (not a ranking) helps a reader confirm they found the right person before clicking through. | MEDIUM | Only if the speaker-name path returns a person, not just a list of arguments — needs a person-first result type in the search response, and depends on the JUSTICE-phase dedup work landing first so a name maps to one canonical person. |
+| Docket-number normalization in search (accepting "552 U.S. 130," "06-1321," "06-1321 " with stray whitespace) | Readers rarely have the exact stored format of a docket string. CourtListener's search tooling normalizes citation formats before matching. | LOW–MEDIUM | Strip/normalize punctuation and whitespace before the `ILIKE`/trigram match; do this in the query layer, not by mutating stored `source_docket` values (which stay immutable per existing constraints). |
+| Full-text search inside utterance/transcript text | HathiTrust and CourtListener both offer full-text search across the document body, not just metadata. Readers researching a specific exchange would want this. | HIGH | Explicitly **not** part of the v1.9 scope (the milestone names cases/dockets/speakers/terms only). Flag as a clean, self-contained future phase — a separate `tsvector` index over `utterances.text`, ranked snippets, and highlight rendering are all new surface area with their own apolitical-framing questions (should a search snippet ever look like a "notable quote"?). Do not fold into the v1.9 search work. |
+| "Argument not yet in the archive" disambiguation on zero-result | Rather than a generic empty state, detect when a normalized query looks like a real case/date outside 1955–2019 (e.g., a 4-digit year outside range) and surface the coverage-boundary explanation specifically, vs. a generic "check spelling" message for other misses. | MEDIUM | Nice-to-have refinement of the required zero-result copy (see below); the *baseline* zero-result behavior is table stakes, this refinement is optional polish. |
 
-### Anti-Features (Commonly Requested, Often Problematic)
+### Anti-Features (Common Elsewhere, Wrong Here)
 
-| Anti-Feature | Why Requested | Why Problematic | Alternative |
-|--------------|---------------|-----------------|-------------|
-| Hover popover for speaker card | Hover feels natural on desktop | Touch devices have no hover state; hover over dense text content triggers accidental popovers while reading | Click-to-open popover — intentional trigger, works on touch + desktop, simpler focus management |
-| Image crop in upload flow | Uploaded photos may not be square | Canvas-based crop UI is complex to implement cross-browser, adds JS payload, is not blocking for v1.2 | Upload as-is; use CSS `object-fit: cover` on avatar circles for non-square images; crop deferred to v1.3 |
-| Field-level merge control (choose per-field which record wins) | Source may have better bio or more complete tenure data | Adds comparison UI with per-field radio buttons; multiplies implementation complexity 3-4x | Target-wins merge; operator manually edits target record fields after merge if needed |
-| Metadata editing after resolve | Operator realizes title/date is wrong after the argument is published | Post-resolve edits are unexpected to users with bookmarks; no undo path exists | Gate editing to `resolved_at IS NULL` strictly; if post-resolve correction is needed, operator resets `resolved_at` to null via direct DB access (not a v1.2 UI feature) |
-| AI-suggested appointing president | Automatically populate from Justice name | Violates apolitical hard constraint — LLM-derived political data is editorial even when factually correct | Operator manually enters from an authoritative source (oyez.org); one-time data entry per Justice (~9 active, ~20 retired) |
-| Bulk people import via CSV | Seems efficient for populating Justice records | Adds CSV parsing, column mapping, validation, partial-failure handling; for ~9 active Justices this is over-engineering | Single-record edit form is adequate; import deferred to v2+ |
+| Feature | Why It's Common Elsewhere | Why It's Wrong Here | Alternative |
+|---------|---------------------------|----------------------|-------------|
+| Relevance-ranked search results ordered by a "match quality" or popularity score | Standard on CourtListener (Citegeist relevance engine), HUDOC, and virtually all commercial and legal search products. | Any non-obvious ranking (popularity, "most relevant," click-through weighting) implicitly tells the reader which result matters more — a soft form of editorializing that Principle 4 ("Treat Speakers Equally") and Principle 1 ("Clarify Structure, Not Meaning") both rule out for case-level content. | Sort by an explicit, stated, non-editorial basis only: exact-match first, then alphabetical by case name or chronological by term — same rule the homepage brief already applies to "recent arguments." |
+| A "Most Viewed" / "Trending" / "Popular This Month" module fed by analytics data | Common on DPLA, National Archives, and most library/archive homepages — analytics naturally produces this once you're already collecting page views. | This is the single most likely place analytics work accidentally reintroduces an editorial ranking: showing which arguments get the most traffic functions exactly like the "featured"/"notable" labeling HOMEPAGE-BRIEF.md and PRINCIPLES.md explicitly forbid, even though no human curator chose it — the ranking mechanism doesn't matter, the effect does. | Analytics stays internal/operator-facing only (aggregate counts for capacity and interest reporting) and is never rendered as a public "popular" or "trending" list, full stop. |
+| An outcome/disposition filter ("affirmed," "reversed," "violation found") | HUDOC lets readers filter by whether a violation was found; most legal-research tools filter by disposition or outcome. | SCDB-style outcome/vote data is already excluded entirely per the apolitical constraint (see PROJECT.md Constraints) — an outcome filter would require exactly the data this project has deliberately chosen not to import. | None needed — search stays scoped to case identity (name/docket/speaker/term), never case result. |
+| Prominent "X,XXX arguments" / coverage-count statistics on the landing page | DPLA, National Archives, and HathiTrust all lead with scale ("14+ million objects," etc.) as a trust signal. | HOMEPAGE-BRIEF.md already rules this out explicitly ("format-first, no coverage claim anywhere ... a quiet note that the archive is incomplete") — a prominent count would imply completeness the corpus does not have (OT 1955–2019 only, PDF ingest for other years deferred). This is a place a common convention directly conflicts with the operator's locked positioning. | Keep the existing "quiet note" approach: state the covered range factually when relevant (e.g., in the zero-result state or About page), never as a headline metric. |
+| Donation/funding calls-to-action, sponsor logos, or a "meet the team" section on the About page | Standard on nonprofit archive About pages (Free Law Project, StoryCorps) because they're funded orgs soliciting support. | Monetization is explicitly "not a driving goal" (Out of Scope) and there is no team — a single maintainer. Copying this convention would misrepresent the project's structure and violate VOICE.md's "modest" attribute. | About page states plainly that this is a single-maintainer project, per AUDIENCE.md's "Built from one real need, made public in case the same format helps others." |
+| User-level analytics: session replay, heatmaps, individual visitor tracking, cross-site pixels | Common on commercial sites and even some public archives that adopt Google Analytics/Hotjar-class tooling by default. | No accounts/no interactivity is a stated hard constraint, and individual-level tracking is a much larger privacy/consent surface than the milestone's own framing assumes ("cookieless tooling may mean no consent UI at all") — bringing in session replay would reopen exactly the consent question the milestone is trying to avoid. | Aggregate, cookieless page-view analytics only (Plausible/Fathom/self-hosted-without-cross-site-ID class of tool) — the milestone's ANALYTICS research thread should confirm the specific tool, this file only flags the tracking-depth boundary. |
+| Speaker "profile pages" ranked by number of appearances, argument win/loss record, or "most active advocate" leaderboards | Legal-research products (and some oral-history sites) build these because frequency-of-appearance is an easy, database-native ranking to produce. | Ranking speakers by any metric — including a neutral-seeming one like appearance count — creates an implicit hierarchy of importance among speakers, which Principle 4 forbids regardless of intent. | A speaker-name search result can state factual counts if asked for directly by a search ("14 arguments"), but no standalone ranked leaderboard page. |
 
----
+## Table-Stakes Deep Dives
+
+### Search: what a result row needs, and what "no results" should say
+
+**Result row contents (cross-checked against CourtListener, HUDOC, National Archives Catalog):**
+A result row needs enough to let the reader pick between near-identical hits without opening each one. For SCOTUS Chat, given the existing schema, that's:
+- Case name (as displayed on the argument page)
+- Docket number(s) — consolidated cases show all associated dockets, matching existing schema support
+- Term / argued date
+- If the hit is a speaker match rather than a case match: which role the speaker held in that argument (bench/advocate/side), not just the raw name
+
+None of this requires new data collection — it's a read projection over data already captured. It does *not* need: a snippet of transcript text (differentiator, deferred — see Full-text search above), a relevance score, or any status/trust-tier information (trust is operator-only and structurally banned from public responses already, per Phase 48's `test_trust_public_leak_ban.py`).
+
+**Zero-result handling — the one place OT 1955–2019 has to be said explicitly.**
+Comparable archives handle genuine non-coverage in one of two ways: (1) a generic "no results, try different terms" message (Chronicling America, HathiTrust) that treats every miss the same regardless of cause, or (2) a targeted explanation when the archive can detect *why* the query missed. This project's coverage gap is unusually easy to detect (a single contiguous date range, 1955–2019) compared to most archives' fuzzier, uneven coverage — so the low-effort baseline and the higher-value refinement are both cheap here:
+
+- **Table stakes (LOW complexity):** every zero-result state names the covered range plainly, once, regardless of query — e.g. "No arguments match this search. This archive currently covers oral arguments from the 1955 through 2019 terms." This satisfies VOICE.md's empty-state guidance ("No arguments match this search") while adding the one fact a reader actually needs to interpret a miss, matching the milestone's own framing ("the one place a reader needs that fact to interpret what they are seeing").
+- **Differentiator (MEDIUM complexity):** detect a 4-digit year in the query that falls outside 1955–2019 and surface a more specific line for that case ("Arguments from after 2019 aren't in this archive yet") versus a generic miss (misspelled case name, unmatched docket). This is a refinement, not a requirement — ship the plain baseline first.
+
+Either way, the copy must stay in VOICE.md's register — factual and calm, never apologetic or promotional ("we're working hard to add more!").
+
+### Landing page: already researched, converges with comparables
+
+HOMEPAGE-BRIEF.md already specifies content priority (statement of what the site is → search/browse entry → recent/available arguments → browse by term → format explanation → trust/source note → About). This matches the comparable-archive pattern closely — DPLA and National Archives Catalog both lead with a *browse* entry point before any statistics or mission framing, and neither leads with a coverage-count statistic as its primary hero element (see anti-feature above; DPLA and National Archives both *do* show scale numbers, just not as the lead framing — SCOTUS Chat's stricter "no coverage claim anywhere" is a deliberate, already-made departure from the more common convention, not an oversight). No new landing-page research is needed here beyond confirming this convergence; do not re-derive HOMEPAGE-BRIEF.md's decisions.
+
+### About page: standard contents for a single-maintainer primary-source archive
+
+Cross-checking Old Bailey Online's "About This Project" (methodology, transcription accuracy, source-material limitations), HathiTrust's help/about pages, and nonprofit legal-archive About pages (Free Law Project) against VOICE.md's already-drafted About copy, the standard contents are:
+1. What the site is and what it contains (already drafted in VOICE.md's "About Copy" block)
+2. What it is *not* (already drafted — "What This Is / Is Not")
+3. Where the material comes from and how it's licensed — this project has a real, disclosed complication other archives don't: Oyez-sourced content is CC BY-NC 4.0 (NonCommercial), noted in PROJECT.md Constraints. The About page (or the existing attributions page) is the natural place this gets stated plainly for readers, not just operators.
+4. Coverage scope and its boundary (OT 1955–2019, PDF route deferred) — stated as a fact, consistent with the "quiet note" approach used elsewhere, not restated as an apology.
+5. Who built it and why — single-maintainer, accessibility-origin framing per AUDIENCE.md, kept modest per Principle 6/7 (no unvalidated accessibility outcome claims).
+6. A way to reach the maintainer (feedback/contact), without inviting public contributions — the product is read-only by design, so this should not become a comment system or issue tracker link that implies interactivity.
+
+Complexity: LOW. This is a content page with no new data dependencies — the hard work (deciding what to say) is already done in VOICE.md/PRINCIPLES.md/AUDIENCE.md.
+
+### Source-linking to Oyez
+
+CourtListener, Old Bailey, and Oyez itself all follow the same convention for re-presented primary sources: a per-item link back to the canonical/upstream location, usually near the item's metadata header, worded as "View source" rather than implying the re-presentation supersedes the original (this matches PRINCIPLES.md #2, "Preserve the Source," and VOICE.md's preferred phrasing "View source transcript").
+
+The good news for complexity: Phase 47 (PROV-01–06) already added `external_id` to `import_run` specifically to capture Oyez lineage during corpus import. **This means the data this feature needs already exists in the schema** — the work is building the link template (`oyez.org/cases/{term}/{docket-or-oyez-id}`) and confirming the stored `external_id` format actually matches what Oyez's URL scheme expects, not collecting new data. Complexity: LOW, contingent on that format check. Flag as a verification item (not a research gap) for whoever plans this phase: confirm a sample of `external_id` values resolve to real Oyez case URLs before building the link generically across ~7,800 rows.
+
+Attribution wording should credit Oyez without implying SCOTUS Chat supersedes it, per PRINCIPLES.md #2 ("Copy that implies SCOTUS Chat is the canonical version of the argument" is explicitly listed as something this principle argues against) — "View source transcript on Oyez," not "Original," not "Official record."
+
+### Analytics: table stakes as a category, anti-feature in its most common presentation
+
+The feature *category* (aggregate, privacy-respecting page-view analytics) is standard operational infrastructure on every comparable public archive and is not itself something to research further here — the milestone's ANALYTICS thread is correctly scoped to the legal/consent question, not the feature's existence. What this file adds: the most common *public-facing* consumption of analytics data — a "trending"/"most viewed" module — is the anti-feature called out above, and is worth flagging early because it's the kind of feature that tends to get added later, informally, once the data already exists, well after the apolitical-framing review that would normally catch it.
 
 ## Feature Dependencies
 
 ```
-People data model migration (structured names + appointing fields)
-    └──required before──> Speaker popover card (needs appointing_president/party columns populated)
-    └──required before──> People admin edit form changes (new fields in schema + form)
-    └──independent of──> Image upload (photo_url already exists)
+Search (metadata: case/docket/speaker/term)
+    └──requires──> Justice identity dedup (JUSTICE phase)
+    │                  (speaker-name search must resolve to one canonical person)
+    └──requires──> Corpus published at scale (PUBLISH phase)
+    │                  (search must only surface published arguments — reuses
+    │                   existing trust/publish gate, no new filtering logic)
+    └──enhances──> none new; reuses existing /arguments/term/{year} listing
 
-Speaker popover card
-    └──requires──> Extended GET /people/{id} response (tenure + appointing fields)
-    └──requires──> People data model migration
+Source link to Oyez
+    └──requires──> import_run.external_id (already shipped, Phase 47 PROV-01–06)
+    └──requires──> format verification (Oyez URL scheme vs. stored external_id)
 
-People merge
-    └──requires──> People directory (already shipped — needed for source/target selection)
-    └──conflict risk──> People delete (after merge, source is deleted; delete endpoint logic overlaps)
+Landing page
+    └──requires──> term-grouped /arguments listing (already shipped, Phase 51 DS-04)
+    └──enhances──> Search (landing page is the primary entry point to it)
 
-People delete
-    └──requires──> Referencing-count check (utterances + argument_participants counts)
-    └──independent of──> People merge (can be built separately)
+About page ──independent── (content-only, no data dependency)
 
-Image upload
-    └──requires──> DO Spaces service (already exists: api/services/spaces.py)
-    └──enhances──> Speaker popover card (popover only shows photo if photo_url is populated)
+Analytics ──independent── (infrastructure-only; legal/consent question is the
+                            actual dependency, tracked separately by the
+                            milestone's own ANALYTICS research thread)
 
-Argument metadata editing
-    └──requires──> resolved_at IS NULL gate logic (already on arguments table)
-    └──independent of all people features
-
-Unified navigation
-    └──independent of all other v1.2 features
-    └──prerequisite for──> acceptable admin UX at launch perception
+Full-text utterance search (differentiator, deferred)
+    └──conflicts with──> apolitical framing until snippet-highlighting rules
+                          are explicitly reasoned through (a highlighted
+                          "matching" excerpt can read as a featured quote)
 ```
 
 ### Dependency Notes
 
-- **People data model migration must ship before speaker popover card.** The popover needs `appointing_president` and `appointing_party` to exist in the DB and be returned by the API.
-- **Image upload is independent of structured names.** `photo_url` already exists. Upload is a UI/API enhancement to the existing edit form, no schema change required.
-- **People merge is the riskiest feature and should ship last** in the people admin cluster, after delete and image upload are verified stable.
-- **Unified navigation is the lowest complexity, highest perceived polish feature.** Build first — it makes every subsequent admin feature feel properly finished.
-
----
+- **Search requires Justice identity dedup:** a speaker-name search that returns two rows for one Justice (the exact bug the JUSTICE phase is closing) would be a visible, confusing defect on the single most-used search dimension. Sequence search after JUSTICE, not before.
+- **Search requires corpus published at scale:** searching a partially-published corpus is fine functionally (the publish gate already filters), but the *value* of shipping search before PUBLISH is low — most searches would miss. No hard technical blocker, but a real ordering argument for the roadmap.
+- **Source link requires the Phase 47 external_id work, already done:** this is a rare case where a dependency is already satisfied rather than upcoming — flag it as a verification task, not a build task, so it doesn't get over-scoped.
+- **Full-text search conflicts with apolitical framing, not with any existing feature:** including it prematurely would require solving "does a highlighted search snippet count as a featured quote?" (PRINCIPLES.md #1/#4 territory) before any engineering starts. This is exactly the kind of feature PRINCIPLES.md's Decision Test exists for — keep it out of v1.9 and treat it as its own future spec.
 
 ## MVP Definition
 
-### Launch With (v1.2)
+### Launch With (v1.9, matches milestone scope already set in PROJECT.md)
 
-All six feature clusters are required for the milestone goal: admin tooling and public experience sufficient for deployment.
+- [ ] Metadata search: case name, docket number, speaker name, term — essential per HOMEPAGE-BRIEF.md's committed search field set and the milestone's own SITE requirement
+- [ ] Zero-result state naming the OT 1955–2019 coverage boundary plainly — essential because this is the one place the range fact changes how a reader interprets what they see
+- [ ] Landing page per HOMEPAGE-BRIEF.md's already-decided content priority — essential, already scoped
+- [ ] About page covering scope, licensing (Oyez CC BY-NC 4.0), maintainer, and non-goals — essential, content already drafted in VOICE.md
+- [ ] Per-argument "View source transcript on Oyez" link — essential per PRINCIPLES.md #2, data dependency already satisfied
+- [ ] Aggregate, cookieless page-view analytics (operator-facing only) — essential for basic operational visibility, scoped by the milestone's own consent research
 
-- [x] Unified top navigation — prerequisite for "done" perception
-- [x] Ingestion flow polish — existing gaps block smooth operator use
-- [x] Argument metadata editing — no path exists today to correct pipeline-derived titles
-- [x] People data model (structured names + appointing president/party) — unblocks popover; enables proper name display
-- [x] People admin improvements (image upload + delete + merge) — completes people management workflow
-- [x] Speaker popover card — primary public-facing differentiator for this milestone
+### Add After Validation (later milestone)
 
-### Add After Validation (v1.3)
+- [ ] Docket-number format normalization in search (accepting citation-style/free-form docket entry) — trigger: real search usage shows readers typing docket numbers in a format the raw match misses
+- [ ] Query-aware zero-result refinement (detecting an out-of-range year specifically) — trigger: operator wants to reduce ambiguity in the baseline zero-result copy after seeing real search logs
 
-- [ ] Image crop in upload flow — CSS `object-fit` covers most cases in v1.2
-- [ ] Post-resolve metadata editing with explicit reset action — needs UX design for "unresolved" flow
-- [ ] Bulk people import — only relevant when corpus exceeds ~50 people
+### Future Consideration (v2+ or never, pending an explicit apolitical-framing review)
 
-### Future Consideration (v2+)
-
-- [ ] Automated enrichment from Oyez/FJC API — manual editor ships in v1.1; automation deferred
-- [ ] Speaker statistics across arguments — apolitical constraint makes this high-risk
-- [ ] Public speaker profile pages — architecturally supported; defer until public demand is clear
-
----
+- [ ] Full-text search across utterance/transcript text — defer until a specific design pass answers how highlighted result snippets avoid reading as "notable quotes"
+- [ ] Any public "most viewed"/"trending" surface — do not build without a fresh PRINCIPLES.md review; flagged here specifically so it isn't added informally once analytics data exists
 
 ## Feature Prioritization Matrix
 
-| Feature | User Value | Implementation Cost | Priority |
-|---------|------------|---------------------|----------|
-| Unified navigation | HIGH | LOW | P1 |
-| Ingestion flow polish | HIGH | MEDIUM | P1 |
-| Argument metadata editing | HIGH | MEDIUM | P1 |
-| People data model migration | HIGH (unblocks popover) | MEDIUM | P1 |
-| Appointing president/party fields | HIGH (popover content) | LOW | P1 |
-| People delete | MEDIUM | LOW | P1 |
-| Image upload | MEDIUM | MEDIUM | P1 |
-| Speaker popover card | HIGH | MEDIUM | P1 |
-| People merge | MEDIUM | HIGH | P1 |
-| Image crop | LOW | HIGH | P3 |
+| Feature | Reader Value | Implementation Cost | Priority |
+|---------|--------------|----------------------|----------|
+| Metadata search (case/docket/speaker/term) | HIGH | MEDIUM | P1 |
+| Zero-result coverage-boundary message | HIGH | LOW | P1 |
+| Landing page | HIGH | MEDIUM (mostly assembly of existing pieces) | P1 |
+| About page | MEDIUM | LOW | P1 |
+| Source link to Oyez | MEDIUM | LOW (contingent on format verification) | P1 |
+| Aggregate analytics | LOW (reader-facing value is indirect) | LOW | P1 |
+| Docket normalization | MEDIUM | LOW–MEDIUM | P2 |
+| Query-aware zero-result refinement | LOW | MEDIUM | P3 |
+| Full-text utterance search | HIGH (for a subset of readers — researchers/legal professionals per AUDIENCE.md) | HIGH | P3, gated on a framing review |
+| Public "trending"/"most viewed" | N/A — anti-feature | — | Do not build |
 
-**Priority key:**
-- P1: Required for v1.2 milestone
-- P2: Should add, not blocking deployment
-- P3: Nice to have, future milestone
+## Comparable-Archive Feature Analysis
 
----
-
-## Existing API Gaps to Close
-
-| Gap | Required By | Current State | Action Needed |
-|-----|-------------|---------------|---------------|
-| `GET /people/{id}` returns only `id, full_name, role_name` | Speaker popover card | Missing tenure, appointing_president, appointing_party | Extend `PersonResponse` schema after data model migration |
-| No argument metadata PATCH endpoint | Argument metadata editing | Does not exist | `PATCH /api/admin/arguments/{id}` + service method |
-| No photo upload endpoint | Image upload | Does not exist | `POST /api/admin/people/{id}/upload-photo` multipart handler |
-| No merge endpoint | People merge | Does not exist | `POST /api/admin/people/{source_id}/merge-into/{target_id}` |
-| No people delete endpoint | People delete | Does not exist | `DELETE /api/admin/people/{id}` with referencing-count guard |
-| `PersonUpdate` schema lacks new fields | Structured names + appointing | Has only `full_name, role_id, bio_text, photo_url, tenures` | Add `first_name, last_name, middle_name, name_suffix, appointing_president, appointing_party` post-migration |
-
----
-
-## Behavioral Specifications
-
-### Speaker Popover Card
-
-- Appears anchored to the clicked avatar, positioned above or below based on viewport space (Floating UI `autoPlacement` middleware)
-- Width: 260–320px; never clips outside viewport on mobile
-- Content sections: photo thumbnail (with initials fallback), name + role label, tenure date range formatted as "YYYY–present" or "YYYY–YYYY", appointing president + party in a neutral factual line
-- One popover visible at a time — opening a second closes the first
-- Dismissed by: clicking outside, pressing Escape, or clicking the same avatar again
-- No action buttons needed for v1.2 (read-only)
-- A11y: ARIA `dialog` role, focus trap when open, focus returns to avatar button on close
-- Implementation entry point: `ChatBubble.svelte` — add click handler on the avatar `<div>`, convert it to a `<button>`, render popover via `{#if showPopover}` with `@floating-ui/dom` for position computation
-
-### Record Merge Workflow
-
-1. Operator selects "Merge" from a person's row in the people directory
-2. Second screen: search field to select target (canonical) person
-3. Preview screen: counts of rows to transfer — "N utterances, M participants, K aliases, J appearances"
-4. Confirm button with warning: "This cannot be undone. [Source name] will be permanently deleted."
-5. Atomic DB transaction: UPDATE all FK references, DELETE source row
-6. On success: redirect to target person's edit page; success flash message
-7. On conflict (alias collision): silently drop conflicting source aliases, proceed with non-conflicting ones
-8. No partial commits — if transaction fails, show error, no data changed
-
-### Argument Metadata Editing
-
-- Form renders only when `resolved_at IS NULL`; if resolved, show read-only display with note: "Locked — argument is published. Editing requires reopening the pipeline."
-- Editable fields: `argued_date`, lead case `case_name`, lead case `docket_number`
-- For consolidated arguments: display all linked cases but only allow editing the lead case's name; secondary docket numbers shown as read-only
-- Save validates: date format, docket number matches `##-####` pattern
-- No publish/unpublish toggle in this form — `resolved_at` is set only by the resolve pipeline step
-
-### Image Upload
-
-- File input accepts `.jpg`, `.jpeg`, `.png`, `.webp` only
-- Client-side validation before submit: reject files > 5MB with an inline error message
-- `URL.createObjectURL` renders preview in a small image element (48×48px) immediately after file selection
-- Upload executes as part of the main save form submission (not a separate async upload on file-select)
-- Server streams file bytes to DO Spaces via boto3 `put_object`; returns the public Spaces URL
-- Updates `photo_url` field in the person record and re-renders the preview with the saved URL
-- Error states: file type rejected (client), file too large (client), upload failed (server) — all surface inline below the file input
-
----
+| Feature | CourtListener / HUDOC (legal transcript archives) | National Archives / DPLA / HathiTrust (library/document archives) | SCOTUS Chat's approach |
+|---------|----------------------------------------------------|----------------------------------------------------------------------|--------------------------|
+| Search fields | Case name, citation, docket, judge, court, date, full text | Keyword, date range, person, subject, format | Case name, docket, speaker, term (metadata only — no full text in v1.9) |
+| Result ranking | Relevance-scored (Citegeist, HUDOC relevance) | Relevance-scored | Exact-match-first, then alphabetical/chronological — never a relevance score, per apolitical framing |
+| Outcome/disposition filter | Yes (HUDOC: violation found/not; CourtListener: precedential status) | N/A | Explicitly excluded — no vote/outcome data is imported at all |
+| Landing page scale statistics | Not prominent (legal archives lead with search) | Prominent ("14M+ objects") | Explicitly excluded per HOMEPAGE-BRIEF.md — "no coverage claim anywhere" |
+| Source attribution | Direct links to underlying court filings/documents | Rights-statement logos + citation generation per item | "View source transcript on Oyez" per argument, using existing `external_id` lineage |
+| About/methodology page | Mission + methodology (Free Law Project is nonprofit-funded, mentions funding) | Methodology + limitations (Old Bailey: OCR/transcription accuracy caveats) | Scope, licensing, maintainer, non-goals — no funding ask (not funded, not monetized) |
+| Analytics-driven "trending" module | Not observed on legal archives (would imply case importance) | Common on library/museum archives (DPLA "popular this month") | Explicitly excluded — anti-feature, see above |
 
 ## Sources
 
-- [Floating UI — positioning library](https://floating-ui.com/)
-- [floating-ui-svelte examples](https://floating-ui-svelte.vercel.app/examples/popovers)
-- [Shadcn Hover Card pattern](https://ui.shadcn.com/docs/components/radix/hover-card)
-- [CiviCRM deduping and merging workflow](https://docs.civicrm.org/user/en/latest/common-workflows/deduping-and-merging/)
-- [Talend Cloud Data Stewardship — merging tasks](https://help.qlik.com/talend/en-US/data-stewardship-user-guide/Cloud/handling-merging-tasks-to-deduplicate-records)
-- [Image upload UX patterns — uxpatterns.dev](https://uxpatterns.dev/patterns/media/image-upload)
-- [Uploadcare file uploader UX best practices](https://uploadcare.com/blog/file-uploader-ux-best-practices/)
-- [FastAPI + presigned URL upload pattern](https://medium.com/@sanmugamsanjai98/secure-file-uploads-made-simple-mastering-s3-presigned-urls-with-react-and-fastapi-258a8f874e97)
-- [boto3 presigned URLs reference](https://boto3.amazonaws.com/v1/documentation/api/latest/guide/s3-presigned-urls.html)
-- [DatoCMS draft/published system](https://www.datocms.com/docs/general-concepts/draft-published)
-- [Craft CMS publish vs save UX discussion](https://github.com/craftcms/cms/issues/7543)
-- [Adobe XDM person name data type](https://experienceleague.adobe.com/en/docs/project-aim-demo/xdm/data-types/person-name)
-- [SvelteKit advanced layouts — joyofcode](https://joyofcode.xyz/sveltekit-advanced-layouts)
+- [CourtListener — Non-Profit Free Legal Search Engine](https://www.courtlistener.com/) — MEDIUM confidence (cross-checked search-field description against FLP wiki advanced-search docs)
+- [FLP Wiki — Advanced Search and Query Techniques](https://wiki.free.law/c/courtlistener/help/search/advanced-search-and-query-techniques) — MEDIUM confidence
+- [Oyez case pages and citation format](https://en.wikipedia.org/wiki/Oyez_Project) — LOW confidence (single secondary source; direct Oyez case-page inspection not performed this pass)
+- [HUDOC database — European Court of Human Rights](https://www.echr.coe.int/hudoc-database) — MEDIUM confidence
+- [HUDOC User Manual](https://www.echr.coe.int/documents/d/echr/HUDOC_Manual_ENG) — MEDIUM confidence
+- [Old Bailey Proceedings Online — About This Project](https://www.dhi.ac.uk/blogs/old-bailey/about/) — MEDIUM confidence (methodology/accuracy claims cross-checked against a second academic source)
+- [National Archives Catalog — Search Tips](https://www.archives.gov/research/catalog/help/search-tips) — MEDIUM confidence
+- [Chronicling America — Search Tips (Library of Congress)](https://guides.loc.gov/chronicling-america/search-tips) — MEDIUM confidence
+- [HathiTrust — How to Search & Access](https://www.hathitrust.org/the-collection/search-access/) — MEDIUM confidence
+- [DPLA — Announcing the Launch of our New Website](https://dp.la/news/announcing-the-launch-of-our-new-website) — LOW confidence (single vendor/press source on redesign rationale)
+- Internal (binding, not re-derived): `.planning/positioning/HOMEPAGE-BRIEF.md`, `.planning/positioning/PRINCIPLES.md`, `.planning/positioning/VOICE.md`, `.planning/positioning/AUDIENCE.md`, `.planning/PROJECT.md` — HIGH confidence, primary source
 
 ---
-*Feature research for: SCOTUS Chat v1.2 — admin tooling and public experience polish*
-*Researched: 2026-06-18*
+*Feature research for: SCOTUS Chat v1.9 — search, landing page, about page, Oyez source links, public-archive analytics*
+*Researched: 2026-09-23*

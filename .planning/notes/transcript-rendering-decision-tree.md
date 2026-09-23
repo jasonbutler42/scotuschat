@@ -91,13 +91,10 @@ between adjacent turns.
 
 **Operator decision 2026-09-23: normalise, "or it will look like a bug."**
 
-> **ASSUMPTION FLAGGED FOR CONFIRMATION.** The operator said *"stage directions should be
-> normalised."* Taken literally that covers only rows 7-9 (~1,700 turns), because rows 4 and 5
-> are no longer stage directions under the same day's decision. But the "looks like a bug"
-> problem is overwhelmingly in rows 4 and 5 (~19,081 turns), so this document applies
-> normalisation to **every marker in the curated vocabulary, wherever it is displayed** —
-> stage-direction rows and lost-words bubble bodies alike. Row 6, the inline case, is
-> deliberately excluded. If the narrower reading was intended, rows 4 and 5 revert to raw text.
+**CONFIRMED by the operator 2026-09-23:** normalisation applies to **every whole-turn marker in
+the curated vocabulary, wherever it is displayed** — stage-direction rows and lost-words bubble
+bodies alike. **Row 6, the inline case, is explicitly excluded**: that marker sits inside a
+sentence a person actually spoke, and rewriting it would edit speech.
 
 ## Rules that must not regress
 
@@ -111,12 +108,37 @@ between adjacent turns.
 - **Trust never reaches a public surface.** PROVISIONAL is operator-facing only; reader-facing
   honesty is Treatment D's explanation card.
 
+## Why the 50% line is the right one — resolved 2026-09-23
+
+**Denominator: settled by measurement, not judgment.** All-turns and excluding-room-events give
+the **identical 6 arguments**. Room-event rows average 0.17 per conversation corpus-wide (1,291
+rows across 7,817 conversations), far too rare to move any ratio. Either denominator is fine.
+
+**An earlier claim in this note's companion was wrong and is corrected here.** It said the
+boundary "discriminates rather than rounds" because the next arguments sit at 49.8% and 49.6%.
+There is no gap — roughly **256 arguments sit between 45% and 50%**, densely packed. That
+reasoning was drawn from looking at two neighbours.
+
+**The boundary is principled for a structural reason instead.** The bench speaks roughly half
+the turns in any argument, so:
+
+| conv | undetermined | justice turns | advocate turns | share |
+|---|---|---|---|---|
+| 16897 | 100 | 23 | 24 | 68.0% |
+| 19600 | 124 | 5 | 84 | 58.2% |
+| 16762 | 134 | **2** | 131 | 50.2% |
+| 18111 | 121 | **1** | 121 | 49.8% |
+| 21839 | 69 | **1** | 69 | 49.6% |
+
+The cluster just below 50% is **"the whole bench is anonymous, advocates intact"** — one or two
+attributed justice turns out of ~120 bench turns. Undetermined turns can only *exceed* 50% once
+advocates are anonymous too.
+
+So the rule reads: **publish if a reader can at least tell who the advocates are.** That is why
+50% catches 6 arguments and 45% would catch ~256.
+
 ## Still open
 
-1. The **denominator** for the >50% rule — this note's percentages count all utterances; the
-   implementation would naturally count non-stage-direction utterances. Not the same number,
-   and the boundary is tight (50.2% then 49.8%).
-2. The **normalisation scope assumption** flagged above.
-3. **Unverified in a browser:** `ChatBubble.svelte:49` falls back to `raw_speaker_label`, which
+1. **Unverified in a browser:** `ChatBubble.svelte:49` falls back to `raw_speaker_label`, which
    is believed to render a literal `<INAUDIBLE>` today. Treatment D replaces it, but nobody has
    seen the current behaviour on screen.

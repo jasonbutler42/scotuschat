@@ -2,6 +2,7 @@
 created: 2026-08-20T00:00:00.000Z
 title: reset_to_fixture writes stale created_at values because it reuses one transaction
 area: api
+resolves_phase: 52
 severity: minor
 files:
 

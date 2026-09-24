@@ -217,10 +217,18 @@ Active milestone: **v1.9 The Site Becomes Complete** (Phases 52–58). Details f
 **Plans**: 5 plans
 
 Plans:
+**Wave 1**
+
 - [ ] 52-01-PLAN.md — Tracer: the identity spine — verified mapping artifact, migration 0032 (`display_name` + partial unique index), importer keyed on `oyez_speaker_id`, `speaker_name` COALESCE
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 52-02-PLAN.md — Server-computed avatar initials on both public payloads; both client splitters deleted; `JI` → `JH` proven in a real browser
 - [ ] 52-03-PLAN.md — Admin person page: Corpus Display Name and Oyez Speaker ID as read-only rows, absent from the write path
 - [ ] 52-04-PLAN.md — `reset_to_fixture` seeds the bench after its TRUNCATE; fail-before-destroy pre-flight; stale `created_at` skew fixed
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 52-05-PLAN.md — Reset per-fixture progress and evidence-based failure copy via one dev-only fixture-state GET
 
 **UI hint**: yes

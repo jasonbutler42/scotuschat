@@ -23,7 +23,10 @@ This project uses the Get Shit Done (GSD) workflow. Always follow the phase-gate
 
 ## Key Constraints
 
-- **Apolitical framing is a hard constraint.** Every speaker (Justice or advocate) gets identical schema, depth, and treatment. No derived insight, summaries, sentiment, or statistics.
+- **Apolitical framing is a hard constraint.** The project never asserts a conclusion about a speaker; it presents the record and lets the reader draw their own. No summaries, sentiment, statistics, aggregation, ranking, or characterisation — for anyone.
+  - **Identical treatment, not identical content.** Every speaker renders through the same component, section order, and visual weight. Sections vary with the data that exists, never with who the person is. A Justice's card is longer because more is on the record, not because the design grants them more room.
+  - **Absent data renders as absent.** No filler, no placeholder, no "not available" row — the section is omitted and the rest closes up. Never invent plausible-looking data to balance a layout.
+  - **Faithful-and-uniform is legal; amplified is not.** A design crosses the line when it makes a disparity easier to read than it was in the room — scaling by speaking time, reordering by participation, persisting a "most active" emphasis. Full doctrine: `.planning/seeds/SEED-002-scotus-teams-video-call-presentation.md`.
 - **Pipeline is offline only.** Ingest/parse/resolve are CLI scripts. Never expose pipeline steps as HTTP endpoints or user-facing features.
 - **Raw PDFs are immutable.** Never modify source files after ingest. All derived data can be regenerated.
 - **Alembic is the sole DDL authority.** Never call `Base.metadata.create_all` anywhere.

@@ -29,7 +29,6 @@
 - [ ] **Phase 57: Surface Plumbing** — robots, sitemap, page metadata, favicon, a root error page, and the Admin link off the public nav
 - [ ] **Phase 58: Analytics & Privacy** — Cookieless measurement, zero-result search queries on the admin dashboard, and a privacy policy that says what is measured
 
-
 <details>
 <summary>✅ v1.0 MVP (Phases 1–4) — SHIPPED 2026-06-15</summary>
 
@@ -195,35 +194,44 @@ Active milestone: **v1.9 The Site Becomes Complete** (Phases 52–58). Details f
 **Cross-cutting obligation (PLUMBING-07).** `api/tests/test_trust_public_leak_ban.py` derives "the public surface" from hand-maintained lists (`PUBLIC_ROUTER_MODULE_NAMES`, `PUBLIC_SCHEMA_MODULE_PATHS`, `PUBLIC_FRONTEND_PATHS`). It does **not** auto-discover. The requirement is owned by Phase 55 (the first phase adding a new public route), but the obligation applies to **every** phase that adds a public route, schema module or frontend path — Phases 53, 55, 56, 57 and 58 all do. Register in the same phase that adds it, or the apolitical leak ban silently stops covering it.
 
 ### Phase 52: Justice Identity
+
 **Goal**: Every justice in the corpus resolves to exactly one person record, joined by a verified stable key that survives a fixture reset, with each name form shown where it belongs.
 **Depends on**: Nothing (first phase of v1.9)
 **Requirements**: JUSTICE-01, JUSTICE-02, JUSTICE-03, JUSTICE-04, JUSTICE-05, JUSTICE-06
 **Success Criteria** (what must be TRUE):
+
   1. Seeding the justice CSV and then importing the corpus produces exactly one person row per justice — all 114 corpus justices resolve on `oyez_speaker_id`, and a spelling difference between the two sources no longer mints a second row.
   2. A justice's utterance attribution reads the corpus name form (`Byron R. White`) while their bio card reads the fuller CSV form (`Byron Raymond White`); an advocate, who has no display name, still shows their full name unchanged.
   3. Running `reset_to_fixture` and then opening the People directory shows the full justice roster, not an empty bench.
   4. A second row carrying an already-used `oyez_speaker_id` is refused by the database itself, not only by application code.
   5. `John Marshall Harlan, II` renders the avatar initials `JH`, not `JI`.
+
 **Notes**:
+
   - The mapping draft at `.planning/notes/justice-identity-mapping-DRAFT.csv` already exists (114 rows: 65 exact, 45 derived by first-initial + last-name, 4 flagged). It is **unverified** — this phase verifies and promotes it to authoritative data. It does not re-derive it.
   - The 4 flagged rows need the operator's eye, not an algorithm: the two Harlans (grandfather 1877–1911 vs. grandson 1955–1971), `Salmon P. Chase` vs. the different justice `Samuel Chase`, and `Henry Brockholst Livingston`, whom the CSV files under the first name "Brockholst".
   - A derivation rule was already considered and **rejected** — first-initial abbreviation reproduces 100 of 114 corpus forms, and a rule that is right 88% of the time is the worst outcome available. Do not revisit.
   - Closes the Person-dedup item carried since v1.7 Phase 42. It is not four bad rows; it is 49 of 114, visible as four only because four fixtures are imported.
   - Per the reseed-don't-migrate doctrine, existing duplicates are cleared by the reset, not by a backfill migration.
+
 **Plans**: TBD
 **UI hint**: yes
 
 ### Phase 53: Undetermined Speakers & Marker Normalisation
+
 **Goal**: A turn the source could not attribute is shown honestly rather than guessed at or rendered broken, such arguments are publishable, and every transcription marker reads the same way everywhere.
 **Depends on**: Phase 52 (both rework corpus import and person resolution; Treatment D is best proven by a reseed against a deduplicated bench)
 **Requirements**: SPEAKER-01, SPEAKER-02, SPEAKER-03, SPEAKER-04, SPEAKER-05, SPEAKER-06, SPEAKER-07, SPEAKER-08
 **Success Criteria** (what must be TRUE):
+
   1. An utterance whose corpus speaker is a `type: "U"` sentinel renders as Treatment D — a narrower bubble centred between two reserved-but-empty rails, labelled "undetermined speaker" — read from a fact stored on the utterance at import, never re-derived from `raw_speaker_label`. No literal `<INAUDIBLE>` string reaches the page.
   2. Hovering an undetermined bubble reveals a dashed question-mark avatar in **both** rails, and clicking either opens an explanation card in the same shape as the speaker-bio card.
   3. An argument containing sentinel speakers and no other blocker publishes with no per-argument override, while an argument more than 50% undetermined refuses to publish until the operator deliberately intervenes.
   4. A whole turn that is only an inaudible marker but carries a known speaker renders as that speaker's ordinary attributed bubble with the marker as its body — the attribution the source supplied is no longer discarded — while laughter inside a speaker's turn still splits into speech plus a separate room-event row, and Voice Overlap is still a stage direction.
   5. Every whole-turn marker in the curated vocabulary shows one canonical form wherever it appears, and a marker inline within a spoken sentence is left exactly as the source wrote it.
+
 **Notes**:
+
   - Treatment D is **approved**, with the mockup at Figma `KICu66PtMLHk4fmxJYPggx` › page Public › `unattributed-speaker-exploration › unattributed-D`, node `33:2`. Treatments A, B and C were considered and not chosen; C was rejected deliberately because it asserts a side the source does not support. Do not re-explore.
   - The measurements are done: 88,102 unattributed utterances (5.18%), 4,638 of 7,817 conversations affected, ~13,221 whole-turn inaudibles with a known speaker, 31 distinct verbatim marker forms, 6 arguments above 50%. The full 900MB pass is recorded in the note — **do not re-run it to rediscover them.**
   - The 50% denominator question is **already settled by measurement**: all-turns and excluding-room-events yield the identical 6 arguments. Confirm the implementation denominator, do not re-litigate the boundary.
@@ -231,94 +239,147 @@ Active milestone: **v1.9 The Site Becomes Complete** (Phases 52–58). Details f
   - `detect_stage_direction` already returns the canonical label and the importer discards it one line later. Normalising is a matter of keeping that value, not building a normaliser.
   - The italic and 70%-opacity treatment for the "undetermined speaker" label is approved, and must land as **design-system additions** in `app/src/app.css` and `.planning/codebase/DESIGN-SYSTEM.md` — not inline one-offs. Phase 51's whole point was that nothing in `app/src` carries a raw value; italic is a new type axis.
   - Trust stays operator-facing. PROVISIONAL must never reach a public response — the reader-facing honesty is Treatment D's explanation card. If this phase touches a public schema module or frontend path not already in the leak-ban lists, register it here (PLUMBING-07).
+
 **Plans**: TBD
 **UI hint**: yes
 
 ### Phase 54: Publishing at Scale & Verification Debt
+
 **Goal**: The corpus is actually live, and every surface has been seen working at real volume instead of against four fixtures.
 **Depends on**: Phase 53 (the PROVISIONAL floor and the >50% gate are what make the corpus publishable at all)
 **Requirements**: PUBLISH-01, PUBLISH-02, PUBLISH-03, PUBLISH-04, PUBLISH-05, VERIFY-01, VERIFY-02
 **Success Criteria** (what must be TRUE):
+
   1. `pipeline bulk-publish --dry-run` reports exactly which arguments it would publish and leaves the database untouched; the real run publishes them and reports a per-row outcome the operator can read.
   2. Bulk publish interrupted partway and re-run picks up where it stopped with no checkpoint table, publishes nothing twice, and completes against the full corpus without exhausting PgBouncer.
   3. Every newly-published argument carries the status-log entry `publish_argument` writes, and zero UNCERTAIN arguments are published — the trust gate was not bypassed by a bulk `UPDATE`.
   4. The corpus is published — every argument eligible under the trust rules, with only the >50%-undetermined arguments held back.
   5. A real term page renders correctly at real volume (~108 arguments, not four fixtures), and the three never-observed UAT behaviours plus Phase 49's outstanding live-browser checks have each been watched working on screen.
+
 **Notes**:
+
   - Follow the existing `recompute-trust` / `prune-runs` command template in `pipeline/__main__.py`. This is a standard pattern with precedent in the codebase, not new territory.
   - The known trap: looping `publish_argument` over 7,811 rows is 7,811 transactions, 7,811 trust recomputations and 7,811 PgBouncer round trips. Chunk the commits; make it resumable **by construction** (`WHERE status != 'PUBLISHED'`), not via a checkpoint table. Do not reach for a raw bulk `UPDATE` under performance pressure — that silently readmits the gate Phase 48 exists to enforce.
   - VERIFY-01's three behaviours: the failed-run error panel (`FailedStepGuidance.svelte`), the unresolved-advocate role placeholder with its per-row Save gate, and the non-interactive avatar for an unresolved utterance. The third overlaps Treatment D from Phase 53 — verify the behaviour that actually ships.
   - VERIFY-02's checks are enumerated in `49-EVIDENCE.md` §9, now under `.planning/milestones/v1.8-phases/49-review-model/`. They were blocked on sandbox `.env` access at the time; browser tooling works now.
   - `/arguments/term/1955` has never been rendered with real content, in either layout or query performance. That is the point of PUBLISH-05.
+
 **Plans**: TBD
 
+### Phase 54.1: Justice Portraits & Biographical Enrichment (INSERTED)
+
+**Goal**: Every justice carries a sourced portrait and a sourced biography, joined on the stable corpus key, and the speaker card renders both without asserting anything about the person.
+**Depends on**: Phase 52 (`oyez_speaker_id` is the join key and the asset filename stem) — sequenced after Phase 54 so the corpus is fully published first. Must precede Phase 56, whose About page carries the image attribution this phase lands.
+**Requirements**: PERSON-01, PERSON-02, PERSON-03, PERSON-04, PERSON-05, PERSON-06
+**Success Criteria** (what must be TRUE):
+
+  1. Every justice with a delivered portrait renders that portrait in the speaker card; a justice without one renders the existing coloured-initials fallback, and neither reads as broken or second-class.
+  2. Portraits are stored and retrieved by `oyez_speaker_id`, so running `reset_to_fixture` and re-importing leaves every portrait attached to the same person it was before.
+  3. A justice's card shows their education and career history drawn verbatim from the FJC Biographical Directory — no generated prose, no summary, no characterisation anywhere on the surface.
+  4. An advocate's card renders through the same component with the same section order; the sections for which no advocate data exists are absent, not filled with placeholder or "not available" text.
+  5. Every delivered image has a recorded source URL, licence, and creator, queryable without opening the files.
+  6. The longest career on record (Kagan, 14 entries) and the shortest (Shiras, 2 entries) both render correctly at 375px and at desktop width.
+
+**Notes**:
+
+  - Two external deliverables gate this phase, both commissioned 2026-09-24 and in flight: the portrait set (`.planning/notes/person-photo-asset-spec.md` — 400x400 WebP, named `{oyez_speaker_id}.webp`, mostly Wikimedia Commons) and the bio card design (`.planning/notes/bio-card-figma-brief.md`). Neither is produced by this phase; this phase ingests and implements them.
+  - **Bio data is already on disk and needs no external sourcing.** `data/corpus/judges.csv` is the FJC Biographical Directory — 4,070 federal judges, 201 columns, referenced nowhere in the codebase today. 113 of 115 SCOTUS justices match on last+first name; the two misses are name-form only (`Brockholst Livingston` → FJC "Henry Brockholst"; `Fred Vinson` → FJC "Frederick Moore") and are fixed by hand, not by a matching rule.
+  - `Professional Career` is filled for 113/113 — a semicolon-delimited chronological career list, median 343 characters / 6 entries, max 754 characters / 14 entries.
+  - **Do not generate prose bios from this data.** Assembling and formatting sourced fields is presentation; writing a paragraph from them makes editorial choices about what mattered, which the apolitical constraint forbids. It would also put unverifiable text into a corpus where everything else traces to a source.
+  - **The open design question is P-06.** The popover forbids truncation — no clamp, no "Read more", no internal scroll — and a 754-character career history does not fit a popover on a 375px viewport. The Figma brief asks for the tradeoff to be shown, not silently resolved; the three candidate routes are splitting to a dedicated person page, restructuring the career string as a dated timeline, or amending P-06 specifically for list-shaped content. Whichever lands, it amends a locked decision and needs saying so.
+  - `people.photo_url` is a single scalar column and the uploader writes one object per person, so a responsive image set cannot be stored without a schema change. Single-file delivery is a constraint, not a preference.
+  - The bench/advocate asymmetry was ruled on by the operator 2026-09-24: photographs aid comprehension more than they risk partisanship, and asymmetric source data is not asymmetric treatment. The CLAUDE.md apolitical constraint was rewritten the same day to say so. Do not re-litigate.
+  - `Gender` and `Race or Ethnicity` are present in the FJC data for all 113. Whether either appears on a public card is an unresolved operator decision, not a default.
+
+**Plans**: TBD
+**UI hint**: yes
+
 ### Phase 55: Search
+
 **Goal**: A reader can find an argument by case name, docket number, speaker or term, and when nothing matches they learn why rather than hitting a dead end.
 **Depends on**: Phase 52 (a speaker-name search before justice dedup would surface the exact duplicate-person bug Phase 52 closes) and Phase 54 (real volume to search against)
 **Requirements**: SITE-03, SITE-04, SITE-05, SITE-06, PLUMBING-07
 **Success Criteria** (what must be TRUE):
+
   1. Searching a case name, a speaker name or a term returns the matching published arguments, and a partial or slightly-misspelled case or speaker name still finds them.
   2. A docket number matches exactly or by normalised-exact only — a one-character near-miss never returns a confidently wrong argument, because a one-character edit is a different real docket.
   3. No unpublished argument ever appears in a search result, proven against a deliberately-unpublished row rather than asserted — and the new search route and response schema are registered in `test_trust_public_leak_ban.py`'s coverage lists, which do not auto-discover.
   4. A results surface shows enough per row for a reader to choose between hits, with bounded pagination rather than the whole corpus.
   5. A search that matches nothing states the OT 1955–2019 coverage boundary plainly — the one place a reader needs that fact to interpret what they are seeing.
+
 **Notes**:
+
   - **DECISION REQUIRED IN THIS PHASE, not a research gap:** `.planning/research/STACK.md` and `.planning/research/ARCHITECTURE.md` genuinely disagree. STACK.md recommends `pg_trgm` GIN trigram **plus** a weighted `tsvector`/GIN combined column for a single ranked multi-field search; ARCHITECTURE.md holds that trigram alone is adequate at ~7,800 rows and explicitly cautions against `tsvector` as premature optimisation. **They agree trigram is needed.** Settle the `tsvector` question before engineering starts, ideally against a performance measurement rather than an opinion.
   - `unaccent` availability on DigitalOcean Managed PostgreSQL is **unverified**. Confirm with `SELECT * FROM pg_available_extensions` before any migration depends on it.
   - Search is a pure-read query added to the **existing** `api/routers/arguments.py`, not a new router, reusing the `ArgumentListItem` schema and the exact same two-predicate published gate (`published_at IS NOT NULL AND status == PUBLISHED`) every other public route uses. Reimplementing that gate is the highest-consequence pitfall in the milestone — the same bug class as the already-fixed BUG-01.
   - Relevance ranking is an **anti-feature** here: it editorialises which case matters. Out of scope by constraint, not by budget.
   - No external search engine. Postgres is sufficient at ~7,800 rows.
+
 **Plans**: TBD
 **UI hint**: yes
 
 ### Phase 56: Landing Page, About & Oyez Source Links
+
 **Goal**: A first-time visitor arrives somewhere that explains the format, can read what this project is and is not, and can get from any argument back to its source on Oyez.
-**Depends on**: Phase 55 (the homepage brief is search-forward and the landing page leans on search existing)
+**Depends on**: Phase 55 (the homepage brief is search-forward and the landing page leans on search existing; Phase 54.1, whose image provenance data the About page's attribution draws on)
 **Requirements**: SITE-01, SITE-02, SITE-07
 **Success Criteria** (what must be TRUE):
+
   1. `/` serves a landing page following `HOMEPAGE-BRIEF.md`'s content priority — format-first, with no coverage claim anywhere and a quiet note that the archive is incomplete and being extended.
   2. Nothing on the landing page ranks, features or counts arguments in a way that implies importance — no trending, no most-viewed, no prominent coverage statistic.
   3. An About page states scope, licensing, maintainer and non-goals in the project's own voice.
   4. Every published argument carries a working link to its source transcript on Oyez, built from the `external_id` lineage captured in Phase 47 and spot-checked against real Oyez URLs rather than assumed to resolve.
+
 **Notes**:
+
   - `.planning/positioning/` holds seven documents from 2026-07-09, **none superseded**, indexed by `README.md`. `HOMEPAGE-BRIEF.md` carries the content priority and success criteria; `VOICE.md` has copy guidance and About-page content already drafted; `PRINCIPLES.md` states the non-editorial boundary as rules. Build against these — do not re-derive the positioning.
   - The Figma homepage exploration (file `9PDECvbdHM2vYVxt3SCwru`, page "Homepage concepts - positioning pass", node `4060:2`, three concepts) is **starting material, not a shortlist**. Operator, 2026-09-23: "That exploration did not have any conclusions. We should use it as a starting point not as a place where we are ready to make a lot of decisions."
   - The concepts are stale in three known ways recorded in `positioning/README.md`: they feature OT 2023 cases that do not exist in the data, they assume a search that did not exist when drawn, and their transcript preview predates Phase 51's shipped Style B2. Current transcript source of truth is Figma `KICu66PtMLHk4fmxJYPggx`, page Public.
   - Oyez links are a link template over data that already shipped in Phase 47 — not new collection.
   - Register the new public frontend paths in the leak-ban coverage lists in this phase (PLUMBING-07, owned by Phase 55).
   - Page metadata for these new pages lands in Phase 57 (PLUMBING-03), which covers every public page at once.
+
 **Plans**: TBD
 **UI hint**: yes
 
 ### Phase 57: Surface Plumbing
+
 **Goal**: The site is legible to crawlers and link previews, and no URL or missing asset produces a broken page.
 **Depends on**: Phase 56 (metadata and the sitemap need every public route to exist first)
 **Requirements**: PLUMBING-01, PLUMBING-02, PLUMBING-03, PLUMBING-04, PLUMBING-05, PLUMBING-06
 **Success Criteria** (what must be TRUE):
+
   1. `robots.txt` is served, and the sitemap lists every published argument and **only** published arguments, generated at request time from the same publish predicate every other public route uses — so it reflects the corpus as it stands after a bulk publish rather than as it was at build time.
   2. Every public page carries its own `<title>`, meta description and Open Graph tags, so a shared link shows a real preview instead of nothing.
   3. A page load no longer 404s on the favicon.
   4. Any bad URL — not only one under `/arguments` — lands on the project's own error page rather than SvelteKit's default.
   5. The public navigation no longer advertises the Admin surface; `/admin` is reached by typing it.
+
 **Notes**:
+
   - Sitemap is a SvelteKit `+server.ts` endpoint with a short cache TTL — not a build-time artifact (stale the moment bulk publish runs) and not served from FastAPI (that breaks the server-load-function discipline). Protocol limits are 50,000 URLs / 50MB, so this corpus needs no sitemap index.
   - Per-page metadata uses native `svelte:head`. No library needed.
   - Removing the Admin link is not a security fix — auth already gates the page. Nothing reader-facing should advertise an operator surface (operator decision, 2026-09-23, `launch-readiness.md`).
   - Register any new public route the sitemap or robots endpoint introduces in the leak-ban coverage lists (PLUMBING-07, owned by Phase 55).
+
 **Plans**: TBD
 **UI hint**: yes
 
 ### Phase 58: Analytics & Privacy
+
 **Goal**: The operator can see what visitors look for — above all what they searched for and did not find — without the site storing anything on a visitor's device and without any of it reaching a public surface.
 **Depends on**: Phase 55 (search must exist to capture queries from) and Phase 57 (the public surface is complete and the privacy page joins it)
 **Requirements**: ANALYTICS-01, ANALYTICS-02, ANALYTICS-03, ANALYTICS-04, ANALYTICS-05
 **Success Criteria** (what must be TRUE):
+
   1. Page views and referrers are recorded on public pages, and no analytics script loads on any `/admin/*` route.
   2. The chosen tool has been **observed in a browser** writing no cookie, no `localStorage` entry, no `IndexedDB` entry and reading no fingerprinting signal — and the consent determination is written down with its jurisdictional caveats, rather than resting on the vendor's "cookieless" label.
   3. The admin dashboard lists zero-result search queries and distinguishes an out-of-range query (a genuine content gap, needing the deferred PDF route) from an in-range one (a search-quality bug, since coverage in range is essentially complete).
   4. No case, docket or speaker identity appears as an event property, and no search or popularity data reaches any public surface.
   5. A privacy policy page states plainly what is measured and what is not.
+
 **Notes**:
+
   - **This phase is last and isolated on purpose.** It introduces the first client-side third-party script in this codebase and the first `PUBLIC_` env var it has ever had. That is distinct from — not a violation of — the standing rule that `FASTAPI_BASE_URL` stays server-only. Treat it as a change in kind, not degree.
   - Vendor choice is an open **operator** decision. GoatCounter is the researched candidate (free tier, no `document.cookie`, no `localStorage`, no persistent client id, no new backend); Plausible, Fathom and self-hosted Umami are documented alternatives. GA4, Meta Pixel, ad-tech tag managers and cookie-consent platform tooling are all explicitly excluded.
   - The consent research is done and holds: the EU ePrivacy trigger (Art. 5(3), per EDPB's October 2024 guidelines) is *storage of, or access to, information on the device* — not "analytics" and not "personal data" — so genuinely storage-free tooling falls outside the consent requirement. Real caveats to carry into the written determination: CNIL's audience-measurement exemption is French-specific soft law whose framework changes 1 Jan 2026; the UK ICO reads this more strictly with no equivalent carve-out and its PECR guidance is mid-consultation; and this is cross-checked secondary sources, **not legal advice**.
@@ -326,6 +387,7 @@ Active milestone: **v1.9 The Site Becomes Complete** (Phases 52–58). Details f
   - Attaching case, docket or speaker identity as an event property would recreate the banned cross-case-statistics anti-feature through analytics taxonomy rather than through code. A public "trending" or "most searched" surface is an anti-feature for the same reason trust tiers never reach a public response.
   - Search data stays operator-facing. The public "request a case" form is deferred to Phase 999.12 — promote it only if logged-query data proves insufficient.
   - Register the privacy policy page's frontend path in the leak-ban coverage lists (PLUMBING-07, owned by Phase 55).
+
 **Plans**: TBD
 **UI hint**: yes
 
@@ -338,11 +400,11 @@ Active milestone: **v1.9 The Site Becomes Complete** (Phases 52–58). Details f
 | 52. Justice Identity | 0/? | Not started | - |
 | 53. Undetermined Speakers & Marker Normalisation | 0/? | Not started | - |
 | 54. Publishing at Scale & Verification Debt | 0/? | Not started | - |
+| 54.1. Justice Portraits & Biographical Enrichment (INSERTED) | 0/? | Not started | - |
 | 55. Search | 0/? | Not started | - |
 | 56. Landing Page, About & Oyez Source Links | 0/? | Not started | - |
 | 57. Surface Plumbing | 0/? | Not started | - |
 | 58. Analytics & Privacy | 0/? | Not started | - |
-
 
 ## Backlog
 

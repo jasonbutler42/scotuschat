@@ -6,12 +6,12 @@ current_phase: 52
 current_phase_name: Justice Identity
 status: roadmap_complete
 stopped_at: Phase 52 UI-SPEC approved
-last_updated: "2026-09-24T20:02:30.828Z"
+last_updated: "2026-09-24T21:15:10.598Z"
 last_activity: 2026-09-23
 last_activity_desc: v1.9 roadmap created (7 phases, 52–58; 40/40 requirements mapped)
-state_head: 220e47bf70425cf3c37d09898f9c05a00275488b
+state_head: 6346ff0dd55eaca859560520440bd757e59930a5
 progress:
-  total_phases: 7
+  total_phases: 8
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -52,8 +52,9 @@ Progress: [░░░░░░░░░░] 0% (0/7 phases)
 | 52 | Justice Identity | JUSTICE-01–06 | — |
 | 53 | Undetermined Speakers & Marker Normalisation | SPEAKER-01–08 | 52 |
 | 54 | Publishing at Scale & Verification Debt | PUBLISH-01–05, VERIFY-01/02 | 53 |
+| 54.1 | Justice Portraits & Biographical Enrichment (INSERTED) | PERSON-01–06 | 52, 54 |
 | 55 | Search | SITE-03/04/05/06, PLUMBING-07 | 52, 54 |
-| 56 | Landing Page, About & Oyez Source Links | SITE-01, SITE-02, SITE-07 | 55 |
+| 56 | Landing Page, About & Oyez Source Links | SITE-01, SITE-02, SITE-07 | 55, 54.1 |
 | 57 | Surface Plumbing | PLUMBING-01–06 | 56 |
 | 58 | Analytics & Privacy | ANALYTICS-01–05 | 55, 57 |
 
@@ -70,7 +71,7 @@ the first client-side third-party script and the first `PUBLIC_` env var this co
 - v1.6: 11 phases, 51 plans, 17 days (2026-07-12 → 2026-07-29)
 - v1.7: 6 phases, 29 plans, 18 days (2026-07-29 → 2026-08-15)
 - v1.8: 5 phases, 45 plans, 120 tasks, 37 days (2026-08-17 → 2026-09-23), 368 commits
-- v1.9: 7 phases, 40 requirements — started 2026-09-23
+- v1.9: 8 phases, 46 requirements — started 2026-09-23 (Phase 54.1 inserted 2026-09-24)
 
 ## Accumulated Context
 
@@ -192,6 +193,10 @@ repeat it.
   phase slot (40.1) to a stale `diagnosed` status; no structural fix has shipped. The v1.8 close hit
   the same class again — the Phase 31 FK-cascade deferred item was still open on disk months after
   Phase 48 fixed it.
+
+### Roadmap Evolution
+
+- Phase 54.1 inserted after Phase 54: Justice Portraits & Biographical Enrichment — photos and FJC bios had no home in v1.9; two external deliverables (portrait set, Figma bio card) commissioned 2026-09-24
 
 ## Deferred Items
 

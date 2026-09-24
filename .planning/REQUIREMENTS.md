@@ -39,6 +39,15 @@ Requirements for milestone v1.9. Each maps to exactly one roadmap phase.
 - [ ] **PUBLISH-04**: The corpus is published — every argument eligible under the trust rules, excluding those SPEAKER-05 holds back
 - [ ] **PUBLISH-05**: Every public surface is verified against a real term at real volume (~108 arguments), not against the four fixtures
 
+### Person Portraits and Biographies (PERSON)
+
+- [ ] **PERSON-01**: A justice portrait set is ingested and stored keyed on `oyez_speaker_id`, so portraits survive `reset_to_fixture` and re-import without misattribution
+- [ ] **PERSON-02**: Each ingested image carries its source URL, licence, creator, and access date as queryable provenance, not only as file metadata
+- [ ] **PERSON-03**: Biographical fields — birthplace, education (school, degree, year), and professional career — are imported from the FJC Biographical Directory already on disk at `data/corpus/judges.csv`, verbatim and unsummarised
+- [ ] **PERSON-04**: The speaker card renders portrait and biography through one component whose sections vary with available data; an absent section is omitted rather than filled with placeholder text
+- [ ] **PERSON-05**: A justice with no portrait renders the existing coloured-initials fallback without reading as broken or as a lesser tier
+- [ ] **PERSON-06**: The career history renders legibly at both extremes of the real data (2 entries and 14 entries) at 375px and desktop width, under whatever resolution of the popover no-truncation rule (P-06) the design adopts
+
 ### Public Site (SITE)
 
 - [ ] **SITE-01**: `/` serves a landing page following `HOMEPAGE-BRIEF.md`'s content priority — format-first, with no coverage claim anywhere, and a quiet note that the archive is incomplete and being extended
@@ -122,6 +131,12 @@ Populated during roadmap creation (2026-09-23). Every v1 requirement maps to exa
 | SPEAKER-06 | Phase 53 | Pending |
 | SPEAKER-07 | Phase 53 | Pending |
 | SPEAKER-08 | Phase 53 | Pending |
+| PERSON-01 | Phase 54.1 | Pending |
+| PERSON-02 | Phase 54.1 | Pending |
+| PERSON-03 | Phase 54.1 | Pending |
+| PERSON-04 | Phase 54.1 | Pending |
+| PERSON-05 | Phase 54.1 | Pending |
+| PERSON-06 | Phase 54.1 | Pending |
 | PUBLISH-01 | Phase 54 | Pending |
 | PUBLISH-02 | Phase 54 | Pending |
 | PUBLISH-03 | Phase 54 | Pending |
@@ -167,6 +182,7 @@ was an arithmetic error in the summary block only. All 40 are mapped.
 | 52 — Justice Identity | JUSTICE-01–06 | 6 |
 | 53 — Undetermined Speakers & Marker Normalisation | SPEAKER-01–08 | 8 |
 | 54 — Publishing at Scale & Verification Debt | PUBLISH-01–05, VERIFY-01, VERIFY-02 | 7 |
+| 54.1 — Justice Portraits & Biographical Enrichment | PERSON-01–06 | 6 |
 | 55 — Search | SITE-03, SITE-04, SITE-05, SITE-06, PLUMBING-07 | 5 |
 | 56 — Landing Page, About & Oyez Source Links | SITE-01, SITE-02, SITE-07 | 3 |
 | 57 — Surface Plumbing | PLUMBING-01–06 | 6 |

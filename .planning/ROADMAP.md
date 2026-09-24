@@ -214,7 +214,15 @@ Active milestone: **v1.9 The Site Becomes Complete** (Phases 52–58). Details f
   - Closes the Person-dedup item carried since v1.7 Phase 42. It is not four bad rows; it is 49 of 114, visible as four only because four fixtures are imported.
   - Per the reseed-don't-migrate doctrine, existing duplicates are cleared by the reset, not by a backfill migration.
 
-**Plans**: TBD
+**Plans**: 5 plans
+
+Plans:
+- [ ] 52-01-PLAN.md — Tracer: the identity spine — verified mapping artifact, migration 0032 (`display_name` + partial unique index), importer keyed on `oyez_speaker_id`, `speaker_name` COALESCE
+- [ ] 52-02-PLAN.md — Server-computed avatar initials on both public payloads; both client splitters deleted; `JI` → `JH` proven in a real browser
+- [ ] 52-03-PLAN.md — Admin person page: Corpus Display Name and Oyez Speaker ID as read-only rows, absent from the write path
+- [ ] 52-04-PLAN.md — `reset_to_fixture` seeds the bench after its TRUNCATE; fail-before-destroy pre-flight; stale `created_at` skew fixed
+- [ ] 52-05-PLAN.md — Reset per-fixture progress and evidence-based failure copy via one dev-only fixture-state GET
+
 **UI hint**: yes
 
 ### Phase 53: Undetermined Speakers & Marker Normalisation

@@ -97,8 +97,12 @@ bounded rather than floating, or revisit the no-matte rule. The middle option tr
 identically and changes no source pixels, so it is the one that survives the apolitical constraint
 most easily.
 
-Send the Figma agent a contact sheet before it finalises the card, so this is designed for rather
-than discovered.
+**A contact sheet exists for exactly this.** `/home/jason/scotuschat/justice-portraits-contact-sheet.png`
+— all 114 portraits at 60px in a circular mask on the real page background, ordered by background
+luminance so the spread is visible at a glance, plus each of the four extreme cases rendered at 80px,
+60px, and 32px. Generated 2026-09-24. It sits beside `person-photos/`, outside this repository, because
+it is a derived artifact of an asset set that also lives outside the repo. Send it to the Figma agent
+before it finalises the card, so this is designed for rather than discovered.
 
 ---
 

@@ -1,7 +1,7 @@
 ---
 phase: "52"
 slug: justice-identity
-status: draft
+status: approved
 shadcn_initialized: false
 preset: none
 created: "2026-09-24"
@@ -191,37 +191,56 @@ actually finds rather than by which code path failed.
 
 ## UI Considerations
 
-> Elements probed per `ui-consideration-probe.md`'s closed 8-category taxonomy. Four elements
-> raised: **E1** Reset to Fixture control (interactive-control), **E2** Reset progress status line
-> (interactive-control, folds into E1's loading state rather than being independently probed),
-> **E3** Corpus Display Name field (form), **E4** Oyez Speaker ID field (form). Avatar initials
-> is excluded from this probe — it is a value-correctness fix with no new element, state, or
-> visual, per the Scope Note above.
+> Produced by `ui-consideration-probe.cjs` against its closed 8-category taxonomy, run after
+> checker approval. Four surfaces were probed; element kinds were confirmed by the operator
+> rather than taken from the prose classifier, which over-matched (it read E1's success-state
+> "4-fixture list" as making the button a `list-collection`).
+>
+> - **E1** Reset to Fixture control — `interactive-control`
+> - **E2** Reset progress status line — `interactive-control`, `static-content`
+> - **E3** Corpus Display Name field — `form`, `static-content`
+> - **E4** Oyez Speaker ID field — `form`, `static-content`
+>
+> **Avatar initials (JUSTICE-06) is excluded from this probe** — per the Scope Note it is a
+> value-correctness fix with no new element, no new state, and zero visual delta.
+> **The two-step destructive confirmation is not probed here either** — it is not one of the
+> closed taxonomy's eight categories (it belongs to the open, prose-owned `domain-probes.md`
+> bank), and it is unchanged from `43-UI-SPEC.md` and restated in the Copywriting Contract above.
+> **`zero-one-many` and `populated` are not raised** — neither surface is a collection; the
+> operator confirmed the success fixture list is E1's success message, not an element in its
+> own right, with the partial case already carried by D-14's partial-reseed copy.
 
-Applicable state considerations resolved: 8 covered, 0 backstop, 9 dismissed, 0 unresolved.
+**Coverage:** 19 applicable · 19 resolved (11 explicit, 0 backstop) · 0 unresolved.
 
-| Category | Element(s) | Status | Resolution / Reason |
-|----------|------------|--------|---------------------|
-| loading | E1 Reset to Fixture control | ✅ covered | Running state's status line now updates through 5 in-place text states (Copywriting Contract) instead of 1; same spinner, same position, no layout shift. |
-| error | E1 Reset to Fixture control | ✅ covered | 4-outcome, evidence-based error contract (Copywriting Contract) replaces the prior 2-outcome lock, per D-14. |
-| empty | E3 Corpus Display Name field | ✅ covered | Blank `display_name` (non-corpus-resolved person, or Barrett/Jackson per D-04) renders "Not in corpus" in the existing N/A treatment — not an error state, a normal and expected value. |
-| empty | E4 Oyez Speaker ID field | ✅ covered | Same "Not in corpus" treatment, same reasoning — blank is the expected value for any non-corpus-joined person. |
-| loading | E3 Corpus Display Name field | 🚫 dismissed | Rendered synchronously from the page's own server-loaded data (same load as Full Name, First Name, etc.) — no independent fetch, no separate loading phase. |
-| loading | E4 Oyez Speaker ID field | 🚫 dismissed | Same reasoning as E3. |
-| error | E3 Corpus Display Name field | 🚫 dismissed | Read-only `<output>`, no submit path, no independent request that can fail — any page-load failure is the existing, unchanged person-page load-error handling, out of this phase's scope. |
-| error | E4 Oyez Speaker ID field | 🚫 dismissed | Same reasoning as E3. |
-| partial | E3 Corpus Display Name field | 🚫 dismissed | A single scalar string field is either present or blank — there is no partially-populated state for one field. |
-| partial | E4 Oyez Speaker ID field | 🚫 dismissed | Same reasoning as E3. |
-| long-text | E3 Corpus Display Name field | ✅ covered | Longest corpus display names (e.g. "Oliver W. Holmes, Jr.") wrap naturally within the existing readout box's padding — same untruncated wrap behavior as Full Name today; no truncation logic introduced. |
-| long-text | E4 Oyez Speaker ID field | ✅ covered | Slug-form ids (e.g. `j__brockholst_livingston`) are bounded in length by the corpus's own naming convention; same natural-wrap treatment, no truncation. |
-| loading | E2 Reset progress status line | 🚫 dismissed | Not an independent element — it is E1's own loading-state content; probing it separately would double-count the same consideration. |
-| error | E2 Reset progress status line | 🚫 dismissed | The progress line never itself errors; a failure transitions E1 out of the Running state entirely into the Error state. |
-| destructive-confirm *(bespoke, not in the closed 8-category taxonomy — carried forward for continuity with `43-UI-SPEC.md`)* | E1 Reset to Fixture control | ✅ covered | Unchanged from `43-UI-SPEC.md` — two-step inline Confirm/Cancel, full wipe-scope statement before the destructive action runs. |
-| zero-one-many | E1 Reset to Fixture control | 🚫 dismissed | Not a collection — always exactly one control; unchanged from `43-UI-SPEC.md`. |
+Empty-state and error-state **copy** lives in `## Copywriting Contract` above; these rows cover
+shape-rooted **state** and reference that copy rather than restating it.
 
-<!-- Dismissed rows are `resolved` status per the shared probe-core model (reason required,
-     audit trail preserved) but are NOT lifted into must_haves.truths — only ✅ covered
-     (explicit) and 🧪 backstop rows lift; ⚠ unresolved would lift as a planner assumption. -->
+| Element | Category | Status | Truth / Reason |
+|---------|----------|--------|----------------|
+| E1 | `loading` | ✅ resolved (explicit) | Running state reuses the existing flex row verbatim — same `◌` spinner glyph and animation, same `--font-size-body` / `--color-text-secondary` styling, same position. Only the text content swaps in place, through five states, with no layout shift. |
+| E1 | `error` | ✅ resolved (explicit) | Four outcomes per D-14, each driven by a follow-up re-read of fixture state rather than by which code path failed: full success (no error — existing Success markup), partial reseed, inconclusive re-read, environment refusal. Same position and `role="alert"` treatment as today, `--color-destructive` at `--font-size-caption`. |
+| E1 | `long-text` | ✅ resolved (explicit) | Every string on this control is a fixed literal in the Copywriting Contract — the CTA label, the two confirm-step labels, and the four error strings. No interpolated value can lengthen them; the alert region wraps at caption size with no truncation. |
+| E2 | `loading` | 🚫 dismissed | Not an independent element — the status line IS E1's loading-state content. Probing it separately double-counts the consideration already resolved at E1\|loading. |
+| E2 | `error` | 🚫 dismissed | The progress line never itself errors. A failure transitions E1 out of the Running state entirely, replacing the line with the Error state resolved at E1\|error. |
+| E2 | `overflow` | ✅ resolved (explicit) | The five progress strings are fixed literals of near-identical length ("Seeding justices…", "Reseeding fixture N of 4…"). The row wraps within the existing Dev Tools card padding; no scroll, clip, or truncation path is introduced. |
+| E2 | `long-text` | ✅ resolved (explicit) | Same fixed-literal set as E2\|overflow — the only variable is the single digit N in "fixture N of 4", bounded at 4 by D-16's declaration order. No user or corpus data reaches this line. |
+| E3 | `empty` | ✅ resolved (explicit) | A blank `display_name` renders the literal "Not in corpus" in `--color-text-secondary`, italic — identical treatment to the existing Full Name N/A state. This is a normal and expected value (advocates, and per D-04 any justice not yet carried in the corpus), not an error. |
+| E3 | `loading` | 🚫 dismissed | Rendered synchronously from the person page's own server load, the same load that already supplies Full Name and the Name Parts inputs. No independent fetch, so no separate loading phase exists to contract. |
+| E3 | `error` | 🚫 dismissed | A read-only `<output>` with no submit path and no independent request that can fail — `display_name` is never added to `PersonUpdate`'s allow-list. Any page-load failure is the existing, unchanged person-page load-error handling, out of this phase's scope. |
+| E3 | `partial` | 🚫 dismissed | A single scalar string field is either present or blank. There is no partially-populated state for one field — the blank case is resolved at E3\|empty. |
+| E3 | `overflow` | ✅ resolved (explicit) | The value box wraps naturally within its `var(--space-sm) var(--space-md)` padding, exactly as the existing Full Name readout does. No max-height, no scroll, and no clip is introduced. |
+| E3 | `long-text` | ✅ resolved (explicit) | The longest corpus display names (e.g. "Oliver W. Holmes, Jr.") wrap untruncated inside the readout box — the same behaviour Full Name already has today. No truncation or ellipsis logic is added. |
+| E4 | `empty` | ✅ resolved (explicit) | A blank `oyez_speaker_id` renders "Not in corpus" in the same italic secondary treatment as E3. The identical wording is deliberate: both fields are blank for exactly the same reason, and the operator should read them as one fact, not two. |
+| E4 | `loading` | 🚫 dismissed | Same as E3\|loading — rendered synchronously from the page's server-loaded person data, with no independent fetch. |
+| E4 | `error` | 🚫 dismissed | Same as E3\|error — a read-only `<output>`, never added to `PersonUpdate`'s allow-list, with no submit path or independent request that can fail. |
+| E4 | `partial` | 🚫 dismissed | Same as E3\|partial — a single scalar identifier is present or blank; the blank case is resolved at E4\|empty. |
+| E4 | `overflow` | ✅ resolved (explicit) | Same readout box and padding as E3, wrapping naturally with no scroll or clip. |
+| E4 | `long-text` | ✅ resolved (explicit) | Slug-form ids (e.g. `j__brockholst_livingston`) are bounded in length by the corpus's own naming convention and wrap naturally in the readout box. No truncation is introduced. |
+
+<!-- Lift rule (plan-phase): ✅ resolved/explicit rows lift into must_haves.truths as written;
+     🧪 resolved/backstop rows lift as { statement, verification: backstop }; ⚠ unresolved rows
+     lift as planner assumptions. 🚫 dismissed rows are resolved with a reason (audit trail) and
+     do NOT lift. -->
 
 ---
 
@@ -238,11 +257,12 @@ Not applicable — no shadcn, no component registry used by this phase.
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
-- [ ] Dimension 5 Spacing: PASS
-- [ ] Dimension 6 Registry Safety: PASS
+- [x] Dimension 1 Copywriting: PASS
+- [x] Dimension 2 Visuals: PASS
+- [x] Dimension 3 Color: PASS
+- [x] Dimension 4 Typography: PASS
+- [x] Dimension 5 Spacing: PASS
+- [x] Dimension 6 Registry Safety: PASS
+- [x] Dimension 7 Inventory Provenance: PASS (no inventory — `Tool: none`)
 
-**Approval:** pending
+**Approval:** approved — gsd-ui-checker, 2026-09-24, 7/7 dimensions PASS, 0 FLAGs.

@@ -161,3 +161,61 @@ async def test_get_person_returns_display_name_and_oyez_speaker_id(
         assert body["oyez_speaker_id"] is None
     finally:
         await client.delete(f"/api/admin/people/{person_id}", headers=headers)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_get_person_returns_the_actual_corpus_values_not_null(
+    client: AsyncClient,
+) -> None:
+    """GET returns the STORED display_name and oyez_speaker_id, not None.
+
+    The sibling test above asserts both fields are null for a person with no
+    corpus join. That assertion holds whether or not the read path carries the
+    values, so it cannot fail while the read path is broken — and it did not:
+    get_person_detail() omitted both keys from the dict the router expands into
+    PersonDetail(**p), which defaults Optional fields to None, so the admin page
+    rendered "Not in corpus" for every person regardless of what the database
+    held. This test pins the other half: with values PRESENT in the row, the
+    response must carry them.
+    """
+    from sqlalchemy import text
+
+    from api.core.database import AsyncSessionLocal
+
+    headers = _admin_headers()
+    create_res = await client.post(
+        "/api/admin/people",
+        headers=headers,
+        json={"is_justice": True, "last_name": "CorpusValueFlowTest"},
+    )
+    assert create_res.status_code == 201
+    person_id = create_res.json()["id"]
+
+    # Both columns are read-only through the API by design (D-09/D-10), so the
+    # only way to arrange a corpus-joined row is to write them directly — which
+    # is exactly what the importer does.
+    async with AsyncSessionLocal() as session:
+        await session.execute(
+            text(
+                "UPDATE people SET display_name = :dn, oyez_speaker_id = :oid "
+                "WHERE id = :pid"
+            ),
+            {
+                "dn": "Corpus V. Flowtest",
+                "oid": "j__corpus_value_flow_test",
+                "pid": person_id,
+            },
+        )
+        await session.commit()
+
+    try:
+        response = await client.get(
+            f"/api/admin/people/{person_id}", headers=headers
+        )
+        assert response.status_code == 200
+        body = response.json()
+        assert body["display_name"] == "Corpus V. Flowtest"
+        assert body["oyez_speaker_id"] == "j__corpus_value_flow_test"
+    finally:
+        await client.delete(f"/api/admin/people/{person_id}", headers=headers)

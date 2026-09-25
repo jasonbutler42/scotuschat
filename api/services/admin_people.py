@@ -449,6 +449,18 @@ async def get_person_detail(db: AsyncSession, person_id: int) -> dict | None:
         # Phase 39 addition — migration 0023: must be explicit, same
         # Pitfall 2 discipline as birthdate above.
         "death_date": person.death_date.isoformat() if person.death_date else None,
+        # Phase 52-03 additions (D-09/D-10) — migration 0032. Same Pitfall 2
+        # discipline as every field above: PersonDetail declares both as
+        # Optional[str] = None, so omitting them here does NOT raise — the
+        # router's PersonDetail(**p) silently defaults them to None and the
+        # admin page renders "Not in corpus" for every person regardless of
+        # what the database holds. Both are read-only (absent from
+        # PersonUpdate's allow-list by design); read-only means never WRITTEN
+        # by a client, not never READ.
+        # NOTE: deliberately NOT added to list_people() above — D-11 keeps the
+        # People directory listing on full_name alone.
+        "display_name": person.display_name,
+        "oyez_speaker_id": person.oyez_speaker_id,
     }
 
 

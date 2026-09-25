@@ -1,21 +1,14 @@
 ---
-status: testing
+status: partial
 phase: 52-justice-identity
 source: [52-VERIFICATION.md]
 started: 2026-09-25T16:05:00Z
-updated: 2026-09-25T17:05:00Z
+updated: 2026-09-25T18:30:00Z
 ---
 
 ## Current Test
 
-number: 2
-name: Live reset-to-fixture run — progress line and evidence-based outcomes
-expected: |
-  Status line advances Seeding justices… → Reseeding fixture 1 of 4… → …4 of 4,
-  in place, never leading reality; Success state renders on completion; the People
-  directory shows the full justice roster; a mid-reset failure shows the
-  evidence-based partial/inconclusive message, not the blanket corruption claim.
-awaiting: user response
+[testing paused — 2 items outstanding: test 2 (issue, open) and test 3 (pending)]
 
 ## Tests
 
@@ -47,7 +40,43 @@ note: |
 
 ### 2. Live reset-to-fixture run — progress line and evidence-based outcomes
 expected: Run one real reset against the dev database: open /admin, run Reset to Fixture through its two-step confirm, watch the status line for the whole run, then open the People directory. Optionally kill the FastAPI process mid-reset to observe the partial-reseed message. The status line advances Seeding justices… → Reseeding fixture 1 of 4… → …4 of 4, in place, never leading reality; the Success state renders on completion; the People directory shows the full justice roster; a mid-reset failure shows the evidence-based partial/inconclusive message, not the blanket corruption claim.
-result: [pending]
+result: issue
+reported: "I really need to restart my machine so don't do anything else but log that this is the message I'm seeing: Still reseeding. This request stopped listening before the reset finished, but the server is still working — the progress line below is live. Nothing is wrong with the database; wait for it to finish. I don't see any progress line."
+severity: major
+run: 2 of 2 (second run, after fix a59a67b0f)
+
+  RUN 1 (before a59a67b0f) — FIXED, verified in code but NOT re-verified live:
+    Showed RESET_PARTIAL_ERROR ("do not use it until you run Reset to Fixture
+    again") over a database that was in fact complete (132 people, all four
+    fixtures in their expected end states, verified directly). Cause:
+    classifyFixtureStateOutcome read `fixtures` and ignored `progress`, so a
+    still-running reset was indistinguishable from a failed one. Fixed by adding
+    the `in-progress` outcome, checked BEFORE the fixture comparison; classifier
+    extracted to app/src/lib/admin/resetOutcome.js with 6 unit tests
+    (app/tests/reset-outcome-classifier.test.mjs), RESET_ABORT_TIMEOUT_MS raised
+    180s -> 280s, 52-UI-SPEC amended four outcomes -> five.
+
+  RUN 2 (this report) — OPEN:
+    The new still-running notice renders correctly, so the in-progress branch IS
+    being reached and the copy is right. But the operator reports NO progress
+    line visible beneath it. The notice's own text promises "the progress line
+    below is live", so the screen currently contradicts itself — the same class
+    of defect as run 1, one layer up.
+    NOT INVESTIGATED — operator had to restart. No diagnosis has been performed
+    and none of the below is verified; it is a starting point, not a finding.
+    Places to look first:
+      - app/src/routes/admin/+page.svelte, the use:enhance result handler: the
+        still-running branch returns before `resetRunning = false` and before
+        stopResetPolling(), so polling SHOULD continue — confirm it actually does.
+      - `await update()` in that branch applies the form result; check whether it
+        re-renders in a way that drops the {#if resetRunning} block, or whether
+        the error and Running blocks are mutually exclusive in the template.
+      - pollResetProgress() only writes resetProgressText when the poll returns a
+        RECOGNISED step token; a failing poll or an unrecognised token silently
+        leaves the last text. If the first poll never succeeded there may be no
+        text to show at all.
+      - Whether the FastAPI process was still alive to answer
+        /admin/dev-fixture-state during the run.
 
 ### 3. Admin Resolve card — JH rendering and unresolved-row avatar
 expected: Open an admin pipeline job's Resolve card for an argument with a bench row whose person has a name suffix. Confirm the avatar circle shows JH for John Marshall Harlan, II (not the suffix letter JI), and confirm an unresolved row's avatar looks exactly as it did before this change.
@@ -57,9 +86,19 @@ result: [pending]
 
 total: 3
 passed: 1
-issues: 0
-pending: 2
+issues: 1
+pending: 1
 skipped: 0
 blocked: 0
 
 ## Gaps
+
+- truth: "The Running state reports per-fixture progress so a multi-minute destructive operation is distinguishable from a hang (D-15)"
+  status: failed
+  reason: "User reported: I don't see any progress line. The still-running notice renders and states 'the progress line below is live', but no progress line is visible."
+  severity: major
+  test: 2
+  root_cause: ""
+  artifacts: []
+  missing: []
+  debug_session: ""

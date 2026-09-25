@@ -410,7 +410,7 @@
 						aria-labelledby="display_name_label display_name_explanation"
 						aria-live="polite"
 						style="display: block; width: 100%; background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) var(--space-md); font-size: var(--font-size-body); box-sizing: border-box; color: {data.person.display_name ? 'var(--color-text-primary)' : 'var(--color-text-secondary)'}; font-style: {data.person.display_name ? 'normal' : 'italic'};"
-					>{data.person.display_name ?? 'Not in corpus'}</output>
+					>{data.person.display_name ?? 'Uses Full Name'}</output>
 				</div>
 
 				<!-- Oyez Speaker ID — server-derived, read-only (D-10, migration

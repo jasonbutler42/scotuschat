@@ -107,7 +107,7 @@ Additional semantic tokens this phase's deltas use (all pre-existing, none new):
 |-------|------|
 | `--color-border` | Border on the two new read-only field boxes (identical treatment to the existing Full Name readout) |
 | `--color-text-primary` | Field values when populated (e.g. `Byron R. White`, `j__byron_r_white`) |
-| `--color-text-secondary` | Field labels/explanations; the "Not in corpus" empty-value state (italic, per the existing Full Name N/A convention); the reset progress status line text |
+| `--color-text-secondary` | Field labels/explanations; the empty-value states ("Uses Full Name" / "Not in corpus", italic, per the existing Full Name N/A convention); the reset progress status line text |
 | `--color-status-warning` | "DEV ONLY" badge — unchanged |
 | `--color-status-published` | "✓ Reset complete" badge — unchanged, and reused (not re-styled) for the "re-read confirms full success" error-recovery path below |
 
@@ -170,10 +170,10 @@ direct fix for the false-alarm case the folded todo identified.
 | Primary CTA (unchanged) | "Reset to Fixture" |
 | Corpus Display Name — label | "Corpus Display Name" |
 | Corpus Display Name — explanation | "The corpus's own name form. Drives utterance attribution; falls back to Full Name when blank." |
-| Corpus Display Name — empty value | "Not in corpus" — rendered in `--color-text-secondary`, italic, identical treatment to the existing Full Name "N/A" state |
+| Corpus Display Name — empty value | "Uses Full Name" — rendered in `--color-text-secondary`, italic, identical treatment to the existing Full Name "N/A" state |
 | Oyez Speaker ID — label | "Oyez Speaker ID" |
 | Oyez Speaker ID — explanation | "The corpus join key. Blank means this person has not been matched to a corpus speaker." |
-| Oyez Speaker ID — empty value | "Not in corpus" — same treatment as above (identical wording is deliberate: both fields are blank for exactly the same reason, and the operator should read them as one fact, not two) |
+| Oyez Speaker ID — empty value | "Not in corpus" — same italic secondary treatment, DIFFERENT wording from Corpus Display Name above, because the two fields are blank for different reasons (see the E3/E4 correction below) |
 | Reset — Running, step 1 | "Seeding justices…" |
 | Reset — Running, steps 2–5 | "Reseeding fixture 1 of 4…" / "Reseeding fixture 2 of 4…" / "Reseeding fixture 3 of 4…" / "Reseeding fixture 4 of 4…" (declaration order, per D-15/D-16 — justices seed once, after TRUNCATE and before the four fixture reseeds) |
 | Reset — Error, re-read confirms full success | **No error is shown.** Render the existing Success state verbatim (badge + 4-fixture list) — the transient request-level failure is not surfaced to the operator once the follow-up read proves the database is fully and correctly reseeded. |
@@ -224,13 +224,13 @@ shape-rooted **state** and reference that copy rather than restating it.
 | E2 | `error` | 🚫 dismissed | The progress line never itself errors. A failure transitions E1 out of the Running state entirely, replacing the line with the Error state resolved at E1\|error. |
 | E2 | `overflow` | ✅ resolved (explicit) | The five progress strings are fixed literals of near-identical length ("Seeding justices…", "Reseeding fixture N of 4…"). The row wraps within the existing Dev Tools card padding; no scroll, clip, or truncation path is introduced. |
 | E2 | `long-text` | ✅ resolved (explicit) | Same fixed-literal set as E2\|overflow — the only variable is the single digit N in "fixture N of 4", bounded at 4 by D-16's declaration order. No user or corpus data reaches this line. |
-| E3 | `empty` | ✅ resolved (explicit) | A blank `display_name` renders the literal "Not in corpus" in `--color-text-secondary`, italic — identical treatment to the existing Full Name N/A state. This is a normal and expected value (advocates, and per D-04 any justice not yet carried in the corpus), not an error. |
+| E3 | `empty` | ✅ resolved (CORRECTED 2026-09-25) | A blank `display_name` renders the literal "Uses Full Name" in `--color-text-secondary`, italic — same treatment as the existing Full Name N/A state. This is a normal and expected value (advocates, and per D-04 any justice not yet carried in the corpus), not an error. **Corrected during UAT:** the original copy said "Not in corpus", which is false for advocates — they ARE corpus speakers and carry an `oyez_speaker_id`; they simply have no corpus display-name form, because `justice_identity_mapping.csv` covers only the 114 justices. "Uses Full Name" is true in every blank case and matches the help text already under the field. |
 | E3 | `loading` | 🚫 dismissed | Rendered synchronously from the person page's own server load, the same load that already supplies Full Name and the Name Parts inputs. No independent fetch, so no separate loading phase exists to contract. |
 | E3 | `error` | 🚫 dismissed | A read-only `<output>` with no submit path and no independent request that can fail — `display_name` is never added to `PersonUpdate`'s allow-list. Any page-load failure is the existing, unchanged person-page load-error handling, out of this phase's scope. |
 | E3 | `partial` | 🚫 dismissed | A single scalar string field is either present or blank. There is no partially-populated state for one field — the blank case is resolved at E3\|empty. |
 | E3 | `overflow` | ✅ resolved (explicit) | The value box wraps naturally within its `var(--space-sm) var(--space-md)` padding, exactly as the existing Full Name readout does. No max-height, no scroll, and no clip is introduced. |
 | E3 | `long-text` | ✅ resolved (explicit) | The longest corpus display names (e.g. "Oliver W. Holmes, Jr.") wrap untruncated inside the readout box — the same behaviour Full Name already has today. No truncation or ellipsis logic is added. |
-| E4 | `empty` | ✅ resolved (explicit) | A blank `oyez_speaker_id` renders "Not in corpus" in the same italic secondary treatment as E3. The identical wording is deliberate: both fields are blank for exactly the same reason, and the operator should read them as one fact, not two. |
+| E4 | `empty` | ✅ resolved (CORRECTED 2026-09-25) | A blank `oyez_speaker_id` renders "Not in corpus" in the same italic secondary treatment as E3, and that wording is correct here: a blank join key genuinely does mean unmatched. **Corrected during UAT:** the original rationale — "both fields are blank for exactly the same reason, and the operator should read them as one fact, not two" — was FALSE. Measured against the live database: 114 people have both fields, 16 (advocates) have an `oyez_speaker_id` but no `display_name`, and 2 (D-04 Barrett/Jackson) have neither. For 16 of 132 people the identical wording made the screen contradict itself — one row claiming "not in corpus" directly above a row showing a corpus id. They are two facts, not one. |
 | E4 | `loading` | 🚫 dismissed | Same as E3\|loading — rendered synchronously from the page's server-loaded person data, with no independent fetch. |
 | E4 | `error` | 🚫 dismissed | Same as E3\|error — a read-only `<output>`, never added to `PersonUpdate`'s allow-list, with no submit path or independent request that can fail. |
 | E4 | `partial` | 🚫 dismissed | Same as E3\|partial — a single scalar identifier is present or blank; the blank case is resolved at E4\|empty. |

@@ -9,3 +9,28 @@
 *.jsonl
 *.json
 *.csv
+
+# EXCEPTION — justice_identity_mapping.csv is NOT one of the above.
+#
+# The blanket rules above exist for the ConvoKit/Oyez source files, which are
+# operator-supplied and far too large for git (utterances.jsonl alone is ~900MB).
+# justice_identity_mapping.csv is neither: it is a 6KB *derived, hand-verified*
+# artifact produced during Phase 52-01, and the `*.csv` rule swept it up by
+# accident.
+#
+# It must be tracked, because:
+#   1. reset_to_fixture's pre-flight hard-requires it (api/services/admin_dev.py,
+#      _require_corpus_files) — without it in the repo, a fresh clone cannot build
+#      the fixture at all.
+#   2. NOTHING regenerates it. import_justices_csv.py consumes it and
+#      pipeline/tests/test_justice_identity_mapping.py validates it; no generator
+#      exists, and 52-01 recorded that the middle-initial reconstruction rule was
+#      deliberately rejected as a source of truth (88% accurate) and reused only
+#      as a verifier.
+#   3. Four rows carry operator judgment no matching logic can reproduce — the two
+#      Harlans, Salmon P. Chase and Henry Brockholst Livingston were resolved by
+#      hand from tenure-date evidence (52-CONTEXT.md D-01).
+#
+# Losing this file means redoing that hand-resolution. CLAUDE.md's "all derived
+# data can be regenerated" does not hold for it, so git is where it lives.
+!justice_identity_mapping.csv

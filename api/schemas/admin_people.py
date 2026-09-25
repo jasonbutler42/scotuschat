@@ -404,6 +404,13 @@ class ResolveRow(BaseModel):
 
     editable is false once the linked argument has left the 'candidate' status —
     the Resolve card renders every row read-only in that state.
+
+    initials is a server-derived, read-only avatar glyph — never accepted on
+    any write path (there is no ResolveRow write schema; writes go through
+    ResolveRowUpdate, which does not and must not carry this field). Computed
+    by api.domain.person_names.derive_initials from the same Person row
+    full_name/photo_url are already sourced from; null for an unresolved row
+    (person_id is None), matching the existing '?' / empty-avatar path.
     """
 
     participant_id: int
@@ -411,6 +418,7 @@ class ResolveRow(BaseModel):
     person_id: Optional[int] = None
     full_name: Optional[str] = None
     photo_url: Optional[str] = None
+    initials: Optional[str] = None
     side: SideEnum
     argument_role: Optional[str] = None
     descriptor: Optional[str] = None

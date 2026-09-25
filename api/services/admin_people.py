@@ -28,7 +28,11 @@ from sqlalchemy import and_, delete, exists, func as sqlfunc, not_, or_, select,
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.domain.authority import WriteDecision
-from api.domain.person_names import format_full_name, prepare_person_name
+from api.domain.person_names import (
+    derive_initials,
+    format_full_name,
+    prepare_person_name,
+)
 from api.models.models import (
     AdminJob,
     Argument,
@@ -1027,6 +1031,9 @@ async def list_resolve_rows_for_job(db: AsyncSession, job_id: int) -> list[dict]
             ArgumentParticipant,
             Person.full_name,
             Person.photo_url,
+            Person.first_name,
+            Person.last_name,
+            Person.name_suffix,
         )
         .outerjoin(Person, ArgumentParticipant.person_id == Person.id)
         .where(ArgumentParticipant.argument_id == argument.id)
@@ -1038,7 +1045,7 @@ async def list_resolve_rows_for_job(db: AsyncSession, job_id: int) -> list[dict]
     # avoiding an N+1 lookup per row (mirrors speakers.get_argument_speakers).
     bench_person_ids = [
         p.person_id
-        for p, _full_name, _photo_url in participant_rows
+        for p, _full_name, _photo_url, _first_name, _last_name, _name_suffix in participant_rows
         if p.side == SideEnum.BENCH and p.person_id is not None
     ]
     tenures_by_person: dict[int, list[CourtTenure]] = {}
@@ -1050,7 +1057,25 @@ async def list_resolve_rows_for_job(db: AsyncSession, job_id: int) -> list[dict]
             tenures_by_person.setdefault(t.person_id, []).append(t)
 
     rows: list[dict] = []
-    for participant, full_name, photo_url in participant_rows:
+    for (
+        participant,
+        full_name,
+        photo_url,
+        first_name,
+        last_name,
+        name_suffix,
+    ) in participant_rows:
+        # D-12/JUSTICE-06 (52-06): server-computed avatar-initials glyph from
+        # the same Person row full_name/photo_url are already sourced from —
+        # no second query, no client-side splitter. Null for an unresolved
+        # row: the outer join leaves every argument below None/blank when
+        # participant.person_id is None, which this function maps to None.
+        initials = derive_initials(
+            first_name=first_name,
+            last_name=last_name,
+            name_suffix=name_suffix,
+            full_name=full_name,
+        )
         if participant.side == SideEnum.BENCH:
             bench_role, missing_tenure = (
                 _bench_role_and_missing_tenure(
@@ -1072,6 +1097,7 @@ async def list_resolve_rows_for_job(db: AsyncSession, job_id: int) -> list[dict]
                     "person_id": participant.person_id,
                     "full_name": full_name,
                     "photo_url": photo_url,
+                    "initials": initials,
                     "side": participant.side.value,
                     "argument_role": bench_role,
                     "descriptor": None,
@@ -1090,6 +1116,7 @@ async def list_resolve_rows_for_job(db: AsyncSession, job_id: int) -> list[dict]
                     "person_id": participant.person_id,
                     "full_name": full_name,
                     "photo_url": photo_url,
+                    "initials": initials,
                     "side": participant.side.value,
                     "argument_role": ADVOCATE_LABEL_MAP.get(participant.side),
                     "descriptor": participant.descriptor,

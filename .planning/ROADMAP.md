@@ -214,12 +214,12 @@ Active milestone: **v1.9 The Site Becomes Complete** (Phases 52–58). Details f
   - Closes the Person-dedup item carried since v1.7 Phase 42. It is not four bad rows; it is 49 of 114, visible as four only because four fixtures are imported.
   - Per the reseed-don't-migrate doctrine, existing duplicates are cleared by the reset, not by a backfill migration.
 
-**Plans**: 5 plans
+**Plans**: 1/5 plans executed
 
 Plans:
 **Wave 1**
 
-- [ ] 52-01-PLAN.md — Tracer: the identity spine — verified mapping artifact, migration 0032 (`display_name` + partial unique index), importer keyed on `oyez_speaker_id`, `speaker_name` COALESCE
+- [x] 52-01-PLAN.md — Tracer: the identity spine — verified mapping artifact, migration 0032 (`display_name` + partial unique index), importer keyed on `oyez_speaker_id`, `speaker_name` COALESCE
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -415,7 +415,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 52. Justice Identity | 0/? | Not started | - |
+| 52. Justice Identity | 1/5 | In Progress|  |
 | 53. Undetermined Speakers & Marker Normalisation | 0/? | Not started | - |
 | 54. Publishing at Scale & Verification Debt | 0/? | Not started | - |
 | 54.1. Justice Portraits & Biographical Enrichment (INSERTED) | 0/? | Not started | - |

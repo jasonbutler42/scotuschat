@@ -4,17 +4,17 @@ milestone: v1.9
 milestone_name: The Site Becomes Complete
 current_phase: 52
 current_phase_name: Justice Identity
-status: roadmap_complete
-stopped_at: Phase 52 UI-SPEC approved; Phase 54.1 inserted; portrait set validated
-last_updated: "2026-09-24T23:05:18.104Z"
-last_activity: 2026-09-23
-last_activity_desc: v1.9 roadmap created (7 phases, 52–58; 40/40 requirements mapped)
-state_head: 93a2641382299c1287b5fbd662af3666c36d8465
+status: executing
+stopped_at: Completed 52-01-PLAN.md
+last_updated: "2026-09-25T11:43:40.434Z"
+last_activity: 2026-09-25
+last_activity_desc: Phase 52 execution started
+state_head: 70e31f1d057c458c9918abcdaead752731363417
 progress:
   total_phases: 8
   completed_phases: 0
   total_plans: 5
-  completed_plans: 0
+  completed_plans: 1
   percent: 0
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-09-23 after the v1.8 milestone close)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
 
-**Current focus:** v1.9 The Site Becomes Complete — make everything true that has to be true before
+**Current focus:** Phase 52 — Justice Identity
 the site can go live (correct data, the full corpus published, a finished public surface), so that
 v2.0 is purely the deployment.
 
@@ -38,10 +38,10 @@ phase-numbered test modules, ~2:1 test:code as a guideline. Both govern all late
 
 ## Current Position
 
-Phase: 52 (Justice Identity) — READY TO EXECUTE
-Plan: —
-Status: Roadmap complete; ready for `/gsd-plan-phase 52`
-Last activity: 2026-09-23 — v1.9 roadmap created (7 phases, 52–58; 40/40 requirements mapped)
+Phase: 52 (Justice Identity) — EXECUTING
+Plan: 2 of 5
+Status: Ready to execute
+Last activity: 2026-09-25 — Phase 52 execution started
 
 Progress: [░░░░░░░░░░] 0% (0/7 phases)
 
@@ -72,6 +72,12 @@ the first client-side third-party script and the first `PUBLIC_` env var this co
 - v1.7: 6 phases, 29 plans, 18 days (2026-07-29 → 2026-08-15)
 - v1.8: 5 phases, 45 plans, 120 tasks, 37 days (2026-08-17 → 2026-09-23), 368 commits
 - v1.9: 8 phases, 46 requirements — started 2026-09-23 (Phase 54.1 inserted 2026-09-24)
+
+**Per-Plan Metrics:**
+
+| Plan | Duration | Tasks | Files |
+|------|----------|-------|-------|
+| Phase 52 P01 | 46min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -260,11 +266,16 @@ suppress by design, so the section was moved verbatim to
 
 ## Session Continuity
 
-Last session: 2026-09-24T22:12:47.913Z
-Stopped at: Phase 52 UI-SPEC approved; Phase 54.1 inserted; portrait set validated
-Resume file: .planning/phases/52-justice-identity/52-UI-SPEC.md
+Last session: 2026-09-25T11:43:40.082Z
+Stopped at: Completed 52-01-PLAN.md
+Resume file: None
 
 ## Operator Next Steps
 
 - Review `.planning/ROADMAP.md` (Phases 52–58) and `.planning/REQUIREMENTS.md` traceability
 - Then `/gsd-plan-phase 52` to plan Justice Identity
+
+## Decisions
+
+- [Phase 52]: oyez_speaker_id promoted from unused side-column to primary justice identity key (Phase 52-01); full_name equality demoted to fallback for unmapped D-04 rows.
+- [Phase 52]: Person.display_name is written by plain assignment, never through the apply_person_value_change authority ladder -- D-09 keeps it off PersonUpdate's allow-list, so no operator edit can ever exist to arbitrate against.

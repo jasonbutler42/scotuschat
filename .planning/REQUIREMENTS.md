@@ -13,11 +13,11 @@ Requirements for milestone v1.9. Each maps to exactly one roadmap phase.
 
 ### Justice Identity (JUSTICE)
 
-- [ ] **JUSTICE-01**: A verified per-justice mapping joins the CSV tenure data to the corpus by `oyez_speaker_id`, covering all 114 corpus justices, stored as data rather than derived by name matching
-- [ ] **JUSTICE-02**: `import_justices_csv` writes `oyez_speaker_id` from that mapping, so `import_convokit::_resolve_person` matches on its first and preferred key
+- [x] **JUSTICE-01**: A verified per-justice mapping joins the CSV tenure data to the corpus by `oyez_speaker_id`, covering all 114 corpus justices, stored as data rather than derived by name matching
+- [x] **JUSTICE-02**: `import_justices_csv` writes `oyez_speaker_id` from that mapping, so `import_convokit::_resolve_person` matches on its first and preferred key
 - [ ] **JUSTICE-03**: A `people.display_name` column carries the corpus name form; the bio card shows `full_name` (the fuller CSV form) and utterance attribution shows `display_name`, falling back to `full_name` when null
 - [ ] **JUSTICE-04**: `reset_to_fixture` seeds all justices after its TRUNCATE, so they persist through every fixture reset
-- [ ] **JUSTICE-05**: A partial unique index on `people.oyez_speaker_id` makes duplicate justice rows structurally impossible
+- [x] **JUSTICE-05**: A partial unique index on `people.oyez_speaker_id` makes duplicate justice rows structurally impossible
 - [ ] **JUSTICE-06**: Avatar initials derive from first and last *name*, skipping suffixes — "John Marshall Harlan, II" yields JH, not JI
 
 ### Undetermined Speakers (SPEAKER)
@@ -117,11 +117,11 @@ Populated during roadmap creation (2026-09-23). Every v1 requirement maps to exa
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| JUSTICE-01 | Phase 52 | Pending |
-| JUSTICE-02 | Phase 52 | Pending |
+| JUSTICE-01 | Phase 52 | Complete |
+| JUSTICE-02 | Phase 52 | Complete |
 | JUSTICE-03 | Phase 52 | Pending |
 | JUSTICE-04 | Phase 52 | Pending |
-| JUSTICE-05 | Phase 52 | Pending |
+| JUSTICE-05 | Phase 52 | Complete |
 | JUSTICE-06 | Phase 52 | Pending |
 | SPEAKER-01 | Phase 53 | Pending |
 | SPEAKER-02 | Phase 53 | Pending |

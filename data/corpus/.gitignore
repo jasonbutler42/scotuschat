@@ -34,3 +34,18 @@
 # Losing this file means redoing that hand-resolution. CLAUDE.md's "all derived
 # data can be regenerated" does not hold for it, so git is where it lives.
 !justice_identity_mapping.csv
+
+# EXCEPTION — supreme_court_justices_sections.csv is also required, and also small.
+#
+# Unlike the mapping above this IS operator-supplied source data rather than a
+# derived artifact, so it is tracked for a different reason: reset_to_fixture's
+# pre-flight requires it too (_require_corpus_files lists both justice CSVs), and
+# at 12KB of public-record tenure data — two sections, 11 columns, appointment and
+# service dates for every justice — it carries none of the size problem the
+# ConvoKit files have.
+#
+# With both CSVs tracked, a fresh clone can seed the justice bench. The four large
+# ConvoKit files above are still required for the full corpus import, so a clone
+# alone cannot rebuild the ENTIRE fixture — but the bench half is reproducible,
+# which is the half that carries hand-resolved operator judgment.
+!supreme_court_justices_sections.csv

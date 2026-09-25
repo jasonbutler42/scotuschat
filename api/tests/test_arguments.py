@@ -440,3 +440,174 @@ async def test_person_detail_never_leaks_trust_tier(
 
     body = response.json()
     assert_no_key_anywhere(body, "trust_tier", "GET /people/{person_id} response")
+
+
+# ---------------------------------------------------------------------------
+# Phase 52-02 (D-12): speaker_initials on GET /arguments/{id}/utterances
+# ---------------------------------------------------------------------------
+
+
+async def _seed_argument_with_one_utterance(
+    db_session,
+    *,
+    person_first_name: str | None,
+    person_last_name: str | None,
+    person_full_name: str,
+    resolved: bool,
+    raw_speaker_label: str | None,
+):
+    """Minimal Argument + lead Case + COMPLETED ImportRun + one Utterance,
+    calling get_argument_with_utterances directly (db_session, not the
+    HTTP client) — mirrors test_speakers_service.py's DB-backed pattern.
+    """
+    import datetime
+
+    from api.models.models import (
+        Argument,
+        ArgumentStatusEnum,
+        Case,
+        CaseArgument,
+        ImportMethod,
+        ImportRun,
+        ImportRunStatus,
+        ImportSource,
+        Person,
+        Role,
+        Utterance,
+    )
+
+    role = Role(name="Phase 52-02 Fixture Role")
+    db_session.add(role)
+    await db_session.flush()
+
+    person = Person(
+        full_name=person_full_name,
+        first_name=person_first_name,
+        last_name=person_last_name,
+        role_id=role.id,
+    )
+    db_session.add(person)
+    await db_session.flush()
+
+    arg = Argument(
+        status=ArgumentStatusEnum.PUBLISHED,
+        argued_date=datetime.date(2024, 1, 10),
+        published_at=datetime.datetime.now(datetime.timezone.utc),
+    )
+    db_session.add(arg)
+    await db_session.flush()
+
+    case = Case(
+        docket_number=f"52-02-TEST-{arg.id}",
+        docket_number_norm=f"52-02-test-{arg.id}",
+        case_name="Phase 52-02 Fixture Case",
+        term_year=2024,
+        slug=f"phase-52-02-fixture-case-{arg.id}",
+    )
+    db_session.add(case)
+    await db_session.flush()
+
+    db_session.add(CaseArgument(case_id=case.id, argument_id=arg.id, is_lead=True))
+
+    run = ImportRun(
+        argument_id=arg.id,
+        step="parse",
+        status=ImportRunStatus.COMPLETED,
+        source=ImportSource.PDF_PIPELINE,
+        method=ImportMethod.RULE_BASED,
+    )
+    db_session.add(run)
+    await db_session.flush()
+
+    db_session.add(
+        Utterance(
+            argument_id=arg.id,
+            import_run_id=run.id,
+            sequence=1,
+            raw_speaker_label=raw_speaker_label,
+            text="Fixture utterance text.",
+            person_id=person.id if resolved else None,
+        )
+    )
+    await db_session.flush()
+
+    return arg.id
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_speaker_initials_from_person_parts_when_resolved(db_session) -> None:
+    """A resolved utterance (person_id set) derives speaker_initials from the
+    Person's structured first_name/last_name — the JH fix path (D-12)."""
+    from api.services.arguments import get_argument_with_utterances
+
+    arg_id = await _seed_argument_with_one_utterance(
+        db_session,
+        person_first_name="John",
+        person_last_name="Harlan",
+        person_full_name="John Marshall Harlan, II",
+        resolved=True,
+        raw_speaker_label="JUSTICE HARLAN",
+    )
+
+    result = await get_argument_with_utterances(db_session, arg_id)
+
+    assert result is not None
+    utterances = result["utterances"]
+    assert len(utterances) == 1
+    assert utterances[0]["speaker_initials"] == "JH"
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_speaker_initials_falls_back_to_raw_speaker_label_when_unresolved(
+    db_session,
+) -> None:
+    """An unresolved utterance (person_id null) derives speaker_initials from
+    raw_speaker_label via the D-13 legacy fallback — never from the
+    coalesced speaker_name string."""
+    from api.services.arguments import get_argument_with_utterances
+
+    arg_id = await _seed_argument_with_one_utterance(
+        db_session,
+        person_first_name=None,
+        person_last_name=None,
+        person_full_name="Unused Person Full Name",
+        resolved=False,
+        raw_speaker_label="Oliver W. Holmes, Jr.",
+    )
+
+    result = await get_argument_with_utterances(db_session, arg_id)
+
+    assert result is not None
+    utterances = result["utterances"]
+    assert len(utterances) == 1
+    assert utterances[0]["person_id"] is None
+    assert utterances[0]["speaker_initials"] == "OH"
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_speaker_initials_null_when_both_person_and_label_absent(
+    db_session,
+) -> None:
+    """An utterance with no person_id and no raw_speaker_label yields a null
+    speaker_initials — never a fabricated letter (D-12 empty-data truth)."""
+    from api.services.arguments import get_argument_with_utterances
+
+    arg_id = await _seed_argument_with_one_utterance(
+        db_session,
+        person_first_name=None,
+        person_last_name=None,
+        person_full_name="Unused Person Full Name",
+        resolved=False,
+        raw_speaker_label=None,
+    )
+
+    result = await get_argument_with_utterances(db_session, arg_id)
+
+    assert result is not None
+    utterances = result["utterances"]
+    assert len(utterances) == 1
+    assert utterances[0]["person_id"] is None
+    assert utterances[0]["speaker_initials"] is None

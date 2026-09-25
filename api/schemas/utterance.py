@@ -33,6 +33,11 @@ class UtteranceResponse(BaseModel):
     import_run_id: int  # which parse run produced this row
     speaker_name: Optional[str] = None   # Resolved from people table
     speaker_role: Optional[str] = None   # Resolved from roles table
+    # D-12: server-computed from structured name parts (api.domain.person_names
+    # .derive_initials) — the client no longer parses a name string for the
+    # avatar glyph. Nullable because speaker_name itself is nullable when
+    # person_id is null.
+    speaker_initials: Optional[str] = None
 
     model_config = {"from_attributes": True}
 

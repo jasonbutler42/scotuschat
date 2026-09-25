@@ -23,6 +23,7 @@ from collections import defaultdict
 from sqlalchemy import distinct, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from api.domain.person_names import derive_initials
 from api.models.models import (
     Argument,
     ArgumentParticipant,
@@ -256,6 +257,14 @@ async def get_argument_speakers(
                 "bio_text": person.bio_text,
                 "tenure": str_tenures_by_person[person.id],
                 "side": side.value if side is not None else None,
+                # D-12: server-computed avatar-initials glyph from the same
+                # Person row already in hand — no second query.
+                "initials": derive_initials(
+                    first_name=person.first_name,
+                    last_name=person.last_name,
+                    name_suffix=person.name_suffix,
+                    full_name=person.full_name,
+                ),
             }
         )
 

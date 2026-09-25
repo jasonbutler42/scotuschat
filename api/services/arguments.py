@@ -17,6 +17,7 @@ PIPE-11 policy:
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from api.domain.person_names import derive_initials
 from api.models.models import (
     Argument,
     ArgumentStatusEnum,
@@ -241,6 +242,14 @@ async def get_argument_with_utterances(
                 Utterance,
                 func.coalesce(Person.display_name, Person.full_name).label("speaker_name"),
                 Role.name.label("speaker_role"),
+                # D-12: structured name parts for speaker_initials, computed
+                # in Python below rather than SQL. Person.full_name is
+                # labeled distinctly so it does not collide with the
+                # coalesced speaker_name label above.
+                Person.first_name.label("speaker_first_name"),
+                Person.last_name.label("speaker_last_name"),
+                Person.name_suffix.label("speaker_name_suffix"),
+                Person.full_name.label("speaker_full_name_parts_source"),
             )
             .outerjoin(Person, Utterance.person_id == Person.id)
             .outerjoin(Role, Person.role_id == Role.id)
@@ -251,14 +260,43 @@ async def get_argument_with_utterances(
             .order_by(Utterance.sequence.asc())
         )
         rows = utterances_result.all()
-        utterances = [
-            {
-                **{c.key: getattr(utterance, c.key) for c in utterance.__table__.columns},
-                "speaker_name": speaker_name,
-                "speaker_role": speaker_role,
-            }
-            for utterance, speaker_name, speaker_role in rows
-        ]
+        utterances = []
+        for (
+            utterance,
+            speaker_name,
+            speaker_role,
+            speaker_first_name,
+            speaker_last_name,
+            speaker_name_suffix,
+            speaker_full_name_parts_source,
+        ) in rows:
+            # D-12: structured parts when person_id is set (bench/resolved
+            # advocate); otherwise fall back to raw_speaker_label so an
+            # unresolved speaker keeps the glyph it renders today rather
+            # than regressing to "?". Never derived from the coalesced
+            # speaker_name string. One derivation call below, fed the
+            # right arguments for whichever case applies.
+            if utterance.person_id is not None:
+                initials_first = speaker_first_name
+                initials_last = speaker_last_name
+                initials_suffix = speaker_name_suffix
+                initials_full_name = speaker_full_name_parts_source
+            else:
+                initials_first = initials_last = initials_suffix = None
+                initials_full_name = utterance.raw_speaker_label
+            utterances.append(
+                {
+                    **{c.key: getattr(utterance, c.key) for c in utterance.__table__.columns},
+                    "speaker_name": speaker_name,
+                    "speaker_role": speaker_role,
+                    "speaker_initials": derive_initials(
+                        first_name=initials_first,
+                        last_name=initials_last,
+                        name_suffix=initials_suffix,
+                        full_name=initials_full_name,
+                    ),
+                }
+            )
 
     # --- Step 5: Assemble the response dict --------------------------------
     return {

@@ -70,5 +70,9 @@ class SpeakerPopoverEntry(BaseModel):
     bio_text: Optional[str] = None    # None when no bio is on file
     tenure: list[TenureEntry] = []
     side: Optional[str] = None        # raw SideEnum value for isBench rendering logic
+    # D-12: server-computed from structured name parts (api.domain.person_names
+    # .derive_initials) — the client no longer parses full_name for the avatar
+    # glyph. Optional so an unnameable person still serializes rather than 500s.
+    initials: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)

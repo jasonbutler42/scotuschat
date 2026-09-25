@@ -377,6 +377,7 @@ class TestGetArgumentSpeakersWidenedContractShape:
         "bio_text",
         "tenure",
         "side",
+        "initials",  # D-12, Phase 52-02
     }
     _TENURE_KEYS = {
         "office",
@@ -608,3 +609,170 @@ class TestGetArgumentSpeakersWidenedContractShape:
         assert second["appointing_president_party"] == "Party B"
         # order_by(CourtTenure.start_date.asc()) — earlier start_date first.
         assert first["start_date"] < second["start_date"]
+
+
+# ---------------------------------------------------------------------------
+# Phase 52-02 (D-12): initials on GET /arguments/{id}/speakers entries
+# ---------------------------------------------------------------------------
+
+
+class TestGetArgumentSpeakersInitials:
+    """DB-backed proof that get_argument_speakers() computes `initials`
+    server-side from the Person row already in hand (D-12) — no second
+    query, and structured parts win when present."""
+
+    @pytest.mark.asyncio
+    @pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+    async def test_initials_from_structured_parts_ignores_suffix(self, db_session) -> None:
+        """A justice with first_name/last_name/name_suffix set derives
+        initials from the parts, dropping the suffix — the JI -> JH fix."""
+        from api.models.models import (
+            Argument,
+            ArgumentParticipant,
+            ArgumentStatusEnum,
+            ImportMethod,
+            ImportRun,
+            ImportRunStatus,
+            ImportSource,
+            Person,
+            Role,
+            Utterance,
+        )
+        from api.services.speakers import get_argument_speakers
+
+        role = Role(name="Associate Justice")
+        db_session.add(role)
+        await db_session.flush()
+
+        person = Person(
+            full_name="John Marshall Harlan, II",
+            first_name="John",
+            middle_name="Marshall",
+            last_name="Harlan",
+            name_suffix="II",
+            role_id=role.id,
+            is_justice=True,
+        )
+        db_session.add(person)
+        await db_session.flush()
+
+        arg = Argument(
+            status=ArgumentStatusEnum.PUBLISHED,
+            argued_date=datetime.date(2024, 1, 10),
+            published_at=datetime.datetime.now(datetime.timezone.utc),
+        )
+        db_session.add(arg)
+        await db_session.flush()
+
+        db_session.add(
+            ArgumentParticipant(
+                argument_id=arg.id,
+                person_id=person.id,
+                raw_speaker_label="JUSTICE HARLAN",
+                side=SideEnum.BENCH,
+            )
+        )
+        await db_session.flush()
+
+        run = ImportRun(
+            argument_id=arg.id,
+            step="parse",
+            status=ImportRunStatus.COMPLETED,
+            source=ImportSource.PDF_PIPELINE,
+            method=ImportMethod.RULE_BASED,
+        )
+        db_session.add(run)
+        await db_session.flush()
+
+        db_session.add(
+            Utterance(
+                argument_id=arg.id,
+                import_run_id=run.id,
+                sequence=1,
+                raw_speaker_label="JUSTICE HARLAN",
+                text="An example utterance.",
+                side=SideEnum.BENCH,
+                person_id=person.id,
+            )
+        )
+        await db_session.flush()
+
+        result = await get_argument_speakers(db_session, arg.id)
+
+        assert len(result) == 1
+        assert result[0]["initials"] == "JH"
+
+    @pytest.mark.asyncio
+    @pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+    async def test_initials_from_full_name_when_no_structured_parts(
+        self, db_session
+    ) -> None:
+        """A part-less advocate (no first_name/last_name) derives initials
+        via the D-13 legacy fallback over full_name."""
+        from api.models.models import (
+            Argument,
+            ArgumentParticipant,
+            ArgumentStatusEnum,
+            ImportMethod,
+            ImportRun,
+            ImportRunStatus,
+            ImportSource,
+            Person,
+            Role,
+            Utterance,
+        )
+        from api.services.speakers import get_argument_speakers
+
+        role = Role(name="Counsel")
+        db_session.add(role)
+        await db_session.flush()
+
+        person = Person(full_name="Oliver W. Holmes, Jr.", role_id=role.id)
+        db_session.add(person)
+        await db_session.flush()
+
+        arg = Argument(
+            status=ArgumentStatusEnum.PUBLISHED,
+            argued_date=datetime.date(2024, 1, 10),
+            published_at=datetime.datetime.now(datetime.timezone.utc),
+        )
+        db_session.add(arg)
+        await db_session.flush()
+
+        db_session.add(
+            ArgumentParticipant(
+                argument_id=arg.id,
+                person_id=person.id,
+                raw_speaker_label="MR. HOLMES",
+                side=SideEnum.PETITIONER,
+            )
+        )
+        await db_session.flush()
+
+        run = ImportRun(
+            argument_id=arg.id,
+            step="parse",
+            status=ImportRunStatus.COMPLETED,
+            source=ImportSource.PDF_PIPELINE,
+            method=ImportMethod.RULE_BASED,
+        )
+        db_session.add(run)
+        await db_session.flush()
+
+        db_session.add(
+            Utterance(
+                argument_id=arg.id,
+                import_run_id=run.id,
+                sequence=1,
+                raw_speaker_label="MR. HOLMES",
+                text="An example utterance.",
+                side=SideEnum.PETITIONER,
+                person_id=person.id,
+            )
+        )
+        await db_session.flush()
+
+        result = await get_argument_speakers(db_session, arg.id)
+
+        assert len(result) == 1
+        assert result[0]["initials"] == "OH"

@@ -1138,3 +1138,73 @@ async def test_fixture_state_requires_admin_token(client):
     resp = await client.get("/api/admin/dev/fixture-state")
     assert resp.status_code != 200
     assert resp.status_code < 500
+
+
+@pytest.mark.asyncio
+async def test_reset_progress_advances_through_expected_steps_then_clears(
+    client, tmp_path, db
+):
+    """reset_to_fixture's progress record (D-15) advances through
+    "seeding_justices" then "reseeding_fixture_1".."reseeding_fixture_4", in
+    that order, with the right completed/total counters at each step -- and
+    is cleared (None) once the reset finishes, proven by observing it via
+    admin_dev_service._get_reset_progress() from inside each real step
+    function (wrapped, not replaced), never by inspecting internals after
+    the fact."""
+    _require_test_db()
+    from api.services import admin_dev as admin_dev_service
+
+    corpus_dir = _write_corpus_fixture(tmp_path)
+
+    real_seed_justices = admin_dev_service.run_import_justices_csv
+    real_import_convokit = admin_dev_service.run_import_convokit
+    observed: list[dict | None] = []
+
+    async def _wrapped_seed_justices(args):
+        observed.append(await admin_dev_service._get_reset_progress())
+        return await real_seed_justices(args)
+
+    async def _wrapped_import_convokit(args):
+        observed.append(await admin_dev_service._get_reset_progress())
+        return await real_import_convokit(args)
+
+    with (
+        patch.object(admin_dev_service, "run_import_justices_csv", _wrapped_seed_justices),
+        patch.object(admin_dev_service, "run_import_convokit", _wrapped_import_convokit),
+    ):
+        resp = await _post_reset(client, corpus_dir)
+    assert resp.status_code == 200
+
+    assert observed == [
+        {"step": "seeding_justices", "completed": 1, "total": 5},
+        {"step": "reseeding_fixture_1", "completed": 2, "total": 5},
+        {"step": "reseeding_fixture_2", "completed": 3, "total": 5},
+        {"step": "reseeding_fixture_3", "completed": 4, "total": 5},
+        {"step": "reseeding_fixture_4", "completed": 5, "total": 5},
+    ]
+
+    # Cleared once the reset (success or raise) has fully returned -- proven
+    # via the same GET the frontend polls, not a private-attribute peek.
+    state_resp = await _get_fixture_state(client)
+    assert state_resp.status_code == 200
+    assert state_resp.json()["progress"] is None
+
+
+@pytest.mark.asyncio
+async def test_reset_progress_cleared_after_mid_reset_failure(client, tmp_path, db):
+    """A raise partway through the reseed loop still clears the progress
+    record (the finally block) -- a failed reset must never leave a stale
+    record claiming one is still running."""
+    _require_test_db()
+    from api.services.admin_dev import ResetIncompleteError
+
+    corpus_dir = _write_corpus_fixture(tmp_path, omit_conversation_id="18897")
+
+    with pytest.raises(ResetIncompleteError):
+        from api.services.admin_dev import reset_to_fixture
+
+        await reset_to_fixture(db, corpus_dir=corpus_dir)
+
+    resp = await _get_fixture_state(client)
+    assert resp.status_code == 200
+    assert resp.json()["progress"] is None

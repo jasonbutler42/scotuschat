@@ -10,10 +10,14 @@ NOT ATOMIC (RESEARCH.md Pitfall 1): the reset is several independently-
 committing units, not one transaction —
     1. the TRUNCATE runs on FastAPI's own AsyncSession (this module's `db`
        argument) and commits immediately;
-    2. each `run_import_convokit` call opens and commits its own session via
-       pipeline.db.get_session() — a SEPARATE engine/pool from FastAPI's
-       AsyncSessionLocal, pointed at the same DATABASE_URL;
-    3. the state-realization block below (Plan 43-02, reworked Phase 50
+    2. the justice seed step (Phase 52-04, D-16 — run_import_justices_csv)
+       opens and commits its own session via pipeline.db.get_session() — a
+       SEPARATE engine/pool from FastAPI's AsyncSessionLocal, pointed at
+       the same DATABASE_URL — after the TRUNCATE and before the corpus
+       reseed;
+    3. each `run_import_convokit` call opens and commits its own session via
+       pipeline.db.get_session() — the same separate engine/pool as above;
+    4. the state-realization block below (Plan 43-02, reworked Phase 50
        D-14) commits via the real admin_arguments.approve_argument /
        admin_arguments.publish_argument service calls (each on this
        module's own `db` session) plus one directly-seeded step="reconcile"
@@ -23,15 +27,18 @@ that session boundary never extends into pipeline's own engine. On any
 failure, the correct recovery is to re-run the whole reset: the TRUNCATE is
 idempotent-safe to re-invoke from any partial state.
 
-Performance note: run_import_convokit streams the whole
-data/corpus/utterances.jsonl file once per conversation, and each of the
-four fixtures below is in a different October Term, so a real-corpus reset
-performs four full passes over that file. Measured on the development
-machine at plan time: one pass over 900,080,134 bytes costs approximately
-20.4 seconds, so expect roughly 80-120 seconds end to end for a real-corpus
-reset. This is a dev-only tool on localhost with no proxy in the path — do
-not add a timeout, a background job, or a progress channel; the UI-SPEC's
-Running state is a deliberately blocking request with a spinner.
+Performance note: the reset now also seeds the ~116-justice bench
+(run_import_justices_csv, Phase 52-04) before the four fixture passes below.
+run_import_convokit streams the whole data/corpus/utterances.jsonl file once
+per conversation, and each of the four fixtures below is in a different
+October Term, so a real-corpus reset performs four full passes over that
+file. Measured on the development machine at plan time: one pass over
+900,080,134 bytes costs approximately 20.4 seconds, so expect roughly
+80-120 seconds end to end for a real-corpus reset, plus the justice seed
+step's own measured cost (see 52-04-SUMMARY.md for the with-seed total).
+This is a dev-only tool on localhost with no proxy in the path — do not add
+a timeout, a background job, or a progress channel; the UI-SPEC's Running
+state is a deliberately blocking request with a spinner.
 """
 
 from pathlib import Path
@@ -54,6 +61,11 @@ from api.models.models import (
 from api.services import admin_arguments as arguments_service
 from api.services.trust import recompute_argument_tier
 from pipeline.commands.import_convokit import DEFAULT_CORPUS_DIR, run_import_convokit
+from pipeline.commands.import_justices_csv import (
+    DEFAULT_CSV_PATH as JUSTICES_CSV_PATH,
+    DEFAULT_MAPPING_CSV_PATH as JUSTICE_MAPPING_CSV_PATH,
+    run_import_justices_csv,
+)
 from pipeline.corpus.loader import (
     CASES_FILENAME,
     CONVERSATIONS_FILENAME,
@@ -155,7 +167,15 @@ TRUNCATE_SQL = """
 
 
 def _require_corpus_files(corpus_dir: Path) -> None:
-    """Pre-flight check, BEFORE any destructive statement (Pitfall 6)."""
+    """Pre-flight check, BEFORE any destructive statement (Pitfall 6).
+
+    Phase 52-04 (JUSTICE-04 / empty): also requires the two justice CSVs
+    the seed step below reads, imported from
+    pipeline.commands.import_justices_csv rather than re-typed here, so
+    this pre-flight and the importer can never disagree about which file
+    they mean. With either missing, this raises BEFORE the TRUNCATE runs —
+    an absent mapping can never leave the database empty.
+    """
     if not corpus_dir.is_dir():
         raise CorpusUnavailableError(f"Corpus directory not found: {corpus_dir}")
     for filename in (
@@ -163,6 +183,8 @@ def _require_corpus_files(corpus_dir: Path) -> None:
         CASES_FILENAME,
         SPEAKERS_FILENAME,
         UTTERANCES_FILENAME,
+        JUSTICES_CSV_PATH.name,
+        JUSTICE_MAPPING_CSV_PATH.name,
     ):
         required = corpus_dir / filename
         if not required.exists():
@@ -232,6 +254,33 @@ async def reset_to_fixture(db: AsyncSession, corpus_dir: str | Path | None = Non
     # 2. TRUNCATE — one statement, one transaction.
     await db.execute(text(TRUNCATE_SQL))
     await db.commit()
+
+    # 2.5. Seed the justice bench (D-16, JUSTICE-04) — after the TRUNCATE's
+    # commit, before the corpus reseed below, so run_import_convokit's
+    # _resolve_person finds the seeded rows by oyez_speaker_id on its first
+    # lookup key for every fixture utterance a seeded justice gives.
+    # Passing csv=None/mapping_csv=None lets the importer resolve its own
+    # DEFAULT_CSV_PATH/DEFAULT_MAPPING_CSV_PATH module constants, which is
+    # what keeps this production path and the corpus_dir test override
+    # consistent; when the resolved corpus directory is not the default,
+    # the two justice CSV paths are built from it instead, so a test
+    # pointing at a temp corpus directory seeds from that directory too.
+    # Wrapped in the same try/except -> ResetIncompleteError shape the
+    # fixture reseed loop below already uses, so a seed failure surfaces as
+    # an incomplete reset rather than an unhandled 500.
+    if resolved_corpus_dir == DEFAULT_CORPUS_DIR:
+        justice_seed_args = SimpleNamespace(csv=None, mapping_csv=None)
+    else:
+        justice_seed_args = SimpleNamespace(
+            csv=str(resolved_corpus_dir / JUSTICES_CSV_PATH.name),
+            mapping_csv=str(resolved_corpus_dir / JUSTICE_MAPPING_CSV_PATH.name),
+        )
+    try:
+        await run_import_justices_csv(justice_seed_args)
+    except Exception as exc:
+        raise ResetIncompleteError(
+            f"Justice seed step failed — reset is incomplete ({exc!r})."
+        ) from exc
 
     # 3-4. Reseed each fixture through the real importer, then verify its
     # Argument row landed. Collect (entry, argument_id) pairs in

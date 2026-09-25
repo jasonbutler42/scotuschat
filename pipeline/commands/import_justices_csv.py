@@ -218,7 +218,11 @@ def _load_justice_mapping(
         )
 
     mapping: dict[tuple[str, str, str, str], dict[str, str]] = {}
-    with mapping_csv_path.open("r", encoding="utf-8", newline="") as f:
+    # "utf-8-sig" strips a leading UTF-8 byte-order mark if present and is
+    # byte-identical to "utf-8" when there is none — an operator-supplied
+    # BOM-prefixed CSV must not silently yield zero mapped rows (JUSTICE-04
+    # / encoding).
+    with mapping_csv_path.open("r", encoding="utf-8-sig", newline="") as f:
         reader = csv.DictReader(f)
         for row in reader:
             key = (
@@ -253,7 +257,9 @@ def _iter_csv_rows(csv_path: Path):
     current_office = None
     header: list[str] | None = None
 
-    with csv_path.open("r", encoding="utf-8", newline="") as f:
+    # "utf-8-sig" strips a leading UTF-8 byte-order mark if present, same
+    # rationale as _load_justice_mapping above (JUSTICE-04 / encoding).
+    with csv_path.open("r", encoding="utf-8-sig", newline="") as f:
         reader = csv.reader(f)
         for raw_row in reader:
             if not raw_row or not any(cell.strip() for cell in raw_row):

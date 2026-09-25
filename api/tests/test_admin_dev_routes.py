@@ -25,10 +25,20 @@ corpus dir by patching api.routers.admin_dev.admin_dev_service.reset_to_fixture
 with a thin wrapper that forwards corpus_dir to the real service function —
 same module object as api.services.admin_dev, so this is not a redefinition
 of the service, just an injected default for the one HTTP call under test.
+
+Phase 52-04 (JUSTICE-04): `_require_corpus_files` now also requires the two
+real, gitignored, operator-supplied justice CSVs
+(supreme_court_justices_sections.csv, justice_identity_mapping.csv) for
+EVERY reset, seeded-bench assertions or not — so `_write_corpus_fixture`
+copies both into its synthetic corpus_dir and every test in this module
+transitively depends on them being present on this machine. Missing either
+one skips the whole module the same way `_require_test_db()` does, via
+`_require_real_justice_corpus_files()`.
 """
 
 import json
 import os
+import shutil
 from pathlib import Path
 from unittest.mock import patch
 
@@ -49,6 +59,10 @@ from api.models.models import (
     Person,
     Role,
     Utterance,
+)
+from pipeline.commands.import_justices_csv import (
+    DEFAULT_CSV_PATH as JUSTICES_CSV_PATH,
+    DEFAULT_MAPPING_CSV_PATH as JUSTICE_MAPPING_CSV_PATH,
 )
 
 # ===========================================================================
@@ -117,6 +131,23 @@ def _require_test_db() -> None:
         )
 
 
+def _require_real_justice_corpus_files() -> None:
+    """Skip the calling test unless the real, gitignored, operator-supplied
+    supreme_court_justices_sections.csv and justice_identity_mapping.csv
+    are present on this machine (52-04's user_setup precondition).
+    reset_to_fixture's pre-flight now hard-requires both for every reset
+    (JUSTICE-04), so a skip here means the justice seed step was never
+    exercised — not that it passed — mirroring _require_test_db()'s own
+    environment-gate pattern rather than letting every test in this module
+    fail with a confusing FileNotFoundError from shutil.copy2."""
+    if not JUSTICES_CSV_PATH.exists() or not JUSTICE_MAPPING_CSV_PATH.exists():
+        pytest.skip(
+            f"Requires the real {JUSTICES_CSV_PATH} and "
+            f"{JUSTICE_MAPPING_CSV_PATH} on this machine (gitignored, "
+            "operator-supplied — see 52-04-PLAN.md's user_setup)."
+        )
+
+
 def _write_corpus_fixture(tmp_path: Path, *, omit_conversation_id: str | None = None) -> Path:
     """Write a synthetic corpus_dir tree containing all four FIXTURE_SET
     conversations (15169, 13015, 18897, 22372) — one advocate turn and one
@@ -127,7 +158,15 @@ def _write_corpus_fixture(tmp_path: Path, *, omit_conversation_id: str | None = 
     from conversations.json (its case/speakers/utterances rows are still
     written) — used by test_reset_incomplete_reseed_raises to simulate a
     partial reseed without inventing a fake fifth conversation id.
+
+    Also copies the real justice CSV + mapping CSV (Phase 52-04) into the
+    synthetic corpus_dir, since reset_to_fixture's pre-flight now requires
+    both for every reset — see _require_real_justice_corpus_files above,
+    called first so a missing pair skips cleanly rather than raising deep
+    inside shutil.copy2.
     """
+    _require_real_justice_corpus_files()
+
     corpus_dir = tmp_path / "corpus"
     corpus_dir.mkdir()
 
@@ -194,6 +233,9 @@ def _write_corpus_fixture(tmp_path: Path, *, omit_conversation_id: str | None = 
     with (corpus_dir / "utterances.jsonl").open("w", encoding="utf-8") as f:
         for row in utterances:
             f.write(json.dumps(row) + "\n")
+
+    shutil.copy2(JUSTICES_CSV_PATH, corpus_dir / JUSTICES_CSV_PATH.name)
+    shutil.copy2(JUSTICE_MAPPING_CSV_PATH, corpus_dir / JUSTICE_MAPPING_CSV_PATH.name)
 
     return corpus_dir
 

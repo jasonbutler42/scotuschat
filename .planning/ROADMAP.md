@@ -595,3 +595,47 @@ Plans:
 - [ ] TBD (promote with /gsd-review-backlog when ready)
 
 **Provenance:** Surfaced by Claude on 2026-09-25 while the operator was describing the launch fixture he wants during Phase 52 Wave 2. The operator confirmed the gap was real and asked for it to be backlogged rather than scoped into v1.9. Corpus figures above were measured directly against `data/corpus/speakers.json`, `conversations.json` and `utterances.jsonl` on the same date, not estimated.
+
+### Phase 999.14: Evaluate prerendering the public site to static output (BACKLOG)
+
+**Goal:** [Captured for future planning] Evaluate moving the public read-only site from a live Node server + FastAPI + Postgres deployment to prerendered static output, built locally or in CI and pushed to hosting, with the admin surface and the API running only on the operator's machine. Captured 2026-09-25 during Phase 52 execution, when the operator raised the idea and asked whether it was crazy. It is not — the project has been converging on it — but it is an architecture decision that touches three stated rules and one unplanned phase, so it needs an ADR or a discuss-phase rather than a config change.
+
+**Why it fits this project better than it would fit most:**
+
+- **Architecture Rule 2 already did the hard part.** Every FastAPI call goes through a `+page.server.ts` server load function. Those are exactly what SvelteKit executes at prerender time — switching from request-time to build-time execution needs no restructuring of the data-access layer. The load functions run earlier, not differently.
+- **The published gate gets stronger, not weaker.** Today it is a runtime predicate (`published_at IS NOT NULL AND status == PUBLISHED`) every public route must remember to apply; Phase 55's notes call reimplementing it "the highest-consequence pitfall in the milestone", and it is the same bug class as the already-fixed BUG-01. Under prerendering an unpublished argument simply never gets a page emitted — there is no route to leak from. That is a structural guarantee rather than a tested one.
+- **The site is genuinely read-only.** CLAUDE.md: "the website is never interactive for end users." PROJECT.md puts user accounts and public contributions out of scope. Architecture Rule 1 makes FastAPI read-only. The precondition static generation needs is already a constraint.
+- **Content only changes when the operator runs the pipeline**, which is offline-only by constraint. There is no live data to go stale between builds.
+- **Production collapses to files.** No Node server, no Postgres, no PgBouncer, and the `statement_cache_size=0` asyncpg workaround stops being a production concern. The admin surface (7 route trees) and the API become local-only — which matches the operator's stated stance that pre-launch data is disposable and launch data is script-populated.
+
+**Use SvelteKit's own static adapter — NOT Eleventy.** The idea as first raised named Eleventy. That would discard Phase 51's design system, the Svelte 5 component library, `SpeakerPopover`, and Phase 52's server-computed initials work, to arrive at the same place. The project is currently on `@sveltejs/adapter-node` with no `prerender` declared anywhere; the change is `@sveltejs/adapter-static` plus `export const prerender = true`, not a rewrite. Any plan promoted from this item must start there.
+
+**Known costs — scope against these, not around them:**
+
+- **7,817 argument pages** to prerender, averaging ~218 utterances each (1,700,789 utterances total). Build time is the open question — plausibly tens of minutes. Acceptable for a scheduled CI build, annoying for a one-word fix. Measure before committing.
+- **No hotfixing content without a rebuild.** Mostly theoretical given the pipeline is already offline-only.
+- **999.12 ("request a case")** is the one known future exception to read-only. It would need a form service or serverless function. That does not break static output, but it should be decided knowingly rather than discovered later.
+- The **admin surface never deploys**. That is a simplification, but it means any future need for a hosted admin is a reversal, not an extension.
+
+**THE TIMING CONSTRAINT — read this before scheduling anything else:**
+
+**Phase 55 (Search) is the forcing function, and it is close.** Its notes already carry an unresolved *"DECISION REQUIRED IN THIS PHASE"* between `pg_trgm` trigram and a weighted `tsvector`/GIN column, plus an unverified `unaccent` availability question on DigitalOcean Managed Postgres. If the site goes static, **that entire decision is moot** — search becomes a client-side index, and the trigram-vs-tsvector debate never needs settling.
+
+And the scale makes it easy rather than hard: Phase 55 searches *arguments* by case name, docket number, speaker and term — **~7,800 records, not 1.7M utterances**. An index over 7,800 argument summaries is a few megabytes; Pagefind or an equivalent handles it comfortably. The thing that normally rules out static-site search is not in scope here.
+
+So the cheapest moment to decide is **before Phase 55 is planned**. Deciding after it ships a Postgres search means replacing working, tested code.
+
+**What to check before promoting this:**
+
+- Measure a prerender of the full 7,817-page set on real hardware. Build time is the only genuinely unknown cost.
+- Confirm the four public route trees (`/`, `/arguments`, `/arguments/[slug]`, `/arguments/term`, `/attributions`) have no request-time dependency that prerendering cannot satisfy.
+- Decide where Phase 58's analytics lands — client-side is fine on static, but it should be chosen rather than inherited.
+- Settle whether the admin surface stays local-only permanently, since that is the part hardest to reverse.
+- Check this against 999.11 (PDF pipeline path) and 999.13 (advocate seeding): both add data volume, and both assume a pipeline that writes to a database the public site then reads. Static output does not change that, but the build step becomes a new dependency in their flow.
+
+**Requirements:** TBD
+**Plans:** 0 plans
+
+- [ ] TBD (promote with /gsd-review-backlog when ready)
+
+**Provenance:** Raised by the operator on 2026-09-25 during Phase 52 Wave 3 ("one of my lingering suspicions is that the front end of this site could operate as a static site... is that a crazy idea?"). Assessed by Claude against the live codebase the same day: adapter and prerender state read from `app/svelte.config.js`, route split counted from `app/src/routes/`, corpus scale measured from `data/corpus/conversations.json` and `utterances.jsonl`, and Phase 55's open search decision read from this roadmap. Backlogged at the operator's request rather than scoped into v1.9.

@@ -5,16 +5,16 @@ milestone_name: The Site Becomes Complete
 current_phase: 52
 current_phase_name: Justice Identity
 status: executing
-stopped_at: Completed 52-04-PLAN.md
-last_updated: "2026-09-25T13:44:25.186Z"
+stopped_at: Completed 52-05-PLAN.md
+last_updated: "2026-09-25T14:39:58.643Z"
 last_activity: 2026-09-25
 last_activity_desc: Phase 52 execution started
-state_head: 46d52751e02db3392e1daf35d6dcc4934244b086
+state_head: dd0a48fe1865310c05d5f921cf6fd1436eccd3ab
 progress:
   total_phases: 8
   completed_phases: 0
   total_plans: 6
-  completed_plans: 4
+  completed_plans: 5
   percent: 0
 ---
 
@@ -81,6 +81,7 @@ the first client-side third-party script and the first `PUBLIC_` env var this co
 | Phase 52 P02 | 58min | 3 tasks | 14 files |
 | Phase 52 P03 | 24min | 2 tasks | 4 files |
 | Phase 52 P04 | 43min | 3 tasks | 3 files |
+| Phase 52 P05 | 57min | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -269,8 +270,8 @@ suppress by design, so the section was moved verbatim to
 
 ## Session Continuity
 
-Last session: 2026-09-25T13:44:25.053Z
-Stopped at: Completed 52-04-PLAN.md
+Last session: 2026-09-25T14:39:58.551Z
+Stopped at: Completed 52-05-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
@@ -287,6 +288,9 @@ Resume file: None
 - [Phase 52]: Both new identity fields (display_name, oyez_speaker_id) are read directly off data.person in the Svelte template, never captured into a top-level const or $derived. — Matches the existing data.person.full_name idiom at the same call site and avoids the stale-prop-capture bug class this codebase has already been bitten by once.
 - [Phase 52]: Phase 52-04: justice bench seed inserted after reset_to_fixture's TRUNCATE commit and before the FIXTURE_SET reseed loop (D-16), with a pre-flight requiring both justice CSVs before any destructive statement. — An absent mapping must never be able to leave the database empty; the seed must run before the reseed loop so oyez_speaker_id resolution hits on the corpus importer's first lookup key.
 - [Phase 52]: Phase 52-04: fixed the reset_to_fixture stale-created_at defect with one extra db.commit() between the fixture-verification loop and the state-realization block, rather than restructuring the whole reset's transaction boundaries. — approve_argument/publish_argument already commit at their own end; the loop's own stale open transaction was the only missing commit boundary.
+- [Phase 52]: Phase 52-05: backend fixture-state progress carries a machine token ('seeding_justices' | 'reseeding_fixture_N'), not the rendered copy string; the frontend owns the Copywriting Contract's literal strings and maps the token to them, so the two layers can't drift independently.
+- [Phase 52]: Phase 52-05: the D-14 re-read runs directly against FASTAPI_BASE_URL from +page.server.ts's own server action rather than through the new dev-fixture-state proxy — that proxy exists only for the browser's client-side polling, which has no FASTAPI_BASE_URL access.
+- [Phase 52]: Phase 52-05: AbortSignal sized at 180s (~2.5x the 71.67s measured floor from 52-04), not re-measured through the live HTTP path in this plan — deferred to the phase's end-of-phase human-check UAT item.
 
 ### Blockers
 

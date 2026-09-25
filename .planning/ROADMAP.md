@@ -214,7 +214,7 @@ Active milestone: **v1.9 The Site Becomes Complete** (Phases 52–58). Details f
   - Closes the Person-dedup item carried since v1.7 Phase 42. It is not four bad rows; it is 49 of 114, visible as four only because four fixtures are imported.
   - Per the reseed-don't-migrate doctrine, existing duplicates are cleared by the reset, not by a backfill migration.
 
-**Plans**: 4/6 plans executed
+**Plans**: 5/6 plans executed
 
 Plans:
 
@@ -232,7 +232,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 52-05-PLAN.md — Reset per-fixture progress and evidence-based failure copy via one dev-only fixture-state GET
+- [x] 52-05-PLAN.md — Reset per-fixture progress and evidence-based failure copy via one dev-only fixture-state GET
 - [ ] 52-06-PLAN.md — Converge the third initials splitter in admin `ResolveCard.svelte` onto the single server-side `derive_initials`, completing D-12 codebase-wide *(added 2026-09-25 by operator decision after 52-02 surfaced it)*
 
 **UI hint**: yes
@@ -419,7 +419,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 52. Justice Identity | 4/6 | In Progress|  |
+| 52. Justice Identity | 5/6 | In Progress|  |
 | 53. Undetermined Speakers & Marker Normalisation | 0/? | Not started | - |
 | 54. Publishing at Scale & Verification Debt | 0/? | Not started | - |
 | 54.1. Justice Portraits & Biographical Enrichment (INSERTED) | 0/? | Not started | - |

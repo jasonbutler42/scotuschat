@@ -71,6 +71,7 @@
 		person_id: number | null;
 		full_name: string | null;
 		photo_url: string | null;
+		initials: string | null;
 		side: string;
 		argument_role: string | null;
 		descriptor: string | null;
@@ -760,12 +761,6 @@
 		};
 	}
 
-	function getInitials(name: string): string {
-		const parts = name.trim().split(/\s+/).filter(Boolean);
-		if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-		if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-		return '?';
-	}
 </script>
 
 {#snippet rawLabelBadge(label: string)}
@@ -1041,7 +1036,7 @@
      aria-disabled when the row's side has not yet been chosen (T-44-18, Pitfall 4). -->
 {#snippet personDropdown(row: MergedRow, label: string, s: RowMatchState | undefined, gated: boolean, side: string)}
 	{#if !personControlEditable(row, s)}
-		{@render personDisplay(row.full_name, row.photo_url, row.argument_role)}
+		{@render personDisplay(row.full_name, row.photo_url, row.argument_role, row.initials)}
 	{:else}
 		{@const comboId = `listbox-${label.replace(/\s+/g, '-')}`}
 		{@const candidates = sideScopedCandidates(row.discrepancy!, label, side, gated)}
@@ -1212,7 +1207,7 @@
 	{/if}
 {/snippet}
 
-{#snippet personDisplay(fullName: string | null, photoUrl: string | null, roleLabel: string | null)}
+{#snippet personDisplay(fullName: string | null, photoUrl: string | null, roleLabel: string | null, initials: string | null)}
 	{#if fullName}
 		<span style="display: inline-flex; align-items: center; gap: var(--space-sm);">
 			<span
@@ -1233,7 +1228,7 @@
 				{#if photoUrl}
 					<img src={photoUrl} alt="" style="width: 100%; height: 100%; object-fit: cover;" />
 				{:else}
-					{getInitials(fullName)}
+					{initials}
 				{/if}
 			</span>
 			<span style="font-size: var(--font-size-body); color: var(--color-text-primary);">

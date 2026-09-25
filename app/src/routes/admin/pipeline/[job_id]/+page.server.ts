@@ -91,6 +91,7 @@ interface ResolveRow {
 	person_id: number | null;
 	full_name: string | null;
 	photo_url: string | null;
+	initials: string | null;
 	side: string;
 	argument_role: string | null;
 	descriptor: string | null;

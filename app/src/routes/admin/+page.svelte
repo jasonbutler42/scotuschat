@@ -523,6 +523,16 @@
 								stopResetPolling();
 								resetPollHandle = setInterval(pollResetProgress, 1000);
 								return async ({ result, update }) => {
+									// Still-running is NOT a terminal result: keep the Running state
+									// and the live progress poll rather than dropping to Idle with an
+									// error, since the reset the operator started is still in flight.
+									if (
+										result.type === 'failure' &&
+										(result.data as { resetStillRunning?: boolean })?.resetStillRunning
+									) {
+										await update();
+										return;
+									}
 									stopResetPolling();
 									resetRunning = false;
 									if (

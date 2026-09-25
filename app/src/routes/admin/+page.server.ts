@@ -1,4 +1,5 @@
 import { fail, redirect } from '@sveltejs/kit';
+import { classifyFixtureStateOutcome as classifyOutcome } from '$lib/admin/resetOutcome.js';
 import type { Actions, PageServerLoad } from './$types';
 import { SESSION_COOKIE_NAME } from '$lib/server/session';
 import { ADMIN_TOKEN, FASTAPI_BASE_URL } from '$env/static/private';
@@ -235,7 +236,21 @@ const RESET_PARTIAL_ERROR =
 // methodology caveat), while staying well under undici's 300s ceiling.
 // Exceeding it throws (AbortError), which routes into resolveFromReRead
 // below rather than being reported as a failure outright.
-const RESET_ABORT_TIMEOUT_MS = 180_000;
+const RESET_ABORT_TIMEOUT_MS = 280_000;
+
+// Phase 52-05 follow-up (UAT 2026-09-25): a reset that is STILL RUNNING is not
+// a reset that failed. The backend publishes `progress` on the same
+// fixture-state response the re-read already fetches, non-null for exactly as
+// long as an operation is in flight — but classifyFixtureStateOutcome used to
+// read only `fixtures`, so an abort that fired while the server was still
+// working produced a fixtures snapshot that was legitimately incomplete and
+// was reported as RESET_PARTIAL_ERROR ("do not use it"). Observed live: the
+// reset completed correctly (132 people, all 4 fixtures in their expected end
+// states) while the operator was told the database was unusable. The evidence
+// to tell the two apart was in the response and was being discarded — exactly
+// what D-14 exists to prevent.
+const RESET_STILL_RUNNING_NOTICE =
+	'Still reseeding. This request stopped listening before the reset finished, but the server is still working — the progress line below is live. Nothing is wrong with the database; wait for it to finish.';
 
 // Phase 52-05 (D-16): mirrors api/services/admin_dev.py's FIXTURE_SET and
 // the exact per-fixture end-state its state-realization block (step 5)
@@ -294,20 +309,14 @@ async function reReadFixtureState(
  */
 function classifyFixtureStateOutcome(
 	state: FixtureStateResponse | null,
-): 'full-success' | 'partial' | 'inconclusive' {
-	if (!state || !Array.isArray(state.fixtures) || state.fixtures.length !== 4) {
-		return 'inconclusive';
-	}
-	const allLandedAsExpected = state.fixtures.every((fixture) => {
-		const expected = EXPECTED_FIXTURE_END_STATES[fixture.conversation_id];
-		return (
-			expected !== undefined &&
-			fixture.present === true &&
-			fixture.status === expected.status &&
-			fixture.latest_import_run_step === expected.latest_import_run_step
-		);
-	});
-	return allLandedAsExpected ? 'full-success' : 'partial';
+): 'in-progress' | 'full-success' | 'partial' | 'inconclusive' {
+	// Delegates to the extracted, unit-tested implementation
+	// (app/src/lib/admin/resetOutcome.js + app/tests/reset-outcome-classifier.test.mjs).
+	// This decides what an operator is told after a destructive operation, and
+	// the original in-file version shipped with no test and a real defect: it
+	// read only `fixtures`, never `progress`, so a still-running reset was
+	// reported as a partial one.
+	return classifyOutcome(state, EXPECTED_FIXTURE_END_STATES);
 }
 
 /**
@@ -327,6 +336,16 @@ function classifyFixtureStateOutcome(
 async function resolveFromReRead(fetch: typeof globalThis.fetch) {
 	const state = await reReadFixtureState(fetch);
 	const outcome = classifyFixtureStateOutcome(state);
+
+	if (outcome === 'in-progress') {
+		// 503 + resetStillRunning: the page keeps its Running state and keeps
+		// polling instead of dropping to Idle with an error, because the
+		// operation the operator started has not finished yet.
+		return fail(503, {
+			resetError: RESET_STILL_RUNNING_NOTICE,
+			resetStillRunning: true,
+		});
+	}
 
 	if (outcome === 'full-success') {
 		return {

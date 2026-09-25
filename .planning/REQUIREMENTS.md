@@ -18,7 +18,7 @@ Requirements for milestone v1.9. Each maps to exactly one roadmap phase.
 - [ ] **JUSTICE-03**: A `people.display_name` column carries the corpus name form; the bio card shows `full_name` (the fuller CSV form) and utterance attribution shows `display_name`, falling back to `full_name` when null
 - [ ] **JUSTICE-04**: `reset_to_fixture` seeds all justices after its TRUNCATE, so they persist through every fixture reset
 - [x] **JUSTICE-05**: A partial unique index on `people.oyez_speaker_id` makes duplicate justice rows structurally impossible
-- [ ] **JUSTICE-06**: Avatar initials derive from first and last *name*, skipping suffixes — "John Marshall Harlan, II" yields JH, not JI
+- [x] **JUSTICE-06**: Avatar initials derive from first and last *name*, skipping suffixes — "John Marshall Harlan, II" yields JH, not JI
 
 ### Undetermined Speakers (SPEAKER)
 
@@ -122,7 +122,7 @@ Populated during roadmap creation (2026-09-23). Every v1 requirement maps to exa
 | JUSTICE-03 | Phase 52 | Pending |
 | JUSTICE-04 | Phase 52 | Pending |
 | JUSTICE-05 | Phase 52 | Complete |
-| JUSTICE-06 | Phase 52 | Pending |
+| JUSTICE-06 | Phase 52 | Complete |
 | SPEAKER-01 | Phase 53 | Pending |
 | SPEAKER-02 | Phase 53 | Pending |
 | SPEAKER-03 | Phase 53 | Pending |

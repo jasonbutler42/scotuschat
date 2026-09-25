@@ -5,16 +5,16 @@ milestone_name: The Site Becomes Complete
 current_phase: 52
 current_phase_name: Justice Identity
 status: executing
-stopped_at: Completed 52-01-PLAN.md
-last_updated: "2026-09-25T11:43:40.434Z"
+stopped_at: Completed 52-02-PLAN.md
+last_updated: "2026-09-25T12:38:57.128Z"
 last_activity: 2026-09-25
 last_activity_desc: Phase 52 execution started
-state_head: 70e31f1d057c458c9918abcdaead752731363417
+state_head: b870f9e97e4253ec63342790c45f18f2c0c59607
 progress:
   total_phases: 8
   completed_phases: 0
   total_plans: 5
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -39,7 +39,7 @@ phase-numbered test modules, ~2:1 test:code as a guideline. Both govern all late
 ## Current Position
 
 Phase: 52 (Justice Identity) — EXECUTING
-Plan: 2 of 5
+Plan: 3 of 5
 Status: Ready to execute
 Last activity: 2026-09-25 — Phase 52 execution started
 
@@ -78,6 +78,7 @@ the first client-side third-party script and the first `PUBLIC_` env var this co
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
 | Phase 52 P01 | 46min | 3 tasks | 9 files |
+| Phase 52 P02 | 58min | 3 tasks | 14 files |
 
 ## Accumulated Context
 
@@ -266,8 +267,8 @@ suppress by design, so the section was moved verbatim to
 
 ## Session Continuity
 
-Last session: 2026-09-25T11:43:40.082Z
-Stopped at: Completed 52-01-PLAN.md
+Last session: 2026-09-25T12:38:57.010Z
+Stopped at: Completed 52-02-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
@@ -279,3 +280,9 @@ Resume file: None
 
 - [Phase 52]: oyez_speaker_id promoted from unused side-column to primary justice identity key (Phase 52-01); full_name equality demoted to fallback for unmapped D-04 rows.
 - [Phase 52]: Person.display_name is written by plain assignment, never through the apply_person_value_change authority ladder -- D-09 keeps it off PersonUpdate's allow-list, so no operator edit can ever exist to arbitrate against.
+- [Phase 52]: derive_initials co-located in api/domain/person_names.py with _KNOWN_SUFFIXES rather than a new module. — D-13's fallback is defined in terms of the exact suffix vocabulary; separating them risks a fourth splitter appearing elsewhere unnoticed.
+- [Phase 52]: arguments.py pre-selects structured-parts-vs-raw_speaker_label arguments in a plain if/else before one derive_initials call per row. — Keeps derive_initials to a single call site per file (the plan's own acceptance criterion), not a ternary with two inline calls.
+
+### Blockers
+
+- A third, independent initials splitter (byte-identical logic) survives in app/src/lib/admin/ResolveCard.svelte -- out of this plan's scope, filed as .planning/todos/pending/2026-09-25-admin-resolvecard-third-initials-implementation.md for the operator.

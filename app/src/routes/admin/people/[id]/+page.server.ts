@@ -62,6 +62,14 @@ interface PersonDetail {
 		reason: string | null;
 		auto_applied: boolean | null;
 	} | null;
+	// Phase 52 additions (D-09, D-10) — migration 0032. Server-derived,
+	// read-only — mirrors api/schemas/admin_people.py's PersonDetail (no
+	// shared-type codegen between FastAPI and SvelteKit in this repo).
+	// display_name is the corpus's own name form (drives utterance
+	// attribution); oyez_speaker_id is the corpus join key. Both null when
+	// the person has no corpus match.
+	display_name: string | null;
+	oyez_speaker_id: string | null;
 }
 
 interface PersonListItem {

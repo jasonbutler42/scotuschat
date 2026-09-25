@@ -172,6 +172,19 @@ class PersonDetail(BaseModel):
     People directory's `Name review` attention state and the typed
     provenance envelope for the editor's extracted-value hint, replacing
     Phase 38's name_needs_review/name_extraction_metadata pair outright.
+
+    Phase 52 additions (D-09, D-10 — migration 0032): display_name and
+    oyez_speaker_id are both server-derived, read-only values returned here
+    but never accepted on PersonCreateRequest or PersonUpdate, following the
+    exact full_name precedent above. display_name (D-09) is the corpus's own
+    name form — the word `full_name` is for name parts, display_name is for
+    the corpus — and it is what utterance attribution falls back to when the
+    row has no display_name; a client that posts it gets a 422, not a
+    silently-ignored write. oyez_speaker_id (D-10) is the load-bearing corpus
+    join key (migration 0032's partial unique index enforces it), blank when
+    the person has no corpus match; making it operator-editable would let a
+    hand edit and a re-seed disagree about which corpus speaker this person
+    is, with the hand edit winning silently.
     """
 
     id: int
@@ -196,6 +209,11 @@ class PersonDetail(BaseModel):
     # Phase 39 addition — migration 0023; mirrors birthdate's exact
     # ISO-date-string shape.
     death_date: Optional[str] = None
+    # Phase 52 additions (D-09, D-10) — migration 0032. Server-derived,
+    # read-only — see the docstring above. Never added to PersonUpdate or
+    # PersonCreateRequest.
+    display_name: Optional[str] = None
+    oyez_speaker_id: Optional[str] = None
 
     model_config = {"from_attributes": True}
 

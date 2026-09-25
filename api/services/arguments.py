@@ -239,7 +239,7 @@ async def get_argument_with_utterances(
         utterances_result = await db.execute(
             select(
                 Utterance,
-                Person.full_name.label("speaker_name"),
+                func.coalesce(Person.display_name, Person.full_name).label("speaker_name"),
                 Role.name.label("speaker_role"),
             )
             .outerjoin(Person, Utterance.person_id == Person.id)

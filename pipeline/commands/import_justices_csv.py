@@ -13,16 +13,25 @@ Supreme Court justices tenure CSV and seeds the full bench roster.
   (Rehnquist, Rutledge) get both `court_tenures` rows auto-created.
 - Idempotent — safe to re-run without creating duplicate people or tenures.
 
-Dedup key: exact `Person.full_name` string match — same precedent as
-`seed_aliases.py`. `Person.oyez_speaker_id` is left NULL here; the later
-corpus importer (Plan 05/06) backfills it.
+Dedup key (Phase 52, JUSTICE-01/02): `Person.oyez_speaker_id` from the
+verified `data/corpus/justice_identity_mapping.csv` mapping, keyed by the
+CSV row's normalized name-part tuple. Person-name (`full_name`) equality is
+the fallback dedup key, used only for CSV rows with no mapping entry
+(currently Amy Coney Barrett and Ketanji Brown Jackson — seated after the
+corpus's 2019 cutoff, D-04 of 52-CONTEXT.md). `Person.display_name` is
+written from the mapping's corpus display form alongside `oyez_speaker_id`.
+No derivation rule is ever used to invent an id for an unmapped row — a
+rejected first-initial abbreviation rule was only 88% accurate
+(.planning/notes/justice-identity-and-seeding.md).
 
 Usage:
     python -m pipeline import-justices
     python -m pipeline import-justices --csv path/to/justices_tenure.csv
+    python -m pipeline import-justices --mapping-csv path/to/mapping.csv
 """
 
 import csv
+import unicodedata
 from pathlib import Path
 
 from dateutil import parser as dateutil_parser
@@ -83,6 +92,12 @@ _EXTRACTION_SOURCE = "import_justices_csv"
 # Matches the data/corpus/ scaffolding created in Plan 01 — the
 # operator copies the source CSV here locally; it is gitignored, not tracked.
 DEFAULT_CSV_PATH = Path("data/corpus/supreme_court_justices_sections.csv")
+
+# Phase 52 (D-06): the verified justice identity mapping — 114 rows joining
+# every corpus j__-prefixed speaker id to its CSV name parts. Same
+# gitignored data/corpus/ scaffolding pattern as DEFAULT_CSV_PATH above; a
+# hand-verified data artifact, not a tracked source mirror.
+DEFAULT_MAPPING_CSV_PATH = Path("data/corpus/justice_identity_mapping.csv")
 
 _CHIEF_SECTION_HEADER = "Supreme Court Chief Justices"
 _ASSOCIATE_SECTION_HEADER = "Supreme Court Associate Justices"
@@ -170,6 +185,63 @@ def _parse_optional_date(value: str):
     return dateutil_parser.parse(value).date()
 
 
+def _normalize_mapping_name_part(value: str | None) -> str:
+    """
+    Normalize one name-part cell for the mapping-CSV join key
+    (JUSTICE-01 / encoding invariant).
+
+    NFC-normalizes and strips whitespace only — no casefold, no accent
+    folding, no punctuation rewriting. A missing cell (None) and an empty
+    cell ("") both normalize to the same empty string, so a blank middle
+    name/suffix compares equal on both sides of the join.
+    """
+    if value is None:
+        return ""
+    return unicodedata.normalize("NFC", value).strip()
+
+
+def _load_justice_mapping(
+    mapping_csv_path: Path,
+) -> dict[tuple[str, str, str, str], dict[str, str]]:
+    """
+    Load the verified justice identity mapping CSV into a dict keyed by the
+    normalized (first, middle, last, suffix) name-part tuple.
+
+    Raises FileNotFoundError when the file is missing (mirrors the
+    DEFAULT_CSV_PATH pre-flight below) and ValueError when it parses to
+    zero data rows — an empty mapping must be a hard error, never a silent
+    degradation to the legacy full_name dedup key (JUSTICE-01).
+    """
+    if not mapping_csv_path.exists():
+        raise FileNotFoundError(
+            f"Justice identity mapping CSV not found: {mapping_csv_path}"
+        )
+
+    mapping: dict[tuple[str, str, str, str], dict[str, str]] = {}
+    with mapping_csv_path.open("r", encoding="utf-8", newline="") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            key = (
+                _normalize_mapping_name_part(row.get("first_name")),
+                _normalize_mapping_name_part(row.get("middle_name")),
+                _normalize_mapping_name_part(row.get("last_name")),
+                _normalize_mapping_name_part(row.get("name_suffix")),
+            )
+            mapping[key] = {
+                "oyez_speaker_id": (row.get("oyez_speaker_id") or "").strip(),
+                "corpus_display_name": (row.get("corpus_display_name") or "").strip(),
+            }
+
+    if not mapping:
+        raise ValueError(
+            f"Justice identity mapping CSV parsed to zero data rows: "
+            f"{mapping_csv_path} — refusing to import with an empty "
+            f"mapping (JUSTICE-01: an empty mapping must be a hard error, "
+            f"never a silent fallback to full_name-only dedup)."
+        )
+    return mapping
+
+
 def _iter_csv_rows(csv_path: Path):
     """
     Yield (office, row_dict) tuples for every justice data row in the CSV.
@@ -210,16 +282,30 @@ async def run_import_justices_csv(args) -> None:
     justices with tenure + appointment data, and auto-creates both
     court_tenures rows for justices elevated from Associate to Chief.
 
-    Idempotent — dedups people by exact Person.full_name and tenures
-    by (person_id, office, start_date); safe to re-run any number of times.
+    Idempotent — dedups mapped justices by `Person.oyez_speaker_id` (from
+    the verified mapping CSV) and unmapped rows by exact `Person.full_name`
+    (D-04's fallback branch); tenures dedup by
+    (person_id, office, start_date). Safe to re-run any number of times,
+    including for the five dual-service justices whose two CSV rows (one
+    per office section) resolve to the SAME oyez_speaker_id and so land on
+    the same Person row without tripping the partial unique index.
 
     Args:
         args: argparse.Namespace with an optional `csv` attribute (path to
-            the justices tenure CSV; defaults to DEFAULT_CSV_PATH).
+            the justices tenure CSV; defaults to DEFAULT_CSV_PATH) and an
+            optional `mapping_csv` attribute (path to the verified justice
+            identity mapping CSV; defaults to DEFAULT_MAPPING_CSV_PATH).
     """
     csv_path = Path(args.csv) if getattr(args, "csv", None) else DEFAULT_CSV_PATH
     if not csv_path.exists():
         raise FileNotFoundError(f"Justices CSV not found: {csv_path}")
+
+    mapping_csv_path = (
+        Path(args.mapping_csv)
+        if getattr(args, "mapping_csv", None)
+        else DEFAULT_MAPPING_CSV_PATH
+    )
+    justice_mapping = _load_justice_mapping(mapping_csv_path)
 
     people_created = 0
     people_upgraded = 0
@@ -269,9 +355,31 @@ async def run_import_justices_csv(args) -> None:
                 reasons_unmatched += 1
                 unmatched_reason_values.add(reason_left_raw)
 
-            result = await session.execute(
-                select(Person).where(Person.full_name == full_name)
+            # JUSTICE-01/02: dedup on oyez_speaker_id from the verified
+            # mapping when this row's name parts are mapped; fall back to
+            # the legacy full_name-equality lookup only for an unmapped row
+            # (D-04 — Barrett and Jackson, seated after the corpus's 2019
+            # cutoff). Never synthesize an oyez_speaker_id for an unmapped
+            # row — no derivation rule, no abbreviation heuristic, no
+            # surname match (rejected at 88% accuracy).
+            mapping_key = (
+                _normalize_mapping_name_part(first),
+                _normalize_mapping_name_part(middle),
+                _normalize_mapping_name_part(last),
+                _normalize_mapping_name_part(suffix),
             )
+            mapping_entry = justice_mapping.get(mapping_key)
+
+            if mapping_entry is not None:
+                result = await session.execute(
+                    select(Person).where(
+                        Person.oyez_speaker_id == mapping_entry["oyez_speaker_id"]
+                    )
+                )
+            else:
+                result = await session.execute(
+                    select(Person).where(Person.full_name == full_name)
+                )
             person = result.scalar_one_or_none()
 
             if person is not None:
@@ -362,6 +470,22 @@ async def run_import_justices_csv(args) -> None:
                 if person.death_date is None and death_date is not None:
                     person.death_date = death_date
                     people_death_dates_backfilled += 1
+                # Phase 52 (JUSTICE-02/03): blank-only prefill for
+                # oyez_speaker_id — never overwrite an id a prior pass (or
+                # the corpus importer) already wrote. display_name is a
+                # plain, unconditional assignment rather than a
+                # apply_person_value_change ladder call: D-09
+                # (52-CONTEXT.md) keeps display_name off PersonUpdate's
+                # allow-list, so no operator edit can ever exist for the
+                # ladder to arbitrate against — there is no adversary here,
+                # so a third write-gating mechanism would protect nothing
+                # (RESEARCH.md Pitfall 2). Only runs when this CSV row is
+                # mapped; an unmapped row (D-04) leaves both fields
+                # untouched.
+                if mapping_entry is not None:
+                    if person.oyez_speaker_id is None:
+                        person.oyez_speaker_id = mapping_entry["oyez_speaker_id"]
+                    person.display_name = mapping_entry["corpus_display_name"]
                 # Phase 38, carried forward unchanged: every rerun
                 # refreshes the extraction provenance envelope, regardless
                 # of whether any part was actually blank this time — the
@@ -404,8 +528,15 @@ async def run_import_justices_csv(args) -> None:
                     death_date=death_date,
                     provenance_metadata=extraction_metadata,
                     review_state=ReviewState.UNREVIEWED,
-                    # oyez_speaker_id intentionally left NULL — the corpus
-                    # importer backfills it later.
+                    # Phase 52 (JUSTICE-02/03): both sourced from the
+                    # verified mapping; None/None for an unmapped row
+                    # (D-04 — Barrett, Jackson).
+                    oyez_speaker_id=(
+                        mapping_entry["oyez_speaker_id"] if mapping_entry else None
+                    ),
+                    display_name=(
+                        mapping_entry["corpus_display_name"] if mapping_entry else None
+                    ),
                 )
                 session.add(person)
                 await session.flush()

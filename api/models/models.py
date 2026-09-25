@@ -150,6 +150,10 @@ class Person(Base):
     death_date = Column(Date, nullable=True)
     # Oyez/ConvoKit external speaker ID (historical corpus import)
     oyez_speaker_id = Column(String(100), nullable=True)
+    # Corpus name form (e.g. "Byron R. White") that drives utterance
+    # attribution — the corpus's own word, exactly as full_name is the
+    # name parts' word (Phase 52 D-09). NULL for anyone not corpus-resolved.
+    display_name = Column(String(300), nullable=True)
     # Unified review record,
     # folding the Phase 38 name_needs_review/name_extraction_metadata pair
     # into the shared record used across the review model.

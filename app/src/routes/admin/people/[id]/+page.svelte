@@ -372,20 +372,21 @@
 				     is used (not a disabled/readonly input) so it stays a plain
 				     readout programmatically associated with its label/explanation. -->
 				<div style="margin-bottom: var(--space-lg);">
-					<div style="display: flex; align-items: baseline; gap: var(--space-sm); margin-bottom: var(--space-sm); flex-wrap: wrap;">
+					<div style="margin-bottom: var(--space-sm);">
 						<span id="full_name_label" style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary);">
 							Full Name
-						</span>
-						<span id="full_name_explanation" style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary);">
-							Generated from name parts.
 						</span>
 					</div>
 					<output
 						id="full_name_preview"
-						aria-labelledby="full_name_label full_name_explanation"
+						aria-labelledby="full_name_label"
+						aria-describedby="full_name_explanation"
 						aria-live="polite"
-						style="display: block; width: 100%; background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) var(--space-md); font-size: var(--font-size-body); box-sizing: border-box; color: {fullNamePreview === 'N/A' ? 'var(--color-text-secondary)' : 'var(--color-text-primary)'}; font-style: {fullNamePreview === 'N/A' ? 'italic' : 'normal'};"
+						style="display: block; width: 100%; background-color: transparent; border: 1px solid color-mix(in srgb, var(--color-border) 40%, transparent); border-radius: 6px; padding: var(--space-sm) var(--space-md); font-size: var(--font-size-body); box-sizing: border-box; color: {fullNamePreview === 'N/A' ? 'var(--color-text-secondary)' : 'var(--color-text-primary)'}; font-style: {fullNamePreview === 'N/A' ? 'italic' : 'normal'};"
 					>{fullNamePreview}</output>
+					<span id="full_name_explanation" style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin-top: var(--space-sm); display: block;">
+						Generated from name parts.
+					</span>
 				</div>
 
 				<!-- Corpus Display Name — server-derived, read-only (D-09, migration
@@ -397,20 +398,21 @@
 				     unconditionally for every person, not gated on is_justice: a
 				     blank value on an advocate is itself informative. -->
 				<div style="margin-bottom: var(--space-lg);">
-					<div style="display: flex; align-items: baseline; gap: var(--space-sm); margin-bottom: var(--space-sm); flex-wrap: wrap;">
+					<div style="margin-bottom: var(--space-sm);">
 						<span id="display_name_label" style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary);">
 							Corpus Display Name
-						</span>
-						<span id="display_name_explanation" style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary);">
-							The corpus's own name form. Drives utterance attribution; falls back to Full Name when blank.
 						</span>
 					</div>
 					<output
 						id="display_name_preview"
-						aria-labelledby="display_name_label display_name_explanation"
+						aria-labelledby="display_name_label"
+						aria-describedby="display_name_explanation"
 						aria-live="polite"
-						style="display: block; width: 100%; background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) var(--space-md); font-size: var(--font-size-body); box-sizing: border-box; color: {data.person.display_name ? 'var(--color-text-primary)' : 'var(--color-text-secondary)'}; font-style: {data.person.display_name ? 'normal' : 'italic'};"
+						style="display: block; width: 100%; background-color: transparent; border: 1px solid color-mix(in srgb, var(--color-border) 40%, transparent); border-radius: 6px; padding: var(--space-sm) var(--space-md); font-size: var(--font-size-body); box-sizing: border-box; color: {data.person.display_name ? 'var(--color-text-primary)' : 'var(--color-text-secondary)'}; font-style: {data.person.display_name ? 'normal' : 'italic'};"
 					>{data.person.display_name ?? 'Uses Full Name'}</output>
+					<span id="display_name_explanation" style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin-top: var(--space-sm); display: block;">
+						The corpus's own name form. Drives utterance attribution; falls back to Full Name when blank.
+					</span>
 				</div>
 
 				<!-- Oyez Speaker ID — server-derived, read-only (D-10, migration
@@ -419,20 +421,21 @@
 				     the Copywriting Contract — both fields are blank for exactly
 				     the same reason. -->
 				<div style="margin-bottom: var(--space-lg);">
-					<div style="display: flex; align-items: baseline; gap: var(--space-sm); margin-bottom: var(--space-sm); flex-wrap: wrap;">
+					<div style="margin-bottom: var(--space-sm);">
 						<span id="oyez_speaker_id_label" style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary);">
 							Oyez Speaker ID
-						</span>
-						<span id="oyez_speaker_id_explanation" style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary);">
-							The corpus join key. Blank means this person has not been matched to a corpus speaker.
 						</span>
 					</div>
 					<output
 						id="oyez_speaker_id_preview"
-						aria-labelledby="oyez_speaker_id_label oyez_speaker_id_explanation"
+						aria-labelledby="oyez_speaker_id_label"
+						aria-describedby="oyez_speaker_id_explanation"
 						aria-live="polite"
-						style="display: block; width: 100%; background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; padding: var(--space-sm) var(--space-md); font-size: var(--font-size-body); box-sizing: border-box; color: {data.person.oyez_speaker_id ? 'var(--color-text-primary)' : 'var(--color-text-secondary)'}; font-style: {data.person.oyez_speaker_id ? 'normal' : 'italic'};"
+						style="display: block; width: 100%; background-color: transparent; border: 1px solid color-mix(in srgb, var(--color-border) 40%, transparent); border-radius: 6px; padding: var(--space-sm) var(--space-md); font-size: var(--font-size-body); box-sizing: border-box; color: {data.person.oyez_speaker_id ? 'var(--color-text-primary)' : 'var(--color-text-secondary)'}; font-style: {data.person.oyez_speaker_id ? 'normal' : 'italic'};"
 					>{data.person.oyez_speaker_id ?? 'Not in corpus'}</output>
+					<span id="oyez_speaker_id_explanation" style="font-size: var(--font-size-caption); font-weight: var(--font-weight-regular); color: var(--color-text-secondary); margin-top: var(--space-sm); display: block;">
+						The corpus join key. Blank means this person has not been matched to a corpus speaker.
+					</span>
 				</div>
 
 				<!-- Name parts — 4-column on desktop, 2-column on mobile. First-or-last

@@ -5,16 +5,16 @@ milestone_name: The Site Becomes Complete
 current_phase: 52
 current_phase_name: Justice Identity
 status: executing
-stopped_at: Completed 52-03-PLAN.md
-last_updated: "2026-09-25T12:50:32.299Z"
+stopped_at: Completed 52-04-PLAN.md
+last_updated: "2026-09-25T13:44:25.186Z"
 last_activity: 2026-09-25
 last_activity_desc: Phase 52 execution started
-state_head: 095cdb4b060e740c520aa6370fdaea4c8b2a7936
+state_head: 46d52751e02db3392e1daf35d6dcc4934244b086
 progress:
   total_phases: 8
   completed_phases: 0
-  total_plans: 5
-  completed_plans: 3
+  total_plans: 6
+  completed_plans: 4
   percent: 0
 ---
 
@@ -39,7 +39,7 @@ phase-numbered test modules, ~2:1 test:code as a guideline. Both govern all late
 ## Current Position
 
 Phase: 52 (Justice Identity) — EXECUTING
-Plan: 4 of 5
+Plan: 5 of 5
 Status: Ready to execute
 Last activity: 2026-09-25 — Phase 52 execution started
 
@@ -80,6 +80,7 @@ the first client-side third-party script and the first `PUBLIC_` env var this co
 | Phase 52 P01 | 46min | 3 tasks | 9 files |
 | Phase 52 P02 | 58min | 3 tasks | 14 files |
 | Phase 52 P03 | 24min | 2 tasks | 4 files |
+| Phase 52 P04 | 43min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -268,8 +269,8 @@ suppress by design, so the section was moved verbatim to
 
 ## Session Continuity
 
-Last session: 2026-09-25T12:50:32.190Z
-Stopped at: Completed 52-03-PLAN.md
+Last session: 2026-09-25T13:44:25.053Z
+Stopped at: Completed 52-04-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
@@ -284,6 +285,8 @@ Resume file: None
 - [Phase 52]: derive_initials co-located in api/domain/person_names.py with _KNOWN_SUFFIXES rather than a new module. — D-13's fallback is defined in terms of the exact suffix vocabulary; separating them risks a fourth splitter appearing elsewhere unnoticed.
 - [Phase 52]: arguments.py pre-selects structured-parts-vs-raw_speaker_label arguments in a plain if/else before one derive_initials call per row. — Keeps derive_initials to a single call site per file (the plan's own acceptance criterion), not a ternary with two inline calls.
 - [Phase 52]: Both new identity fields (display_name, oyez_speaker_id) are read directly off data.person in the Svelte template, never captured into a top-level const or $derived. — Matches the existing data.person.full_name idiom at the same call site and avoids the stale-prop-capture bug class this codebase has already been bitten by once.
+- [Phase 52]: Phase 52-04: justice bench seed inserted after reset_to_fixture's TRUNCATE commit and before the FIXTURE_SET reseed loop (D-16), with a pre-flight requiring both justice CSVs before any destructive statement. — An absent mapping must never be able to leave the database empty; the seed must run before the reseed loop so oyez_speaker_id resolution hits on the corpus importer's first lookup key.
+- [Phase 52]: Phase 52-04: fixed the reset_to_fixture stale-created_at defect with one extra db.commit() between the fixture-verification loop and the state-realization block, rather than restructuring the whole reset's transaction boundaries. — approve_argument/publish_argument already commit at their own end; the loop's own stale open transaction was the only missing commit boundary.
 
 ### Blockers
 

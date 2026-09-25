@@ -214,9 +214,12 @@ Active milestone: **v1.9 The Site Becomes Complete** (Phases 52–58). Details f
   - Closes the Person-dedup item carried since v1.7 Phase 42. It is not four bad rows; it is 49 of 114, visible as four only because four fixtures are imported.
   - Per the reseed-don't-migrate doctrine, existing duplicates are cleared by the reset, not by a backfill migration.
 
-**Plans**: 3/5 plans executed
+**Plans**: 4/6 plans executed
 
 Plans:
+
+- [ ] 52-06-PLAN.md
+
 **Wave 1**
 
 - [x] 52-01-PLAN.md — Tracer: the identity spine — verified mapping artifact, migration 0032 (`display_name` + partial unique index), importer keyed on `oyez_speaker_id`, `speaker_name` COALESCE
@@ -225,7 +228,7 @@ Plans:
 
 - [x] 52-02-PLAN.md — Server-computed avatar initials on both public payloads; both client splitters deleted; `JI` → `JH` proven in a real browser
 - [x] 52-03-PLAN.md — Admin person page: Corpus Display Name and Oyez Speaker ID as read-only rows, absent from the write path
-- [ ] 52-04-PLAN.md — `reset_to_fixture` seeds the bench after its TRUNCATE; fail-before-destroy pre-flight; stale `created_at` skew fixed
+- [x] 52-04-PLAN.md — `reset_to_fixture` seeds the bench after its TRUNCATE; fail-before-destroy pre-flight; stale `created_at` skew fixed
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -415,7 +418,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 52. Justice Identity | 3/5 | In Progress|  |
+| 52. Justice Identity | 4/6 | In Progress|  |
 | 53. Undetermined Speakers & Marker Normalisation | 0/? | Not started | - |
 | 54. Publishing at Scale & Verification Debt | 0/? | Not started | - |
 | 54.1. Justice Portraits & Biographical Enrichment (INSERTED) | 0/? | Not started | - |

@@ -19,6 +19,7 @@ import pytest
 
 from api.domain.person_names import (
     PersonNameError,
+    derive_initials,
     format_full_name,
     normalize_name_part,
     prepare_name_provenance,
@@ -220,3 +221,76 @@ def test_legacy_split_preserves_original_full_name_available_to_caller():
     assert result.auto_apply is False
     # Caller-side contract: original remains exactly what was passed in.
     assert original == "Roberts, John"
+
+
+# ---------------------------------------------------------------------------
+# Phase 52-02 Task 1: derive_initials (D-12/D-13, JUSTICE-06)
+# ---------------------------------------------------------------------------
+
+
+def test_derive_initials_structured_parts_with_suffix():
+    # name_suffix is accepted and deliberately ignored — a suffix is never
+    # an initial. This is the JI -> JH fix.
+    assert derive_initials(first_name="John", last_name="Harlan", name_suffix="II") == "JH"
+
+
+def test_derive_initials_structured_parts_no_suffix():
+    assert derive_initials(first_name="Oliver", last_name="Holmes") == "OH"
+
+
+def test_derive_initials_structured_parts_win_over_full_name():
+    # Structured parts win: full_name is never parsed when first_name and
+    # last_name are both present.
+    assert (
+        derive_initials(
+            first_name="John",
+            last_name="Harlan",
+            full_name="An Entirely Different Name",
+        )
+        == "JH"
+    )
+
+
+def test_derive_initials_fallback_drops_roman_numeral_suffix_after_comma():
+    # D-13 fallback: no parts, full_name only. Suffix token dropped.
+    assert derive_initials(full_name="John Marshall Harlan, II") == "JH"
+
+
+def test_derive_initials_fallback_drops_jr_suffix_after_comma():
+    assert derive_initials(full_name="Oliver W. Holmes, Jr.") == "OH"
+
+
+def test_derive_initials_fallback_single_token_returns_first_two_codepoints():
+    assert derive_initials(full_name="Cher") == "CH"
+
+
+@pytest.mark.parametrize("blank_full_name", [None, "", "   "])
+def test_derive_initials_blank_or_none_full_name_and_no_parts_returns_none(
+    blank_full_name,
+):
+    assert derive_initials(full_name=blank_full_name) is None
+
+
+def test_derive_initials_no_arguments_returns_none():
+    assert derive_initials() is None
+
+
+def test_derive_initials_only_first_name_falls_back_to_full_name():
+    # Structured branch requires BOTH first_name and last_name; a lone
+    # first_name is not enough to take the structured path.
+    assert (
+        derive_initials(first_name="John", full_name="John Marshall Harlan, II")
+        == "JH"
+    )
+
+
+def test_derive_initials_uppercases_nfc_normalized_leading_codepoint():
+    # Lowercase, accented leading characters are uppercased, not stripped
+    # of their mark.
+    assert derive_initials(first_name="émile", last_name="zola") == "ÉZ"
+
+
+def test_derive_initials_is_pure_and_deterministic():
+    first = derive_initials(first_name="John", last_name="Harlan", name_suffix="II")
+    second = derive_initials(first_name="John", last_name="Harlan", name_suffix="II")
+    assert first == second == "JH"

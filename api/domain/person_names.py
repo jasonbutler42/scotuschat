@@ -365,3 +365,19 @@ def split_legacy_full_name(full_name: str) -> SplitResult:
         ),
         auto_apply=True,
     )
+
+
+# ---------------------------------------------------------------------------
+# Avatar initials derivation (D-12/D-13, Phase 52-02)
+# ---------------------------------------------------------------------------
+
+
+def derive_initials(
+    *,
+    first_name: Optional[str] = None,
+    last_name: Optional[str] = None,
+    name_suffix: Optional[str] = None,
+    full_name: Optional[str] = None,
+) -> Optional[str]:
+    """RED-phase stub — real implementation lands in the GREEN commit."""
+    return None

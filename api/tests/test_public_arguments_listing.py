@@ -208,7 +208,16 @@ async def test_terms_counts_published_only_ordered_desc(client: AsyncClient, see
     uniquely-generated term years (year 1850 + a random offset) so this
     test never collides with real seed data or other tests' terms.
     """
-    base_year = 1850 + (uuid.uuid4().int % 100)
+    # Term-year band invariant: each test in this file owns ONE disjoint decade
+    # band strictly below 1955, and `% 10` keeps the drawn year inside it. Both
+    # halves are load-bearing. `% 100` (the original) made every band span a
+    # century, so the bands overlapped each other AND the real OT 1955-2019
+    # fixture arguments other tests seed into the shared TEST_DATABASE_URL
+    # database (api/services/admin_dev.py FIXTURE_SET) — an extra argument row
+    # then appears in a term listing and the assertion fails at random.
+    # Bands in use: 1810 1820 1830 1840 1850 1860 1870 1880 1890 1900 1910 1920
+    # 1930 1940. A new test takes the next unused base, never a used one.
+    base_year = 1850 + (uuid.uuid4().int % 10)
     later_year = base_year + 1
 
     await seeded.add_argument(term_year=later_year, question_number=1)
@@ -232,7 +241,7 @@ async def test_terms_counts_published_only_ordered_desc(client: AsyncClient, see
 @pytest.mark.skipif(not _db_configured(), reason="DATABASE_URL not configured")
 async def test_terms_excludes_draft_argument(client: AsyncClient, seeded: _SeededFixture) -> None:
     """A DRAFT argument (never published) must not inflate its term's count."""
-    year = 1860 + (uuid.uuid4().int % 100)
+    year = 1860 + (uuid.uuid4().int % 10)
 
     await seeded.add_argument(term_year=year, question_number=1)
     await seeded.add_argument(
@@ -258,7 +267,7 @@ async def test_terms_excludes_unpublished_argument_with_retained_published_at(
     plan 10 Defect 2) must not inflate its term's count — the gate is both
     predicates, never one instead of the other.
     """
-    year = 1870 + (uuid.uuid4().int % 100)
+    year = 1870 + (uuid.uuid4().int % 10)
 
     await seeded.add_argument(term_year=year, question_number=1)
     await seeded.add_argument(
@@ -280,7 +289,7 @@ async def test_terms_consolidated_docket_contributes_one(client: AsyncClient, se
     A consolidated case with four `case_arguments` rows (one lead, three
     non-lead) contributes exactly 1 to its term's count — never 4.
     """
-    year = 1880 + (uuid.uuid4().int % 100)
+    year = 1880 + (uuid.uuid4().int % 10)
 
     await seeded.add_argument(term_year=year, question_number=1, extra_lead_cases=3)
 
@@ -293,7 +302,7 @@ async def test_terms_consolidated_docket_contributes_one(client: AsyncClient, se
 @pytest.mark.skipif(not _db_configured(), reason="DATABASE_URL not configured")
 async def test_terms_absent_when_only_argument_is_unpublished(client: AsyncClient, seeded: _SeededFixture) -> None:
     """A term whose only argument is unpublished (DRAFT) is absent from the list entirely."""
-    year = 1890 + (uuid.uuid4().int % 100)
+    year = 1890 + (uuid.uuid4().int % 10)
 
     await seeded.add_argument(
         term_year=year,
@@ -322,7 +331,7 @@ async def test_term_detail_lists_only_published_arguments_for_that_term(
     case has that term_year — a published argument in a different term, and
     a draft argument in the same term, are both excluded.
     """
-    year = 1900 + (uuid.uuid4().int % 100)
+    year = 1900 + (uuid.uuid4().int % 10)
     other_year = year + 1
 
     included_id = await seeded.add_argument(term_year=year, question_number=1)
@@ -379,7 +388,7 @@ async def test_term_detail_excludes_unpublished_with_retained_published_at(
     still non-null is absent from the term-detail response for its term
     (same both-predicates gate as the term index).
     """
-    year = 1910 + (uuid.uuid4().int % 100)
+    year = 1910 + (uuid.uuid4().int % 10)
 
     await seeded.add_argument(
         term_year=year,
@@ -399,7 +408,7 @@ async def test_term_detail_consolidated_docket_contributes_one_row(
     client: AsyncClient, seeded: _SeededFixture
 ) -> None:
     """A consolidated case (one lead + three non-lead case_arguments rows) contributes exactly one row."""
-    year = 1920 + (uuid.uuid4().int % 100)
+    year = 1920 + (uuid.uuid4().int % 10)
 
     argument_id = await seeded.add_argument(term_year=year, question_number=1, extra_lead_cases=3)
 
@@ -419,7 +428,7 @@ async def test_term_detail_shared_argued_date_orders_stably(
     stable order (tiebroken by Argument.id) across two consecutive
     requests — no accidental reordering between calls.
     """
-    year = 1930 + (uuid.uuid4().int % 100)
+    year = 1930 + (uuid.uuid4().int % 10)
     shared_date = datetime.date(year, 1, 15)
 
     id_a = await seeded.add_argument(term_year=year, question_number=1, argued_date=shared_date)
@@ -458,7 +467,7 @@ async def test_term_detail_shared_argued_date_orders_stably(
 @pytest.mark.skipif(not _db_configured(), reason="DATABASE_URL not configured")
 async def test_terms_live_response_never_leaks_trust_tier(client: AsyncClient, seeded: _SeededFixture) -> None:
     """GET /arguments/terms — live decoded JSON body, walked recursively."""
-    year = 1940 + (uuid.uuid4().int % 100)
+    year = 1940 + (uuid.uuid4().int % 10)
     await seeded.add_argument(term_year=year, question_number=1)
 
     response = await client.get("/arguments/terms")
@@ -473,7 +482,7 @@ async def test_term_detail_live_response_never_leaks_trust_tier(
     client: AsyncClient, seeded: _SeededFixture
 ) -> None:
     """GET /arguments/term/{term_year} — live decoded JSON body, against a seeded, populated term."""
-    year = 1950 + (uuid.uuid4().int % 100)
+    year = 1810 + (uuid.uuid4().int % 10)
     await seeded.add_argument(term_year=year, question_number=1)
 
     response = await client.get(f"/arguments/term/{year}")
@@ -496,7 +505,7 @@ async def test_by_slug_utterances_live_response_never_leaks_trust_tier(
     """
     suffix = uuid.uuid4().hex[:10]
     slug = f"test-fixture-leak-check-{suffix}"
-    year = 1960 + (uuid.uuid4().int % 100)
+    year = 1820 + (uuid.uuid4().int % 10)
     await seeded.add_argument(term_year=year, question_number=1, slug=slug)
 
     response = await client.get(f"/arguments/by-slug/{slug}/utterances")
@@ -556,7 +565,7 @@ async def test_unpublished_argument_is_absent_from_all_public_read_paths(
     )
     from api.services.speakers import get_argument_speakers
 
-    year = 1970 + (uuid.uuid4().int % 100)
+    year = 1830 + (uuid.uuid4().int % 10)
     suffix = uuid.uuid4().hex[:10]
 
     async with AsyncSessionLocal() as db:
@@ -702,7 +711,7 @@ async def test_published_argument_without_slug_is_absent_from_public_listing(see
     from api.core.database import AsyncSessionLocal
     from api.services.arguments import list_arguments_for_term, list_terms
 
-    year = 1970 + (uuid.uuid4().int % 100)
+    year = 1840 + (uuid.uuid4().int % 10)
 
     # add_argument now mints a slug by default (production's shape), so null it
     # out explicitly to build the state under test.

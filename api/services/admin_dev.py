@@ -325,6 +325,26 @@ async def reset_to_fixture(db: AsyncSession, corpus_dir: str | Path | None = Non
 
         fixture_rows.append((entry, argument.id))
 
+    # Commit the fixture-verification loop's own read transaction before
+    # state realization starts (2026-08-20 todo — stale created_at values).
+    # This `db` session's first use since the TRUNCATE commit above was the
+    # SELECT inside this loop's first iteration, which opened a fresh
+    # transaction that has stayed open (no writes, no commit) through every
+    # iteration — including while run_import_convokit's own separate
+    # session/engine did the real work of importing all four fixtures.
+    # PostgreSQL's now() returns transaction-START time, not statement
+    # time, so every server_default=func.now() column the state-realization
+    # block below writes on this same `db` session would otherwise carry a
+    # timestamp from before some of the fixtures were even imported —
+    # observed as a DRAFT argument_status_log row stamped earlier than the
+    # CANDIDATE row that logically preceded it. Committing here (nothing to
+    # persist, only to close) means approve_argument/publish_argument's own
+    # first SELECT below opens a fresh transaction at the real time of each
+    # transition; both functions already commit at their own end, so no
+    # further commit is needed between the per-fixture transitions that
+    # follow.
+    await db.commit()
+
     # 5. State realization — runs strictly AFTER every fixture
     # has landed and passed its existence check above, so every Argument
     # row referenced below is guaranteed to exist before any transition is

@@ -718,3 +718,54 @@ async def test_reset_response_reports_realized_states(client, tmp_path, db):
     # PD-05: all four fixtures are distinguishable by the
     # (argument_status, latest_import_run_step) pair.
     assert len(seen_pairs) == 4
+
+
+@pytest.mark.asyncio
+async def test_reset_status_log_created_at_monotonic_with_id(client, tmp_path, db):
+    """argument_status_log rows, ordered by id, are also non-decreasing by
+    created_at for both multi-transition fixtures (13015/Draft,
+    18897/Published) -- the invariant that silently broke because
+    reset_to_fixture reused one long-lived transaction across its
+    fixture-verification loop and its state-realization block. PostgreSQL's
+    now() is transaction-START time, not statement time, so a DRAFT row
+    written late in that transaction was stamped earlier than the CANDIDATE
+    row that logically preceded it (2026-08-20 todo, Task 2 fix). Also
+    checks arguments.resolved_at on the Draft fixture is not earlier than
+    its own CANDIDATE status-log row."""
+    _require_test_db()
+
+    corpus_dir = _write_corpus_fixture(tmp_path)
+    resp = await _post_reset(client, corpus_dir)
+    assert resp.status_code == 200
+
+    candidate_created_at_by_conversation: dict[str, object] = {}
+
+    for conversation_id in ("13015", "18897"):
+        argument = await _fetch_argument(db, conversation_id)
+        rows = (
+            await db.execute(
+                select(ArgumentStatusLog.id, ArgumentStatusLog.status, ArgumentStatusLog.created_at)
+                .where(ArgumentStatusLog.argument_id == argument.id)
+                .order_by(ArgumentStatusLog.id.asc())
+            )
+        ).all()
+        assert len(rows) >= 2, f"expected >=2 status-log rows for {conversation_id!r}"
+
+        timestamps = [created_at for _, _, created_at in rows]
+        assert timestamps == sorted(timestamps), (
+            f"argument_status_log rows for conversation {conversation_id!r} "
+            f"are not monotonic by id: {rows}"
+        )
+
+        candidate_row = next(
+            (row for row in rows if row[1] == ArgumentStatusEnum.CANDIDATE), None
+        )
+        assert candidate_row is not None, (
+            f"expected a CANDIDATE birth-state row for {conversation_id!r}"
+        )
+        candidate_created_at_by_conversation[conversation_id] = candidate_row[2]
+
+    draft_argument = await _fetch_argument(db, "13015")
+    assert draft_argument.resolved_at is not None
+    assert draft_argument.resolved_at >= candidate_created_at_by_conversation["13015"]
+

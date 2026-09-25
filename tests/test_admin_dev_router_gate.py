@@ -166,3 +166,35 @@ def test_dev_router_absent_for_allowlist_near_misses(near_miss_value):
     paths = _all_route_paths(main.app)
 
     assert not any(p.startswith("/api/admin/dev") for p in paths)
+
+
+@pytest.mark.asyncio
+async def test_fixture_state_route_absent_outside_development():
+    """
+    Phase 52-05 (D-14): the new dev-only GET is proven absent outside
+    development by the SAME gate test that proves it for its siblings, not
+    assumed to inherit the gate merely by living on the same router. A
+    request 404s, never 403 (same Information Disclosure reasoning as
+    test_dev_router_absent_outside_development above).
+    """
+    main = _reimport_api_main("production")
+    paths = _all_route_paths(main.app)
+
+    assert not any(p == "/api/admin/dev/fixture-state" for p in paths)
+
+    async with AsyncClient(
+        transport=ASGITransport(app=main.app), base_url="http://test"
+    ) as client:
+        resp = await client.get("/api/admin/dev/fixture-state")
+
+    assert resp.status_code == 404
+    assert resp.status_code != 403
+
+
+def test_fixture_state_route_present_in_development():
+    """The inverse of the absence test above — without this, the absence
+    test would still pass if the route were deleted entirely."""
+    main = _reimport_api_main("development")
+    paths = _all_route_paths(main.app)
+
+    assert any(p == "/api/admin/dev/fixture-state" for p in paths)

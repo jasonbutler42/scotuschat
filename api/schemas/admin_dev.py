@@ -45,3 +45,37 @@ class SeedUnresolvedSpeakerResponse(BaseModel):
     raw_speaker_label: str
     trust_tier: str
     already_seeded: bool
+
+
+class FixtureStateItem(BaseModel):
+    """Phase 52-05 (D-14). One FIXTURE_SET conversation's landing state, as
+    re-read by api.services.admin_dev.get_fixture_state -- never written by
+    the reset itself. `present` is False and the three nullable fields are
+    None when no Argument row exists yet for this conversation."""
+
+    conversation_id: str
+    case_name: str
+    role: str
+    present: bool
+    argument_id: int | None
+    status: str | None
+    latest_import_run_step: str | None
+
+
+class ResetProgress(BaseModel):
+    """Phase 52-05 (D-15). `step` is a short machine token
+    ("seeding_justices" | "reseeding_fixture_N") -- the frontend owns the
+    Copywriting Contract's rendered literal strings and maps this token to
+    them, never the other way around."""
+
+    step: str
+    completed: int
+    total: int
+
+
+class FixtureStateResponse(BaseModel):
+    """Phase 52-05 (D-14/D-15). `progress` is None when no reset is
+    currently in flight."""
+
+    fixtures: list[FixtureStateItem]
+    progress: ResetProgress | None

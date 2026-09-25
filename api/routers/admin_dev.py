@@ -1,6 +1,6 @@
 """
-Dev-only admin router — "Reset to Fixture"
-and "Seed unresolved speaker".
+Dev-only admin router — "Reset to Fixture", "Fixture state" (Phase 52-05,
+read-only), and "Seed unresolved speaker".
 
 This router is ONLY mounted on the FastAPI app (api/main.py) when
 settings.environment == "development". In every other environment it
@@ -19,7 +19,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.core.database import get_db
 from api.routers.admin import verify_admin_token
-from api.schemas.admin_dev import ResetToFixtureResponse, SeedUnresolvedSpeakerResponse
+from api.schemas.admin_dev import (
+    FixtureStateResponse,
+    ResetToFixtureResponse,
+    SeedUnresolvedSpeakerResponse,
+)
 from api.services import admin_dev as admin_dev_service
 from api.services.admin_dev import (
     CorpusUnavailableError,
@@ -55,6 +59,28 @@ async def reset_to_fixture(db: AsyncSession = Depends(get_db)):
     except ResetIncompleteError as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
     return result
+
+
+@router.get("/fixture-state", response_model=FixtureStateResponse)
+async def get_fixture_state(db: AsyncSession = Depends(get_db)):
+    """
+    Read-only re-read of what FIXTURE_SET last landed as, plus the current
+    reset progress record if one is in flight (Phase 52-05, D-14/D-15).
+
+    This is a GET that never triggers a reset and never writes anything —
+    it issues the same per-conversation existence-and-state SELECT
+    reset_to_fixture's own reseed loop already performs, and reads an
+    in-memory progress record. Calling it twice in a row leaves every
+    table byte-identical.
+
+    Auth inherited from router-level verify_admin_token dependency. This
+    route is only reachable at all when the environment is development
+    (D-07) — see api/main.py's guarded include_router call, the same gate
+    reset-to-fixture uses.
+
+    Takes no request body, query parameter, or header of its own.
+    """
+    return await admin_dev_service.get_fixture_state(db)
 
 
 @router.post("/seed-unresolved-speaker", response_model=SeedUnresolvedSpeakerResponse)

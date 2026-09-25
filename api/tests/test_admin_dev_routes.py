@@ -51,8 +51,10 @@ from sqlalchemy import func, select
 from api.models.models import (
     AdminJob,
     Argument,
+    ArgumentParticipant,
     ArgumentStatusEnum,
     ArgumentStatusLog,
+    Case,
     CourtTenure,
     ImportMethod,
     ImportRun,
@@ -993,3 +995,146 @@ async def test_reset_justice_utterance_speaker_name_uses_corpus_display_form(
     _, advocate_full_name, advocate_display_name = advocate_rows[0]
     assert advocate_display_name is None
     assert advocate_full_name == "Advocate 15169"
+
+
+# ===========================================================================
+# Phase 52-05 (D-14/D-15) — GET /api/admin/dev/fixture-state, the read-only
+# re-read the frontend's resetToFixture action consults on any failure, and
+# the source of the Running state's per-fixture progress polling.
+# ===========================================================================
+
+
+async def _get_fixture_state(client):
+    return await client.get(
+        "/api/admin/dev/fixture-state", headers=_admin_headers()
+    )
+
+
+async def _table_row_counts(db) -> dict[str, int]:
+    """Row counts across every table Phase 52-05's TRUNCATE_SQL names plus
+    the two FK-reached-only-by-CASCADE tables this module's fixtures ever
+    touch — used to prove get_fixture_state performs no write (a snapshot
+    identical before and after, not merely a 200 status)."""
+    db.expire_all()
+    counts: dict[str, int] = {}
+    for label, model in (
+        ("people", Person),
+        ("court_tenures", CourtTenure),
+        ("cases", Case),
+        ("arguments", Argument),
+        ("argument_participants", ArgumentParticipant),
+        ("utterances", Utterance),
+        ("import_run", ImportRun),
+        ("admin_jobs", AdminJob),
+    ):
+        counts[label] = (
+            await db.execute(select(func.count()).select_from(model))
+        ).scalar_one()
+    return counts
+
+
+@pytest.mark.asyncio
+async def test_fixture_state_before_reset_reports_all_absent(client, db):
+    """Before any reset, every FIXTURE_SET entry reports present=False with
+    every nullable field null, in declaration order, and progress is None
+    (no reset in flight)."""
+    _require_test_db()
+
+    # This test's own TRUNCATE-adjacent isolation: reset_to_fixture always
+    # TRUNCATEs on entry, so calling it once with an empty synthetic corpus
+    # dir would itself populate fixtures -- instead, directly TRUNCATE the
+    # same table set here so this test asserts the true pre-reset state
+    # without depending on another test's ordering.
+    from sqlalchemy import text as sa_text
+
+    from api.services.admin_dev import TRUNCATE_SQL
+
+    await db.execute(sa_text(TRUNCATE_SQL))
+    await db.commit()
+
+    resp = await _get_fixture_state(client)
+    assert resp.status_code == 200
+    body = resp.json()
+
+    assert body["progress"] is None
+    assert [f["conversation_id"] for f in body["fixtures"]] == FIXTURE_ORDER
+    for fixture in body["fixtures"]:
+        assert fixture["present"] is False
+        assert fixture["argument_id"] is None
+        assert fixture["status"] is None
+        assert fixture["latest_import_run_step"] is None
+
+
+@pytest.mark.asyncio
+async def test_fixture_state_after_reset_reports_expected_states(
+    client, tmp_path, db
+):
+    """After a successful reset, the re-read reports all four fixtures
+    present, in FIXTURE_SET declaration order, each carrying the exact
+    per-role end-state reset_to_fixture's own state-realization block
+    leaves behind -- the same evidence the frontend's D-14 re-read
+    interprets as full success."""
+    _require_test_db()
+
+    corpus_dir = _write_corpus_fixture(tmp_path)
+    reset_resp = await _post_reset(client, corpus_dir)
+    assert reset_resp.status_code == 200
+
+    resp = await _get_fixture_state(client)
+    assert resp.status_code == 200
+    body = resp.json()
+
+    assert body["progress"] is None
+    assert [f["conversation_id"] for f in body["fixtures"]] == FIXTURE_ORDER
+
+    expected_by_conversation = {
+        "15169": ("candidate", "parse"),
+        "13015": ("draft", "parse"),
+        "18897": ("published", "parse"),
+        "22372": ("candidate", "reconcile"),
+    }
+    for fixture in body["fixtures"]:
+        expected_status, expected_step = expected_by_conversation[
+            fixture["conversation_id"]
+        ]
+        assert fixture["present"] is True
+        assert fixture["argument_id"] is not None
+        assert fixture["status"] == expected_status
+        assert fixture["latest_import_run_step"] == expected_step
+
+
+@pytest.mark.asyncio
+async def test_fixture_state_performs_no_write(client, tmp_path, db):
+    """Calling GET /fixture-state twice in a row, after a reset, leaves
+    every table's row count byte-identical -- proven by a before/after
+    snapshot comparison across every TRUNCATE_SQL table, not merely by
+    asserting a 200 status (must_haves: 'The endpoint performs no write')."""
+    _require_test_db()
+
+    corpus_dir = _write_corpus_fixture(tmp_path)
+    reset_resp = await _post_reset(client, corpus_dir)
+    assert reset_resp.status_code == 200
+    await db.commit()
+
+    before = await _table_row_counts(db)
+
+    resp1 = await _get_fixture_state(client)
+    assert resp1.status_code == 200
+    after_first = await _table_row_counts(db)
+    assert after_first == before
+
+    resp2 = await _get_fixture_state(client)
+    assert resp2.status_code == 200
+    after_second = await _table_row_counts(db)
+    assert after_second == before
+
+
+@pytest.mark.asyncio
+async def test_fixture_state_requires_admin_token(client):
+    """GET without a valid X-Admin-Token returns non-200/non-5xx, mirroring
+    test_reset_requires_admin_token's own assertion shape."""
+    _require_test_db()
+
+    resp = await client.get("/api/admin/dev/fixture-state")
+    assert resp.status_code != 200
+    assert resp.status_code < 500

@@ -38,13 +38,24 @@ file. Measured on the development machine at plan time: one pass over
 seed step added (Phase 52-04), one direct end-to-end reset against the real
 corpus and the dev database measured 71.67s total wall-clock — see
 52-04-SUMMARY.md for the full measurement and its methodology caveat (a
-direct async call, not through the HTTP endpoint plan 52-05's AbortSignal
-will actually time). This is a dev-only tool on localhost with no proxy in
-the path — do not add a timeout, a background job, or a progress channel;
-the UI-SPEC's Running state is a deliberately blocking request with a
-spinner.
+direct async call, not through the HTTP endpoint). This is a dev-only tool
+on localhost with no proxy in the path.
+
+Phase 52-05 (D-14/D-15): the operator's frontend now carries its own
+AbortSignal sized above the measured duration above, and the blanket
+"probable corruption" error copy this reset used to report on every failure
+mode is replaced by a follow-up read of what actually landed — see
+get_fixture_state below. D-15 also gives the Running state a per-fixture
+progress signal instead of one static string for the whole multi-minute
+operation, tracked by the process-local `_reset_progress` record below.
+This progress record is process-local, single-operator, localhost-only
+state — it does not need to survive a restart and there is exactly one
+FastAPI worker in dev; do not promote it to a database row or a
+cross-worker channel.
 """
 
+import asyncio
+from dataclasses import dataclass
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -106,6 +117,53 @@ class FixtureNotSeededError(Exception):
     null. An un-reset database is the expected cause — mirrors
     ResetIncompleteError's own reasoning: this function never returns
     success with nothing done."""
+
+
+# Phase 52-05 (D-15): process-local progress record for a single in-flight
+# reset_to_fixture call, guarded by an asyncio.Lock only to avoid a torn
+# read while reset_to_fixture is mid-write -- NOT to arbitrate concurrent
+# resets (D-15 assumes one operator, one reset at a time, on localhost).
+# `step` is a short machine token ("seeding_justices" or
+# "reseeding_fixture_N"), never the rendered copy -- the frontend owns the
+# Copywriting Contract's literal strings (52-UI-SPEC.md) and maps this
+# token to them, so the two layers can't drift out of sync independently.
+@dataclass
+class _ResetProgressState:
+    step: str | None = None
+    completed: int = 0
+    total: int = 0
+
+
+_reset_progress = _ResetProgressState()
+_reset_progress_lock = asyncio.Lock()
+
+
+async def _set_reset_progress(step: str, completed: int, total: int) -> None:
+    async with _reset_progress_lock:
+        _reset_progress.step = step
+        _reset_progress.completed = completed
+        _reset_progress.total = total
+
+
+async def _clear_reset_progress() -> None:
+    """Always called from reset_to_fixture's own finally block (Phase
+    52-05) so a raise at any step never leaves a stale record claiming a
+    reset is still running."""
+    async with _reset_progress_lock:
+        _reset_progress.step = None
+        _reset_progress.completed = 0
+        _reset_progress.total = 0
+
+
+async def _get_reset_progress() -> dict | None:
+    async with _reset_progress_lock:
+        if _reset_progress.step is None:
+            return None
+        return {
+            "step": _reset_progress.step,
+            "completed": _reset_progress.completed,
+            "total": _reset_progress.total,
+        }
 
 
 # Single source of truth for both the reseed loop and the response
@@ -259,175 +317,195 @@ async def reset_to_fixture(db: AsyncSession, corpus_dir: str | Path | None = Non
     await db.execute(text(TRUNCATE_SQL))
     await db.commit()
 
-    # 2.5. Seed the justice bench (D-16, JUSTICE-04) — after the TRUNCATE's
-    # commit, before the corpus reseed below, so run_import_convokit's
-    # _resolve_person finds the seeded rows by oyez_speaker_id on its first
-    # lookup key for every fixture utterance a seeded justice gives.
-    # Passing csv=None/mapping_csv=None lets the importer resolve its own
-    # DEFAULT_CSV_PATH/DEFAULT_MAPPING_CSV_PATH module constants, which is
-    # what keeps this production path and the corpus_dir test override
-    # consistent; when the resolved corpus directory is not the default,
-    # the two justice CSV paths are built from it instead, so a test
-    # pointing at a temp corpus directory seeds from that directory too.
-    # Wrapped in the same try/except -> ResetIncompleteError shape the
-    # fixture reseed loop below already uses, so a seed failure surfaces as
-    # an incomplete reset rather than an unhandled 500.
-    if resolved_corpus_dir == DEFAULT_CORPUS_DIR:
-        justice_seed_args = SimpleNamespace(csv=None, mapping_csv=None)
-    else:
-        justice_seed_args = SimpleNamespace(
-            csv=str(resolved_corpus_dir / JUSTICES_CSV_PATH.name),
-            mapping_csv=str(resolved_corpus_dir / JUSTICE_MAPPING_CSV_PATH.name),
-        )
+    # 2.5 onward runs under one try/finally (Phase 52-05, D-15): the
+    # progress record set at each step below must be cleared on ANY exit —
+    # success or raise — so a failed reset never leaves a stale record
+    # claiming one is still running (see _clear_reset_progress).
     try:
-        await run_import_justices_csv(justice_seed_args)
-    except Exception as exc:
-        raise ResetIncompleteError(
-            f"Justice seed step failed — reset is incomplete ({exc!r})."
-        ) from exc
-
-    # 3-4. Reseed each fixture through the real importer, then verify its
-    # Argument row landed. Collect (entry, argument_id) pairs in
-    # FIXTURE_SET declaration order for the state-realization step below.
-    # No paired AdminJob check anymore — the corpus
-    # importer no longer creates one at all.
-    fixture_rows: list[tuple[dict, int]] = []
-    for entry in FIXTURE_SET:
-        conversation_id = entry["conversation_id"]
-
-        try:
-            await run_import_convokit(
-                SimpleNamespace(
-                    conversation_id=conversation_id,
-                    corpus_dir=str(resolved_corpus_dir),
-                )
+        # 2.5. Seed the justice bench (D-16, JUSTICE-04) — after the
+        # TRUNCATE's commit, before the corpus reseed below, so
+        # run_import_convokit's _resolve_person finds the seeded rows by
+        # oyez_speaker_id on its first lookup key for every fixture
+        # utterance a seeded justice gives. Passing csv=None/mapping_csv=
+        # None lets the importer resolve its own DEFAULT_CSV_PATH/
+        # DEFAULT_MAPPING_CSV_PATH module constants, which is what keeps
+        # this production path and the corpus_dir test override
+        # consistent; when the resolved corpus directory is not the
+        # default, the two justice CSV paths are built from it instead, so
+        # a test pointing at a temp corpus directory seeds from that
+        # directory too. Wrapped in the same try/except ->
+        # ResetIncompleteError shape the fixture reseed loop below already
+        # uses, so a seed failure surfaces as an incomplete reset rather
+        # than an unhandled 500.
+        if resolved_corpus_dir == DEFAULT_CORPUS_DIR:
+            justice_seed_args = SimpleNamespace(csv=None, mapping_csv=None)
+        else:
+            justice_seed_args = SimpleNamespace(
+                csv=str(resolved_corpus_dir / JUSTICES_CSV_PATH.name),
+                mapping_csv=str(resolved_corpus_dir / JUSTICE_MAPPING_CSV_PATH.name),
             )
+        # D-15: step 1 of 5 — reported before the seed call so the
+        # frontend's Running state never advances a step it has not
+        # actually started.
+        await _set_reset_progress("seeding_justices", 1, 5)
+        try:
+            await run_import_justices_csv(justice_seed_args)
         except Exception as exc:
-            # run_import_convokit's own per-conversation resilience only
-            # wraps the per-term _import_conversation call; a scoped
-            # --conversation-id lookup failure (e.g. the id is genuinely
-            # absent from conversations.json) raises BEFORE that guard, so
-            # this module must catch it here rather than let an unrelated
-            # exception type escape as an unhandled 500 (RESEARCH.md Open
-            # Question 2). Either way, a partial reseed never reports
-            # success — it always surfaces as ResetIncompleteError.
             raise ResetIncompleteError(
-                f"Conversation {conversation_id!r} failed to import — "
-                f"reset is incomplete ({exc!r})."
+                f"Justice seed step failed — reset is incomplete ({exc!r})."
             ) from exc
 
-        argument = (
-            await db.execute(
-                select(Argument).where(Argument.oyez_transcript_id == conversation_id)
+        # 3-4. Reseed each fixture through the real importer, then verify
+        # its Argument row landed. Collect (entry, argument_id) pairs in
+        # FIXTURE_SET declaration order for the state-realization step
+        # below. No paired AdminJob check anymore — the corpus importer no
+        # longer creates one at all.
+        fixture_rows: list[tuple[dict, int]] = []
+        for fixture_index, entry in enumerate(FIXTURE_SET, start=1):
+            conversation_id = entry["conversation_id"]
+
+            # D-15: steps 2-5 of 5 — one per FIXTURE_SET entry, in
+            # declaration order, reported before its own run_import_convokit
+            # call for the same reason as the justice-seed step above.
+            await _set_reset_progress(
+                f"reseeding_fixture_{fixture_index}", fixture_index + 1, 5
             )
-        ).scalar_one_or_none()
-        if argument is None:
-            raise ResetIncompleteError(
-                f"Conversation {conversation_id!r} did not land an Argument row "
-                "after run_import_convokit — reset is incomplete."
+
+            try:
+                await run_import_convokit(
+                    SimpleNamespace(
+                        conversation_id=conversation_id,
+                        corpus_dir=str(resolved_corpus_dir),
+                    )
+                )
+            except Exception as exc:
+                # run_import_convokit's own per-conversation resilience only
+                # wraps the per-term _import_conversation call; a scoped
+                # --conversation-id lookup failure (e.g. the id is genuinely
+                # absent from conversations.json) raises BEFORE that guard, so
+                # this module must catch it here rather than let an unrelated
+                # exception type escape as an unhandled 500 (RESEARCH.md Open
+                # Question 2). Either way, a partial reseed never reports
+                # success — it always surfaces as ResetIncompleteError.
+                raise ResetIncompleteError(
+                    f"Conversation {conversation_id!r} failed to import — "
+                    f"reset is incomplete ({exc!r})."
+                ) from exc
+
+            argument = (
+                await db.execute(
+                    select(Argument).where(Argument.oyez_transcript_id == conversation_id)
+                )
+            ).scalar_one_or_none()
+            if argument is None:
+                raise ResetIncompleteError(
+                    f"Conversation {conversation_id!r} did not land an Argument row "
+                    "after run_import_convokit — reset is incomplete."
+                )
+
+            fixture_rows.append((entry, argument.id))
+
+        # Commit the fixture-verification loop's own read transaction before
+        # state realization starts (2026-08-20 todo — stale created_at values).
+        # This `db` session's first use since the TRUNCATE commit above was the
+        # SELECT inside this loop's first iteration, which opened a fresh
+        # transaction that has stayed open (no writes, no commit) through every
+        # iteration — including while run_import_convokit's own separate
+        # session/engine did the real work of importing all four fixtures.
+        # PostgreSQL's now() returns transaction-START time, not statement
+        # time, so every server_default=func.now() column the state-realization
+        # block below writes on this same `db` session would otherwise carry a
+        # timestamp from before some of the fixtures were even imported —
+        # observed as a DRAFT argument_status_log row stamped earlier than the
+        # CANDIDATE row that logically preceded it. Committing here (nothing to
+        # persist, only to close) means approve_argument/publish_argument's own
+        # first SELECT below opens a fresh transaction at the real time of each
+        # transition; both functions already commit at their own end, so no
+        # further commit is needed between the per-fixture transitions that
+        # follow.
+        await db.commit()
+
+        # 5. State realization — runs strictly AFTER every fixture
+        # has landed and passed its existence check above, so every Argument
+        # row referenced below is guaranteed to exist before any transition is
+        # attempted. Looked up by id collected during the reseed loop, never
+        # assumed.
+        ids_by_conversation = {
+            entry["conversation_id"]: argument_id for entry, argument_id in fixture_rows
+        }
+
+        # Fixture 15169 (Complexity): no action. It stays exactly as the
+        # importer left it — status=CANDIDATE, no AdminJob, latest ImportRun at
+        # step="parse". This is deliberate: it is the reference "freshly
+        # imported" state.
+
+        # Fixture 13015 (Draft target): CANDIDATE -> DRAFT via the real
+        # argument-scoped service function. approve_argument
+        # stamps resolved_at and writes the ArgumentStatusLog row — this module
+        # performs none of those writes itself.
+        draft_argument_id = ids_by_conversation["13015"]
+        await arguments_service.approve_argument(db, draft_argument_id)
+
+        # Fixture 18897 (Published target): TWO calls, in this order, and the
+        # order is NOT optional. approve_argument must run first to reach DRAFT
+        # and stamp resolved_at — publish_argument raises ValueError("Cannot
+        # publish: resolve step not yet complete") when resolved_at is still
+        # null, which is exactly the state a freshly-imported CANDIDATE argument
+        # is in. Do not "simplify" these two calls into one.
+        published_argument_id = ids_by_conversation["18897"]
+        await arguments_service.approve_argument(db, published_argument_id)
+        await arguments_service.publish_argument(db, published_argument_id)
+
+        # Fixture 22372 (Mid-pipeline target, D-04, OQ-2): seeds a
+        # step="reconcile" ImportRun rather than flipping an AdminJob's status
+        # (there is no AdminJob to flip, D-14/D-19). Argument.status stays
+        # CANDIDATE, Argument.resolved_at stays null, unchanged — mirrors the
+        # pre-Phase-50 fixture's "still mid-pipeline" semantics exactly.
+        mid_argument_id = ids_by_conversation["22372"]
+        await _seed_reconcile_run_fixture(db, mid_argument_id, conversation_id="22372")
+        await db.commit()
+
+        # 6. Build the response strictly from values re-read from the database
+        # after every transition above has committed — never from FIXTURE_SET
+        # and never from the values this function intended to write.
+        # publish_argument/approve_argument already call db.refresh() on their
+        # own argument after their bulk updates, but expire the whole identity
+        # map before this final read rather than trusting any object loaded
+        # earlier in this call (Phase 31 refresh-after-bulk-update precedent).
+        db.expire_all()
+
+        fixtures: list[dict] = []
+        for entry, argument_id in fixture_rows:
+            argument = (
+                await db.execute(select(Argument).where(Argument.id == argument_id))
+            ).scalar_one()
+            # The highest-id ImportRun for this argument reports its
+            # step, which together with argument_status keeps all four
+            # reference states distinguishable: Complexity = candidate/parse,
+            # Draft = draft/parse, Published = published/parse, Mid-pipeline =
+            # candidate/reconcile.
+            latest_run_step = (
+                await db.execute(
+                    select(ImportRun.step)
+                    .where(ImportRun.argument_id == argument_id)
+                    .order_by(ImportRun.id.desc())
+                    .limit(1)
+                )
+            ).scalar_one_or_none()
+            fixtures.append(
+                {
+                    "conversation_id": entry["conversation_id"],
+                    "case_name": entry["case_name"],
+                    "role": entry["role"],
+                    "argument_id": argument.id,
+                    "argument_status": argument.status.value,
+                    "latest_import_run_step": latest_run_step or "",
+                }
             )
 
-        fixture_rows.append((entry, argument.id))
-
-    # Commit the fixture-verification loop's own read transaction before
-    # state realization starts (2026-08-20 todo — stale created_at values).
-    # This `db` session's first use since the TRUNCATE commit above was the
-    # SELECT inside this loop's first iteration, which opened a fresh
-    # transaction that has stayed open (no writes, no commit) through every
-    # iteration — including while run_import_convokit's own separate
-    # session/engine did the real work of importing all four fixtures.
-    # PostgreSQL's now() returns transaction-START time, not statement
-    # time, so every server_default=func.now() column the state-realization
-    # block below writes on this same `db` session would otherwise carry a
-    # timestamp from before some of the fixtures were even imported —
-    # observed as a DRAFT argument_status_log row stamped earlier than the
-    # CANDIDATE row that logically preceded it. Committing here (nothing to
-    # persist, only to close) means approve_argument/publish_argument's own
-    # first SELECT below opens a fresh transaction at the real time of each
-    # transition; both functions already commit at their own end, so no
-    # further commit is needed between the per-fixture transitions that
-    # follow.
-    await db.commit()
-
-    # 5. State realization — runs strictly AFTER every fixture
-    # has landed and passed its existence check above, so every Argument
-    # row referenced below is guaranteed to exist before any transition is
-    # attempted. Looked up by id collected during the reseed loop, never
-    # assumed.
-    ids_by_conversation = {
-        entry["conversation_id"]: argument_id for entry, argument_id in fixture_rows
-    }
-
-    # Fixture 15169 (Complexity): no action. It stays exactly as the
-    # importer left it — status=CANDIDATE, no AdminJob, latest ImportRun at
-    # step="parse". This is deliberate: it is the reference "freshly
-    # imported" state.
-
-    # Fixture 13015 (Draft target): CANDIDATE -> DRAFT via the real
-    # argument-scoped service function. approve_argument
-    # stamps resolved_at and writes the ArgumentStatusLog row — this module
-    # performs none of those writes itself.
-    draft_argument_id = ids_by_conversation["13015"]
-    await arguments_service.approve_argument(db, draft_argument_id)
-
-    # Fixture 18897 (Published target): TWO calls, in this order, and the
-    # order is NOT optional. approve_argument must run first to reach DRAFT
-    # and stamp resolved_at — publish_argument raises ValueError("Cannot
-    # publish: resolve step not yet complete") when resolved_at is still
-    # null, which is exactly the state a freshly-imported CANDIDATE argument
-    # is in. Do not "simplify" these two calls into one.
-    published_argument_id = ids_by_conversation["18897"]
-    await arguments_service.approve_argument(db, published_argument_id)
-    await arguments_service.publish_argument(db, published_argument_id)
-
-    # Fixture 22372 (Mid-pipeline target, D-04, OQ-2): seeds a
-    # step="reconcile" ImportRun rather than flipping an AdminJob's status
-    # (there is no AdminJob to flip, D-14/D-19). Argument.status stays
-    # CANDIDATE, Argument.resolved_at stays null, unchanged — mirrors the
-    # pre-Phase-50 fixture's "still mid-pipeline" semantics exactly.
-    mid_argument_id = ids_by_conversation["22372"]
-    await _seed_reconcile_run_fixture(db, mid_argument_id, conversation_id="22372")
-    await db.commit()
-
-    # 6. Build the response strictly from values re-read from the database
-    # after every transition above has committed — never from FIXTURE_SET
-    # and never from the values this function intended to write.
-    # publish_argument/approve_argument already call db.refresh() on their
-    # own argument after their bulk updates, but expire the whole identity
-    # map before this final read rather than trusting any object loaded
-    # earlier in this call (Phase 31 refresh-after-bulk-update precedent).
-    db.expire_all()
-
-    fixtures: list[dict] = []
-    for entry, argument_id in fixture_rows:
-        argument = (
-            await db.execute(select(Argument).where(Argument.id == argument_id))
-        ).scalar_one()
-        # The highest-id ImportRun for this argument reports its
-        # step, which together with argument_status keeps all four
-        # reference states distinguishable: Complexity = candidate/parse,
-        # Draft = draft/parse, Published = published/parse, Mid-pipeline =
-        # candidate/reconcile.
-        latest_run_step = (
-            await db.execute(
-                select(ImportRun.step)
-                .where(ImportRun.argument_id == argument_id)
-                .order_by(ImportRun.id.desc())
-                .limit(1)
-            )
-        ).scalar_one_or_none()
-        fixtures.append(
-            {
-                "conversation_id": entry["conversation_id"],
-                "case_name": entry["case_name"],
-                "role": entry["role"],
-                "argument_id": argument.id,
-                "argument_status": argument.status.value,
-                "latest_import_run_step": latest_run_step or "",
-            }
-        )
-
-    return {"fixtures": fixtures}
+        return {"fixtures": fixtures}
+    finally:
+        await _clear_reset_progress()
 
 
 # Default target for seed_unresolved_speaker_fixture: the Complexity fixture
@@ -647,3 +725,65 @@ async def seed_unresolved_speaker_fixture(
         "trust_tier": argument.trust_tier.value,
         "already_seeded": False,
     }
+
+
+async def get_fixture_state(db: AsyncSession) -> dict:
+    """
+    Phase 52-05 (D-14/D-15): read-only re-read of "what landed" and "where
+    a running reset is" -- what the frontend's resetToFixture action
+    re-reads on any failure before asserting anything, and what its
+    Running-state status line polls for per-fixture progress.
+
+    Issues no INSERT, UPDATE, DELETE or TRUNCATE and calls neither
+    importer -- one SELECT per FIXTURE_SET entry (the same
+    per-conversation existence check reset_to_fixture's own reseed loop
+    already performs), plus one read of the process-local progress record.
+    Calling this twice in a row leaves every table byte-identical.
+
+    Returns a dict shaped for api.schemas.admin_dev.FixtureStateResponse.
+    """
+    fixtures: list[dict] = []
+    for entry in FIXTURE_SET:
+        conversation_id = entry["conversation_id"]
+        argument = (
+            await db.execute(
+                select(Argument).where(Argument.oyez_transcript_id == conversation_id)
+            )
+        ).scalar_one_or_none()
+
+        if argument is None:
+            fixtures.append(
+                {
+                    "conversation_id": conversation_id,
+                    "case_name": entry["case_name"],
+                    "role": entry["role"],
+                    "present": False,
+                    "argument_id": None,
+                    "status": None,
+                    "latest_import_run_step": None,
+                }
+            )
+            continue
+
+        latest_run_step = (
+            await db.execute(
+                select(ImportRun.step)
+                .where(ImportRun.argument_id == argument.id)
+                .order_by(ImportRun.id.desc())
+                .limit(1)
+            )
+        ).scalar_one_or_none()
+
+        fixtures.append(
+            {
+                "conversation_id": conversation_id,
+                "case_name": entry["case_name"],
+                "role": entry["role"],
+                "present": True,
+                "argument_id": argument.id,
+                "status": argument.status.value,
+                "latest_import_run_step": latest_run_step,
+            }
+        )
+
+    return {"fixtures": fixtures, "progress": await _get_reset_progress()}

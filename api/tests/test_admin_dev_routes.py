@@ -36,6 +36,7 @@ one skips the whole module the same way `_require_test_db()` does, via
 `_require_real_justice_corpus_files()`.
 """
 
+import csv
 import json
 import os
 import shutil
@@ -148,7 +149,12 @@ def _require_real_justice_corpus_files() -> None:
         )
 
 
-def _write_corpus_fixture(tmp_path: Path, *, omit_conversation_id: str | None = None) -> Path:
+def _write_corpus_fixture(
+    tmp_path: Path,
+    *,
+    omit_conversation_id: str | None = None,
+    justice_speaker_overrides: dict[str, str] | None = None,
+) -> Path:
     """Write a synthetic corpus_dir tree containing all four FIXTURE_SET
     conversations (15169, 13015, 18897, 22372) — one advocate turn and one
     bench turn each, with per-conversation-unique speaker ids to avoid
@@ -158,6 +164,15 @@ def _write_corpus_fixture(tmp_path: Path, *, omit_conversation_id: str | None = 
     from conversations.json (its case/speakers/utterances rows are still
     written) — used by test_reset_incomplete_reseed_raises to simulate a
     partial reseed without inventing a fake fifth conversation id.
+
+    `justice_speaker_overrides`, when given, maps a conversation_id to a
+    REAL mapped oyez_speaker_id (e.g. "j__byron_r_white") to use as that
+    conversation's justice speaker id in place of the synthetic
+    f"j__{conversation_id}" — lets a test resolve that utterance onto the
+    already-seeded bench Person row instead of creating a new, unmapped
+    one (used by the Success Criterion 2 speaker_name test). The speaker's
+    `type` stays "justice" either way — `_is_justice_type` reads that
+    field, never the id's naming convention.
 
     Also copies the real justice CSV + mapping CSV (Phase 52-04) into the
     synthetic corpus_dir, since reset_to_fixture's pre-flight now requires
@@ -170,6 +185,8 @@ def _write_corpus_fixture(tmp_path: Path, *, omit_conversation_id: str | None = 
     corpus_dir = tmp_path / "corpus"
     corpus_dir.mkdir()
 
+    justice_speaker_overrides = justice_speaker_overrides or {}
+
     conversations: dict = {}
     cases: list[dict] = []
     speakers: dict = {}
@@ -177,7 +194,9 @@ def _write_corpus_fixture(tmp_path: Path, *, omit_conversation_id: str | None = 
 
     for conversation_id, meta in FIXTURE_CONVERSATIONS.items():
         advocate_key = f"adv__{conversation_id}"
-        justice_key = f"j__{conversation_id}"
+        justice_key = justice_speaker_overrides.get(
+            conversation_id, f"j__{conversation_id}"
+        )
 
         if conversation_id != omit_conversation_id:
             conversations[conversation_id] = {
@@ -769,3 +788,208 @@ async def test_reset_status_log_created_at_monotonic_with_id(client, tmp_path, d
     assert draft_argument.resolved_at is not None
     assert draft_argument.resolved_at >= candidate_created_at_by_conversation["13015"]
 
+
+# ===========================================================================
+# Phase 52-04 (JUSTICE-04) — the justice bench seed step inside
+# reset_to_fixture. All five tests below exercise the REAL
+# data/corpus/supreme_court_justices_sections.csv and
+# data/corpus/justice_identity_mapping.csv (copied into the synthetic
+# corpus_dir by _write_corpus_fixture) rather than a hand-built fixture, so
+# a "skipped" outcome here always means the seed step was never exercised,
+# not that it passed.
+# ===========================================================================
+
+
+def _load_real_justice_mapping_ids() -> set[str]:
+    """The full set of oyez_speaker_id values in the real, verified mapping
+    CSV -- read directly, independent of the importer's own parsing, so
+    this is a genuine cross-check rather than the importer grading its own
+    homework."""
+    ids: set[str] = set()
+    with JUSTICE_MAPPING_CSV_PATH.open("r", encoding="utf-8-sig", newline="") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            ids.add((row.get("oyez_speaker_id") or "").strip())
+    return ids
+
+
+async def _fetch_seeded_bench_person_rows(db) -> list:
+    """Every (id, oyez_speaker_id) pair for a Person seeded by the justice
+    bench step -- identified via court_tenures, which ONLY
+    run_import_justices_csv ever writes, so this never picks up the
+    FIXTURE_SET's own synthetic justice-type speakers (which get no
+    court_tenures row)."""
+    db.expire_all()
+    justice_person_ids = (
+        (await db.execute(select(CourtTenure.person_id).distinct())).scalars().all()
+    )
+    if not justice_person_ids:
+        return []
+    rows = (
+        await db.execute(
+            select(Person.id, Person.oyez_speaker_id).where(
+                Person.id.in_(justice_person_ids)
+            )
+        )
+    ).all()
+    return rows
+
+
+@pytest.mark.asyncio
+async def test_reset_seeds_full_justice_roster(client, tmp_path, db):
+    """After a reset, people carries the full 116-distinct-person justice
+    roster from the real 121-row supreme_court_justices_sections.csv, and
+    court_tenures carries both rows for each of the five dual-service
+    justices (Rutledge, E.D. White, Hughes, Stone, Rehnquist) -- Success
+    Criterion 3, proven through the real reset path, not just the four
+    FIXTURE_SET conversations' own synthetic advocates/justices."""
+    _require_test_db()
+
+    corpus_dir = _write_corpus_fixture(tmp_path)
+    resp = await _post_reset(client, corpus_dir)
+    assert resp.status_code == 200
+
+    db.expire_all()
+    justice_person_ids = (
+        (await db.execute(select(CourtTenure.person_id).distinct())).scalars().all()
+    )
+    assert len(justice_person_ids) == 116
+
+    tenure_counts = (
+        await db.execute(
+            select(CourtTenure.person_id, func.count())
+            .where(CourtTenure.person_id.in_(justice_person_ids))
+            .group_by(CourtTenure.person_id)
+        )
+    ).all()
+    dual_service_count = sum(1 for _, count in tenure_counts if count == 2)
+    assert dual_service_count == 5
+    assert all(count in (1, 2) for _, count in tenure_counts)
+
+
+@pytest.mark.asyncio
+async def test_reset_seeded_oyez_ids_unique_and_match_mapping(client, tmp_path, db):
+    """Every people.oyez_speaker_id written by the seed step is unique
+    (JUSTICE-04 / adjacency -- the partial unique index would refuse a
+    duplicate at the database, and this proves the seed's own dedup logic
+    never even attempts one), and the set of non-null ids exactly matches
+    the mapping CSV's own 114-id set. Exactly 2 of the 116 seeded justices
+    (Barrett, Jackson -- D-04) are unmapped."""
+    _require_test_db()
+
+    corpus_dir = _write_corpus_fixture(tmp_path)
+    resp = await _post_reset(client, corpus_dir)
+    assert resp.status_code == 200
+
+    rows = await _fetch_seeded_bench_person_rows(db)
+    assert len(rows) == 116
+
+    non_null_ids = [oyez_id for _, oyez_id in rows if oyez_id is not None]
+    assert len(non_null_ids) == len(set(non_null_ids)), (
+        "duplicate oyez_speaker_id among seeded justices"
+    )
+    assert len(rows) - len(non_null_ids) == 2
+
+    mapping_ids = _load_real_justice_mapping_ids()
+    assert set(non_null_ids) == mapping_ids
+
+
+@pytest.mark.asyncio
+async def test_reset_justice_seed_is_idempotent(client, tmp_path, db):
+    """Running reset_to_fixture twice in a row leaves the identical seeded
+    justice-roster count and the identical non-null oyez_speaker_id set as
+    running it once (JUSTICE-04 / idempotency)."""
+    _require_test_db()
+
+    corpus_dir = _write_corpus_fixture(tmp_path)
+
+    resp1 = await _post_reset(client, corpus_dir)
+    assert resp1.status_code == 200
+
+    first_rows = await _fetch_seeded_bench_person_rows(db)
+    first_non_null_ids = {oyez_id for _, oyez_id in first_rows if oyez_id is not None}
+    # Commit before the second reset's TRUNCATE — an open read transaction
+    # here (even a bare SELECT) deadlocks against TRUNCATE's ACCESS
+    # EXCLUSIVE lock (same discipline as test_reset_is_repeatable above).
+    await db.commit()
+
+    resp2 = await _post_reset(client, corpus_dir)
+    assert resp2.status_code == 200
+
+    second_rows = await _fetch_seeded_bench_person_rows(db)
+    second_non_null_ids = {oyez_id for _, oyez_id in second_rows if oyez_id is not None}
+
+    assert len(first_rows) == len(second_rows) == 116
+    assert first_non_null_ids == second_non_null_ids
+
+
+@pytest.mark.asyncio
+async def test_reset_missing_justice_csv_raises_before_truncate(client, tmp_path, db):
+    """A corpus directory missing one of the two required justice CSVs
+    raises CorpusUnavailableError, proven by a pre-seeded people row still
+    existing afterward -- not merely by the exception type (JUSTICE-04 /
+    empty: an absent mapping must never be able to leave the database
+    empty, because the pre-flight runs BEFORE the TRUNCATE)."""
+    _require_test_db()
+    from api.services.admin_dev import CorpusUnavailableError, reset_to_fixture
+
+    corpus_dir = _write_corpus_fixture(tmp_path)
+    (corpus_dir / JUSTICE_MAPPING_CSV_PATH.name).unlink()
+
+    sentinel = Person(full_name="Pre-Flight Sentinel Person, 52-04")
+    db.add(sentinel)
+    await db.commit()
+    sentinel_id = sentinel.id
+
+    with pytest.raises(CorpusUnavailableError):
+        await reset_to_fixture(db, corpus_dir=corpus_dir)
+
+    db.expire_all()
+    assert (
+        await db.execute(select(Person).where(Person.id == sentinel_id))
+    ).scalar_one_or_none() is not None, (
+        "the TRUNCATE ran despite the missing justice CSV — the pre-flight "
+        "did not refuse before the destructive statement"
+    )
+
+
+@pytest.mark.asyncio
+async def test_reset_justice_utterance_speaker_name_uses_corpus_display_form(
+    client, tmp_path, db
+):
+    """Reset with one fixture's justice speaker id overridden to a REAL
+    mapped oyez_speaker_id (j__byron_r_white): that utterance's person is
+    the already-seeded bench row, whose display_name ("Byron R. White") is
+    what speaker_name coalesces to; the fixture's advocate is unaffected --
+    Success Criterion 2 / JUSTICE-03, proven through the reset path rather
+    than a hand-built fixture."""
+    _require_test_db()
+
+    corpus_dir = _write_corpus_fixture(
+        tmp_path, justice_speaker_overrides={"15169": "j__byron_r_white"}
+    )
+    resp = await _post_reset(client, corpus_dir)
+    assert resp.status_code == 200
+
+    argument = await _fetch_argument(db, "15169")
+
+    rows = (
+        await db.execute(
+            select(Person.is_justice, Person.full_name, Person.display_name)
+            .join(Utterance, Utterance.person_id == Person.id)
+            .where(Utterance.argument_id == argument.id)
+        )
+    ).all()
+
+    justice_rows = [row for row in rows if row[0] is True]
+    advocate_rows = [row for row in rows if row[0] is False]
+    assert len(justice_rows) == 1
+    assert len(advocate_rows) == 1
+
+    _, justice_full_name, justice_display_name = justice_rows[0]
+    assert justice_display_name == "Byron R. White"
+    assert justice_full_name == "Byron Raymond White"
+
+    _, advocate_full_name, advocate_display_name = advocate_rows[0]
+    assert advocate_display_name is None
+    assert advocate_full_name == "Advocate 15169"

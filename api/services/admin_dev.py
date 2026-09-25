@@ -34,11 +34,15 @@ per conversation, and each of the four fixtures below is in a different
 October Term, so a real-corpus reset performs four full passes over that
 file. Measured on the development machine at plan time: one pass over
 900,080,134 bytes costs approximately 20.4 seconds, so expect roughly
-80-120 seconds end to end for a real-corpus reset, plus the justice seed
-step's own measured cost (see 52-04-SUMMARY.md for the with-seed total).
-This is a dev-only tool on localhost with no proxy in the path — do not add
-a timeout, a background job, or a progress channel; the UI-SPEC's Running
-state is a deliberately blocking request with a spinner.
+80-120 seconds end to end for the four-fixture reseed. With the justice
+seed step added (Phase 52-04), one direct end-to-end reset against the real
+corpus and the dev database measured 71.67s total wall-clock — see
+52-04-SUMMARY.md for the full measurement and its methodology caveat (a
+direct async call, not through the HTTP endpoint plan 52-05's AbortSignal
+will actually time). This is a dev-only tool on localhost with no proxy in
+the path — do not add a timeout, a background job, or a progress channel;
+the UI-SPEC's Running state is a deliberately blocking request with a
+spinner.
 """
 
 from pathlib import Path

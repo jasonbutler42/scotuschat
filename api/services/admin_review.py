@@ -340,7 +340,18 @@ async def apply_person_value_change(
         values_differ=values_differ,
     )
 
-    if decision in (WriteDecision.ACCEPT, WriteDecision.ACCEPT_AND_RECORD):
+    # Phase 52 (Task 2, "Trivial-ACCEPT provenance restamp", STATE.md /
+    # 52-CONTEXT.md Claude's Discretion): decide_write returns bare ACCEPT
+    # ONLY when values_differ is False (see its own docstring) — the
+    # gap-fill branch above already returns early for a genuine fill, so a
+    # bare ACCEPT reaching this point is always a byte-identical
+    # trivial-agreement rerun (e.g. a justice re-seed), never a real
+    # change. Gate the write on values_differ, reusing the SAME
+    # `_values_differ` computation above (no second comparison helper) —
+    # so a trivial agreement performs no write at all, only
+    # ACCEPT_AND_RECORD (which decide_write only ever returns when
+    # values_differ is True) still writes.
+    if decision in (WriteDecision.ACCEPT, WriteDecision.ACCEPT_AND_RECORD) and values_differ:
         await db.execute(
             update(Person)
             .where(Person.id == person.id)

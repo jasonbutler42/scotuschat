@@ -136,6 +136,37 @@ def _write_justices_csv(
     return csv_path
 
 
+_MAPPING_HEADER = [
+    "oyez_speaker_id",
+    "corpus_display_name",
+    "first_name",
+    "middle_name",
+    "last_name",
+    "name_suffix",
+]
+
+
+def _write_mapping_csv(tmp_path: Path, rows: list[list[str]]) -> Path:
+    """
+    Write a small justice identity mapping CSV fixture (D-06/D-07/D-08
+    shape). Phase 52 (Task 2/JUSTICE-01/02): converges an "existing person
+    to be upgraded" fixture onto the new oyez_speaker_id-keyed dedup path
+    — pass the returned path as `args.mapping_csv` alongside an
+    `oyez_speaker_id=` kwarg on the fixture's `Person(...)` matching one of
+    these rows, so the test exercises the real id-keyed lookup rather than
+    the full_name-equality fallback (which every fixture in this file would
+    otherwise silently take, since none of these fictional test names
+    appear in the real data/corpus/justice_identity_mapping.csv).
+    """
+    mapping_path = tmp_path / "mapping.csv"
+    with mapping_path.open("w", encoding="utf-8", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(_MAPPING_HEADER)
+        for row in rows:
+            writer.writerow(row)
+    return mapping_path
+
+
 def _make_session_cm(session):
     """
     Create a context manager that yields `session`.
@@ -201,13 +232,49 @@ async def test_missing_csv_path_raises_file_not_found():
 
 
 @pytest.mark.asyncio
+async def test_missing_mapping_csv_path_raises_file_not_found(tmp_path):
+    """
+    Phase 52 (JUSTICE-01): mapping-path validation happens before any DB
+    session is opened, mirroring the tenure-CSV pre-flight above — this
+    test requires no DATABASE_URL either.
+    """
+    csv_path = _write_justices_csv(tmp_path, chief_rows=[], associate_rows=[])
+    args = argparse.Namespace(
+        csv=str(csv_path),
+        mapping_csv=r"C:\definitely\does\not\exist\mapping.csv",
+    )
+    with pytest.raises(FileNotFoundError):
+        await run_import_justices_csv(args)
+
+
+@pytest.mark.asyncio
+async def test_empty_mapping_csv_is_a_hard_error(tmp_path):
+    """
+    Phase 52 (JUSTICE-01): a mapping CSV that parses to zero data rows must
+    be a hard error, never a silent degradation to full_name-only dedup —
+    a header-only mapping file raises ValueError before any DB session is
+    opened.
+    """
+    csv_path = _write_justices_csv(tmp_path, chief_rows=[], associate_rows=[])
+    mapping_path = _write_mapping_csv(tmp_path, rows=[])
+    args = argparse.Namespace(csv=str(csv_path), mapping_csv=str(mapping_path))
+    with pytest.raises(ValueError, match="zero data rows"):
+        await run_import_justices_csv(args)
+
+
+@pytest.mark.asyncio
 async def test_upgrades_existing_person_in_place(isolated_session, tmp_path):
     """
-    An existing Person row matching a CSV row's reconstructed full_name is
+    An existing Person row matching a CSV row's mapped oyez_speaker_id is
     upgraded (is_justice=True + exactly one CourtTenure added) in place —
-    not duplicated (D-02/D-03). role_id is left untouched.
+    not duplicated (D-02/D-03, Phase 52 JUSTICE-01/02 dedup key). role_id
+    is left untouched.
     """
-    existing = Person(full_name="Testcase Q. Fixture", is_justice=False)
+    existing = Person(
+        full_name="Testcase Q. Fixture",
+        is_justice=False,
+        oyez_speaker_id="j__test_fixture_q_fixture",
+    )
     isolated_session.add(existing)
     await isolated_session.flush()
     existing_id = existing.id
@@ -232,7 +299,11 @@ async def test_upgrades_existing_person_in_place(isolated_session, tmp_path):
             ],
         ],
     )
-    args = argparse.Namespace(csv=str(csv_path))
+    mapping_path = _write_mapping_csv(
+        tmp_path,
+        [["j__test_fixture_q_fixture", "Testcase Q. Fixture", "Testcase", "Q.", "Fixture", ""]],
+    )
+    args = argparse.Namespace(csv=str(csv_path), mapping_csv=str(mapping_path))
 
     with patch(
         "pipeline.commands.import_justices_csv.get_session",
@@ -410,6 +481,63 @@ async def test_idempotent_rerun_creates_no_duplicates(isolated_session, tmp_path
 
 
 @pytest.mark.asyncio
+async def test_unmapped_row_dedups_on_full_name_fallback_across_rerun(
+    isolated_session, tmp_path
+):
+    """
+    Phase 52 (Task 2/JUSTICE-01, D-04's surviving fallback): a CSV row with
+    no entry in the justice identity mapping (mirroring Amy Coney
+    Barrett / Ketanji Brown Jackson, seated after the corpus's 2019
+    cutoff) still dedups on person-name equality across a rerun — the
+    legacy full_name-equality lookup is not removed, only demoted to the
+    fallback branch used when a row has no mapping entry.
+    """
+    csv_path = _write_justices_csv(
+        tmp_path,
+        chief_rows=[],
+        associate_rows=[
+            [
+                "Testcase",
+                "U.",
+                "Unmapped",
+                "",
+                "Fictional President",
+                "Democratic",
+                "2020-10-01",
+                "",
+                "Still in Office",
+                "1970-01-01",
+                "",
+            ],
+        ],
+    )
+    # A mapping CSV with an unrelated entry — "Testcase U. Unmapped" has NO
+    # row here, matching D-04's shape exactly (a real justice with zero
+    # mapping coverage, not merely an empty mapping file — JUSTICE-01's
+    # empty-mapping guard is covered separately below).
+    mapping_path = _write_mapping_csv(
+        tmp_path,
+        [["j__someone_else", "Someone Else", "Someone", "", "Else", ""]],
+    )
+    args = argparse.Namespace(csv=str(csv_path), mapping_csv=str(mapping_path))
+    session_cm = _make_session_cm(isolated_session)
+
+    for _ in range(2):
+        with patch(
+            "pipeline.commands.import_justices_csv.get_session", new=session_cm
+        ):
+            await run_import_justices_csv(args)
+
+    result = await isolated_session.execute(
+        select(Person).where(Person.full_name == "Testcase U. Unmapped")
+    )
+    people = result.scalars().all()
+    assert len(people) == 1, "Unmapped row must dedup on full_name, not duplicate on rerun"
+    assert people[0].oyez_speaker_id is None
+    assert people[0].display_name is None
+
+
+@pytest.mark.asyncio
 async def test_blank_end_date_yields_none(isolated_session, tmp_path):
     """A blank 'Date Service Terminated' cell yields CourtTenure.end_date=None."""
     csv_path = _write_justices_csv(
@@ -550,6 +678,7 @@ async def test_rerun_preserves_operator_edited_parts_blank_only_prefill(
         middle_name="Q.",  # matches the CSV row — no-op path, not gap-fill
         last_name="Preserve",  # matches the CSV row — no-op path, not gap-fill
         review_state=ReviewState.OPERATOR_EDITED,
+        oyez_speaker_id="j__test_fixture_q_preserve",
     )
     isolated_session.add(existing)
     await isolated_session.flush()
@@ -574,7 +703,20 @@ async def test_rerun_preserves_operator_edited_parts_blank_only_prefill(
             ],
         ],
     )
-    args = argparse.Namespace(csv=str(csv_path))
+    mapping_path = _write_mapping_csv(
+        tmp_path,
+        [
+            [
+                "j__test_fixture_q_preserve",
+                "Testcase Q. Preserve",
+                "Testcase",
+                "Q.",
+                "Preserve",
+                "",
+            ]
+        ],
+    )
+    args = argparse.Namespace(csv=str(csv_path), mapping_csv=str(mapping_path))
 
     with patch(
         "pipeline.commands.import_justices_csv.get_session",
@@ -616,6 +758,7 @@ async def test_rerun_upgrade_fills_all_blank_name_parts(isolated_session, tmp_pa
     existing = Person(
         full_name="Testcase B. Blank",
         is_justice=False,
+        oyez_speaker_id="j__test_fixture_b_blank_parts",
         # first_name/middle_name/last_name/name_suffix all left None —
         # genuinely blank, review_state defaults to UNREVIEWED.
     )
@@ -642,7 +785,20 @@ async def test_rerun_upgrade_fills_all_blank_name_parts(isolated_session, tmp_pa
             ],
         ],
     )
-    args = argparse.Namespace(csv=str(csv_path))
+    mapping_path = _write_mapping_csv(
+        tmp_path,
+        [
+            [
+                "j__test_fixture_b_blank_parts",
+                "Testcase B. Blank",
+                "Testcase",
+                "B.",
+                "Blank",
+                "",
+            ]
+        ],
+    )
+    args = argparse.Namespace(csv=str(csv_path), mapping_csv=str(mapping_path))
 
     with patch(
         "pipeline.commands.import_justices_csv.get_session",
@@ -690,6 +846,7 @@ async def test_rerun_last_name_operator_edited_to_different_value_survives(
         middle_name="C.",
         last_name="OperatorLastName",  # differs from CSV's "Conflict"
         review_state=ReviewState.OPERATOR_EDITED,
+        oyez_speaker_id="j__test_fixture_c_conflict",
     )
     isolated_session.add(existing)
     await isolated_session.flush()
@@ -714,7 +871,20 @@ async def test_rerun_last_name_operator_edited_to_different_value_survives(
             ],
         ],
     )
-    args = argparse.Namespace(csv=str(csv_path))
+    mapping_path = _write_mapping_csv(
+        tmp_path,
+        [
+            [
+                "j__test_fixture_c_conflict",
+                "Testcase C. Conflict",
+                "Testcase",
+                "C.",
+                "Conflict",
+                "",
+            ]
+        ],
+    )
+    args = argparse.Namespace(csv=str(csv_path), mapping_csv=str(mapping_path))
 
     with patch(
         "pipeline.commands.import_justices_csv.get_session",
@@ -821,6 +991,7 @@ async def test_rerun_preserves_operator_review_state(
         full_name="Testcase Q. Preserve",
         is_justice=False,
         review_state=operator_state,
+        oyez_speaker_id="j__test_fixture_q_preserve_review_state",
     )
     isolated_session.add(existing)
     await isolated_session.flush()
@@ -845,7 +1016,20 @@ async def test_rerun_preserves_operator_review_state(
             ],
         ],
     )
-    args = argparse.Namespace(csv=str(csv_path))
+    mapping_path = _write_mapping_csv(
+        tmp_path,
+        [
+            [
+                "j__test_fixture_q_preserve_review_state",
+                "Testcase Q. Preserve",
+                "Testcase",
+                "Q.",
+                "Preserve",
+                "",
+            ]
+        ],
+    )
+    args = argparse.Namespace(csv=str(csv_path), mapping_csv=str(mapping_path))
 
     with patch(
         "pipeline.commands.import_justices_csv.get_session",
@@ -1027,6 +1211,7 @@ async def test_backfill_never_overwrites_operator_birthdate_or_death_date(
         is_justice=False,
         birthdate=date(1900, 5, 5),
         death_date=date(1985, 5, 5),
+        oyez_speaker_id="j__test_fixture_o_preserved",
     )
     isolated_session.add(existing)
     await isolated_session.flush()
@@ -1051,7 +1236,20 @@ async def test_backfill_never_overwrites_operator_birthdate_or_death_date(
             ],
         ],
     )
-    args = argparse.Namespace(csv=str(csv_path))
+    mapping_path = _write_mapping_csv(
+        tmp_path,
+        [
+            [
+                "j__test_fixture_o_preserved",
+                "Testcase O. Preserved",
+                "Testcase",
+                "O.",
+                "Preserved",
+                "",
+            ]
+        ],
+    )
+    args = argparse.Namespace(csv=str(csv_path), mapping_csv=str(mapping_path))
 
     with patch(
         "pipeline.commands.import_justices_csv.get_session",
@@ -1075,7 +1273,11 @@ async def test_backfill_fills_blank_birthdate_and_death_date(
     A pre-existing Person with birthdate=None, death_date=None gets both
     filled from the CSV after import.
     """
-    existing = Person(full_name="Testcase B. Blank", is_justice=False)
+    existing = Person(
+        full_name="Testcase B. Blank",
+        is_justice=False,
+        oyez_speaker_id="j__test_fixture_b_blank_dates",
+    )
     isolated_session.add(existing)
     await isolated_session.flush()
     existing_id = existing.id
@@ -1099,7 +1301,20 @@ async def test_backfill_fills_blank_birthdate_and_death_date(
             ],
         ],
     )
-    args = argparse.Namespace(csv=str(csv_path))
+    mapping_path = _write_mapping_csv(
+        tmp_path,
+        [
+            [
+                "j__test_fixture_b_blank_dates",
+                "Testcase B. Blank",
+                "Testcase",
+                "B.",
+                "Blank",
+                "",
+            ]
+        ],
+    )
+    args = argparse.Namespace(csv=str(csv_path), mapping_csv=str(mapping_path))
 
     with patch(
         "pipeline.commands.import_justices_csv.get_session",
@@ -1121,7 +1336,11 @@ async def test_backfill_fills_blank_tenure_reason_left(isolated_session, tmp_pat
     A pre-existing CourtTenure matching (person_id, office, start_date) with
     reason_left=None gets filled from the CSV after import.
     """
-    existing_person = Person(full_name="Testcase T. Blankreason", is_justice=True)
+    existing_person = Person(
+        full_name="Testcase T. Blankreason",
+        is_justice=True,
+        oyez_speaker_id="j__test_fixture_t_blankreason",
+    )
     isolated_session.add(existing_person)
     await isolated_session.flush()
 
@@ -1155,7 +1374,20 @@ async def test_backfill_fills_blank_tenure_reason_left(isolated_session, tmp_pat
             ],
         ],
     )
-    args = argparse.Namespace(csv=str(csv_path))
+    mapping_path = _write_mapping_csv(
+        tmp_path,
+        [
+            [
+                "j__test_fixture_t_blankreason",
+                "Testcase T. Blankreason",
+                "Testcase",
+                "T.",
+                "Blankreason",
+                "",
+            ]
+        ],
+    )
+    args = argparse.Namespace(csv=str(csv_path), mapping_csv=str(mapping_path))
 
     with patch(
         "pipeline.commands.import_justices_csv.get_session",
@@ -1179,7 +1411,11 @@ async def test_backfill_never_overwrites_operator_reason_left(
     reason_left='retired' keeps that exact value after import, even though
     the matching CSV row's Reason Left cell says Died.
     """
-    existing_person = Person(full_name="Testcase T. Operatorreason", is_justice=True)
+    existing_person = Person(
+        full_name="Testcase T. Operatorreason",
+        is_justice=True,
+        oyez_speaker_id="j__test_fixture_t_operatorreason",
+    )
     isolated_session.add(existing_person)
     await isolated_session.flush()
 
@@ -1213,7 +1449,20 @@ async def test_backfill_never_overwrites_operator_reason_left(
             ],
         ],
     )
-    args = argparse.Namespace(csv=str(csv_path))
+    mapping_path = _write_mapping_csv(
+        tmp_path,
+        [
+            [
+                "j__test_fixture_t_operatorreason",
+                "Testcase T. Operatorreason",
+                "Testcase",
+                "T.",
+                "Operatorreason",
+                "",
+            ]
+        ],
+    )
+    args = argparse.Namespace(csv=str(csv_path), mapping_csv=str(mapping_path))
 
     with patch(
         "pipeline.commands.import_justices_csv.get_session",

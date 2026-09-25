@@ -781,6 +781,78 @@ async def test_apply_person_value_change_blank_name_parts_gap_fill_accepts_no_di
 
 @pytest.mark.asyncio
 @pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_apply_person_value_change_operator_confirmed_row_survives_identical_reseed() -> None:
+    """
+    Phase 52 (Task 2, Trivial-ACCEPT provenance restamp): a byte-identical
+    justice re-seed (incoming value equal to the stored one) against an
+    OPERATOR_CONFIRMED row must be a true no-op — decision is bare ACCEPT
+    (never ACCEPT_AND_RECORD, since decide_write only returns
+    ACCEPT_AND_RECORD when values_differ is True), no value_discrepancy row
+    is created, and the row's operator-authored review_state and value both
+    survive unchanged. Regression guard for the redundant-write gate added
+    to `apply_person_value_change`'s ACCEPT path.
+    """
+    from sqlalchemy import select as sa_select
+
+    from api.core.database import AsyncSessionLocal
+    from api.domain.authority import WriteDecision
+    from api.models.models import Person, ReviewState, ValueDiscrepancy
+    from api.services.admin_review import apply_person_value_change
+
+    async with AsyncSessionLocal() as db:
+        person = Person(
+            full_name="Operator Confirmed Reseed Person",
+            first_name="Jane",
+            review_state=ReviewState.OPERATOR_CONFIRMED,
+        )
+        db.add(person)
+        await db.commit()
+        person_id = person.id
+
+    try:
+        async with AsyncSessionLocal() as db:
+            person = await db.get(Person, person_id)
+            decision = await apply_person_value_change(
+                db,
+                person=person,
+                field="first_name",
+                incoming_value="Jane",  # byte-identical to the stored value
+                incoming_source="seed",
+                incoming_method="direct",
+            )
+            await db.commit()
+
+        assert decision == WriteDecision.ACCEPT
+
+        async with AsyncSessionLocal() as db:
+            refreshed = await db.get(Person, person_id)
+            assert refreshed.first_name == "Jane"
+            assert refreshed.review_state == ReviewState.OPERATOR_CONFIRMED
+            rows = (
+                await db.execute(
+                    sa_select(ValueDiscrepancy).where(
+                        ValueDiscrepancy.target_type == "person",
+                        ValueDiscrepancy.target_id == person_id,
+                    )
+                )
+            ).scalars().all()
+            assert len(rows) == 0
+    finally:
+        from sqlalchemy import delete as sa_delete
+
+        async with AsyncSessionLocal() as db:
+            await db.execute(
+                sa_delete(ValueDiscrepancy).where(
+                    ValueDiscrepancy.target_type == "person",
+                    ValueDiscrepancy.target_id == person_id,
+                )
+            )
+            await db.execute(sa_delete(Person).where(Person.id == person_id))
+            await db.commit()
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
 async def test_update_resolve_row_for_job_succeeds_on_draft_and_unpublished_but_not_published() -> None:
     import uuid as _uuid
 

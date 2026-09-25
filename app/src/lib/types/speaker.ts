@@ -41,4 +41,8 @@ export interface SpeakerDetail {
 	birthdate: string | null;
 	death_date: string | null;
 	bio_text: string | null;
+	// D-12 (Phase 52-02): server-computed from structured name parts
+	// (api.domain.person_names.derive_initials) — the client no longer
+	// derives this from full_name.
+	initials: string | null;
 }

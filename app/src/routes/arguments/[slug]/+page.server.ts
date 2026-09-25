@@ -7,6 +7,10 @@ interface RawSpeaker {
 	// office carries the canonical "chief"/"associate" storage value (Phase 37
 	// D-15/D-17) — formal title projection happens in SpeakerPopover.svelte, not here.
 	tenure?: Array<{ office?: string | null; start_date?: string | null; end_date?: string | null }>;
+	// D-12 (Phase 52-02): server-computed avatar-initials glyph. Typed here
+	// rather than relying only on the index signature below; the existing
+	// spread (`...s`) already carries it into the mapped object.
+	initials?: string | null;
 	[key: string]: unknown;
 }
 

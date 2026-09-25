@@ -52,14 +52,13 @@
 	// duplicate cannot reappear because there is no local colour value left to
 	// copy.
 
-	// $derived for the same reason as isBench above: a const IIFE would keep the
-	// first speaker's initials on the fallback avatar after the prop changes.
-	const initials = $derived.by(() => {
-		const parts = speaker.full_name.trim().split(/\s+/).filter(Boolean);
-		if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-		if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-		return '?';
-	});
+	// $derived, not const, for the same reason as isBench above: a const would
+	// keep the first speaker's initials on the fallback avatar after the prop
+	// changes. D-12 (Phase 52-02): the client no longer parses full_name — the
+	// value is server-computed (api.domain.person_names.derive_initials) and
+	// shipped on the speaker payload; this is a plain read with a fallback for
+	// the (rare) unnameable case.
+	const initials = $derived(speaker.initials ?? '?');
 
 	// Per-photo state, so it must reset when the photo does. Without the $effect
 	// a failed load on speaker A leaves showInitials true, and speaker B renders

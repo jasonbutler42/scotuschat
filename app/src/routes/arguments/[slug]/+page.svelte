@@ -48,17 +48,24 @@
 	}
 
 	// D-12: Roster derived client-side from utterances (no new API endpoint needed)
-	// Extended to carry person_id alongside name and role (Pitfall 4 fix)
+	// Extended to carry person_id alongside name and role (Pitfall 4 fix).
+	// Phase 52-02 (D-12): also carries the server-computed speaker_initials —
+	// the client no longer derives initials from `name`.
 	const roster = $derived.by(() => {
 		const seen = new Set<string>();
-		const bench: { name: string; role: string | null; person_id: number | null }[] = [];
-		const advocates: { name: string; role: string | null; person_id: number | null }[] = [];
+		const bench: { name: string; role: string | null; person_id: number | null; initials: string | null }[] = [];
+		const advocates: { name: string; role: string | null; person_id: number | null; initials: string | null }[] = [];
 		for (const u of data.utterances) {
 			if (u.is_stage_direction) continue;
 			const key = u.speaker_name ?? u.raw_speaker_label ?? '';
 			if (!key || seen.has(key)) continue;
 			seen.add(key);
-			const entry = { name: key, role: u.speaker_role ?? null, person_id: u.person_id ?? null };
+			const entry = {
+				name: key,
+				role: u.speaker_role ?? null,
+				person_id: u.person_id ?? null,
+				initials: u.speaker_initials ?? null
+			};
 			if (u.side === 'BENCH') bench.push(entry);
 			else advocates.push(entry);
 		}
@@ -176,14 +183,6 @@
 				[]
 			)
 	);
-
-	// Helper: derive initials from a display name
-	function getInitials(name: string): string {
-		const parts = name.trim().split(/\s+/).filter(Boolean);
-		if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-		if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-		return '?';
-	}
 
 	// D-19 (Style B2): run grouping is the structural unit and MUST happen
 	// before layout, separate from presentation. A run is a maximal sequence
@@ -323,12 +322,12 @@
 									aria-label="View {speaker.name} details"
 								>
 									<div aria-hidden="true" class="speaker-fill" style="width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:var(--font-size-caption);font-weight:var(--font-weight-semibold);color:var(--color-bg);flex-shrink:0;">
-										{getInitials(speaker.name)}
+										{speaker.initials ?? '?'}
 									</div>
 								</button>
 							{:else}
 								<div aria-hidden="true" class="speaker-fill" style="width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:var(--font-size-caption);font-weight:var(--font-weight-semibold);color:var(--color-bg);flex-shrink:0;margin:var(--space-xs);">
-									{getInitials(speaker.name)}
+									{speaker.initials ?? '?'}
 								</div>
 							{/if}
 							<p style="font-size:var(--font-size-body);font-weight:var(--font-weight-regular);color:var(--color-text-secondary);margin:0;">{speaker.name}</p>
@@ -357,12 +356,12 @@
 									aria-label="View {speaker.name} details"
 								>
 									<div aria-hidden="true" class="speaker-fill" style="width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:var(--font-size-caption);font-weight:var(--font-weight-semibold);color:var(--color-bg);flex-shrink:0;">
-										{getInitials(speaker.name)}
+										{speaker.initials ?? '?'}
 									</div>
 								</button>
 							{:else}
 								<div aria-hidden="true" class="speaker-fill" style="width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:var(--font-size-caption);font-weight:var(--font-weight-semibold);color:var(--color-bg);flex-shrink:0;margin:var(--space-xs);">
-									{getInitials(speaker.name)}
+									{speaker.initials ?? '?'}
 								</div>
 							{/if}
 							<p style="font-size:var(--font-size-body);font-weight:var(--font-weight-regular);color:var(--color-text-secondary);margin:0;">{speaker.name}</p>
@@ -438,6 +437,7 @@
 							{@const first = item.utterances[0]}
 							{@const isBench = first.side === 'BENCH'}
 							{@const displayName = first.speaker_name ?? first.raw_speaker_label ?? ''}
+							{@const displayInitials = first.speaker_initials ?? '?'}
 							<!-- D-19 Style B2: one rail slot (sticky avatar) per run, spanning
 							     the run's full rendered height via `align-items: stretch` on
 							     this row plus the rail column stretching to match. Order is
@@ -509,7 +509,7 @@
 													display: flex; align-items: center; justify-content: center;
 													font-size: var(--font-size-caption); font-weight: var(--font-weight-semibold);
 													color: var(--color-bg); flex-shrink: 0;
-												">{getInitials(displayName)}</div>
+												">{displayInitials}</div>
 											</button>
 										{:else}
 											<div aria-hidden="true" class="speaker-fill" style="
@@ -517,7 +517,7 @@
 												display: flex; align-items: center; justify-content: center;
 												font-size: var(--font-size-caption); font-weight: var(--font-weight-semibold);
 												color: var(--color-bg); flex-shrink: 0;
-											">{getInitials(displayName)}</div>
+											">{displayInitials}</div>
 										{/if}
 									</div>
 								</div>

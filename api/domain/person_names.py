@@ -22,6 +22,7 @@ migrations without initializing the app or a database connection
 from __future__ import annotations
 
 import re
+import unicodedata
 from dataclasses import dataclass
 from typing import Literal, Optional
 
@@ -372,6 +373,16 @@ def split_legacy_full_name(full_name: str) -> SplitResult:
 # ---------------------------------------------------------------------------
 
 
+def _initial(token: str) -> str:
+    """First code point of an NFC-normalized token, uppercased."""
+    return unicodedata.normalize("NFC", token)[0].upper()
+
+
+def _two_codepoints(token: str) -> str:
+    """First two code points of an NFC-normalized token, uppercased."""
+    return unicodedata.normalize("NFC", token)[:2].upper()
+
+
 def derive_initials(
     *,
     first_name: Optional[str] = None,
@@ -379,5 +390,49 @@ def derive_initials(
     name_suffix: Optional[str] = None,
     full_name: Optional[str] = None,
 ) -> Optional[str]:
-    """RED-phase stub — real implementation lands in the GREEN commit."""
-    return None
+    """
+    Derive a two-character avatar-initials glyph (D-12/D-13, JUSTICE-06).
+
+    Two branches, in this order:
+
+    1. Structured branch: when first_name and last_name are both non-blank
+       (after stripping), return the first code point of each. name_suffix
+       is accepted and deliberately ignored -- a suffix is never an
+       initial. This is the branch every justice takes, since their parts
+       come from the CSV, and it is what fixes John Marshall Harlan, II
+       rendering JH instead of JI.
+    2. Legacy fallback (D-13): otherwise, when full_name is non-blank,
+       split on whitespace after stripping a trailing comma from each
+       token, drop any token whose comma-stripped form is a known suffix
+       (_KNOWN_SUFFIXES), then take the first code point of the first and
+       last surviving tokens. One surviving token yields its first two
+       code points. Zero surviving tokens, or a blank/None full_name,
+       returns None.
+
+    Deliberately more permissive than split_legacy_full_name: this
+    produces a two-character display glyph, not stored name parts, so it
+    is safe to fall back for single-part names, particle names, and a
+    suffix without a leading comma -- shapes split_legacy_full_name
+    refuses. Pure and deterministic; never mutates its arguments.
+    """
+    first_stripped = (first_name or "").strip()
+    last_stripped = (last_name or "").strip()
+
+    if first_stripped and last_stripped:
+        return _initial(first_stripped) + _initial(last_stripped)
+
+    if not full_name or not full_name.strip():
+        return None
+
+    survivors = []
+    for token in full_name.strip().split():
+        cleaned = token.rstrip(",")
+        if cleaned in _KNOWN_SUFFIXES:
+            continue
+        survivors.append(cleaned)
+
+    if not survivors:
+        return None
+    if len(survivors) == 1:
+        return _two_codepoints(survivors[0])
+    return _initial(survivors[0]) + _initial(survivors[-1])

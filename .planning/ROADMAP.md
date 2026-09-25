@@ -214,11 +214,11 @@ Active milestone: **v1.9 The Site Becomes Complete** (Phases 52–58). Details f
   - Closes the Person-dedup item carried since v1.7 Phase 42. It is not four bad rows; it is 49 of 114, visible as four only because four fixtures are imported.
   - Per the reseed-don't-migrate doctrine, existing duplicates are cleared by the reset, not by a backfill migration.
 
-**Plans**: 5/6 plans executed
+**Plans**: 6/6 plans executed
 
 Plans:
 
-- [ ] 52-06-PLAN.md
+- [x] 52-06-PLAN.md
 
 **Wave 1**
 
@@ -419,7 +419,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 52. Justice Identity | 5/6 | In Progress|  |
+| 52. Justice Identity | 6/6 | In Progress|  |
 | 53. Undetermined Speakers & Marker Normalisation | 0/? | Not started | - |
 | 54. Publishing at Scale & Verification Debt | 0/? | Not started | - |
 | 54.1. Justice Portraits & Biographical Enrichment (INSERTED) | 0/? | Not started | - |

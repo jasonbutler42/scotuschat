@@ -4,17 +4,17 @@ milestone: v1.9
 milestone_name: The Site Becomes Complete
 current_phase: 52
 current_phase_name: Justice Identity
-status: executing
-stopped_at: Completed 52-05-PLAN.md
-last_updated: "2026-09-25T14:39:58.643Z"
+status: verifying
+stopped_at: Completed 52-06-PLAN.md
+last_updated: "2026-09-25T14:51:22.703Z"
 last_activity: 2026-09-25
 last_activity_desc: Phase 52 execution started
-state_head: dd0a48fe1865310c05d5f921cf6fd1436eccd3ab
+state_head: 9dae1ce511235bd51a15a9fc1b855d05eefc1d9b
 progress:
   total_phases: 8
   completed_phases: 0
   total_plans: 6
-  completed_plans: 5
+  completed_plans: 6
   percent: 0
 ---
 
@@ -39,8 +39,8 @@ phase-numbered test modules, ~2:1 test:code as a guideline. Both govern all late
 ## Current Position
 
 Phase: 52 (Justice Identity) — EXECUTING
-Plan: 5 of 5
-Status: Ready to execute
+Plan: 6 of 6
+Status: Phase complete — ready for verification
 Last activity: 2026-09-25 — Phase 52 execution started
 
 Progress: [░░░░░░░░░░] 0% (0/7 phases)
@@ -82,6 +82,7 @@ the first client-side third-party script and the first `PUBLIC_` env var this co
 | Phase 52 P03 | 24min | 2 tasks | 4 files |
 | Phase 52 P04 | 43min | 3 tasks | 3 files |
 | Phase 52 P05 | 57min | 2 tasks | 9 files |
+| Phase 52 P06 | 10min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -270,8 +271,8 @@ suppress by design, so the section was moved verbatim to
 
 ## Session Continuity
 
-Last session: 2026-09-25T14:39:58.551Z
-Stopped at: Completed 52-05-PLAN.md
+Last session: 2026-09-25T14:51:15.408Z
+Stopped at: Completed 52-06-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
@@ -291,6 +292,8 @@ Resume file: None
 - [Phase 52]: Phase 52-05: backend fixture-state progress carries a machine token ('seeding_justices' | 'reseeding_fixture_N'), not the rendered copy string; the frontend owns the Copywriting Contract's literal strings and maps the token to them, so the two layers can't drift independently.
 - [Phase 52]: Phase 52-05: the D-14 re-read runs directly against FASTAPI_BASE_URL from +page.server.ts's own server action rather than through the new dev-fixture-state proxy — that proxy exists only for the browser's client-side polling, which has no FASTAPI_BASE_URL access.
 - [Phase 52]: Phase 52-05: AbortSignal sized at 180s (~2.5x the 71.67s measured floor from 52-04), not re-measured through the live HTTP path in this plan — deferred to the phase's end-of-phase human-check UAT item.
+- [Phase 52]: Phase 52-06: list_resolve_rows_for_job's SELECT extended with Person.first_name/last_name/name_suffix so derive_initials has structured parts in hand at one call site per row, reused across the bench and advocate dict branches.
+- [Phase 52]: Phase 52-06: the null-initials case gets no client-side rendering branch in ResolveCard.svelte -- person_id null implies full_name null too, so the existing {#if fullName} guard already covers it; no ?? '?' fallback was added.
 
 ### Blockers
 

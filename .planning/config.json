@@ -26,7 +26,8 @@
     "skip_discuss": false,
     "use_worktrees": false,
     "security_enforcement": false,
-    "api_coverage_gate": false
+    "api_coverage_gate": false,
+    "test_gate_timeout": 1800
   },
   "ship": {
     "pr_body_sections": [

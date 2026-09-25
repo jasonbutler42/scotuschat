@@ -5,7 +5,14 @@ area: ui
 priority: low
 files:
   - app/src/lib/admin/ResolveCard.svelte
+resolves_phase: 52
 ---
+
+> **Scheduled 2026-09-25.** Operator decision: this is fixed in plan `52-06`
+> (wave 3 of phase 52), not deferred to the backlog. 52-02's D-12 must_have was
+> amended to scope it to public surfaces, with codebase-wide singularity left as
+> 52-06's truth to satisfy. `resolves_phase: 52` closes this todo automatically
+> when the phase completes.
 
 ## Problem
 

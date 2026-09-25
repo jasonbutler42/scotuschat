@@ -233,6 +233,7 @@ Plans:
 **Wave 3** *(blocked on Wave 2 completion)*
 
 - [ ] 52-05-PLAN.md — Reset per-fixture progress and evidence-based failure copy via one dev-only fixture-state GET
+- [ ] 52-06-PLAN.md — Converge the third initials splitter in admin `ResolveCard.svelte` onto the single server-side `derive_initials`, completing D-12 codebase-wide *(added 2026-09-25 by operator decision after 52-02 surfaced it)*
 
 **UI hint**: yes
 
@@ -555,3 +556,42 @@ Plans:
 **Provenance:** Raised by the operator during v1.9 milestone scoping (2026-09-23) alongside the decision to log search queries for prioritisation. Operator chose analytics-only for v1.9 and asked explicitly for a backlog item to revisit the form.
 
 **Note:** 999.10 (bulk-import historical justices CSV) was removed 2026-07-12 during backlog review — SUPERSEDED/ABSORBED into Phase 29's `import-justices` command per CONTEXT.md D-01, 2026-07-09. 999.17 (FastAPI test lifespan/session-factory failure) was removed 2026-07-12 — FIXED 2026-07-10 during Phase 30 Wave 1, commits `1a99f28a`/`f7ad3082`. 999.1, the earlier 999.9 (README), 999.11, 999.12, 999.13, 999.14, 999.15, 999.16, 999.18, 999.19 were promoted 2026-07-12 to Phases 36, 40, 39, 35, 34, 33, 38, 37, 32, 31 respectively, and folded into the v1.6 milestone on 2026-07-13. The canonical allocator later reused the now-vacant 999.9 slot for the edit-affordance backlog item captured 2026-07-13, and subsequently reused the now-vacant 999.10 slot for the Node.js path-mangling test backlog item captured 2026-07-31 (unrelated to the original 999.10, bulk-import historical justices CSV). See the Phase Details section above for promoted-item scope. That Node.js path-mangling item (the second 999.10) was itself removed 2026-08-18 by the cross-phase UAT audit — VERIFIED FIXED: `api/tests/test_phase38_people_ui_contract.py` runs 23 passed / 0 failed with `node` on PATH. The mangled `C:\workspace\...` path came from the pre-relocation Windows checkout and the WSL relocation resolved it. One caveat carried forward in STATE.md: those 4 tests SKIP rather than fail when `node` is absent from PATH (the default for a pytest run launched outside an nvm shell), so a future regression there would be invisible. The 999.10 slot was vacant again until 2026-08-24, when the canonical allocator reused it a third time for the unified-admin-screen item captured above during Phase 49 UAT (unrelated to either prior 999.10). The 999.11 slot, vacated by its 2026-07-12 promotion to Phase 39, was likewise reused on 2026-08-25 for the PDF-import-path item split out of Phase 50 (unrelated to the original 999.11).
+
+### Phase 999.13: Seed advocates into the baseline fixture (BACKLOG)
+
+**Goal:** [Captured for future planning] Do for advocates what Phase 52 does for justices: seed them into the launch fixture as identified people with per-argument side and a normalised role, so the baseline database is complete on both sides of the bench rather than only the bench. Captured 2026-09-25 during Phase 52 execution, when the operator described the launch dataset he wants — every corpus argument, every justice, and as much advocate data as the corpus supports, all populated by an idempotent script rather than manual work.
+
+**Why this is a real gap, not an oversight:**
+
+- **Nothing on the roadmap seeds advocates.** They appear across the roadmap only as *rendering* concerns — their speaker cards, the unresolved-advocate role placeholder, the bench/advocate photograph asymmetry ruled on 2026-09-24. Phases 55-58 are Search, Landing Page, Surface Plumbing and Analytics. No phase does for advocates what 52-01 (identity mapping) and 52-04 (seed on reset) do for justices.
+- **The scale is the inverse of the justices.** `data/corpus/speakers.json` holds 114 justice entries of whom 35 actually speak; it holds **9,535 advocate entries, of whom 8,944 actually speak**. The bench is the small half of the problem.
+- **It blocks the launch fixture the operator described.** An idempotent `reset_to_fixture` that seeds every argument and every justice but no advocates produces a database where most speakers in most arguments are unresolved.
+
+**What the corpus actually supports — check this before scoping:**
+
+| | Justices | Advocates |
+|---|---|---|
+| Roster entries in `speakers.json` | 114 | 9,535 |
+| Who actually speak in `utterances.jsonl` | 35 | 8,944 |
+| Structured name parts | yes — `supreme_court_justices_sections.csv` | **no** |
+| Per-argument side | yes | yes |
+| Role | tenure-derived | free text, needs normalising |
+
+- **Advocates have no structured name parts and no second source.** Every non-justice entry in `speakers.json` is exactly `{"name": "Harry F. Murphy", "type": "A"}` — 9,535 of 9,535 carry only those two keys. There is no advocate equivalent of the justices CSV. So advocate `first_name`/`middle_name`/`last_name`/`name_suffix` cannot be populated from this corpus at all, and advocates will permanently resolve through `derive_initials`'s D-13 `full_name` fallback (built in 52-02, already correct for this case). Any plan promising structured advocate names needs a data source that does not currently exist.
+- **Advocate roles need normalising before they are shown.** `conversations.json` carries 20,601 advocate appearances with a per-case `role` string. 7,558 are the literal `"inferred"`; the remainder is a long free-text tail expressing a handful of concepts in hundreds of spellings — `"on behalf of the Petitioner"` (759), `"for petitioner"` (562), `"for the petitioner"` (466), `"Argued the cause for the petitioner"` (351), `"argued the cause for Petitioner"` (185), and so on. Seeding these raw would put hundreds of near-duplicate role labels on the public site. The normalisation is the real work in this phase, and it is a domain judgment call (which spellings collapse to which canonical role) rather than a mechanical transform.
+- **`side` is already clean.** Each advocate appearance carries a `side` integer alongside the role string, so petitioner/respondent placement does not depend on parsing the free text.
+
+**Apolitical-constraint note:** advocates render through the same component, in the same section order, at the same visual weight as justices — CLAUDE.md's identical-treatment rule. Sections for which no advocate data exists are absent, not filled with placeholder text. The absence of structured name parts for advocates is asymmetric *source data*, which the 2026-09-24 ruling explicitly distinguishes from asymmetric *treatment*. Do not re-litigate that; do not invent advocate data to balance a layout.
+
+**What to check before promoting this:**
+
+- Whether the PDF route (999.11) is live, since post-2019 arguments bring advocates the ConvoKit corpus does not carry, and a seeding design that assumes corpus-only input would need reworking.
+- Whether advocate identity needs a stable join key the way justices needed `oyez_speaker_id`. The corpus speaker ids for advocates are slug-form (`harry_f_murphy`) and appear stable within the corpus, but they have not been verified for collisions the way Phase 52 verified the justice ids bidirectionally. That verification is a prerequisite, not an implementation detail — it is exactly what 52-01 had to do first.
+- Whether the role normalisation should ship as operator-reviewable mapping data (the shape 52-01 used for `justice_identity_mapping.csv`) rather than as logic buried in the importer.
+
+**Requirements:** TBD
+**Plans:** 0 plans
+
+- [ ] TBD (promote with /gsd-review-backlog when ready)
+
+**Provenance:** Surfaced by Claude on 2026-09-25 while the operator was describing the launch fixture he wants during Phase 52 Wave 2. The operator confirmed the gap was real and asked for it to be backlogged rather than scoped into v1.9. Corpus figures above were measured directly against `data/corpus/speakers.json`, `conversations.json` and `utterances.jsonl` on the same date, not estimated.

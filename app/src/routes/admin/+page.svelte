@@ -2,6 +2,7 @@
 	import StatCard from '$lib/admin/StatCard.svelte';
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
+	import { onDestroy } from 'svelte';
 
 	let { data, form } = $props();
 
@@ -83,6 +84,59 @@
 	let resetConfirming = $state(false);
 	let resetRunning = $state(false);
 	let resetResult = $state<ResetFixtureItem[] | null>(null);
+
+	// Phase 52-05 (D-15): the Running state's per-fixture progress line.
+	// Mirrors api/schemas/admin_dev.py::ResetProgress's `step` machine token
+	// ("seeding_justices" | "reseeding_fixture_N") -- this component owns the
+	// 52-UI-SPEC.md Copywriting Contract's five literal strings and maps the
+	// backend's token to them, so the two layers can't drift independently.
+	interface ResetProgress {
+		step: string;
+		completed: number;
+		total: number;
+	}
+
+	const RESET_PROGRESS_STEP_1_COPY = 'Seeding justices…';
+
+	let resetProgressText = $state(RESET_PROGRESS_STEP_1_COPY);
+	let resetPollHandle: ReturnType<typeof setInterval> | null = null;
+
+	// Maps a backend progress token to its 52-UI-SPEC.md literal. Returns
+	// null for anything unrecognised (including no progress in flight) so
+	// the caller can leave the last-observed text on screen rather than
+	// clearing or guessing at a step that has not been reported.
+	function fixtureProgressCopy(step: string | null | undefined): string | null {
+		if (step === 'seeding_justices') return RESET_PROGRESS_STEP_1_COPY;
+		const match = /^reseeding_fixture_(\d)$/.exec(step ?? '');
+		if (match) return `Reseeding fixture ${match[1]} of 4…`;
+		return null;
+	}
+
+	function stopResetPolling() {
+		if (resetPollHandle !== null) {
+			clearInterval(resetPollHandle);
+			resetPollHandle = null;
+		}
+	}
+
+	// Never advances the label on a timer or optimistically (D-15
+	// prohibition) -- only ever writes a step the backend has actually
+	// reported this poll. A poll failure, a null `progress` (reset not yet
+	// started or already finished), or an unrecognised token all leave the
+	// last-observed text in place rather than clearing or guessing.
+	async function pollResetProgress() {
+		try {
+			const res = await fetch('/admin/dev-fixture-state', { cache: 'no-store' });
+			if (!res.ok) return;
+			const body: { progress?: ResetProgress | null } = await res.json();
+			const copy = fixtureProgressCopy(body.progress?.step);
+			if (copy) resetProgressText = copy;
+		} catch {
+			// Network hiccup mid-poll -- keep showing the last observed step.
+		}
+	}
+
+	onDestroy(stopResetPolling);
 
 	// ──────────────────────────────────────────────────────────────────────────
 	// Dev-tools unresolved-speaker seeder control (Phase 49, D-33a). Single-step —
@@ -440,13 +494,16 @@
 				</p>
 
 				{#if resetRunning}
-					<!-- Running state: replaces the button/confirm row in place. -->
+					<!-- Running state: replaces the button/confirm row in place. Same flex row,
+					     spinner glyph/animation and text styling as before (Phase 43) -- only the
+					     text content now advances through D-15's five per-fixture progress steps,
+					     driven by pollResetProgress polling the backend's actual progress record. -->
 					<div style="display: flex; align-items: center; gap: var(--space-sm); min-height: var(--touch-target);">
 						<span
 							aria-hidden="true"
 							style="display: inline-block; animation: spin 1s linear infinite;"
 						>◌</span>
-						<span style="font-size: var(--font-size-body); color: var(--color-text-secondary);">Resetting to fixture…</span>
+						<span style="font-size: var(--font-size-body); color: var(--color-text-secondary);">{resetProgressText}</span>
 					</div>
 				{:else if resetConfirming}
 					<!-- Confirming state: two-step Yes/No, no type-to-confirm input (D-05). -->
@@ -462,7 +519,11 @@
 							style="flex: 1;"
 							use:enhance={() => {
 								resetRunning = true;
+								resetProgressText = RESET_PROGRESS_STEP_1_COPY;
+								stopResetPolling();
+								resetPollHandle = setInterval(pollResetProgress, 1000);
 								return async ({ result, update }) => {
+									stopResetPolling();
 									resetRunning = false;
 									if (
 										result.type === 'success' &&

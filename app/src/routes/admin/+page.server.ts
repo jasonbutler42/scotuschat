@@ -210,11 +210,143 @@ export const load: PageServerLoad = async ({ fetch }) => {
 	};
 };
 
-// Phase 43 (D-05/D-06/D-07): the two locked error copies from
-// 43-UI-SPEC.md's Copywriting Contract. No third variant is ever returned.
+// Phase 43 (D-05/D-06/D-07) error copies, unchanged verbatim.
+// Phase 52-05 (D-14) lifts this file's former two-copy-only lock — see
+// 52-UI-SPEC.md's Copywriting Contract, which amends 43-UI-SPEC.md's in
+// place. There are now four outcomes: the two below, plus RESET_PARTIAL_ERROR
+// and a no-error full-success path, each driven by a follow-up read of what
+// actually landed (resolveFromReRead below) rather than by which code path
+// failed.
 const RESET_ENV_ERROR = 'Reset failed: this action is not available in this environment.';
 const RESET_MID_ERROR =
 	'Reset failed partway through — the database may be in an inconsistent state. Check server logs before retrying.';
+
+// Phase 52-05 (D-14): the re-read confirms a genuine partial reseed — some
+// but not all fixtures present, or one in an unexpected state.
+const RESET_PARTIAL_ERROR =
+	'Reset failed partway through. A follow-up check found the database only partially reseeded — do not use it until you run Reset to Fixture again.';
+
+// Phase 52-05 (D-15): the reset fetch previously had no AbortSignal at all,
+// inheriting undici's own 300s headersTimeout uncontrolled — the exact
+// false-alarm case the folded todo documented (a fully successful reset
+// whose client simply gave up listening). Sized comfortably above the
+// 71.67s wall-clock floor plan 52-04 measured via a direct call (bypassing
+// HTTP-layer overhead — a floor, not a final number; see 52-04-SUMMARY.md's
+// methodology caveat), while staying well under undici's 300s ceiling.
+// Exceeding it throws (AbortError), which routes into resolveFromReRead
+// below rather than being reported as a failure outright.
+const RESET_ABORT_TIMEOUT_MS = 180_000;
+
+// Phase 52-05 (D-16): mirrors api/services/admin_dev.py's FIXTURE_SET and
+// the exact per-fixture end-state its state-realization block (step 5)
+// leaves behind on a FULLY successful reset. Used only to interpret the
+// D-14 re-read's evidence — never sent to the backend, never rendered.
+const EXPECTED_FIXTURE_END_STATES: Record<
+	string,
+	{ status: string; latest_import_run_step: string }
+> = {
+	'15169': { status: 'candidate', latest_import_run_step: 'parse' },
+	'13015': { status: 'draft', latest_import_run_step: 'parse' },
+	'18897': { status: 'published', latest_import_run_step: 'parse' },
+	'22372': { status: 'candidate', latest_import_run_step: 'reconcile' },
+};
+
+interface FixtureStateItem {
+	conversation_id: string;
+	case_name: string;
+	role: string;
+	present: boolean;
+	argument_id: number | null;
+	status: string | null;
+	latest_import_run_step: string | null;
+}
+
+interface FixtureStateResponse {
+	fixtures: FixtureStateItem[];
+	progress: { step: string; completed: number; total: number } | null;
+}
+
+/**
+ * Phase 52-05 (D-14): re-reads GET /api/admin/dev/fixture-state directly
+ * (server-side, same FASTAPI_BASE_URL/ADMIN_TOKEN access resetToFixture
+ * already uses — not routed through the dev-fixture-state/+server.ts proxy,
+ * which exists for the browser's own polling, not for this server-side
+ * call). Returns null on any failure to obtain evidence at all.
+ */
+async function reReadFixtureState(
+	fetch: typeof globalThis.fetch,
+): Promise<FixtureStateResponse | null> {
+	try {
+		const res = await fetch(`${FASTAPI_BASE_URL}/api/admin/dev/fixture-state`, {
+			headers: { 'X-Admin-Token': ADMIN_TOKEN },
+		});
+		if (!res.ok) return null;
+		return (await res.json()) as FixtureStateResponse;
+	} catch {
+		return null;
+	}
+}
+
+/**
+ * Classifies the re-read's evidence into one of D-14's three post-re-read
+ * outcomes (the fourth, environment refusal, short-circuits before any
+ * re-read is attempted — see resetToFixture below).
+ */
+function classifyFixtureStateOutcome(
+	state: FixtureStateResponse | null,
+): 'full-success' | 'partial' | 'inconclusive' {
+	if (!state || !Array.isArray(state.fixtures) || state.fixtures.length !== 4) {
+		return 'inconclusive';
+	}
+	const allLandedAsExpected = state.fixtures.every((fixture) => {
+		const expected = EXPECTED_FIXTURE_END_STATES[fixture.conversation_id];
+		return (
+			expected !== undefined &&
+			fixture.present === true &&
+			fixture.status === expected.status &&
+			fixture.latest_import_run_step === expected.latest_import_run_step
+		);
+	});
+	return allLandedAsExpected ? 'full-success' : 'partial';
+}
+
+/**
+ * Phase 52-05 (D-14): the single convergence point every non-404
+ * resetToFixture failure routes through — a thrown fetch/abort, a non-ok
+ * status, an unparseable body, or a fixtures array that is not exactly 4
+ * entries long. Re-reads fixture state and maps the evidence to one of
+ * three outcomes:
+ *   - full success: returns the same `resetFixtures` success shape the
+ *     happy path returns, so the page renders the existing Success markup
+ *     with no new template branch and NO error is shown at all — the
+ *     direct fix for the false-alarm case the folded todo identified.
+ *   - partial: RESET_PARTIAL_ERROR.
+ *   - inconclusive (no evidence obtained): RESET_MID_ERROR, now the true
+ *     fallback rather than the default for every failure mode.
+ */
+async function resolveFromReRead(fetch: typeof globalThis.fetch) {
+	const state = await reReadFixtureState(fetch);
+	const outcome = classifyFixtureStateOutcome(state);
+
+	if (outcome === 'full-success') {
+		return {
+			resetFixtures: state!.fixtures.map((fixture) => ({
+				conversation_id: fixture.conversation_id,
+				case_name: fixture.case_name,
+				role: fixture.role,
+				argument_id: fixture.argument_id as number,
+				argument_status: fixture.status as string,
+				latest_import_run_step: fixture.latest_import_run_step as string,
+			})),
+		};
+	}
+
+	if (outcome === 'partial') {
+		return fail(502, { resetError: RESET_PARTIAL_ERROR });
+	}
+
+	return fail(502, { resetError: RESET_MID_ERROR });
+}
 
 // Phase 49 (D-33a): the seeder's own two copies — deliberately NOT the reset
 // action's RESET_ENV_ERROR/RESET_MID_ERROR literals above. This action never
@@ -237,7 +369,8 @@ export const actions: Actions = {
 	},
 
 	/**
-	 * resetToFixture — proxies to the dev-only reset endpoint below (Phase 43, D-05/D-06/D-07).
+	 * resetToFixture — proxies to the dev-only reset endpoint below (Phase 43, D-05/D-06/D-07;
+	 * re-read behavior added Phase 52-05, D-14/D-15).
 	 *
 	 * Takes no form data — no corpus path, no fixture list, no other parameter. The
 	 * backend endpoint has no request surface and this action must not invent one.
@@ -246,17 +379,17 @@ export const actions: Actions = {
 	 * the DOM when not development, so this branch should be unreachable — the
 	 * backend's unmounted router is the real enforcement, D-07).
 	 *
-	 * Maps every failure to exactly one of the two locked UI-SPEC error copies:
-	 *   - 404 from the backend -> RESET_ENV_ERROR (environment refusal)
-	 *   - every other non-ok status, a thrown fetch (network failure), a response
-	 *     body that fails to parse as JSON, or a parsed fixtures array that is not
-	 *     exactly 4 entries long -> RESET_MID_ERROR (mid-reset failure)
-	 * The backend's 503 corpus-missing case also lands on RESET_MID_ERROR even though
-	 * nothing was actually deleted (the backend pre-flights the corpus check before the
-	 * TRUNCATE) — the UI-SPEC locks a two-copy set and the server log distinguishes them.
+	 * D-14: only the 404/environment-refusal path short-circuits directly to
+	 * RESET_ENV_ERROR. Every other failure — a thrown fetch (including the
+	 * RESET_ABORT_TIMEOUT_MS signal firing), a non-ok status (including the
+	 * backend's 503 corpus-missing case), an unparseable body, or a parsed
+	 * fixtures array that is not exactly 4 entries long — converges on
+	 * resolveFromReRead, which re-reads fixture state before asserting
+	 * anything and reports what it actually found.
 	 *
-	 * On success, returns the parsed fixtures array under `resetFixtures` (not a
-	 * redirect) — the UI-SPEC's Success state renders inline on the same page.
+	 * On success (this request's own response, not a re-read), returns the
+	 * parsed fixtures array under `resetFixtures` (not a redirect) — the
+	 * UI-SPEC's Success state renders inline on the same page.
 	 */
 	resetToFixture: async ({ fetch }) => {
 		if (env.ENVIRONMENT !== 'development') {
@@ -268,9 +401,10 @@ export const actions: Actions = {
 			res = await fetch(`${FASTAPI_BASE_URL}/api/admin/dev/reset-to-fixture`, {
 				method: 'POST',
 				headers: { 'X-Admin-Token': ADMIN_TOKEN },
+				signal: AbortSignal.timeout(RESET_ABORT_TIMEOUT_MS),
 			});
 		} catch {
-			return fail(502, { resetError: RESET_MID_ERROR });
+			return await resolveFromReRead(fetch);
 		}
 
 		if (res.status === 404) {
@@ -278,20 +412,24 @@ export const actions: Actions = {
 		}
 
 		if (!res.ok) {
-			return fail(502, { resetError: RESET_MID_ERROR });
+			return await resolveFromReRead(fetch);
 		}
 
 		let body: { fixtures?: unknown };
 		try {
 			body = await res.json();
 		} catch {
-			return fail(502, { resetError: RESET_MID_ERROR });
+			return await resolveFromReRead(fetch);
 		}
 
-		// A partial reseed is an error state, never a shorter success list (43-UI-SPEC.md
-		// "partial" row) — the fixture set is fixed at exactly 4 by FIXTURES.md.
+		// A partial reseed is an error state, never a shorter success list —
+		// the fixture set is fixed at exactly 4 by FIXTURES.md. Routed through
+		// the same re-read as every other failure rather than asserted
+		// directly, since the re-read is the only thing that can distinguish
+		// "actually partial" from "this response was malformed but the
+		// database is fine" (D-14).
 		if (!Array.isArray(body.fixtures) || body.fixtures.length !== 4) {
-			return fail(502, { resetError: RESET_MID_ERROR });
+			return await resolveFromReRead(fetch);
 		}
 
 		return { resetFixtures: body.fixtures };

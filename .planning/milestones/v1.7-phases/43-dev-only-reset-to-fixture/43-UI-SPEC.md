@@ -164,6 +164,21 @@ Five states, driving one control. Modeled directly on the two existing "Danger Z
 | Error — environment/route refusal (defense-in-depth; should be unreachable since the section itself is gated, but the backend gate is the real enforcement per D-07) | "Reset failed: this action is not available in this environment." |
 | Destructive confirmation | "Reset to Fixture": two-step inline Yes/No (Confirm reset / Cancel), stating the full wipe scope before the destructive action runs — no type-to-confirm text input (per D-05) |
 
+> **SUPERSEDED 2026-09-25 (Phase 52-05, D-14).** The two error rows above were
+> locked by a code comment reading *"No third variant is ever returned"* —
+> every reset failure, including the backend's own 503 corpus-missing case
+> where nothing was actually deleted, collapsed onto one of these two
+> strings. That lock is deliberately lifted: the frontend action now
+> re-reads fixture state before asserting anything, producing four outcomes
+> (full success — no error shown at all; a genuine partial reseed; an
+> inconclusive re-read, which is this table's mid-reset-failure text,
+> verbatim, demoted to a true fallback; and this table's environment-refusal
+> text, unchanged). The live contract is
+> `.planning/phases/52-justice-identity/52-UI-SPEC.md`'s Copywriting
+> Contract — read that table, not this one, for the current behavior. This
+> table is left in place as the historical record of what Phase 43 shipped
+> and why the two-copy lock existed in the first place.
+
 ---
 
 ## UI Considerations

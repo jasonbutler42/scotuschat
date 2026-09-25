@@ -49,11 +49,20 @@ PAGE_SERVER_TS = "app/src/routes/admin/+page.server.ts"
 # the forbidden literal exists in exactly one place in this test module.
 CLIENT_ENV_PREFIX = "PUBLIC_"
 
-# The two locked error copies from 43-UI-SPEC.md's Copywriting Contract.
+# The two error copies preserved verbatim from 43-UI-SPEC.md's original
+# Copywriting Contract (Phase 43).
 RESET_ENV_ERROR = "Reset failed: this action is not available in this environment."
 RESET_MID_ERROR = (
     "Reset failed partway through — the database may be in an inconsistent state. "
     "Check server logs before retrying."
+)
+
+# Phase 52-05 (D-14): a third literal, added when the "No third variant is
+# ever returned" lock was deliberately lifted -- see 52-UI-SPEC.md's
+# Copywriting Contract and 43-UI-SPEC.md's superseded-note amendment.
+RESET_PARTIAL_ERROR = (
+    "Reset failed partway through. A follow-up check found the database only "
+    "partially reseeded — do not use it until you run Reset to Fixture again."
 )
 
 
@@ -179,7 +188,10 @@ def test_reset_action_posts_no_operator_input():
 
 
 # ---------------------------------------------------------------------------
-# Test 4: exactly the two locked error copies exist, verbatim, no third variant.
+# Test 4: exactly the three locked error copies exist, verbatim, no fourth
+# variant (Phase 52-05, D-14 — the former "no third variant" lock is
+# deliberately lifted to three; a fourth outcome, full success, renders no
+# error text at all, so it has no string to enumerate here).
 # ---------------------------------------------------------------------------
 
 
@@ -194,17 +206,22 @@ def test_error_copies_match_ui_spec():
         "Expected the UI-SPEC's mid-reset-failure error copy verbatim in "
         "+page.server.ts."
     )
-
-    # No third "Reset failed" variant exists — every quoted string starting with
-    # this prefix must be one of the two locked copies above.
-    occurrences = re.findall(r"'([^']*Reset failed[^']*)'", server_ts)
-    assert len(occurrences) >= 2, (
-        "Expected at least the two locked 'Reset failed' error copies as quoted "
-        f"string literals in +page.server.ts, found {len(occurrences)}."
+    assert RESET_PARTIAL_ERROR in server_ts, (
+        "Expected 52-UI-SPEC.md's partial-reseed error copy verbatim in "
+        "+page.server.ts."
     )
-    allowed = {RESET_ENV_ERROR, RESET_MID_ERROR}
+
+    # No fourth "Reset failed" variant exists — every quoted string starting
+    # with this prefix must be one of the three locked copies above.
+    occurrences = re.findall(r"'([^']*Reset failed[^']*)'", server_ts)
+    assert len(occurrences) >= 3, (
+        "Expected at least the three locked 'Reset failed' error copies as "
+        f"quoted string literals in +page.server.ts, found {len(occurrences)}."
+    )
+    allowed = {RESET_ENV_ERROR, RESET_MID_ERROR, RESET_PARTIAL_ERROR}
     for occurrence in occurrences:
         assert occurrence in allowed, (
             f"Found an unexpected 'Reset failed' copy variant: {occurrence!r} — "
-            "exactly two error copies are locked by the UI-SPEC; no third may exist."
+            "exactly three error copies are locked (52-UI-SPEC.md); no fourth "
+            "may exist."
         )

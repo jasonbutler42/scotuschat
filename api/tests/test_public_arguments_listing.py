@@ -217,7 +217,12 @@ async def test_terms_counts_published_only_ordered_desc(client: AsyncClient, see
     # then appears in a term listing and the assertion fails at random.
     # Bands in use: 1810 1820 1830 1840 1850 1860 1870 1880 1890 1900 1910 1920
     # 1930 1940. A new test takes the next unused base, never a used one.
-    base_year = 1850 + (uuid.uuid4().int % 10)
+    # A test that ALSO derives a second year (`base + 1`) must draw from
+    # `% 9`, so the derived year cannot spill onto the next band's base.
+    # `% 9` not `% 10`: this test also uses `base_year + 1`, so the draw must
+    # leave room for it inside the band. `% 10` lets 1859 + 1 land on 1860 —
+    # the NEXT band's base — reintroducing the cross-test collision (WR-01).
+    base_year = 1850 + (uuid.uuid4().int % 9)
     later_year = base_year + 1
 
     await seeded.add_argument(term_year=later_year, question_number=1)
@@ -331,7 +336,9 @@ async def test_term_detail_lists_only_published_arguments_for_that_term(
     case has that term_year — a published argument in a different term, and
     a draft argument in the same term, are both excluded.
     """
-    year = 1900 + (uuid.uuid4().int % 10)
+    # `% 9` not `% 10` — same reason as the 1850 band above: `year + 1` must
+    # stay inside this band, and 1909 + 1 would land on the 1910 band (WR-01).
+    year = 1900 + (uuid.uuid4().int % 9)
     other_year = year + 1
 
     included_id = await seeded.add_argument(term_year=year, question_number=1)

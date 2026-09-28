@@ -170,3 +170,24 @@ class TestLoadCases:
         assert len(result) == 2
         assert result["1955_71"]["title"] == "1955 Case"
         assert result["1956_71"]["title"] == "1956 Case"
+
+
+def test_stream_prefilter_matches_only_the_real_conversation_id_key(tmp_path):
+    """The scan skips unwanted rows by regex before json.loads. A look-alike
+    key inside utterance text is escaped in JSON, so it must never be taken
+    for the real key -- whichever order the fields appear in, and with or
+    without whitespace after the colon."""
+    rows = [
+        # Real id wanted; text (placed first) mentions an unwanted id.
+        {"text": 'he said "conversation_id": "999"', "conversation_id": "1"},
+        # Real id unwanted; text mentions a wanted id.
+        {"text": 'see "conversation_id": "1"', "conversation_id": "999"},
+        {"conversation_id": "2", "text": "plain"},
+    ]
+    path = tmp_path / "utterances.jsonl"
+    lines = [json.dumps(rows[0]), json.dumps(rows[1]), json.dumps(rows[2], separators=(",", ":"))]
+    path.write_text("\n".join(lines) + "\n\n", encoding="utf-8")
+
+    got = list(stream_utterances_for_conversation_ids(path, {"1", "2"}))
+
+    assert [r["conversation_id"] for r in got] == ["1", "2"]

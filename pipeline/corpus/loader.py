@@ -17,6 +17,7 @@ per October Term batch.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Iterator
 
@@ -29,6 +30,8 @@ CASES_FILENAME = "cases.jsonl"
 CONVERSATIONS_FILENAME = "conversations.json"
 SPEAKERS_FILENAME = "speakers.json"
 UTTERANCES_FILENAME = "utterances.jsonl"
+
+_CONVERSATION_ID_RE = re.compile(r'"conversation_id":\s*"([^"\\]*)"')
 
 
 def stream_utterances_for_conversation_ids(
@@ -44,6 +47,14 @@ def stream_utterances_for_conversation_ids(
     """
     with utterances_path.open("r", encoding="utf-8") as f:
         for line in f:
+            # Skip unwanted rows without parsing them: json.loads on all
+            # ~1.7M lines was ~85% of the scan. Sound because a literal quote
+            # inside a JSON string is always escaped, so this unescaped
+            # pattern can only match the real key. No match (a format this
+            # pattern does not anticipate) falls through to the full parse.
+            match = _CONVERSATION_ID_RE.search(line)
+            if match is not None and match.group(1) not in wanted_ids:
+                continue
             line = line.strip()
             if not line:
                 continue

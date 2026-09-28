@@ -1,183 +1,220 @@
 ---
 phase: 52-justice-identity
-reviewed: 2026-09-25T00:00:00Z
+reviewed: 2026-09-28T00:00:00Z
 depth: standard
-files_reviewed: 38
+files_reviewed: 11
 files_reviewed_list:
-  - alembic/versions/0032_person_display_name_and_oyez_unique.py
-  - api/domain/person_names.py
-  - api/models/models.py
-  - api/routers/admin_dev.py
-  - api/schemas/admin_dev.py
-  - api/schemas/admin_people.py
-  - api/schemas/speakers.py
-  - api/schemas/utterance.py
-  - api/services/admin_dev.py
   - api/services/admin_people.py
-  - api/services/admin_review.py
-  - api/services/arguments.py
-  - api/services/speakers.py
-  - api/tests/test_admin_dev_routes.py
-  - api/tests/test_admin_people_resolve_initials.py
   - api/tests/test_admin_people_schema_readonly.py
-  - api/tests/test_arguments.py
-  - api/tests/test_authority_matrix.py
-  - api/tests/test_person_names.py
-  - api/tests/test_public_arguments_listing.py
-  - api/tests/test_speakers_service.py
-  - app/src/lib/admin/ResolveCard.svelte
-  - app/src/lib/public/SpeakerPopover.svelte
-  - app/src/lib/types/speaker.ts
+  - app/src/lib/admin/resetOutcome.js
   - app/src/routes/admin/+page.server.ts
   - app/src/routes/admin/+page.svelte
-  - app/src/routes/admin/dev-fixture-state/+server.ts
-  - app/src/routes/admin/people/[id]/+page.server.ts
   - app/src/routes/admin/people/[id]/+page.svelte
-  - app/src/routes/admin/pipeline/[job_id]/+page.server.ts
-  - app/src/routes/arguments/[slug]/+page.server.ts
-  - app/src/routes/arguments/[slug]/+page.svelte
-  - app/tests/speaker-initials.browser.test.mjs
-  - data/corpus/justice_identity_mapping.csv
-  - pipeline/commands/import_justices_csv.py
-  - pipeline/tests/test_import_justices_csv.py
-  - pipeline/tests/test_justice_identity_mapping.py
-  - pipeline/tests/test_justice_identity_resolution.py
-  - tests/test_admin_dev_frontend_gate.py
-  - tests/test_admin_dev_router_gate.py
+  - app/tests/reset-outcome-classifier.test.mjs
+  - pipeline/commands/import_convokit.py
+  - pipeline/corpus/loader.py
+  - pipeline/tests/test_corpus_loader.py
+  - pipeline/tests/test_import_convokit_core.py
 findings:
   critical: 0
-  warning: 1
+  warning: 2
   info: 1
-  total: 2
+  total: 3
 status: issues_found
 ---
 
 # Phase 52: Code Review Report
 
-**Reviewed:** 2026-09-25T00:00:00Z
+**Reviewed:** 2026-09-28
 **Depth:** standard
-**Files Reviewed:** 38
+**Files Reviewed:** 11
 **Status:** issues_found
+
+> This is an **incremental re-review** since commit `4424f07a4`. It supersedes
+> the prior `52-REVIEW.md` (preserved in git history) and covers only the
+> hunks changed by `git diff 4424f07a4..HEAD` across the 11 files listed
+> above, read with surrounding context.
 
 ## Summary
 
-Reviewed the justice-identity phase: migration 0032 (`display_name` +
-`uq_people_oyez_speaker_id` partial unique index), the single
-`derive_initials` implementation and its three call sites, the
-`reset_to_fixture` transaction ordering and progress-tracking rework,
-`PersonUpdate`'s read-only allow-list for `display_name`/`oyez_speaker_id`,
-`pipeline/commands/import_justices_csv.py`'s oyez-id-keyed dedup path, and
-the verified `justice_identity_mapping.csv` artifact.
+The diff since `4424f07a4` does four independent things: (1) moves
+`import_convokit.py`'s synchronous corpus reads (`load_cases`, the
+utterances.jsonl scan) onto worker threads via `asyncio.to_thread` so
+`run_import_convokit` no longer blocks uvicorn's event loop when awaited
+from `admin_dev.reset_to_fixture`; (2) adds a regex prefilter to
+`stream_utterances_for_conversation_ids` that skips ~85% of JSONL lines
+before `json.loads`; (3) reworks the admin dashboard's Reset-to-Fixture
+control so a "still running" 503 keeps the page in its Running state and
+lets a live poll (`resetOutcome.js`'s `classifyFixtureStateOutcome`) detect
+completion and render the correct terminal state; and (4) surfaces
+`display_name`/`oyez_speaker_id` on the admin Person detail read path.
 
-The five areas the review brief flagged all check out:
+Verified directly:
+- The `asyncio.to_thread` offload is correct and race-free: the offloaded
+  functions (`load_cases`, `_collect_turns_by_conversation`) are pure
+  synchronous file I/O with no shared mutable state and no interaction with
+  the asyncpg connection pool or the `_reset_progress_lock` asyncio.Lock in
+  `admin_dev.py`. `test_utterance_scan_does_not_block_the_event_loop`
+  actually proves the non-blocking property (a concurrent ticker's max gap
+  is asserted `< 0.25s` against a patched 0.5s-sleeping scan) rather than
+  just asserting the call site looks right — ran it locally, passes.
+- The regex prefilter (`_CONVERSATION_ID_RE`) is sound for the reasoning
+  given in its comment: an escaped literal quote inside a JSON string value
+  breaks the unescaped `"conversation_id":` pattern, so a look-alike
+  substring inside free text can never falsely match, and a genuine miss
+  (any format the pattern doesn't anticipate) always falls through to the
+  full `json.loads` parse rather than being trusted. Confirmed by tracing
+  the escaping byte-for-byte and by running
+  `test_stream_prefilter_matches_only_the_real_conversation_id_key` plus
+  the rest of `test_corpus_loader.py` locally — all pass.
+- The new Reset-to-Fixture "still running" / poll-driven completion path
+  (`resetAwaitingCompletion`, `finishResetFromPoll`, `pollResetProgress`) is
+  correctly synchronized: every state mutation that matters for avoiding a
+  double-finish (`resetAwaitingCompletion = false`, `stopResetPolling()`)
+  happens synchronously as the first statement of the function that owns
+  it, before any `await`, so two overlapping `setInterval` ticks cannot both
+  observe the flag as `true` and both call `finishResetFromPoll`. The
+  backend's `_clear_reset_progress()` only fires once, in `reset_to_fixture`'s
+  `finally` block, so "progress is null" is a reliable last-word signal
+  (whether the operation ended in success or in `ResetIncompleteError`) —
+  the design correctly delegates "did it actually land" to the fixture-state
+  re-read rather than inferring it from "no longer in progress."
+- `api/services/admin_people.py`'s two-field addition to
+  `get_person_detail` matches `PersonDetail`'s schema (`Optional[str] =
+  None` for both), and `display_name`/`oyez_speaker_id` are confirmed
+  absent from `PersonUpdate` (which carries `extra="forbid"`), so the new
+  `test_admin_people_schema_readonly.py` 422 assertions are testing a real
+  contract, not a tautology.
 
-1. `derive_initials` is genuinely the only implementation — every call site
-   (`api/services/admin_people.py`, `api/services/arguments.py`,
-   `api/services/speakers.py`) imports it from `api.domain.person_names`,
-   and a repo-wide grep for client-side name-splitting patterns
-   (`.split(' ')`, `.charAt(0)`, `.slice(0, 2)`) in `app/src/lib`/`app/src/routes`
-   found none in `ResolveCard.svelte`/`SpeakerPopover.svelte`/the argument
-   page — all three render the server-computed `initials`/`speaker_initials`
-   field directly.
-2. `reset_to_fixture`'s pre-flight (`_require_corpus_files`) raises before
-   the `TRUNCATE` executes (verified: `_require_corpus_files` is called at
-   step 1, before `await db.execute(text(TRUNCATE_SQL))` at step 2), and the
-   justice seed (`run_import_justices_csv`) runs after the `TRUNCATE`
-   commits and before the four-fixture reseed loop, matching the module
-   docstring's own transaction-boundary description.
-3. `PersonUpdate` (`api/schemas/admin_people.py`) does not declare
-   `display_name` or `oyez_speaker_id`, carries `extra="forbid"`, and
-   `api/tests/test_admin_people_schema_readonly.py` proves the 422 through a
-   live PATCH rather than inspecting `model_fields` alone.
-4. Migration 0032's `upgrade()`/`downgrade()` are simple, symmetric, and
-   correctly ordered (`downgrade()` drops the index before the column); no
-   other migration defines an index named `uq_people_oyez_speaker_id`.
-5. The 14 term-year bands in `api/tests/test_public_arguments_listing.py`
-   are individually documented and all sit below 1955 — but two of them are
-   **not actually disjoint** from their neighbor once a `+1` offset is
-   applied (WR-01 below).
-
-One test-reliability issue was found (WR-01); no Critical-tier defects.
+Two warnings below concern a stale-state gap in the Reset-to-Fixture /
+seed-unresolved-speaker controls that the new poll-driven completion path
+highlights by contrast (it does the state reset correctly; the older,
+still-present submit-time and success-path code next to it does not).
 
 ## Warnings
 
-### WR-01: Two term-year test bands can collide with their neighbor's band
+### WR-01: Reset-to-Fixture and Seed-unresolved-speaker success paths never clear a prior `form` error, so a stale failure message can render under a fresh success
 
-**File:** `api/tests/test_public_arguments_listing.py:220-221,334-335`
-**Issue:** The file's own header comment (lines 211-219) documents "14
-disjoint decade bands, each strictly below 1955" as a load-bearing
-invariant — each test draws `base + (uuid4().int % 10)` from a private,
-non-overlapping base so two tests can never seed a published argument into
-the same `term_year` and cause one test's count assertion to see the
-other's row.
+**File:** `app/src/routes/admin/+page.svelte:580-596` (Reset-to-Fixture), `app/src/routes/admin/+page.svelte:711-726` (Seed unresolved speaker)
 
-Two tests break that invariant by drawing a **second** year as `base + 1`
-instead of staying within the same `% 10` band:
+**Issue:** Both controls' `use:enhance` callbacks only call `update()` /
+`applyAction()` on their failure branch; the success branch sets the local
+`$state` result variable and calls `invalidateAll()` directly, never
+touching `form`:
 
-- `test_terms_counts_published_only_ordered_desc` (line 220-221):
-  `base_year = 1850 + (uuid4().int % 10)` → range 1850-1859;
-  `later_year = base_year + 1` → range **1851-1860**. When `base_year`
-  happens to be 1859, `later_year` is 1860 — inside the *next* test's
-  band (`test_terms_excludes_draft_argument`, line 244:
-  `year = 1860 + (uuid4().int % 10)` → 1860-1869).
-- `test_term_detail_lists_only_published_arguments_for_that_term`
-  (line 334-335): `year = 1900 + (uuid4().int % 10)` → 1900-1909;
-  `other_year = year + 1` → **1901-1910**. When `year` happens to be 1909,
-  `other_year` is 1910 — inside `test_term_detail_excludes_unpublished_with_retained_published_at`'s
-  band (line 391: `1910 + (uuid4().int % 10)` → 1910-1919).
-
-Each collision requires both `uuid4()` draws to land on the boundary value
-simultaneously (~1% chance per full suite run), so this will not fail on
-most runs — but when it does, the two colliding tests both seed a published
-`Argument` for the *same* `term_year`, and whichever runs second sees an
-extra row it did not create, failing an exact-count assertion
-(`terms_by_year.get(year) == 1`, etc.) for a reason that has nothing to do
-with the code under test. This is exactly the class of flaky, hard-to-reproduce
-failure the file's own comment is trying to prevent by hand-reserving bands.
-
-**Fix:** Either draw the base offset from `% 9` (reserving the band's last
-year so `base + 1` never leaves the decade) for any test that computes a
-second year via `+ 1`, or move the two affected tests' bases so neither one
-borders an adjacent test's band with no gap:
-```python
-# test_terms_counts_published_only_ordered_desc
-base_year = 1850 + (uuid.uuid4().int % 9)  # was % 10 — leaves room for +1
-later_year = base_year + 1
-
-# test_term_detail_lists_only_published_arguments_for_that_term
-year = 1900 + (uuid.uuid4().int % 9)  # was % 10 — leaves room for +1
-other_year = year + 1
+```js
+if (result.type === 'success' && result.data && Array.isArray(...)) {
+  resetResult = (result.data as { resetFixtures: ResetFixtureItem[] }).resetFixtures;
+  resetConfirming = false;
+  await invalidateAll();          // <-- form is NOT reset here
+} else {
+  resetResult = null;
+  resetConfirming = false;
+  await update();                 // <-- only the failure branch clears/sets form
+}
 ```
+
+`invalidateAll()` only reruns `load`; it does not clear the sticky `form`
+prop SvelteKit populates from the last action result (`applyAction`/`update`
+is the only thing that changes it, which is exactly why the failure branch
+calls `update()`). Reproduction: trigger a reset that fails (network error,
+non-4-fixture body, etc.) so `form.resetError` is set and rendered via
+`{#if form?.resetError}` (line 692); then trigger a second reset that
+succeeds. `resetResult` renders the new "✓ Reset complete" badge and
+fixture list, but the stale `form.resetError` paragraph from the first
+attempt is still rendered directly beneath it, because nothing ever cleared
+`form`. The same gap exists for `seedResult`/`form?.seedError` (lines
+711-726, rendered at line 755).
+
+The new poll-driven path added in this diff (`finishResetFromPoll`, lines
+156-177) gets this right — it calls `applyAction({...})` unconditionally on
+both its success and failure branches, which is exactly the established
+project convention elsewhere (e.g.
+`app/src/routes/admin/people/[id]/+page.svelte:353-357` calls `await
+update()` unconditionally regardless of result type). The older code paths
+sitting right next to the new one do not follow that convention.
+
+**Fix:** Call `update()` (or `applyAction({type:'success', status:200,
+data:{}})`) unconditionally in both success branches, mirroring
+`finishResetFromPoll` and the rest of the codebase's convention:
+
+```js
+if (result.type === 'success' && result.data && Array.isArray(...)) {
+  resetResult = (result.data as { resetFixtures: ResetFixtureItem[] }).resetFixtures;
+  resetConfirming = false;
+  await update();
+  await invalidateAll();
+} else {
+  ...
+}
+```
+
+### WR-02: `resetResult` (and `seedResult`) from a prior successful run is not cleared when a new attempt starts, so a stale success badge/list can render underneath the new Running spinner
+
+**File:** `app/src/routes/admin/+page.svelte:560-565` (submit-time reset), `app/src/routes/admin/+page.svelte:710` (seed submit)
+
+**Issue:** The `use:enhance` factory function that fires at submission time
+resets `resetRunning`, `resetAwaitingCompletion`, and `resetProgressText`,
+but never clears `resetResult`:
+
+```js
+use:enhance={() => {
+  resetRunning = true;
+  resetAwaitingCompletion = false;
+  resetProgressText = RESET_PROGRESS_STEP_1_COPY;
+  stopResetPolling();
+  resetPollHandle = setInterval(pollResetProgress, 1000);
+  return async ({ result, update }) => { ... };
+}}
+```
+
+`resetResult` is rendered unconditionally whenever truthy (`{#if
+resetResult}` at line 663), independent of `resetRunning`/`resetConfirming`.
+So: run a reset to success (badge + fixture list render), then start a
+second reset. While the second run is in its Running (spinner) state — or,
+per WR-01's scenario, if the second run also lands in the "still running"
+503 branch — the first run's "✓ Reset complete" badge and fixture list are
+still visible below the spinner, because nothing cleared `resetResult` at
+submission time. An operator could plausibly read the still-visible badge
+as confirmation the *new* click already finished. The same gap applies to
+`seedResult` at the seed form's submission point (line 710).
+
+**Fix:** Clear the result state when a new submission starts:
+
+```js
+use:enhance={() => {
+  resetRunning = true;
+  resetResult = null;
+  resetAwaitingCompletion = false;
+  ...
+}}
+```
+
+and similarly `seedResult = null;` alongside `seedSubmitting = true;`.
 
 ## Info
 
-### IN-01: Source-text contract test for Dev Tools gate predates this phase's testing policy but is extended by it
+### IN-01: `test_utterance_scan_does_not_block_the_event_loop`'s 0.25s threshold is timing-based and could be flaky under a heavily loaded CI runner
 
-**File:** `tests/test_admin_dev_frontend_gate.py:74-141`
-**Issue:** CLAUDE.md's Testing Policy states "No static source-text contract
-tests for frontend behavior" with a narrow exception for a structural-ban
-sweep. `test_dev_tools_section_is_server_gated` asserts on the *rendered
-structure* of `+page.svelte` (heading appears once, sits between a
-specific `{#if}`/`{/if}` pair, no `display: none`/`visibility: hidden`, no
-`<dialog>`) via string search rather than a real render — this is closer to
-the banned pattern than the permitted "identifier reaches no public
-surface" sweep, since it is trying to prove something about what the page
-*shows*, not merely that a forbidden name is absent. The file's own
-docstring acknowledges this directly and explains why (a two-process
-ENVIRONMENT-flip is impractical for the existing browser harness) with a
-manual-UAT fallback noted — this is a deliberate, reasoned exception from
-Phase 43, not new debt introduced by Phase 52. Phase 52 only added
-`RESET_PARTIAL_ERROR` to the file's existing pattern (`test_error_copies_match_ui_spec`),
-so no new instance of the banned pattern was introduced here.
-**Fix:** No action required for this phase. If this file is touched again,
-consider whether the Playwright/CDP-based `*.browser.test.mjs` harness
-(already used by `app/tests/speaker-initials.browser.test.mjs` in this same
-phase) could assert the gate's rendered absence for the production case
-directly, retiring the structural heading/if-index check in favor of a real
-render.
+**File:** `pipeline/tests/test_import_convokit_core.py:1516-1561`
+
+**Issue:** The test patches the scan to `time.sleep(0.5)` and asserts a
+concurrent asyncio ticker's max observed gap is `< 0.25s`. This correctly
+proves the regression it targets (a synchronous 0.5s call on the event loop
+would produce a ~0.5s gap, comfortably failing the 0.25s bound), and margin
+is generous relative to the 0.5s stimulus. Under a sufficiently
+oversubscribed CI host, non-deterministic scheduling delays on the
+`asyncio.sleep(0.01)` ticker could in principle push the gap over 0.25s
+without the offload actually regressing. Not a defect in the logic being
+tested — flagged only as a maintenance note in case this test is ever seen
+to flake.
+
+**Fix:** No action needed unless it's observed to flake in practice; if it
+does, widening the threshold (e.g. to 0.35-0.4s) preserves a comfortable
+margin below the 0.5s stimulus while reducing false failures.
 
 ---
 
-_Reviewed: 2026-09-25T00:00:00Z_
+_Reviewed: 2026-09-28_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_

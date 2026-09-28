@@ -8,7 +8,7 @@ updated: 2026-09-28T00:00:00Z
 
 ## Current Test
 
-[testing paused — 2 items outstanding: test 2 (issue, open) and test 3 (blocked)]
+[testing paused — 1 item outstanding: test 3 (blocked — no pipeline jobs in dev DB)]
 
 ## Tests
 
@@ -40,7 +40,20 @@ note: |
 
 ### 2. Live reset-to-fixture run — progress line and evidence-based outcomes
 expected: Run one real reset against the dev database: open /admin, run Reset to Fixture through its two-step confirm, watch the status line for the whole run, then open the People directory. Optionally kill the FastAPI process mid-reset to observe the partial-reseed message. The status line advances Seeding justices… → Reseeding fixture 1 of 4… → …4 of 4, in place, never leading reality; the Success state renders on completion; the People directory shows the full justice roster; a mid-reset failure shows the evidence-based partial/inconclusive message, not the blanket corruption claim.
-result: issue
+result: pass
+verified_by: claude, real browser (headless Chromium via Playwright), 2026-09-28, after fix b8f29e054
+verification: |
+  Three live resets against the dev DB through /admin's two-step confirm:
+    - Run A (cold cache, ~11 min): line advanced Seeding justices -> 1..4 of 4 in
+      place; still-running notice at 315s with the line above it; 550 polls
+      answered, max gap 2.0s (was ~60s frozen). All four fixtures landed in
+      their expected end states.
+    - Run B (234s, under the abort): Success state rendered with all 4 fixtures.
+    - Run C (abort temporarily forced to 30s, reverted): notice at 36s, line kept
+      advancing through 4 of 4, then the page left Running and rendered Success
+      on its own at 338s — the new post-still-running completion path.
+  Not exercised: killing FastAPI mid-reset (optional in the test text).
+previously: issue
 reported: "I really need to restart my machine so don't do anything else but log that this is the message I'm seeing: Still reseeding. This request stopped listening before the reset finished, but the server is still working — the progress line below is live. Nothing is wrong with the database; wait for it to finish. I don't see any progress line."
 severity: major
 run: 2 of 2 (second run, after fix a59a67b0f)
@@ -94,8 +107,8 @@ note: |
 ## Summary
 
 total: 3
-passed: 1
-issues: 1
+passed: 2
+issues: 0
 pending: 0
 skipped: 0
 blocked: 1
@@ -104,7 +117,9 @@ blocked: 1
 
 - gap_id: G-52-2
   truth: "The Running state reports per-fixture progress so a multi-minute destructive operation is distinguishable from a hang (D-15)"
-  status: failed
+  status: resolved
+  resolved_by: b8f29e054
+  resolved_at: 2026-09-28
   reason: "User reported: I don't see any progress line. The still-running notice renders and states 'the progress line below is live', but no progress line is visible."
   severity: major
   test: 2
@@ -117,4 +132,4 @@ blocked: 1
   missing: []
   debug_session: ""
   fix: "b8f29e054 — reads via asyncio.to_thread (test_utterance_scan_does_not_block_the_event_loop, fails without the fix); poll classifies completion via shared resetOutcome.js; copy 'below' -> 'above'"
-  live_reverify: pending — needs a real reset run through the UI
+  live_reverify: passed 2026-09-28 (see test 2 verification)

@@ -1511,3 +1511,50 @@ async def test_scoped_import_derives_question_number_via_next_question_number(
         )
     ).scalar_one()
     assert scoped_argument.question_number == 2
+
+
+async def test_utterance_scan_does_not_block_the_event_loop(tmp_path):
+    """UAT G-52-2: the utterances.jsonl scan is synchronous file I/O, and
+    run_import_convokit is also awaited inside the API process by
+    admin_dev.reset_to_fixture. On the event loop, the real 900MB scan froze
+    uvicorn ~60s per fixture, so the Dev Tools progress poll went unanswered
+    for the whole reset. The scan must run off-loop: a concurrent coroutine
+    keeps ticking while a deliberately slow scan is in flight.
+
+    Needs no database -- the corpus has no conversations for the term, so
+    no session is ever opened; only the scan itself runs.
+    """
+    import asyncio
+    import time
+
+    corpus_dir = _write_corpus_fixture(tmp_path, {}, [], {})
+
+    def slow_stream(_path, _wanted_ids):
+        time.sleep(0.5)
+        return iter(())
+
+    max_gap = 0.0
+    done = asyncio.Event()
+    started = asyncio.Event()
+
+    async def ticker():
+        nonlocal max_gap
+        last = time.monotonic()
+        started.set()
+        while not done.is_set():
+            await asyncio.sleep(0.01)
+            now = time.monotonic()
+            max_gap = max(max_gap, now - last)
+            last = now
+
+    tick = asyncio.create_task(ticker())
+    await started.wait()
+    with patch(
+        "pipeline.commands.import_convokit.stream_utterances_for_conversation_ids",
+        slow_stream,
+    ):
+        await run_import_convokit(_args(9999, corpus_dir))
+    done.set()
+    await tick
+
+    assert max_gap < 0.25, f"event loop blocked for {max_gap:.2f}s during the scan"

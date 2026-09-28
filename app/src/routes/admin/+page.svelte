@@ -1,6 +1,13 @@
 <script lang="ts">
 	import StatCard from '$lib/admin/StatCard.svelte';
-	import { enhance } from '$app/forms';
+	import { applyAction, enhance } from '$app/forms';
+	import {
+		classifyFixtureStateOutcome,
+		EXPECTED_FIXTURE_END_STATES,
+		RESET_MID_ERROR,
+		RESET_PARTIAL_ERROR,
+		toResetFixtures,
+	} from '$lib/admin/resetOutcome.js';
 	import { invalidateAll } from '$app/navigation';
 	import { onDestroy } from 'svelte';
 
@@ -100,6 +107,10 @@
 
 	let resetProgressText = $state(RESET_PROGRESS_STEP_1_COPY);
 	let resetPollHandle: ReturnType<typeof setInterval> | null = null;
+	// Set once the action has answered "still running" (UAT G-52-2): the POST
+	// is over, so the poll is now the only thing that can observe the reset
+	// finishing, and it must carry the page out of Running when it does.
+	let resetAwaitingCompletion = false;
 
 	// Maps a backend progress token to its 52-UI-SPEC.md literal. Returns
 	// null for anything unrecognised (including no progress in flight) so
@@ -128,11 +139,40 @@
 		try {
 			const res = await fetch('/admin/dev-fixture-state', { cache: 'no-store' });
 			if (!res.ok) return;
-			const body: { progress?: ResetProgress | null } = await res.json();
-			const copy = fixtureProgressCopy(body.progress?.step);
+			const body = await res.json();
+			const copy = fixtureProgressCopy(body?.progress?.step);
 			if (copy) resetProgressText = copy;
+			if (resetAwaitingCompletion && body && body.progress == null) {
+				await finishResetFromPoll(body);
+			}
 		} catch {
 			// Network hiccup mid-poll -- keep showing the last observed step.
+		}
+	}
+
+	// The reset finished after the action stopped listening. Judge what landed
+	// by the same rules the action's own re-read uses, and render the matching
+	// terminal state through the normal form channel.
+	async function finishResetFromPoll(body: unknown) {
+		resetAwaitingCompletion = false;
+		stopResetPolling();
+		resetRunning = false;
+		resetConfirming = false;
+		const outcome = classifyFixtureStateOutcome(
+			body as Parameters<typeof classifyFixtureStateOutcome>[0],
+			EXPECTED_FIXTURE_END_STATES,
+		);
+		if (outcome === 'full-success') {
+			resetResult = toResetFixtures(body as Parameters<typeof toResetFixtures>[0]);
+			await applyAction({ type: 'success', status: 200, data: {} });
+			await invalidateAll();
+		} else {
+			resetResult = null;
+			await applyAction({
+				type: 'failure',
+				status: 502,
+				data: { resetError: outcome === 'partial' ? RESET_PARTIAL_ERROR : RESET_MID_ERROR },
+			});
 		}
 	}
 
@@ -519,6 +559,7 @@
 							style="flex: 1;"
 							use:enhance={() => {
 								resetRunning = true;
+								resetAwaitingCompletion = false;
 								resetProgressText = RESET_PROGRESS_STEP_1_COPY;
 								stopResetPolling();
 								resetPollHandle = setInterval(pollResetProgress, 1000);
@@ -530,6 +571,7 @@
 										result.type === 'failure' &&
 										(result.data as { resetStillRunning?: boolean })?.resetStillRunning
 									) {
+										resetAwaitingCompletion = true;
 										await update();
 										return;
 									}

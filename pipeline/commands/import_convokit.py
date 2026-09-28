@@ -69,6 +69,7 @@ without pulling in the rest of its term as a side effect.
 from __future__ import annotations
 
 import argparse
+import asyncio
 import functools
 from collections import defaultdict
 from collections.abc import Sequence
@@ -2388,6 +2389,22 @@ def _print_summary(label: str, counters: dict) -> None:
 # ---------------------------------------------------------------------------
 
 
+def _collect_turns_by_conversation(
+    utterances_path: Path, wanted_ids: set[str]
+) -> dict[str, list[dict]]:
+    """One streaming pass over utterances.jsonl, grouped by conversation_id.
+
+    Synchronous by design -- run_import_convokit calls it via
+    asyncio.to_thread so the scan never blocks the event loop.
+    """
+    turns_by_conversation: dict[str, list[dict]] = defaultdict(list)
+    for row in stream_utterances_for_conversation_ids(utterances_path, wanted_ids):
+        cid = row.get("conversation_id") if isinstance(row, dict) else None
+        if cid is not None:
+            turns_by_conversation[cid].append(row)
+    return turns_by_conversation
+
+
 async def run_import_convokit(args) -> None:
     """
     Entry point for `python -m pipeline import-convokit`.
@@ -2443,7 +2460,13 @@ async def run_import_convokit(args) -> None:
     # identifier, matching conversations.json's per-conversation "case_id"
     # field); docket_no is a DIFFERENT format, used for the
     # Case.docket_number column -- see Task 2.
-    cases_by_case_id = load_cases(cases_path)
+    #
+    # The corpus reads below are synchronous file I/O. They run on a worker
+    # thread because this coroutine is also awaited inside the API process
+    # (admin_dev.reset_to_fixture): on the event loop, the utterances scan
+    # alone froze uvicorn for ~60s per fixture, so the Dev Tools progress
+    # poll could not be answered while a reset was running (UAT G-52-2).
+    cases_by_case_id = await asyncio.to_thread(load_cases, cases_path)
 
     rollup = _new_counters()
 
@@ -2471,12 +2494,10 @@ async def run_import_convokit(args) -> None:
         # term, filtered to this term's conversation_id set (Pattern 3
         # option (b)) -- held in memory only for this term, never the
         # whole 900MB file.
-        turns_by_conversation: dict[str, list[dict]] = defaultdict(list)
         wanted_ids = set(conversations.keys())
-        for row in stream_utterances_for_conversation_ids(utterances_path, wanted_ids):
-            cid = row.get("conversation_id") if isinstance(row, dict) else None
-            if cid is not None:
-                turns_by_conversation[cid].append(row)
+        turns_by_conversation = await asyncio.to_thread(
+            _collect_turns_by_conversation, utterances_path, wanted_ids
+        )
 
         counters = _new_counters()
         for conversation_id, raw_conversation in conversations.items():

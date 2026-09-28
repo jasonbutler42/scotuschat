@@ -1,5 +1,11 @@
 import { fail, redirect } from '@sveltejs/kit';
-import { classifyFixtureStateOutcome as classifyOutcome } from '$lib/admin/resetOutcome.js';
+import {
+	classifyFixtureStateOutcome as classifyOutcome,
+	EXPECTED_FIXTURE_END_STATES,
+	RESET_MID_ERROR,
+	RESET_PARTIAL_ERROR,
+	toResetFixtures,
+} from '$lib/admin/resetOutcome.js';
 import type { Actions, PageServerLoad } from './$types';
 import { SESSION_COOKIE_NAME } from '$lib/server/session';
 import { ADMIN_TOKEN, FASTAPI_BASE_URL } from '$env/static/private';
@@ -219,13 +225,8 @@ export const load: PageServerLoad = async ({ fetch }) => {
 // actually landed (resolveFromReRead below) rather than by which code path
 // failed.
 const RESET_ENV_ERROR = 'Reset failed: this action is not available in this environment.';
-const RESET_MID_ERROR =
-	'Reset failed partway through — the database may be in an inconsistent state. Check server logs before retrying.';
-
-// Phase 52-05 (D-14): the re-read confirms a genuine partial reseed — some
-// but not all fixtures present, or one in an unexpected state.
-const RESET_PARTIAL_ERROR =
-	'Reset failed partway through. A follow-up check found the database only partially reseeded — do not use it until you run Reset to Fixture again.';
+// RESET_MID_ERROR and RESET_PARTIAL_ERROR live in $lib/admin/resetOutcome.js,
+// shared with the page's post-still-running completion check.
 
 // Phase 52-05 (D-15): the reset fetch previously had no AbortSignal at all,
 // inheriting undici's own 300s headersTimeout uncontrolled — the exact
@@ -250,21 +251,7 @@ const RESET_ABORT_TIMEOUT_MS = 280_000;
 // to tell the two apart was in the response and was being discarded — exactly
 // what D-14 exists to prevent.
 const RESET_STILL_RUNNING_NOTICE =
-	'Still reseeding. This request stopped listening before the reset finished, but the server is still working — the progress line below is live. Nothing is wrong with the database; wait for it to finish.';
-
-// Phase 52-05 (D-16): mirrors api/services/admin_dev.py's FIXTURE_SET and
-// the exact per-fixture end-state its state-realization block (step 5)
-// leaves behind on a FULLY successful reset. Used only to interpret the
-// D-14 re-read's evidence — never sent to the backend, never rendered.
-const EXPECTED_FIXTURE_END_STATES: Record<
-	string,
-	{ status: string; latest_import_run_step: string }
-> = {
-	'15169': { status: 'candidate', latest_import_run_step: 'parse' },
-	'13015': { status: 'draft', latest_import_run_step: 'parse' },
-	'18897': { status: 'published', latest_import_run_step: 'parse' },
-	'22372': { status: 'candidate', latest_import_run_step: 'reconcile' },
-};
+	'Still reseeding. This request stopped listening before the reset finished, but the server is still working — the progress line above is live. Nothing is wrong with the database; wait for it to finish.';
 
 interface FixtureStateItem {
 	conversation_id: string;
@@ -348,16 +335,7 @@ async function resolveFromReRead(fetch: typeof globalThis.fetch) {
 	}
 
 	if (outcome === 'full-success') {
-		return {
-			resetFixtures: state!.fixtures.map((fixture) => ({
-				conversation_id: fixture.conversation_id,
-				case_name: fixture.case_name,
-				role: fixture.role,
-				argument_id: fixture.argument_id as number,
-				argument_status: fixture.status as string,
-				latest_import_run_step: fixture.latest_import_run_step as string,
-			})),
-		};
+		return { resetFixtures: toResetFixtures(state!) };
 	}
 
 	if (outcome === 'partial') {

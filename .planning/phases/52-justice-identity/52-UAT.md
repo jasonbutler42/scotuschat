@@ -1,14 +1,14 @@
 ---
-status: partial
+status: complete
 phase: 52-justice-identity
 source: [52-VERIFICATION.md]
 started: 2026-09-25T16:05:00Z
-updated: 2026-09-28T00:00:00Z
+updated: 2026-09-28T18:15:00Z
 ---
 
 ## Current Test
 
-[testing paused — 1 item outstanding: test 3 (blocked — no pipeline jobs in dev DB)]
+[testing complete]
 
 ## Tests
 
@@ -93,9 +93,9 @@ run: 2 of 2 (second run, after fix a59a67b0f)
 
 ### 3. Admin Resolve card — JH rendering and unresolved-row avatar
 expected: Open an admin pipeline job's Resolve card for an argument with a bench row whose person has a name suffix. Confirm the avatar circle shows JH for John Marshall Harlan, II (not the suffix letter JI), and confirm an unresolved row's avatar looks exactly as it did before this change.
-result: blocked
-blocked_by: other
-reason: "blocked"
+result: skipped
+reason: "Deferred follow-up: waived by the operator 2026-09-28 — no pipeline jobs exist in the dev DB, so the admin Resolve card cannot be opened; JH rendering is covered by app/tests/speaker-initials.browser.test.mjs in a real Chromium"
+previously: blocked
 note: |
   Precondition absent in the dev database, not a code defect: admin_jobs is empty
   (0 rows; only the 4 fixture arguments exist), and the Resolve card renders only
@@ -110,8 +110,8 @@ total: 3
 passed: 2
 issues: 0
 pending: 0
-skipped: 0
-blocked: 1
+skipped: 1
+blocked: 0
 
 ## Gaps
 
@@ -133,3 +133,9 @@ blocked: 1
   debug_session: ""
   fix: "b8f29e054 — reads via asyncio.to_thread (test_utterance_scan_does_not_block_the_event_loop, fails without the fix); poll classifies completion via shared resetOutcome.js; copy 'below' -> 'above'"
   live_reverify: passed 2026-09-28 (see test 2 verification)
+
+## Deferred Follow-Ups
+
+- test: 3
+  idea: "Operator eye on the admin Resolve card: John Marshall Harlan, II shows JH, and an unresolved row's avatar is unchanged. Needs a pipeline job for an argument with Harlan II on the bench."
+  deferred_at: 2026-09-28

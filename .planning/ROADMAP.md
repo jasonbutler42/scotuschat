@@ -260,7 +260,15 @@ Plans:
   - The italic and 70%-opacity treatment for the "undetermined speaker" label is approved, and must land as **design-system additions** in `app/src/app.css` and `.planning/codebase/DESIGN-SYSTEM.md` — not inline one-offs. Phase 51's whole point was that nothing in `app/src` carries a raw value; italic is a new type axis.
   - Trust stays operator-facing. PROVISIONAL must never reach a public response — the reader-facing honesty is Treatment D's explanation card. If this phase touches a public schema module or frontend path not already in the leak-ban lists, register it here (PLUMBING-07).
 
-**Plans**: TBD
+**Plans:** 5 plans
+
+Plans:
+- [ ] 53-01-PLAN.md — Stored sentinel fact at import, PROVISIONAL floor, >50% hold behind the existing override (wave 1)
+- [ ] 53-02-PLAN.md — Canonical whole-turn markers with verbatim kept; inaudible keeps its speaker; rendering facts on the public payload (wave 2)
+- [ ] 53-05-PLAN.md — Admin "why blocked" sentence with the undetermined percentage on all three surfaces (wave 2)
+- [ ] 53-03-PLAN.md — Treatment D at rest, inaudible-body styling, italic/opacity design-system tokens (wave 3)
+- [ ] 53-04-PLAN.md — Hover/focus/touch reveal and the explanation card; leak-ban registration (wave 4)
+
 **UI hint**: yes
 
 ### Phase 54: Publishing at Scale & Verification Debt

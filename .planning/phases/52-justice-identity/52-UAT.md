@@ -108,7 +108,13 @@ blocked: 1
   reason: "User reported: I don't see any progress line. The still-running notice renders and states 'the progress line below is live', but no progress line is visible."
   severity: major
   test: 2
-  root_cause: ""
-  artifacts: []
+  root_cause: "run_import_convokit scanned the 900MB utterances.jsonl with synchronous I/O (measured 59.6s per fixture) on uvicorn's event loop when awaited by reset_to_fixture, so /dev/fixture-state polls went unanswered for the whole reset and the reset overran the 280s abort. Secondary: after a still-running answer the page had no path out of Running; notice copy said 'below' for a line rendered above."
+  artifacts:
+    - path: "pipeline/commands/import_convokit.py"
+      issue: "blocking corpus reads inside an async function"
+    - path: "app/src/routes/admin/+page.svelte"
+      issue: "poll never transitioned to a terminal state after still-running"
   missing: []
   debug_session: ""
+  fix: "b8f29e054 — reads via asyncio.to_thread (test_utterance_scan_does_not_block_the_event_loop, fails without the fix); poll classifies completion via shared resetOutcome.js; copy 'below' -> 'above'"
+  live_reverify: pending — needs a real reset run through the UI

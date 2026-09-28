@@ -263,10 +263,17 @@ Plans:
 **Plans:** 5 plans
 
 Plans:
+**Wave 1**
 - [ ] 53-01-PLAN.md — Stored sentinel fact at import, PROVISIONAL floor, >50% hold behind the existing override (wave 1)
+
+**Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 53-02-PLAN.md — Canonical whole-turn markers with verbatim kept; inaudible keeps its speaker; rendering facts on the public payload (wave 2)
 - [ ] 53-05-PLAN.md — Admin "why blocked" sentence with the undetermined percentage on all three surfaces (wave 2)
+
+**Wave 3** *(blocked on Wave 2 completion)*
 - [ ] 53-03-PLAN.md — Treatment D at rest, inaudible-body styling, italic/opacity design-system tokens (wave 3)
+
+**Wave 4** *(blocked on Wave 3 completion)*
 - [ ] 53-04-PLAN.md — Hover/focus/touch reveal and the explanation card; leak-ban registration (wave 4)
 
 **UI hint**: yes

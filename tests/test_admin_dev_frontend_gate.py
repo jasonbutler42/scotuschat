@@ -44,6 +44,9 @@ def _read(rel_path: str) -> str:
 
 PAGE_SVELTE = "app/src/routes/admin/+page.svelte"
 PAGE_SERVER_TS = "app/src/routes/admin/+page.server.ts"
+# RESET_MID_ERROR / RESET_PARTIAL_ERROR live here since 52-05 follow-up
+# b8f29e054, shared by the server action and the page's completion poll.
+RESET_OUTCOME_JS = "app/src/lib/admin/resetOutcome.js"
 
 # SvelteKit's client-visible env prefix — written as a module-level constant so
 # the forbidden literal exists in exactly one place in this test module.
@@ -196,7 +199,9 @@ def test_reset_action_posts_no_operator_input():
 
 
 def test_error_copies_match_ui_spec():
-    server_ts = _read(PAGE_SERVER_TS)
+    # The reset's error copies are split across the action and the shared
+    # outcome module; the lock applies to the pair.
+    server_ts = _read(PAGE_SERVER_TS) + "\n" + _read(RESET_OUTCOME_JS)
 
     assert RESET_ENV_ERROR in server_ts, (
         "Expected the UI-SPEC's environment-refusal error copy verbatim in "

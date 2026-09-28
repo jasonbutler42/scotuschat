@@ -560,6 +560,7 @@
 							use:enhance={() => {
 								resetRunning = true;
 								resetAwaitingCompletion = false;
+								resetResult = null;
 								resetProgressText = RESET_PROGRESS_STEP_1_COPY;
 								stopResetPolling();
 								resetPollHandle = setInterval(pollResetProgress, 1000);
@@ -585,7 +586,9 @@
 										resetResult = (result.data as { resetFixtures: ResetFixtureItem[] })
 											.resetFixtures;
 										resetConfirming = false;
-										await invalidateAll();
+										// update() applies the success result, which also clears a
+										// resetError left by an earlier failed attempt, then reloads.
+										await update();
 									} else {
 										// Error branch: control returns to Idle (not Confirming) and any
 										// stale success list is cleared so it never sits above a fresh error.
@@ -708,6 +711,7 @@
 						action="?/seedUnresolvedSpeaker"
 						use:enhance={() => {
 							seedSubmitting = true;
+							seedResult = null;
 							return async ({ result, update }) => {
 								seedSubmitting = false;
 								if (
@@ -717,7 +721,7 @@
 								) {
 									seedResult = (result.data as { seedResult: SeedUnresolvedSpeakerResult })
 										.seedResult;
-									await invalidateAll();
+									await update();
 								} else {
 									seedResult = null;
 									await update();

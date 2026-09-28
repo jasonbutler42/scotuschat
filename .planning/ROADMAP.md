@@ -639,3 +639,11 @@ So the cheapest moment to decide is **before Phase 55 is planned**. Deciding aft
 - [ ] TBD (promote with /gsd-review-backlog when ready)
 
 **Provenance:** Raised by the operator on 2026-09-25 during Phase 52 Wave 3 ("one of my lingering suspicions is that the front end of this site could operate as a static site... is that a crazy idea?"). Assessed by Claude against the live codebase the same day: adapter and prerender state read from `app/svelte.config.js`, route split counted from `app/src/routes/`, corpus scale measured from `data/corpus/conversations.json` and `utterances.jsonl`, and Phase 55's open search decision read from this roadmap. Backlogged at the operator's request rather than scoped into v1.9.
+
+### Phase 999.15: Follow-up — Phase 52 deferred UAT follow-up: Test 3 (BACKLOG)
+
+**Goal:** Resolve the UAT checkpoint deferred during Phase 52 verification
+**Source phase:** 52
+**Deferred at:** 2026-09-28 during /gsd-verify-work 52 session completion
+**Follow-ups:**
+- [ ] Test 3: Operator eye on the admin Resolve card: John Marshall Harlan, II shows JH, and an unresolved row's avatar is unchanged. Needs a pipeline job for an argument with Harlan II on the bench. (deferred 2026-09-28)

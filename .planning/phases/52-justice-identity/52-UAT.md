@@ -3,12 +3,12 @@ status: partial
 phase: 52-justice-identity
 source: [52-VERIFICATION.md]
 started: 2026-09-25T16:05:00Z
-updated: 2026-09-25T18:30:00Z
+updated: 2026-09-28T00:00:00Z
 ---
 
 ## Current Test
 
-[testing paused — 2 items outstanding: test 2 (issue, open) and test 3 (pending)]
+[testing paused — 2 items outstanding: test 2 (issue, open) and test 3 (blocked)]
 
 ## Tests
 
@@ -80,20 +80,30 @@ run: 2 of 2 (second run, after fix a59a67b0f)
 
 ### 3. Admin Resolve card — JH rendering and unresolved-row avatar
 expected: Open an admin pipeline job's Resolve card for an argument with a bench row whose person has a name suffix. Confirm the avatar circle shows JH for John Marshall Harlan, II (not the suffix letter JI), and confirm an unresolved row's avatar looks exactly as it did before this change.
-result: [pending]
+result: blocked
+blocked_by: other
+reason: "blocked"
+note: |
+  Precondition absent in the dev database, not a code defect: admin_jobs is empty
+  (0 rows; only the 4 fixture arguments exist), and the Resolve card renders only
+  inside a pipeline job. Harlan II exists as person 2556. Unblocks once a job is
+  created for an argument with Harlan II on the bench. The underlying behavior is
+  covered by 52-06's browser test and 52-VERIFICATION SC5 (JH/OH/? asserted in a
+  real Chromium) — this item is the operator's eye on the admin surface only.
 
 ## Summary
 
 total: 3
 passed: 1
 issues: 1
-pending: 1
+pending: 0
 skipped: 0
-blocked: 0
+blocked: 1
 
 ## Gaps
 
-- truth: "The Running state reports per-fixture progress so a multi-minute destructive operation is distinguishable from a hang (D-15)"
+- gap_id: G-52-2
+  truth: "The Running state reports per-fixture progress so a multi-minute destructive operation is distinguishable from a hang (D-15)"
   status: failed
   reason: "User reported: I don't see any progress line. The still-running notice renders and states 'the progress line below is live', but no progress line is visible."
   severity: major

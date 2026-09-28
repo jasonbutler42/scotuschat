@@ -9,7 +9,7 @@
         "--browser",
         "chromium",
         "--executable-path",
-        "/home/jason/.cache/ms-playwright/chromium-1228/chrome-linux64/chrome",
+        "/home/jason/.cache/ms-playwright/chromium-1246/chrome-linux64/chrome",
         "--user-data-dir",
         "/home/jason/scotuschat/project/.playwright-profile"
       ],

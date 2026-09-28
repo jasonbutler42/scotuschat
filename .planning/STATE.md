@@ -2,31 +2,31 @@
 gsd_state_version: "1.0"
 milestone: v1.9
 milestone_name: The Site Becomes Complete
-current_phase: 52
-current_phase_name: Justice Identity
-status: verifying
-stopped_at: Completed 52-06-PLAN.md
-last_updated: "2026-09-25T14:51:22.703Z"
-last_activity: 2026-09-25
-last_activity_desc: Phase 52 execution started
-state_head: 9dae1ce511235bd51a15a9fc1b855d05eefc1d9b
+current_phase: 53
+current_phase_name: Undetermined Speakers & Marker Normalisation
+status: planning
+stopped_at: Phase 52 complete, ready to plan Phase 53
+last_updated: "2026-09-28T18:58:21.294Z"
+last_activity: 2026-09-28
+last_activity_desc: Phase 52 complete, transitioned to Phase 53
+state_head: 1f92aea50a98d178ee04475aab91c1be81480ec2
 progress:
   total_phases: 8
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 6
   completed_plans: 6
-  percent: 0
+  percent: 13
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-09-23 after the v1.8 milestone close)
+See: .planning/PROJECT.md (updated 2026-09-28 after Phase 52)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
 
-**Current focus:** Phase 52 — Justice Identity
+**Current focus:** Phase 53 — Undetermined Speakers & Marker Normalisation
 the site can go live (correct data, the full corpus published, a finished public surface), so that
 v2.0 is purely the deployment.
 
@@ -38,12 +38,12 @@ phase-numbered test modules, ~2:1 test:code as a guideline. Both govern all late
 
 ## Current Position
 
-Phase: 52 (Justice Identity) — EXECUTING
-Plan: 6 of 6
-Status: Phase complete — ready for verification
-Last activity: 2026-09-25 — Phase 52 execution started
+Phase: 53 — Undetermined Speakers & Marker Normalisation
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-09-28 — Phase 52 complete, transitioned to Phase 53
 
-Progress: [░░░░░░░░░░] 0% (0/7 phases)
+Progress: [█░░░░░░░░░] 13% (1/8 phases)
 
 ## Milestone Roadmap — v1.9 (Phases 52–58)
 
@@ -133,9 +133,6 @@ repeat it.
 - **Analytics vendor (Phase 58)** is an operator choice. GoatCounter is the researched candidate;
   Plausible / Fathom / self-hosted Umami are documented alternatives. Once picked, inspect the actual
   script for device storage/access behaviour rather than trusting the "cookieless" label.
-- **The 4 flagged justice mapping rows (Phase 52)** need the operator's eye: the two Harlans,
-  `Salmon P. Chase` vs. the different justice `Samuel Chase`, and `Henry Brockholst Livingston`
-  (filed in the CSV under the first name "Brockholst").
 - **Oyez `external_id` URL format (Phase 56)** — spot-check that stored values resolve to real Oyez
   URLs. A verification task, not a build task.
 
@@ -271,8 +268,8 @@ suppress by design, so the section was moved verbatim to
 
 ## Session Continuity
 
-Last session: 2026-09-25T14:51:15.408Z
-Stopped at: Completed 52-06-PLAN.md
+Last session: 2026-09-28T18:30:00Z
+Stopped at: Phase 52 complete, ready to plan Phase 53
 Resume file: None
 
 ## Operator Next Steps

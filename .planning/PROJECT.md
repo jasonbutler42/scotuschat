@@ -133,12 +133,12 @@ Anyone can open a SCOTUS oral argument and immediately follow the conversation �
 - ✓ Unified import path: corpus import writes `import_run` directly (source=corpus) with no fabricated PDF-pipeline artifacts, `admin_job` references an existing `import_run` rather than inventing one and the corpus CLI batch needs no `admin_job` at all, re-import is idempotent (one conversation imported twice, byte-identical second pass across all eight affected tables) and never clobbers operator-authored values, and the authority ordering (operator > corpus > pdf/rule > pdf/llm) governs overwrite decisions on every writer — proven by an 8-test real-writer behavioral gate module with a hand-verified falsifiability demonstration, not a source-text grep — v1.8 (IMPORT-01, 03, 04, 05), validated in Phase 50. IMPORT-02 (the PDF path adapting as a peer strategy) was deliberately split to Phase 999.11 on 2026-08-25
 - ✓ Public noun aligned to "arguments": flat slug-based `/arguments`, `/arguments/term/{year}`, `/arguments/{slug}` URLs with the `/cases` route tree, router, service and schema deleted and no redirect layer; a `lib/primitives` shared component library (Button, Badge, Card, Input) generalized from existing patterns with Button's icon-only accessible-name contract enforced by a TypeScript discriminated union; Tailwind removed entirely in favour of a two-layer CSS custom-property token set (35 primitives + 75 semantic names, 5 type steps, 2 weights, 8 spacing steps) with zero raw hex and zero numeric font-size or font-weight surviving anywhere in `app/src`; and a term-grouped listing replacing the unbounded flat one — v1.8 (DS-01–04), validated in Phase 51
 - ✓ Resolve-card editability widened from CANDIDATE-only to every unpublished state, read-only only once `published`, with recompute coverage extended to the newly-reachable write paths — v1.8 (operator request at the Phase 48 close), validated in Phase 49 plan 49-04
+- ✓ Justice identity: all 114 corpus justices resolve to exactly one person on a verified `oyez_speaker_id` mapping (operator-checked, not derived), refused at the database by a partial unique index; `display_name` carries the corpus name form on utterances while the bio card keeps the fuller CSV form; justices are seeded by `reset_to_fixture` so the People directory is never an empty bench; avatar initials derived server-side from structured name parts (`John Marshall Harlan, II` → `JH`). Closes the Person-dedup item carried since v1.7 Phase 42 — v1.9 (JUSTICE-01–06), validated in Phase 52. UAT also fixed a 60 s-per-fixture event-loop stall in the reset and cut reset time from 4–11 min to 67 s; the admin Resolve-card eye check was deferred to Phase 999.15
 
 ### Active
 
 **v1.9 — The Site Becomes Complete**
 
-- [ ] Justice identity joined to the corpus by a verified stable key, deduplicated, and persisting through fixture resets (JUSTICE)
 - [ ] Undetermined speakers displayed honestly and publishable, with markers normalised (SPEAKER)
 - [ ] The corpus published at scale and every surface verified at real volume (PUBLISH)
 - [ ] A landing page, About page, search, and source links back to Oyez (SITE)
@@ -266,6 +266,7 @@ Anyone can open a SCOTUS oral argument and immediately follow the conversation �
 | Tailwind removed in favour of hand-authored CSS custom properties | Utility classes put the design system in the markup where it cannot be audited or versioned; a two-layer token set can be | ✓ Good — zero raw hex and zero numeric font-size/weight survive in `app/src` |
 | No static source-text contract tests for frontend behavior (Testing Policy, 2026-08-27) | 28 green tests passed against a fully broken button in Phase 44; asserting a string appears in a `.svelte` file proves a declaration exists, not that a page works | ✓ Good — 16 such files deleted; the narrow structural-ban exception was kept and is what guards the apolitical constraint |
 | Defect Policy: settled-correctness defects are fixed silently, taste questions are escalated (2026-08-27) | The operator is a UX practitioner; the right amount of attention for a lock-ordering bug is zero | ✓ Good — phases 49–51 reported fixed defects in one line each instead of opening checkpoints |
+| Justice identity keyed on `oyez_speaker_id` from an operator-verified mapping, not a name-derivation rule (Phase 52) | A first-initial rule reproduced 100 of 114 corpus forms — right 88% of the time is the worst outcome, because the misses look plausible | ✓ Good — the database refuses a second row with a used id; 49 of 114 justices had been silently duplicated |
 
 ## Evolution
 
@@ -285,4 +286,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-09-23 — v1.9 The Site Becomes Complete opened. v1.8 shipped with all 5 phases verified and 24 of 25 requirements validated; IMPORT-02 deliberately split to Phase 999.11.*
+*Last updated: 2026-09-28 after Phase 52 (Justice Identity) — JUSTICE-01–06 validated.*

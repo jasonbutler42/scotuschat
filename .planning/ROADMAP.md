@@ -21,7 +21,7 @@
 
 **Overview:** Make everything true that has to be true before the site can go live, so that v2.0 is purely the deployment. Data correctness first (justice identity, then undetermined speakers), because search over speaker names before justice dedup would surface the exact duplicate-person bug that work exists to close. Then the corpus actually published, because every surface after it is better verified at real volume than against four fixtures. Then the public surface a reader arrives at — search (backend, precedes the landing page), landing page and About, then plumbing. Analytics is deliberately last and isolated: it introduces the first client-side third-party script and the first `PUBLIC_` env var this codebase has ever had.
 
-- [ ] **Phase 52: Justice Identity** — One person row per justice, joined to the corpus by a verified `oyez_speaker_id`, surviving every fixture reset
+- [x] **Phase 52: Justice Identity** — One person row per justice, joined to the corpus by a verified `oyez_speaker_id`, surviving every fixture reset (completed 2026-09-28)
 - [ ] **Phase 53: Undetermined Speakers & Marker Normalisation** — Treatment D for source-unattributed turns, a PROVISIONAL trust floor, and one canonical form for every whole-turn marker
 - [ ] **Phase 54: Publishing at Scale & Verification Debt** — Bulk publish through the existing trust gate, the corpus live, and every surface finally seen at real volume
 - [ ] **Phase 55: Search** — Find an argument by case, docket, speaker or term, with a zero-result state that names the coverage boundary
@@ -214,7 +214,7 @@ Active milestone: **v1.9 The Site Becomes Complete** (Phases 52–58). Details f
   - Closes the Person-dedup item carried since v1.7 Phase 42. It is not four bad rows; it is 49 of 114, visible as four only because four fixtures are imported.
   - Per the reseed-don't-migrate doctrine, existing duplicates are cleared by the reset, not by a backfill migration.
 
-**Plans**: 6/6 plans executed
+**Plans**: 6/6 plans complete
 
 Plans:
 
@@ -233,7 +233,7 @@ Plans:
 **Wave 3** *(blocked on Wave 2 completion)*
 
 - [x] 52-05-PLAN.md — Reset per-fixture progress and evidence-based failure copy via one dev-only fixture-state GET
-- [ ] 52-06-PLAN.md — Converge the third initials splitter in admin `ResolveCard.svelte` onto the single server-side `derive_initials`, completing D-12 codebase-wide *(added 2026-09-25 by operator decision after 52-02 surfaced it)*
+- [x] 52-06-PLAN.md — Converge the third initials splitter in admin `ResolveCard.svelte` onto the single server-side `derive_initials`, completing D-12 codebase-wide *(added 2026-09-25 by operator decision after 52-02 surfaced it)*
 
 **UI hint**: yes
 
@@ -419,7 +419,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 52. Justice Identity | 6/6 | In Progress|  |
+| 52. Justice Identity | 6/6 | Complete    | 2026-09-28 |
 | 53. Undetermined Speakers & Marker Normalisation | 0/? | Not started | - |
 | 54. Publishing at Scale & Verification Debt | 0/? | Not started | - |
 | 54.1. Justice Portraits & Biographical Enrichment (INSERTED) | 0/? | Not started | - |

@@ -158,6 +158,13 @@
 	--font-weight-regular: 400;
 	--font-weight-semibold: 600;
 
+	/* Type axes (D-02) — a style axis, not a size/weight one. First use: the
+	   "undetermined speaker" bubble label and the whole-turn inaudible-marker
+	   body (D-12); also absorbs StageDirection.svelte's and
+	   SpeakerPopover.svelte's pre-existing raw `font-style: italic;` literals. */
+	--font-style-italic: italic;
+	--opacity-muted: 0.7;
+
 	/* Touch targets — WCAG 2.1 AA default plus the dense in-table admin exception */
 	--touch-target: 44px;
 	--touch-target-dense: 36px;
@@ -184,6 +191,11 @@
 	--transcript-rail-gap: var(--space-sm);
 	--bubble-max-width: 72%;
 	--bubble-pad-x: var(--space-lg);
+	/* Treatment D (D-01/SPEAKER-01): 540:582 ≈ 0.928 of --bubble-max-width,
+	   rounded. `data-width` (Transcript variant axes) redefines
+	   --bubble-max-width but NOT this token — an undetermined bubble's ratio
+	   to a standard one does not track a width-variant switch. */
+	--bubble-max-width-undetermined: 67%;
 
 	font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
@@ -241,6 +253,7 @@
 		--transcript-rail-gap: var(--space-xs);
 		--bubble-max-width: 100%;
 		--bubble-pad-x: var(--space-sm);
+		--bubble-max-width-undetermined: 93%;
 	}
 }
 

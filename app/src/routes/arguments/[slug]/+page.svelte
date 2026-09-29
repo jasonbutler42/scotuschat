@@ -2,6 +2,7 @@
 	import { Popover } from 'bits-ui';
 	import ChatBubble from '$lib/public/ChatBubble.svelte';
 	import StageDirection from '$lib/public/StageDirection.svelte';
+	import UndeterminedBubble from '$lib/public/UndeterminedBubble.svelte';
 	import SectionRail from '$lib/public/SectionRail.svelte';
 	import MobileNavBar from '$lib/public/MobileNavBar.svelte';
 	import SpeakerPopover from '$lib/public/SpeakerPopover.svelte';
@@ -57,6 +58,11 @@
 		const advocates: { name: string; role: string | null; person_id: number | null; initials: string | null }[] = [];
 		for (const u of data.utterances) {
 			if (u.is_stage_direction) continue;
+			// D-05/SPEAKER-01: a sentinel-speaker row never contributes a roster
+			// name — defensive as well as by construction, since the stored fact
+			// (never raw_speaker_label content) is what the render loop below
+			// keys off to skip it entirely.
+			if (u.speaker_undetermined) continue;
 			const key = u.speaker_name ?? u.raw_speaker_label ?? '';
 			if (!key || seen.has(key)) continue;
 			seen.add(key);
@@ -117,6 +123,10 @@
 		let advocate = 0;
 		for (const u of data.utterances) {
 			if (u.is_stage_direction) continue;
+			// Same D-05 skip as `roster` above: an undetermined row consumes no
+			// colour slot, so one sentinel row does not shift every later
+			// speaker's hue.
+			if (u.speaker_undetermined) continue;
 			const key = u.speaker_name ?? u.raw_speaker_label ?? '';
 			if (!key || byName.has(key)) continue;
 			const isBenchSide = u.side === 'BENCH';
@@ -198,6 +208,7 @@
 	type TranscriptUtterance = (typeof data)['utterances'][number];
 	type RenderItem =
 		| { kind: 'stage'; utterance: TranscriptUtterance }
+		| { kind: 'undetermined'; utterance: TranscriptUtterance }
 		| { kind: 'run'; utterances: TranscriptUtterance[] };
 
 	const renderItems = $derived.by(() => {
@@ -205,6 +216,16 @@
 		for (const u of data.utterances) {
 			if (u.is_stage_direction) {
 				items.push({ kind: 'stage', utterance: u });
+				continue;
+			}
+			// D-05/S5: classified BEFORE the run-continuation check below, keyed
+			// only off the stored sentinel fact — never off raw_speaker_label
+			// content. This is also what stops two consecutive undetermined rows
+			// merging: both carry raw_speaker_label === null today, and the old
+			// run-continuation equality check treated that shared null as "same
+			// speaker" (the S5 defect this fixes as a side effect).
+			if (u.speaker_undetermined === true) {
+				items.push({ kind: 'undetermined', utterance: u });
 				continue;
 			}
 			const last = items[items.length - 1];
@@ -432,6 +453,10 @@
 						{#if item.kind === 'stage'}
 							<div id={anchorId(item.utterance)}>
 								<StageDirection utterance={item.utterance} />
+							</div>
+						{:else if item.kind === 'undetermined'}
+							<div id={anchorId(item.utterance)}>
+								<UndeterminedBubble utterance={item.utterance} />
 							</div>
 						{:else}
 							{@const first = item.utterances[0]}

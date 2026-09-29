@@ -1,0 +1,72 @@
+<script lang="ts">
+	// Treatment D (D-01/SPEAKER-01): a turn the source never attributed to any
+	// person — the sentinel-speaker fact stored at import (D-05), never
+	// re-derived from raw_speaker_label text. Rendered as a bubble centred
+	// between two reserved 40px rails, neither filled at rest (D-01 rejects
+	// every treatment that guesses a side). S5: this is ALWAYS a singleton —
+	// two consecutive undetermined turns are always two separate bubbles, so
+	// unlike ChatBubble there is no run/position concept here at all.
+	//
+	// Every prop-derived value below is $derived, NOT const — same stale-prop
+	// discipline ChatBubble.svelte documents. A plain `const` off a prop is
+	// captured once at component init and frozen; this component is reused
+	// across renders the same way ChatBubble is (keyed by sequence in the
+	// route's {#each}), so a frozen value would survive into a different
+	// utterance after navigation.
+	let { utterance } = $props<{
+		utterance: {
+			id: number | string;
+			text: string;
+			is_inaudible_marker?: boolean;
+		};
+	}>();
+</script>
+
+<!-- No speaker-identity colour class or per-speaker/side custom property
+     anywhere in this component — an undetermined turn is deliberately
+     assigned to neither a speaker nor a side (D-01). No `position: sticky`
+     either: a Treatment D item is always exactly one utterance (S5), so
+     there is no run for a rail avatar to track scroll through — plan 53-04
+     adds the (non-sticky) reveal avatars into the rail columns below. -->
+<div role="article" aria-label="Undetermined speaker" class="undetermined-row" style="
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		gap: var(--transcript-rail-gap);
+	">
+	<div class="undetermined-rail undetermined-rail-left" style="width: 40px; flex-shrink: 0;"></div>
+
+	<div style="
+			max-width: min(var(--bubble-max-width-undetermined), 63ch);
+			min-width: 0;
+			background-color: var(--color-surface);
+			border: 1px solid var(--color-border);
+			border-radius: 6px 6px 6px 6px;
+			padding: var(--space-sm) var(--bubble-pad-x);
+		">
+		<!-- Label row — shown on EVERY Treatment D bubble, never suppressed as
+		     a "continuation" the way ChatBubble suppresses its name row: S5
+		     guarantees there is never a continuation here to suppress it for. -->
+		<div style="margin-bottom: var(--space-sm);">
+			<span style="
+					font-size: var(--font-size-caption);
+					font-weight: var(--font-weight-regular);
+					font-style: var(--font-style-italic);
+					opacity: var(--opacity-muted);
+					color: var(--color-text-secondary);
+				">undetermined speaker</span>
+		</div>
+
+		<!-- Body text — ChatBubble's own Lead size/weight/line-height/zero
+		     margin, colour inherited from the page body's own
+		     --color-text-primary (same as ChatBubble's ordinary body). -->
+		<p style="
+				font-size: var(--font-size-lead);
+				font-weight: var(--font-weight-regular);
+				line-height: var(--line-height-lead);
+				margin: 0;
+			">{utterance.text}</p>
+	</div>
+
+	<div class="undetermined-rail undetermined-rail-right" style="width: 40px; flex-shrink: 0;"></div>
+</div>

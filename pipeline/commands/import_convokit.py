@@ -2063,9 +2063,11 @@ def _incoming_utterance_rows(
     stage-direction row, otherwise the source-sentinel fact read from
     speakers.json's `type` field via `_is_unattributed_speaker_type` --
     never re-derived from `raw_speaker_label` or the speaker's name),
-    `is_inaudible_marker` (D-04: `True` only for a whole-turn Inaudible
-    marker row that keeps a resolved speaker_id, i.e. NOT a room event and
-    NOT the missing-speaker fallback below) and `verbatim_text` (D-10: the
+    `is_inaudible_marker` (D-04: `True` for a whole-turn Inaudible marker
+    row, i.e. NOT a room event and NOT the missing-speaker fallback below;
+    the row keeps its resolved speaker_id when there is one, but the D-13
+    double-unknown case -- a source-sentinel speaker -- sets this flag with
+    speaker_id `None`, so the flag never implies a resolved speaker) and `verbatim_text` (D-10: the
     original source segment for any marker row, room event or Inaudible
     alike; `None` for a speech row). `compute_utterance_digest` ignores
     every key outside its frozen four, so none of these extra fields ever
@@ -2170,7 +2172,7 @@ def _incoming_utterance_rows(
                         raw_speaker_label = cached.raw_speaker_label
                 else:
                     speaker_meta = speakers_index.get(speaker_id) or {}
-                    if _is_unattributed_speaker_type(speaker_meta):
+                    if speaker_undetermined:
                         if speaker_id not in seen_unattributed:
                             seen_unattributed.add(speaker_id)
                             counters["unattributed_speakers_skipped"] = (

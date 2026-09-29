@@ -5,8 +5,6 @@
 	import type { BadgeTone } from '$lib/primitives/badge-tone';
 	import { blockerSentence } from '$lib/admin/blockerSentence.js';
 
-	type Blocker = { code: string; count: number };
-
 	let { data, form } = $props();
 
 	// Per-row Publish submitting state (Phase 48 plan 10), keyed by argument

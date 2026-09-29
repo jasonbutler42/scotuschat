@@ -5,16 +5,16 @@ milestone_name: The Site Becomes Complete
 current_phase: 53
 current_phase_name: Undetermined Speakers & Marker Normalisation
 status: executing
-stopped_at: Completed 53-02-PLAN.md
-last_updated: "2026-09-29T12:19:27.651Z"
+stopped_at: Completed 53-05-PLAN.md
+last_updated: "2026-09-29T12:32:39.506Z"
 last_activity: 2026-09-29
-last_activity_desc: Phase 53 execution started
-state_head: "0bb01054b803fc07e8f7ee0e39401bec2d2665f4"
+last_activity_desc: Phase 53 execution — 53-01, 53-02, 53-05 complete; 53-03, 53-04 still outstanding
+state_head: d2a325465606e77b8b3fd5b243591dcfc7d2eba3
 progress:
   total_phases: 8
   completed_phases: 1
   total_plans: 11
-  completed_plans: 8
+  completed_plans: 9
   percent: 13
 ---
 
@@ -39,9 +39,13 @@ phase-numbered test modules, ~2:1 test:code as a guideline. Both govern all late
 ## Current Position
 
 Phase: 53 (Undetermined Speakers & Marker Normalisation) — EXECUTING
-Plan: 3 of 5
+Plan: 3 of 5 complete (53-01, 53-02, 53-05) — 53-03 and 53-04 still outstanding
+(wave order note: 53-05 depended only on 53-01 and ran ahead of 53-03/53-04 in
+this phase's wave plan; the automatic advance-plan counter does not track wave
+order — see project memory "advance-plan ignores wave order" — this position
+was corrected by hand against the actual *-SUMMARY.md files on disk)
 Status: Ready to execute
-Last activity: 2026-09-29 — Phase 53 execution started
+Last activity: 2026-09-29 — Phase 53 execution — 53-05 complete
 
 Progress: [█░░░░░░░░░] 13% (1/8 phases)
 
@@ -85,6 +89,7 @@ the first client-side third-party script and the first `PUBLIC_` env var this co
 | Phase 52 P06 | 10min | 2 tasks | 5 files |
 | Phase 53 P01 | 54min | 2 tasks | 9 files |
 | Phase 53 P02 | 62min | 2 tasks | 6 files |
+| Phase 53 P05 | 20min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -271,7 +276,7 @@ suppress by design, so the section was moved verbatim to
 ## Session Continuity
 
 Last session: 2026-09-29T12:19:27.341Z
-Stopped at: Completed 53-02-PLAN.md
+Stopped at: Completed 53-05-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
@@ -297,6 +302,7 @@ Resume file: None
 - [Phase 53]: Phase 53-01: the D-06 majority denominator/numerator (non_stage_total/undetermined_count) are counted inline in _load_constituents' existing utterance loop, never via a second query or per-row blocker bump -- a single post-loop check.
 - [Phase 53]: Phase 53-01: _seed_argument's utterance spec gained an optional 4th (speaker_undetermined) tuple element instead of a second seeding helper -- every existing 3-element caller, including test_published_gate.py's wrapper, keeps working unchanged.
 - [Phase 53]: Three-way row classification (speech/room-event/inaudible) replaces the boolean is_stage_direction split in the corpus importer; a known speaker's whole-turn Inaudible marker is stored as their own attributed row instead of a stage direction.
+- [Phase 53]: Phase 53-05: blockerSentence extracted from three verbatim-duplicated per-page copies into one shared, unit-tested app/src/lib/admin/blockerSentence.js (following the resetOutcome.js precedent) -- the D-18 majority_undetermined_speaker sentence is added once and rendered identically on all three admin surfaces.
 
 ### Blockers
 

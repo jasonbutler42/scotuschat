@@ -29,7 +29,7 @@ Requirements for milestone v1.9. Each maps to exactly one roadmap phase.
 - [ ] **SPEAKER-05**: An argument more than 50% undetermined is not publishable without explicit operator intervention
 - [ ] **SPEAKER-06**: Every whole-turn marker in the curated vocabulary displays in its canonical form, wherever it appears; markers inline within a spoken sentence are left exactly as the source wrote them
 - [ ] **SPEAKER-07**: A whole-turn inaudible marker with a known speaker renders as an ordinary attributed bubble whose body is the marker — the speaker attribution the source supplied is no longer discarded
-- [ ] **SPEAKER-08**: Voice Overlap remains classified as a stage direction, and laughter inside a speaker's turn still splits into speech plus a separate room-event row
+- [x] **SPEAKER-08**: Voice Overlap remains classified as a stage direction, and laughter inside a speaker's turn still splits into speech plus a separate room-event row
 
 ### Publishing at Scale (PUBLISH)
 
@@ -130,7 +130,7 @@ Populated during roadmap creation (2026-09-23). Every v1 requirement maps to exa
 | SPEAKER-05 | Phase 53 | Pending |
 | SPEAKER-06 | Phase 53 | Pending |
 | SPEAKER-07 | Phase 53 | Pending |
-| SPEAKER-08 | Phase 53 | Pending |
+| SPEAKER-08 | Phase 53 | Complete |
 | PERSON-01 | Phase 54.1 | Pending |
 | PERSON-02 | Phase 54.1 | Pending |
 | PERSON-03 | Phase 54.1 | Pending |

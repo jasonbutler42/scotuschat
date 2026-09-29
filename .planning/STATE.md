@@ -5,16 +5,16 @@ milestone_name: The Site Becomes Complete
 current_phase: 53
 current_phase_name: Undetermined Speakers & Marker Normalisation
 status: executing
-stopped_at: Completed 53-01-PLAN.md
-last_updated: "2026-09-29T11:30:44.605Z"
+stopped_at: Completed 53-02-PLAN.md
+last_updated: "2026-09-29T12:19:27.651Z"
 last_activity: 2026-09-29
 last_activity_desc: Phase 53 execution started
-state_head: 953471f12507c906f172a14457bf58b5485adb59
+state_head: "0bb01054b803fc07e8f7ee0e39401bec2d2665f4"
 progress:
   total_phases: 8
   completed_phases: 1
   total_plans: 11
-  completed_plans: 7
+  completed_plans: 8
   percent: 13
 ---
 
@@ -39,7 +39,7 @@ phase-numbered test modules, ~2:1 test:code as a guideline. Both govern all late
 ## Current Position
 
 Phase: 53 (Undetermined Speakers & Marker Normalisation) — EXECUTING
-Plan: 2 of 5
+Plan: 3 of 5
 Status: Ready to execute
 Last activity: 2026-09-29 — Phase 53 execution started
 
@@ -84,6 +84,7 @@ the first client-side third-party script and the first `PUBLIC_` env var this co
 | Phase 52 P05 | 57min | 2 tasks | 9 files |
 | Phase 52 P06 | 10min | 2 tasks | 5 files |
 | Phase 53 P01 | 54min | 2 tasks | 9 files |
+| Phase 53 P02 | 62min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -269,8 +270,8 @@ suppress by design, so the section was moved verbatim to
 
 ## Session Continuity
 
-Last session: 2026-09-29T11:30:44.360Z
-Stopped at: Completed 53-01-PLAN.md
+Last session: 2026-09-29T12:19:27.341Z
+Stopped at: Completed 53-02-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
@@ -295,6 +296,7 @@ Resume file: None
 - [Phase 53]: Phase 53-01: speaker_undetermined is computed once in _incoming_utterance_rows immediately after speaker_id is read and before the resolved_participants cache branch, so a cached and a freshly-resolved speaker both carry the identical D-05 fact.
 - [Phase 53]: Phase 53-01: the D-06 majority denominator/numerator (non_stage_total/undetermined_count) are counted inline in _load_constituents' existing utterance loop, never via a second query or per-row blocker bump -- a single post-loop check.
 - [Phase 53]: Phase 53-01: _seed_argument's utterance spec gained an optional 4th (speaker_undetermined) tuple element instead of a second seeding helper -- every existing 3-element caller, including test_published_gate.py's wrapper, keeps working unchanged.
+- [Phase 53]: Three-way row classification (speech/room-event/inaudible) replaces the boolean is_stage_direction split in the corpus importer; a known speaker's whole-turn Inaudible marker is stored as their own attributed row instead of a stage direction.
 
 ### Blockers
 

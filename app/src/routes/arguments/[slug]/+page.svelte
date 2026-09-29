@@ -3,6 +3,7 @@
 	import ChatBubble from '$lib/public/ChatBubble.svelte';
 	import StageDirection from '$lib/public/StageDirection.svelte';
 	import UndeterminedBubble from '$lib/public/UndeterminedBubble.svelte';
+	import UndeterminedSpeakerCard from '$lib/public/UndeterminedSpeakerCard.svelte';
 	import SectionRail from '$lib/public/SectionRail.svelte';
 	import MobileNavBar from '$lib/public/MobileNavBar.svelte';
 	import SpeakerPopover from '$lib/public/SpeakerPopover.svelte';
@@ -15,6 +16,10 @@
 	let isPopoverOpen = $state(false);
 	let currentSpeaker = $state<SpeakerDetail | null>(null);
 	let currentAnchor = $state<HTMLElement | null>(null);
+	// D-14: the page's single shared popover instance's second content mode
+	// (SPEAKER-02) — the explanation card beside the existing speaker-bio
+	// card, never a second popover root.
+	let popoverMode = $state<'speaker' | 'undetermined'>('speaker');
 
 	// Build O(1) lookup map from server-loaded speakers array (Pitfall 2: not returned as Map)
 	// Cast via unknown because RawSpeaker uses an index signature in +page.server.ts
@@ -26,9 +31,21 @@
 
 	function onAvatarClick(personId: number, anchor: HTMLElement): void {
 		const speaker = speakersMap.get(personId) ?? null;
+		popoverMode = 'speaker';
 		currentSpeaker = speaker;
 		currentAnchor = anchor;
 		isPopoverOpen = speaker !== null;
+	}
+
+	// D-14: opened from either dashed `?` avatar of a Treatment D bubble.
+	// `anchor` is the avatar element itself (left or right), so the popover
+	// anchors to whichever side was activated — the same mechanism as every
+	// existing avatar button, never told "left" or "right" in words.
+	function onUndeterminedAvatarClick(anchor: HTMLElement): void {
+		currentSpeaker = null;
+		currentAnchor = anchor;
+		popoverMode = 'undetermined';
+		isPopoverOpen = true;
 	}
 
 	/**
@@ -273,7 +290,9 @@
 				       background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px;
 				       min-width: 300px; max-width: 400px;"
 			>
-				{#if currentSpeaker}
+				{#if popoverMode === 'undetermined'}
+					<UndeterminedSpeakerCard />
+				{:else if currentSpeaker}
 					<SpeakerPopover
 						speaker={currentSpeaker}
 						paletteVars={speakerVarsForPerson(currentSpeaker.person_id)}
@@ -456,7 +475,10 @@
 							</div>
 						{:else if item.kind === 'undetermined'}
 							<div id={anchorId(item.utterance)}>
-								<UndeterminedBubble utterance={item.utterance} />
+								<UndeterminedBubble
+									utterance={item.utterance}
+									onAvatarActivate={onUndeterminedAvatarClick}
+								/>
 							</div>
 						{:else}
 							{@const first = item.utterances[0]}

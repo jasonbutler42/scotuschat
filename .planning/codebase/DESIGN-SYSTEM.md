@@ -344,7 +344,9 @@ One token set, two component layers, per the Figma page structure (D-06):
   `Button`, `Badge`, `Input`, `Card`.
 - `app/src/lib/public/` — reading-optimized components (wider measure, larger type, more air):
   `ChatBubble`, `StageDirection`, `SectionRail`, `TermRow`, `UndeterminedBubble` (Phase 53 — Treatment
-  D, the source-unattributed-turn rest state), etc.
+  D, the source-unattributed-turn rest state), `UndeterminedSpeakerCard` (Phase 53 plan 53-04 —
+  the D-14 explanation card, same shape as `SpeakerPopover`'s bio card but title+paragraphs only),
+  etc.
 - `app/src/lib/admin/` — density-optimized components for the operator surfaces.
 
 One source of truth (the token set above), two expressions of it — public and admin can feel
@@ -369,6 +371,16 @@ drift apart. `.utterance-body` sets the ordinary ink (`--color-text-primary`) an
 `.utterance-body.is-inaudible-marker` overrides both to `--color-stage-text` /
 `--font-style-italic` when the row's stored `is_inaudible_marker` fact is true. Everything else
 about the body paragraph (size, weight, line height, margin) stays inline, unchanged.
+
+**Exception: `UndeterminedBubble.svelte`'s component-scoped `<style>` (Phase 53 plan 53-04,
+D-01/D-16).** The Treatment D dashed `?` avatar reveal — `:hover` gated behind `@media (hover:
+hover)`, `:focus-within` for keyboard, and a `data-revealed` attribute for touch — cannot be
+expressed as an inline `style="..."` attribute at all: pseudo-classes and media queries have no
+inline-style equivalent. This is the one component in the codebase with its own scoped `<style>`
+block, kept deliberately narrow (opacity/pointer-events on `.undetermined-avatar`, keyed off the
+row's hover/focus/touch state) rather than a general move away from inline styling. The 120ms
+opacity transition is an inline VALUE inside that block, not a token, because no motion token
+exists elsewhere in this codebase to reuse.
 
 ---
 

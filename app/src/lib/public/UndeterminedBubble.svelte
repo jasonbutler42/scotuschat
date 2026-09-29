@@ -13,12 +13,16 @@
 	// across renders the same way ChatBubble is (keyed by sequence in the
 	// route's {#each}), so a frozen value would survive into a different
 	// utterance after navigation.
-	let { utterance } = $props<{
+	let { utterance, onAvatarActivate } = $props<{
 		utterance: {
 			id: number | string;
 			text: string;
 			is_inaudible_marker?: boolean;
 		};
+		/** D-14: called with the activated avatar's own element (so the route
+		 *  can anchor the shared popover to whichever side — left or right —
+		 *  was clicked), never told which side it was in words. */
+		onAvatarActivate: (anchor: HTMLElement) => void;
 	}>();
 
 	// D-12/D-13: the identical derivation ChatBubble.svelte carries — one rule
@@ -32,15 +36,39 @@
      anywhere in this component — an undetermined turn is deliberately
      assigned to neither a speaker nor a side (D-01). No `position: sticky`
      either: a Treatment D item is always exactly one utterance (S5), so
-     there is no run for a rail avatar to track scroll through — plan 53-04
-     adds the (non-sticky) reveal avatars into the rail columns below. -->
+     there is no run for a rail avatar to track scroll through. D-16/D-01:
+     the dashed `?` avatar below is revealed by ONE row-level CSS rule
+     (`.undetermined-row:hover .undetermined-avatar` etc.) that targets BOTH
+     rails at once — a one-sided reveal is structurally impossible, not just
+     avoided by care. -->
 <div role="article" aria-label="Undetermined speaker" class="undetermined-row" style="
 		display: flex;
 		justify-content: center;
 		align-items: center;
 		gap: var(--transcript-rail-gap);
 	">
-	<div class="undetermined-rail undetermined-rail-left" style="width: 40px; flex-shrink: 0;"></div>
+	<div class="undetermined-rail undetermined-rail-left" style="width: 40px; flex-shrink: 0; display: flex; align-items: center; justify-content: flex-end;">
+		<!-- Pushed to this rail's END (the edge nearest the bubble) — the right
+		     rail below mirrors this with justify-content: flex-start, so the
+		     avatar-to-bubble gap reads equal on both sides. -->
+		<button
+			type="button"
+			class="undetermined-avatar"
+			aria-label="Undetermined speaker details"
+			onclick={(e) => onAvatarActivate(e.currentTarget as HTMLElement)}
+			style="background:none;border:none;padding:0;cursor:pointer;border-radius:50%;
+			       display:flex;align-items:center;justify-content:center;"
+		>
+			<div aria-hidden="true" style="
+					width: 32px; height: 32px; border-radius: 50%;
+					border: 1px dashed var(--color-text-secondary);
+					background: transparent;
+					display: flex; align-items: center; justify-content: center;
+					font-size: var(--font-size-caption); font-weight: var(--font-weight-semibold);
+					color: var(--color-text-secondary);
+				">?</div>
+		</button>
+	</div>
 
 	<div style="
 			max-width: min(var(--bubble-max-width-undetermined), 63ch);
@@ -78,5 +106,47 @@
 		>{utterance.text}</p>
 	</div>
 
-	<div class="undetermined-rail undetermined-rail-right" style="width: 40px; flex-shrink: 0;"></div>
+	<div class="undetermined-rail undetermined-rail-right" style="width: 40px; flex-shrink: 0; display: flex; align-items: center; justify-content: flex-start;">
+		<!-- Pushed to this rail's START (the edge nearest the bubble) — mirrors
+		     the left rail's flex-end above. -->
+		<button
+			type="button"
+			class="undetermined-avatar"
+			aria-label="Undetermined speaker details"
+			onclick={(e) => onAvatarActivate(e.currentTarget as HTMLElement)}
+			style="background:none;border:none;padding:0;cursor:pointer;border-radius:50%;
+			       display:flex;align-items:center;justify-content:center;"
+		>
+			<div aria-hidden="true" style="
+					width: 32px; height: 32px; border-radius: 50%;
+					border: 1px dashed var(--color-text-secondary);
+					background: transparent;
+					display: flex; align-items: center; justify-content: center;
+					font-size: var(--font-size-caption); font-weight: var(--font-weight-semibold);
+					color: var(--color-text-secondary);
+				">?</div>
+		</button>
+	</div>
 </div>
+
+<!-- Component-scoped style — the codebase's one exception to "everything is
+     inline" (DESIGN-SYSTEM.md Styling mechanism). `:hover`/`:focus-within`/a
+     hover-media gate cannot be expressed as an inline style attribute; the
+     120ms transition is likewise an inline VALUE here because no motion
+     token exists elsewhere in this codebase to reuse. Never display:none or
+     aria-hidden on .undetermined-avatar — both buttons stay in the DOM and
+     in tab order always; only opacity/pointer-events change (D-16, WCAG). -->
+<style>
+	.undetermined-avatar {
+		opacity: 0;
+		pointer-events: none;
+		transition: opacity 120ms ease;
+	}
+
+	@media (hover: hover) {
+		.undetermined-row:hover .undetermined-avatar {
+			opacity: 1;
+			pointer-events: auto;
+		}
+	}
+</style>

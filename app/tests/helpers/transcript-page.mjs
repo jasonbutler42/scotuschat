@@ -128,9 +128,26 @@ export async function waitForExpression(cdp, expression, timeoutMs = 15_000) {
  *   `GET /arguments/by-slug/{slug}/speakers`.
  * @param {{ width: number, height: number }} [options.viewport] - initial
  *   viewport applied via CDP `Emulation.setDeviceMetricsOverride`.
+ * @param {boolean} [options.realPointer] - Phase 53 plan 53-04: when true,
+ *   launches WITHOUT `--headless=new`. Measured on this host: headless
+ *   Chromium (new or old headless mode, with or without `--ozone-platform=x11`)
+ *   always reports `matchMedia('(hover: hover)').matches === false` and
+ *   `(pointer: fine)` false — there is no CDP command that overrides this,
+ *   only a real windowed browser against a real display reports `hover:hover`/
+ *   `pointer:fine`. Requires `$DISPLAY` (WSLg provides `:0` on this machine);
+ *   throws loudly rather than silently falling back to headless, so a hover
+ *   test can never read as passing against the wrong pointer capability.
+ *   Default false preserves every existing caller's headless behavior.
  * @returns {Promise<{ cdp: CdpClient, setViewport: (width: number, height: number) => Promise<void>, close: () => Promise<void> }>}
  */
-export async function openTranscriptPage({ slug, argumentPayload, speakersPayload, viewport }) {
+export async function openTranscriptPage({ slug, argumentPayload, speakersPayload, viewport, realPointer = false }) {
+	if (realPointer && !process.env.DISPLAY) {
+		throw new Error(
+			'openTranscriptPage({ realPointer: true }) requires $DISPLAY (a real windowed browser) — ' +
+				'headless Chromium always reports hover:none/pointer:coarse on this host, and no CDP ' +
+				'override exists. Set $DISPLAY (e.g. WSLg\'s :0) before running this test.'
+		);
+	}
 	const mockApi = createServer((request, response) => {
 		response.setHeader('content-type', 'application/json');
 		if (request.method === 'GET' && request.url === `/arguments/by-slug/${slug}/utterances`) {
@@ -182,7 +199,8 @@ export async function openTranscriptPage({ slug, argumentPayload, speakersPayloa
 		await waitFor(`http://127.0.0.1:${appPort}${casePath}`);
 
 		browser = spawn(executable, [
-			'--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
+			...(realPointer ? ['--window-position=-32000,-32000'] : ['--headless=new']),
+			'--disable-gpu', '--no-first-run', '--no-default-browser-check',
 			'--remote-allow-origins=*',
 			`--remote-debugging-port=${debugPort}`, `--user-data-dir=${profile}`,
 			`http://127.0.0.1:${appPort}${casePath}`,

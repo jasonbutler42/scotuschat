@@ -824,6 +824,156 @@ async def test_override_is_not_sticky_across_republish():
         await _teardown_argument_with_lead_case(ids)
 
 
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="DATABASE_URL not configured")
+async def test_publish_sentinel_speakers_only_no_override_needed():
+    """
+    D-05/D-17: 1 sentinel + 2 resolved (half or fewer undetermined) floors
+    to PROVISIONAL, not UNCERTAIN — publishes with NO override, and its
+    status-log row leaves both override columns NULL exactly like any
+    other non-blocked publish (D-16).
+    """
+    from sqlalchemy import select
+
+    from api.core.database import AsyncSessionLocal
+    from api.models.models import ArgumentStatusEnum, ArgumentStatusLog
+    from api.services.admin_arguments import publish_argument
+
+    ids = await _seed_argument_with_lead_case(
+        "corpus",
+        "direct",
+        utterance_specs=[
+            (True, False, "PETITIONER"),
+            (True, False, "RESPONDENT"),
+            (False, False, "UNKNOWN", True),
+        ],
+    )
+    try:
+        await _mark_resolved(ids["argument_id"])
+        async with AsyncSessionLocal() as db:
+            result = await publish_argument(db, ids["argument_id"])
+        assert result is not None
+        assert result["status"] == ArgumentStatusEnum.PUBLISHED
+
+        async with AsyncSessionLocal() as db:
+            log_result = await db.execute(
+                select(ArgumentStatusLog).where(
+                    ArgumentStatusLog.argument_id == ids["argument_id"]
+                )
+            )
+            row = log_result.scalars().one()
+            assert row.override_reason is None
+            assert row.trust_tier_at_transition is None
+    finally:
+        await _teardown_argument_with_lead_case(ids)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="DATABASE_URL not configured")
+async def test_publish_blocked_when_majority_undetermined_without_override():
+    """
+    D-06/D-17/D-18: 3 sentinel + 1 resolved (more than half undetermined)
+    holds publish behind the existing UNCERTAIN gate — no override reason
+    raises TrustGateBlocked whose blockers carry the majority entry with
+    its percentage, and nothing is written.
+    """
+    from sqlalchemy import func, select
+
+    from api.core.database import AsyncSessionLocal
+    from api.domain.trust import TrustTier
+    from api.models.models import Argument, ArgumentStatusEnum, ArgumentStatusLog
+    from api.services.admin_arguments import publish_argument
+    from api.services.trust import TrustGateBlocked
+
+    ids = await _seed_argument_with_lead_case(
+        "corpus",
+        "direct",
+        utterance_specs=[
+            (True, False, "PETITIONER"),
+            (False, False, "UNKNOWN", True),
+            (False, False, "UNKNOWN", True),
+            (False, False, "UNKNOWN", True),
+        ],
+    )
+    try:
+        await _mark_resolved(ids["argument_id"])
+        async with AsyncSessionLocal() as db:
+            with pytest.raises(TrustGateBlocked) as exc_info:
+                await publish_argument(db, ids["argument_id"])
+        exc = exc_info.value
+        assert exc.tier is TrustTier.UNCERTAIN
+        assert {"code": "majority_undetermined_speaker", "count": 3, "percent": 75} in exc.blockers
+
+        async with AsyncSessionLocal() as db:
+            arg = await db.get(Argument, ids["argument_id"])
+            assert arg.published_at is None
+            assert arg.status == ArgumentStatusEnum.CANDIDATE
+            log_count = (
+                await db.execute(
+                    select(func.count())
+                    .select_from(ArgumentStatusLog)
+                    .where(ArgumentStatusLog.argument_id == ids["argument_id"])
+                )
+            ).scalar()
+            assert log_count == 0, "a blocked publish must not write a status-log row"
+    finally:
+        await _teardown_argument_with_lead_case(ids)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="DATABASE_URL not configured")
+async def test_publish_majority_undetermined_succeeds_with_override():
+    """
+    D-17: the same majority-undetermined seed as
+    test_publish_blocked_when_majority_undetermined_without_override
+    publishes with a non-blank override_reason — the existing typed-reason
+    override is the ONLY way a held argument publishes, no new mechanism.
+    """
+    from sqlalchemy import select
+
+    from api.core.database import AsyncSessionLocal
+    from api.domain.trust import TrustTier
+    from api.models.models import ArgumentStatusEnum, ArgumentStatusLog
+    from api.services.admin_arguments import publish_argument
+
+    ids = await _seed_argument_with_lead_case(
+        "corpus",
+        "direct",
+        utterance_specs=[
+            (True, False, "PETITIONER"),
+            (False, False, "UNKNOWN", True),
+            (False, False, "UNKNOWN", True),
+            (False, False, "UNKNOWN", True),
+        ],
+    )
+    try:
+        await _mark_resolved(ids["argument_id"])
+        async with AsyncSessionLocal() as db:
+            result = await publish_argument(
+                db,
+                ids["argument_id"],
+                override_reason="Publishing despite a majority-undetermined argument for test coverage.",
+            )
+        assert result is not None
+        assert result["status"] == ArgumentStatusEnum.PUBLISHED
+
+        async with AsyncSessionLocal() as db:
+            log_result = await db.execute(
+                select(ArgumentStatusLog)
+                .where(ArgumentStatusLog.argument_id == ids["argument_id"])
+                .order_by(ArgumentStatusLog.id.desc())
+            )
+            newest = log_result.scalars().first()
+            assert newest is not None
+            assert (
+                newest.override_reason
+                == "Publishing despite a majority-undetermined argument for test coverage."
+            )
+            assert newest.trust_tier_at_transition == TrustTier.UNCERTAIN
+    finally:
+        await _teardown_argument_with_lead_case(ids)
+
+
 @pytest_asyncio.fixture
 async def client():
     """

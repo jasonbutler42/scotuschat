@@ -34,8 +34,18 @@ async def _seed_argument(source, method, utterance_specs, participant_specs=()):
     Seed one CANDIDATE Argument, one ImportRun with the given (source,
     method), a shared Person for resolved constituents, one Utterance row
     per entry in utterance_specs — each a (resolved, is_stage_direction,
-    side) tuple — and one ArgumentParticipant row per entry in
-    participant_specs — each a `resolved` bool.
+    side) tuple, OR (Phase 53 plan 53-01) a (resolved, is_stage_direction,
+    side, speaker_undetermined) 4-tuple — and one ArgumentParticipant row
+    per entry in participant_specs — each a `resolved` bool.
+
+    A 3-element utterance spec seeds speaker_undetermined=False (the
+    default, matching every pre-Phase-53 caller unchanged). A 4-element
+    spec's fourth entry is the stored speaker_undetermined column value:
+    True forces raw_speaker_label and person_id to None regardless of
+    `resolved` (D-05's CHECK constraint shape — a sentinel row is never
+    resolved); the literal None seeds an explicit NULL flag (the
+    pre-migration-0033 shape), leaving raw_speaker_label/person_id
+    governed by `resolved`/`is_stage_direction` exactly as before.
 
     Returns a dict of every id needed for the matching teardown helper.
     """
@@ -73,16 +83,33 @@ async def _seed_argument(source, method, utterance_specs, participant_specs=()):
             await db.flush()
 
         utterance_ids = []
-        for i, (resolved, is_stage_direction, side) in enumerate(utterance_specs):
+        for i, spec in enumerate(utterance_specs):
+            if len(spec) == 4:
+                resolved, is_stage_direction, side, speaker_undetermined = spec
+            else:
+                resolved, is_stage_direction, side = spec
+                speaker_undetermined = False
+
+            if speaker_undetermined is True:
+                # D-05 CHECK constraint shape: a source-sentinel row is
+                # never resolved and never carries a label, regardless of
+                # what `resolved` was passed as.
+                raw_speaker_label = None
+                row_person_id = None
+            else:
+                raw_speaker_label = "MR. TEST" if not is_stage_direction else None
+                row_person_id = person.id if (resolved and person is not None) else None
+
             utterance = Utterance(
                 argument_id=argument.id,
                 import_run_id=import_run.id,
                 sequence=i + 1,
-                raw_speaker_label="MR. TEST" if not is_stage_direction else None,
+                raw_speaker_label=raw_speaker_label,
                 text=f"Test utterance {i + 1}.",
                 is_stage_direction=is_stage_direction,
                 side=SideEnum(side) if isinstance(side, str) else side,
-                person_id=person.id if (resolved and person is not None) else None,
+                person_id=row_person_id,
+                speaker_undetermined=speaker_undetermined,
             )
             db.add(utterance)
             await db.flush()
@@ -452,6 +479,213 @@ async def test_zero_constituent_argument_recomputes_to_uncertain():
         async with AsyncSessionLocal() as db:
             argument = await db.get(Argument, ids["argument_id"])
             assert argument.trust_tier is TrustTier.UNCERTAIN
+    finally:
+        await _teardown_argument(ids)
+
+
+# ---------------------------------------------------------------------------
+# Phase 53 plan 53-01 Task 2 (D-05/D-06/D-18): sentinel PROVISIONAL floor +
+# majority-undetermined blocker
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_recompute_resolved_and_sentinel_stays_provisional_no_blocker():
+    """[resolved, sentinel] -> PROVISIONAL with an empty blocker list."""
+    from api.core.database import AsyncSessionLocal
+    from api.domain.trust import TrustTier
+    from api.models.models import Argument, ImportMethod, ImportSource
+    from api.services.trust import recompute_argument_tier, summarize_tier_blockers
+
+    ids = await _seed_argument(
+        ImportSource.CORPUS,
+        ImportMethod.DIRECT,
+        utterance_specs=[(True, False, "PETITIONER"), (False, False, "UNKNOWN", True)],
+    )
+    try:
+        async with AsyncSessionLocal() as db:
+            result = await recompute_argument_tier(db, ids["argument_id"])
+            assert result is TrustTier.PROVISIONAL
+            await db.commit()
+
+        async with AsyncSessionLocal() as db:
+            argument = await db.get(Argument, ids["argument_id"])
+            assert argument.trust_tier is TrustTier.PROVISIONAL
+            blockers = await summarize_tier_blockers(db, ids["argument_id"])
+        assert blockers == []
+    finally:
+        await _teardown_argument(ids)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_recompute_sentinel_plus_unresolved_non_sentinel_is_uncertain():
+    """[sentinel, unresolved non-sentinel] -> UNCERTAIN with exactly one
+    unresolved_utterance_speaker of count 1 -- the sentinel row is not
+    counted as unresolved (Pitfall 2 ordering)."""
+    from api.core.database import AsyncSessionLocal
+    from api.domain.trust import TrustTier
+    from api.models.models import Argument, ImportMethod, ImportSource
+    from api.services.trust import recompute_argument_tier, summarize_tier_blockers
+
+    ids = await _seed_argument(
+        ImportSource.CORPUS,
+        ImportMethod.DIRECT,
+        utterance_specs=[(False, False, "UNKNOWN", True), (False, False, "UNKNOWN")],
+    )
+    try:
+        async with AsyncSessionLocal() as db:
+            result = await recompute_argument_tier(db, ids["argument_id"])
+            assert result is TrustTier.UNCERTAIN
+            await db.commit()
+
+        async with AsyncSessionLocal() as db:
+            argument = await db.get(Argument, ids["argument_id"])
+            assert argument.trust_tier is TrustTier.UNCERTAIN
+            blockers = await summarize_tier_blockers(db, ids["argument_id"])
+        assert blockers == [{"code": "unresolved_utterance_speaker", "count": 1}]
+    finally:
+        await _teardown_argument(ids)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_recompute_three_of_five_sentinel_holds_with_majority_blocker():
+    """3 sentinel + 2 resolved -> UNCERTAIN, blockers contain
+    {"code": "majority_undetermined_speaker", "count": 3, "percent": 60}."""
+    from api.core.database import AsyncSessionLocal
+    from api.domain.trust import TrustTier
+    from api.models.models import Argument, ImportMethod, ImportSource
+    from api.services.trust import recompute_argument_tier, summarize_tier_blockers
+
+    ids = await _seed_argument(
+        ImportSource.CORPUS,
+        ImportMethod.DIRECT,
+        utterance_specs=[
+            (True, False, "PETITIONER"),
+            (True, False, "RESPONDENT"),
+            (False, False, "UNKNOWN", True),
+            (False, False, "UNKNOWN", True),
+            (False, False, "UNKNOWN", True),
+        ],
+    )
+    try:
+        async with AsyncSessionLocal() as db:
+            result = await recompute_argument_tier(db, ids["argument_id"])
+            assert result is TrustTier.UNCERTAIN
+            await db.commit()
+
+        async with AsyncSessionLocal() as db:
+            argument = await db.get(Argument, ids["argument_id"])
+            assert argument.trust_tier is TrustTier.UNCERTAIN
+            blockers = await summarize_tier_blockers(db, ids["argument_id"])
+        assert {"code": "majority_undetermined_speaker", "count": 3, "percent": 60} in blockers
+    finally:
+        await _teardown_argument(ids)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_recompute_two_of_four_sentinel_stays_provisional_no_majority_blocker():
+    """2 sentinel + 2 resolved -> PROVISIONAL, no majority blocker (exactly
+    half is NOT held -- strictly greater than half is required, D-06)."""
+    from api.core.database import AsyncSessionLocal
+    from api.domain.trust import TrustTier
+    from api.models.models import Argument, ImportMethod, ImportSource
+    from api.services.trust import recompute_argument_tier, summarize_tier_blockers
+
+    ids = await _seed_argument(
+        ImportSource.CORPUS,
+        ImportMethod.DIRECT,
+        utterance_specs=[
+            (True, False, "PETITIONER"),
+            (True, False, "RESPONDENT"),
+            (False, False, "UNKNOWN", True),
+            (False, False, "UNKNOWN", True),
+        ],
+    )
+    try:
+        async with AsyncSessionLocal() as db:
+            result = await recompute_argument_tier(db, ids["argument_id"])
+            assert result is TrustTier.PROVISIONAL
+            await db.commit()
+
+        async with AsyncSessionLocal() as db:
+            argument = await db.get(Argument, ids["argument_id"])
+            assert argument.trust_tier is TrustTier.PROVISIONAL
+            blockers = await summarize_tier_blockers(db, ids["argument_id"])
+        assert not any(b["code"] == "majority_undetermined_speaker" for b in blockers)
+    finally:
+        await _teardown_argument(ids)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_recompute_stage_directions_do_not_dilute_majority_ratio():
+    """2 sentinel + 1 resolved + 3 stage directions -> majority blocker
+    with percent 67 -- stage-direction rows are excluded from BOTH the
+    numerator and the denominator, so they cannot dilute the ratio to
+    33 (2 of 6) instead of the correct 67 (2 of 3)."""
+    from api.core.database import AsyncSessionLocal
+    from api.domain.trust import TrustTier
+    from api.models.models import Argument, ImportMethod, ImportSource
+    from api.services.trust import recompute_argument_tier, summarize_tier_blockers
+
+    ids = await _seed_argument(
+        ImportSource.CORPUS,
+        ImportMethod.DIRECT,
+        utterance_specs=[
+            (True, False, "PETITIONER"),
+            (False, False, "UNKNOWN", True),
+            (False, False, "UNKNOWN", True),
+            (False, True, "UNKNOWN"),
+            (False, True, "UNKNOWN"),
+            (False, True, "UNKNOWN"),
+        ],
+    )
+    try:
+        async with AsyncSessionLocal() as db:
+            result = await recompute_argument_tier(db, ids["argument_id"])
+            assert result is TrustTier.UNCERTAIN
+            await db.commit()
+
+        async with AsyncSessionLocal() as db:
+            blockers = await summarize_tier_blockers(db, ids["argument_id"])
+        assert {"code": "majority_undetermined_speaker", "count": 2, "percent": 67} in blockers
+    finally:
+        await _teardown_argument(ids)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not _db_configured(), reason="Requires DATABASE_URL")
+async def test_recompute_null_speaker_undetermined_flag_fails_closed():
+    """A row with an explicit NULL speaker_undetermined flag (the
+    pre-migration-0033 shape) and no person takes the existing unresolved
+    path -> UNCERTAIN with unresolved_utterance_speaker (fail closed) --
+    never treated as a sentinel."""
+    from api.core.database import AsyncSessionLocal
+    from api.domain.trust import TrustTier
+    from api.models.models import Argument, ImportMethod, ImportSource
+    from api.services.trust import recompute_argument_tier, summarize_tier_blockers
+
+    ids = await _seed_argument(
+        ImportSource.CORPUS,
+        ImportMethod.DIRECT,
+        utterance_specs=[(False, False, "UNKNOWN", None)],
+    )
+    try:
+        async with AsyncSessionLocal() as db:
+            result = await recompute_argument_tier(db, ids["argument_id"])
+            assert result is TrustTier.UNCERTAIN
+            await db.commit()
+
+        async with AsyncSessionLocal() as db:
+            argument = await db.get(Argument, ids["argument_id"])
+            assert argument.trust_tier is TrustTier.UNCERTAIN
+            blockers = await summarize_tier_blockers(db, ids["argument_id"])
+        assert {"code": "unresolved_utterance_speaker", "count": 1} in blockers
+        assert not any(b["code"] == "majority_undetermined_speaker" for b in blockers)
     finally:
         await _teardown_argument(ids)
 

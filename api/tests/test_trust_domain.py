@@ -18,7 +18,13 @@ from pathlib import Path
 
 import pytest
 
-from api.domain.trust import TrustTier, derive_tier, floor_tier
+from api.domain.trust import (
+    TrustTier,
+    derive_tier,
+    exceeds_undetermined_majority,
+    floor_tier,
+    undetermined_share_percent,
+)
 from api.models.models import ImportMethod, ImportSource
 
 # ---------------------------------------------------------------------------
@@ -191,6 +197,57 @@ def test_floor_tier_permutation_invariant_over_mixed_list():
     mixed = [TrustTier.VERIFIED, TrustTier.TRUSTED, TrustTier.PROVISIONAL, TrustTier.UNCERTAIN]
     results = {floor_tier(list(perm)) for perm in itertools.permutations(mixed)}
     assert results == {TrustTier.UNCERTAIN}
+
+
+# ---------------------------------------------------------------------------
+# Phase 53 plan 53-01 Task 2 (D-06/D-18/SPEAKER-05): majority-undetermined
+# rule + display percentage, as literal expectation tables (not recomputed
+# by the test).
+# ---------------------------------------------------------------------------
+
+EXCEEDS_MAJORITY_CASES = [
+    # undetermined, total, expected
+    (0, 0, False),
+    (1, 2, False),
+    (2, 4, False),
+    (3, 5, True),
+    (100, 200, False),
+    (101, 200, True),
+    (5, 5, True),
+]
+
+
+@pytest.mark.parametrize(
+    "undetermined, total, expected",
+    EXCEEDS_MAJORITY_CASES,
+    ids=[f"{u}-of-{t}" for u, t, _e in EXCEEDS_MAJORITY_CASES],
+)
+def test_exceeds_undetermined_majority(undetermined, total, expected):
+    assert exceeds_undetermined_majority(undetermined, total) is expected
+
+
+SHARE_PERCENT_CASES = [
+    # undetermined, total, expected percent
+    (68, 100, 68),
+    (101, 200, 51),
+    (134, 267, 50),
+    (3, 5, 60),
+    (2, 3, 67),
+]
+
+
+@pytest.mark.parametrize(
+    "undetermined, total, expected_percent",
+    SHARE_PERCENT_CASES,
+    ids=[f"{u}-of-{t}" for u, t, _p in SHARE_PERCENT_CASES],
+)
+def test_undetermined_share_percent(undetermined, total, expected_percent):
+    assert undetermined_share_percent(undetermined, total) == expected_percent
+
+
+def test_undetermined_share_percent_raises_on_zero_total():
+    with pytest.raises(ValueError):
+        undetermined_share_percent(0, 0)
 
 
 # ---------------------------------------------------------------------------

@@ -138,3 +138,43 @@ def floor_tier(tiers: Sequence[TrustTier]) -> TrustTier:
     if not tiers:
         return TrustTier.UNCERTAIN
     return min(tiers, key=lambda t: _TIER_ORDER[t])
+
+
+def exceeds_undetermined_majority(undetermined: int, total: int) -> bool:
+    """
+    D-06/SPEAKER-05: True when strictly more than half of `total`
+    non-stage-direction utterances are source-undetermined
+    (`speaker_undetermined is True`).
+
+    Integer arithmetic only — `2 * undetermined > total` compares the
+    EXACT ratio, never a float or a rounded percentage. An argument at
+    50.2% undetermined is held; one at 49.8% is not; exactly half (2 of 4)
+    is NOT held (strictly greater than half, not "at least half"). A zero
+    total (no non-stage-direction utterances at all) returns False — there
+    is nothing to hold a majority over.
+    """
+    return total > 0 and 2 * undetermined > total
+
+
+def undetermined_share_percent(undetermined: int, total: int) -> int:
+    """
+    Display-only half-up integer rounding of `undetermined / total` as a
+    percentage (D-18; rounding choice is Claude's discretion per
+    53-CONTEXT.md). Raises ValueError when `total <= 0` — there is no
+    percentage of zero constituents to display.
+
+    `(200 * undetermined + total) // (2 * total)` is the half-up integer
+    rounding of `100 * undetermined / total` computed entirely in
+    integers: 101/200 -> 51 (not banker's 50), 134/267 -> 50, 68/100 -> 68,
+    3/5 -> 60.
+
+    This function is NEVER used by exceeds_undetermined_majority's own
+    gate comparison — it reads the exact ratio. Consequence: an argument
+    at 50.2% undetermined displays "50%" (the rounded number) while still
+    being held, because the gate compares the exact ratio and the
+    blocker's accompanying sentence ("more than half") carries the fact
+    the rounded number alone cannot.
+    """
+    if total <= 0:
+        raise ValueError("undetermined_share_percent: total must be > 0")
+    return (200 * undetermined + total) // (2 * total)

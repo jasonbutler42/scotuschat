@@ -44,8 +44,21 @@ from __future__ import annotations
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.domain.trust import UNREVIEWED, TrustTier, derive_tier, floor_tier
+from api.domain.trust import (
+    UNREVIEWED,
+    TrustTier,
+    derive_tier,
+    exceeds_undetermined_majority,
+    floor_tier,
+    undetermined_share_percent,
+)
 from api.models.models import Argument, ArgumentParticipant, ImportRun, ReviewState, Utterance
+
+# D-18/SPEAKER-05: the blocker code for a majority-undetermined argument
+# (more than half its non-stage-direction utterances are source-sentinel).
+# Carries a `percent` key in its payload in addition to the usual
+# {code, count} shape every other blocker uses.
+MAJORITY_UNDETERMINED_BLOCKER_CODE = "majority_undetermined_speaker"
 
 
 class TrustGateBlocked(ValueError):
@@ -79,7 +92,12 @@ async def _load_constituents(
     response, D-20).
 
     Returns (tiers, blockers) where blockers is a list of
-    {"code": str, "count": int} dicts with zero-count codes omitted.
+    {"code": str, "count": int} dicts with zero-count codes omitted, plus
+    (D-18) one additional entry when the D-06 majority rule fires: a dict
+    with keys code (MAJORITY_UNDETERMINED_BLOCKER_CODE), count and an
+    extra display percentage — the ONLY blocker dict carrying that third
+    key — appended after every counted {code, count} blocker, so ordering
+    is deterministic.
     """
     utterance_rows = (
         await db.execute(
@@ -111,9 +129,17 @@ async def _load_constituents(
     def _bump(code: str) -> None:
         blocker_counts[code] = blocker_counts.get(code, 0) + 1
 
+    # D-06: denominator/numerator for the post-loop majority check below --
+    # exactly the set this loop already iterates (every non-stage-direction
+    # utterance), counted here rather than via a second pass or a per-row
+    # _bump (RESEARCH.md anti-pattern: this is a single post-loop check).
+    non_stage_total = 0
+    undetermined_count = 0
+
     for person_id, is_stage_direction, speaker_undetermined, source, method in utterance_rows:
         if is_stage_direction:  # No speaker to attribute, no risk
             continue
+        non_stage_total += 1
         if speaker_undetermined is True:
             # D-05: the SOURCE itself declares it does not know who spoke
             # this turn (speakers.json's own sentinel type, stored at
@@ -125,6 +151,7 @@ async def _load_constituents(
             # unresolved_utterance_speaker (Pitfall 2: this branch must sit
             # before the person_id is None fallback below, since a
             # sentinel row's person_id is always NULL by construction).
+            undetermined_count += 1
             tier = floor_tier(
                 [TrustTier.PROVISIONAL, derive_tier(source.value, method.value, UNREVIEWED)]
             )
@@ -179,6 +206,23 @@ async def _load_constituents(
         _bump("no_constituents")
 
     blockers = [{"code": code, "count": count} for code, count in blocker_counts.items()]
+
+    # D-06/D-18: a single post-loop check, never a per-row _bump. More than
+    # half of this argument's non-stage-direction utterances being
+    # source-undetermined additionally floors to UNCERTAIN, through the
+    # SAME existing typed-reason override gate (D-17) -- no new mechanism.
+    # Appended after every counted {code, count} blocker above, so ordering
+    # is deterministic.
+    if exceeds_undetermined_majority(undetermined_count, non_stage_total):
+        tiers.append(TrustTier.UNCERTAIN)
+        blockers.append(
+            {
+                "code": MAJORITY_UNDETERMINED_BLOCKER_CODE,
+                "count": undetermined_count,
+                "percent": undetermined_share_percent(undetermined_count, non_stage_total),
+            }
+        )
+
     return tiers, blockers
 
 

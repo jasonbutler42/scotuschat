@@ -1258,3 +1258,465 @@ async def test_null_flags_serialise_as_false_on_public_payload(
     result = await get_argument_with_utterances(isolated_session, argument.id)
     assert result["utterances"][0]["speaker_undetermined"] is False
     assert result["utterances"][0]["is_inaudible_marker"] is False
+
+
+# ===========================================================================
+# Phase 53 plan 53-02 Task 2 (SPEAKER-06/07/08): vocabulary-wide
+# canonicalisation matrix and every adjacency/empty/ordering edge
+# ===========================================================================
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "source_form, expected_text, expected_is_stage_direction, expected_is_inaudible_marker",
+    [
+        ("[Inaudible]", "(Inaudible)", False, True),
+        ("[inaudible]", "(Inaudible)", False, True),
+        ("(inaudible)", "(Inaudible)", False, True),
+        ("(Inaudible.)", "(Inaudible)", False, True),
+        ("[Inaudible].", "(Inaudible)", False, True),
+        ("(Voice overlap)", "(Voice Overlap)", True, False),
+        ("( Voice Overlap)", "(Voice Overlap)", True, False),
+        ("(voive overlap)", "(Voice Overlap)", True, False),
+        ("(Laughs)", "(Laughter)", True, False),
+        ("[Laughter]", "(Laughter)", True, False),
+        ("(Recess)", "(Recess)", True, False),
+        ("(Luncheon Recess)", "(Luncheon Recess)", True, False),
+        ("(Cross Talk)", "(Cross Talk)", True, False),
+    ],
+    ids=[
+        "inaudible-bracket",
+        "inaudible-bracket-lower",
+        "inaudible-paren-lower",
+        "inaudible-inner-period",
+        "inaudible-bracket-trailing-period",
+        "voice-overlap-lower",
+        "voice-overlap-spaced",
+        "voice-overlap-typo",
+        "laughs-variant",
+        "laughter-bracket",
+        "recess",
+        "luncheon-recess",
+        "cross-talk",
+    ],
+)
+async def test_canonical_marker_form_and_verbatim_kept(
+    isolated_session,
+    tmp_path,
+    source_form,
+    expected_text,
+    expected_is_stage_direction,
+    expected_is_inaudible_marker,
+):
+    """D-08/D-09/SPEAKER-06: every curated marker form -- every case in the
+    31-form vocabulary this matrix samples -- canonicalises to one display
+    form, keeping the source form byte-for-byte in verbatim_text, for a
+    known speaker's whole turn."""
+    utterances = [
+        {
+            "id": "u1",
+            "conversation_id": "9999_71",
+            "speaker": "adv__john_smith",
+            "text": source_form,
+        },
+    ]
+    argument = await _run_and_fetch_argument(isolated_session, tmp_path, utterances)
+
+    row = (
+        await isolated_session.execute(
+            select(Utterance).where(Utterance.argument_id == argument.id)
+        )
+    ).scalar_one()
+    assert row.text == expected_text
+    assert row.verbatim_text == source_form
+    assert row.is_stage_direction is expected_is_stage_direction
+    assert row.is_inaudible_marker is expected_is_inaudible_marker
+
+
+@pytest.mark.asyncio
+async def test_inline_marker_inside_spoken_sentence_left_untouched(
+    isolated_session, tmp_path
+):
+    """D-11: a marker embedded inside a spoken sentence (not the whole
+    turn) is never rewritten, normalised, or split out -- byte-identical
+    text, verbatim_text None, both flags false."""
+    text = "I think (inaudible) the statute applies."
+    utterances = [
+        {
+            "id": "u1",
+            "conversation_id": "9999_71",
+            "speaker": "adv__john_smith",
+            "text": text,
+        },
+    ]
+    argument = await _run_and_fetch_argument(isolated_session, tmp_path, utterances)
+
+    row = (
+        await isolated_session.execute(
+            select(Utterance).where(Utterance.argument_id == argument.id)
+        )
+    ).scalar_one()
+    assert row.text == text
+    assert row.verbatim_text is None
+    assert row.is_stage_direction is False
+    assert row.is_inaudible_marker is False
+
+
+@pytest.mark.asyncio
+async def test_marker_between_speech_segments_splits_three_rows_same_speaker(
+    isolated_session, tmp_path
+):
+    """SPEAKER-06 adjacency: "First point." / "[Inaudible]" / "Second
+    point." on three lines by one known speaker gives three rows in
+    order, all carrying that speaker, the middle one canonicalised with
+    is_inaudible_marker true."""
+    utterances = [
+        {
+            "id": "u1",
+            "conversation_id": "9999_71",
+            "speaker": "adv__john_smith",
+            "text": "First point.\n[Inaudible]\nSecond point.",
+        },
+    ]
+    argument = await _run_and_fetch_argument(isolated_session, tmp_path, utterances)
+
+    rows = (
+        await isolated_session.execute(
+            select(Utterance)
+            .where(Utterance.argument_id == argument.id)
+            .order_by(Utterance.sequence)
+        )
+    ).scalars().all()
+    assert len(rows) == 3
+    assert rows[0].text == "First point."
+    assert rows[1].text == "(Inaudible)"
+    assert rows[1].is_inaudible_marker is True
+    assert rows[2].text == "Second point."
+    assert (
+        rows[0].raw_speaker_label
+        == rows[1].raw_speaker_label
+        == rows[2].raw_speaker_label
+        == "John Smith"
+    )
+
+
+@pytest.mark.asyncio
+async def test_adjacent_inaudible_markers_not_merged(isolated_session, tmp_path):
+    """SPEAKER-06 adjacency: "(Inaudible)" / "(Inaudible)" becomes two
+    inaudible rows -- never merged or de-duplicated."""
+    utterances = [
+        {
+            "id": "u1",
+            "conversation_id": "9999_71",
+            "speaker": "adv__john_smith",
+            "text": "(Inaudible)\n(Inaudible)",
+        },
+    ]
+    argument = await _run_and_fetch_argument(isolated_session, tmp_path, utterances)
+
+    rows = (
+        await isolated_session.execute(
+            select(Utterance)
+            .where(Utterance.argument_id == argument.id)
+            .order_by(Utterance.sequence)
+        )
+    ).scalars().all()
+    assert len(rows) == 2
+    assert rows[0].is_inaudible_marker is True
+    assert rows[1].is_inaudible_marker is True
+
+
+@pytest.mark.asyncio
+async def test_adjacent_room_event_markers_not_merged(isolated_session, tmp_path):
+    """SPEAKER-06 adjacency: "(Voice Overlap)" / "(Laughter)" becomes two
+    separate stage rows -- never merged or de-duplicated."""
+    utterances = [
+        {
+            "id": "u1",
+            "conversation_id": "9999_71",
+            "speaker": None,
+            "text": "(Voice Overlap)\n(Laughter)",
+        },
+    ]
+    argument = await _run_and_fetch_argument(isolated_session, tmp_path, utterances)
+
+    rows = (
+        await isolated_session.execute(
+            select(Utterance)
+            .where(Utterance.argument_id == argument.id)
+            .order_by(Utterance.sequence)
+        )
+    ).scalars().all()
+    assert len(rows) == 2
+    assert rows[0].text == "(Voice Overlap)"
+    assert rows[1].text == "(Laughter)"
+    assert rows[0].is_stage_direction is True
+    assert rows[1].is_stage_direction is True
+
+
+@pytest.mark.asyncio
+async def test_room_event_then_inaudible_known_speaker_stage_then_attributed(
+    isolated_session, tmp_path
+):
+    """SPEAKER-08 adjacency: "(Voice Overlap)" / "(Inaudible)" by a known
+    speaker gives a stage row (unattributed) then that speaker's own
+    attributed inaudible row."""
+    utterances = [
+        {
+            "id": "u1",
+            "conversation_id": "9999_71",
+            "speaker": "adv__john_smith",
+            "text": "(Voice Overlap)\n(Inaudible)",
+        },
+    ]
+    argument = await _run_and_fetch_argument(isolated_session, tmp_path, utterances)
+
+    rows = (
+        await isolated_session.execute(
+            select(Utterance)
+            .where(Utterance.argument_id == argument.id)
+            .order_by(Utterance.sequence)
+        )
+    ).scalars().all()
+    assert len(rows) == 2
+    assert rows[0].is_stage_direction is True
+    assert rows[0].raw_speaker_label is None
+    assert rows[1].is_stage_direction is False
+    assert rows[1].is_inaudible_marker is True
+    assert rows[1].raw_speaker_label == "John Smith"
+
+
+@pytest.mark.asyncio
+async def test_speech_then_laughter_speech_attached_room_event_unattributed(
+    isolated_session, tmp_path
+):
+    """SPEAKER-08 adjacency: "It's on now." then "(Laughter)" in one turn
+    gives the speech row (speaker attached) followed by the room-event row
+    (no speaker)."""
+    utterances = [
+        {
+            "id": "u1",
+            "conversation_id": "9999_71",
+            "speaker": "adv__john_smith",
+            "text": "It's on now.\n(Laughter)",
+        },
+    ]
+    argument = await _run_and_fetch_argument(isolated_session, tmp_path, utterances)
+
+    rows = (
+        await isolated_session.execute(
+            select(Utterance)
+            .where(Utterance.argument_id == argument.id)
+            .order_by(Utterance.sequence)
+        )
+    ).scalars().all()
+    assert len(rows) == 2
+    assert rows[0].text == "It's on now."
+    assert rows[0].raw_speaker_label == "John Smith"
+    assert rows[0].is_stage_direction is False
+    assert rows[1].is_stage_direction is True
+    assert rows[1].raw_speaker_label is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("empty_segment", ["()", "[ ]", "(.)"])
+async def test_empty_bracket_segments_stay_inside_speech_row(
+    isolated_session, tmp_path, empty_segment
+):
+    """SPEAKER-06/08 empty: "()", "[ ]" and "(.)" segments are not markers
+    -- they stay inside the speech row verbatim, with no verbatim_text."""
+    text = f"Before.\n{empty_segment}\nAfter."
+    utterances = [
+        {
+            "id": "u1",
+            "conversation_id": "9999_71",
+            "speaker": "adv__john_smith",
+            "text": text,
+        },
+    ]
+    argument = await _run_and_fetch_argument(isolated_session, tmp_path, utterances)
+
+    rows = (
+        await isolated_session.execute(
+            select(Utterance).where(Utterance.argument_id == argument.id)
+        )
+    ).scalars().all()
+    assert len(rows) == 1
+    assert rows[0].text == text
+    assert rows[0].verbatim_text is None
+    assert rows[0].is_stage_direction is False
+
+
+@pytest.mark.asyncio
+async def test_empty_turn_text_imported_unchanged(isolated_session, tmp_path):
+    """SPEAKER-06 empty: an empty turn text is imported exactly as before
+    this phase -- one speech row, not a marker, not errored."""
+    utterances = [
+        {
+            "id": "u1",
+            "conversation_id": "9999_71",
+            "speaker": "adv__john_smith",
+            "text": "",
+        },
+    ]
+    argument = await _run_and_fetch_argument(isolated_session, tmp_path, utterances)
+
+    rows = (
+        await isolated_session.execute(
+            select(Utterance).where(Utterance.argument_id == argument.id)
+        )
+    ).scalars().all()
+    assert len(rows) == 1
+    assert rows[0].text == ""
+    assert rows[0].is_stage_direction is False
+    assert rows[0].is_inaudible_marker is False
+
+
+@pytest.mark.asyncio
+async def test_speakerless_room_event_turn_not_errored(
+    isolated_session, tmp_path, capsys
+):
+    """SPEAKER-08 empty: a speakerless "(Voice Overlap)" turn is one stage
+    row and is not counted as errored."""
+    utterances = [
+        {
+            "id": "u1",
+            "conversation_id": "9999_71",
+            "speaker": None,
+            "text": "(Voice Overlap)",
+        },
+    ]
+    argument = await _run_and_fetch_argument(isolated_session, tmp_path, utterances)
+
+    rows = (
+        await isolated_session.execute(
+            select(Utterance).where(Utterance.argument_id == argument.id)
+        )
+    ).scalars().all()
+    assert len(rows) == 1
+    assert rows[0].is_stage_direction is True
+
+    captured = capsys.readouterr()
+    assert "0 utterance rows errored" in captured.out
+
+
+@pytest.mark.asyncio
+async def test_speakerless_inaudible_turn_falls_back_unattributed_not_errored(
+    isolated_session, tmp_path, capsys
+):
+    """SPEAKER-07/08 empty: a speakerless inaudible-only turn falls back to
+    an unattributed stage row with canonical text kept -- not counted as
+    errored and never dropped (the Claude's-discretion call recorded in
+    53-02-PLAN.md's <objective>)."""
+    utterances = [
+        {
+            "id": "u1",
+            "conversation_id": "9999_71",
+            "speaker": None,
+            "text": "(Inaudible)",
+        },
+    ]
+    argument = await _run_and_fetch_argument(isolated_session, tmp_path, utterances)
+
+    rows = (
+        await isolated_session.execute(
+            select(Utterance).where(Utterance.argument_id == argument.id)
+        )
+    ).scalars().all()
+    assert len(rows) == 1
+    assert rows[0].text == "(Inaudible)"
+    assert rows[0].verbatim_text == "(Inaudible)"
+    assert rows[0].is_stage_direction is True
+    assert rows[0].is_inaudible_marker is False
+    assert rows[0].raw_speaker_label is None
+
+    captured = capsys.readouterr()
+    assert "0 utterance rows errored" in captured.out
+
+
+@pytest.mark.asyncio
+async def test_sentinel_speaker_inaudible_turn_marks_both_flags(
+    isolated_session, tmp_path
+):
+    """D-13 data half: a sentinel speaker's whole-turn inaudible turn is
+    one row with speaker_undetermined true AND is_inaudible_marker true,
+    no person, not a stage direction."""
+    speakers = {**_SPEAKERS, _SENTINEL_SPEAKER_ID: _SENTINEL_SPEAKER_META}
+    utterances = [
+        {
+            "id": "u1",
+            "conversation_id": "9999_71",
+            "speaker": _SENTINEL_SPEAKER_ID,
+            "text": "(Inaudible)",
+        },
+    ]
+    argument = await _run_and_fetch_argument(
+        isolated_session, tmp_path, utterances, speakers=speakers
+    )
+
+    row = (
+        await isolated_session.execute(
+            select(Utterance).where(Utterance.argument_id == argument.id)
+        )
+    ).scalar_one()
+    assert row.speaker_undetermined is True
+    assert row.is_inaudible_marker is True
+    assert row.is_stage_direction is False
+    assert row.person_id is None
+
+
+@pytest.mark.asyncio
+async def test_reimport_same_corpus_is_a_no_op_one_parse_run(
+    isolated_session, tmp_path
+):
+    """SPEAKER-06 ordering: running the same import twice leaves exactly
+    one step="parse" ImportRun for the argument and the same utterance row
+    count -- canonical text is deterministic, so the second run's digest
+    matches the first and the reconcile branch writes nothing new."""
+    utterances = [
+        {
+            "id": "u1",
+            "conversation_id": "9999_71",
+            "speaker": "adv__john_smith",
+            "text": "First point.\n[Inaudible]\nSecond point.",
+        },
+        {
+            "id": "u2",
+            "conversation_id": "9999_71",
+            "speaker": None,
+            "text": "(Voice overlap)",
+        },
+    ]
+    corpus_dir = _write_corpus_fixture(
+        tmp_path, _CONVERSATION, [_CASE], _SPEAKERS, utterances
+    )
+    args = _args(9999, corpus_dir)
+
+    with patch(
+        "pipeline.commands.import_convokit.get_session",
+        new=_make_session_cm(isolated_session),
+    ):
+        await run_import_convokit(args)
+        await run_import_convokit(args)
+
+    argument = (
+        await isolated_session.execute(
+            select(Argument).where(Argument.oyez_transcript_id == "9999_71")
+        )
+    ).scalar_one()
+
+    parse_runs = (
+        await isolated_session.execute(
+            select(ImportRun).where(
+                ImportRun.argument_id == argument.id, ImportRun.step == "parse"
+            )
+        )
+    ).scalars().all()
+    assert len(parse_runs) == 1
+
+    rows = (
+        await isolated_session.execute(
+            select(Utterance).where(Utterance.argument_id == argument.id)
+        )
+    ).scalars().all()
+    assert len(rows) == 4

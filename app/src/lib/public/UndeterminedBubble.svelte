@@ -20,6 +20,12 @@
 			is_inaudible_marker?: boolean;
 		};
 	}>();
+
+	// D-12/D-13: the identical derivation ChatBubble.svelte carries — one rule
+	// for a whole-turn inaudible body, not a second copy, so a Treatment D
+	// bubble whose body is also a lost-words marker reads the same as an
+	// attributed bubble's.
+	const lostWordsBody = $derived(utterance.is_inaudible_marker === true);
 </script>
 
 <!-- No speaker-identity colour class or per-speaker/side custom property
@@ -58,14 +64,18 @@
 		</div>
 
 		<!-- Body text — ChatBubble's own Lead size/weight/line-height/zero
-		     margin, colour inherited from the page body's own
-		     --color-text-primary (same as ChatBubble's ordinary body). -->
-		<p style="
+		     margin; ink and italics driven by the same `utterance-body`
+		     class pair ChatBubble uses (D-13: one rule, not a second copy). -->
+		<p
+			class="utterance-body"
+			class:is-inaudible-marker={lostWordsBody}
+			style="
 				font-size: var(--font-size-lead);
 				font-weight: var(--font-weight-regular);
 				line-height: var(--line-height-lead);
 				margin: 0;
-			">{utterance.text}</p>
+			"
+		>{utterance.text}</p>
 	</div>
 
 	<div class="undetermined-rail undetermined-rail-right" style="width: 40px; flex-shrink: 0;"></div>

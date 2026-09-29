@@ -222,6 +222,17 @@
 .speaker-ink { color: var(--speaker-color, var(--color-speaker-unresolved)); }
 .speaker-stroke { border-color: var(--speaker-color, var(--color-speaker-unresolved)); }
 
+/* D-12/D-13: one rule for a whole-turn-body's ink and style, shared by
+   ChatBubble.svelte and UndeterminedBubble.svelte, so the two bubble
+   components cannot drift apart. Colour lives in a class, not an inline
+   style attribute, for the same reason the `.speaker-*` rules above do: an
+   inline `color` on the element would outrank the class. */
+.utterance-body { color: var(--color-text-primary); font-style: normal; }
+.utterance-body.is-inaudible-marker {
+	color: var(--color-stage-text);
+	font-style: var(--font-style-italic);
+}
+
 :root[data-colour='family'] .speaker-fill { background-color: var(--family-color); }
 :root[data-colour='family'] .speaker-ink { color: var(--family-color); }
 :root[data-colour='family'] .speaker-stroke { border-color: var(--family-color); }

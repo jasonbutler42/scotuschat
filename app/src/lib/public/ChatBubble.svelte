@@ -23,6 +23,7 @@
 			speaker_role: string | null;
 			text: string;
 			is_stage_direction: boolean;
+			is_inaudible_marker?: boolean;
 		};
 		position?: RunPosition;
 		showSpeakerName?: boolean;
@@ -48,6 +49,12 @@
 	// without re-rendering a bubble.
 	const displayName = $derived(utterance.speaker_name ?? utterance.raw_speaker_label ?? '');
 	const displayRole = $derived(utterance.speaker_role ?? null);
+
+	// D-12/D-13: a whole-turn inaudible body (the transcriber's note that no
+	// words could be made out) is keyed off this stored fact only — never off
+	// matching `utterance.text` against the curated marker vocabulary
+	// client-side (same "stored, not re-derived" discipline as D-05).
+	const lostWordsBody = $derived(utterance.is_inaudible_marker === true);
 
 	// D-19 corner-rounding table (2px amendment). CSS border-radius shorthand
 	// order is top-left top-right bottom-right bottom-left; every row here has
@@ -104,9 +111,10 @@
 	     P-03 forbids any typographic difference by speaker side. Wraps, never
 	     truncates (P-06). -->
 	<p
+		class="utterance-body"
+		class:is-inaudible-marker={lostWordsBody}
 		style="
 			font-size: var(--font-size-lead);
-			color: var(--color-text-primary);
 			font-weight: var(--font-weight-regular);
 			line-height: var(--line-height-lead);
 			margin: 0;

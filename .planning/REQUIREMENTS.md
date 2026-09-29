@@ -24,8 +24,8 @@ Requirements for milestone v1.9. Each maps to exactly one roadmap phase.
 
 - [ ] **SPEAKER-01**: An utterance whose corpus speaker is a `type: "U"` sentinel renders as Treatment D — a narrower bubble centred between two reserved-but-empty rails, labelled "undetermined speaker"
 - [ ] **SPEAKER-02**: Hovering an undetermined utterance reveals a question-mark avatar in both rails; clicking either opens an explanation card in the speaker-bio card shape
-- [ ] **SPEAKER-03**: The source-sentinel fact is stored on the utterance at import, never re-derived from `raw_speaker_label`
-- [ ] **SPEAKER-04**: A stored source-sentinel speaker contributes PROVISIONAL to the trust floor rather than UNCERTAIN, so such arguments are publishable without a per-argument override
+- [x] **SPEAKER-03**: The source-sentinel fact is stored on the utterance at import, never re-derived from `raw_speaker_label`
+- [x] **SPEAKER-04**: A stored source-sentinel speaker contributes PROVISIONAL to the trust floor rather than UNCERTAIN, so such arguments are publishable without a per-argument override
 - [ ] **SPEAKER-05**: An argument more than 50% undetermined is not publishable without explicit operator intervention
 - [ ] **SPEAKER-06**: Every whole-turn marker in the curated vocabulary displays in its canonical form, wherever it appears; markers inline within a spoken sentence are left exactly as the source wrote them
 - [ ] **SPEAKER-07**: A whole-turn inaudible marker with a known speaker renders as an ordinary attributed bubble whose body is the marker — the speaker attribution the source supplied is no longer discarded
@@ -125,8 +125,8 @@ Populated during roadmap creation (2026-09-23). Every v1 requirement maps to exa
 | JUSTICE-06 | Phase 52 | Complete |
 | SPEAKER-01 | Phase 53 | Pending |
 | SPEAKER-02 | Phase 53 | Pending |
-| SPEAKER-03 | Phase 53 | Pending |
-| SPEAKER-04 | Phase 53 | Pending |
+| SPEAKER-03 | Phase 53 | Complete |
+| SPEAKER-04 | Phase 53 | Complete |
 | SPEAKER-05 | Phase 53 | Pending |
 | SPEAKER-06 | Phase 53 | Pending |
 | SPEAKER-07 | Phase 53 | Pending |

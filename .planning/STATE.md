@@ -5,16 +5,16 @@ milestone_name: The Site Becomes Complete
 current_phase: 53
 current_phase_name: Undetermined Speakers & Marker Normalisation
 status: executing
-stopped_at: Phase 53 UI-SPEC approved
-last_updated: "2026-09-28T22:19:02.434Z"
-last_activity: 2026-09-28
-last_activity_desc: Phase 52 complete, transitioned to Phase 53
-state_head: 1602d4f8f4bbb7ede5a41dbb1d2cf7eb704c894a
+stopped_at: Completed 53-01-PLAN.md
+last_updated: "2026-09-29T11:30:44.605Z"
+last_activity: 2026-09-29
+last_activity_desc: Phase 53 execution started
+state_head: 953471f12507c906f172a14457bf58b5485adb59
 progress:
   total_phases: 8
   completed_phases: 1
   total_plans: 11
-  completed_plans: 6
+  completed_plans: 7
   percent: 13
 ---
 
@@ -38,10 +38,10 @@ phase-numbered test modules, ~2:1 test:code as a guideline. Both govern all late
 
 ## Current Position
 
-Phase: 53 (Undetermined Speakers & Marker Normalisation) — READY TO EXECUTE
-Plan: Not started
+Phase: 53 (Undetermined Speakers & Marker Normalisation) — EXECUTING
+Plan: 2 of 5
 Status: Ready to execute
-Last activity: 2026-09-28 — Phase 52 complete, transitioned to Phase 53
+Last activity: 2026-09-29 — Phase 53 execution started
 
 Progress: [█░░░░░░░░░] 13% (1/8 phases)
 
@@ -83,6 +83,7 @@ the first client-side third-party script and the first `PUBLIC_` env var this co
 | Phase 52 P04 | 43min | 3 tasks | 3 files |
 | Phase 52 P05 | 57min | 2 tasks | 9 files |
 | Phase 52 P06 | 10min | 2 tasks | 5 files |
+| Phase 53 P01 | 54min | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -268,9 +269,9 @@ suppress by design, so the section was moved verbatim to
 
 ## Session Continuity
 
-Last session: 2026-09-28T19:29:20.097Z
-Stopped at: Phase 53 UI-SPEC approved
-Resume file: /home/jason/scotuschat/project/.planning/phases/53-undetermined-speakers-marker-normalisation/53-UI-SPEC.md
+Last session: 2026-09-29T11:30:44.360Z
+Stopped at: Completed 53-01-PLAN.md
+Resume file: None
 
 ## Operator Next Steps
 
@@ -291,6 +292,9 @@ Resume file: /home/jason/scotuschat/project/.planning/phases/53-undetermined-spe
 - [Phase 52]: Phase 52-05: AbortSignal sized at 180s (~2.5x the 71.67s measured floor from 52-04), not re-measured through the live HTTP path in this plan — deferred to the phase's end-of-phase human-check UAT item.
 - [Phase 52]: Phase 52-06: list_resolve_rows_for_job's SELECT extended with Person.first_name/last_name/name_suffix so derive_initials has structured parts in hand at one call site per row, reused across the bench and advocate dict branches.
 - [Phase 52]: Phase 52-06: the null-initials case gets no client-side rendering branch in ResolveCard.svelte -- person_id null implies full_name null too, so the existing {#if fullName} guard already covers it; no ?? '?' fallback was added.
+- [Phase 53]: Phase 53-01: speaker_undetermined is computed once in _incoming_utterance_rows immediately after speaker_id is read and before the resolved_participants cache branch, so a cached and a freshly-resolved speaker both carry the identical D-05 fact.
+- [Phase 53]: Phase 53-01: the D-06 majority denominator/numerator (non_stage_total/undetermined_count) are counted inline in _load_constituents' existing utterance loop, never via a second query or per-row blocker bump -- a single post-loop check.
+- [Phase 53]: Phase 53-01: _seed_argument's utterance spec gained an optional 4th (speaker_undetermined) tuple element instead of a second seeding helper -- every existing 3-element caller, including test_published_gate.py's wrapper, keeps working unchanged.
 
 ### Blockers
 

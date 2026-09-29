@@ -253,6 +253,18 @@ end of the scale (caption/body/heading); public draws from the full range.
 Font family: `system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`, declared
 once in `app/src/app.css` on `:root`, inherited everywhere via `font-family: inherit`.
 
+## Type axes
+
+Two style-axis tokens, added Phase 53 (D-02), following the same "named axis" pattern as the two
+`--font-weight-*` tokens above — a component references the axis, never a raw literal:
+
+| Token | Value | Usage |
+|---|---|---|
+| `--font-style-italic` | `italic` | The "undetermined speaker" bubble label (D-02); the whole-turn inaudible-marker body inside any bubble (D-12/D-13, via `.utterance-body.is-inaudible-marker` — see Styling mechanism below); `StageDirection.svelte`'s room-event body; the advocate `SpeakerPopover` "Coming soon" placeholder. The last two are Phase 51-09-sweep raw `font-style: italic;` literals this phase converts to the token in the same pass — same property, same value, a pixel no-op. |
+| `--opacity-muted` | `0.7` | Reduced-emphasis label text — currently exactly one call site, the "undetermined speaker" label (D-02). A named semantic rather than an inline `0.7`, so a future second use references the same value instead of guessing a new one. |
+
+Admin-surface italic literals predate this axis and are out of this phase's scope (unconverted).
+
 ## Spacing
 
 Eight steps, all multiples of 4px:
@@ -280,7 +292,7 @@ Eight steps, all multiples of 4px:
 dense admin tables. This exception is carried forward unchanged from the pre-token system — no
 future conversion may introduce a touch target below either of these two named values (P-05).
 
-## Layout geometry (5)
+## Layout geometry (6)
 
 Tokens rather than literals because **measure** — characters per line — is what D-09 actually
 cares about, and measure is the product of these four values, not of the type size. At 390px the
@@ -293,6 +305,7 @@ allocation, so these tighten on mobile and the type size is left alone.
 | `--transcript-pad-x` | `var(--space-xl)` (24px) | `var(--space-sm)` (8px) | Transcript reading-layer horizontal padding. |
 | `--transcript-rail-gap` | `var(--space-sm)` (8px) | `var(--space-xs)` (4px) | Gap between the speaker rail and the bubble stack. |
 | `--bubble-max-width` | `72%` | `100%` | Bubble cap. At 100% the bubble edges coincide with the stack edges and the rail's offset becomes visible on both edges — the sides read *further* apart, not closer. |
+| `--bubble-max-width-undetermined` | `67%` | `93%` | Added Phase 53 (D-01/SPEAKER-01): Treatment D's own bubble cap, `--bubble-max-width` (72%/100%) x 0.928 (the Figma 540:582 ratio), rounded — expressed as `min(var(--bubble-max-width-undetermined), 63ch)` (68ch x 0.928 ≈ 63.1, rounded), the same `min(percentage, ch-cap)` shape as `--bubble-max-width`'s own `68ch` cap. See Transcript variant axes below: `data-width` does **not** redefine this token. |
 | `--bubble-pad-x` | `var(--space-lg)` (16px) | `var(--space-sm)` (8px) | Bubble internal horizontal padding. |
 | `--sticky-bottom-inset` | `var(--space-sm)` (8px) | `calc(var(--touch-target) + var(--space-sm))` (52px) | How far above the viewport bottom a bottom-anchored sticky element must park to stay visible. Below 768px `MobileNavBar` is `position: fixed; bottom: 0` with an **opaque** background, so anything parked at a plain `--space-sm` is painted underneath it and silently disappears — which is not a sticky failure but reads exactly like one. Consumed by the transcript's sticky rail avatar (D-19). |
 
@@ -310,7 +323,7 @@ a component change, it would not belong here.
 | Attribute | Values | Effect |
 |---|---|---|
 | `data-colour` | *(unset)* / `family` / `side` | Chooses which of three per-row candidate colours paints. |
-| `data-width` | *(unset)* / `88` / `94` / `100` | Redefines `--bubble-max-width`. Applied at every viewport, not just mobile, so the control always does something visible. |
+| `data-width` | *(unset)* / `88` / `94` / `100` | Redefines `--bubble-max-width`. Applied at every viewport, not just mobile, so the control always does something visible. **Does not** redefine `--bubble-max-width-undetermined` (Phase 53) — under a width variant, Treatment D's ratio to a standard bubble no longer tracks the 0.928 Figma derivation. Recorded here as a known gap, adjustable if a real-browser check under a width variant reads wrong. |
 
 Each speaker-bearing row declares three candidate colours as custom properties — `--speaker-color`
 (per speaker, side-blind), `--family-color` (per speaker, opposite hue arcs per side) and
@@ -330,7 +343,8 @@ One token set, two component layers, per the Figma page structure (D-06):
 - `app/src/lib/primitives/` — shared, tokens-only components with no public/admin opinion:
   `Button`, `Badge`, `Input`, `Card`.
 - `app/src/lib/public/` — reading-optimized components (wider measure, larger type, more air):
-  `ChatBubble`, `StageDirection`, `SectionRail`, `TermRow`, etc.
+  `ChatBubble`, `StageDirection`, `SectionRail`, `TermRow`, `UndeterminedBubble` (Phase 53 — Treatment
+  D, the source-unattributed-turn rest state), etc.
 - `app/src/lib/admin/` — density-optimized components for the operator surfaces.
 
 One source of truth (the token set above), two expressions of it — public and admin can feel
@@ -345,12 +359,24 @@ attributes: `style="background-color: #1e293b;"` becomes
 `style="background-color: var(--color-surface);"`. The mechanism itself — a plain inline `style`
 attribute on the element — is unchanged.
 
+**Exception: `.utterance-body` / `.utterance-body.is-inaudible-marker` (Phase 53, D-12/D-13).**
+A global class pair in `app/src/app.css`, sitting beside the `.speaker-fill` / `.speaker-ink` /
+`.speaker-stroke` rules for the same reason those are classes rather than inline values: an
+element's inline `color` would outrank a class rule, so the one property that must be identical
+across two independent components (`ChatBubble.svelte`'s and `UndeterminedBubble.svelte`'s body
+`<p>`) has to live in a shared class, not be copy-pasted into two `style=` attributes that could
+drift apart. `.utterance-body` sets the ordinary ink (`--color-text-primary`) and style (`normal`);
+`.utterance-body.is-inaudible-marker` overrides both to `--color-stage-text` /
+`--font-style-italic` when the row's stored `is_inaudible_marker` fact is true. Everything else
+about the body paragraph (size, weight, line height, margin) stays inline, unchanged.
+
 ---
 
 *This is a living snapshot, not a locked spec — update it if a future phase changes the token
-set. Reconciled against `app/src/app.css` on 2026-09-03 (plan 51-10): **35 primitives and 75
-semantic tokens**, every one of them documented above, and no token named here that the CSS does
-not declare.*
+set. Reconciled against `app/src/app.css` on 2026-09-29 (Phase 53 plan 53-03, adding
+`--font-style-italic`, `--opacity-muted`, and `--bubble-max-width-undetermined` — D-02/SPEAKER-01):
+**35 primitives and 78 semantic tokens**, every one of them documented above, and no token named
+here that the CSS does not declare.*
 
 **How to re-check this document.** The contract is bidirectional and mechanical — every token
 name in `app/src/app.css` appears here, and every token named here exists in the CSS. Extract the

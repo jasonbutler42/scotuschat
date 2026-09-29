@@ -157,7 +157,7 @@
 	<!-- Advocate descriptor slot (D-16): unconditional placeholder text, no real
 	     per-advocate data exists yet — do not invent plausible-looking data. -->
 	{#if !isBench}
-		<p style="font-size:var(--font-size-caption);font-weight:var(--font-weight-regular);font-style:italic;color:var(--color-text-secondary);margin-top:var(--space-lg);margin-bottom:0;border-top:1px solid var(--color-border);padding-top:var(--space-lg);">Coming soon</p>
+		<p style="font-size:var(--font-size-caption);font-weight:var(--font-weight-regular);font-style:var(--font-style-italic);color:var(--color-text-secondary);margin-top:var(--space-lg);margin-bottom:0;border-top:1px solid var(--color-border);padding-top:var(--space-lg);">Coming soon</p>
 	{/if}
 
 	<!-- Bio paragraph: bench and advocate alike, full width. Omitted entirely

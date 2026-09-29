@@ -26,7 +26,7 @@
 			font-size: var(--font-size-caption);
 			font-weight: var(--font-weight-regular);
 			color: var(--color-stage-text);
-			font-style: italic;
+			font-style: var(--font-style-italic);
 			line-height: var(--line-height-caption);
 			margin: 0;
 		"

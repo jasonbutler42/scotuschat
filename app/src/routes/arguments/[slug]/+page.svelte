@@ -20,6 +20,11 @@
 	// (SPEAKER-02) — the explanation card beside the existing speaker-bio
 	// card, never a second popover root.
 	let popoverMode = $state<'speaker' | 'undetermined'>('speaker');
+	// D-15: the activated turn's own stored is_inaudible_marker fact, passed
+	// straight through to the card. The switch keys off this stored flag
+	// only — never off the body text or anything about who the person
+	// might be.
+	let undeterminedInaudibleBody = $state(false);
 
 	// Build O(1) lookup map from server-loaded speakers array (Pitfall 2: not returned as Map)
 	// Cast via unknown because RawSpeaker uses an index signature in +page.server.ts
@@ -37,14 +42,17 @@
 		isPopoverOpen = speaker !== null;
 	}
 
-	// D-14: opened from either dashed `?` avatar of a Treatment D bubble.
-	// `anchor` is the avatar element itself (left or right), so the popover
-	// anchors to whichever side was activated — the same mechanism as every
-	// existing avatar button, never told "left" or "right" in words.
-	function onUndeterminedAvatarClick(anchor: HTMLElement): void {
+	// D-14/D-15: opened from either dashed `?` avatar of a Treatment D
+	// bubble. `anchor` is the avatar element itself (left or right), so the
+	// popover anchors to whichever side was activated — the same mechanism
+	// as every existing avatar button, never told "left" or "right" in
+	// words. `inaudibleBody` is the turn's own stored is_inaudible_marker
+	// fact, forwarded from UndeterminedBubble's own prop.
+	function onUndeterminedAvatarClick(anchor: HTMLElement, inaudibleBody: boolean): void {
 		currentSpeaker = null;
 		currentAnchor = anchor;
 		popoverMode = 'undetermined';
+		undeterminedInaudibleBody = inaudibleBody;
 		isPopoverOpen = true;
 	}
 
@@ -291,7 +299,7 @@
 				       min-width: 300px; max-width: 400px;"
 			>
 				{#if popoverMode === 'undetermined'}
-					<UndeterminedSpeakerCard />
+					<UndeterminedSpeakerCard inaudibleBody={undeterminedInaudibleBody} />
 				{:else if currentSpeaker}
 					<SpeakerPopover
 						speaker={currentSpeaker}

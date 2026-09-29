@@ -7,10 +7,24 @@
 	// not markup.
 	const PARAGRAPH_1_ORDINARY =
 		'The words here were captured clearly. What the record does not say is which person spoke them.';
+	// D-15: swapped in when the activated turn's stored is_inaudible_marker
+	// fact is true — keyed off that stored fact only, never off "who the
+	// person might be." Paragraphs 2 and 3 never change.
+	const PARAGRAPH_1_INAUDIBLE =
+		'The words in this turn were not captured, and the record does not say which person spoke.';
 	const PARAGRAPH_2 =
 		'Oyez attributes each turn by listening to the argument audio. Where a voice could not be matched to a participant, the turn is left unattributed rather than guessed.';
 	const PARAGRAPH_3 =
 		'Everyone who spoke was present in the courtroom that day — the record simply does not identify which of them this was.';
+
+	let { inaudibleBody = false } = $props<{ inaudibleBody?: boolean }>();
+
+	// $derived, never const: this one card instance is reused as the reader
+	// moves between turns (the route holds a single card behind the shared
+	// Popover.Content, same discipline as ChatBubble/UndeterminedBubble's
+	// $derived-off-props rule) — a frozen value would keep the FIRST turn's
+	// wording after the prop changes.
+	const paragraph1 = $derived(inaudibleBody === true ? PARAGRAPH_1_INAUDIBLE : PARAGRAPH_1_ORDINARY);
 </script>
 
 <div class="undetermined-card">
@@ -29,7 +43,7 @@
 			border-top: 1px solid var(--color-border);
 			margin-top: var(--space-lg);
 			padding-top: var(--space-lg);
-		">{PARAGRAPH_1_ORDINARY}</p>
+		">{paragraph1}</p>
 
 	<p style="
 			font-size: var(--font-size-caption);

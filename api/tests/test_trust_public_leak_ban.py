@@ -32,6 +32,24 @@ above. The old list-response model is gone;
 names `TermIndexResponse` instead. `PUBLIC_FRONTEND_PATHS` below points
 at this phase's surviving public routes rather than the six deleted
 files under the retired cases route directory.
+
+Phase 53 (plan 53-04, D-07/PLUMBING-07): `PUBLIC_FRONTEND_PATHS` gains
+five `app/src/lib/public/` component files — `UndeterminedBubble.svelte`
+and `UndeterminedSpeakerCard.svelte` (new, Treatment D and its D-14
+explanation card) plus `ChatBubble.svelte`, `StageDirection.svelte` and
+`SpeakerPopover.svelte` (modified by this phase's earlier plans, and
+never previously registered here — this module's frontend coverage had
+only ever tracked route/page files and `TermRow.svelte`, not every
+component under `app/src/lib/public/`). Two new tests close a real gap
+the two path-based sweeps above shared: both `continue` silently past a
+missing path, so a typo in `PUBLIC_FRONTEND_PATHS` would have passed
+every sweep vacuously. `test_public_frontend_paths_all_exist` fails
+loudly on exactly that condition, and
+`test_public_frontend_pages_never_reference_trust_vocabulary` is the
+Testing Policy's one permitted static-source-text exception — a
+case-insensitive structural sweep proving `trust_tier`/`review_state`/
+`provisional` reach no registered public file, which absence across a
+computed file set can legitimately prove.
 """
 
 from __future__ import annotations
@@ -124,7 +142,27 @@ PUBLIC_FRONTEND_PATHS = [
     ROOT / "app" / "src" / "routes/arguments/[slug]/+page.svelte",
     ROOT / "app" / "src" / "routes/arguments/[slug]/+page.server.ts",
     ROOT / "app" / "src" / "lib/public/TermRow.svelte",
+    # Phase 53 (plan 53-04, D-07): the five public components this phase
+    # added or touched for Treatment D and the D-14 explanation card. Two
+    # are new (UndeterminedBubble.svelte, UndeterminedSpeakerCard.svelte);
+    # three were modified by this phase's earlier plans (ChatBubble,
+    # StageDirection, SpeakerPopover) and had never previously been
+    # registered here — this module's coverage predates Phase 53 and only
+    # tracked route/page files and TermRow.svelte, not every component
+    # under app/src/lib/public/.
+    ROOT / "app" / "src" / "lib/public/UndeterminedBubble.svelte",
+    ROOT / "app" / "src" / "lib/public/UndeterminedSpeakerCard.svelte",
+    ROOT / "app" / "src" / "lib/public/ChatBubble.svelte",
+    ROOT / "app" / "src" / "lib/public/StageDirection.svelte",
+    ROOT / "app" / "src" / "lib/public/SpeakerPopover.svelte",
 ]
+
+# Phase 53 (plan 53-04, D-07): the trust vocabulary a public frontend file
+# may never reference, case-insensitively. Distinct from BANNED_KEYS above
+# (a Pydantic model_fields check) — this is a structural sweep of raw file
+# text, the Testing Policy's one permitted "absence across a computed file
+# set" exception (CLAUDE.md Testing Policy).
+BANNED_TRUST_VOCABULARY_CASE_INSENSITIVE = ("trust_tier", "review_state", "provisional")
 
 
 def _unwrap_annotation_types(annotation):
@@ -480,6 +518,59 @@ def test_public_frontend_pages_never_use_public_fastapi_base_url() -> None:
                 "FASTAPI_BASE_URL must be imported from $env/static/private "
                 "only (CLAUDE.md hard constraint)."
             )
+    assert not violations, "\n".join(violations)
+
+
+# ---------------------------------------------------------------------------
+# Phase 53 (plan 53-04, D-07): every registered path exists, and no
+# registered public file carries trust vocabulary
+# ---------------------------------------------------------------------------
+
+
+def test_public_frontend_paths_all_exist() -> None:
+    """
+    Every path in PUBLIC_FRONTEND_PATHS must exist on disk. The two sweeps
+    above (`test_public_frontend_pages_never_reference_reconcile_counter_names`,
+    `test_public_frontend_pages_never_use_public_fastapi_base_url`) both
+    `continue` silently on a missing path — deliberately, so a renamed or
+    deleted file doesn't fail an unrelated sweep — but that same silence
+    means a TYPO'd path (e.g. a missing `[slug]` segment, or a misspelled
+    filename) passes both sweeps VACUOUSLY: nothing was ever read, so
+    nothing was ever found to violate. This test is the guard against that:
+    it fails loudly on exactly the condition the other two sweeps must
+    tolerate silently.
+    """
+    missing = [str(path) for path in PUBLIC_FRONTEND_PATHS if not path.exists()]
+    assert not missing, (
+        "PUBLIC_FRONTEND_PATHS lists a path that does not exist on disk — "
+        f"a typo here makes every path-based sweep in this module vacuous "
+        f"for that entry: {missing}"
+    )
+
+
+def test_public_frontend_pages_never_reference_trust_vocabulary() -> None:
+    """
+    D-07 / PLUMBING-07: no registered public frontend file may reference
+    `trust_tier`, `review_state` or `provisional`, case-insensitively.
+    Unlike the parametrized Pydantic-model sweep above (Test 1), this is a
+    raw source-text sweep over a COMPUTED file set — the Testing Policy's
+    one permitted exception to "no static source-text contract tests for
+    frontend behavior" (CLAUDE.md), because proving an identifier's absence
+    across a reviewable, explicit file list is exactly what source text
+    can prove, unlike a rendered-page behavior claim.
+    """
+    violations = []
+    for path in PUBLIC_FRONTEND_PATHS:
+        if not path.exists():
+            continue
+        text = path.read_text(encoding="utf-8").lower()
+        for banned in BANNED_TRUST_VOCABULARY_CASE_INSENSITIVE:
+            if banned in text:
+                violations.append(
+                    f"{path.name} references trust vocabulary '{banned}' — "
+                    "PROVISIONAL/trust never reaches a public response or a "
+                    "public frontend file (D-07/D-23)."
+                )
     assert not violations, "\n".join(violations)
 
 

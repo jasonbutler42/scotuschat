@@ -196,6 +196,83 @@ async def test_people_has_is_justice_column(db_conn):
     )
 
 
+# ---------------------------------------------------------------------------
+# Test 5: utterances.speaker_undetermined / is_inaudible_marker /
+# verbatim_text columns + both CHECK constraints (Phase 53 plan 53-01, D-05)
+# ---------------------------------------------------------------------------
+
+
+@requires_db
+@pytest.mark.asyncio
+async def test_utterances_carry_undetermined_and_marker_columns(db_conn):
+    """
+    Migration 0033 adds three nullable utterance columns with NO
+    database-side default (NULL means "written before 0033", fails
+    closed) plus two CHECK constraints that make the trust branch's
+    assumptions structural.
+
+    Asserts:
+    - speaker_undetermined: boolean, nullable, NULL column_default
+    - is_inaudible_marker: boolean, nullable, NULL column_default
+    - verbatim_text: text, nullable, NULL column_default
+    - both CHECK constraint names exist on utterances
+    """
+    column_rows = await db_conn.fetch(
+        """
+        SELECT column_name, data_type, is_nullable, column_default
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'utterances'
+          AND column_name IN ('speaker_undetermined', 'is_inaudible_marker', 'verbatim_text')
+        """
+    )
+    columns_by_name = {row["column_name"]: row for row in column_rows}
+    assert set(columns_by_name) == {
+        "speaker_undetermined",
+        "is_inaudible_marker",
+        "verbatim_text",
+    }, (
+        f"Expected exactly speaker_undetermined/is_inaudible_marker/verbatim_text, "
+        f"got {sorted(columns_by_name)}. Has migration 0033 been applied?"
+    )
+
+    for name, expected_type in (
+        ("speaker_undetermined", "boolean"),
+        ("is_inaudible_marker", "boolean"),
+        ("verbatim_text", "text"),
+    ):
+        row = columns_by_name[name]
+        assert row["data_type"] == expected_type, (
+            f"Expected {name}.data_type='{expected_type}', got '{row['data_type']}'"
+        )
+        assert row["is_nullable"] == "YES", (
+            f"Expected {name}.is_nullable='YES', got '{row['is_nullable']}'"
+        )
+        assert row["column_default"] is None, (
+            f"Expected {name}.column_default IS NULL (no database-side default, "
+            f"reseed-don't-migrate), got '{row['column_default']}'"
+        )
+
+    constraint_rows = await db_conn.fetch(
+        """
+        SELECT constraint_name
+        FROM information_schema.table_constraints
+        WHERE table_schema = 'public'
+          AND table_name = 'utterances'
+          AND constraint_type = 'CHECK'
+        """
+    )
+    constraint_names = {row["constraint_name"] for row in constraint_rows}
+    assert "ck_utterances_undetermined_unattributed" in constraint_names, (
+        f"Expected CHECK constraint 'ck_utterances_undetermined_unattributed' not found.\n"
+        f"Found CHECK constraints: {sorted(constraint_names)}"
+    )
+    assert "ck_utterances_inaudible_marker_not_stage" in constraint_names, (
+        f"Expected CHECK constraint 'ck_utterances_inaudible_marker_not_stage' not found.\n"
+        f"Found CHECK constraints: {sorted(constraint_names)}"
+    )
+
+
 def test_no_create_all_in_codebase():
     """
     No Base.metadata.create_all() call must exist in production source files.

@@ -2022,13 +2022,19 @@ def _incoming_utterance_rows(
     written.
 
     Each returned row dict carries the four D-13-frozen digest fields
-    (`sequence`, `raw_speaker_label`, `text`, `is_stage_direction`) PLUS one
-    extra field, `speaker_id` (`None` for stage-direction rows and for rows
-    with no attributable speaker) -- `compute_utterance_digest` ignores any
-    key outside its frozen four, so this extra field never affects the
-    digest. It exists purely so a caller that DOES need to write Utterance
-    rows (`_import_utterances`) can resolve/create the row's participant
-    without re-deriving `speaker_id` from `turns` a second time.
+    (`sequence`, `raw_speaker_label`, `text`, `is_stage_direction`) PLUS two
+    extra fields, `speaker_id` (`None` for stage-direction rows and for rows
+    with no attributable speaker) and `speaker_undetermined` (D-05: `False`
+    on a stage-direction row, otherwise the source-sentinel fact read from
+    speakers.json's `type` field via `_is_unattributed_speaker_type` --
+    never re-derived from `raw_speaker_label` or the speaker's name) --
+    `compute_utterance_digest` ignores any key outside its frozen four, so
+    neither extra field ever affects the digest. `speaker_id` exists purely
+    so a caller that DOES need to write Utterance rows (`_import_utterances`)
+    can resolve/create the row's participant without re-deriving `speaker_id`
+    from `turns` a second time; `speaker_undetermined` exists so that same
+    caller can store the fact on the Utterance row without a second read of
+    speakers.json.
 
     `raw_speaker_label` is derived the SAME way
     `_resolve_and_link_participant` derives `full_name` -- directly from
@@ -2067,6 +2073,7 @@ def _incoming_utterance_rows(
 
         speaker_id: str | None = None
         raw_speaker_label: str | None = None
+        speaker_undetermined: bool = False
         if any(not is_stage for _, is_stage in split_rows):
             speaker_id = turn.get("speaker")
             if not speaker_id:
@@ -2079,6 +2086,15 @@ def _incoming_utterance_rows(
                     "-- flagged, skipped (V5)."
                 )
                 continue
+
+            # D-05 (Phase 53 plan 53-01): the source-sentinel fact is
+            # derived HERE, ONCE, from speakers.json's `type` field --
+            # never from raw_speaker_label or the speaker's name -- and
+            # BEFORE the resolved_participants cache branch below, so both
+            # the cached-None path and the fresh path carry the same value.
+            speaker_undetermined = _is_unattributed_speaker_type(
+                speakers_index.get(speaker_id) or {}
+            )
 
             if speaker_id in resolved_participants:
                 # Already resolved (advocates loop) -- reuse its
@@ -2115,6 +2131,7 @@ def _incoming_utterance_rows(
                     "text": row_text,
                     "is_stage_direction": is_stage,
                     "speaker_id": None if is_stage else speaker_id,
+                    "speaker_undetermined": False if is_stage else speaker_undetermined,
                 }
             )
 
@@ -2195,6 +2212,8 @@ async def _import_utterances(
                     person_id=None,
                     section_hint=None,  # Stage directions never
                     # carry or change a section.
+                    speaker_undetermined=False,  # D-05: a stage direction
+                    # is never a source-sentinel speaker fact.
                 )
             )
             counters["stage_direction_utterances_created"] = (
@@ -2266,6 +2285,7 @@ async def _import_utterances(
                 side=resolved_side,
                 person_id=participant.person_id if participant else None,
                 section_hint=section_hint,
+                speaker_undetermined=row["speaker_undetermined"],
             )
         )
         counters["utterances_created"] = counters.get("utterances_created", 0) + 1

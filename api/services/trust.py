@@ -29,6 +29,14 @@ exists. Phase 49 fills this module's own participant-branch slot:
 `(source, method, review_state)` triple and calls derive_tier() with it,
 in place of the Phase 48 placeholder that contributed nothing for a
 resolved participant. derive_tier's three-argument signature is unchanged.
+
+Phase 53 (D-05) adds a third utterance-branch case alongside the
+NULL-person_id floor above: a row whose `speaker_undetermined` is True is
+the SOURCE's own sentinel (speakers.json `type`, stored at import) —
+distinct from an ordinary unresolved speaker — and contributes
+TrustTier.PROVISIONAL (floored against its own run's provenance tier)
+instead of UNCERTAIN, and never bumps the `unresolved_utterance_speaker`
+blocker.
 """
 
 from __future__ import annotations
@@ -78,6 +86,7 @@ async def _load_constituents(
             select(
                 Utterance.person_id,
                 Utterance.is_stage_direction,
+                Utterance.speaker_undetermined,
                 ImportRun.source,
                 ImportRun.method,
             )
@@ -102,8 +111,26 @@ async def _load_constituents(
     def _bump(code: str) -> None:
         blocker_counts[code] = blocker_counts.get(code, 0) + 1
 
-    for person_id, is_stage_direction, source, method in utterance_rows:
+    for person_id, is_stage_direction, speaker_undetermined, source, method in utterance_rows:
         if is_stage_direction:  # No speaker to attribute, no risk
+            continue
+        if speaker_undetermined is True:
+            # D-05: the SOURCE itself declares it does not know who spoke
+            # this turn (speakers.json's own sentinel type, stored at
+            # import) -- distinct from an ordinary unresolved speaker,
+            # where nothing rules out attribution ever succeeding later.
+            # Contributes PROVISIONAL, floored against this run's own
+            # provenance tier -- it can never lift a row above what its
+            # own (source, method) allows, and it never bumps
+            # unresolved_utterance_speaker (Pitfall 2: this branch must sit
+            # before the person_id is None fallback below, since a
+            # sentinel row's person_id is always NULL by construction).
+            tier = floor_tier(
+                [TrustTier.PROVISIONAL, derive_tier(source.value, method.value, UNREVIEWED)]
+            )
+            tiers.append(tier)
+            if tier is TrustTier.UNCERTAIN:
+                _bump("llm_corrective_utterance")
             continue
         if person_id is None:  # Unresolved speaker floors to UNCERTAIN
             tiers.append(TrustTier.UNCERTAIN)

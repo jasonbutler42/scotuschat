@@ -32,7 +32,8 @@ from unittest.mock import patch
 import pytest
 from sqlalchemy import select
 
-from api.models.models import Argument, ArgumentStatusEnum, ImportRun, SideEnum, Utterance
+from api.domain.trust import TrustTier
+from api.models.models import Argument, ArgumentStatusEnum, ImportRun, Person, SideEnum, Utterance
 from api.schemas.utterance import ArgumentUtterancesResponse
 from api.services.arguments import get_argument_with_utterances
 from pipeline.commands.import_convokit import run_import_convokit
@@ -128,9 +129,11 @@ _SPEAKERS = {
 }
 
 
-async def _run_and_fetch_argument(isolated_session, tmp_path, utterances) -> Argument:
+async def _run_and_fetch_argument(
+    isolated_session, tmp_path, utterances, speakers=None
+) -> Argument:
     corpus_dir = _write_corpus_fixture(
-        tmp_path, _CONVERSATION, [_CASE], _SPEAKERS, utterances
+        tmp_path, _CONVERSATION, [_CASE], speakers if speakers is not None else _SPEAKERS, utterances
     )
     args = _args(9999, corpus_dir)
 
@@ -914,3 +917,179 @@ async def test_broken_case_join_counted_as_errored_not_crashing_batch(
     # At least one conversation errored (the broken join), reflected in the
     # printed summary count (not just a silent skip).
     assert "1 conversations errored" in captured.out or "conversations errored" in captured.out
+
+
+# ===========================================================================
+# Phase 53 plan 53-01 (D-05/SPEAKER-03/SPEAKER-04): source-sentinel speaker
+# fact stored at import, floors the argument to PROVISIONAL
+# ===========================================================================
+
+_SENTINEL_SPEAKER_ID = "u__inaudible"
+_SENTINEL_SPEAKER_META = {"name": "<INAUDIBLE>", "type": "U", "role": "inaudible"}
+
+
+@pytest.mark.asyncio
+async def test_sentinel_turn_stores_fact_and_no_person_minted(isolated_session, tmp_path):
+    """D-05/SPEAKER-03: a source-sentinel speaker's turn stores
+    speaker_undetermined=True, person_id=None, raw_speaker_label=None,
+    is_stage_direction=False -- and mints no Person row for the sentinel
+    name at all. The advocate's ordinary turn in the same conversation
+    keeps speaker_undetermined=False."""
+    speakers = {**_SPEAKERS, _SENTINEL_SPEAKER_ID: _SENTINEL_SPEAKER_META}
+    utterances = [
+        {
+            "id": "u1",
+            "conversation_id": "9999_71",
+            "speaker": "adv__john_smith",
+            "text": "May it please the Court.",
+        },
+        {
+            "id": "u2",
+            "conversation_id": "9999_71",
+            "speaker": _SENTINEL_SPEAKER_ID,
+            "text": "Something was said here.",
+        },
+    ]
+    argument = await _run_and_fetch_argument(
+        isolated_session, tmp_path, utterances, speakers=speakers
+    )
+
+    rows = (
+        await isolated_session.execute(
+            select(Utterance)
+            .where(Utterance.argument_id == argument.id)
+            .order_by(Utterance.sequence)
+        )
+    ).scalars().all()
+    assert len(rows) == 2
+    advocate_row, sentinel_row = rows
+
+    assert advocate_row.speaker_undetermined is False
+
+    assert sentinel_row.speaker_undetermined is True
+    assert sentinel_row.person_id is None
+    assert sentinel_row.raw_speaker_label is None
+    assert sentinel_row.is_stage_direction is False
+
+    minted = (
+        await isolated_session.execute(
+            select(Person).where(Person.full_name == "<INAUDIBLE>")
+        )
+    ).scalar_one_or_none()
+    assert minted is None, "no Person row must be minted for a source-sentinel speaker"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "speaker_type, speaker_name, expected_undetermined",
+    [
+        ("U", "<INAUDIBLE>", True),
+        (" u ", "Courtroom voice", True),
+        ("unattributed", "Someone", True),
+        ("unknown", "Crier", True),
+        ("advocate", "<INAUDIBLE>", False),
+        (None, "No Type Speaker", False),
+    ],
+    ids=[
+        "type-U-sentinel-name",
+        "type-whitespace-u",
+        "type-unattributed",
+        "type-unknown",
+        "type-advocate-sentinel-name",
+        "type-absent",
+    ],
+)
+async def test_speaker_undetermined_keyed_on_type_not_name(
+    isolated_session, tmp_path, speaker_type, speaker_name, expected_undetermined
+):
+    """SPEAKER-03: the stored fact keys on speakers.json's `type` field,
+    never on the speaker's name -- a `type: "U"` speaker with an ordinary
+    name IS flagged, and an `advocate`-typed speaker literally named the
+    sentinel string is NOT flagged. A missing `type` key is NOT a sentinel
+    (D-12 flagged-advocate path)."""
+    test_speaker_meta = {"name": speaker_name}
+    if speaker_type is not None:
+        test_speaker_meta["type"] = speaker_type
+    speakers = {**_SPEAKERS, "test_speaker_id": test_speaker_meta}
+    utterances = [
+        {
+            "id": "u1",
+            "conversation_id": "9999_71",
+            "speaker": "test_speaker_id",
+            "text": "A single spoken turn.",
+        },
+    ]
+    argument = await _run_and_fetch_argument(
+        isolated_session, tmp_path, utterances, speakers=speakers
+    )
+
+    row = (
+        await isolated_session.execute(
+            select(Utterance).where(Utterance.argument_id == argument.id)
+        )
+    ).scalar_one()
+    assert row.speaker_undetermined is expected_undetermined
+
+
+@pytest.mark.asyncio
+async def test_sentinel_speaker_whole_turn_stage_direction_stays_false(
+    isolated_session, tmp_path
+):
+    """A sentinel speaker's turn whose whole text is a stage-direction
+    marker is stored as a stage-direction row (raw_speaker_label=None,
+    is_stage_direction=True) with speaker_undetermined=False -- the
+    ck_utterances_undetermined_unattributed CHECK constraint requires this
+    (a row can never be both undetermined and a stage direction), matching
+    D-03 (room events stay stage directions regardless of who "said"
+    them)."""
+    speakers = {**_SPEAKERS, _SENTINEL_SPEAKER_ID: _SENTINEL_SPEAKER_META}
+    utterances = [
+        {
+            "id": "u1",
+            "conversation_id": "9999_71",
+            "speaker": _SENTINEL_SPEAKER_ID,
+            "text": "(Laughter)",
+        },
+    ]
+    argument = await _run_and_fetch_argument(
+        isolated_session, tmp_path, utterances, speakers=speakers
+    )
+
+    row = (
+        await isolated_session.execute(
+            select(Utterance).where(Utterance.argument_id == argument.id)
+        )
+    ).scalar_one()
+    assert row.is_stage_direction is True
+    assert row.raw_speaker_label is None
+    assert row.speaker_undetermined is False
+
+
+@pytest.mark.asyncio
+async def test_corpus_argument_tier_is_provisional_with_sentinel_speaker(
+    isolated_session, tmp_path
+):
+    """D-05/SPEAKER-04: an argument with one resolved advocate turn and one
+    source-sentinel turn stores trust_tier PROVISIONAL at import time --
+    not UNCERTAIN (no human judgment is involved) and not TRUSTED (we
+    accepted a limit; we verified nothing)."""
+    speakers = {**_SPEAKERS, _SENTINEL_SPEAKER_ID: _SENTINEL_SPEAKER_META}
+    utterances = [
+        {
+            "id": "u1",
+            "conversation_id": "9999_71",
+            "speaker": "adv__john_smith",
+            "text": "May it please the Court.",
+        },
+        {
+            "id": "u2",
+            "conversation_id": "9999_71",
+            "speaker": _SENTINEL_SPEAKER_ID,
+            "text": "Something inaudible was said.",
+        },
+    ]
+    argument = await _run_and_fetch_argument(
+        isolated_session, tmp_path, utterances, speakers=speakers
+    )
+    assert argument.trust_tier is TrustTier.PROVISIONAL
+    assert argument.trust_tier is not TrustTier.UNCERTAIN

@@ -567,6 +567,17 @@ class Utterance(Base):
     section_hint = Column(String(50), nullable=True)  # "petitioner"|"respondent"|"rebuttal"|"amicus"
     side = Column(SAEnum(SideEnum, name="side", values_callable=lambda e: [x.value for x in e]), nullable=False, default=SideEnum.UNKNOWN)
     person_id = Column(Integer, ForeignKey("people.id"), nullable=True)  # null at parse time
+    # D-05 (Phase 53 plan 53-01): the source-sentinel fact, stored at
+    # import, never re-derived from raw_speaker_label/text. NULL means
+    # "written before migration 0033" and reads as false (fails closed).
+    speaker_undetermined = Column(Boolean, nullable=True, default=False)
+    # D-12 (Phase 53 plan 53-02 populates this): whether this row's whole
+    # turn is the canonical inaudible marker. NULL means not yet known.
+    is_inaudible_marker = Column(Boolean, nullable=True, default=False)
+    # D-10 (Phase 53 plan 53-02 populates this): verbatim source form of a
+    # canonicalised whole-turn marker row, kept alongside the canonical
+    # form stored in `text`.
+    verbatim_text = Column(Text, nullable=True)
 
     __table_args__ = (
         UniqueConstraint(
@@ -577,6 +588,16 @@ class Utterance(Base):
         ),
         Index("ix_utterances_argument_id", "argument_id"),
         Index("ix_utterances_import_run_id", "import_run_id"),
+        # Self-documentation only — Alembic (migration 0033) remains the
+        # sole DDL authority (CLAUDE.md); mirrors CourtTenure's convention.
+        CheckConstraint(
+            "speaker_undetermined IS NOT TRUE OR (person_id IS NULL AND is_stage_direction = false)",
+            name="ck_utterances_undetermined_unattributed",
+        ),
+        CheckConstraint(
+            "is_inaudible_marker IS NOT TRUE OR is_stage_direction = false",
+            name="ck_utterances_inaudible_marker_not_stage",
+        ),
     )
 
 

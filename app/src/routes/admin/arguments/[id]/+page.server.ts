@@ -1,6 +1,7 @@
 import { ADMIN_TOKEN, FASTAPI_BASE_URL } from '$env/static/private';
 import { error, fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
+import type { TierBlocker } from '$lib/admin/blockerSentence.js';
 
 type ConsolidatedDocket = {
 	docket_number: string;
@@ -25,8 +26,6 @@ type StatusLogEntry = {
 	override_reason: string | null;
 	trust_tier_at_transition: string | null;
 };
-
-type Blocker = { code: string; count: number };
 
 type SpeakerRow = {
 	participant_id: number;
@@ -463,7 +462,7 @@ export const actions: Actions = {
 						source: 'publish',
 						publishBlocked: true,
 						trustTier: d.trust_tier as string,
-						blockers: (d.blockers as Blocker[]) ?? [],
+						blockers: (d.blockers as TierBlocker[]) ?? [],
 						blockMessage: d.message as string,
 					});
 				}

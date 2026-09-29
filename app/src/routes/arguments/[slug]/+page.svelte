@@ -291,12 +291,14 @@
 			<Popover.Content
 				customAnchor={currentAnchor}
 				sideOffset={8}
+				collisionPadding={16}
 				trapFocus={true}
 				escapeKeydownBehavior="close"
 				interactOutsideBehavior="close"
 				style="z-index: 50;
 				       background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px;
-				       min-width: 300px; max-width: 400px;"
+				       min-width: min(300px, calc(100vw - 2 * var(--space-lg)));
+				       max-width: min(400px, calc(100vw - 2 * var(--space-lg)));"
 			>
 				{#if popoverMode === 'undetermined'}
 					<UndeterminedSpeakerCard inaudibleBody={undeterminedInaudibleBody} />

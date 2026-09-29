@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import Badge from '$lib/primitives/Badge.svelte';
 	import type { BadgeTone } from '$lib/primitives/badge-tone';
+	import { blockerSentence } from '$lib/admin/blockerSentence.js';
 
 	type Blocker = { code: string; count: number };
 
@@ -120,31 +121,6 @@
 		return tier;
 	}
 
-	// Blocked-publish blocker-code -> operator-readable sentence (Phase 48
-	// D-19), duplicated verbatim from the detail page's own helper
-	// ([id]/+page.svelte, plan 48-08) so both pages degrade identically for
-	// any future blocker code added server-side. A bare tier name gives the
-	// operator nothing to act on; each sentence names what dragged the tier
-	// down, with a count.
-	function blockerSentence(code: string, count: number): string {
-		const plural = count === 1 ? '' : 's';
-		if (code === 'unresolved_utterance_speaker') {
-			return `${count} utterance${plural} ${count === 1 ? 'has' : 'have'} no resolved speaker`;
-		}
-		if (code === 'unresolved_participant') {
-			return `${count} participant${plural} ${count === 1 ? 'is' : 'are'} unresolved`;
-		}
-		if (code === 'llm_corrective_utterance') {
-			return `${count} utterance${plural} came from the LLM corrective pass`;
-		}
-		if (code === 'uncertain_participant') {
-			return `${count} participant${plural} ${count === 1 ? 'has' : 'have'} unverified provenance`;
-		}
-		if (code === 'no_constituents') {
-			return 'this argument has no utterances yet';
-		}
-		return `${count} occurrence${plural} of "${code}"`;
-	}
 </script>
 
 <svelte:head>
@@ -554,7 +530,7 @@
 											<ul style="margin: 0 0 var(--space-lg) 0; padding-left: var(--space-lg);">
 												{#each form.blockers as b}
 													<li style="font-size: var(--font-size-caption); color: var(--color-text-secondary); padding: var(--space-xs) 0;">
-														{blockerSentence(b.code, b.count)}
+														{blockerSentence(b)}
 													</li>
 												{/each}
 											</ul>

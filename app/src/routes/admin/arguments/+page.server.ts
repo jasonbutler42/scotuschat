@@ -1,8 +1,7 @@
 import { ADMIN_TOKEN, FASTAPI_BASE_URL } from '$env/static/private';
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
-
-type Blocker = { code: string; count: number };
+import type { TierBlocker } from '$lib/admin/blockerSentence.js';
 
 type ArgumentListItem = {
 	id: number;
@@ -107,7 +106,7 @@ export const actions: Actions = {
 						argumentId,
 						publishBlocked: true,
 						trustTier: d.trust_tier as string,
-						blockers: (d.blockers as Blocker[]) ?? [],
+						blockers: (d.blockers as TierBlocker[]) ?? [],
 						blockMessage: d.message as string,
 					});
 				}

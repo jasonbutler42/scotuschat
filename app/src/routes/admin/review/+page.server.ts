@@ -1,6 +1,7 @@
 import { ADMIN_TOKEN, FASTAPI_BASE_URL } from '$env/static/private';
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
+import type { TierBlocker } from '$lib/admin/blockerSentence.js';
 
 type DiscrepancyDetail = {
 	id: number;
@@ -13,8 +14,6 @@ type DiscrepancyDetail = {
 	incoming_method: string | null;
 	created_at: string;
 };
-
-type TierBlocker = { code: string; count: number };
 
 type ReviewQueueConstituent = {
 	participant_id: number;

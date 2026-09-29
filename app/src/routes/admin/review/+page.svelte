@@ -3,6 +3,7 @@
 	import Badge from '$lib/primitives/Badge.svelte';
 	import type { BadgeTone } from '$lib/primitives/badge-tone';
 	import { goto } from '$app/navigation';
+	import { blockerSentence } from '$lib/admin/blockerSentence.js';
 
 	let { data, form } = $props();
 
@@ -187,30 +188,6 @@
 	// renders the literal "(none)", never an empty pair of quotes.
 	function discrepancyValueDisplay(value: string | null): string {
 		return value === null ? '(none)' : `"${value}"`;
-	}
-
-	// Blocked-publish blocker-code -> operator-readable sentence, copied
-	// verbatim from admin/arguments/+page.svelte so a zero-flagged-
-	// constituent degraded row's expanded panel reads identically to the
-	// existing publish-blocked panel (49-05 <planner_decisions> E5 empty).
-	function blockerSentence(code: string, count: number): string {
-		const plural = count === 1 ? '' : 's';
-		if (code === 'unresolved_utterance_speaker') {
-			return `${count} utterance${plural} ${count === 1 ? 'has' : 'have'} no resolved speaker`;
-		}
-		if (code === 'unresolved_participant') {
-			return `${count} participant${plural} ${count === 1 ? 'is' : 'are'} unresolved`;
-		}
-		if (code === 'llm_corrective_utterance') {
-			return `${count} utterance${plural} came from the LLM corrective pass`;
-		}
-		if (code === 'uncertain_participant') {
-			return `${count} participant${plural} ${count === 1 ? 'has' : 'have'} unverified provenance`;
-		}
-		if (code === 'no_constituents') {
-			return 'this argument has no utterances yet';
-		}
-		return `${count} occurrence${plural} of "${code}"`;
 	}
 
 	function argumentEditHref(item: { admin_job_id: number | null; id: number }): string {
@@ -609,7 +586,7 @@
 											<ul style="margin: 0; padding-left: var(--space-lg);">
 												{#each item.blockers as blocker}
 													<li style="font-size: var(--font-size-caption); color: var(--color-text-secondary); padding: var(--space-xs) 0;">
-														{blockerSentence(blocker.code, blocker.count)}
+														{blockerSentence(blocker)}
 													</li>
 												{/each}
 											</ul>

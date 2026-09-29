@@ -5,16 +5,16 @@ milestone_name: The Site Becomes Complete
 current_phase: 53
 current_phase_name: Undetermined Speakers & Marker Normalisation
 status: executing
-stopped_at: Completed 53-03-PLAN.md
-last_updated: "2026-09-29T13:36:02.453Z"
+stopped_at: Completed 53-04-PLAN.md
+last_updated: "2026-09-29T15:06:45.203Z"
 last_activity: 2026-09-29
-last_activity_desc: Phase 53 execution — 53-01, 53-02, 53-03, 53-05 complete; 53-04 still outstanding
-state_head: 8e4b8141b27f87bec80a6eaa589e76f7bc1808c9
+last_activity_desc: Phase 53 execution — all 5 plans complete (53-01, 53-02, 53-03, 53-04, 53-05); phase verification not yet run
+state_head: cd1cbf7b254b8d266e20a3a16fdf253752f7408e
 progress:
   total_phases: 8
   completed_phases: 1
   total_plans: 11
-  completed_plans: 10
+  completed_plans: 11
   percent: 13
 ---
 
@@ -38,14 +38,15 @@ phase-numbered test modules, ~2:1 test:code as a guideline. Both govern all late
 
 ## Current Position
 
-Phase: 53 (Undetermined Speakers & Marker Normalisation) — EXECUTING
-Plan: 4 of 5 complete (53-01, 53-02, 53-03, 53-05) — 53-04 still outstanding
+Phase: 53 (Undetermined Speakers & Marker Normalisation) — ALL PLANS COMPLETE
+Plan: 5 of 5 complete (53-01, 53-02, 53-03, 53-04, 53-05)
 (wave order note: 53-05 depended only on 53-01 and ran ahead of 53-03/53-04 in
 this phase's wave plan; the automatic advance-plan counter does not track wave
 order — see project memory "advance-plan ignores wave order" — this position
-was corrected by hand against the actual *-SUMMARY.md files on disk)
-Status: Ready to execute
-Last activity: 2026-09-29 — Phase 53 execution — 53-03 complete
+was corrected by hand against the actual *-SUMMARY.md files on disk, which now
+number five)
+Status: Ready for /gsd-verify-work (phase verification, not yet run)
+Last activity: 2026-09-29 — Phase 53 execution — 53-04 complete, phase's plans all summarized
 
 Progress: [█░░░░░░░░░] 13% (1/8 phases)
 
@@ -91,6 +92,7 @@ the first client-side third-party script and the first `PUBLIC_` env var this co
 | Phase 53 P02 | 62min | 2 tasks | 6 files |
 | Phase 53 P05 | 20min | 2 tasks | 8 files |
 | Phase 53 P03 | 60min | 3 tasks | 9 files |
+| Phase 53 P04 | 95min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -276,8 +278,8 @@ suppress by design, so the section was moved verbatim to
 
 ## Session Continuity
 
-Last session: 2026-09-29T13:36:02.226Z
-Stopped at: Completed 53-03-PLAN.md
+Last session: 2026-09-29T15:06:31.131Z
+Stopped at: Completed 53-04-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
@@ -306,6 +308,9 @@ Resume file: None
 - [Phase 53]: Phase 53-05: blockerSentence extracted from three verbatim-duplicated per-page copies into one shared, unit-tested app/src/lib/admin/blockerSentence.js (following the resetOutcome.js precedent) -- the D-18 majority_undetermined_speaker sentence is added once and rendered identically on all three admin surfaces.
 - [Phase 53]: Treatment D classified before run-continuation (renderItems), fixing the S5 latent defect where two consecutive undetermined rows merged on their shared null raw_speaker_label.
 - [Phase 53]: D-12/D-13 whole-turn inaudible body treatment landed as one shared .utterance-body CSS class pair used by both ChatBubble and UndeterminedBubble, not a duplicated inline expression.
+- [Phase 53]: Phase 53-04: openTranscriptPage gained an opt-in realPointer harness option instead of changing the shared harness's default headless launch -- measured that this Chromium build's headless mode always reports hover:none/pointer:coarse with no CDP override, so a genuine hover test needs a real window; every other browser test caller stays headless.
+- [Phase 53]: Phase 53-04: touch taps in browser tests must use Emulation.setTouchEmulationEnabled + Input.dispatchTouchEvent, not Input.synthesizeTapGesture alone -- the latter delivers real pointerType:'touch' events (so CSS reveal works) but never synthesizes the compatibility click event a real touchscreen tap produces, so avatar onclick activation never fires through it alone on this Chromium build.
+- [Phase 53]: Phase 53-04: CDP Enter-key button activation requires rawKeyDown -> char (text/unmodifiedText '\r', windowsVirtualKeyCode 13) -> keyUp, not a plain keyDown+keyUp pair, which reaches the page's own keydown/keyup listeners but never triggers the browser's native Enter-activates-button default action.
 
 ### Blockers
 

@@ -22,8 +22,8 @@ Requirements for milestone v1.9. Each maps to exactly one roadmap phase.
 
 ### Undetermined Speakers (SPEAKER)
 
-- [ ] **SPEAKER-01**: An utterance whose corpus speaker is a `type: "U"` sentinel renders as Treatment D — a narrower bubble centred between two reserved-but-empty rails, labelled "undetermined speaker"
-- [ ] **SPEAKER-02**: Hovering an undetermined utterance reveals a question-mark avatar in both rails; clicking either opens an explanation card in the speaker-bio card shape
+- [x] **SPEAKER-01**: An utterance whose corpus speaker is a `type: "U"` sentinel renders as Treatment D — a narrower bubble centred between two reserved-but-empty rails, labelled "undetermined speaker"
+- [x] **SPEAKER-02**: Hovering an undetermined utterance reveals a question-mark avatar in both rails; clicking either opens an explanation card in the speaker-bio card shape
 - [x] **SPEAKER-03**: The source-sentinel fact is stored on the utterance at import, never re-derived from `raw_speaker_label`
 - [x] **SPEAKER-04**: A stored source-sentinel speaker contributes PROVISIONAL to the trust floor rather than UNCERTAIN, so such arguments are publishable without a per-argument override
 - [x] **SPEAKER-05**: An argument more than 50% undetermined is not publishable without explicit operator intervention
@@ -123,8 +123,8 @@ Populated during roadmap creation (2026-09-23). Every v1 requirement maps to exa
 | JUSTICE-04 | Phase 52 | Complete |
 | JUSTICE-05 | Phase 52 | Complete |
 | JUSTICE-06 | Phase 52 | Complete |
-| SPEAKER-01 | Phase 53 | Pending |
-| SPEAKER-02 | Phase 53 | Pending |
+| SPEAKER-01 | Phase 53 | Complete |
+| SPEAKER-02 | Phase 53 | Complete |
 | SPEAKER-03 | Phase 53 | Complete |
 | SPEAKER-04 | Phase 53 | Complete |
 | SPEAKER-05 | Phase 53 | Complete |

@@ -11,6 +11,12 @@ Key design decisions:
     case_name, docket_number, argued_date, question_number.
   - person_id is null at Phase 1; Phase 2 Resolve step populates it.
   - import_run_id is included so callers can confirm which parse run is shown.
+  - Phase 53 (D-07/D-10): speaker_undetermined and is_inaudible_marker are
+    rendering facts, not trust facts — safe to expose publicly. The raw
+    source form of a canonicalised marker row is deliberately NOT added
+    here; D-10 keeps that column in the database only, so a leak-ban grep
+    for its name never needs to touch this file. Public and admin both
+    read the canonical `text`.
 """
 
 import datetime
@@ -38,6 +44,15 @@ class UtteranceResponse(BaseModel):
     # avatar glyph. Nullable because speaker_name itself is nullable when
     # person_id is null.
     speaker_initials: Optional[str] = None
+    # D-05/D-12 (Phase 53): a rendering fact, not a trust fact — whether
+    # this row's speaker is the source's own "no identifiable speaker"
+    # sentinel. A legacy row (written before migration 0033, NULL in the
+    # DB) serialises as False, matching pre-Phase-53 rendering exactly.
+    speaker_undetermined: bool = False
+    # D-04/D-12/D-15 (Phase 53): a rendering fact — whether this row's
+    # whole turn is the canonical Inaudible marker (a known or undetermined
+    # speaker's words were lost, not a room event). NULL reads as False.
+    is_inaudible_marker: bool = False
 
     model_config = {"from_attributes": True}
 

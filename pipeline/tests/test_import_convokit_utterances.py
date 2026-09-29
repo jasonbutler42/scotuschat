@@ -1093,3 +1093,168 @@ async def test_corpus_argument_tier_is_provisional_with_sentinel_speaker(
     )
     assert argument.trust_tier is TrustTier.PROVISIONAL
     assert argument.trust_tier is not TrustTier.UNCERTAIN
+
+
+# ===========================================================================
+# Phase 53 plan 53-02 (D-04/D-08/D-09/D-10/SPEAKER-01/06/07/08): canonical
+# marker storage, inaudible-marker speaker attribution, and the public
+# payload's speaker_undetermined/is_inaudible_marker facts
+# ===========================================================================
+
+
+@pytest.mark.asyncio
+async def test_known_speaker_whole_turn_inaudible_is_their_own_attributed_row(
+    isolated_session, tmp_path
+):
+    """D-04/Pitfall 1: a known speaker (not in the advocates list) whose
+    ONLY turn is a whole-turn Inaudible marker with a trailing period is
+    resolved during import -- their own canonical (Inaudible) row, not a
+    stage direction, with the verbatim source form kept and the argument's
+    stored trust tier TRUSTED (corpus/direct resolution)."""
+    from api.models.models import ArgumentParticipant
+
+    utterances = [
+        {
+            "id": "u1",
+            "conversation_id": "9999_71",
+            "speaker": "adv__john_smith",
+            "text": "May it please the Court.",
+        },
+        {
+            "id": "u2",
+            "conversation_id": "9999_71",
+            "speaker": "j__test_justice_doe",
+            "text": "(Inaudible).",
+        },
+    ]
+    argument = await _run_and_fetch_argument(isolated_session, tmp_path, utterances)
+
+    rows = (
+        await isolated_session.execute(
+            select(Utterance)
+            .where(Utterance.argument_id == argument.id)
+            .order_by(Utterance.sequence)
+        )
+    ).scalars().all()
+    assert len(rows) == 2
+    inaudible_row = rows[1]
+
+    assert inaudible_row.text == "(Inaudible)"
+    assert inaudible_row.verbatim_text == "(Inaudible)."
+    assert inaudible_row.is_inaudible_marker is True
+    assert inaudible_row.is_stage_direction is False
+    assert inaudible_row.raw_speaker_label == "Test Justice Doe"
+    assert inaudible_row.person_id is not None
+    assert inaudible_row.side == SideEnum.BENCH
+    assert inaudible_row.speaker_undetermined is False
+
+    participant = (
+        await isolated_session.execute(
+            select(ArgumentParticipant).where(
+                ArgumentParticipant.argument_id == argument.id,
+                ArgumentParticipant.raw_speaker_label == "Test Justice Doe",
+            )
+        )
+    ).scalar_one_or_none()
+    assert participant is not None
+
+    assert argument.trust_tier is TrustTier.TRUSTED
+
+
+@pytest.mark.asyncio
+async def test_inaudible_and_sentinel_rows_reach_public_payload(
+    isolated_session, tmp_path
+):
+    """SPEAKER-01/D-05/D-12: the public payload carries speaker_undetermined
+    and is_inaudible_marker as plain booleans read from the stored columns,
+    and the serialised response never carries trust vocabulary or
+    verbatim_text (D-07/D-10)."""
+    import datetime
+
+    speakers = {**_SPEAKERS, _SENTINEL_SPEAKER_ID: _SENTINEL_SPEAKER_META}
+    utterances = [
+        {
+            "id": "u1",
+            "conversation_id": "9999_71",
+            "speaker": "adv__john_smith",
+            "text": "May it please the Court.",
+        },
+        {
+            "id": "u2",
+            "conversation_id": "9999_71",
+            "speaker": "j__test_justice_doe",
+            "text": "(Inaudible).",
+        },
+        {
+            "id": "u3",
+            "conversation_id": "9999_71",
+            "speaker": _SENTINEL_SPEAKER_ID,
+            "text": "Something was said here.",
+        },
+    ]
+    argument = await _run_and_fetch_argument(
+        isolated_session, tmp_path, utterances, speakers=speakers
+    )
+
+    argument.published_at = datetime.datetime.now(datetime.timezone.utc)
+    argument.status = ArgumentStatusEnum.PUBLISHED
+    isolated_session.add(argument)
+    await isolated_session.flush()
+
+    result = await get_argument_with_utterances(isolated_session, argument.id)
+    assert result is not None
+    assert len(result["utterances"]) == 3
+
+    inaudible_payload = result["utterances"][1]
+    assert inaudible_payload["is_inaudible_marker"] is True
+    assert inaudible_payload["text"] == "(Inaudible)"
+
+    sentinel_payload = result["utterances"][2]
+    assert sentinel_payload["speaker_undetermined"] is True
+    assert sentinel_payload["raw_speaker_label"] is None
+
+    response = ArgumentUtterancesResponse(**result)
+    assert response.utterances[1].is_inaudible_marker is True
+    assert response.utterances[2].speaker_undetermined is True
+
+    body = response.model_dump_json().lower()
+    for banned in ("provisional", "trust_tier", "review_state", "verbatim_text"):
+        assert banned not in body
+
+
+@pytest.mark.asyncio
+async def test_null_flags_serialise_as_false_on_public_payload(
+    isolated_session, tmp_path
+):
+    """A legacy row (speaker_undetermined/is_inaudible_marker NULL, written
+    before migration 0033) serialises as False on the public payload --
+    fails closed, matching pre-Phase-53 rendering exactly."""
+    import datetime
+
+    utterances = [
+        {
+            "id": "u1",
+            "conversation_id": "9999_71",
+            "speaker": "adv__john_smith",
+            "text": "May it please the Court.",
+        },
+    ]
+    argument = await _run_and_fetch_argument(isolated_session, tmp_path, utterances)
+
+    row = (
+        await isolated_session.execute(
+            select(Utterance).where(Utterance.argument_id == argument.id)
+        )
+    ).scalar_one()
+    row.speaker_undetermined = None
+    row.is_inaudible_marker = None
+    isolated_session.add(row)
+
+    argument.published_at = datetime.datetime.now(datetime.timezone.utc)
+    argument.status = ArgumentStatusEnum.PUBLISHED
+    isolated_session.add(argument)
+    await isolated_session.flush()
+
+    result = await get_argument_with_utterances(isolated_session, argument.id)
+    assert result["utterances"][0]["speaker_undetermined"] is False
+    assert result["utterances"][0]["is_inaudible_marker"] is False

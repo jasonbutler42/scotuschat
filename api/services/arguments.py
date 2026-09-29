@@ -295,6 +295,13 @@ async def get_argument_with_utterances(
                         name_suffix=initials_suffix,
                         full_name=initials_full_name,
                     ),
+                    # Phase 53 (D-05/D-12): both columns are nullable
+                    # (NULL means "written before migration 0033"), and the
+                    # public schema fields default to False -- coerce here,
+                    # after the column spread above, so a legacy NULL row
+                    # serialises as False rather than None.
+                    "speaker_undetermined": utterance.speaker_undetermined is True,
+                    "is_inaudible_marker": utterance.is_inaudible_marker is True,
                 }
             )
 

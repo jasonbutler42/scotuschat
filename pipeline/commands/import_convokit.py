@@ -75,6 +75,7 @@ from collections import defaultdict
 from collections.abc import Sequence
 from datetime import date
 from pathlib import Path
+from typing import NamedTuple
 
 from dateutil import parser as dateutil_parser
 from sqlalchemy import func, or_, select, update
@@ -1967,34 +1968,68 @@ async def _resolve_and_link_participant(
 # ---------------------------------------------------------------------------
 
 
-def _split_turn_into_rows(text: str) -> list[tuple[str, bool]]:
+class _SplitRow(NamedTuple):
+    """One row produced by `_split_turn_into_rows`. `verbatim_text` is the
+    original segment text for a marker row (D-10), `None` for a speech
+    row (verbatim is never needed -- `text` already IS the verbatim
+    source for spoken content)."""
+
+    text: str
+    kind: str
+    verbatim_text: str | None
+
+
+# D-04 (Phase 53 plan 53-02): a whole-turn marker row is one of three
+# kinds -- a speech row (no marker), a room event (unattributed, D-03), or
+# an Inaudible marker (keeps its known speaker, D-04). Only a room event
+# suppresses speaker resolution in `_incoming_utterance_rows` below.
+_ROW_SPEECH = "speech"
+_ROW_ROOM_EVENT = "room_event"
+_ROW_INAUDIBLE = "inaudible"
+
+
+def _split_turn_into_rows(text: str) -> list[_SplitRow]:
     """
     Split one ConvoKit turn's `text` on its `\\n`-delimited segment
     boundaries and classify each segment via
     stage_directions.detect_stage_direction (D-16/D-17 -- no re-implemented
     regex here).
 
-    Returns an ordered list of (row_text, is_stage_direction) tuples:
-    contiguous non-marker segments are rejoined with `\\n` into a single
-    row (D-18's default -- a turn with no marker segments becomes exactly
-    one row, `\\n` boundaries preserved verbatim), while each detected
-    marker segment becomes its own adjacent row (D-16 -- "a turn that
-    begins or contains an inline marker segment" is split, keeping the
-    spoken remainder as its own row(s); losslessly reversible later).
+    Returns an ordered list of `_SplitRow`: contiguous non-marker segments
+    are rejoined with `\\n` into a single `_ROW_SPEECH` row (D-18's default
+    -- a turn with no marker segments becomes exactly one row, `\\n`
+    boundaries preserved verbatim, `verbatim_text` None), while each
+    detected marker segment becomes its own adjacent row (D-16 -- "a turn
+    that begins or contains an inline marker segment" is split, keeping the
+    spoken remainder as its own row(s); losslessly reversible later). A
+    marker row's `text` is the D-08 canonical form
+    (`stage_directions.canonical_marker_text`) and its `verbatim_text` is
+    the original source segment, byte-for-byte (D-10); its `kind` is
+    `_ROW_INAUDIBLE` when the canonical label is
+    `stage_directions.INAUDIBLE_LABEL`, else `_ROW_ROOM_EVENT` (D-03/D-04
+    -- the vocabulary split, not a second normaliser).
     """
     segments = text.split("\n")
-    rows: list[tuple[str, bool]] = []
+    rows: list[_SplitRow] = []
     pending: list[str] = []
 
     def _flush_pending() -> None:
         if pending:
-            rows.append(("\n".join(pending), False))
+            rows.append(_SplitRow("\n".join(pending), _ROW_SPEECH, None))
             pending.clear()
 
     for segment in segments:
-        if stage_directions.detect_stage_direction(segment) is not None:
+        label = stage_directions.detect_stage_direction(segment)
+        if label is not None:
             _flush_pending()
-            rows.append((segment, True))
+            kind = (
+                _ROW_INAUDIBLE
+                if label == stage_directions.INAUDIBLE_LABEL
+                else _ROW_ROOM_EVENT
+            )
+            rows.append(
+                _SplitRow(stage_directions.canonical_marker_text(label), kind, segment)
+            )
         else:
             pending.append(segment)
     _flush_pending()
@@ -2022,19 +2057,34 @@ def _incoming_utterance_rows(
     written.
 
     Each returned row dict carries the four D-13-frozen digest fields
-    (`sequence`, `raw_speaker_label`, `text`, `is_stage_direction`) PLUS two
-    extra fields, `speaker_id` (`None` for stage-direction rows and for rows
-    with no attributable speaker) and `speaker_undetermined` (D-05: `False`
-    on a stage-direction row, otherwise the source-sentinel fact read from
+    (`sequence`, `raw_speaker_label`, `text`, `is_stage_direction`) PLUS
+    `speaker_id` (`None` for a room-event row and for rows with no
+    attributable speaker), `speaker_undetermined` (D-05: `False` on a
+    stage-direction row, otherwise the source-sentinel fact read from
     speakers.json's `type` field via `_is_unattributed_speaker_type` --
-    never re-derived from `raw_speaker_label` or the speaker's name) --
-    `compute_utterance_digest` ignores any key outside its frozen four, so
-    neither extra field ever affects the digest. `speaker_id` exists purely
-    so a caller that DOES need to write Utterance rows (`_import_utterances`)
-    can resolve/create the row's participant without re-deriving `speaker_id`
-    from `turns` a second time; `speaker_undetermined` exists so that same
-    caller can store the fact on the Utterance row without a second read of
+    never re-derived from `raw_speaker_label` or the speaker's name),
+    `is_inaudible_marker` (D-04: `True` only for a whole-turn Inaudible
+    marker row that keeps a resolved speaker_id, i.e. NOT a room event and
+    NOT the missing-speaker fallback below) and `verbatim_text` (D-10: the
+    original source segment for any marker row, room event or Inaudible
+    alike; `None` for a speech row). `compute_utterance_digest` ignores
+    every key outside its frozen four, so none of these extra fields ever
+    affects the digest. `speaker_id` exists purely so a caller that DOES
+    need to write Utterance rows (`_import_utterances`) can resolve/create
+    the row's participant without re-deriving `speaker_id` from `turns` a
+    second time; `speaker_undetermined` exists so that same caller can
+    store the fact on the Utterance row without a second read of
     speakers.json.
+
+    D-04/Pitfall 1: speaker resolution runs when the turn has any speech
+    row OR any Inaudible row -- only an all-room-event turn suppresses it.
+    A speech row with no `speaker` key keeps the pre-existing V5
+    errored-and-skipped path (the whole turn is skipped). An Inaudible-only
+    turn with no `speaker` key is NOT errored -- per the Claude's-discretion
+    call recorded in 53-02-PLAN.md's `<objective>`, its Inaudible rows fall
+    back to today's unattributed stage-direction treatment (canonical text,
+    verbatim kept, both flags false) rather than inventing or dropping a
+    speaker.
 
     `raw_speaker_label` is derived the SAME way
     `_resolve_and_link_participant` derives `full_name` -- directly from
@@ -2071,69 +2121,120 @@ def _incoming_utterance_rows(
         if not split_rows:
             continue
 
+        has_speech = any(row.kind == _ROW_SPEECH for row in split_rows)
+        has_inaudible = any(row.kind == _ROW_INAUDIBLE for row in split_rows)
+
         speaker_id: str | None = None
         raw_speaker_label: str | None = None
         speaker_undetermined: bool = False
-        if any(not is_stage for _, is_stage in split_rows):
+        # D-04/Pitfall 1: a room event alone never triggers resolution --
+        # only a speech row or an Inaudible row (the turn HAS a speaker
+        # whose words either survive or were merely lost).
+        inaudible_missing_speaker = False
+        if has_speech or has_inaudible:
             speaker_id = turn.get("speaker")
             if not speaker_id:
-                counters["utterance_rows_errored"] = (
-                    counters.get("utterance_rows_errored", 0) + 1
-                )
-                print(
-                    f"WARNING: utterance row for conversation "
-                    f"{turn.get('conversation_id')!r} missing 'speaker' key "
-                    "-- flagged, skipped (V5)."
-                )
-                continue
-
-            # D-05 (Phase 53 plan 53-01): the source-sentinel fact is
-            # derived HERE, ONCE, from speakers.json's `type` field --
-            # never from raw_speaker_label or the speaker's name -- and
-            # BEFORE the resolved_participants cache branch below, so both
-            # the cached-None path and the fresh path carry the same value.
-            speaker_undetermined = _is_unattributed_speaker_type(
-                speakers_index.get(speaker_id) or {}
-            )
-
-            if speaker_id in resolved_participants:
-                # Already resolved (advocates loop) -- reuse its
-                # raw_speaker_label directly, no recomputation, no write.
-                cached = resolved_participants[speaker_id]
-                if cached is None:
-                    raw_speaker_label = None
-                    speaker_id = None  # no attributable speaker
-                else:
-                    raw_speaker_label = cached.raw_speaker_label
-            else:
-                speaker_meta = speakers_index.get(speaker_id) or {}
-                if _is_unattributed_speaker_type(speaker_meta):
-                    if speaker_id not in seen_unattributed:
-                        seen_unattributed.add(speaker_id)
-                        counters["unattributed_speakers_skipped"] = (
-                            counters.get("unattributed_speakers_skipped", 0) + 1
-                        )
-                    raw_speaker_label = None
-                    speaker_id = None  # no attributable speaker
-                else:
-                    raw_speaker_label = (
-                        speaker_meta.get("name")
-                        or speaker_meta.get("full_name")
-                        or turn.get("speaker")
+                if has_speech:
+                    counters["utterance_rows_errored"] = (
+                        counters.get("utterance_rows_errored", 0) + 1
                     )
+                    print(
+                        f"WARNING: utterance row for conversation "
+                        f"{turn.get('conversation_id')!r} missing 'speaker' "
+                        "key -- flagged, skipped (V5)."
+                    )
+                    continue
+                # Inaudible-only turn, no speaker key: NOT an error (see
+                # docstring above) -- falls back to the unattributed
+                # stage-direction treatment below.
+                inaudible_missing_speaker = True
+            else:
+                # D-05 (Phase 53 plan 53-01): the source-sentinel fact is
+                # derived HERE, ONCE, from speakers.json's `type` field --
+                # never from raw_speaker_label or the speaker's name -- and
+                # BEFORE the resolved_participants cache branch below, so
+                # both the cached-None path and the fresh path carry the
+                # same value.
+                speaker_undetermined = _is_unattributed_speaker_type(
+                    speakers_index.get(speaker_id) or {}
+                )
 
-        for row_text, is_stage in split_rows:
+                if speaker_id in resolved_participants:
+                    # Already resolved (advocates loop) -- reuse its
+                    # raw_speaker_label directly, no recomputation, no write.
+                    cached = resolved_participants[speaker_id]
+                    if cached is None:
+                        raw_speaker_label = None
+                        speaker_id = None  # no attributable speaker
+                    else:
+                        raw_speaker_label = cached.raw_speaker_label
+                else:
+                    speaker_meta = speakers_index.get(speaker_id) or {}
+                    if _is_unattributed_speaker_type(speaker_meta):
+                        if speaker_id not in seen_unattributed:
+                            seen_unattributed.add(speaker_id)
+                            counters["unattributed_speakers_skipped"] = (
+                                counters.get("unattributed_speakers_skipped", 0) + 1
+                            )
+                        raw_speaker_label = None
+                        speaker_id = None  # no attributable speaker
+                    else:
+                        raw_speaker_label = (
+                            speaker_meta.get("name")
+                            or speaker_meta.get("full_name")
+                            or turn.get("speaker")
+                        )
+
+        for row in split_rows:
             sequence += 1
-            rows.append(
-                {
-                    "sequence": sequence,
-                    "raw_speaker_label": None if is_stage else raw_speaker_label,
-                    "text": row_text,
-                    "is_stage_direction": is_stage,
-                    "speaker_id": None if is_stage else speaker_id,
-                    "speaker_undetermined": False if is_stage else speaker_undetermined,
-                }
+            # A room event is always unattributed (D-03); an Inaudible row
+            # with no speaker key falls back to the same unattributed
+            # stage-direction shape (inaudible_missing_speaker, above) --
+            # canonical text kept, verbatim kept, both flags false.
+            is_unattributed_marker = row.kind == _ROW_ROOM_EVENT or (
+                row.kind == _ROW_INAUDIBLE and inaudible_missing_speaker
             )
+            if is_unattributed_marker:
+                rows.append(
+                    {
+                        "sequence": sequence,
+                        "raw_speaker_label": None,
+                        "text": row.text,
+                        "is_stage_direction": True,
+                        "speaker_id": None,
+                        "speaker_undetermined": False,
+                        "is_inaudible_marker": False,
+                        "verbatim_text": row.verbatim_text,
+                    }
+                )
+            elif row.kind == _ROW_INAUDIBLE:
+                # D-04: a known speaker's whole-turn Inaudible marker keeps
+                # them -- their own row, not a stage direction.
+                rows.append(
+                    {
+                        "sequence": sequence,
+                        "raw_speaker_label": raw_speaker_label,
+                        "text": row.text,
+                        "is_stage_direction": False,
+                        "speaker_id": speaker_id,
+                        "speaker_undetermined": speaker_undetermined,
+                        "is_inaudible_marker": True,
+                        "verbatim_text": row.verbatim_text,
+                    }
+                )
+            else:  # _ROW_SPEECH
+                rows.append(
+                    {
+                        "sequence": sequence,
+                        "raw_speaker_label": raw_speaker_label,
+                        "text": row.text,
+                        "is_stage_direction": False,
+                        "speaker_id": speaker_id,
+                        "speaker_undetermined": speaker_undetermined,
+                        "is_inaudible_marker": False,
+                        "verbatim_text": None,
+                    }
+                )
 
     return rows
 
@@ -2171,7 +2272,11 @@ async def _import_utterances(
     `speaker_id` is `None` for a stage-direction row or a row with no
     attributable speaker (ConvoKit's own unattributed-speaker sentinel) --
     matching the pre-Phase-50 `participant is None` path exactly, and never
-    triggering a resolution call.
+    triggering a resolution call. A row with `is_stage_direction` False and
+    `is_inaudible_marker` True (D-04, Phase 53 plan 53-02) takes this same
+    spoken branch -- it IS that speaker's turn, participant resolution and
+    all -- and `verbatim_text` (D-10) is threaded onto both branches
+    unchanged from the row dict.
 
     `sequence` on each row is already a fresh monotonic counter starting at
     1 for this argument_id/import_run_id pair (T-29-09 -- every row created
@@ -2214,6 +2319,11 @@ async def _import_utterances(
                     # carry or change a section.
                     speaker_undetermined=False,  # D-05: a stage direction
                     # is never a source-sentinel speaker fact.
+                    is_inaudible_marker=False,  # D-04: a stage-direction
+                    # row is a room event or an unattributed Inaudible
+                    # fallback, never an attributed transcription failure.
+                    verbatim_text=row.get("verbatim_text"),  # D-10: kept
+                    # for every whole-turn marker row, room events too.
                 )
             )
             counters["stage_direction_utterances_created"] = (
@@ -2286,6 +2396,8 @@ async def _import_utterances(
                 person_id=participant.person_id if participant else None,
                 section_hint=section_hint,
                 speaker_undetermined=row["speaker_undetermined"],
+                is_inaudible_marker=row["is_inaudible_marker"],
+                verbatim_text=row.get("verbatim_text"),
             )
         )
         counters["utterances_created"] = counters.get("utterances_created", 0) + 1

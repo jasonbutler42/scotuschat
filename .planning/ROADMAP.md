@@ -23,6 +23,7 @@
 
 - [x] **Phase 52: Justice Identity** — One person row per justice, joined to the corpus by a verified `oyez_speaker_id`, surviving every fixture reset (completed 2026-09-28)
 - [x] **Phase 53: Undetermined Speakers & Marker Normalisation** — Treatment D for source-unattributed turns, a PROVISIONAL trust floor, and one canonical form for every whole-turn marker (completed 2026-09-30)
+- [ ] **Phase 53.1: Tenure-Bounded Speaker Correction** (INSERTED) — pre-appointment advocacy, wrong-justice and post-tenure attributions corrected before the corpus goes live
 - [ ] **Phase 54: Publishing at Scale & Verification Debt** — Bulk publish through the existing trust gate, the corpus live, and every surface finally seen at real volume
 - [ ] **Phase 55: Search** — Find an argument by case, docket, speaker or term, with a zero-result state that names the coverage boundary
 - [ ] **Phase 56: Landing Page, About & Oyez Source Links** — A front door that explains the format, an About page, and a way back to the source transcript
@@ -278,10 +279,32 @@ Plans:
 
 **UI hint**: yes
 
+### Phase 53.1: Tenure-Bounded Speaker Correction (INSERTED)
+
+**Goal:** No turn is credited to a justice on a date they could not have spoken from the bench — the source's tenure-impossible attributions are corrected in the derived layer before the corpus goes live.
+**Requirements**: TBD (to be defined at discuss/plan time)
+**Depends on:** Phase 53 (Treatment D is the honest rendering for turns no rule can recover)
+**Success Criteria** (what must be TRUE):
+
+  1. A justice-id turn in an argument dated **before** that person's first tenure renders as that same person on the **advocate** side (e.g. Thurgood Marshall arguing as Solicitor General in 1967, John Roberts in 1989), and their card carries a short factual note that they later became a justice and this argument predates the appointment — answering the reader's "wasn't she a justice?" without extra weight.
+  2. A turn credited to the wrong justice is reattributed to the single same-surname justice sitting on that date (the 803 Harlan II turns on Harlan I); when zero or several justices match, the rule refuses to guess.
+  3. A turn dated outside every plausible tenure (after death or retirement, e.g. Harlan II in 2003) renders as an undetermined speaker (Treatment D), never a guess.
+  4. Every correction is explicit, recorded and regenerable from untouched source files; a dry run lists each correction before anything is written, and the admin "Justices with tenure gaps" filter is empty after a full-corpus import.
+
+**Notes**:
+
+  - Found 2026-09-30 from the admin tenure-gap filter flagging Thurgood Marshall. Scan (term-year granularity, slightly undercounts join-year terms): ~3,500 pre-appointment advocate turns across Roberts, Marshall, Ginsburg, Alito, Stevens, Powell, Burger, Rehnquist, Kagan, Blackmun; 803 Harlan I/II; small post-tenure strays for Black, Douglas, Frankfurter, Burton, Reed, Clark, Stewart, O'Connor, Harlan II.
+  - Absorbs `todos/pending/2026-09-25-harlan-i-carries-harlan-ii-utterances.md` and `2026-09-25-harlan-ii-stray-2003-utterance.md`.
+  - Raw corpus files are immutable — corrections belong at import, like D-05/D-10 in Phase 53.
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 53.1 to break down)
+
 ### Phase 54: Publishing at Scale & Verification Debt
 
 **Goal**: The corpus is actually live, and every surface has been seen working at real volume instead of against four fixtures.
-**Depends on**: Phase 53 (the PROVISIONAL floor and the >50% gate are what make the corpus publishable at all)
+**Depends on**: Phase 53 (the PROVISIONAL floor and the >50% gate are what make the corpus publishable at all), Phase 53.1 (the corpus must not go live with tenure-impossible attributions)
 **Requirements**: PUBLISH-01, PUBLISH-02, PUBLISH-03, PUBLISH-04, PUBLISH-05, VERIFY-01, VERIFY-02
 **Success Criteria** (what must be TRUE):
 

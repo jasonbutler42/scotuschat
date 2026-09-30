@@ -2,31 +2,31 @@
 gsd_state_version: "1.0"
 milestone: v1.9
 milestone_name: The Site Becomes Complete
-current_phase: 53
-current_phase_name: Undetermined Speakers & Marker Normalisation
-status: executing
-stopped_at: Completed 53-04-PLAN.md
-last_updated: "2026-09-29T15:06:45.203Z"
-last_activity: 2026-09-29
-last_activity_desc: Phase 53 execution — all 5 plans complete (53-01, 53-02, 53-03, 53-04, 53-05); phase verification not yet run
-state_head: cd1cbf7b254b8d266e20a3a16fdf253752f7408e
+current_phase: 54
+current_phase_name: Publishing at Scale & Verification Debt
+status: planning
+stopped_at: Phase 53 complete, ready to plan Phase 54
+last_updated: "2026-09-30T15:38:57.203Z"
+last_activity: 2026-09-30
+last_activity_desc: Phase 53 complete, transitioned to Phase 54
+state_head: cb58c25b5b94b13a966089944b11d7e3a0befff7
 progress:
   total_phases: 8
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 11
   completed_plans: 11
-  percent: 13
+  percent: 25
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-09-28 after Phase 52)
+See: .planning/PROJECT.md (updated 2026-09-30 after Phase 53)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
 
-**Current focus:** Phase 53 — Undetermined Speakers & Marker Normalisation
+**Current focus:** Phase 54 — Publishing at Scale & Verification Debt
 the site can go live (correct data, the full corpus published, a finished public surface), so that
 v2.0 is purely the deployment.
 
@@ -38,17 +38,12 @@ phase-numbered test modules, ~2:1 test:code as a guideline. Both govern all late
 
 ## Current Position
 
-Phase: 53 (Undetermined Speakers & Marker Normalisation) — ALL PLANS COMPLETE
-Plan: 5 of 5 complete (53-01, 53-02, 53-03, 53-04, 53-05)
-(wave order note: 53-05 depended only on 53-01 and ran ahead of 53-03/53-04 in
-this phase's wave plan; the automatic advance-plan counter does not track wave
-order — see project memory "advance-plan ignores wave order" — this position
-was corrected by hand against the actual *-SUMMARY.md files on disk, which now
-number five)
-Status: Ready for /gsd-verify-work (phase verification, not yet run)
-Last activity: 2026-09-29 — Phase 53 execution — 53-04 complete, phase's plans all summarized
+Phase: 54 — Publishing at Scale & Verification Debt
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-09-30 — Phase 53 complete, transitioned to Phase 54
 
-Progress: [█░░░░░░░░░] 13% (1/8 phases)
+Progress: [███░░░░░░░] 25% (2/8 phases)
 
 ## Milestone Roadmap — v1.9 (Phases 52–58)
 
@@ -172,7 +167,8 @@ repeat it.
   (operator decision, 2026-09-23); recorded as a known risk in `launch-readiness.md`.
 - **Three UAT behaviours implemented but never observed** — the failed-run error panel
   (`FailedStepGuidance.svelte`), the unresolved-advocate role placeholder with its per-row Save gate,
-  and the non-interactive avatar for an unresolved utterance. → VERIFY-01, Phase 54.
+  and the non-interactive avatar for an unresolved utterance. → VERIFY-01, Phase 54. The third now
+  overlaps Treatment D (Phase 53) — verify the behaviour that actually ships.
 - **Phase 49's live-browser checks** are consolidated in `49-EVIDENCE.md` §9 (now under
   `.planning/milestones/v1.8-phases/49-review-model/`) and still unrun. They were blocked on sandbox
   `.env` access; browser tooling works now. → VERIFY-02, Phase 54.
@@ -279,7 +275,7 @@ suppress by design, so the section was moved verbatim to
 ## Session Continuity
 
 Last session: 2026-09-29T15:06:31.131Z
-Stopped at: Completed 53-04-PLAN.md
+Stopped at: Phase 53 complete, ready to plan Phase 54
 Resume file: None
 
 ## Operator Next Steps

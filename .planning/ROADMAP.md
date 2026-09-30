@@ -22,7 +22,7 @@
 **Overview:** Make everything true that has to be true before the site can go live, so that v2.0 is purely the deployment. Data correctness first (justice identity, then undetermined speakers), because search over speaker names before justice dedup would surface the exact duplicate-person bug that work exists to close. Then the corpus actually published, because every surface after it is better verified at real volume than against four fixtures. Then the public surface a reader arrives at — search (backend, precedes the landing page), landing page and About, then plumbing. Analytics is deliberately last and isolated: it introduces the first client-side third-party script and the first `PUBLIC_` env var this codebase has ever had.
 
 - [x] **Phase 52: Justice Identity** — One person row per justice, joined to the corpus by a verified `oyez_speaker_id`, surviving every fixture reset (completed 2026-09-28)
-- [ ] **Phase 53: Undetermined Speakers & Marker Normalisation** — Treatment D for source-unattributed turns, a PROVISIONAL trust floor, and one canonical form for every whole-turn marker
+- [x] **Phase 53: Undetermined Speakers & Marker Normalisation** — Treatment D for source-unattributed turns, a PROVISIONAL trust floor, and one canonical form for every whole-turn marker (completed 2026-09-30)
 - [ ] **Phase 54: Publishing at Scale & Verification Debt** — Bulk publish through the existing trust gate, the corpus live, and every surface finally seen at real volume
 - [ ] **Phase 55: Search** — Find an argument by case, docket, speaker or term, with a zero-result state that names the coverage boundary
 - [ ] **Phase 56: Landing Page, About & Oyez Source Links** — A front door that explains the format, an About page, and a way back to the source transcript
@@ -260,7 +260,7 @@ Plans:
   - The italic and 70%-opacity treatment for the "undetermined speaker" label is approved, and must land as **design-system additions** in `app/src/app.css` and `.planning/codebase/DESIGN-SYSTEM.md` — not inline one-offs. Phase 51's whole point was that nothing in `app/src` carries a raw value; italic is a new type axis.
   - Trust stays operator-facing. PROVISIONAL must never reach a public response — the reader-facing honesty is Treatment D's explanation card. If this phase touches a public schema module or frontend path not already in the leak-ban lists, register it here (PLUMBING-07).
 
-**Plans:** 5/5 plans executed
+**Plans:** 5/5 plans complete
 
 Plans:
 **Wave 1**
@@ -435,7 +435,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 52. Justice Identity | 6/6 | Complete    | 2026-09-28 |
-| 53. Undetermined Speakers & Marker Normalisation | 5/5 | In Progress|  |
+| 53. Undetermined Speakers & Marker Normalisation | 5/5 | Complete    | 2026-09-30 |
 | 54. Publishing at Scale & Verification Debt | 0/? | Not started | - |
 | 54.1. Justice Portraits & Biographical Enrichment (INSERTED) | 0/? | Not started | - |
 | 55. Search | 0/? | Not started | - |

@@ -2,20 +2,20 @@
 gsd_state_version: "1.0"
 milestone: v1.9
 milestone_name: The Site Becomes Complete
-current_phase: 54
-current_phase_name: Publishing at Scale & Verification Debt
+current_phase: "53.1"
+current_phase_name: Tenure-Bounded Speaker Correction
 status: planning
-stopped_at: Phase 53 complete, ready to plan Phase 54
-last_updated: "2026-09-30T15:38:57.203Z"
+stopped_at: Phase 54 context gathered; Phase 53.1 inserted ahead of it and must run first
+last_updated: "2026-09-30T18:30:35.353Z"
 last_activity: 2026-09-30
 last_activity_desc: Phase 53 complete, transitioned to Phase 54
-state_head: cb58c25b5b94b13a966089944b11d7e3a0befff7
+state_head: 3312235d4d912f77435640c68797ca8c2770d41c
 progress:
-  total_phases: 8
+  total_phases: 9
   completed_phases: 2
   total_plans: 11
   completed_plans: 11
-  percent: 25
+  percent: 22
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-09-30 after Phase 53)
 
 **Core value:** Anyone can open a SCOTUS oral argument and immediately follow the conversation — the chat format makes speaker identity, turn-taking, and flow self-evident without legal background.
 
-**Current focus:** Phase 54 — Publishing at Scale & Verification Debt
+**Current focus:** Phase 53.1 — Tenure-Bounded Speaker Correction (inserted ahead of Phase 54)
 the site can go live (correct data, the full corpus published, a finished public surface), so that
 v2.0 is purely the deployment.
 
@@ -38,12 +38,13 @@ phase-numbered test modules, ~2:1 test:code as a guideline. Both govern all late
 
 ## Current Position
 
-Phase: 54 — Publishing at Scale & Verification Debt
-Plan: Not started
+Phase: 53.1 — Tenure-Bounded Speaker Correction (INSERTED 2026-09-30)
+Plan: Not started — discuss first. Phase 54 discussion paused mid-way; decisions so far in
+`phases/54-publishing-at-scale-verification-debt/54-DISCUSS-CHECKPOINT.json`
 Status: Ready to plan
 Last activity: 2026-09-30 — Phase 53 complete, transitioned to Phase 54
 
-Progress: [███░░░░░░░] 25% (2/8 phases)
+Progress: [██░░░░░░░░] 22% (2/8 phases)
 
 ## Milestone Roadmap — v1.9 (Phases 52–58)
 
@@ -51,7 +52,8 @@ Progress: [███░░░░░░░] 25% (2/8 phases)
 |---|-------|--------------|------------|
 | 52 | Justice Identity | JUSTICE-01–06 | — |
 | 53 | Undetermined Speakers & Marker Normalisation | SPEAKER-01–08 | 52 |
-| 54 | Publishing at Scale & Verification Debt | PUBLISH-01–05, VERIFY-01/02 | 53 |
+| 53.1 | Tenure-Bounded Speaker Correction (INSERTED) | TBD | 53 |
+| 54 | Publishing at Scale & Verification Debt | PUBLISH-01–05, VERIFY-01/02 | 53, 53.1 |
 | 54.1 | Justice Portraits & Biographical Enrichment (INSERTED) | PERSON-01–06 | 52, 54 |
 | 55 | Search | SITE-03/04/05/06, PLUMBING-07 | 52, 54 |
 | 56 | Landing Page, About & Oyez Source Links | SITE-01, SITE-02, SITE-07 | 55, 54.1 |
@@ -211,6 +213,7 @@ repeat it.
 ### Roadmap Evolution
 
 - Phase 54.1 inserted after Phase 54: Justice Portraits & Biographical Enrichment — photos and FJC bios had no home in v1.9; two external deliverables (portrait set, Figma bio card) commissioned 2026-09-24
+- Phase 53.1 inserted after Phase 53: Tenure-Bounded Speaker Correction — ~4,300 source turns credited to a justice outside their tenure (pre-appointment advocacy, Harlan I/II, post-tenure strays), found 2026-09-30 during Phase 54 discussion; must precede bulk publish (URGENT)
 
 ## Deferred Items
 
@@ -274,9 +277,9 @@ suppress by design, so the section was moved verbatim to
 
 ## Session Continuity
 
-Last session: 2026-09-29T15:06:31.131Z
-Stopped at: Phase 53 complete, ready to plan Phase 54
-Resume file: None
+Last session: 2026-09-30T18:30:34.717Z
+Stopped at: Phase 54 context gathered; Phase 53.1 inserted ahead of it and must run first
+Resume file: .planning/phases/53.1-tenure-bounded-speaker-correction/53.1-PRE-DISCUSSION-NOTES.md
 
 ## Operator Next Steps
 
